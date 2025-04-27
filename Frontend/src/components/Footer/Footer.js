@@ -56,13 +56,10 @@ const Footer = (activeContent) => {
             <div className="row">
               <div className="col-md-6 mb-5 ">
                 <h5 className="text-primary text-uppercase mb-4" style={{ letterSpacing: "5px" }}>Contáctanos</h5>
-                <p><i className="fa fa-map-marker-alt mr-2"></i>Jr.LaArena Piura-Perú</p>
-                <p><i className="fa fa-phone-alt mr-2"></i>+51 995092832</p>
                 <p><i className="fa fa-envelope mr-2"></i>informes@centrojuanpabloii.com</p>
                 <div className="d-flex justify-content-center mt-4">
                   <a className="btn btn-outline-light btn-square mr-2" href="#"><i className="fab fa-twitter"></i></a>
                   <a className="btn btn-outline-light btn-square mr-2" href="#"><i className="fab fa-facebook-f"></i></a>
-                  <a className="btn btn-outline-light btn-square mr-2" href="#"><i className="fab fa-linkedin-in"></i></a>
                   <a className="btn btn-outline-light btn-square" href="#"><i className="fab fa-instagram"></i></a>
                 </div>
               </div>
@@ -122,7 +119,7 @@ const Footer = (activeContent) => {
       <div className="container-fluid bg-dark text-white border-top py-4 px-sm-3 px-md-5" style={{ borderColor: "rgba(256, 256, 256, .1) !important" }}>
         <div className="row">
           <div className="col-lg-6 text-center text-md-left mb-3 mb-md-0">
-            <p className="m-0 text-white">&copy; <a className="text-primary" href="#">Centro JuanPabloII</a>. Todos los Derechos Reservados. Desarrollado por <a className="text-primary" href="#">Diego Centeno</a></p>
+            <p className="m-0 text-white">&copy; <a className="text-primary" href="#">Centro JuanPabloII</a>. Todos los Derechos Reservados. </p>
           </div>
           <div className="col-lg-6 text-center text-md-right">
             <ul className="nav d-inline-flex">
