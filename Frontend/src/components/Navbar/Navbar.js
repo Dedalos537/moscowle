@@ -28,30 +28,12 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                             <h1 className="m-0"><span className="text-primary">CENTRO DE TERAPIAS</span> JUAN PABLO II</h1>
                         </a>
                     </div>
-                    <div className="col-lg-3 text-right">
-                        <div className="d-inline-flex align-items-center">
-                            <i className="fa fa-2x fa-map-marker-alt text-primary mr-3"></i>
-                            <div className="text-left">
-                                <h3 className="font-weight-semi-bold mb-1">Ubícanos</h3>
-                                <h6>Jr.Vicus 311</h6>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="col-lg-3 text-right">
+                    <div className="col-lg-8 text-center">
                         <div className="d-inline-flex align-items-center">
                             <i className="fa fa-2x fa-envelope text-primary mr-3"></i>
                             <div className="text-left">
                                 <h3 className="font-weight-semi-bold mb-1">Escríbenos</h3>
                                 <h6>informes@centrojuanpabloii.com</h6>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="col-lg-3 text-right">
-                        <div className="d-inline-flex align-items-center">
-                            <i className="fa fa-2x fa-phone text-primary mr-3"></i>
-                            <div className="text-left">
-                                <h3 className="font-weight-semi-bold mb-1">Contáctanos</h3>
-                                <h6>+51 995092832</h6>
                             </div>
                         </div>
                     </div>
@@ -159,7 +141,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                     </div>
                 </div>
             </div>
-            <div className="d-lg-none">
+            <div className="d-lg-none pb-2">
 
                 <div className="row align-items-center py-4 px-xl-5">
 
@@ -173,20 +155,6 @@ const Navbar = ({ handleNavigation, activeContent }) => {
 
                         <div className="mt-4">
 
-                            <h5 className="font-weight-semi-bold">Contáctanos</h5>
-
-                            <div className="d-inline-flex align-items-center mt-2">
-
-                                <i className="fa fa-map-marker-alt text-primary mr-2 fa-lg"></i>
-
-                                <div className="text-left">
-
-                                    <h6 className="m-0">Jr. Vicus 311</h6>
-
-                                </div>
-
-                            </div>
-
                             <div className="d-inline-flex align-items-center mt-2">
 
                                 <i className="fa fa-envelope text-primary mr-2 fa-lg"></i>
@@ -199,17 +167,6 @@ const Navbar = ({ handleNavigation, activeContent }) => {
 
                             </div>
 
-                            <div className="d-inline-flex align-items-center mt-2">
-
-                                <i className="fa fa-phone text-primary mr-2 fa-lg"></i>
-
-                                <div className="text-left">
-
-                                    <h6 className="m-0">+51 995092832</h6>
-
-                                </div>
-
-                            </div>
 
                         </div>
 
