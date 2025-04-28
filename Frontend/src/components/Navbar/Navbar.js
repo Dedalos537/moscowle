@@ -28,7 +28,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                             <h1 className="m-0"><span className="text-primary">CENTRO DE TERAPIAS</span> JUAN PABLO II</h1>
                         </a>
                     </div>
-                    <div className="col-lg-8 text-center">
+                    <div className="col-lg-8 text-right">
                         <div className="d-inline-flex align-items-center">
                             <i className="fa fa-2x fa-envelope text-primary mr-3"></i>
                             <div className="text-left">
