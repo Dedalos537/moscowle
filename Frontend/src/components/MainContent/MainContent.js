@@ -300,7 +300,7 @@ const MainContent = ({ toggleModal }) => {
 
     return (
         <main>
-            <div className="container-fluid p-0 pb-5 mb-5 pt-2">
+            <div className="container-fluid p-0 pb-5 mb-5">
                 <div id="header-carousel" className="carousel slide carousel-fade" data-ride="carousel">
                     <ol className="carousel-indicators">
                         <li data-target="#header-carousel" data-slide-to="0" className="active"></li>

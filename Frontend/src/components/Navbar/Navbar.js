@@ -141,7 +141,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                     </div>
                 </div>
             </div>
-            <div className="d-lg-none">
+            <div className="d-lg-none pb-2">
 
                 <div className="row align-items-center py-4 px-xl-5">
 
