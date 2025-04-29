@@ -10,6 +10,7 @@ import ContactContent from "./ContactContent";
 import emailjs from "@emailjs/browser";
 
 
+
 const MainContent = ({ toggleModal }) => {
     const [selectedTerapia, setSelectedTerapia] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -181,44 +182,44 @@ const MainContent = ({ toggleModal }) => {
     const terapiasInfo = {
         lectoEscritura: {
             title: "LECTO-ESCRITURA",
-            image: "https://th.bing.com/th/id/OIG4.Lx0DI4cJvITiZ.MhyBou?pid=ImgGn",
+            image: "img/LECTOESCRITURA.jpg",
             description: "En esta terapia, trabajamos para potenciar las habilidades de lectura y escritura de los niños, utilizando métodos innovadores y personalizados que nos permiten alcanzar grandes logros.",
         },
         conductal: {
-            title: "CONDUCTAL",
-            image: "https://th.bing.com/th/id/OIG1.3rx.KXoMCiGOUzV9cq5W?pid=ImgGn",
+            title: "CONDUCTUAL",
+            image: "img/CONDUCTUAL.jpg",
             description: "En el Centro de Terapias Juan Pablo II, ofrecemos terapia de conducta integral para tratar problemas como agresividad, impulsividad, ansiedad y depresión. Nuestro enfoque ayuda a mejorar la calidad de vida, comenzando con la modificación de conductas, clave para el bienestar y desarrollo personal de niños, adolescentes y adultos.",
         },
         lenguaje: {
             title: "DE LENGUAJE",
-            image: "https://th.bing.com/th/id/OIG2.QuFUsnwlkYLs3vu.qUB6?pid=ImgGn",
+            image: "img/DE LENGUAJE.jpg",
             description: "Es un proceso que se enfoca en ayudar a aquellas personas que enfrentan dificultades para hablar y sus consecuencias como  entender, leer o escribir.  A través e técnicas personalizadas, el “Centro de Terapias Juan Pablo II” soluciona problemas como la articulación incorrecta, el retraso en el desarrollo del habla, y dificultades en la comprensión y producción del lenguaje. El objetivo es facilitar una comunicación efectiva, que permita a cada persona desarrollarse plenamente en su entorno. con dificultades de habla y lenguaje.",
         },
         // Agrega más terapias aquí
         ocupacional: {
             title: "OCUPACIONAL",
-            image: "https://th.bing.com/th/id/OIG3.FUFQGAdUlCUv63tDareQ?pid=ImgGn",
+            image: "img/OCUPACIONAL.jpg",
             description: "La terapia ocupacional se enfoca en ayudar a las personas a superar dificultades en actividades cotidianas esenciales como la alimentación, la higiene personal, el control de esfínteres, el estudio y la recreación.  En el Centro de Terapias Juan Pablo II, ofrecemos intervenciones personalizadas para fomentar la autosuficiencia y mejorar la calidad de vida de cada paciente, ayudándolos a desarrollarse plenamente en su entorno.",
         },
 
         aprendizaje: {
             title: "DE APRENDIZAJE",
-            image: "https://th.bing.com/th/id/OIG1._conMoxJM08J1VjdUtoQ?pid=ImgGn",
+            image: "img/DE APRENDIZAJE.jpg",
             description: "Enfocada en el aprendizaje u.u.",
         },
         autismo: {
             title: "AUTISMO",
-            image: "https://th.bing.com/th/id/OIG1.ZSdwi6SX6wb4VkHBu2B0?pid=ImgGn",
+            image: "img/AUTISTA.jpg",
             description: "En el Centro de Terapias Juan Pablo II, ofrecemos apoyo especializado para personas con Trastorno del Espectro Autista (TEA). Utilizamos técnicas propias para ayudar a mejorar la comunicación, la interacción social y la adaptación al entorno. Reconocemos que el autismo se manifiesta de diversas maneras, por lo que adaptamos nuestras terapias para potenciar las habilidades de cada paciente, favoreciendo su desarrollo en áreas como la memoria, el arte o la tecnología.",
         },
         down: {
             title: "SÍNDROME DE DOWN",
-            image: "https://th.bing.com/th/id/OIG3.kjBcmrNg0BHo1aWQbqJQ?pid=ImgGn",
+            image: "img/SINDROME DE DOWN.jpg",
             description: "Enfocada en el Síndrome de down u.u.",
         },
         intelectual: {
             title: "DISCAPACIDAD INTELECTUAL",
-            image: "https://th.bing.com/th/id/OIG2.ylBCpQ.AGKZwEqyKqXQQ?pid=ImgGn",
+            image: "img/DISCAPACIDAD INTELECTUAL.jpg",
             description: "Enfocada en la discapacidad intelectual u.u.",
         },
     };
@@ -309,10 +310,10 @@ const MainContent = ({ toggleModal }) => {
                     </ol>
                     <div className="carousel-inner">
                         <div className="carousel-item active" style={{ minHeight: "300px", maxHeight: "30%" }}>
-                            <img className="position-relative w-100" src="https://th.bing.com/th/id/OIG2..wGinq22WgqTmh29J6hr?pid=ImgGn" style={{ minHeight: "100px", objectFit: "cover" }} />
+                            <img className="position-relative w-100" src="img/LECTOESCRITURA.jpg" style={{ minHeight: "100px", objectFit: "cover" }} />
                             <div className="carousel-caption d-flex align-items-center justify-content-center">
                                 <div className="p-5" style={{ width: "100%", maxWidth: "900px", maxHeight: "40%" }}>
-                                    <h5 className="text-white text-uppercase mb-md-3">SEGUIMOS EN VERANO CON TERAPIAS DE:</h5>
+                                    <h5 className="text-white text-uppercase mb-md-3">CURSO REGULAR:</h5>
                                     <h1 className="display-3 text-white mb-md-4">LECTO-ESCRITURA</h1>
                                     <button
                                         className="btn btn-primary py-md-2 px-md-4 font-weight-semi-bold mt-2"
@@ -324,10 +325,10 @@ const MainContent = ({ toggleModal }) => {
                             </div>
                         </div>
                         <div className="carousel-item" style={{ minHeight: "300px", maxHeight: "30%" }}>
-                            <img className="position-relative w-100" src="https://th.bing.com/th/id/OIG3.3YWycEyA7d3DuqRvtO_y?pid=ImgGn" style={{ minHeight: "300px", objectFit: "cover" }} />
+                            <img className="position-relative w-100" src="img/CONDUCTUAL.jpg" style={{ minHeight: "300px", objectFit: "cover" }} />
                             <div className="carousel-caption d-flex align-items-center justify-content-center">
                                 <div className="p-5" style={{ width: "100%", maxWidth: "900px", maxHeight: "40%" }}>
-                                    <h5 className="text-white text-uppercase mb-md-3">SEGUIMOS EN VERANO CON TERAPIAS DE:</h5>
+                                    <h5 className="text-white text-uppercase mb-md-3">CURSO REGULAR:</h5>
                                     <h1 className="display-3 text-white mb-md-4">CONDUCTAL</h1>
                                     <button
                                         className="btn btn-primary py-md-2 px-md-4 font-weight-semi-bold mt-2"
@@ -339,10 +340,10 @@ const MainContent = ({ toggleModal }) => {
                             </div>
                         </div>
                         <div className="carousel-item" style={{ minHeight: "300px" }}>
-                            <img className="position-relative w-100" src="https://th.bing.com/th/id/OIG1.tZNMX5miyC83itLxq1Rb?w=1024&h=1024&rs=1&pid=ImgDetMain" style={{ minHeight: "300px", objectFit: "cover" }} />
+                            <img className="position-relative w-100" src="img/DE LENGUAJE.jpg" style={{ minHeight: "300px", objectFit: "cover" }} />
                             <div className="carousel-caption d-flex align-items-center justify-content-center">
                                 <div className="p-5" style={{ width: "100%", maxWidth: "900px", maxHeight: "40%" }}>
-                                    <h5 className="text-white text-uppercase mb-md-3">SEGUIMOS EN VERANO CON TERAPIAS DE:</h5>
+                                    <h5 className="text-white text-uppercase mb-md-3">CURSO REGULAR:</h5>
                                     <h1 className="display-3 text-white mb-md-4">DE LENGUAJE</h1>
                                     <button
                                         className="btn btn-primary py-md-2 px-md-4 font-weight-semi-bold mt-2"
@@ -362,7 +363,7 @@ const MainContent = ({ toggleModal }) => {
                 <div className="container py-5">
                     <div className="row align-items-center">
                         <div className="col-lg-5">
-                            <img className="img-fluid rounded mb-4 mb-lg-0" src="https://th.bing.com/th/id/OIG2.EGnJUX_Eupo9pPH.THj5?pid =ImgGn" alt="" />
+                            <img className="img-fluid rounded mb-4 mb-lg-0" src="img/course-5.jpg" alt="" />
                         </div>
                         <div className="col-lg-7">
                             <div className="text-left mb-4 ">
