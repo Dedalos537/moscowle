@@ -1,98 +1,140 @@
 import React, { useState, useEffect } from 'react';
-import './Modal.css'; // Asegúrate de importar tu archivo CSS
+import './Modal.css';
 
-const InfoModal = ({ isOpen, onRequestClose, selectedTerapia }) => {
-    const [imageLoaded, setImageLoaded] = useState(true);
-    const [imageVisible, setImageVisible] = useState(false); // Estado para controlar la visibilidad de la imagen
+const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, activeContent }) => {
+  // Validación de props
+  const onClose = typeof onRequestClose === 'function' ? onRequestClose : () => {};
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageVisible, setImageVisible] = useState(true);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Handler para el menú móvil
+  const handleMenuToggle = () => {
+    setMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  // Handler para los enlaces de navegación
+  const handleLinkClick = (content) => {
+    // Verificar si handleNavigation existe y es una función antes de llamarla
+    if (typeof handleNavigation === 'function') {
+      handleNavigation(content);
+    } else {
+      console.warn('handleNavigation prop is not provided or is not a function');
+    }
+    setMobileMenuOpen(false); // Cierra el menú al cambiar de pestaña
+  };
 
-    useEffect(() => {
-        // Bloquea el deslizamiento de la página cuando el modal está abierto
-        if (isOpen) {
-            document.body.style.overflow = 'hidden'; // Bloquea el scroll
-            setImageVisible(true); // Muestra la imagen al abrir el modal
-            setImageLoaded(true); // Restablece el estado de carga de la imagen
-        } else {
-            document.body.style.overflow = ''; // Restablece el scroll cuando el modal se cierra
-        }
+  useEffect(() => {
+    // Bloquea el deslizamiento de la página cuando el modal está abierto
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'; // Bloquea el scroll
+      setImageVisible(true); // Muestra la imagen al abrir el modal
+      // No resetear imageLoaded aquí para evitar parpadeos
+    } else {
+      document.body.style.overflow = ''; // Restablece el scroll cuando el modal se cierra
+    }
 
-        // Limpieza en el efecto para restaurar el scroll cuando el modal se cierre
-        return () => {
-            document.body.style.overflow = ''; // Asegúrate de restaurar el scroll
-        };
-    }, [isOpen]);
-
-    const handleClickOutside = (e) => {
-        // Verifica si el clic es fuera del contenido del modal
-        if (e.target.classList.contains('modal-container')) {
-            onRequestClose();
-        }
+    // Limpieza al desmontar el componente
+    return () => {
+      document.body.style.overflow = ''; // Asegúrate de restaurar el scroll
     };
+  }, [isOpen]);
 
-    const handleImageLoad = () => {
-        setImageLoaded(true);
-    };
+  // Cierra el modal al hacer clic fuera del contenido
+  const handleClickOutside = (e) => {
+    if (e.target.classList.contains('modal-container')) {
+      onClose();
+    }
+  };
 
-    const handleImageError = () => {
-        setImageVisible(false); // Oculta la imagen si hay un error al cargar
-    };
+  // Handlers para la imagen
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
 
-    if (!selectedTerapia) return null; // Asegúrate de que haya una terapia seleccionada
+  const handleImageError = () => {
+    setImageVisible(false); // Oculta la imagen si hay un error al cargar
+  };
 
-    return (
-        <div
-            className={`modal-container ${isOpen ? 'show' : ''}`}
-            onClick={handleClickOutside} // Detectar clic fuera del modal
-        >
-            <div
-                className={`modal-content ${isOpen ? 'fade-in' : 'fade-out'}`}
-                onClick={(e) => e.stopPropagation()} // Previene el cierre al hacer clic dentro del modal
-                style={{ width: '600px', height: '400px', display: 'flex', flexDirection: 'column' }} // Tamaño fijo del modal
-            >
+  // No renderizar nada si no hay terapia seleccionada o el modal está cerrado
+  if (!selectedTerapia || !isOpen) return null;
+  
+  // Verificar si las propiedades necesarias existen en selectedTerapia
+  const { title = 'Terapia', description = '', image = '' } = selectedTerapia;
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px' }}>
-                    <h2 style={{ color: '#4CAF50', margin: 0 }}>{selectedTerapia.title}</h2>
-                    <button className="btn btn-close" onClick={onRequestClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                        <i className="fa fa-times fa-lg text-primary"></i> {/* Icono de cerrar */}
-                    </button>
-                </div>
-
-
-                <div style={{ display: 'flex', flex: 1 }}>
-                    {imageVisible && (
-                        <div style={{ flex: 1 }}>
-                            <img
-                                src={selectedTerapia.image}
-                                alt={selectedTerapia.title}
-                                style={{
-                                    width: '100%',
-                                    height: '100%', // Ocupa todo el alto
-                                    objectFit: 'cover', // Mantiene la proporción de la imagen
-                                    borderRadius: '10px',
-                                    opacity: imageLoaded ? 1 : 0,
-                                    transition: 'opacity 0.5s ease-in-out'
-                                }}
-                                onLoad={handleImageLoad} // Set image loaded to true when the image is loaded
-                                onError={handleImageError} // Handle image load error
-                            />
-                        </div>
-                    )}
-                    <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-                        <p style={{ maxHeight: '170px', overflowY: 'auto' }}>{selectedTerapia.description}</p>
-                    </div>
-                </div>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                    <a
-                        href="https://api.whatsapp.com/send/?phone=51995092832&type=phone_number&app_absent=0"
-                        className="btn btn-success"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Ir a WhatsApp
-                    </a>
-                </div>
-            </div>
+  return (
+    <div
+      className={`modal-container ${isOpen ? 'show' : ''}`}
+      onClick={handleClickOutside}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className={`modal-content ${isOpen ? 'fade-in' : 'fade-out'}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: '600px', height: '400px', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* Encabezado del modal */}
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px' }}>
+          <h2 id="modal-title" style={{ color: '#4CAF50', margin: 0 }}>{title}</h2>
+          <button 
+            className="btn btn-close" 
+            onClick={onClose} 
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            aria-label="Cerrar"
+          >
+            <i className="fa fa-times fa-lg text-primary"></i>
+          </button>
         </div>
-    );
+
+        {/* Contenido principal del modal */}
+        <div className="modal-body" style={{ display: 'flex', flex: 1 }}>
+          {imageVisible && (
+            <div className="modal-image-container" style={{ flex: 1 }}>
+              <img
+                src={image}
+                alt={`Imagen ilustrativa de ${title}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '10px',
+                  opacity: imageLoaded ? 1 : 0,
+                  transition: 'opacity 0.5s ease-in-out'
+                }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+            </div>
+          )}
+          <div className="modal-description" style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+            <p style={{ maxHeight: '170px', overflowY: 'auto' }}>{description}</p>
+          </div>
+        </div>
+
+        {/* Pie del modal */}
+        <div className="modal-footer" style={{ padding: '20px', textAlign: 'center' }}>
+          <button
+            className={`nav-link btn btn-primary ${activeContent === "services" ? "active" : ""}`}
+            onClick={() => {
+              try {
+                handleLinkClick("services");
+                // Cierra el modal después de la navegación
+                onClose();
+              } catch (error) {
+                console.error("Error en la navegación:", error);
+                onClose();
+              }
+            }}
+            style={{ border: 'none', background: '#4CAF50', color: 'white', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}
+          >
+            Saber Más
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default InfoModal;

@@ -215,12 +215,12 @@ const MainContent = ({ toggleModal }) => {
         down: {
             title: "SÍNDROME DE DOWN",
             image: "img/SINDROME DE DOWN.jpg",
-            description: "Enfocada en el Síndrome de down u.u.",
+            description: "En el Centro de Terapias Juan Pablo II, ofrecemos apoyo especializado para personas con Síndrome de Down. Utilizamos técnicas propias para mejorar el desarrollo psicomotor, el lenguaje y la autonomía personal. Reconocemos que cada persona presenta fortalezas únicas, por lo que adaptamos nuestras terapias para potenciar sus capacidades individuales, favoreciendo su inclusión social, aprendizaje y desarrollo de habilidades para la vida diaria.",
         },
         intelectual: {
             title: "DISCAPACIDAD INTELECTUAL",
             image: "img/DISCAPACIDAD INTELECTUAL.jpg",
-            description: "Enfocada en la discapacidad intelectual u.u.",
+            description: "En el Centro de Terapias Juan Pablo II, ofrecemos apoyo especializado para personas con Discapacidad Intelectual. Utilizamos técnicas propias para fortalecer las habilidades cognitivas, la comunicación y la independencia funcional. Reconocemos que cada persona tiene un potencial único, por lo que adaptamos nuestras terapias para desarrollar sus capacidades específicas, favoreciendo su inclusión social, autonomía y el máximo desarrollo de sus competencias personales.",
         },
     };
 
@@ -266,22 +266,22 @@ const MainContent = ({ toggleModal }) => {
 
         const testimonials = [
             {
-                quote: "Dolor eirmod diam stet kasd sed. Aliqu rebum est eos. Rebum elitr dolore et eos labore, stet justo sed est sed. Diam sed sed dolor stet amet eirmod eos labore diam.",
+                quote: "A lo largo de todo este tiempo en lo que mi hijo a asistido a las terapias, he visto un buen desarrollo en Jose Carlos tanto en el colegio como en su vida diaria",
                 img: "img/testimonial-1.jpg",
-                name: "Client Name",
-                profession: "Profession",
+                name: "Liliana Carrion",
+                profession: "Madre de Familia",
             },
             {
-                quote: "Dolor eirmod diam stet kasd sed. Aliqu rebum est eos. Rebum elitr dolore et eos labore, stet justo sed est sed. Diam sed sed dolor stet amet eirmod eos labore diam.",
+                quote: "Tras estos 3 meses de terapia he notado que mi hijo se comporta de una forma mas tranquila, mas sociable, todavia tiene algun que otro problema, pero ha mejorado bastante",
                 img: "img/testimonial-2.jpg",
-                name: "Client Name",
-                profession: "Profession",
+                name: "Claudia Martinez",
+                profession: "Madre de Familia",
             },
             {
-                quote: "Dolor eirmod diam stet kasd sed. Aliqu rebum est eos. Rebum elitr dolore et eos labore, stet justo sed est sed. Diam sed sed dolor stet amet eirmod eos labore diam.",
+                quote: "Mi hija a aumentando bastante su vocabulario, utilizando palabras que antes no decia, solo haciendo reciaones de dos silabas, aumentando su capacidad en este aspecto.",
                 img: "img/testimonial-3.jpg",
-                name: "Client Name",
-                profession: "Profession",
+                name: "Alejandra Nole",
+                profession: "Madre de familia",
             },
         ];
 
