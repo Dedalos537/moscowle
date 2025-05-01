@@ -291,7 +291,7 @@ const MainContent = ({ toggleModal }) => {
                     <div key={index} className="text-center">
                         <i className="fa fa-3x fa-quote-left text-primary mb-4"></i>
                         <h4 className="font-weight-normal mb-4">{testimonial.quote}</h4>
-                        <img className="img-fluid mx-auto mb-3" src={testimonial.img} alt={testimonial.name} />
+                        <img className="img-fluid mx-auto mb-3" style={{width: '100px'}} src={testimonial.img} alt={testimonial.name} />
                         <h5 className="m-0">{testimonial.name}</h5>
                         <span>{testimonial.profession}</span>
                     </div>))}
