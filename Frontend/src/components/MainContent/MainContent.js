@@ -267,7 +267,7 @@ const MainContent = ({ toggleModal }) => {
         const testimonials = [
             {
                 quote: "A lo largo de todo este tiempo en lo que mi hijo a asistido a las terapias, he visto un buen desarrollo en Jose Carlos tanto en el colegio como en su vida diaria",
-                img: "img/testimonial-1.jpg",
+                img: "img/testimonial-1.jpeg",
                 name: "Liliana Carrion",
                 profession: "Madre de Familia",
             },
