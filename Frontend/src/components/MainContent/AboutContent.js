@@ -23,7 +23,7 @@ const AboutContent = () => {
       <div className="container mb-5">
         <div className="row g-4">
           {/* Misión */}
-          <div className="col-md-6">
+          <div className="col-md-6 mb-5">
             <div className="bg-light p-4 rounded shadow h-100 text-center">
               <i className="fa fa-bullseye fa-2x text-primary mb-3"></i>
               <h4 className="text-uppercase">Misión</h4>
