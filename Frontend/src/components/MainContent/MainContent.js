@@ -266,20 +266,20 @@ const MainContent = ({ toggleModal }) => {
 
         const testimonials = [
             {
-                quote: "A lo largo de todo este tiempo en lo que mi hijo ha asistido a las terapias, he visto un buen desarrollo en Jose Carlos tanto en el colegio como en su vida diaria",
-                img: "img/testimonial-1.jpeg",
+                quote: "A lo largo de todo este tiempo en lo que mi hijo a asistido a las terapias, he visto un buen desarrollo en Jose Carlos tanto en el colegio como en su vida diaria",
+                img: "img/testimonial-1.jpg",
                 name: "Liliana Carrion",
                 profession: "Madre de Familia",
             },
             {
-                quote: "Tras estos 3 meses de terapia he notado que mi hijo se comporta de una forma más tranquila, más sociable, todavía tiene algún que otro problema, pero ha mejorado bastante",
-                img: "img/testimonial-2.jpeg",
+                quote: "Tras estos 3 meses de terapia he notado que mi hijo se comporta de una forma mas tranquila, mas sociable, todavia tiene algun que otro problema, pero ha mejorado bastante",
+                img: "img/testimonial-2.jpg",
                 name: "Claudia Martinez",
                 profession: "Madre de Familia",
             },
             {
-                quote: "Mi hija ha aumentando bastante su vocabulario, utilizando palabras que antes no decía, solo haciendo relaciones de dos sílabas, aumentando su capacidad en este aspecto.",
-                img: "img/testimonial-3.jpeg",
+                quote: "Mi hija a aumentando bastante su vocabulario, utilizando palabras que antes no decia, solo haciendo reciaones de dos silabas, aumentando su capacidad en este aspecto.",
+                img: "img/testimonial-3.jpg",
                 name: "Alejandra Nole",
                 profession: "Madre de familia",
             },
@@ -291,7 +291,7 @@ const MainContent = ({ toggleModal }) => {
                     <div key={index} className="text-center">
                         <i className="fa fa-3x fa-quote-left text-primary mb-4"></i>
                         <h4 className="font-weight-normal mb-4">{testimonial.quote}</h4>
-                        <img className="img-fluid mx-auto mb-3" style={{width: '100px' }} src={testimonial.img} alt={testimonial.name} />
+                        <img className="img-fluid mx-auto mb-3" src={testimonial.img} alt={testimonial.name} />
                         <h5 className="m-0">{testimonial.name}</h5>
                         <span>{testimonial.profession}</span>
                     </div>))}

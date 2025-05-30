@@ -57,6 +57,11 @@ const Footer = (activeContent) => {
               <div className="col-md-6 mb-5 align-items-center justify-content-center">
                 <h5 className="text-primary text-uppercase mb-4" style={{ letterSpacing: "5px" }}>Contáctanos</h5>
                 <p><i className="fa fa-envelope mr-2"></i>informes@centrojuanpabloii.com</p>
+                <div className="d-flex justify-content-center mt-4">
+                  <a className="btn btn-outline-light btn-square mr-2" href="#"><i className="fab fa-twitter"></i></a>
+                  <a className="btn btn-outline-light btn-square mr-2" href="#"><i className="fab fa-facebook-f"></i></a>
+                  <a className="btn btn-outline-light btn-square" href="#"><i className="fab fa-instagram"></i></a>
+                </div>
               </div>
               <div className="col-md-6 mb-5">
                 <h5
