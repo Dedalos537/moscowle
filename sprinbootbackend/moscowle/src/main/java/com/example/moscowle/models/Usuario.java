@@ -2,6 +2,7 @@ package com.example.moscowle.models;
 
 import jakarta.persistence.*;
 
+@Entity
 public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
