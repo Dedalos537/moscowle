@@ -26,6 +26,20 @@ public class Contactanos {
     @JoinColumn(name = "id_usuario")
     private Usuario usuario;
 
+    // Constructor vacío
+    public Contactanos() {
+        this.fecha = LocalDate.now();
+    }
+    
+    // Constructor con parámetros
+    public Contactanos(String nombre, String correo, String sujeto, String mensaje) {
+        this.nombre = nombre;
+        this.correo = correo;
+        this.sujeto = sujeto;
+        this.mensaje = mensaje;
+        this.fecha = LocalDate.now();
+    }
+
     public Long getId() {
         return id;
     }
