@@ -13,15 +13,45 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
     setMobileMenuOpen(!isMobileMenuOpen);
   };
   
-  // Handler para los enlaces de navegación
-  const handleLinkClick = (content) => {
-    // Verificar si handleNavigation existe y es una función antes de llamarla
-    if (typeof handleNavigation === 'function') {
-      handleNavigation(content);
-    } else {
-      console.warn('handleNavigation prop is not provided or is not a function');
+  // Verificar si estamos en un entorno de navegador
+  const isBrowser = typeof window !== 'undefined';
+
+  // Se utilizará para manejar la navegación a services de forma segura
+  const navigateToServices = () => {
+    try {
+      // Comprobación segura de la función handleNavigation
+      if (typeof handleNavigation === 'function') {
+        handleNavigation("services");
+        return true;
+      } else {
+        console.warn('handleNavigation no es una función');
+        
+        // Intentar navegar de otras formas si handleNavigation no existe
+        if (isBrowser) {
+          // Alternativa 1: Buscar elementos con ID
+          const servicesSection = document.getElementById('services');
+          if (servicesSection) {
+            servicesSection.scrollIntoView({ behavior: 'smooth' });
+            return true;
+          }
+          
+          // Alternativa 2: Buscar enlaces con href services
+          const servicesLinks = document.querySelectorAll('a[href*="services"]');
+          if (servicesLinks.length > 0) {
+            servicesLinks[0].click();
+            return true;
+          }
+          
+          // Alternativa 3: Si hay un hash en la URL
+          window.location.hash = 'services';
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error al navegar:", error);
     }
-    setMobileMenuOpen(false); // Cierra el menú al cambiar de pestaña
+    
+    return false;
   };
 
   useEffect(() => {
@@ -119,11 +149,18 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
             className={`nav-link btn btn-primary ${activeContent === "services" ? "active" : ""}`}
             onClick={() => {
               try {
-                handleLinkClick("services");
-                // Cierra el modal después de la navegación
-                onClose();
+                // Intenta navegar a services de forma segura
+                const navigationSuccessful = navigateToServices();
+                
+                // Cierra el modal después de un breve retraso para permitir que la navegación ocurra
+                setTimeout(() => {
+                  onClose();
+                }, navigationSuccessful ? 200 : 0);
+                
+                // Cierra el menú móvil si estaba abierto
+                setMobileMenuOpen(false);
               } catch (error) {
-                console.error("Error en la navegación:", error);
+                console.error("Error en el botón:", error);
                 onClose();
               }
             }}
