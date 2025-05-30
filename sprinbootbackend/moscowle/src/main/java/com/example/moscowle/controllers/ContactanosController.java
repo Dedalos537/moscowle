@@ -63,5 +63,16 @@ public class ContactanosController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+ @GetMapping("/listar")
+public ResponseEntity<?> listarContactos() {
+    try {
+        return ResponseEntity.ok(contactanosService.listarTodos());
+    } catch (Exception e) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Error al obtener los contactos: " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+}
 
 }

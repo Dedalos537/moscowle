@@ -3,17 +3,35 @@ import axios from 'axios';
 
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [nuevoUsuario, setNuevoUsuario] = useState({ correo: '', contrasena: '', rol: '' });
   const [editando, setEditando] = useState(null);
 
   useEffect(() => {
     cargarUsuarios();
+    cargarRoles();
   }, []);
 
   const cargarUsuarios = () => {
     axios.get('/api/usuarios/listar')
       .then(res => setUsuarios(res.data))
       .catch(err => console.error('Error al cargar usuarios:', err));
+  };
+
+  const cargarRoles = () => {
+    axios.get('/api/roles/listar')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setRoles(res.data);
+        } else {
+          console.error('Formato inesperado en respuesta de roles:', res.data);
+          setRoles([]);
+        }
+      })
+      .catch(err => {
+        console.error('Error al cargar roles:', err);
+        setRoles([]);
+      });
   };
 
   const handleChange = (e) => {
@@ -25,7 +43,13 @@ const Usuarios = () => {
     const url = editando ? `/api/usuarios/${editando.id}` : '/api/usuarios';
     const metodo = editando ? axios.put : axios.post;
 
-    metodo(url, nuevoUsuario)
+    const payload = {
+      correo: nuevoUsuario.correo,
+      contrasena: nuevoUsuario.contrasena,
+      rol: { id: parseInt(nuevoUsuario.rol) }
+    };
+
+    metodo(url, payload)
       .then(() => {
         setNuevoUsuario({ correo: '', contrasena: '', rol: '' });
         setEditando(null);
@@ -43,7 +67,11 @@ const Usuarios = () => {
 
   const editarUsuario = (usuario) => {
     setEditando(usuario);
-    setNuevoUsuario({ correo: usuario.correo, contrasena: '', rol: usuario.rol });
+    setNuevoUsuario({
+      correo: usuario.correo,
+      contrasena: '',
+      rol: usuario.rol?.id || ''
+    });
   };
 
   return (
@@ -76,14 +104,19 @@ const Usuarios = () => {
               />
             </div>
             <div className="col-md-3">
-              <input
-                type="text"
+              <select
                 name="rol"
-                placeholder="Rol"
                 value={nuevoUsuario.rol}
                 onChange={handleChange}
                 className="form-control"
-              />
+              >
+                <option value="">Seleccione un rol</option>
+                {roles.map(rol => (
+                  <option key={rol.id} value={rol.id}>
+                    {rol.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-md-2 d-grid">
               <button onClick={guardarUsuario} className="btn btn-success">
@@ -105,18 +138,12 @@ const Usuarios = () => {
                 {usuarios.map((u) => (
                   <tr key={u.id}>
                     <td>{u.correo}</td>
-                    <td>{u.rol}</td>
+                    <td>{u.rol?.nombre}</td>
                     <td>
-                      <button
-                        onClick={() => editarUsuario(u)}
-                        className="btn btn-warning btn-sm me-2"
-                      >
+                      <button onClick={() => editarUsuario(u)} className="btn btn-warning btn-sm me-2">
                         <i className="bi bi-pencil-square"></i>
                       </button>
-                      <button
-                        onClick={() => eliminarUsuario(u.id)}
-                        className="btn btn-danger btn-sm"
-                      >
+                      <button onClick={() => eliminarUsuario(u.id)} className="btn btn-danger btn-sm">
                         <i className="bi bi-trash3"></i>
                       </button>
                     </td>
@@ -132,7 +159,6 @@ const Usuarios = () => {
               </tbody>
             </table>
           </div>
-
         </div>
       </div>
     </div>

@@ -9,10 +9,12 @@ import org.springframework.transaction.annotation.*;
 import com.example.moscowle.models.Contactanos;
 import com.example.moscowle.models.dto.ContactanosDTO;
 import com.example.moscowle.repository.ContactanosRepository;
+import java.util.List;
 
 @Service
 @Transactional
 public class ContactanosService {
+    
     
     @Autowired
     private ContactanosRepository contactanosRepository;
@@ -40,4 +42,9 @@ public class ContactanosService {
                contactoDTO.getSujeto() != null && !contactoDTO.getSujeto().trim().isEmpty() &&
                contactoDTO.getMensaje() != null && !contactoDTO.getMensaje().trim().isEmpty();
     }
+    // Listar todos los contactos
+public List<Contactanos> listarTodos() {
+    return contactanosRepository.findAll();
+}
+
 }

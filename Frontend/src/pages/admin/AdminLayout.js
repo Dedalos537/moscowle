@@ -1,10 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import './admin.css'; // ✅ Asegúrate de importar tu CSS personalizado
+import './admin.css';
 
 const AdminLayout = () => {
+
+  useEffect(() => {
+    const botonScroll = document.querySelector('.scroll-to-top');
+    if (botonScroll) {
+      botonScroll.style.display = 'none';
+    }
+
+    // Limpieza opcional al salir
+    return () => {
+      if (botonScroll) {
+        botonScroll.style.display = 'block';
+      }
+    };
+  }, []);
+
   return (
     <div className="admin-container">
       {/* Sidebar */}
@@ -24,10 +39,7 @@ const AdminLayout = () => {
       <main className="admin-content">
         <header className="admin-header">
           <span>👤 Admin</span>
-          <Link to="/admin/perfil" className="btn btn-outline-primary btn-sm me-2">
-  Perfil
-</Link>
-
+          <Link to="/admin/perfil" className="btn btn-outline-primary btn-sm me-2">Perfil</Link>
           <button className="btn btn-outline-danger btn-sm">Cerrar sesión</button>
         </header>
 

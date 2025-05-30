@@ -1,13 +1,11 @@
 package com.example.moscowle.models;
-
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-
 import java.util.List;
 
 @Entity
 public class Rol {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -15,20 +13,16 @@ public class Rol {
     @Column(nullable = false)
     private String nombre;
 
-    // Relación uno a muchos con Usuario
     @OneToMany(mappedBy = "rol", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Usuario> usuarios;
 
-    // Constructor vacío
-    public Rol() {
-    }
+    public Rol() {}
 
-    // Constructor con parámetros
     public Rol(String nombre) {
         this.nombre = nombre;
     }
 
-    // Getters y Setters
     public Integer getId() {
         return id;
     }
