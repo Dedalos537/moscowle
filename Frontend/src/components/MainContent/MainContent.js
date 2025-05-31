@@ -192,29 +192,29 @@ const MainContent = ({ toggleModal }) => {
         },
         lenguaje: {
             title: "DE LENGUAJE",
-            image: "img/DE LENGUAJE.jpg",
+            image: "/img/DE LENGUAJE.jpg",
             description: "Es un proceso que se enfoca en ayudar a aquellas personas que enfrentan dificultades para hablar y sus consecuencias como  entender, leer o escribir.  A través e técnicas personalizadas, el “Centro de Terapias Juan Pablo II” soluciona problemas como la articulación incorrecta, el retraso en el desarrollo del habla, y dificultades en la comprensión y producción del lenguaje. El objetivo es facilitar una comunicación efectiva, que permita a cada persona desarrollarse plenamente en su entorno. con dificultades de habla y lenguaje.",
         },
         // Agrega más terapias aquí
         ocupacional: {
             title: "OCUPACIONAL",
-            image: "img/OCUPACIONAL.jpg",
+            image: "/img/OCUPACIONAL.jpg",
             description: "La terapia ocupacional se enfoca en ayudar a las personas a superar dificultades en actividades cotidianas esenciales como la alimentación, la higiene personal, el control de esfínteres, el estudio y la recreación.  En el Centro de Terapias Juan Pablo II, ofrecemos intervenciones personalizadas para fomentar la autosuficiencia y mejorar la calidad de vida de cada paciente, ayudándolos a desarrollarse plenamente en su entorno.",
         },
 
         aprendizaje: {
             title: "DE APRENDIZAJE",
-            image: "img/DE APRENDIZAJE.jpg",
+            image: "/img/DE APRENDIZAJE.jpg",
             description: "Enfocada en el aprendizaje u.u.",
         },
         autismo: {
             title: "AUTISMO",
-            image: "img/AUTISTA.jpg",
+            image: "/img/AUTISTA.jpg",
             description: "En el Centro de Terapias Juan Pablo II, ofrecemos apoyo especializado para personas con Trastorno del Espectro Autista (TEA). Utilizamos técnicas propias para ayudar a mejorar la comunicación, la interacción social y la adaptación al entorno. Reconocemos que el autismo se manifiesta de diversas maneras, por lo que adaptamos nuestras terapias para potenciar las habilidades de cada paciente, favoreciendo su desarrollo en áreas como la memoria, el arte o la tecnología.",
         },
         down: {
             title: "SÍNDROME DE DOWN",
-            image: "img/SINDROME DE DOWN.jpg",
+            image: "/img/SINDROME DE DOWN.jpg",
             description: "En el Centro de Terapias Juan Pablo II, ofrecemos apoyo especializado para personas con Síndrome de Down. Utilizamos técnicas propias para mejorar el desarrollo psicomotor, el lenguaje y la autonomía personal. Reconocemos que cada persona presenta fortalezas únicas, por lo que adaptamos nuestras terapias para potenciar sus capacidades individuales, favoreciendo su inclusión social, aprendizaje y desarrollo de habilidades para la vida diaria.",
         },
         intelectual: {
