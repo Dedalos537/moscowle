@@ -1,5 +1,6 @@
 package com.example.moscowle.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -21,15 +22,16 @@ public class Usuario {
 
     // Relación uno a uno con Apoderado
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Apoderado apoderado;
 
     // Relación uno a uno con Trabajador
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Trabajador trabajador;
 
     // Constructor vacío
-    public Usuario() {
-    }
+    public Usuario() {}
 
     // Constructor con parámetros
     public Usuario(String correo, String contrasena, Rol rol) {
