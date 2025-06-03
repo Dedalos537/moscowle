@@ -29,7 +29,7 @@ function App() {
       <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
 
       <div className={`transition-content ${activeContent === "home" ? "show" : ""}`}>
-        {activeContent === "home" && <MainContent />}
+        {activeContent === "home" && <MainContent handleNavigation={handleNavigation}/>}
       </div>
 
       <div className={`transition-content ${activeContent === "about" ? "show" : ""}`}>
@@ -46,7 +46,7 @@ function App() {
       <div className={`transition-content ${activeContent === "login" ? "show" : ""}`}/>
       {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}</div>
       <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
-      <Modal isOpen={isModalOpen} toggleModal={toggleModal} />
+      <Modal  handleNavigation={handleNavigation} activeContent={activeContent} isOpen={isModalOpen} toggleModal={toggleModal} />
     </>
   );
 }

@@ -12,47 +12,6 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
   const handleMenuToggle = () => {
     setMobileMenuOpen(!isMobileMenuOpen);
   };
-  
-  // Verificar si estamos en un entorno de navegador
-  const isBrowser = typeof window !== 'undefined';
-
-  // Se utilizará para manejar la navegación a services de forma segura
-  const navigateToServices = () => {
-    try {
-      // Comprobación segura de la función handleNavigation
-      if (typeof handleNavigation === 'function') {
-        handleNavigation("services");
-        return true;
-      } else {
-        console.warn('handleNavigation no es una función');
-        
-        // Intentar navegar de otras formas si handleNavigation no existe
-        if (isBrowser) {
-          // Alternativa 1: Buscar elementos con ID
-          const servicesSection = document.getElementById('services');
-          if (servicesSection) {
-            servicesSection.scrollIntoView({ behavior: 'smooth' });
-            return true;
-          }
-          
-          // Alternativa 2: Buscar enlaces con href services
-          const servicesLinks = document.querySelectorAll('a[href*="services"]');
-          if (servicesLinks.length > 0) {
-            servicesLinks[0].click();
-            return true;
-          }
-          
-          // Alternativa 3: Si hay un hash en la URL
-          window.location.hash = 'services';
-          return true;
-        }
-      }
-    } catch (error) {
-      console.error("Error al navegar:", error);
-    }
-    
-    return false;
-  };
 
   useEffect(() => {
     // Bloquea el deslizamiento de la página cuando el modal está abierto
@@ -84,6 +43,17 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
 
   const handleImageError = () => {
     setImageVisible(false); // Oculta la imagen si hay un error al cargar
+  };
+
+  // Handler para navegar a servicios (usando la misma lógica que el login)
+  const handleNavigateToServices = () => {
+    // Cerrar el modal primero
+    onClose();
+    
+    // Navegar a services usando handleNavigation (igual que en el login)
+    if (typeof handleNavigation === 'function') {
+      handleNavigation("services");
+    }
   };
 
   // No renderizar nada si no hay terapia seleccionada o el modal está cerrado
@@ -146,25 +116,16 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
         {/* Pie del modal */}
         <div className="modal-footer" style={{ padding: '20px', textAlign: 'center' }}>
           <button
-            className={`nav-link btn btn-primary ${activeContent === "services" ? "active" : ""}`}
-            onClick={() => {
-              try {
-                // Intenta navegar a services de forma segura
-                const navigationSuccessful = navigateToServices();
-                
-                // Cierra el modal después de un breve retraso para permitir que la navegación ocurra
-                setTimeout(() => {
-                  onClose();
-                }, navigationSuccessful ? 200 : 0);
-                
-                // Cierra el menú móvil si estaba abierto
-                setMobileMenuOpen(false);
-              } catch (error) {
-                console.error("Error en el botón:", error);
-                onClose();
-              }
+            className="btn btn-primary"
+            onClick={handleNavigateToServices}
+            style={{ 
+              border: 'none', 
+              background: '#4CAF50', 
+              color: 'white', 
+              padding: '10px 20px', 
+              borderRadius: '5px', 
+              cursor: 'pointer' 
             }}
-            style={{ border: 'none', background: '#4CAF50', color: 'white', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' }}
           >
             Saber Más
           </button>

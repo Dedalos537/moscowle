@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 const ServicesContent = () => {
     const [selectedTerapia, setSelectedTerapia] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-   
+
     const terapiasInfo = {
         lectoEscritura: {
             title: "LECTO-ESCRITURA",
@@ -152,7 +152,7 @@ const ServicesContent = () => {
     };
 
     const getCategoryColor = (category) => {
-        switch(category) {
+        switch (category) {
             case "Terapias": return { primary: "#667eea", secondary: "#764ba2" };
             case "Terapias Integrales": return { primary: "#28a745", secondary: "#20c997" };
             case "Apoyo Virtual": return { primary: "#17a2b8", secondary: "#6f42c1" };
@@ -163,11 +163,11 @@ const ServicesContent = () => {
 
     const ServiceCard = ({ service, serviceKey, category }) => {
         const colors = getCategoryColor(category);
-        
+
         return (
             <div className="col-lg-3 col-md-6 col-sm-6 mb-4">
-                <div 
-                    className="service-card h-100" 
+                <div
+                    className="service-card h-100"
                     onClick={() => openModal(serviceKey)}
                     style={{
                         cursor: "pointer",
@@ -181,7 +181,7 @@ const ServicesContent = () => {
                     }}
                 >
                     {/* Image Section */}
-                    <div 
+                    <div
                         className="card-image-container"
                         style={{
                             height: "200px",
@@ -190,8 +190,8 @@ const ServicesContent = () => {
                             background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`
                         }}
                     >
-                        <img 
-                            src={service.image} 
+                        <img
+                            src={service.image}
                             alt={service.title}
                             style={{
                                 width: "100%",
@@ -204,7 +204,7 @@ const ServicesContent = () => {
                                 e.target.style.display = 'none';
                             }}
                         />
-                        <div 
+                        <div
                             className="overlay"
                             style={{
                                 position: "absolute",
@@ -222,9 +222,9 @@ const ServicesContent = () => {
                         >
                             <div style={{ fontSize: "3rem" }}>{service.icon}</div>
                         </div>
-                        
+
                         {/* Icon Badge */}
-                        <div 
+                        <div
                             style={{
                                 position: "absolute",
                                 top: "15px",
@@ -245,7 +245,7 @@ const ServicesContent = () => {
                     </div>
 
                     {/* Content Section */}
-                    <div 
+                    <div
                         className="card-body"
                         style={{
                             padding: "25px 20px",
@@ -254,7 +254,7 @@ const ServicesContent = () => {
                             minHeight: "180px"
                         }}
                     >
-                        <h5 
+                        <h5
                             style={{
                                 fontWeight: "700",
                                 fontSize: "1.1rem",
@@ -268,8 +268,8 @@ const ServicesContent = () => {
                         >
                             {service.title}
                         </h5>
-                        
-                        <p 
+
+                        <p
                             style={{
                                 color: "#6c757d",
                                 fontSize: "0.9rem",
@@ -279,11 +279,11 @@ const ServicesContent = () => {
                                 textAlign: "justify"
                             }}
                         >
-                            {service.description.length > 120 
-                                ? service.description.substring(0, 120) + "..." 
+                            {service.description.length > 120
+                                ? service.description.substring(0, 120) + "..."
                                 : service.description}
                         </p>
-                        
+
                         <div style={{ textAlign: "center" }}>
                             <button
                                 style={{
@@ -312,7 +312,8 @@ const ServicesContent = () => {
     return (
         <div style={{ fontFamily: "Arial, sans-serif" }}>
             {/* Header Section */}
-            <div 
+            <div
+                className="container-fluid page-header mb-5"
                 style={{
                     padding: "100px 0",
                     marginBottom: "60px",
@@ -320,20 +321,19 @@ const ServicesContent = () => {
                     overflow: "hidden"
                 }}
             >
-                <div 
+                <div
                     style={{
                         position: "absolute",
                         top: 0,
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"10\" cy=\"10\" r=\"1\" fill=\"white\" opacity=\"0.1\"/><circle cx=\"90\" cy=\"90\" r=\"1\" fill=\"white\" opacity=\"0.1\"/><circle cx=\"50\" cy=\"30\" r=\"0.5\" fill=\"white\" opacity=\"0.1\"/></svg>')",
                         animation: "float 20s ease-in-out infinite"
                     }}
                 />
-                
+
                 <div className="container" style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
-                    <h1 
+                    <h1
                         style={{
                             fontSize: "3.5rem",
                             fontWeight: "800",
@@ -344,16 +344,7 @@ const ServicesContent = () => {
                     >
                         Nuestros Servicios
                     </h1>
-                    <p 
-                        style={{
-                            fontSize: "1.3rem",
-                            color: "rgba(255,255,255,0.9)",
-                            marginBottom: "30px",
-                            fontWeight: "300"
-                        }}
-                    >
-                        Ofrecemos una amplia gama de terapias especializadas para el desarrollo integral
-                    </p>
+
                     <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "1rem" }}>
                         <span>Inicio</span>
                         <span style={{ margin: "0 15px" }}>»</span>
@@ -364,49 +355,11 @@ const ServicesContent = () => {
 
             {/* Services Content */}
             <div className="container" style={{ padding: "0 15px" }}>
-                {/* Terapias Section */}
-                <div style={{ marginBottom: "80px" }}>
-                    <div style={{ textAlign: "center", marginBottom: "50px" }}>
-                        <h2 
-                            style={{
-                                fontSize: "2.8rem",
-                                fontWeight: "700",
-                                color: "#667eea",
-                                marginBottom: "15px"
-                            }}
-                        >
-                            Terapias Especializadas
-                        </h2>
-                        <p 
-                            style={{
-                                fontSize: "1.1rem",
-                                color: "#6c757d",
-                                marginBottom: "25px"
-                            }}
-                        >
-                            Terapias individualizadas para el desarrollo de habilidades específicas
-                        </p>
-                        <div 
-                            style={{
-                                width: "80px",
-                                height: "4px",
-                                background: "linear-gradient(135deg, #667eea, #764ba2)",
-                                margin: "0 auto",
-                                borderRadius: "2px"
-                            }}
-                        />
-                    </div>
-                    <div className="row">
-                        {getServicesByCategory("Terapias").map(([key, service]) => (
-                            <ServiceCard key={key} service={service} serviceKey={key} category="Terapias" />
-                        ))}
-                    </div>
-                </div>
 
                 {/* Terapias Integrales Section */}
                 <div style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
-                        <h2 
+                        <h2
                             style={{
                                 fontSize: "2.8rem",
                                 fontWeight: "700",
@@ -416,7 +369,7 @@ const ServicesContent = () => {
                         >
                             Terapias Integrales
                         </h2>
-                        <p 
+                        <p
                             style={{
                                 fontSize: "1.1rem",
                                 color: "#6c757d",
@@ -425,7 +378,7 @@ const ServicesContent = () => {
                         >
                             Programas especializados para condiciones específicas
                         </p>
-                        <div 
+                        <div
                             style={{
                                 width: "80px",
                                 height: "4px",
@@ -442,10 +395,51 @@ const ServicesContent = () => {
                     </div>
                 </div>
 
+                {/* Terapias Section */}
+                <div style={{ marginBottom: "80px" }}>
+                    <div style={{ textAlign: "center", marginBottom: "50px" }}>
+                        <h2
+                            style={{
+                                fontSize: "2.8rem",
+                                fontWeight: "700",
+                                color: "#667eea",
+                                marginBottom: "15px"
+                            }}
+                        >
+                            Terapias Especializadas
+                        </h2>
+                        <p
+                            style={{
+                                fontSize: "1.1rem",
+                                color: "#6c757d",
+                                marginBottom: "25px"
+                            }}
+                        >
+                            Terapias individualizadas para el desarrollo de habilidades específicas
+                        </p>
+                        <div
+                            style={{
+                                width: "80px",
+                                height: "4px",
+                                background: "linear-gradient(135deg, #667eea, #764ba2)",
+                                margin: "0 auto",
+                                borderRadius: "2px"
+                            }}
+                        />
+                    </div>
+                    <div className="row">
+                        {getServicesByCategory("Terapias").map(([key, service]) => (
+                            <ServiceCard key={key} service={service} serviceKey={key} category="Terapias" />
+                        ))}
+                    </div>
+                </div>
+
+
+
                 {/* Apoyo Virtual Section */}
                 <div style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
-                        <h2 
+                        <h2
                             style={{
                                 fontSize: "2.8rem",
                                 fontWeight: "700",
@@ -455,7 +449,7 @@ const ServicesContent = () => {
                         >
                             Apoyo Virtual
                         </h2>
-                        <p 
+                        <p
                             style={{
                                 fontSize: "1.1rem",
                                 color: "#6c757d",
@@ -464,7 +458,7 @@ const ServicesContent = () => {
                         >
                             Servicios de terapia online y apoyo a distancia
                         </p>
-                        <div 
+                        <div
                             style={{
                                 width: "80px",
                                 height: "4px",
@@ -484,7 +478,7 @@ const ServicesContent = () => {
                 {/* Material Concreto Section */}
                 <div style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
-                        <h2 
+                        <h2
                             style={{
                                 fontSize: "2.8rem",
                                 fontWeight: "700",
@@ -494,7 +488,7 @@ const ServicesContent = () => {
                         >
                             Material Concreto
                         </h2>
-                        <p 
+                        <p
                             style={{
                                 fontSize: "1.1rem",
                                 color: "#6c757d",
@@ -503,7 +497,7 @@ const ServicesContent = () => {
                         >
                             Recursos didácticos y material especializado
                         </p>
-                        <div 
+                        <div
                             style={{
                                 width: "80px",
                                 height: "4px",
@@ -523,7 +517,7 @@ const ServicesContent = () => {
 
             {/* Modal Simple */}
             {isModalOpen && selectedTerapia && (
-                <div 
+                <div
                     style={{
                         position: "fixed",
                         top: 0,
@@ -539,7 +533,7 @@ const ServicesContent = () => {
                     }}
                     onClick={closeModal}
                 >
-                    <div 
+                    <div
                         style={{
                             background: "white",
                             borderRadius: "20px",
@@ -567,12 +561,12 @@ const ServicesContent = () => {
                         >
                             ×
                         </button>
-                        
+
                         <div style={{ textAlign: "center", marginBottom: "30px" }}>
                             <div style={{ fontSize: "4rem", marginBottom: "20px" }}>
                                 {selectedTerapia.icon}
                             </div>
-                            <h2 style={{ 
+                            <h2 style={{
                                 color: getCategoryColor(selectedTerapia.category).primary,
                                 fontSize: "2rem",
                                 fontWeight: "700",
@@ -580,8 +574,8 @@ const ServicesContent = () => {
                             }}>
                                 {selectedTerapia.title}
                             </h2>
-                            <img 
-                                src={selectedTerapia.image} 
+                            <img
+                                src={selectedTerapia.image}
                                 alt={selectedTerapia.title}
                                 style={{
                                     width: "100%",
@@ -591,7 +585,7 @@ const ServicesContent = () => {
                                     marginBottom: "20px"
                                 }}
                             />
-                            <p style={{ 
+                            <p style={{
                                 color: "#6c757d",
                                 fontSize: "1.1rem",
                                 lineHeight: "1.7",
