@@ -45,7 +45,8 @@ function App() {
       </div>
       <div className={`transition-content ${activeContent === "login" ? "show" : ""}`}/>
       {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}</div>
-      <Footer handleNavigation={handleNavigation} activeContent={activeContent} /><Modal isOpen={isModalOpen} toggleModal={toggleModal} />
+      <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
+      <Modal isOpen={isModalOpen} toggleModal={toggleModal} />
     </>
   );
 }
