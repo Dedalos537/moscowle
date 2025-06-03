@@ -26,16 +26,30 @@ public class Contactanos {
     @JoinColumn(name = "id_usuario")
     private Usuario usuario;
 
+<<<<<<< HEAD
 
     public Contactanos(Long id, String nombre, String correo, String sujeto, String mensaje, LocalDate fecha,
             Usuario usuario) {
         this.id = id;
+=======
+    // Constructor vacío
+    public Contactanos() {
+        this.fecha = LocalDate.now();
+    }
+    
+    // Constructor con parámetros
+    public Contactanos(String nombre, String correo, String sujeto, String mensaje) {
+>>>>>>> origin/oscar
         this.nombre = nombre;
         this.correo = correo;
         this.sujeto = sujeto;
         this.mensaje = mensaje;
+<<<<<<< HEAD
         this.fecha = fecha;
         this.usuario = usuario;
+=======
+        this.fecha = LocalDate.now();
+>>>>>>> origin/oscar
     }
 
     public Long getId() {
@@ -93,4 +107,9 @@ public class Contactanos {
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
     }
+<<<<<<< HEAD
+=======
+
+    
+>>>>>>> origin/oscar
 }

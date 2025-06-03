@@ -6,6 +6,7 @@ import AboutContent from "./components/MainContent/AboutContent";
 import ServicesContent from "./components/MainContent/ServicesContent"; 
 import ContactContent from "./components/MainContent/ContactContent"; 
 import Modal from "./components/Modals/Modal";
+import Login from "./components/Auth/Login";
 import "./App.css";
 import "owl.carousel/dist/assets/owl.carousel.min.css";
 import "owl.carousel/dist/assets/owl.theme.default.min.css";
@@ -24,29 +25,28 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <><div className="App">
       <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
-      
+
       <div className={`transition-content ${activeContent === "home" ? "show" : ""}`}>
         {activeContent === "home" && <MainContent />}
       </div>
-      
+
       <div className={`transition-content ${activeContent === "about" ? "show" : ""}`}>
         {activeContent === "about" && <AboutContent />}
       </div>
-      
+
       <div className={`transition-content ${activeContent === "services" ? "show" : ""}`}>
         {activeContent === "services" && <ServicesContent />}
       </div>
-      
+
       <div className={`transition-content ${activeContent === "contact" ? "show" : ""}`}>
         {activeContent === "contact" && <ContactContent />}
       </div>
-      
-      <Footer handleNavigation={handleNavigation} activeContent={activeContent}/>
-      
-      <Modal isOpen={isModalOpen} toggleModal={toggleModal} />
-    </div>
+      <div className={`transition-content ${activeContent === "login" ? "show" : ""}`}/>
+      {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}</div>
+      <Footer handleNavigation={handleNavigation} activeContent={activeContent} /><Modal isOpen={isModalOpen} toggleModal={toggleModal} />
+    </>
   );
 }
 

@@ -1,10 +1,11 @@
 package com.example.moscowle.models;
+
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "trabajador")
 public class Trabajador {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,6 +19,10 @@ public class Trabajador {
     private String cargo;
 
     private String especialidad;
+
+    @OneToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 
     // Getters y Setters
     public Long getId() {

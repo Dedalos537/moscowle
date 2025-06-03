@@ -19,6 +19,10 @@ public class Apoderado {
 
     private String direccion;
 
+    @OneToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     // Getters y Setters
     public Long getId() {
         return id;
