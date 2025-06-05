@@ -65,87 +65,87 @@ const Navbar = ({ handleNavigation, activeContent }) => {
               >
                 <div className="navbar-nav w-100">
                   <div className="nav-item dropdown">
-                    <a href="#" className="nav-link" data-toggle="dropdown">
+                    <a href="#!" className="nav-link" data-toggle="dropdown">
                       Terapias{" "}
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         CONDUCTUAL
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         DE LENGUAJE
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         DE APRENDIZAJE
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         OCUPACIONAL
                       </a>
                     </div>
                   </div>
                   <div className="nav-item dropdown">
-                    <a href="#" className="nav-link" data-toggle="dropdown">
+                    <a href="#!" className="nav-link" data-toggle="dropdown">
                       Terapias Integrales{" "}
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="" className="dropdown-item">
-                        AUTISMO (TE A)
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                        AUTISMO (TEA)
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         TDA
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         TDAH
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         SÍNDROME DE DOWN
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         DISCAPACIDAD INTELECTUAL
                       </a>
                     </div>
                   </div>
                   <div className="nav-item dropdown">
-                    <a href="#" className="nav-link" data-toggle="dropdown">
+                    <a href="#!" className="nav-link" data-toggle="dropdown">
                       Apoyo Virtual{" "}
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         COMUNICACIÓN ORAL
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         MATEMÁTICAS
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         DESARROLLO COGNITIVO
                       </a>
                     </div>
                   </div>
                   <div className="nav-item dropdown">
-                    <a href="#" className="nav-link" data-toggle="dropdown">
+                    <a href="#!" className="nav-link" data-toggle="dropdown">
                       Material Concreto
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         COMUNICACIÓN ORAL
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         MATEMÁTICAS
                       </a>
-                      <a href="" className="dropdown-item">
+                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
                         DESARROLLO COGNITIVO
                       </a>
                     </div>

@@ -11,7 +11,7 @@ import emailjs from "@emailjs/browser";
 
 
 
-const MainContent = ({ toggleModal }) => {
+const MainContent = ({ toggleModal, handleNavigation }) => {
     const [selectedTerapia, setSelectedTerapia] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({
@@ -591,6 +591,8 @@ const MainContent = ({ toggleModal }) => {
                 isOpen={isModalOpen}
                 onRequestClose={closeModal}
                 selectedTerapia={selectedTerapia}
+                handleNavigation={handleNavigation}
+                activeContent="services"
             />
 
         </main>

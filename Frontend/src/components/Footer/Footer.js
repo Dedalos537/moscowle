@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const Footer = () => {
+const Footer = ({handleNavigation}) => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [showPrivacidad, setShowPrivacidad] = useState(false);
@@ -13,12 +13,6 @@ const Footer = () => {
     { label: "Material Concreto", target: "services" },
   ];
 
-  const handleNavigation = (target) => {
-    const element = document.getElementById(target);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-  };
 
   const handleInputChange = (e) => setEmail(e.target.value);
 
@@ -94,7 +88,7 @@ const Footer = () => {
                       key={index}
                       className="text-white mb-2"
                       href="#!"
-                      onClick={() => handleNavigation(service.target)}
+                      onClick={() => handleNavigation("services")}
                     >
                       <i className="fa fa-angle-right mr-2"></i>{service.label}
                     </a>
