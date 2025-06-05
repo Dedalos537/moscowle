@@ -357,7 +357,7 @@ const ServicesContent = () => {
             <div className="container" style={{ padding: "0 15px" }}>
 
                 {/* Terapias Integrales Section */}
-                <div style={{ marginBottom: "80px" }}>
+                <div id="TerapiasIntegrales" style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
                         <h2
                             style={{
@@ -396,7 +396,7 @@ const ServicesContent = () => {
                 </div>
 
                 {/* Terapias Section */}
-                <div style={{ marginBottom: "80px" }}>
+                <div id="Terapias" style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
                         <h2
                             style={{
@@ -437,7 +437,7 @@ const ServicesContent = () => {
 
 
                 {/* Apoyo Virtual Section */}
-                <div style={{ marginBottom: "80px" }}>
+                <div id="ApoyoVirtual" style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
                         <h2
                             style={{
@@ -476,7 +476,7 @@ const ServicesContent = () => {
                 </div>
 
                 {/* Material Concreto Section */}
-                <div style={{ marginBottom: "80px" }}>
+                <div id="MaterialConcreto" style={{ marginBottom: "80px" }}>
                     <div style={{ textAlign: "center", marginBottom: "50px" }}>
                         <h2
                             style={{

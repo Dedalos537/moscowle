@@ -9,8 +9,23 @@ const Navbar = ({ handleNavigation, activeContent }) => {
 
   const handleLinkClick = (content) => {
     handleNavigation(content);
-
     setMobileMenuOpen(false); // Cierra el menú al cambiar de pestaña
+  };
+
+  // Nueva función para manejar navegación a secciones específicas
+  const handleSectionNavigation = (sectionId) => {
+    // Primero navegar a la página de servicios
+    handleNavigation("services");
+    
+    // Esperar un poco para que se renderice la página y luego hacer scroll
+    setTimeout(() => {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
+    
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -70,19 +85,19 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("Terapias")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("Terapias")}>
                         CONDUCTUAL
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("Terapias")}>
                         DE LENGUAJE
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("Terapias")}>
                         DE APRENDIZAJE
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("Terapias")}>
                         OCUPACIONAL
                       </a>
                     </div>
@@ -93,19 +108,19 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
                         AUTISMO (TEA)
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
                         TDA
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
                         TDAH
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
                         SÍNDROME DE DOWN
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
                         DISCAPACIDAD INTELECTUAL
                       </a>
                     </div>
@@ -116,16 +131,16 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("ApoyoVirtual")}>
                         COMUNICACIÓN ORAL
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("ApoyoVirtual")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("ApoyoVirtual")}>
                         MATEMÁTICAS
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("ApoyoVirtual")}>
                         DESARROLLO COGNITIVO
                       </a>
                     </div>
@@ -136,16 +151,16 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         COMUNICACIÓN ORAL
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         LECTO-ESCRITURA
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         MATEMÁTICAS
                       </a>
-                      <a href="#!" className="dropdown-item" onClick={() => handleLinkClick("services")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         DESARROLLO COGNITIVO
                       </a>
                     </div>
@@ -281,6 +296,87 @@ const Navbar = ({ handleNavigation, activeContent }) => {
             >
               Servicios
             </a>
+
+            {/* Menú móvil expandido para servicios */}
+            <div className="ml-3">
+              <div className="nav-link font-weight-bold text-primary" style={{fontSize: '0.9rem'}}>
+                Terapias Especializadas
+              </div>
+              <div className="ml-2">
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("Terapias")}>
+                  Lecto-escritura
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("Terapias")}>
+                  Conductual
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("Terapias")}>
+                  De Lenguaje
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("Terapias")}>
+                  De Aprendizaje
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("Terapias")}>
+                  Ocupacional
+                </a>
+              </div>
+              
+              <div className="nav-link font-weight-bold text-success" style={{fontSize: '0.9rem'}}>
+                Terapias Integrales
+              </div>
+              <div className="ml-2">
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
+                  Autismo (TEA)
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
+                  TDA
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
+                  TDAH
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
+                  Síndrome de Down
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("TerapiasIntegrales")}>
+                  Discapacidad Intelectual
+                </a>
+              </div>
+              
+              <div className="nav-link font-weight-bold text-info" style={{fontSize: '0.9rem'}}>
+                Apoyo Virtual
+              </div>
+              <div className="ml-2">
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("ApoyoVirtual")}>
+                  Comunicación Oral
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("ApoyoVirtual")}>
+                  Lecto-escritura
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("ApoyoVirtual")}>
+                  Matemáticas
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("ApoyoVirtual")}>
+                  Desarrollo Cognitivo
+                </a>
+              </div>
+              
+              <div className="nav-link font-weight-bold text-warning" style={{fontSize: '0.9rem'}}>
+                Material Concreto
+              </div>
+              <div className="ml-2">
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                  Comunicación Oral
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                  Lecto-escritura
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                  Matemáticas
+                </a>
+                <a href="#!" className="nav-link text-muted" style={{fontSize: '0.85rem'}} onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                  Desarrollo Cognitivo
+                </a>
+              </div>
+            </div>
 
             <a
               href="#!"

@@ -7,12 +7,11 @@ const Footer = ({handleNavigation}) => {
   const [showTerminos, setShowTerminos] = useState(false);
 
   const services = [
-    { label: "Terapias", target: "services" },
-    { label: "Terapias Integrales", target: "services" },
-    { label: "Apoyo Virtual", target: "services" },
-    { label: "Material Concreto", target: "services" },
+    { label: "Terapias", target: "Terapias" },
+    { label: "Terapias Integrales", target: "TerapiasIntegrales" },
+    { label: "Apoyo Virtual", target: "ApoyoVirtual" },
+    { label: "Material Concreto", target: "MaterialConcreto" },
   ];
-
 
   const handleInputChange = (e) => setEmail(e.target.value);
 
@@ -35,6 +34,28 @@ const Footer = ({handleNavigation}) => {
     } catch (error) {
       console.error("Error al enviar el correo:", error);
       setMessage("Hubo un error al enviar el correo. Inténtalo más tarde.");
+    }
+  };
+
+  // Función corregida para manejar navegación con smooth scroll
+  const handleSectionNavigation = (sectionId) => {
+    // Si ya estamos en la página de servicios, hacer scroll directo
+    if (window.location.pathname === '/services' || window.location.hash === '#services') {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } else {
+      // Si estamos en otra página, navegar primero y luego hacer scroll
+      handleNavigation("services");
+      
+      // Esperar a que se renderice la página y luego hacer scroll
+      setTimeout(() => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 300); // Aumenté el tiempo a 300ms para mejor estabilidad
     }
   };
 
@@ -86,9 +107,13 @@ const Footer = ({handleNavigation}) => {
                   {services.map((service, index) => (
                     <a
                       key={index}
-                      className="text-white mb-2"
+                      className="text-white mb-2 text-decoration-none"
                       href="#!"
-                      onClick={() => handleNavigation("services")}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleSectionNavigation(service.target);
+                      }}
+                      style={{ cursor: 'pointer' }}
                     >
                       <i className="fa fa-angle-right mr-2"></i>{service.label}
                     </a>
@@ -130,13 +155,40 @@ const Footer = ({handleNavigation}) => {
           <div className="col-lg-6 text-center text-md-right">
             <ul className="nav d-inline-flex">
               <li className="nav-item">
-                <a className="nav-link text-white py-0" href="#!" onClick={() => setShowPrivacidad(true)}>Privacidad</a>
+                <a 
+                  className="nav-link text-white py-0" 
+                  href="#!" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPrivacidad(true);
+                  }}
+                >
+                  Privacidad
+                </a>
               </li>
               <li className="nav-item">
-                <a className="nav-link text-white py-0" href="#!" onClick={() => setShowTerminos(true)}>Términos</a>
+                <a 
+                  className="nav-link text-white py-0" 
+                  href="#!" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowTerminos(true);
+                  }}
+                >
+                  Términos
+                </a>
               </li>
               <li className="nav-item">
-                <a className="nav-link text-white py-0" href="#!" onClick={() => handleNavigation("contact")}>Ayuda</a>
+                <a 
+                  className="nav-link text-white py-0" 
+                  href="#!" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavigation("contact");
+                  }}
+                >
+                  Ayuda
+                </a>
               </li>
             </ul>
           </div>
@@ -147,9 +199,3 @@ const Footer = ({handleNavigation}) => {
 };
 
 export default Footer;
-
-
-
-
-
-
