@@ -1,0 +1,156 @@
+.notification-bar {
+    position: fixed;
+    top: 0;
+    right: -300px; /* Oculta fuera de la pantalla */
+    width: 300px;
+    height: 100vh;
+    background-color: white;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    transition: right 0.3s ease; 
+    z-index: 999;
+    padding: 20px;
+    
+}
+
+.notification-bar.active {
+    right: 0; 
+    
+}
+
+
+.notification-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+background-color: white;
+padding: 10px 15px;
+border-bottom: 1px solid #e0e0e0;
+
+}
+
+.notification-header h2 {
+font-size: 18px;
+color: #333;
+margin-right: 50px;
+}
+
+.back-btn {
+background-color: transparent;
+border: none;
+font-size: 18px;
+color: #333;
+cursor: pointer;
+
+}
+
+.notifications {
+padding: 10px;
+}
+
+.notification {
+display: flex;
+align-items: center;
+padding: 10px 0;
+border-bottom: 1px solid #e0e0e0;
+}
+
+.notification-icon {
+font-size: 24px;
+margin-right: 10px;
+color: #333;
+}
+
+.notification-content {
+flex: 1;
+margin-left: 20px;
+}
+
+.notification-course {
+font-size: 14px;
+font-weight: bold;
+color: #333;
+}
+
+.notification-week {
+font-size: 12px;
+color: #666;
+}
+
+.notification-type {
+font-size: 14px;
+color: #008000;
+margin-top: 5px;
+}
+
+.notification-due,
+.notification-date {
+font-size: 12px;
+color: #999;
+margin-top: 5px;
+}
+
+.tarea .notification-type {
+color: #8a2be2;
+}
+
+.encuesta .notification-type {
+color: #008000;
+}
+
+.comentario .notification-type {
+color: #0000ff;
+}
+
+.notification:last-child {
+border-bottom: none;
+}
+
+
+/* Modo oscuro para la barra de notificaciones */
+.dark .notification-bar {
+   background-color: #3f3d3d;  
+   border: 1px solid #555; 
+}
+
+.dark .notification-bar .notification-header {
+   background-color: #3f3d3d;
+   color: #ffffff; /* Texto  encabezado */
+}
+
+.dark .notification-bar .notification-header h2 {
+   color: #ffffff; /*título de notificaciones */
+}
+
+.dark .notification-bar .notifications .notification-content p {
+   color: #ffffff; /*  párrafos dentro de las notificaciones */
+}
+
+.dark .notification-bar .notification {
+   background-color: #3f3d3d;  
+   color: #ffffff; 
+   border-bottom: 1px solid #555;
+}
+
+.dark .notification-bar .notification .notification-icon i {
+   color: #a3a9a5; 
+}
+
+.dark .notification-bar .back-btn i {
+   color: #ffffff;
+}
+
+/* Colores específicos para los tipos de notificación en modo oscuro */
+.dark .notification.tarea .notification-content .notification-type {
+  color: #8a2be2 !important; 
+}
+
+.dark .notification.encuesta .notification-content .notification-type {
+  color: #008000 !important; 
+}
+
+.dark .notification.comentario .notification-content .notification-type {
+  color: #0000ff !important; 
+}
+body.dark .warning {
+   color: #ffa500; /* naranja */
+}
