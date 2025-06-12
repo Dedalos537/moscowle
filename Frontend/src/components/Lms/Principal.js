@@ -62,7 +62,7 @@ const CoursesComponent = ({ handleNavigation }) => {
   // Función para regresar al inicio
   const goBackToHome = () => {
     if (handleNavigation) {
-      handleNavigation("home");
+      handleNavigation("/");
     }
   };
 

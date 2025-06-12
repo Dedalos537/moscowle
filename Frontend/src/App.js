@@ -1,4 +1,10 @@
-import React, { useState } from "react";
+// App.js - Enfoque alternativo con lazy loading
+import React, { useState, Suspense } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route
+} from "react-router-dom";
 import Navbar from "./components/Navbar/Navbar";
 import Footer from "./components/Footer/Footer";
 import MainContent from "./components/MainContent/MainContent";
@@ -11,6 +17,9 @@ import "./App.css";
 import "owl.carousel/dist/assets/owl.carousel.min.css";
 import "owl.carousel/dist/assets/owl.theme.default.min.css";
 import "owl.carousel/dist/owl.carousel.min.js";
+
+// Carga lazy del componente LMS para evitar que su CSS se cargue hasta que sea necesario
+const CoursesComponent = React.lazy(() => import("./components/Lms/Principal"));
 
 function App() {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -25,29 +34,44 @@ function App() {
   };
 
   return (
-    <><div className="App">
-      <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
+    <Router>
+      <Routes>
+        {/* Rutas principales del sitio web */}
+        <Route
+          path="/"
+          element={
+            <div className="App" data-theme="main-site">
+              <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
 
-      <div className={`transition-content ${activeContent === "home" ? "show" : ""}`}>
-        {activeContent === "home" && <MainContent handleNavigation={handleNavigation}/>}
-      </div>
+              {activeContent === "home" && <MainContent />}
+              {activeContent === "about" && <AboutContent />}
+              {activeContent === "services" && <ServicesContent />}
+              {activeContent === "contact" && <ContactContent />}
+              {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}
 
-      <div className={`transition-content ${activeContent === "about" ? "show" : ""}`}>
-        {activeContent === "about" && <AboutContent />}
-      </div>
+              <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
+              <Modal isOpen={isModalOpen} toggleModal={toggleModal} />
+            </div>
+          }
+        />
 
-      <div className={`transition-content ${activeContent === "services" ? "show" : ""}`}>
-        {activeContent === "services" && <ServicesContent />}
-      </div>
-
-      <div className={`transition-content ${activeContent === "contact" ? "show" : ""}`}>
-        {activeContent === "contact" && <ContactContent />}
-      </div>
-      <div className={`transition-content ${activeContent === "login" ? "show" : ""}`}/>
-      {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}</div>
-      <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
-      <Modal  handleNavigation={handleNavigation} activeContent={activeContent} isOpen={isModalOpen} toggleModal={toggleModal} />
-    </>
+        {/* Rutas del panel de administración con carga lazy */}
+        <Route 
+          path="/lms/*" 
+          element={
+            <div className="lms-root" data-theme="lms">
+              <Suspense fallback={
+                <div className="lms-loading">
+                  <div className="loading-spinner">Cargando LMS...</div>
+                </div>
+              }>
+                <CoursesComponent />
+              </Suspense>
+            </div>
+          } 
+        />
+      </Routes>
+    </Router>
   );
 }
 
