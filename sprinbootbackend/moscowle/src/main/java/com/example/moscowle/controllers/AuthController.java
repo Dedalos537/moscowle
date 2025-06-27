@@ -1,14 +1,11 @@
-// src/main/java/com/moscowle/controller/AuthController.java
-
 package com.example.moscowle.controllers;
 
-import com.example.moscowle.models.Usuario;
-import com.example.moscowle.repository.UsuarioRepository;
+import com.example.moscowle.service.AuthService; 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus; 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -16,28 +13,23 @@ import java.util.Map;
 public class AuthController {
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private AuthService authService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
         String correo = loginData.get("email");
-        String contrasena = loginData.get("password");
+        String rawPassword = loginData.get("password"); 
 
-        Usuario usuario = usuarioRepository.findByCorreoAndContrasena(correo, contrasena);
+    
+        Map<String, Object> responseData = authService.login(correo, rawPassword);
 
-        if (usuario == null) {
-            return ResponseEntity.status(401).body("Credenciales inválidas o acceso no autorizado");
+        if (responseData == null) {
+    
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas o acceso no autorizado");
         }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", usuario.getId());
-        response.put("correo", usuario.getCorreo());
-        response.put("rol", usuario.getRol().getNombre());
+        System.out.println("Login exitoso para: " + correo); 
 
-        System.out.println("Intentando login con: " + correo);
-
-        
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(responseData);
     }
 }

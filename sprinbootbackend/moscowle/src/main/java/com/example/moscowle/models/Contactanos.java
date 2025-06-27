@@ -43,8 +43,6 @@ public class Contactanos {
         this.correo = correo;
         this.sujeto = sujeto;
         this.mensaje = mensaje;
-        this.fecha = fecha;
-        this.usuario = usuario;
 
         this.fecha = LocalDate.now();
 

@@ -1,10 +1,7 @@
-// Paso 1: Crear la estructura para la autenticación y registro supervisado
-// Archivo: src/components/Auth/Login.js
-// Basado en los requisitos y bajo el estándar ISO 25010 (funcionalidad, usabilidad, seguridad...)
-
 import React, { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import axiosInstance from "../../utils/axiosConfig";
+import './Login.css'; // Asegúrate de crear este archivo CSS
 
 export default function Login({ handleNavigation }) {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -60,10 +57,15 @@ export default function Login({ handleNavigation }) {
   };
 
   return (
+    <>
+    <style>
+      
+      
+    </style>
     <div className="login-page-container">
-      <div style={{ maxWidth: "400px", margin: "auto" }}>
+      <div className="login-form-container">
         <div className="text-center mb-4">
-          <User size={40} color="white" />
+          <User  size={40} color="white" />
           <h1>CENTRO DE TERAPIAS</h1>
           <p>JUAN PABLO II</p>
           <p>Iniciar Sesión</p>
@@ -111,5 +113,6 @@ export default function Login({ handleNavigation }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
