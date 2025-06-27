@@ -11,6 +11,8 @@ import "./App.css";
 import "owl.carousel/dist/assets/owl.carousel.min.css";
 import "owl.carousel/dist/assets/owl.theme.default.min.css";
 import "owl.carousel/dist/owl.carousel.min.js";
+import AdminDashboard from "./components/Admin/Dashboard";
+
 
 function App() {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -47,6 +49,9 @@ function App() {
       {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}</div>
       <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
       <Modal  handleNavigation={handleNavigation} activeContent={activeContent} isOpen={isModalOpen} toggleModal={toggleModal} />
+
+      {activeContent === "dashboard" && <AdminDashboard />}
+
     </>
   );
 }
