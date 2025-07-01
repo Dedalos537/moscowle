@@ -4,37 +4,73 @@ package com.example.moscowle.controllers;
 
 import com.example.moscowle.models.SolicitudRegistro;
 import com.example.moscowle.repository.SolicitudRegistroRepository;
+import com.example.moscowle.service.RegistroService;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/registro")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class SolicitudRegistroController {
 
     @Autowired
-    private SolicitudRegistroRepository solicitudRepo;
+    private RegistroService registroService;
 
     @PostMapping
-    public ResponseEntity<SolicitudRegistro> registrarSolicitud(@RequestBody SolicitudRegistro solicitud) {
-        solicitud.setEstado("PENDIENTE");
-        return ResponseEntity.ok(solicitudRepo.save(solicitud));
+    public ResponseEntity<?> registrarSolicitud(@RequestBody SolicitudRegistro solicitud) {
+        try {
+            System.out.println("Recibiendo solicitud de registro para: " + solicitud.getCorreo());
+            
+            SolicitudRegistro solicitudGuardada = registroService.crearSolicitud(solicitud);
+            
+            return ResponseEntity.ok(Map.of(
+                "message", "Solicitud enviada correctamente. Pronto será revisada.",
+                "solicitud", solicitudGuardada
+            ));
+            
+        } catch (RuntimeException e) {
+            System.err.println("Error en registro: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            
+        } catch (Exception e) {
+            System.err.println("Error interno en registro: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error interno del servidor"));
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<SolicitudRegistro>> obtenerSolicitudes() {
-        return ResponseEntity.ok(solicitudRepo.findAll());
+    public ResponseEntity<Object> obtenerSolicitudes() {
+        try {
+            return ResponseEntity.ok(registroService.obtenerTodasLasSolicitudes());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PutMapping("/{id}/aprobar")
     public ResponseEntity<?> aprobarSolicitud(@PathVariable Long id) {
-        SolicitudRegistro solicitud = solicitudRepo.findById(id).orElse(null);
-        if (solicitud == null) return ResponseEntity.notFound().build();
+        try {
+            String passwordTemporal = generarPasswordTemporal();
+            String mensaje = registroService.aprobarSolicitud(id, passwordTemporal);
+            
+            return ResponseEntity.ok(Map.of("message", mensaje));
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error interno del servidor"));
+        }
+    }
 
-        solicitud.setEstado("APROBADO");
-        solicitudRepo.save(solicitud);
-        return ResponseEntity.ok("Solicitud aprobada");
+    private String generarPasswordTemporal() {
+        return "temp" + System.currentTimeMillis();
     }
 }

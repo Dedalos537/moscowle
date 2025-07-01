@@ -63,4 +63,9 @@ public class Apoderado {
     public void setDireccion(String direccion) {
         this.direccion = direccion;
     }
+
+    public void setUsuario(Usuario usuario2) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setUsuario'");
+    }
 }

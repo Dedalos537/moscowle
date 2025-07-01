@@ -146,6 +146,7 @@ const ServicesContent = () => {
     const closeModal = () => {
         setIsModalOpen(false);
     };
+    
 
     const getServicesByCategory = (category) => {
         return Object.entries(allServices).filter(([key, service]) => service.category === category);

@@ -2,8 +2,9 @@
 
 package com.example.moscowle.models;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
+import jakarta.persistence.*;
 @Entity
 @Table(name = "solicitud_registro")
 public class SolicitudRegistro {
@@ -22,47 +23,38 @@ public class SolicitudRegistro {
     private String servicio;
 
     @Column(nullable = false)
-    private String estado; // PENDIENTE, APROBADO
+    private String estado = "PENDIENTE"; // PENDIENTE, APROBADO, RECHAZADO
 
-    // Getters y Setters
+    @Column(name = "fecha_creacion")
+    private LocalDateTime fechaCreacion;
 
-    public Long getId() {
-        return id;
+    @Column(name = "fecha_aprobacion")
+    private LocalDateTime fechaAprobacion;
+
+    // Constructores
+    public SolicitudRegistro() {
+        this.fechaCreacion = LocalDateTime.now();
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    // Getters y Setters completos
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public String getNombre() {
-        return nombre;
-    }
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
+    public String getCorreo() { return correo; }
+    public void setCorreo(String correo) { this.correo = correo; }
 
-    public String getCorreo() {
-        return correo;
-    }
+    public String getServicio() { return servicio; }
+    public void setServicio(String servicio) { this.servicio = servicio; }
 
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 
-    public String getServicio() {
-        return servicio;
-    }
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
-    public void setServicio(String servicio) {
-        this.servicio = servicio;
-    }
-
-    public String getEstado() {
-        return estado;
-    }
-
-    public void setEstado(String estado) {
-        this.estado = estado;
-    }
+    public LocalDateTime getFechaAprobacion() { return fechaAprobacion; }
+    public void setFechaAprobacion(LocalDateTime fechaAprobacion) { this.fechaAprobacion = fechaAprobacion; }
 }

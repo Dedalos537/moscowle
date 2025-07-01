@@ -10,6 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class AuthController {
 
     @Autowired
@@ -17,19 +18,30 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
-        String correo = loginData.get("email");
-        String rawPassword = loginData.get("password"); 
+        try {
+            String correo = loginData.get("email");
+            String rawPassword = loginData.get("password");
 
-    
-        Map<String, Object> responseData = authService.login(correo, rawPassword);
+            System.out.println("Intento de login - Correo: " + correo);
 
-        if (responseData == null) {
-    
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas o acceso no autorizado");
+            if (correo == null || rawPassword == null) {
+                return ResponseEntity.badRequest().body("Email y contraseña son requeridos");
+            }
+
+            Map<String, Object> responseData = authService.login(correo, rawPassword);
+
+            if (responseData == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Credenciales inválidas o acceso no autorizado");
+            }
+
+            System.out.println("Login exitoso para: " + correo);
+            return ResponseEntity.ok(responseData);
+
+        } catch (Exception e) {
+            System.err.println("Error en login: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error interno del servidor");
         }
-
-        System.out.println("Login exitoso para: " + correo); 
-
-        return ResponseEntity.ok(responseData);
     }
 }
