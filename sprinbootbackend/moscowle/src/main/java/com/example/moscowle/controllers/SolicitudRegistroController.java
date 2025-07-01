@@ -3,15 +3,12 @@
 package com.example.moscowle.controllers;
 
 import com.example.moscowle.models.SolicitudRegistro;
-import com.example.moscowle.repository.SolicitudRegistroRepository;
 import com.example.moscowle.service.RegistroService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import java.util.Map;
 
 @RestController

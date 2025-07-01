@@ -82,20 +82,19 @@ public class RegistroService {
         // Crear apoderado asociado
         Apoderado apoderado = new Apoderado();
         apoderado.setNombre(solicitud.getNombre());
-        apoderado.setApellido(""); // Se puede actualizar después
+        apoderado.setApellido(""); 
         apoderado.setUsuario(usuario);
         apoderadoRepository.save(apoderado);
 
         // Actualizar solicitud
         solicitud.setEstado("APROBADO");
-        solicitud.setFechaAprobacion(LocalDateTime.now()); // Agregar este campo a la entidad
+        solicitud.setFechaAprobacion(LocalDateTime.now()); 
         solicitudRepo.save(solicitud);
 
         return "Solicitud aprobada correctamente. Contraseña temporal: " + passwordTemporal;
     }
 
     public Object obtenerTodasLasSolicitudes() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'obtenerTodasLasSolicitudes'");
     }
 }

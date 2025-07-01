@@ -62,8 +62,6 @@ public class AuthService {
                 String newHash = testEncoder.encode("admin123");
                 System.out.println("Nuevo hash para admin123: " + newHash);
                 
-                // Temporal: permitir login si es admin123
-                System.out.println("PERMITIENDO LOGIN TEMPORAL PARA DEBUG");
             } else {
                 return null;
             }
@@ -82,7 +80,6 @@ public class AuthService {
     public Usuario crearUsuarioAdmin(String correo, String password) {
         // Verificar si ya existe
         if (usuarioRepository.findByCorreo(correo).isPresent()) {
-            System.out.println("Usuario admin ya existe");
             return null;
         }
 
