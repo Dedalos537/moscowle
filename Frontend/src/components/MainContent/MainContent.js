@@ -6,179 +6,13 @@ import InfoModal from '../Modals/InfoModal';
 import Modal from '../Modals/Modal';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import ContactContent from "./ContactContent";
-import emailjs from "@emailjs/browser";
+import RegistroSolicitante from "../Registro/RegistroSolicitante";
 
 
 
 const MainContent = ({ toggleModal, handleNavigation }) => {
     const [selectedTerapia, setSelectedTerapia] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [formData, setFormData] = useState({
-
-        name: "",
-
-        email: "",
-
-        subject: "",
-
-    });
-
-
-    const [message, setMessage] = useState("");
-
-    const [errors, setErrors] = useState({});
-
-
-    const handleInputChange = (e) => {
-
-        setFormData({
-
-            ...formData,
-
-            [e.target.name]: e.target.value,
-
-        });
-
-    };
-
-
-    const validate = () => {
-
-        let tempErrors = {};
-
-        if (!formData.name) tempErrors.name = "Por favor ingrese su nombre.";
-
-        if (!formData.email) {
-
-            tempErrors.email = "Por favor ingrese su correo.";
-
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-
-            tempErrors.email = "Por favor ingrese un correo válido.";
-
-        }
-
-        if (!formData.subject) tempErrors.subject = "Por favor ingrese el sujeto.";
-
-        setErrors(tempErrors);
-
-        return Object.keys(tempErrors).length === 0;
-
-    };
-
-
-    const sendEmail = (e) => {
-
-        e.preventDefault(); // Evita el comportamiento por defecto del formulario
-
-
-        if (!validate()) return; // Valida antes de enviar
-
-
-        // Parámetros para el administrador
-
-        const adminTemplateParams = {
-
-            user_name: formData.name,
-
-            user_email: formData.email,
-
-            subject: formData.subject,
-
-            to_email: "informes@centrojuanpabloii.com",
-
-        };
-
-
-        // Parámetros para el usuario
-
-        const userTemplateParams = {
-
-            user_name: formData.name,
-
-            user_email: formData.email,
-
-            reply_to: "informes@centrojuanpabloii.com",
-
-            message: "Gracias por contactarnos. Hemos recibido tu mensaje y lo revisaremos pronto.",
-
-        };
-
-
-        // Enviar correo al administrador
-
-        emailjs
-
-            .send(
-
-                "service_olcgbip", // ID del servicio
-
-                "template_trm57wu", // ID de la plantilla para el admin
-
-                adminTemplateParams,
-
-                "FOH1RobDyzI3oW_rY" // ID público del usuario
-
-            )
-
-            .then(
-
-                (response) => {
-
-                    console.log("Correo enviado al administrador", response.status, response.text);
-
-
-                    // Enviar correo de respuesta al usuario
-
-                    emailjs
-
-                        .send(
-
-                            "service_olcgbip", // ID del servicio
-
-                            "template_wf1pe58", // ID de la plantilla para el usuario
-
-                            userTemplateParams,
-
-                            "FOH1RobDyzI3oW_rY"
-
-                        )
-
-                        .then(
-
-                            (userResponse) => {
-
-                                console.log("Correo enviado al usuario", userResponse.status, userResponse.text);
-
-                                setMessage("¡Correo enviado con éxito! Pronto nos comunicaremos contigo.");
-
-                                setFormData({ name: "", email: "", subject: "" }); // Restablecer el formulario
-
-                            },
-
-                            (err) => {
-
-                                console.error("Error al enviar correo al usuario", err);
-
-                                setMessage("Hubo un error al enviar el correo de confirmación.");
-
-                            }
-
-                        );
-
-                },
-
-                (err) => {
-
-                    console.error("Error al enviar correo al administrador", err);
-
-                    setMessage("Hubo un error al enviar el correo. Inténtalo más tarde.");
-
-                }
-
-            );
-    };
     const terapiasInfo = {
         lectoEscritura: {
             title: "LECTO-ESCRITURA",
@@ -291,7 +125,7 @@ const MainContent = ({ toggleModal, handleNavigation }) => {
                     <div key={index} className="text-center">
                         <i className="fa fa-3x fa-quote-left text-primary mb-4"></i>
                         <h4 className="font-weight-normal mb-4">{testimonial.quote}</h4>
-                        <img className="img-fluid mx-auto mb-3" style={{width: 150}} src={testimonial.img} alt={testimonial.name} />
+                        <img className="img-fluid mx-auto mb-3" style={{ width: 150 }} src={testimonial.img} alt={testimonial.name} />
                         <h5 className="m-0">{testimonial.name}</h5>
                         <span>{testimonial.profession}</span>
                     </div>))}
@@ -464,122 +298,14 @@ const MainContent = ({ toggleModal, handleNavigation }) => {
                     </div>
                 </div>
             </div>
-
-            <div className="container-fluid bg-registration py-5" style={{ margin: "90px 0" }}>
-                <div className="container py-5">
-                    <div className="row align-items-center">
-                        <div className="col-lg-7 mb-5 mb-lg-0">
-                            <div className="mb-4">
-                                <h5 className="text-primary text-uppercase mb-3" style={{ letterSpacing: "5px" }}>Deseas Inscribirte?</h5>
-                                <h1 className="text-white">30% de descuento en la evaluación inicial</h1>
-                            </div>
-                            <p className="text-white">Ingrese su nombre, dirección de correo electrónico y selecciona en qué deseas recibir información y nos contactaremos con usted</p>
-                            <ul className="list-inline text-white m-0">
-                                <li className="py-2"><i className="fa fa-check text-primary mr-3"></i>Datos Seguros</li>
-                                <li className="py-2"><i className="fa fa-check text-primary mr-3"></i>Interacción personal y segura</li>
-                                <li className="py-2"><i className="fa fa-check text-primary mr-3"></i>Comunicación Directa</li>
-
-                            </ul>
+            <div className="container-fluid bg-registration py-5">
+              
+                        <div className="col-12 col-md-8 col-lg-5 mx-auto"> 
+                            <RegistroSolicitante />
                         </div>
-                        <div className="col-lg-5">
-                            <div className="card border-0">
-                                <div className="card-header bg-light text-center p-4">
-                                    <h1 className="m-0">Date a conocer!</h1>
-                                </div>
-                                <div className="card-body rounded-bottom bg-primary p-5">
 
-                                    <form onSubmit={sendEmail}>
-
-                                        <div className="form-group">
-
-                                            <input
-
-                                                type="text"
-
-                                                name="name" // Asegúrate de que no haya espacios
-
-                                                className={`form-control border-0 p-4 ${errors.name ? "is-invalid" : ""}`}
-
-                                                placeholder="Ingrese su nombre"
-
-                                                required="required"
-
-                                                value={formData.name}
-
-                                                onChange={handleInputChange}
-
-                                            />
-
-                                        </div>
-
-                                        <div className="form-group">
-
-                                            <input
-
-                                                type="email"
-
-                                                name="email"
-
-                                                className={`form-control border-0 p-4 ${errors.email ? "is-invalid" : ""}`}
-
-                                                placeholder="Ingrese su correo"
-
-                                                required="required"
-
-                                                value={formData.email}
-
-                                                onChange={handleInputChange}
-
-                                            />
-
-                                        </div>
-
-                                        <div className="form-group">
-
-                                            <select
-
-                                                className={`form-control border-0 p -4 ${errors.subject ? "is-invalid" : ""}`}
-
-                                                style={{ height: "47px" }}
-
-                                                name="subject"
-
-                                                value={formData.subject}
-
-                                                onChange={handleInputChange}
-
-                                            >
-
-                                                <option value="">Seleccione un servicio</option>
-
-                                                <option value="1">Terapias</option>
-
-                                                <option value="2">Terapias Integrales</option>
-
-                                                <option value="3">Material Virtual</option>
-
-                                                <option value="4">Material Físico</option>
-
-                                            </select>
-
-                                        </div>
-
-                                        <div>
-
-                                            <button className="btn btn-dark btn-block border-0 py-3" type="submit">Enviar</button>
-
-                                        </div>
-
-                                    </form>
-
-                                    {message && <p className="text-center mt-3">{message}</p>}
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
+
             <div className="container-fluid py-5">
                 <div className="row justify-content-center">
                     <div className="col-lg-8">
@@ -599,4 +325,4 @@ const MainContent = ({ toggleModal, handleNavigation }) => {
     );
 };
 
-export default MainContent;// Asegúrate de que la ruta sea correcta
+export default MainContent;

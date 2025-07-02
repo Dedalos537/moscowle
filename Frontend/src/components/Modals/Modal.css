@@ -1,80 +1,116 @@
-/* Modal Background */
+/* Modal.css - Estilos mejorados con accesibilidad ISO 25010 */
+
+/* Contenedor principal del modal */
 .modal-container {
-  display: none;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6); /* Fondo oscuro y semi-transparente */
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  transition: opacity 0.3s ease; /* Transición suave para la opacidad */
+  z-index: 1050;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .modal-container.show {
-  display: flex;
   opacity: 1;
+  visibility: visible;
 }
 
+/* Contenido del modal */
 .modal-content {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   max-width: 500px;
-  width: 100%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  animation: fadeIn 0.5s ease-out;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1.5;
-    transform: translateY(0);
-  }
+.modal-container.show .modal-content {
+  transform: scale(1);
 }
 
+/* Header del modal */
 .modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #dee2e6;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #eee;
 }
 
 .modal-title {
-  font-size: 18px;
-  font-weight: bold;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212529;
 }
 
+/* Botón de cerrar mejorado */
 .btn-close {
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 24px;
-  color: #000000;
+  font-size: 1.5rem;
   cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.btn-close:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.btn-close:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+  background-color: #e9ecef;
+}
+
+.btn-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Body del modal */
 .modal-body {
+  padding: 1.5rem;
+}
+
+.text-center {
   text-align: center;
 }
 
+.mt-3 {
+  margin-top: 1rem;
+}
+
+/* Spinner mejorado */
 .spinner {
-  border: 8px solid #f3f3f3;
-  border-top: 8px solid #4CAF50;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
   border-radius: 50%;
   width: 40px;
   height: 40px;
   animation: spin 1s linear infinite;
-  margin: 0 auto;
+  margin: 0 auto 1rem;
 }
 
 @keyframes spin {
@@ -82,35 +118,218 @@
   100% { transform: rotate(360deg); }
 }
 
-.modal-footer {
-  margin-top: 20px;
-  text-align: center;
+/* Estados de carga */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+.btn-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  margin-right: 0.5rem;
+}
+
+/* Mensajes de error */
+.error-message {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 1rem 0;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+  margin: 0;
+}
+
+/* Footer del modal */
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Botones mejorados */
 .btn {
-  padding: 10px 20px;
-  border-radius: 5px;
-  color: #ffffff;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
   text-align: center;
 }
 
 .btn-success {
-  background-color: #25D366; /* WhatsApp green */
-  border: none;
+  background-color: #28a745;
+  color: white;
 }
 
 .btn-success:hover {
-  background-color: #128C7E; /* Darker green on hover */
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
+.btn-success:focus {
+  outline: 2px solid #28a745;
+  outline-offset: 2px;
+}
+
+.btn-success:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Clase para elementos solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Mejoras de accesibilidad para alto contraste */
+@media (prefers-contrast: high) {
+  .modal-container {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
   .modal-content {
-    padding: 15px;
-    width: 90%;
+    border: 2px solid #000;
   }
+  
+  .btn-close:focus,
+  .btn:focus {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+  }
+}
+
+/* Soporte para modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .modal-content {
+    background: #2b2b2b;
+    color: #fff;
+  }
+  
+  .modal-header {
+    border-bottom-color: #444;
+  }
+  
+  .modal-footer {
+    border-top-color: #444;
+  }
+  
   .modal-title {
-    font-size: 16px;
+    color: #fff;
   }
+  
+  .btn-close {
+    color: #ccc;
+  }
+  
+  .btn-close:hover {
+    background-color: #444;
+    color: #fff;
+  }
+  
+  .error-message {
+    background-color: #3c1e1e;
+    border-color: #5a2d2d;
+  }
+}
+
+/* Animaciones respetando preferencias de usuario */
+@media (prefers-reduced-motion: reduce) {
+  .modal-container,
+  .modal-content,
+  .btn,
+  .btn-close {
+    transition: none;
+  }
+  
+  .spinner,
+  .btn-spinner {
+    animation: none;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 576px) {
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
+  }
+  
+  .btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Mejoras para navegación por teclado */
+.modal-content:focus-within {
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* Estados de hover para elementos interactivos */
+.modal-content a:hover,
+.modal-content button:hover {
+  text-decoration: none;
+}
+
+/* Indicadores visuales para elementos focusables */
+*:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* Asegurar que los elementos interactivos tengan tamaño mínimo */
+button,
+a,
+input,
+select,
+textarea {
+  min-width: 44px;
+  min-height: 44px;
 }

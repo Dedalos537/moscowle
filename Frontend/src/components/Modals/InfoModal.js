@@ -14,19 +14,28 @@ const InfoModal = ({ isOpen, onRequestClose, selectedTerapia, handleNavigation, 
   };
 
   useEffect(() => {
+
     // Bloquea el deslizamiento de la página cuando el modal está abierto
+
     if (isOpen) {
-      document.body.style.overflow = 'hidden'; // Bloquea el scroll
-      setImageVisible(true); // Muestra la imagen al abrir el modal
-      // No resetear imageLoaded aquí para evitar parpadeos
+
+      document.body.style.overflow = "hidden"; // Bloquea el scroll
+
     } else {
-      document.body.style.overflow = ''; // Restablece el scroll cuando el modal se cierra
+
+      document.body.style.overflow = ""; // Restablece el scroll cuando el modal se cierra
+
     }
 
-    // Limpieza al desmontar el componente
+
+    // Limpieza en el efecto para restaurar el scroll cuando el modal se cierre
+
     return () => {
-      document.body.style.overflow = ''; // Asegúrate de restaurar el scroll
+
+      document.body.style.overflow = ""; // Asegúrate de restaurar el scroll
+
     };
+
   }, [isOpen]);
 
   // Cierra el modal al hacer clic fuera del contenido

@@ -8,22 +8,24 @@ import {
 import Navbar from "./components/Navbar/Navbar";
 import Footer from "./components/Footer/Footer";
 import MainContent from "./components/MainContent/MainContent";
-import AboutContent from "./components/MainContent/AboutContent"; 
-import ServicesContent from "./components/MainContent/ServicesContent"; 
-import ContactContent from "./components/MainContent/ContactContent"; 
+import AboutContent from "./components/MainContent/AboutContent";
+import ServicesContent from "./components/MainContent/ServicesContent";
+import ContactContent from "./components/MainContent/ContactContent";
 import Modal from "./components/Modals/Modal";
 import Login from "./components/Auth/Login";
 import "./App.css";
 import "owl.carousel/dist/assets/owl.carousel.min.css";
 import "owl.carousel/dist/assets/owl.theme.default.min.css";
 import "owl.carousel/dist/owl.carousel.min.js";
+import AdminDashboard from "./components/Admin/Dashboard";
+
 
 // Carga lazy del componente LMS para evitar que su CSS se cargue hasta que sea necesario
 const CoursesComponent = React.lazy(() => import("./components/Lms/Principal"));
 
 function App() {
   const [isModalOpen, setModalOpen] = useState(false);
-  const [activeContent, setActiveContent] = useState("home");
+  const [activeContent, setActiveContent] = useState("home"); 
 
   const toggleModal = () => {
     setModalOpen(!isModalOpen);
@@ -34,44 +36,51 @@ function App() {
   };
 
   return (
-    <Router>
-      <Routes>
-        {/* Rutas principales del sitio web */}
-        <Route
-          path="/"
-          element={
-            <div className="App" data-theme="main-site">
-              <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
+    <>
+      <div className="App">
+    
+        {activeContent !== "login" && activeContent !== "dashboard" && (
+            <Navbar handleNavigation={handleNavigation} activeContent={activeContent} />
+        )}
 
-              {activeContent === "home" && <MainContent />}
-              {activeContent === "about" && <AboutContent />}
-              {activeContent === "services" && <ServicesContent />}
-              {activeContent === "contact" && <ContactContent />}
-              {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}
 
-              <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
-              <Modal isOpen={isModalOpen} toggleModal={toggleModal} />
-            </div>
-          }
-        />
+        <div className={`transition-content ${activeContent === "home" ? "show" : ""}`}>
+          {activeContent === "home" && <MainContent handleNavigation={handleNavigation}/>}
+        </div>
 
-        {/* Rutas del panel de administración con carga lazy */}
-        <Route 
-          path="/lms/*" 
-          element={
-            <div className="lms-root" data-theme="lms">
-              <Suspense fallback={
-                <div className="lms-loading">
-                  <div className="loading-spinner">Cargando LMS...</div>
-                </div>
-              }>
-                <CoursesComponent />
-              </Suspense>
-            </div>
-          } 
-        />
-      </Routes>
-    </Router>
+        <div className={`transition-content ${activeContent === "about" ? "show" : ""}`}>
+          {activeContent === "about" && <AboutContent />}
+        </div>
+
+        <div className={`transition-content ${activeContent === "services" ? "show" : ""}`}>
+          {activeContent === "services" && <ServicesContent />}
+        </div>
+
+        <div className={`transition-content ${activeContent === "contact" ? "show" : ""}`}>
+          {activeContent === "contact" && <ContactContent />}
+        </div>
+
+        {/* Login Page */}
+        <div className={`transition-content ${activeContent === "login" ? "show" : ""}`}>
+          {activeContent === "login" && <Login handleNavigation={handleNavigation}/>}
+        </div>
+
+        {/* Admin Dashboard Page - THIS IS THE KEY ADDITION/CHANGE */}
+        <div className={`transition-content ${activeContent === "dashboard" ? "show" : ""}`}>
+          {activeContent === "dashboard" && <AdminDashboard />}
+        </div>
+
+      </div> {/* End of .App container */}
+
+      {/* Conditionally render Navbar and Footer based on activeContent */}
+      {activeContent !== "login" && activeContent !== "dashboard" && (
+          <Footer handleNavigation={handleNavigation} activeContent={activeContent} />
+      )}
+
+      {/* Modal - typically rendered outside main content for z-index */}
+      <Modal handleNavigation={handleNavigation} activeContent={activeContent} isOpen={isModalOpen} toggleModal={toggleModal} />
+
+    </>
   );
 }
 

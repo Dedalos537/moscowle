@@ -1,30 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import axiosInstance from "../../utils/axiosConfig";
+import './Login.css'; // Asegúrate de crear este archivo CSS
 
-export default function LoginForm({ handleNavigation, axios}) {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+export default function Login({ handleNavigation }) {
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Ocultar navbar y footer cuando se monta el componente
   useEffect(() => {
-    // Ocultar elementos de navegación
-    const navbar = document.querySelector('nav, .navbar, [class*="nav"]');
-    const footer = document.querySelector('footer, .footer, [class*="footer"]');
+    const navbar = document.querySelector("nav, .navbar, [class*='nav']");
+    const footer = document.querySelector("footer, .footer, [class*='footer']");
 
     if (navbar) navbar.style.display = "none";
     if (footer) footer.style.display = "none";
 
-    // Aplicar estilos al body
     document.body.style.margin = "0";
     document.body.style.padding = "0";
     document.body.style.overflow = "hidden";
 
-    // Limpiar al desmontar
     return () => {
       if (navbar) navbar.style.display = "";
       if (footer) footer.style.display = "";
@@ -36,10 +31,7 @@ export default function LoginForm({ handleNavigation, axios}) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -48,15 +40,17 @@ export default function LoginForm({ handleNavigation, axios}) {
     setMessage("");
 
     try {
-      const response = await axios.post("http://localhost:8080/api", {
-        email: formData.email,
-        password: formData.password,
-      });
-
+      const res = await axiosInstance.post("/login", formData);
+      const { rol } = res.data;
       setMessage("¡Inicio de sesión exitoso!");
-      // Manejar respuesta exitosa
-    } catch (error) {
-      setMessage("Error al iniciar sesión. Inténtalo de nuevo.");
+      // Redirección según el rol
+      if (rol === "ADMIN") {
+        handleNavigation("dashboard");
+      } else {
+        handleNavigation("home");
+      }
+    } catch (err) {
+      setMessage("Credenciales inválidas o sin autorización aún");
     } finally {
       setLoading(false);
     }
@@ -64,195 +58,61 @@ export default function LoginForm({ handleNavigation, axios}) {
 
   return (
     <>
-      {/* Bootstrap CSS con namespace específico */}
-      <link
-        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
-        rel="stylesheet"
-      />
-
-      <div className="login-page-container">
-        <div style={{ width: "100%", maxWidth: "400px" }}>
-          <button
-            type="button"
-            onClick={() => handleNavigation("home")}
-            style={{
-              position: "absolute",
-              top: "20px",
-              left: "20px",
-              background: "rgba(255, 255, 255, 0.9)",
-              border: "1px solid #dee2e6",
-              borderRadius: "50%",
-              width: "45px",
-              height: "45px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              zIndex: "10",
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = "white";
-              e.target.style.transform = "scale(1.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = "rgba(255, 255, 255, 0.9)";
-              e.target.style.transform = "scale(1)";
-            }}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#333"
-              strokeWidth="2"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </button>
-          {/* Header */}
-          <div className="login-text-center login-mb-4">
-            <div className="login-user-icon">
-              <User size={40} color="white" />
-            </div>
-            <h1
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: "bold",
-                color: "#333",
-                marginBottom: "0.5rem",
-              }}
-            >
-              CENTRO DE TERAPIAS
-            </h1>
-            <p
-              style={{
-                fontSize: "1.2rem",
-                color: "#666",
-                fontWeight: "500",
-                margin: "0",
-              }}
-            >
-              JUAN PABLO II
-            </p>
-            <p
-              style={{ fontSize: "0.9rem", color: "#888", marginTop: "0.5rem" }}
-            >
-              Iniciar Sesión
-            </p>
-          </div>
-
-          {/* Login Card */}
-          <div className="login-card">
-            <div className="login-p-4">
-              <div>
-                {/* Email Field */}
-                <div className="login-mb-3">
-                  <label className="login-form-label">Correo Electrónico</label>
-                  <div className="login-input-group">
-                    <Mail className="login-input-icon" size={20} />
-                    <input
-                      name="email"
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="login-form-control"
-                      placeholder="tu@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Password Field */}
-                <div className="login-mb-4">
-                  <label className="login-form-label">Contraseña</label>
-                  <div className="login-input-group">
-                    <Lock className="login-input-icon" size={20} />
-                    <input
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="login-form-control"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="login-password-toggle"
-                    >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="login-btn"
-                >
-                  {loading ? (
-                    <div className="login-d-flex login-align-items-center login-justify-content-center">
-                      <div className="login-spinner"></div>
-                      Iniciando sesión...
-                    </div>
-                  ) : (
-                    "Iniciar Sesión"
-                  )}
-                </button>
-
-                {/* Message */}
-                {message && (
-                  <div
-                    className={
-                      message.includes("exitoso")
-                        ? "login-alert-success"
-                        : "login-alert-danger"
-                    }
-                  >
-                    {message}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer Links */}
-              <div className="login-text-center login-mt-3">
-                <button className="login-link">
-                  ¿Olvidaste tu contraseña?
-                </button>
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    color: "#666",
-                    marginTop: "0.5rem",
-                  }}
-                >
-                  ¿Necesitas ayuda?
-                  <a
-                    href="mailto:informes@centrojuanpabloii.com"
-                    className="login-link"
-                    style={{ marginLeft: "4px" }}
-                  >
-                    informes@centrojuanpabloii.com
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Text */}
-          <div className="login-text-center login-mt-3">
-            <small style={{ color: "#888" }}>
-              Centro de Terapias Juan Pablo II © 2024
-            </small>
-          </div>
+    <style>
+      
+      
+    </style>
+    <div className="login-page-container">
+      <div className="login-form-container">
+        <div className="text-center mb-4">
+          <User  size={40} color="white" />
+          <h1>CENTRO DE TERAPIAS</h1>
+          <p>JUAN PABLO II</p>
+          <p>Iniciar Sesión</p>
         </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label>Correo Electrónico</label>
+            <div className="input-group">
+              <Mail size={20} />
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="form-control"
+                required
+              />
+            </div>
+          </div>
+          <div className="mb-4">
+            <label>Contraseña</label>
+            <div className="input-group">
+              <Lock size={20} />
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="form-control"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="btn btn-outline-secondary"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+            {loading ? "Iniciando..." : "Iniciar Sesión"}
+          </button>
+          {message && <div className="alert alert-info mt-3">{message}</div>}
+        </form>
       </div>
+    </div>
     </>
   );
 }
