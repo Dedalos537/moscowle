@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Configuración base de Axios
 const axiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080',
+    baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api', // URL base de la API
     timeout: 10000, // 10 segundos
     headers: {
         'Content-Type': 'application/json',
@@ -14,10 +14,10 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     (config) => {
         // Agregar token de autenticación si existe
-        /*const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('authToken');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-        }*/
+        }
         
         // Log para debugging en desarrollo
         if (process.env.NODE_ENV === 'development') {

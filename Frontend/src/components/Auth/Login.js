@@ -41,11 +41,12 @@ export default function Login({ handleNavigation }) {
 
     try {
       const res = await axiosInstance.post("/login", formData);
-      const { rol } = res.data;
+      const { rol, token } = res.data;
       setMessage("¡Inicio de sesión exitoso!");
-      // Guardar autenticación y rol
+      // Guardar autenticación, rol y token
       localStorage.setItem("isAuthenticated", "true");
       localStorage.setItem("rol", rol);
+      localStorage.setItem("authToken", token);
       // Redirección según el rol usando window.location.href para recargar la app
       if (rol === "ADMIN") {
         window.location.href = "/dashboard";

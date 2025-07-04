@@ -19,7 +19,6 @@ export default function AdminDashboard() {
   const fetchSolicitudes = async () => {
     try {
       const res = await axiosInstance.get("/registro");
-      console.log("Respuesta de /registro:", res.data); // Mostrar la respuesta en consola
       setSolicitudes(Array.isArray(res.data) ? res.data : res.data.solicitudes || []);
     } catch (error) {
       setMensaje("Error al cargar solicitudes: " + (error.response?.data?.message || error.message)); // Mostrar error real
