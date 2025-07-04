@@ -152,7 +152,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="/services" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         COMUNICACIÓN ORAL
                       </a>
                       <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
