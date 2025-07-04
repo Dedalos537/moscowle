@@ -30,6 +30,7 @@ public class SecurityConfig {
                 // Endpoints públicos
                 .requestMatchers(HttpMethod.POST, "/api/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/registro").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/logout").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/contactanos").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Para CORS preflight
                 

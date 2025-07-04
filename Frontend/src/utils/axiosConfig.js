@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Configuración base de Axios
 const axiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api',
+    baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080',
     timeout: 10000, // 10 segundos
     headers: {
         'Content-Type': 'application/json',

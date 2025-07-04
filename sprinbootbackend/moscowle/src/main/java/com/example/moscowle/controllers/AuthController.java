@@ -44,4 +44,10 @@ public class AuthController {
                 .body("Error interno del servidor");
         }
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // Aquí podrías invalidar la sesión si usas sesiones de Spring, pero como es stateless, solo responde OK
+        return ResponseEntity.ok(Map.of("success", true, "message", "Sesión cerrada correctamente"));
+    }
 }

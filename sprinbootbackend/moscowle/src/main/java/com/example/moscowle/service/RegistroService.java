@@ -51,7 +51,7 @@ public class RegistroService {
         }
 
         solicitud.setEstado("PENDIENTE");
-        solicitud.setFechaAprobacion(LocalDateTime.now()); // Agregar este campo a la entidad
+        // No asignar fechaAprobacion aquí
         
         return solicitudRepo.save(solicitud);
     }
@@ -95,6 +95,6 @@ public class RegistroService {
     }
 
     public Object obtenerTodasLasSolicitudes() {
-        throw new UnsupportedOperationException("Unimplemented method 'obtenerTodasLasSolicitudes'");
+        return solicitudRepo.findAll();
     }
 }

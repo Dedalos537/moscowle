@@ -43,11 +43,14 @@ export default function Login({ handleNavigation }) {
       const res = await axiosInstance.post("/login", formData);
       const { rol } = res.data;
       setMessage("¡Inicio de sesión exitoso!");
-      // Redirección según el rol
+      // Guardar autenticación y rol
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("rol", rol);
+      // Redirección según el rol usando window.location.href para recargar la app
       if (rol === "ADMIN") {
-        handleNavigation("dashboard");
+        window.location.href = "/dashboard";
       } else {
-        handleNavigation("home");
+        window.location.href = "/";
       }
     } catch (err) {
       setMessage("Credenciales inválidas o sin autorización aún");

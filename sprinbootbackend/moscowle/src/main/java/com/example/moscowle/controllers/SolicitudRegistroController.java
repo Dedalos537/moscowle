@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/registro")
+@RequestMapping("/api")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class SolicitudRegistroController {
 
     @Autowired
     private RegistroService registroService;
 
-    @PostMapping
+    @PostMapping("/registro")
     public ResponseEntity<?> registrarSolicitud(@RequestBody SolicitudRegistro solicitud) {
         try {
             System.out.println("Recibiendo solicitud de registro para: " + solicitud.getCorreo());
@@ -42,7 +42,7 @@ public class SolicitudRegistroController {
         }
     }
 
-    @GetMapping
+    @GetMapping("/registro")
     public ResponseEntity<Object> obtenerSolicitudes() {
         try {
             return ResponseEntity.ok(registroService.obtenerTodasLasSolicitudes());
@@ -51,7 +51,7 @@ public class SolicitudRegistroController {
         }
     }
 
-    @PutMapping("/{id}/aprobar")
+    @PutMapping("/registro/{id}/aprobar")
     public ResponseEntity<?> aprobarSolicitud(@PathVariable Long id) {
         try {
             String passwordTemporal = generarPasswordTemporal();

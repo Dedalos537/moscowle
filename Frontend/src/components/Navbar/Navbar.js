@@ -1,7 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Navbar = ({ handleNavigation, activeContent }) => {
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleMenuToggle = () => {
     setMobileMenuOpen(!isMobileMenuOpen);
@@ -14,17 +17,14 @@ const Navbar = ({ handleNavigation, activeContent }) => {
 
   // Nueva función para manejar navegación a secciones específicas
   const handleSectionNavigation = (sectionId) => {
-    // Primero navegar a la página de servicios
-    handleNavigation("services");
-    
-    // Esperar un poco para que se renderice la página y luego hacer scroll
+    // Navegar a /services y luego hacer scroll a la sección
+    navigate("/services");
     setTimeout(() => {
       const section = document.getElementById(sectionId);
       if (section) {
         section.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-    }, 100);
-    
+    }, 200);
     setMobileMenuOpen(false);
   };
 
@@ -50,12 +50,13 @@ const Navbar = ({ handleNavigation, activeContent }) => {
             </div>
           </div>
           <div className="col-lg-2 text-right">
-            <button
+            <a
               className="btn btn-primary px-4 py-2 font-weight-bold"
+              href="/login"
               onClick={() => handleNavigation("login")}
             >
               <i className="fa fa-user mr-2"></i>Ingresar
-            </button>
+            </a>
           </div>
         </div>
 
@@ -151,7 +152,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                       <i className="fa fa-angle-down float-right mt-1"></i>
                     </a>
                     <div className="dropdown-menu position-absolute bg-secondary border-0 rounded-0 w-100 m-0">
-                      <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
+                      <a href="/services" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
                         COMUNICACIÓN ORAL
                       </a>
                       <a href="#!" className="dropdown-item" onClick={() => handleSectionNavigation("MaterialConcreto")}>
@@ -170,7 +171,7 @@ const Navbar = ({ handleNavigation, activeContent }) => {
             </div>
             <div className="col-lg-9">
               <nav className="navbar navbar-expand-lg bg-light navbar-light py-3 py-lg-0 px-0">
-                <a href="#!" className="text-decoration-none d-block d-lg-none">
+                <a href="#" className="text-decoration-none d-block d-lg-none">
                   <h1 className="m-0">
                     <span className="text-primary">CENTRO</span> JUAN PABLO II
                   </h1>
@@ -189,37 +190,29 @@ const Navbar = ({ handleNavigation, activeContent }) => {
                 >
                   <div className="navbar-nav py-0">
                     <a
-                      href="#!"
-                      className={`nav-item nav-link ${
-                        activeContent === "home" ? "active" : ""
-                      }`}
+                      href="/"
+                      className={`nav-item nav-link ${location.pathname === "/" ? "active" : ""}`}
                       onClick={() => handleNavigation("home")}
                     >
                       Inicio
                     </a>
                     <a
-                      href="#!"
-                      className={`nav-item nav-link ${
-                        activeContent === "about" ? "active" : ""
-                      }`}
+                      href="/about"
+                      className={`nav-item nav-link ${location.pathname === "/about" ? "active" : ""}`}
                       onClick={() => handleNavigation("about")}
                     >
                       Acerca
                     </a>
                     <a
-                      href="#!"
-                      className={`nav-item nav-link ${
-                        activeContent === "services" ? "active" : ""
-                      }`}
+                      href="/services"
+                      className={`nav-item nav-link ${location.pathname === "/services" ? "active" : ""}`}
                       onClick={() => handleNavigation("services")}
                     >
                       Servicios
                     </a>
                     <a
-                      href="#!"
-                      className={`nav-item nav-link ${
-                        activeContent === "contact" ? "active" : ""
-                      }`}
+                      href="/contact"
+                      className={`nav-item nav-link ${location.pathname === "/contact" ? "active" : ""}`}
                       onClick={() => handleNavigation("contact")}
                     >
                       Contáctanos
