@@ -1,0 +1,98 @@
+<div class="container-fluid py-5 px-3">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="custom-card">
+
+        <div class="custom-header text-center">
+          <div class="custom-icon">
+            <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+          </div>
+          <h1 class="h4 mb-2 font-weight-bold text-dark">¡Date a conocer!</h1>
+          <p class="text-muted mb-2" style="font-size: 13px">¿DESEAS INSCRIBIRTE?</p>
+          <div class="custom-badge">
+            30% de descuento en la evaluación inicial
+          </div>
+        </div>
+
+        <div class="custom-form-body">
+          <div class="text-center mb-4">
+            <p class="text-white mb-3" style="font-size: 13px; line-height: 1.4">
+              Ingrese su nombre, dirección de correo electrónico y selecciona en qué deseas recibir
+              información y nos contactaremos con usted
+            </p>
+
+            <div class="text-left">
+              <div class="feature-item" *ngFor="let feature of features">
+                <div class="feature-icon">
+                  <svg width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
+                  </svg>
+                </div>
+                {{ feature }}
+              </div>
+            </div>
+          </div>
+
+          <form [formGroup]="registroForm" (ngSubmit)="sendSolicitud()">
+            <div class="form-group mb-3">
+              <input
+                type="text"
+                formControlName="nombre"
+                class="form-control custom-input"
+                placeholder="Ingrese su nombre"
+                [ngClass]="{'is-invalid': errores.nombre || (registroForm.get('nombre')?.touched && registroForm.get('nombre')?.invalid)}"
+                required
+              />
+
+              <div *ngIf="registroForm.get('nombre')?.touched && registroForm.get('nombre')?.invalid" class="invalid-feedback">
+                <small *ngIf="registroForm.get('nombre')?.hasError('required')">El nombre es obligatorio.</small>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <input
+                type="email"
+                formControlName="correo"
+                class="form-control custom-input"
+                placeholder="Ingrese su correo electrónico"
+                [ngClass]="{'is-invalid': errores.correo || (registroForm.get('correo')?.touched && registroForm.get('correo')?.invalid)}"
+                required
+              />
+
+              <div *ngIf="registroForm.get('correo')?.touched && registroForm.get('correo')?.invalid" class="invalid-feedback">
+                <small *ngIf="registroForm.get('correo')?.hasError('required')">El correo electrónico es obligatorio.</small>
+                <small *ngIf="registroForm.get('correo')?.hasError('email')">El formato del correo electrónico no es válido.</small>
+              </div>
+            </div>
+
+            <div class="form-group mb-4">
+              <select
+                formControlName="servicio"
+                class="form-control"
+                [ngClass]="{'is-invalid': errores.servicio || (registroForm.get('servicio')?.touched && registroForm.get('servicio')?.invalid)}"
+                required
+              >
+                <option value="">Seleccione un servicio</option>
+                <option *ngFor="let servicio of servicios" [value]="servicio">{{ servicio }}</option>
+              </select>
+
+              <div *ngIf="registroForm.get('servicio')?.touched && registroForm.get('servicio')?.invalid" class="invalid-feedback">
+                <small *ngIf="registroForm.get('servicio')?.hasError('required')">El servicio es obligatorio.</small>
+              </div>
+            </div>
+
+            <button class="btn btn-block custom-btn w-100" type="submit" [disabled]="registroForm.invalid">
+              Enviar
+            </button>
+          </form>
+
+          <div *ngIf="mensaje" class="custom-alert" [ngClass]="{'alert-success': !mensaje.includes('Error'), 'alert-danger': mensaje.includes('Error')}">
+            {{ mensaje }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

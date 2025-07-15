@@ -1,0 +1,34 @@
+<div class="container mt-5">
+  <h2>Solicitudes de Registro</h2>
+
+  <div *ngIf="mensaje" class="alert alert-info">
+    {{ mensaje }}
+  </div>
+
+  <table class="table table-bordered mt-3">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre</th>
+        <th>Correo</th>
+        <th>Servicio Solicitado</th>
+        <th>Estado</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let solicitud of solicitudes; let i = index">
+        <td>{{ i + 1 }}</td>
+        <td>{{ solicitud.nombre }}</td>
+        <td>{{ solicitud.correo }}</td>
+        <td>{{ solicitud.servicio }}</td>
+        <td>{{ solicitud.estado }}</td>
+        <td>
+          <button *ngIf="solicitud.estado === 'PENDIENTE'" class="btn btn-success btn-sm" (click)="aprobar(solicitud.id)">
+            Aprobar
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

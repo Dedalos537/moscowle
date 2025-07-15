@@ -1,0 +1,27 @@
+@keyframes float {
+  0%,100% {transform: translateY(0);}
+  50% {transform: translateY(-20px);}
+}
+.service-card {
+  padding: 20px; margin: 15px; cursor: pointer;
+  transition: transform .3s, box-shadow .3s;
+}
+.service-card:hover {
+  transform: translateY(-15px) scale(1.02);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+}
+.row { display:flex; flex-wrap:wrap; margin:0 -15px; }
+.section-block { margin-bottom:80px; }
+.modal-backdrop {
+  position:fixed; inset:0; background:rgba(0,0,0,0.8);
+  display:flex; align-items:center; justify-content:center; padding:20px; z-index:1000;
+}
+.modal-content {
+  background:white; padding:40px; border-radius:20px; max-width:600px; width:100%; max-height:80vh; overflow:auto; position:relative;
+}
+.close-btn {
+  position:absolute; top:15px; right:20px; border:none; background:none; font-size:2rem; cursor:pointer; color:#999;
+}
+
+@media(max-width:991px){ .col-lg-3{flex:0 0 50%; max-width:50%;} }
+@media(max-width:767px){ .col-lg-3, .col-md-6{flex:0 0 100%; max-width:100%;} }

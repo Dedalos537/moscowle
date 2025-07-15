@@ -1,0 +1,44 @@
+.carousel-container {
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.owl-carousel {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.owl-carousel .item {
+  text-align: center;
+  padding: 30px;
+  background: #f7f7f7;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  flex: 0 0 auto; 
+}
+
+.testimonial-item img {
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+
+.testimonial-item h4 {
+  font-size: 18px;
+  font-weight: 400;
+  color: #555;
+}
+
+.testimonial-item h5 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #007bff;
+}
+
+.testimonial-item span {
+  color: #777;
+  font-size: 16px;
+}

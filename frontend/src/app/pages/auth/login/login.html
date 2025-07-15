@@ -1,0 +1,64 @@
+<div class="login-page-container">
+  <div class="login-form-container">
+    <div class="text-center mb-4 cursor" [routerLink]="'/home'" title="Ir a Inicio">
+      <i class="fa fa-user-circle fa-3x text-white"></i>
+      <h1>CENTRO DE TERAPIAS</h1>
+      <p>JUAN PABLO II</p>
+      <p>Iniciar Sesión</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="handleSubmit()">
+      <div class="mb-3">
+        <label for="email">Correo Electrónico</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            class="form-control"
+            required
+          />
+        </div>
+        <!-- Mostrar error si no es válido -->
+        <div *ngIf="email?.touched && email?.invalid" class="text-danger">
+          <small *ngIf="email?.hasError('required')">El correo es obligatorio.</small>
+          <small *ngIf="email?.hasError('email')">Debe ser un correo válido.</small>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="password">Contraseña</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa fa-lock"></i></span>
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            class="form-control"
+            required
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            (click)="showPassword = !showPassword"
+          >
+            <i [class]="showPassword ? 'fa fa-eye-slash' : 'fa fa-eye'"></i>
+          </button>
+        </div>
+
+        <div *ngIf="password?.touched && password?.invalid" class="text-danger">
+          <small *ngIf="password?.hasError('required')">La contraseña es obligatoria.</small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100" [disabled]="loading || loginForm.invalid">
+        {{ loading ? 'Iniciando...' : 'Iniciar Sesión' }}
+      </button>
+
+      <div *ngIf="message" class="alert alert-info mt-3">
+        {{ message }}
+      </div>
+    </form>
+  </div>
+</div>

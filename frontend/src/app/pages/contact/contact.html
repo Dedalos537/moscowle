@@ -1,0 +1,100 @@
+<div class="container-fluid page-header" style="margin-bottom: 90px">
+  <div class="container">
+    <div class="d-flex flex-column justify-content-center" style="min-height: 300px">
+      <h3 class="display-4 text-white text-uppercase">Contáctanos</h3>
+      <div class="d-inline-flex text-white">
+        <p class="m-0 text-uppercase">
+          <a class="text-white" routerLink="/">Inicio</a>
+        </p>
+        <i class="fa fa-angle-double-right pt-1 px-3"></i>
+        <p class="m-0 text-uppercase">Contáctanos</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="contact-form bg-secondary rounded p-5"  [formGroup]="formDatos" >
+
+      <div class="control-group mb-3">
+        <input
+          type="text"
+          class="form-control border-0 p-4"
+          placeholder="Su nombre *"
+          formControlName="nombre"
+          [ngClass]="{'is-invalid': formDatos.get('nombre')?.touched && formDatos.get('nombre')?.invalid}"
+        />
+        <div class="invalid-feedback d-block" *ngIf="formDatos.get('nombre')?.touched && formDatos.get('nombre')?.invalid">
+          <div *ngIf="formDatos.get('nombre')?.errors?.['required']">Por favor ingrese su nombre.</div>
+          <div *ngIf="formDatos.get('nombre')?.errors?.['maxlength']">El nombre no puede exceder 100 caracteres.</div>
+        </div>
+      </div>
+
+      <div class="control-group mb-3">
+        <input
+          type="email"
+          class="form-control border-0 p-4"
+          placeholder="Su correo electrónico *"
+          formControlName="correo"
+          [ngClass]="{'is-invalid': formDatos.get('correo')?.touched && formDatos.get('correo')?.invalid}"
+        />
+        <div class="invalid-feedback d-block" *ngIf="formDatos.get('correo')?.touched && formDatos.get('correo')?.invalid">
+          <div *ngIf="formDatos.get('correo')?.errors?.['required']">Por favor ingrese su correo.</div>
+          <div *ngIf="formDatos.get('correo')?.errors?.['email']">Por favor ingrese un correo válido.</div>
+          <div *ngIf="formDatos.get('correo')?.errors?.['maxlength']">El correo no puede exceder 100 caracteres.</div>
+        </div>
+      </div>
+
+      <div class="control-group mb-3">
+        <input
+          type="text"
+          class="form-control border-0 p-4"
+          placeholder="Sujeto *"
+          formControlName="sujeto"
+          [ngClass]="{'is-invalid': formDatos.get('sujeto')?.touched && formDatos.get('sujeto')?.invalid}"
+        />
+        <div class="invalid-feedback d-block" *ngIf="formDatos.get('sujeto')?.touched && formDatos.get('sujeto')?.invalid">
+          <div *ngIf="formDatos.get('sujeto')?.errors?.['required']">Por favor ingrese el sujeto.</div>
+          <div *ngIf="formDatos.get('sujeto')?.errors?.['maxlength']">El sujeto no puede exceder 200 caracteres.</div>
+        </div>
+      </div>
+
+      <div class="control-group mb-3">
+        <textarea
+          class="form-control border-0 py-3 px-4"
+          rows="5"
+          placeholder="Mensaje *"
+          formControlName="mensaje"
+          [ngClass]="{'is-invalid': formDatos.get('mensaje')?.touched && formDatos.get('mensaje')?.invalid}"
+        ></textarea>
+        <div class="invalid-feedback d-block" *ngIf="formDatos.get('mensaje')?.touched && formDatos.get('mensaje')?.invalid">
+          <div *ngIf="formDatos.get('mensaje')?.errors?.['required']">Por favor ingrese su mensaje.</div>
+          <div *ngIf="formDatos.get('mensaje')?.errors?.['maxlength']">El mensaje no puede exceder 5000 caracteres.</div>
+        </div>
+        <small class="text-muted">
+          {{ formDatos.get('mensaje')?.value?.length || 0 }}/5000 caracteres
+        </small>
+      </div>
+
+
+      <div class="text-center">
+        <button (click)="handleSubmit()" class="btn btn-primary py-3 px-5" type="submit" [disabled]="isLoading || formDatos.invalid">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          {{ isLoading ? 'Enviando...' : 'Enviar Mensaje' }}
+        </button>
+      </div>
+
+      <div *ngIf="message" class="alert mt-4" [ngClass]="{
+        'alert-success': messageType === 'success',
+        'alert-danger': messageType === 'error'
+      }">
+        <div class="d-flex align-items-center">
+          <i class="fa fa-check" *ngIf="messageType === 'success'"></i>
+          <i class="fa fa-exclamation-triangle" *ngIf="messageType === 'error'"></i>
+          {{ message }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

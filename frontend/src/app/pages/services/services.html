@@ -1,0 +1,103 @@
+<div class="container-fluid page-header mb-5">
+  <div class="container">
+    <div class="d-flex flex-column justify-content-center" style="min-height:300px;">
+      <h3 class="display-4 text-white text-uppercase">Nuestros Servicios</h3>
+      <div class="d-inline-flex text-white">
+        <p class="m-0 text-uppercase">
+          <a class="text-white" routerLink="/">Inicio</a>
+        </p>
+        <i class="fa fa-angle-double-right pt-1 px-3"></i>
+        <p class="m-0 text-uppercase">Servicios</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Terapias Integrales -->
+  <section class="category-section">
+    <h2 class="category-title text-center text-success">Terapias Integrales</h2>
+    <p class="category-description text-center">Programas especializados para condiciones específicas</p>
+    <div class="row">
+      <div
+        class="col-lg-4 col-md-6 col-sm-6 mb-4"
+        *ngFor="let item of getServicesByCategory('Terapias Integrales')"
+      >
+        <app-service-card
+          [service]="item[1]"
+          [category]="'Terapias Integrales'"
+          (openModal)="onOpenModal(item[0])"
+        ></app-service-card>
+      </div>
+    </div>
+  </section>
+
+  <!-- Terapias -->
+  <section class="category-section">
+    <h2 class="category-title text-center" style="color: #667eea;">Terapias Especializadas</h2>
+    <p class="category-description text-center">Terapias individualizadas para el desarrollo de habilidades específicas</p>
+    <div class="row">
+      <div
+        class="col-lg-4 col-md-6 col-sm-6 mb-4"
+        *ngFor="let item of getServicesByCategory('Terapias')"
+      >
+        <app-service-card
+          [service]="item[1]"
+          [category]="'Terapias'"
+          (openModal)="onOpenModal(item[0])"
+        ></app-service-card>
+      </div>
+    </div>
+  </section>
+
+  <section class="category-section">
+    <h2 class="category-title text-info text-center">Apoyo Virtual</h2>
+    <p class="category-description text-center">Servicios de terapia online y apoyo a distancia</p>
+    <div class="row">
+      <div
+        class="col-lg-4 col-md-6 col-sm-6 mb-4"
+        *ngFor="let item of getServicesByCategory('Apoyo Virtual')"
+      >
+        <app-service-card
+          [service]="item[1]"
+          [category]="'Apoyo Virtual'"
+          (openModal)="onOpenModal(item[0])"
+        ></app-service-card>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="category-section">
+    <h2 class="category-title text-warning text-center">Material Concreto</h2>
+    <p class="category-description text-center">Recursos didácticos y material especializado</p>
+    <div class="row">
+      <div
+        class="col-lg-4 col-md-6 col-sm-6 mb-4"
+        *ngFor="let item of getServicesByCategory('Material Concreto')"
+      >
+        <app-service-card
+          [service]="item[1]"
+          [category]="'Material Concreto'"
+          (openModal)="onOpenModal(item[0])"
+        ></app-service-card>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="closeModal()">×</button>
+    <div *ngIf="selectedTerapia">
+      <div class="modal-icon">{{ selectedTerapia.icon }}</div>
+      <h2>{{ selectedTerapia.title }}</h2>
+      <img
+        [src]="selectedTerapia.image"
+        alt="{{ selectedTerapia.title }}"
+        style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 15px; margin-bottom: 20px"
+      />
+      <p style="text-align: justify">{{ selectedTerapia.description }}</p>
+    </div>
+  </div>
+</div>
