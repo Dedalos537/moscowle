@@ -28,11 +28,16 @@ export default function AdminDashboard() {
 
   const aprobar = async (id) => {
     try {
-      await axiosInstance.put(`/registro/${id}/aprobar`);
-      setMensaje("Solicitud aprobada correctamente");
+      const res = await axiosInstance.put(`/registro/${id}/aprobar`);
+      setMensaje(res.data.message || "Solicitud aprobada correctamente");
       fetchSolicitudes();
     } catch (error) {
-      setMensaje("No se pudo aprobar la solicitud");
+      setMensaje(
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "No se pudo aprobar la solicitud"
+      );
+      console.error("Error al aprobar solicitud:", error);
     }
   };
 
@@ -73,7 +78,7 @@ export default function AdminDashboard() {
           {solicitudes.map((solicitud, index) => (
             <tr key={solicitud.id}>
               <td>{index + 1}</td>
-              <td>{solicitud.nombre}</td>
+              <td>{solicitud.nombre+" "+solicitud.apellido}</td>
               <td>{solicitud.correo}</td>
               <td>{solicitud.servicio}</td>
               <td>{solicitud.estado}</td>

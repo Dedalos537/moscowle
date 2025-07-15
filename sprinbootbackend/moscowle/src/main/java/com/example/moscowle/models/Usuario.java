@@ -14,6 +14,12 @@ public class Usuario {
     @Column(nullable = false)
     private String contrasena;
 
+    @Column(nullable = true)
+    private String nombre;
+
+    @Column(nullable = true)
+    private String apellido;
+
     // Relación muchos a uno con Rol
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rol_id", nullable = false)
@@ -85,5 +91,21 @@ public class Usuario {
 
     public void setTrabajador(Trabajador trabajador) {
         this.trabajador = trabajador;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getApellido() {
+        return apellido;
+    }
+
+    public void setApellido(String apellido) {
+        this.apellido = apellido;
     }
 }

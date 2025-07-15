@@ -29,8 +29,24 @@ export default function RegistroSolicitante() {
         e.preventDefault();
         if (!validar()) return;
 
+        // Separar nombre y apellido por el primer espacio
+        let nombre = formData.nombre;
+        let apellido = "";
+        if (nombre && nombre.includes(" ")) {
+            const partes = nombre.trim().split(/ (.+)/); // split solo en el primer espacio
+            nombre = partes[0];
+            apellido = partes.length > 1 ? partes[1] : "";
+        }
+
+        const payload = {
+            nombre,
+            apellido,
+            correo: formData.correo,
+            servicio: formData.servicio
+        };
+
         try {
-            await axiosInstance.post("/registro", formData);
+            await axiosInstance.post("/registro", payload);
             setMensaje("¡Solicitud enviada correctamente! Pronto será aprobada.");
             setFormData({ nombre: "", correo: "", servicio: "" });
             setErrores({});

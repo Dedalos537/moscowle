@@ -65,6 +65,10 @@ public class RegistroService {
             throw new RuntimeException("La solicitud ya fue aprobada");
         }
 
+        // Extraer nombre y apellido de la cadena
+        String nombre = solicitud.getNombre();
+        String apellido = solicitud.getApellido();
+
         // Buscar o crear rol USER
         Rol rolUser = rolRepository.findByNombre("USER")
                 .orElseGet(() -> {
@@ -77,12 +81,14 @@ public class RegistroService {
         usuario.setCorreo(solicitud.getCorreo());
         usuario.setContrasena(passwordEncoder.encode(passwordTemporal));
         usuario.setRol(rolUser);
+        usuario.setNombre(nombre);
+        usuario.setApellido(apellido);
         usuario = usuarioRepository.save(usuario);
 
         // Crear apoderado asociado
         Apoderado apoderado = new Apoderado();
-        apoderado.setNombre(solicitud.getNombre());
-        apoderado.setApellido(""); 
+        apoderado.setNombre(nombre);
+        apoderado.setApellido(apellido);
         apoderado.setUsuario(usuario);
         apoderadoRepository.save(apoderado);
 
