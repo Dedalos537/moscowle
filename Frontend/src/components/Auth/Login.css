@@ -103,7 +103,7 @@
         .login-form-container .input-group {
             display: flex;
             align-items: center;
-            border: 2px solid #e2e8f0;
+            border: 2px solid #000000;
             border-radius: 12px;
             overflow: hidden;
             margin-bottom: 18px;

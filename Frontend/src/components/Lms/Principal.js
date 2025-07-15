@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axiosInstance from "../../utils/axiosConfig";
 import './styleLMS.css';
 import './noti.css';
 
@@ -10,6 +11,25 @@ const CoursesComponent = ({ handleNavigation }) => {
   const [notificationActive, setNotificationActive] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [bodyActive, setBodyActive] = useState(false);
+
+  // Proteger el dashboard: solo users pueden verlo
+    useEffect(() => {
+      const isAuth = localStorage.getItem("isAuthenticated");
+      const rol = localStorage.getItem("rol");
+      if (!isAuth || rol !== "USER") {
+        window.location.href = "/login";
+      }
+    }, []);
+
+    // Botón de cerrar sesión
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post("/api/logout");
+    } catch (e) {}
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("rol");
+    window.location.href = "/";
+  };
 
   const enableDarkMode = () => {
     setDarkMode(true);
@@ -150,6 +170,7 @@ const CoursesComponent = ({ handleNavigation }) => {
             <h3 className="name">Lucia Martinez</h3>
             <p className="role">Estudiante</p>
             <a href="perfil.html" className="btn">Ver Perfil</a>
+            <button className="btn btn-danger" onClick={handleLogout}>Cerrar sesión</button>
           </div>
 
           <div className={`search-form ${searchActive ? 'active' : ''}`}>

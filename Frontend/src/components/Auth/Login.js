@@ -50,6 +50,8 @@ export default function Login({ handleNavigation }) {
       // Redirección según el rol usando window.location.href para recargar la app
       if (rol === "ADMIN") {
         window.location.href = "/dashboard";
+      } else if (rol === "USER") {
+        window.location.href = "/cursos";
       } else {
         window.location.href = "/";
       }
