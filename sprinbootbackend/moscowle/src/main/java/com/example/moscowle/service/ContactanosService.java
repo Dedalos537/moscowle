@@ -1,6 +1,7 @@
 package com.example.moscowle.service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -39,5 +40,10 @@ public class ContactanosService {
                contactoDTO.getCorreo() != null && !contactoDTO.getCorreo().trim().isEmpty() &&
                contactoDTO.getSujeto() != null && !contactoDTO.getSujeto().trim().isEmpty() &&
                contactoDTO.getMensaje() != null && !contactoDTO.getMensaje().trim().isEmpty();
+    }
+
+    // Listar todos los mensajes de contacto
+    public List<Contactanos> listarContactos() {
+        return contactanosRepository.findAll();
     }
 }

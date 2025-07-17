@@ -7,7 +7,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-
+import axiosInstance from '../../../../axiosConfig';
 @Component({
   selector: 'app-registro-solicitante',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
@@ -34,6 +34,7 @@ export class RegistroSolicitante {
   constructor(private fb: FormBuilder) {
     this.registroForm = this.fb.group({
       nombre: ['', Validators.required],
+      apellido: ['', Validators.required], // <-- Añade apellido
       correo: ['', [Validators.required, Validators.email]],
       servicio: ['', Validators.required],
     });
@@ -55,13 +56,23 @@ export class RegistroSolicitante {
     return Object.keys(this.errores).length === 0;
   }
 
-  sendSolicitud(): void {
+  async sendSolicitud(): Promise<void> {
     if (!this.validar()) return;
 
-    setTimeout(() => {
-      this.mensaje = '¡Solicitud enviada correctamente! Pronto será aprobada.';
+    this.mensaje = '';
+    this.errores = {};
+
+    try {
+      const datos = this.registroForm.value;
+      const res = await axiosInstance.post('/registro', datos);
+      this.mensaje =
+        res.data.message ||
+        '¡Solicitud enviada correctamente! Pronto será aprobada.';
       this.registroForm.reset();
-      this.errores = {};
-    }, 2000);
+    } catch (err: any) {
+      this.mensaje =
+        err?.response?.data?.error ||
+        'Error al enviar la solicitud. Intenta nuevamente.';
+    }
   }
 }

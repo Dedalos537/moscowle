@@ -1,12 +1,25 @@
 <div class="login-page-container">
+
+  <!-- Botón circular de inicio -->
+  <button
+    class="btn btn-home-circle"
+    routerLink="home"
+    (click)="handleLinkClick()"
+    aria-label="Ir al inicio"
+    type="button"
+  >
+    <i class="fa fa-arrow-left"></i>
+  </button>
+
   <div class="login-form-container">
+   
     <div class="text-center mb-4 cursor" [routerLink]="'/home'" title="Ir a Inicio">
       <i class="fa fa-user-circle fa-3x text-white"></i>
       <h1>CENTRO DE TERAPIAS</h1>
       <p>JUAN PABLO II</p>
       <p>Iniciar Sesión</p>
     </div>
-
+    
     <form [formGroup]="loginForm" (ngSubmit)="handleSubmit()">
       <div class="mb-3">
         <label for="email">Correo Electrónico</label>
@@ -60,5 +73,7 @@
         {{ message }}
       </div>
     </form>
+
+   
   </div>
 </div>

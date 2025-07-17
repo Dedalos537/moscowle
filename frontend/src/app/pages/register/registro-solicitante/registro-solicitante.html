@@ -53,6 +53,21 @@
 
             <div class="form-group mb-3">
               <input
+                type="text"
+                formControlName="apellido"
+                class="form-control custom-input"
+                placeholder="Ingrese su apellido"
+                [ngClass]="{'is-invalid': errores.apellido || (registroForm.get('apellido')?.touched && registroForm.get('apellido')?.invalid)}"
+                required
+              />
+
+              <div *ngIf="registroForm.get('apellido')?.touched && registroForm.get('apellido')?.invalid" class="invalid-feedback">
+                <small *ngIf="registroForm.get('apellido')?.hasError('required')">El apellido es obligatorio.</small>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <input
                 type="email"
                 formControlName="correo"
                 class="form-control custom-input"

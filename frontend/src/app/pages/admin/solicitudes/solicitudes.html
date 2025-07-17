@@ -1,34 +1,49 @@
 <div class="container mt-5">
   <h2>Solicitudes de Registro</h2>
+  <p class="mb-3 text-muted" aria-label="Descripción de la tabla de solicitudes">
+    En la siguiente tabla puedes revisar, aprobar o gestionar las solicitudes de registro recibidas.
+  </p>
 
-  <div *ngIf="mensaje" class="alert alert-info">
+  <div *ngIf="mensaje" class="alert alert-info" role="alert" aria-live="polite">
     {{ mensaje }}
   </div>
 
-  <table class="table table-bordered mt-3">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Nombre</th>
-        <th>Correo</th>
-        <th>Servicio Solicitado</th>
-        <th>Estado</th>
-        <th>Acción</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let solicitud of solicitudes; let i = index">
-        <td>{{ i + 1 }}</td>
-        <td>{{ solicitud.nombre }} {{ solicitud.apellido }}</td>
-        <td>{{ solicitud.correo }}</td>
-        <td>{{ solicitud.servicio }}</td>
-        <td>{{ solicitud.estado }}</td>
-        <td>
-          <button *ngIf="solicitud.estado === 'PENDIENTE'" class="btn btn-success btn-sm" (click)="aprobar(solicitud.id)">
-            Aprobar
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="table-responsive" aria-label="Solicitudes de registro">
+    <table class="table table-bordered mt-3">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Correo</th>
+          <th scope="col">Servicio Solicitado</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let solicitud of solicitudes; let i = index">
+            <td data-label="#">{{ i + 1 }}</td>
+          <td data-label="Nombre">{{ solicitud.nombre }} {{ solicitud.apellido }}</td>
+          <td data-label="Correo">{{ solicitud.correo }}</td>
+          <td data-label="Servicio Solicitado">{{ solicitud.servicio }}</td>
+          <td data-label="Estado">{{ solicitud.estado }}</td>
+          <td data-label="Acción">
+            <button
+              *ngIf="solicitud.estado === 'PENDIENTE'"
+              class="btn btn-success btn-sm"
+              (click)="aprobar(solicitud.id)"
+              [attr.aria-label]="'Aprobar solicitud de ' + solicitud.nombre"
+            >
+              Aprobar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tabla de mensajes de contacto -->
+  <hr class="my-5" />
+  <h2>Mensajes recibidos desde Contáctanos</h2>
+  <app-contactanos-mensajes></app-contactanos-mensajes>
 </div>

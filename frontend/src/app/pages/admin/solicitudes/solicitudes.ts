@@ -2,15 +2,16 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import axiosInstance from '../../../../axiosConfig';
+import { ContactanosMensajes } from '../contactanos-mensajes/contactanos-mensajes'; // Ajusta la ruta si es necesario
 
 @Component({
   selector: 'app-solicitudes',
-  imports: [CommonModule],
+  imports: [CommonModule, ContactanosMensajes], // <-- Agrega aquí el componente
   templateUrl: './solicitudes.html',
   styleUrl: './solicitudes.css'
 })
 export class Solicitudes {
- solicitudes: any[] = [];
+  solicitudes: any[] = [];
   private router = inject(Router);
   mensaje: string = '';
 
@@ -24,7 +25,7 @@ export class Solicitudes {
     }
     axiosInstance.get('/auth/validate')
       .then(() => {
-        this.fetchSolicitudes();
+        this.fetchSolicitudes(); // <-- Esto carga la tabla automáticamente
       })
       .catch(() => {
         this.router.navigate(['/login']);

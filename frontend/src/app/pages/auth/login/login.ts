@@ -35,7 +35,10 @@ export class Login {
     return this.loginForm.get('password');
   }
 
-  
+  handleLinkClick(): void {
+    this.router.navigate(['/home']);
+  }
+
   async handleSubmit(): Promise<void> {
     if (this.loginForm.invalid) {
       this.message = 'Por favor, completa el formulario correctamente.';

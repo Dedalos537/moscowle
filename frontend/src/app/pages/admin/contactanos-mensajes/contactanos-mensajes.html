@@ -1,0 +1,28 @@
+<div class="container mt-5">
+  <h2>Mensajes de Contacto</h2>
+  <div *ngIf="mensaje" class="alert alert-info" role="alert" aria-live="polite">{{ mensaje }}</div>
+  <div class="table-responsive" aria-label="Mensajes de contacto">
+    <table class="table table-bordered mt-3">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Correo</th>
+          <th scope="col">Sujeto</th>
+          <th scope="col">Mensaje</th>
+          <th scope="col">Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let msg of mensajes; let i = index">
+          <td data-label="#">{{ i + 1 }}</td>
+          <td data-label="Nombre">{{ msg.nombre }}</td>
+          <td data-label="Correo">{{ msg.correo }}</td>
+          <td data-label="Sujeto">{{ msg.sujeto }}</td>
+          <td data-label="Mensaje">{{ msg.mensaje }}</td>
+          <td data-label="Fecha">{{ msg.fecha }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -9,6 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink, RouterModule } from '@angular/router';
+import axiosInstance from '../../../axiosConfig';
 
 @Component({
   selector: 'app-contact',
@@ -50,7 +51,7 @@ export class Contact {
     });
   }
 
-  handleSubmit() { 
+  async handleSubmit() {
     this.message = '';
     this.messageType = 'success';
 
@@ -61,13 +62,21 @@ export class Contact {
 
     this.isLoading = true;
 
-    setTimeout(() => {
+    try {
+      const res = await axiosInstance.post('/contactanos', this.formDatos.value);
+      if (res.data.success) {
+        this.message = res.data.message || 'Mensaje enviado correctamente. ¡Gracias por contactarnos!';
+        this.messageType = 'success';
+        this.formDatos.reset();
+      } else {
+        this.message = res.data.message || 'No se pudo enviar el mensaje.';
+        this.messageType = 'error';
+      }
+    } catch (err: any) {
+      this.message = err?.response?.data?.message || 'Error al enviar el mensaje. Intenta nuevamente.';
+      this.messageType = 'error';
+    } finally {
       this.isLoading = false;
-      this.message =
-        'Mensaje enviado correctamente. ¡Gracias por contactarnos!';
-      this.messageType = 'success';
-
-      this.formDatos.reset();
-    }, 2000);
+    }
   }
 }
