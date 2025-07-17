@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { Router } from '@angular/router';
 import { UiEventService } from '../../services/ui-event.service';
 import flatpickr from 'flatpickr';
+import axiosInstance from '../../../../axiosConfig';
 
 @Component({
   selector: 'app-cursos',
@@ -38,19 +39,40 @@ export class CursosComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    flatpickr('#calendar', {
-      dateFormat: 'd/m/Y',
-      allowInput: false,
-      onClose: () => {
-        const calendar = document.getElementById('calendar') as HTMLInputElement;
-        if (calendar) calendar.style.display = 'none';
-      }
-    });
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+      localStorage.setItem('authToken', token);
+    }
 
-    const darkMode = localStorage.getItem('dark-mode');
-    if (darkMode === 'enabled') this.enableDarkMode();
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      window.location.href = 'http://localhost:3000/login';
+      return;
+    }
 
-    this.uiEventService.setupEventListeners();
+    // Validar el token con el backend
+    axiosInstance.get('/auth/validate')
+      .then(() => {
+        // Token válido, continúa con la carga normal
+        flatpickr('#calendar', {
+          dateFormat: 'd/m/Y',
+          allowInput: false,
+          onClose: () => {
+            const calendar = document.getElementById('calendar') as HTMLInputElement;
+            if (calendar) calendar.style.display = 'none';
+          }
+        });
+
+        const darkMode = localStorage.getItem('dark-mode');
+        if (darkMode === 'enabled') this.enableDarkMode();
+
+        this.uiEventService.setupEventListeners();
+      })
+      .catch(() => {
+        // Token inválido, redirige al login
+        window.location.href = 'http://localhost:3000/login';
+      });
   }
 
   irPerfil() {
