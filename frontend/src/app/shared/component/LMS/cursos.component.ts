@@ -39,17 +39,6 @@ export class CursosComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      localStorage.setItem('authToken', token);
-    }
-
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-      window.location.href = 'http://localhost:3000/login';
-      return;
-    }
 
     // Validar el token con el backend
     axiosInstance.get('/auth/validate')

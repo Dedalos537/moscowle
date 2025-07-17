@@ -6,15 +6,7 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000,
-});
-
-// Interceptor para agregar el token a cada petición
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true, // <--- importante para enviar cookies
 });
 
 export default axiosInstance;
