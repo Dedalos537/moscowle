@@ -61,8 +61,11 @@
             En el Centro de Terapias Juan Pablo II, trabajamos para potenciar el
             aprendizaje y el desarrollo integral...
           </p>
-          <button class="btn btn-primary py-md-2 px-md-4 font-weight-semi-bold mt-2"
-            (click)="openModal('lectoEscritura')">
+          <button
+            class="btn btn-primary py-md-2 px-md-4 font-weight-semi-bold mt-2"
+            (click)="openModal('lectoEscritura')"
+            aria-label="Más información sobre Lecto-Escritura"
+          >
             Más Info
           </button>
         </div>
@@ -82,7 +85,7 @@
         <div class="row align-items-center">
           <div class="col-lg-3 col-md-6 mb-4" (click)="openModal('lectoEscritura')">
             <div class="cat-item position-relative overflow-hidden rounded mb-2">
-              <img class="img-fluid" [src]="terapiasInfo.lectoEscritura.image" alt="Lecto Escritura" />
+              <img class="img-fluid" [src]="terapiasInfo.lectoEscritura.image" alt="Terapia de Lecto-Escritura: {{ terapiasInfo.lectoEscritura.description }}" />
               <div class="cat-overlay text-white text-decoration-none">
                 <h4 class="text-white font-weight-medium">
                   {{ terapiasInfo.lectoEscritura.title }}
@@ -182,25 +185,42 @@
     <app-testimonio-carrusel></app-testimonio-carrusel>
   </div>
 
-  <div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
-    <div class="modal-content">
+  <!-- Modal Backdrop and Content -->
+  <div
+    class="modal-backdrop-custom"
+    *ngIf="isModalOpen"
+    (click)="closeModal()"
+    aria-hidden="true"
+  >
+    <div
+      class="modal-content-custom"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="terapiaModalLabel"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+    >
       <div class="modal-header">
         <h5 class="modal-title" id="terapiaModalLabel">
           {{ selectedTerapia?.title }}
         </h5>
-        <button type="button" class="close" aria-label="Close" (click)="closeModal()">
+        <button
+          type="button"
+          class="close"
+          aria-label="Cerrar"
+          (click)="closeModal()"
+        >
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div class="modal-body">
-        <img [src]="selectedTerapia?.image" style="
-            width: 100%;
-            max-height: 200px;
-            object-fit: cover;
-            border-radius: 15px;
-            margin-bottom: 20px;
-          " />
+        <img
+          [src]="selectedTerapia?.image"
+          alt="{{ selectedTerapia?.title }}: {{ selectedTerapia?.description }}"
+          style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 15px; margin-bottom: 20px;"
+        />
         <p>{{ selectedTerapia?.description }}</p>
+        <p class="sr-only">Presiona el botón cerrar para salir del modal.</p>
       </div>
     </div>
   </div>

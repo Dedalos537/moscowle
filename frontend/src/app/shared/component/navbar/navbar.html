@@ -103,19 +103,32 @@
     </div>
   </div>
 
-  <button class="navbar-toggler" type="button" (click)="toggleMobileMenu()">
+  <button class="navbar-toggler"
+        type="button"
+        (click)="toggleMobileMenu()"
+        aria-label="Abrir menú de navegación"
+        aria-controls="mobileNavbar"
+        [attr.aria-expanded]="isMobileMenuOpen"
+        style="width: 70px; height: 56px; font-size: rem; border-radius: 60%; background: #fff; border: 10px solid #4cb176;">
     <i class="fa fa-bars fa-lg text-primary"></i>
   </button>
 
-  <div [class.show]="isMobileMenuOpen" class="collapse" id="mobileNavbar">
-    <div class="bg-light p-3">
-
-      <a class="nav-link" routerLink="home" routerLinkActive="active">Inicio</a>
-      <a class="nav-link" routerLink="about" routerLinkActive="active">Acerca</a>
-      <a class="nav-link" routerLink="services" routerLinkActive="active">Servicios</a>
-      <a class="nav-link" routerLink="contact" routerLinkActive="active">Contáctanos</a>
+  <div [class.show]="isMobileMenuOpen" class="collapse" id="mobileNavbar" role="navigation" aria-label="Menú principal">
+    <div class="bg-light p-3" style="border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);">
+      <a class="nav-link py-3 my-1 font-weight-bold" routerLink="home" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
+        <i class="fa fa-home mr-2"></i>Inicio
+      </a>
+      <a class="nav-link py-3 my-1 font-weight-bold" routerLink="about" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
+        <i class="fa fa-info-circle mr-2"></i>Acerca
+      </a>
+      <a class="nav-link py-3 my-1 font-weight-bold" routerLink="services" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
+        <i class="fa fa-cogs mr-2"></i>Servicios
+      </a>
+      <a class="nav-link py-3 my-1 font-weight-bold" routerLink="contact" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
+        <i class="fa fa-envelope mr-2"></i>Contáctanos
+      </a>
       <div class="border-top pt-3 mt-2">
-        <button class="btn btn-primary btn-block" routerLink="login">
+        <button class="btn btn-primary btn-block py-3 font-weight-bold" routerLink="login" style="font-size: 1.2rem;">
           <i class="fa fa-user mr-2"></i>Ingresar
         </button>
       </div>

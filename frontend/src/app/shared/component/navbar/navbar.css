@@ -1,0 +1,20 @@
+.nav-link:focus, .btn:focus {
+  outline: 3px solid #ffd700;
+  outline-offset: 2px;
+  background: #e6f0ff;
+}
+
+.nav-link.active {
+  background: #358d41;
+  color: #22bec4 !important;
+  border-radius: 8px;
+}
+
+#mobileNavbar.collapse {
+  transition: max-height 0.3s ease;
+  overflow: hidden;
+  max-height: 0;
+}
+#mobileNavbar.show {
+  max-height: 600px;
+}

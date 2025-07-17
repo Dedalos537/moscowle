@@ -67,13 +67,19 @@ export class Home {
     },
   };
 
-  openModal(terapiaId: TerapiaId) {
-    this.selectedTerapia = this.terapiasInfo[terapiaId];
+  openModal(terapiaKey: TerapiaId) {
+    this.selectedTerapia = this.terapiasInfo[terapiaKey];
     this.isModalOpen = true;
+    document.body.classList.add('modal-open');
+    setTimeout(() => {
+      const modal = document.querySelector('.modal-content-custom') as HTMLElement;
+      if (modal) modal.focus();
+    }, 0);
   }
 
   closeModal() {
     this.isModalOpen = false;
+    document.body.classList.remove('modal-open');
   }
 
   scrollToSection() {
