@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { RouterLink, RouterModule } from '@angular/router';
+import axiosInstance from '../../../../axiosConfig';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-navbar',
@@ -59,5 +61,14 @@ export class Navbar {
 
   handleLinkClick(): void {
     this.isMobileMenuOpen = false;
+  }
+  
+  isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  constructor(private router: Router) {}
+
+  async logout() {
+    await axiosInstance.post('/logout');
+    localStorage.clear();
+    this.router.navigate(['/login']);
   }
 }

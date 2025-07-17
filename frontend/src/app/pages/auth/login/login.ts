@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import axiosInstance from '../../../../axiosConfig';
 
 @Component({
   selector: 'app-login',
@@ -35,34 +36,41 @@ export class Login {
   }
 
   
-handleSubmit(): void {
-  if (this.loginForm.invalid) {
-    this.message = 'Por favor, completa el formulario correctamente.';
-    return;
-  }
-
-  this.loading = true;
-  this.message = '';
-
-  setTimeout(() => {
-    const { email, password } = this.loginForm.value;
-
-    if (email === 'alumno@juanpabloii.edu.pe' && password === '123456') {
-      const rol = 'ALUMNO';
-      localStorage.setItem('rol', rol);
-      this.message = '¡Inicio de sesión exitoso!';
-      this.router.navigate(['/cursos']);
-    } else if (email === 'admin@juanpabloii.edu.pe' && password === 'admin123') {
-      const rol = 'ADMIN';
-      localStorage.setItem('rol', rol);
-      this.message = '¡Inicio de sesión exitoso!';
-      this.router.navigate(['/dashboard']);
-    } else {
-      this.message = 'Credenciales incorrectas';
+  async handleSubmit(): Promise<void> {
+    if (this.loginForm.invalid) {
+      this.message = 'Por favor, completa el formulario correctamente.';
+      return;
     }
 
-    this.loading = false;
-  }, 1000);
-}
+    this.loading = true;
+    this.message = '';
+
+    try {
+      const { email, password } = this.loginForm.value;
+      // Llama al backend para autenticar
+      const res = await axiosInstance.post('/login', { email, password });
+      console.log('Respuesta login:', res.data); // <-- depuración
+      const { rol, token } = res.data;
+      this.message = '¡Inicio de sesión exitoso!';
+      // Guardar autenticación, rol y token en localStorage
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('rol', rol);
+      if (token) {
+        localStorage.setItem('authToken', token);
+      }
+      // Redirección según el rol
+      if (rol === 'ADMIN') {
+        this.router.navigate(['/dashboard']);
+      } else if (rol === 'USER' || rol === 'ALUMNO') {
+        this.router.navigate(['/cursos']);
+      } else {
+        this.router.navigate(['/']);
+      }
+    } catch (err: any) {
+      this.message = 'Credenciales inválidas o sin autorización aún';
+    } finally {
+      this.loading = false;
+    }
+  }
 
 }

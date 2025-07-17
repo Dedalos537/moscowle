@@ -14,9 +14,8 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
-
     @Autowired
     private AuthService authService;
 
@@ -24,7 +23,7 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData, HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
         try {
             String correo = loginData.get("email");
             String rawPassword = loginData.get("password");
@@ -39,21 +38,12 @@ public class AuthController {
 
             if (responseData == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Credenciales inválidas o acceso no autorizado");
+                    .body("Credenciales inválidas o acceso no autorizado");
             }
 
             // Generar JWT y agregarlo a la respuesta
             String token = jwtUtil.generateToken(correo, (String) responseData.get("rol"));
             responseData.put("token", token);
-
-            // Set cookie (HTTP Only, SameSite=None, Secure si usas HTTPS)
-            jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie("authToken", token);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(60 * 60 * 10); // 10 horas
-            cookie.setSecure(false); // true si usas HTTPS
-            cookie.setDomain("localhost"); // ajusta si usas otro dominio
-            response.addCookie(cookie);
 
             System.out.println("Login exitoso para: " + correo);
             return ResponseEntity.ok(responseData);
@@ -61,22 +51,26 @@ public class AuthController {
         } catch (Exception e) {
             System.err.println("Error en login: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error interno del servidor");
+                .body("Error interno del servidor");
         }
     }
-
+    
     @GetMapping("/auth/validate")
-    public ResponseEntity<?> validateToken(@CookieValue(value = "authToken", required = false) String token) {
-        if (token == null || !jwtUtil.validateToken(token)) {
+    public ResponseEntity<?> validateToken(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token faltante o inválido");
+        }
+        String token = authHeader.substring(7);
+        if (jwtUtil.validateToken(token)) {
+            return ResponseEntity.ok(Map.of("valid", true));
+        } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
         }
-        return ResponseEntity.ok(Map.of("valid", true));
     }
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // Aquí podrías invalidar la sesión si usas sesiones de Spring, pero como es
-        // stateless, solo responde OK
+        // Aquí podrías invalidar la sesión si usas sesiones de Spring, pero como es stateless, solo responde OK
         return ResponseEntity.ok(Map.of("success", true, "message", "Sesión cerrada correctamente"));
     }
 }

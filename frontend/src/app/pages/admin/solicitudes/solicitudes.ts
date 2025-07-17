@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import axiosInstance from '../../../../axiosConfig';
 
 @Component({
   selector: 'app-solicitudes',
@@ -8,23 +10,58 @@ import { Component } from '@angular/core';
   styleUrl: './solicitudes.css'
 })
 export class Solicitudes {
- solicitudes = [
-    { id: 1, nombre: 'Juan Pérez', correo: 'juan.perez@example.com', servicio: 'Terapia Física', estado: 'PENDIENTE' },
-    { id: 2, nombre: 'Ana García', correo: 'ana.garcia@example.com', servicio: 'Terapia Ocupacional', estado: 'PENDIENTE' },
-    { id: 3, nombre: 'Carlos López', correo: 'carlos.lopez@example.com', servicio: 'Psicoterapia', estado: 'PENDIENTE' }
-  ];
-
+ solicitudes: any[] = [];
+  private router = inject(Router);
   mensaje: string = '';
+
+  // Proteger la ruta: solo admins autenticados pueden verla y validar el token con el backend
+  ngOnInit(): void {
+    const isAuth = localStorage.getItem('isAuthenticated');
+    const rol = localStorage.getItem('rol');
+    if (!isAuth || rol !== 'ADMIN') {
+      this.router.navigate(['/login']);
+      return;
+    }
+    axiosInstance.get('/auth/validate')
+      .then(() => {
+        this.fetchSolicitudes();
+      })
+      .catch(() => {
+        this.router.navigate(['/login']);
+      });
+  }
+
+  async fetchSolicitudes(): Promise<void> {
+    try {
+      const res = await axiosInstance.get('/registro');
+      this.solicitudes = Array.isArray(res.data) ? res.data : res.data.solicitudes || [];
+    } catch (error: any) {
+      this.mensaje = 'Error al cargar solicitudes: ' + (error?.response?.data?.message || error.message);
+      console.error('Error al cargar solicitudes:', error);
+    }
+  }
 
   constructor() {}
 
-  ngOnInit(): void {}
+  // ...existing code...
 
-  aprobar(id: number): void {
-    const solicitud = this.solicitudes.find(s => s.id === id);
-    if (solicitud) {
-      solicitud.estado = 'APROBADO';
-      this.mensaje = 'Solicitud aprobada correctamente';
+  async aprobar(id: number): Promise<void> {
+    try {
+      const res = await axiosInstance.put(`/registro/${id}/aprobar`);
+      this.mensaje = res.data.message || 'Solicitud aprobada correctamente';
+      await this.fetchSolicitudes();
+    } catch (error: any) {
+      this.mensaje = error?.response?.data?.error || error?.response?.data?.message || 'No se pudo aprobar la solicitud';
+      console.error('Error al aprobar solicitud:', error);
     }
+  }
+
+  async handleLogout(): Promise<void> {
+    try {
+      await axiosInstance.post('/api/logout');
+    } catch (e) {}
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('rol');
+    this.router.navigate(['/login']);
   }
 }

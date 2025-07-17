@@ -19,7 +19,7 @@
     <tbody>
       <tr *ngFor="let solicitud of solicitudes; let i = index">
         <td>{{ i + 1 }}</td>
-        <td>{{ solicitud.nombre }}</td>
+        <td>{{ solicitud.nombre }} {{ solicitud.apellido }}</td>
         <td>{{ solicitud.correo }}</td>
         <td>{{ solicitud.servicio }}</td>
         <td>{{ solicitud.estado }}</td>
