@@ -192,12 +192,34 @@ export class Services {
   onOpenModal(serviceKey: string) {
     this.selectedTerapia = this.allServices[serviceKey];
     this.isModalOpen = true;
+    setTimeout(() => {
+      const modal = document.getElementById('modalContent');
+      modal?.focus();
+    }, 0);
+    document.body.classList.add('modal-open');
+    window.addEventListener('keydown', this.handleKeyDown);
   }
 
   closeModal() {
     this.isModalOpen = false;
     this.selectedTerapia = null;
+    document.body.classList.remove('modal-open');
+    window.removeEventListener('keydown', this.handleKeyDown);
   }
+
+  handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      this.closeModal();
+    }
+    // Opcional: Mantener el foco dentro del modal
+    if (this.isModalOpen && event.key === 'Tab') {
+      const modal = document.getElementById('modalContent');
+      if (modal) {
+        event.preventDefault();
+        modal.focus();
+      }
+    }
+  };
 
   getServicesByCategory(cat: string) {
     return Object.entries(this.allServices).filter(

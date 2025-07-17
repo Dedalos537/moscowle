@@ -86,18 +86,31 @@
   </section>
 </div>
 
-<div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <button class="close-btn" (click)="closeModal()">×</button>
+<div class="modal-backdrop" *ngIf="isModalOpen" (click)="closeModal()" aria-modal="true" role="dialog" aria-labelledby="modalTitle" tabindex="-1">
+  <div class="modal-content"
+       (click)="$event.stopPropagation()"
+       tabindex="0"
+       id="modalContent"
+       role="document"
+       aria-describedby="modalDesc"
+  >
+    <button class="close-btn"
+            (click)="closeModal()"
+            aria-label="Cerrar modal"
+            title="Cerrar"
+            style="font-size:2.5rem; color:#0057b8; background:#fff; border-radius:50%; width:48px; height:48px; border:2px solid #0057b8; display:flex; align-items:center; justify-content:center;">
+      ×
+    </button>
     <div *ngIf="selectedTerapia">
-      <div class="modal-icon">{{ selectedTerapia.icon }}</div>
-      <h2>{{ selectedTerapia.title }}</h2>
+      <div class="modal-icon" aria-hidden="true" style="font-size:3rem; text-align:center;">{{ selectedTerapia.icon }}</div>
+      <h2 id="modalTitle" style="font-size:2rem; color:#0057b8; text-align:center; margin-top:10px;">{{ selectedTerapia.title }}</h2>
       <img
         [src]="selectedTerapia.image"
-        alt="{{ selectedTerapia.title }}"
-        style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 15px; margin-bottom: 20px"
+        [alt]="selectedTerapia.title + ': ' + selectedTerapia.description"
+        style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 15px; margin-bottom: 20px"
       />
-      <p style="text-align: justify">{{ selectedTerapia.description }}</p>
+      <p id="modalDesc" style="text-align: justify; font-size:1.2rem; color:#222;">{{ selectedTerapia.description }}</p>
+      <p class="sr-only">Presiona el botón cerrar o la tecla Escape para salir del modal.</p>
     </div>
   </div>
 </div>
