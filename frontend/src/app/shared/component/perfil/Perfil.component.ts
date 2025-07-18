@@ -1,6 +1,13 @@
-import { Component, OnInit, AfterViewInit, ViewEncapsulation } from '@angular/core';
-import { UiEventService } from '../../services/ui-event.service';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  ChangeDetectorRef,
+  ViewEncapsulation
+} from '@angular/core';
 import { Router } from '@angular/router';
+import { UiEventService } from '../../services/ui-event.service';
+import axiosInstance from '../../../../axiosConfig';
 import flatpickr from 'flatpickr';
 
 @Component({
@@ -10,67 +17,119 @@ import flatpickr from 'flatpickr';
   encapsulation: ViewEncapsulation.None
 })
 export class PerfilComponent implements OnInit, AfterViewInit {
-  today: Date = new Date();
-  currentMonth: number = this.today.getMonth();
-  currentYear: number = this.today.getFullYear();
+  today = new Date();
+  currentMonth = this.today.getMonth();
+  currentYear = this.today.getFullYear();
+  nombreCompleto = '';
 
-  events: { date: string; event: string; color: string }[] = [
+  events = [
     { date: '2024-10-27', event: 'Tarea 3', color: 'green' },
     { date: '2024-10-30', event: 'Tarea 2', color: 'blue' }
   ];
 
-  constructor(private router: Router, private uiEventService: UiEventService) {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private uiEventService: UiEventService
+  ) {}
 
   ngOnInit(): void {
-    this.uiEventService.setupEventListeners();
+    const isAuth = localStorage.getItem('isAuthenticated');
+    const rol = localStorage.getItem('rol');
+    if (!isAuth || rol !== 'USER') {
+    this.router.navigate(['/login']);
+    return;
+    }
+
+
+    axiosInstance
+      .get('/auth/validate')
+      .then(() => {
+        return axiosInstance.get('/auth/me');
+      })
+      .then((res) => {
+        const { nombre, apellido } = res.data;
+        this.nombreCompleto = `${nombre} ${apellido}`;
+        this.cdr.detectChanges();
+        this.setupFlatpickr();
+        this.checkDarkMode();
+        this.uiEventService.setupEventListeners();
+      })
+      .catch(() => this.router.navigate(['/login']));
+  }
+
+  ngAfterViewInit(): void {
+    this.generateCalendar(this.currentMonth, this.currentYear);
+    this.addCalendarNavigation();
   }
 
   irPerfil() {
     this.router.navigate(['/perfil']);
   }
 
-  logout(): void {
-    localStorage.removeItem('authToken'); // si usas tokens
-    this.router.navigate(['/home']);
+  irCursos() {
+    this.router.navigate(['/cursos']);
+  }
+  async logout() {
+    await axiosInstance.post('/logout');
+    localStorage.clear();
+    this.router.navigate(['/login']);
   }
 
-  
-  ngAfterViewInit(): void {
-    this.generateCalendar(this.currentMonth, this.currentYear);
-
-    const prevButton = document.getElementById('prev');
-    const nextButton = document.getElementById('next');
-
-    prevButton?.addEventListener('click', () => {
-      this.currentMonth--;
-      if (this.currentMonth < 0) {
-        this.currentMonth = 11;
-        this.currentYear--;
+  private setupFlatpickr(): void {
+    flatpickr('#calendar', {
+      dateFormat: 'd/m/Y',
+      allowInput: false,
+      onClose: () => {
+        const input = document.getElementById('calendar') as HTMLInputElement;
+        if (input) input.style.display = 'none';
       }
+    });
+  }
+
+  private checkDarkMode(): void {
+    const darkMode = localStorage.getItem('dark-mode');
+    if (darkMode === 'enabled') {
+      this.enableDarkMode();
+    }
+  }
+
+  enableDarkMode(): void {
+    document.getElementById('toggle-btn')?.classList.replace('fa-sun', 'fa-moon');
+    document.body.classList.add('dark');
+    localStorage.setItem('dark-mode', 'enabled');
+  }
+
+  disableDarkMode(): void {
+    document.getElementById('toggle-btn')?.classList.replace('fa-moon', 'fa-sun');
+    document.body.classList.remove('dark');
+    localStorage.setItem('dark-mode', 'disabled');
+  }
+
+  private addCalendarNavigation(): void {
+    document.getElementById('prev')?.addEventListener('click', () => {
+      this.currentMonth = this.currentMonth === 0 ? 11 : this.currentMonth - 1;
+      if (this.currentMonth === 11) this.currentYear--;
       this.generateCalendar(this.currentMonth, this.currentYear);
     });
 
-    nextButton?.addEventListener('click', () => {
-      this.currentMonth++;
-      if (this.currentMonth > 11) {
-        this.currentMonth = 0;
-        this.currentYear++;
-      }
+    document.getElementById('next')?.addEventListener('click', () => {
+      this.currentMonth = this.currentMonth === 11 ? 0 : this.currentMonth + 1;
+      if (this.currentMonth === 0) this.currentYear++;
       this.generateCalendar(this.currentMonth, this.currentYear);
     });
   }
 
   generateCalendar(month: number, year: number): void {
-    const calendarContainer = document.getElementById('dates');
-    const monthYear = document.getElementById('monthYear');
+    const container = document.getElementById('dates');
+    const monthLabel = document.getElementById('monthYear');
+    if (!container || !monthLabel) return;
 
-    if (!calendarContainer || !monthYear) return;
-
+    container.innerHTML = '';
     const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    calendarContainer.innerHTML = '';
+    const totalDays = new Date(year, month + 1, 0).getDate();
 
-    monthYear.textContent = new Date(year, month).toLocaleString('es-ES', {
+    monthLabel.textContent = new Date(year, month).toLocaleString('es-ES', {
       month: 'long',
       year: 'numeric'
     });
@@ -78,35 +137,33 @@ export class PerfilComponent implements OnInit, AfterViewInit {
     for (let i = 0; i < (firstDay + 6) % 7; i++) {
       const blank = document.createElement('div');
       blank.classList.add('date');
-      calendarContainer.appendChild(blank);
+      container.appendChild(blank);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
+    for (let day = 1; day <= totalDays; day++) {
       const date = new Date(year, month, day);
-      const dayElement = document.createElement('div');
-      dayElement.classList.add('date');
-      dayElement.textContent = day.toString();
+      const dayEl = document.createElement('div');
+      dayEl.classList.add('date');
+      dayEl.textContent = day.toString();
 
       if (
         day === this.today.getDate() &&
         month === this.today.getMonth() &&
         year === this.today.getFullYear()
       ) {
-        dayElement.classList.add('today');
+        dayEl.classList.add('today');
       }
 
-      const event = this.events.find(
-        e => e.date === date.toISOString().slice(0, 10)
-      );
+      const event = this.events.find(e => e.date === date.toISOString().slice(0, 10));
       if (event) {
-        const eventElement = document.createElement('div');
-        eventElement.classList.add('event');
-        eventElement.textContent = event.event;
-        eventElement.style.backgroundColor = event.color;
-        dayElement.appendChild(eventElement);
+        const eEl = document.createElement('div');
+        eEl.classList.add('event');
+        eEl.textContent = event.event;
+        eEl.style.backgroundColor = event.color;
+        dayEl.appendChild(eEl);
       }
 
-      calendarContainer.appendChild(dayElement);
+      container.appendChild(dayEl);
     }
   }
 }

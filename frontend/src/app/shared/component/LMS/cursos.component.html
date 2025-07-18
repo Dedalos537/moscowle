@@ -70,7 +70,7 @@
     <h3 class="name">{{ nombreCompleto }}</h3>
     <p class="role">Estudiante</p>
     
-    <a routerLink="/perfil" class="btn">Ver Perfil</a>
+    <a (click)="irPerfil()" class="btn">Ver Perfil</a>
   </div>
   <nav class="navbar">
     <a routerLink="/cursos"><i class="fas fa-graduation-cap"></i><span>Cursos</span></a>
@@ -82,7 +82,7 @@
 </div>
 
 <section class="courses">
-  <h1 class="heading">Cursos</h1>
+  <h1 class="heading">Servicios</h1>
 
   <div class="box-container">
     <div class="box">

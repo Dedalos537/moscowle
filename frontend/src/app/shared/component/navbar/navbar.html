@@ -72,6 +72,9 @@
               <a class="nav-item nav-link" routerLink="about" routerLinkActive="active">Acerca</a>
               <a class="nav-item nav-link" routerLink="services" routerLinkActive="active">Servicios</a>
               <a class="nav-item nav-link" routerLink="contact" routerLinkActive="active">Contáctanos</a>
+              <a *ngIf="isAdmin()" class="nav-item nav-link" routerLink="dashboard" routerLinkActive="active">Dashboard</a>
+
+
             </div>
           </div>
         </nav>
@@ -126,6 +129,9 @@
       </a>
       <a class="nav-link py-3 my-1 font-weight-bold" routerLink="contact" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
         <i class="fa fa-envelope mr-2"></i>Contáctanos
+      </a>
+      <a *ngIf="isAdmin" class="nav-link py-3 my-1 font-weight-bold" routerLink="dashboard" routerLinkActive="active" style="font-size: 1.3rem; color: #4cb176;">
+        <i class="fa fa-tachometer-alt mr-2"></i>Dashboard
       </a>
       <div class="border-top pt-3 mt-2">
         <button class="btn btn-primary btn-block py-3 font-weight-bold" routerLink="login" style="font-size: 1.2rem;">

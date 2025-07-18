@@ -65,6 +65,11 @@ export class Navbar {
   
   isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   constructor(private router: Router) {}
+  
+  isAdmin(): boolean {
+  return localStorage.getItem('rol') === 'ADMIN';
+  }
+
 
   async logout() {
     await axiosInstance.post('/logout');
