@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ContactanosMensajes } from '../contactanos-mensajes/contactanos-mensajes'; 
 import axiosInstance from '../../../../axiosConfig';
 
 @Component({
   selector: 'app-solicitudes',
-  imports: [CommonModule],
+  imports: [CommonModule,ContactanosMensajes],
   templateUrl: './solicitudes.html',
   styleUrl: './solicitudes.css',
 })
