@@ -39,7 +39,12 @@ export class CursosComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-
+    const isAuth = localStorage.getItem('isAuthenticated');
+    const rol = localStorage.getItem('rol');
+    if (!isAuth || rol !== 'USER') {
+      this.router.navigate(['/login']);
+      return;
+    }
     // Validar el token con el backend
     axiosInstance.get('/auth/validate')
       .then(() => {
@@ -60,7 +65,7 @@ export class CursosComponent implements OnInit {
       })
       .catch(() => {
         // Token inválido, redirige al login
-        window.location.href = 'http://localhost:3000/login';
+        this.router.navigate(['/login']);;
       });
   }
 
@@ -68,9 +73,10 @@ export class CursosComponent implements OnInit {
     this.router.navigate(['/perfil']);
   }
 
-  logout(): void {
-    localStorage.removeItem('authToken'); // si usas tokens
-    this.router.navigate(['/home']);
+  async logout() {
+    await axiosInstance.post('/logout');
+    localStorage.clear();
+    this.router.navigate(['/login']);
   }
 
   enableDarkMode(): void {
