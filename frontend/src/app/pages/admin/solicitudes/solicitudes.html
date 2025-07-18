@@ -21,29 +21,25 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let solicitud of solicitudes; let i = index">
-            <td data-label="#">{{ i + 1 }}</td>
+        <tr *ngFor="let solicitud of solicitudes; let i = index; trackBy: trackById">
+          <td data-label="#">{{ i + 1 }}</td>
           <td data-label="Nombre">{{ solicitud.nombre }} {{ solicitud.apellido }}</td>
           <td data-label="Correo">{{ solicitud.correo }}</td>
           <td data-label="Servicio Solicitado">{{ solicitud.servicio }}</td>
           <td data-label="Estado">{{ solicitud.estado }}</td>
           <td data-label="Acción">
-            <button
-              *ngIf="solicitud.estado === 'PENDIENTE'"
-              class="btn btn-success btn-sm"
-              (click)="aprobar(solicitud.id)"
-              [attr.aria-label]="'Aprobar solicitud de ' + solicitud.nombre"
-            >
+            <button *ngIf="solicitud.estado === 'PENDIENTE'" class="btn btn-success btn-sm"
+              (click)="aprobar(solicitud.id)">
               Aprobar
             </button>
           </td>
         </tr>
       </tbody>
     </table>
+
   </div>
 
   <!-- Tabla de mensajes de contacto -->
   <hr class="my-5" />
   <h2>Mensajes recibidos desde Contáctanos</h2>
-  <app-contactanos-mensajes></app-contactanos-mensajes>
 </div>

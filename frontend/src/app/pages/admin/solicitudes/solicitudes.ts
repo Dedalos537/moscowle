@@ -1,21 +1,23 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import axiosInstance from '../../../../axiosConfig';
-import { ContactanosMensajes } from '../contactanos-mensajes/contactanos-mensajes'; // Ajusta la ruta si es necesario
 
 @Component({
   selector: 'app-solicitudes',
-  imports: [CommonModule, ContactanosMensajes], // <-- Agrega aquí el componente
+  imports: [CommonModule],
   templateUrl: './solicitudes.html',
-  styleUrl: './solicitudes.css'
+  styleUrl: './solicitudes.css',
 })
 export class Solicitudes {
   solicitudes: any[] = [];
-  private router = inject(Router);
   mensaje: string = '';
 
-  // Proteger la ruta: solo admins autenticados pueden verla y validar el token con el backend
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router // ✅ ya no usas inject(Router)
+  ) {}
+
   ngOnInit(): void {
     const isAuth = localStorage.getItem('isAuthenticated');
     const rol = localStorage.getItem('rol');
@@ -23,9 +25,10 @@ export class Solicitudes {
       this.router.navigate(['/login']);
       return;
     }
-    axiosInstance.get('/auth/validate')
+    axiosInstance
+      .get('/auth/validate')
       .then(() => {
-        this.fetchSolicitudes(); // <-- Esto carga la tabla automáticamente
+        this.fetchSolicitudes();
       })
       .catch(() => {
         this.router.navigate(['/login']);
@@ -35,16 +38,17 @@ export class Solicitudes {
   async fetchSolicitudes(): Promise<void> {
     try {
       const res = await axiosInstance.get('/registro');
-      this.solicitudes = Array.isArray(res.data) ? res.data : res.data.solicitudes || [];
+      this.solicitudes = Array.isArray(res.data)
+        ? res.data
+        : res.data.solicitudes || [];
+      this.cdr.detectChanges(); // 🔁 Forzar actualización
     } catch (error: any) {
-      this.mensaje = 'Error al cargar solicitudes: ' + (error?.response?.data?.message || error.message);
+      this.mensaje =
+        'Error al cargar solicitudes: ' +
+        (error?.response?.data?.message || error.message);
       console.error('Error al cargar solicitudes:', error);
     }
   }
-
-  constructor() {}
-
-  // ...existing code...
 
   async aprobar(id: number): Promise<void> {
     try {
@@ -52,7 +56,10 @@ export class Solicitudes {
       this.mensaje = res.data.message || 'Solicitud aprobada correctamente';
       await this.fetchSolicitudes();
     } catch (error: any) {
-      this.mensaje = error?.response?.data?.error || error?.response?.data?.message || 'No se pudo aprobar la solicitud';
+      this.mensaje =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        'No se pudo aprobar la solicitud';
       console.error('Error al aprobar solicitud:', error);
     }
   }
@@ -64,5 +71,9 @@ export class Solicitudes {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('rol');
     this.router.navigate(['/login']);
+  }
+
+  trackById(index: number, item: any): number {
+    return item.id;
   }
 }
