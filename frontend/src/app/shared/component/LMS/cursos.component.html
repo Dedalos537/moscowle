@@ -9,7 +9,7 @@
     <div class="icons">
       <div id="search-btn" class="fas fa-search"></div>
       <div id="user-btn" class="fas fa-user"></div>
-      <div id="notification-btn" class="fas fa-bell" style="cursor: pointer"></div>
+
       <div id="toggle-btn" class="fas fa-sun"></div>
       <div id="menu-btn" class="fas fa-bars"></div>
     </div>
@@ -23,41 +23,7 @@
 
     </div>
 
-    <div class="notification-bar">
-      <div class="notification-header">
-        <button class="back-btn"><i class="fas fa-times"></i></button>
-        <h2>Notificaciones</h2>
-      </div>
-      <div class="notifications">
-        <div class="notification tarea">
-          <div class="notification-icon"><i class="fas fa-file-alt"></i></div>
-          <div class="notification-content">
-            <p class="notification-course">Curso: Terapia Cognitiva</p>
-            <p class="notification-week">Sección de Desarrollo: 5</p>
-            <p class="notification-type">Tipo de Tarea: Evaluación</p>
-            <p class="notification-due">Fecha de Vencimiento: 23 oct.</p>
-          </div>
-        </div>
-        <div class="notification encuesta">
-          <div class="notification-icon"><i class="fas fa-poll"></i></div>
-          <div class="notification-content">
-            <p class="notification-course">Curso: Terapia Conductual</p>
-            <p class="notification-week">Sección de Desarrollo: 3</p>
-            <p class="notification-type">Tipo de Tarea: Encuesta</p>
-            <p class="notification-due">Fecha de Vencimiento: 25 oct.</p>
-          </div>
-        </div>
-        <div class="notification comentario">
-          <div class="notification-icon"><i class="fas fa-comments"></i></div>
-          <div class="notification-content">
-            <p class="notification-course">Curso: Terapia Familiar</p>
-            <p class="notification-week">Sección de Desarrollo: 2</p>
-            <p class="notification-type">Tipo de Tarea: Comentario en Foro</p>
-            <p class="notification-date">Fecha de Ingreso: 21 oct.</p>
-          </div>
-        </div>
-      </div>
-    </div>
+
   </section>
 </header>
 
@@ -69,16 +35,14 @@
     <img src="/img/PIC-1.jpg" class="image" alt="" />
     <h3 class="name">{{ nombreCompleto }}</h3>
     <p class="role">Estudiante</p>
-    
+
     <a (click)="irPerfil()" class="btn">Ver Perfil</a>
   </div>
   <nav class="navbar">
     <a routerLink="/cursos"><i class="fas fa-graduation-cap"></i><span>Cursos</span></a>
-    <a routerLink="/tarea"><i class="fas fa-file-alt"></i><span>Tareas</span></a>
-    <a routerLink="/progreso"><i class="fas fa-chart-line"></i><span>Progreso</span></a>
-    <a routerLink="/calendario"><i class="fas fa-calendar-alt"></i><span>Calendario</span></a>
+
   </nav>
-  
+
 </div>
 
 <section class="courses">
@@ -86,95 +50,64 @@
 
   <div class="box-container">
     <div class="box">
-      <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
-        <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
+      <a href="https://juegos.centrojuanpabloii.com/mamemi/" target="_blank" class="box-link">
+        <div class="tutor">
+          <img src="/img/PIC-1.jpg" alt="Avatar del tutor" />
+          <div class="info">
+            <h3>Lucia Martínez</h3>
+            <span>Disponible ahora</span>
+          </div>
         </div>
-      </div>
-      <div class="thumb">
-        <img src="/img/CONDUCTUAL.jpg" alt="" />
-      </div>
-      <h3 class="title">CURSO 01</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
+        <div class="thumb">
+          <img src="/img/CONDUCTUAL.jpg" alt="Miniatura del juego" />
+        </div>
+        <h3 class="title">Juego Interactivo: Ma Me Mi</h3>
+        <div class="arrow-btn" style="text-align: right;">
+          <i class="fas fa-arrow-right"></i>
+        </div>
+      </a>
+    </div>
+     <div class="box">
+      <a href="https://juegos.centrojuanpabloii.com/d-bas/" target="_blank" class="box-link">
+        <div class="tutor">
+          <img src="/img/PIC-1.jpg" alt="Avatar del tutor" />
+          <div class="info">
+            <h3>Lucia Martínez</h3>
+            <span>Disponible ahora</span>
+          </div>
+        </div>
+        <div class="thumb">
+          <img src="/img/DBAS.jpg" alt="Miniatura del juego D-BAS" />
+        </div>
+        <h3 class="title">Juego Interactivo: D-BAS</h3>
+        <div class="arrow-btn" style="text-align: right;">
+          <i class="fas fa-arrow-right"></i>
+        </div>
+      </a>
     </div>
 
-    <div class="box">
+  <div class="box">
+    <a href="https://juegos.centrojuanpabloii.com/c-bas/" target="_blank" class="box-link">
       <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
+        <img src="/img/PIC-1.jpg" alt="Avatar del tutor" />
         <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
+          <h3>Lucia Martínez</h3>
+          <span>Disponible ahora</span>
         </div>
       </div>
       <div class="thumb">
-        <img src="/img/IM3.PNG" alt="" />
+        <img src="/img/CBAS.jpg" alt="Miniatura del juego C-BAS" />
       </div>
-      <h3 class="title">CURSO 02</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
-    </div>
-
-    <div class="box">
-      <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
-        <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
-        </div>
+      <h3 class="title">Juego Interactivo: C-BAS</h3>
+      <div class="arrow-btn" style="text-align: right;">
+        <i class="fas fa-arrow-right"></i>
       </div>
-      <div class="thumb">
-        <img src="/img/IM4.PNG" alt="" />
-      </div>
-      <h3 class="title">CURSO 03</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
-    </div>
-
-    <div class="box">
-      <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
-        <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
-        </div>
-      </div>
-      <div class="thumb">
-        <img src="/img/IM5.PNG" alt="" />
-      </div>
-      <h3 class="title">CURSO 04</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
-    </div>
-
-    <div class="box">
-      <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
-        <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
-        </div>
-      </div>
-      <div class="thumb">
-        <img src="/img/LECTOESCRITURA.jpg" alt="" />
-      </div>
-      <h3 class="title">CURSO 05</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
-    </div>
-
-    <div class="box">
-      <div class="tutor">
-        <img src="/img/PIC-1.jpg" alt="" />
-        <div class="info">
-          <h3>john deo</h3>
-          <span>21-10-2024</span>
-        </div>
-      </div>
-      <div class="thumb">
-        <img src="/img/LECTOESCRITURA.jpg" alt="" />
-      </div>
-      <h3 class="title">CURSO 06</h3>
-      <a routerLink="/secciones" class="arrow-btn"><i class="fas fa-arrow-right"></i></a>
-    </div>
+    </a>
   </div>
+  </div>
+ 
+   
+
 </section>
 
 <footer class="footer">
@@ -184,45 +117,44 @@
 
 <style>
   .side-bar .navbar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 0;
-  gap: 2rem;
-}
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 0;
+    gap: 2rem;
+  }
 
-.side-bar .navbar a {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-size: 1.6rem;
-  color: var(--light-color);
-  transition: 0.3s ease;
-}
+  .side-bar .navbar a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 1.6rem;
+    color: var(--light-color);
+    transition: 0.3s ease;
+  }
 
-.side-bar .navbar a i {
-  font-size: 2.5rem;
-  color: var(--main-color);
-  margin-bottom: 0.5rem;
-  transition: 0.2s ease;
-}
+  .side-bar .navbar a i {
+    font-size: 2.5rem;
+    color: var(--main-color);
+    margin-bottom: 0.5rem;
+    transition: 0.2s ease;
+  }
 
-.side-bar .navbar a span {
-  font-size: 1.5rem;
-  color: var(--light-color);
-}
+  .side-bar .navbar a span {
+    font-size: 1.5rem;
+    color: var(--light-color);
+  }
 
-.side-bar .navbar a:hover {
-  background-color: var(--light-bg);
-  transform: scale(1.05);
-  border-radius: 1rem;
-  padding: 1rem 2rem;
-}
+  .side-bar .navbar a:hover {
+    background-color: var(--light-bg);
+    transform: scale(1.05);
+    border-radius: 1rem;
+    padding: 1rem 2rem;
+  }
 
-.side-bar .navbar a:hover i {
-  color: var(--black);
-}
-
+  .side-bar .navbar a:hover i {
+    color: var(--black);
+  }
 </style>

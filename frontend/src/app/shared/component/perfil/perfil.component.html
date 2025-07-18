@@ -10,9 +10,6 @@
         <div class="icons">
          <div id="search-btn" class="fas fa-search"></div>
           <div id="user-btn" class="fas fa-user"></div>
-          <div id="notification-btn" class="fas fa-bell" style="cursor: pointer"></div>
-          <div id="calendar-btn" class="fas fa-calendar" style="cursor: pointer"></div>
-          <input type="text" id="calendar" class="calendar" style="display: none" readonly />
           <div id="toggle-btn" class="fas fa-sun"></div>  
           <div id="menu-btn" class="fas fa-bars"></div>            
        </div>
@@ -25,44 +22,7 @@
             <button (click)="logout()" class="btn">Cerrar sesión</button>
 
          </div>
-        <div class="notification-bar">
-          <div class="notification-header">
-              <button class="back-btn"><i class="fas fa-times"></i></button>
-              <h2>Notificaciones</h2>
-          </div>
-          <div class="notifications">
-              <!-- Notificación 1-->
-              <div class="notification tarea">
-                  <div class="notification-icon"><i class="fas fa-file-alt"></i></div>
-                  <div class="notification-content">
-                      <p class="notification-course">Curso: Terapia Cognitiva</p>
-                      <p class="notification-week">Sección de Desarrollo: 5</p>
-                      <p class="notification-type">Tipo de Tarea: Evaluación</p>
-                      <p class="notification-due">Fecha de Vencimiento: 23 oct.</p>
-                  </div>
-              </div>
-              <!-- Notificación 2-->
-              <div class="notification encuesta">
-                  <div class="notification-icon"><i class="fas fa-poll"></i></div>
-                  <div class="notification-content">
-                      <p class="notification-course">Curso: Terapia Conductual</p>
-                      <p class="notification-week">Sección de Desarrollo: 3</p>
-                      <p class="notification-type">Tipo de Tarea: Encuesta</p>
-                      <p class="notification-due">Fecha de Vencimiento: 25 oct.</p>
-                  </div>
-              </div>
-              <!-- Notificación 3-->
-              <div class="notification comentario">
-                  <div class="notification-icon"><i class="fas fa-comments"></i></div>
-                  <div class="notification-content">
-                      <p class="notification-course">Curso: Terapia Familiar</p>
-                      <p class="notification-week">Sección de Desarrollo: 2</p>
-                      <p class="notification-type">Tipo de Tarea: Comentario en Foro</p>
-                      <p class="notification-date">Fecha de Ingreso: 21 oct.</p>
-                  </div>
-              </div>
-          </div>
-      </div>
+       
       </section>
     </header>
 
@@ -79,9 +39,6 @@
   </div>
   <nav class="navbar">
     <a (click)="irCursos()"><i class="fas fa-graduation-cap"></i><span>Cursos</span></a>
-    <a routerLink="/tarea"><i class="fas fa-file-alt"></i><span>Tareas</span></a>
-    <a routerLink="/progreso"><i class="fas fa-chart-line"></i><span>Progreso</span></a>
-    <a routerLink="/calendario"><i class="fas fa-calendar-alt"></i><span>Calendario</span></a>
   </nav>
   
 </div>
