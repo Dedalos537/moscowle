@@ -59,7 +59,7 @@ export class PerfilComponent implements OnInit {
   irPerfil() {
     this.router.navigate(['/perfil']);
   }
-
+  
   irCursos() {
     this.router.navigate(['/cursos']);
   }
