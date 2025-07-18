@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { UiEventService } from '../../services/ui-event.service';
 import flatpickr from 'flatpickr';
@@ -8,11 +8,12 @@ import axiosInstance from '../../../../axiosConfig';
   selector: 'app-cursos',
   templateUrl: './cursos.component.html',
   styleUrls: ['./cursos.component.css'],
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
 })
 export class CursosComponent implements OnInit {
+  constructor(private router: Router, private uiEventService: UiEventService, private cdr: ChangeDetectorRef) {}
 
-  constructor(private router: Router, private uiEventService: UiEventService) {}
+  nombreCompleto: string = ''; 
 
   cursos = [
     {
@@ -20,22 +21,22 @@ export class CursosComponent implements OnInit {
       fecha: '01 Jul 2025',
       titulo: 'Terapia Cognitiva',
       tutorImg: 'assets/images/tutor1.jpg',
-      imagen: 'assets/images/curso1.jpg'
+      imagen: 'assets/images/curso1.jpg',
     },
     {
       nombre: 'Curso 2',
       fecha: '03 Jul 2025',
       titulo: 'Terapia Familiar',
       tutorImg: 'assets/images/tutor2.jpg',
-      imagen: 'assets/images/curso2.jpg'
+      imagen: 'assets/images/curso2.jpg',
     },
     {
       nombre: 'Curso 3',
       fecha: '05 Jul 2025',
       titulo: 'Terapia Conductual',
       tutorImg: 'assets/images/tutor3.jpg',
-      imagen: 'assets/images/curso3.jpg'
-    }
+      imagen: 'assets/images/curso3.jpg',
+    },
   ];
 
   ngOnInit(): void {
@@ -46,16 +47,24 @@ export class CursosComponent implements OnInit {
       return;
     }
     // Validar el token con el backend
-    axiosInstance.get('/auth/validate')
+    axiosInstance
+      .get('/auth/validate')
       .then(() => {
+        axiosInstance.get('/auth/me').then((response) => {
+          const { nombre, apellido } = response.data;
+          this.nombreCompleto = `${nombre} ${apellido}`;
+          this.cdr.detectChanges();
+        });
         // Token válido, continúa con la carga normal
         flatpickr('#calendar', {
           dateFormat: 'd/m/Y',
           allowInput: false,
           onClose: () => {
-            const calendar = document.getElementById('calendar') as HTMLInputElement;
+            const calendar = document.getElementById(
+              'calendar'
+            ) as HTMLInputElement;
             if (calendar) calendar.style.display = 'none';
-          }
+          },
         });
 
         const darkMode = localStorage.getItem('dark-mode');
@@ -65,7 +74,7 @@ export class CursosComponent implements OnInit {
       })
       .catch(() => {
         // Token inválido, redirige al login
-        this.router.navigate(['/login']);;
+        this.router.navigate(['/login']);
       });
   }
 
@@ -103,8 +112,12 @@ export class CursosComponent implements OnInit {
     const notifBtn = document.getElementById('notification-btn');
     const backBtn = document.querySelector('.back-btn');
 
-    const profile = document.querySelector('.header .flex .profile') as HTMLElement;
-    const search = document.querySelector('.header .flex .search-form') as HTMLElement;
+    const profile = document.querySelector(
+      '.header .flex .profile'
+    ) as HTMLElement;
+    const search = document.querySelector(
+      '.header .flex .search-form'
+    ) as HTMLElement;
     const sideBar = document.querySelector('.side-bar') as HTMLElement;
     const notifBar = document.querySelector('.notification-bar') as HTMLElement;
 
