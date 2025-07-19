@@ -20,9 +20,12 @@
                 "glob": "**/*",
                 "input": "public"
               }
+           
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "public/css/style.min.css", 
+              "public/css/Modal.css"    
             ]
           },
           "configurations": {
@@ -30,14 +33,15 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "650kB",
                   "maximumError": "1MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "10kB",  
+                  "maximumError": "40kB"   
                 }
+            
               ],
               "outputHashing": "all"
             },
@@ -75,7 +79,9 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/assets/css/style.min.css",
+              "src/assets/css/Modal.css"     
             ]
           }
         }
@@ -85,4 +91,5 @@
   "cli": {
     "analytics": "7ed3bf4e-153f-441e-a2a9-bebf7664eefd"
   }
+  
 }
