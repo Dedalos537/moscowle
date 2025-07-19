@@ -1,37 +1,45 @@
-version: '3.8'
-
+version: "3.9"
 services:
-  mysql:
-    image: mysql:8
-    container_name: moscowle-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: Rucula_530
-      MYSQL_DATABASE: moscowle
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-
-  backend:
-    build: ./sprinbootbackend/moscowle # This line is correct
-    container_name: moscowle-backend
-    depends_on:
-      - mysql
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/moscowle
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: Rucula_530
-    restart: on-failure
-
   frontend:
     build: ./frontend
-    container_name: moscowle-frontend
     ports:
       - "4200:80"
     depends_on:
       - backend
+    networks:
+      - moscowle_net
+
+  backend:
+    build: ./sprinbootbackend/moscowle # This line is correct
+    container_name: moscowle-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/moscowle
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=Ot@ku2123
+    depends_on:
+      - mysql
+    networks:
+      - moscowle_net
+
+  mysql:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Ot@ku2123
+      MYSQL_DATABASE: moscowle
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - moscowle_net
 
 volumes:
-  mysql-data:
+  mysql_data:
+
+networks:
+  moscowle_net:
+    driver: bridge
