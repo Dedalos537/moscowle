@@ -8,7 +8,7 @@ import { Router } from '@angular/router';
   selector: 'app-navbar',
   imports: [CommonModule, RouterModule, RouterLink],
   templateUrl: './navbar.html',
-  styleUrl: './navbar.css',
+  styleUrls: ['./navbar.css'],
 })
 export class Navbar {
   @Input() activeContent: string = 'home';
