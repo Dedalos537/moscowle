@@ -14,6 +14,7 @@
           "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist/frontend",
+            "baseHref": "./",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "assets": [
@@ -44,12 +45,20 @@
                 }
             
               ],
-              "outputHashing": "all"
+              "optimization": true,
+              "outputHashing": "all",
+              "sourceMap": false,
+              "namedChunks": false,
+              "aot": true,
+              "extractLicenses": true,
+              "baseHref": "./"
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "namedChunks": true,
+              "aot": false
             }
           },
           "defaultConfiguration": "production"

@@ -9934,8 +9934,9 @@ button.bg-dark:focus {
   color: #fff !important;
 }
 
-.text-primary {
-  color: #ff6600 !important;
+
+a span .text-primary {
+  color: #28a745 !important;
 }
 
 a.text-primary:hover,
@@ -10235,7 +10236,7 @@ h6,
 }
 
 .carousel-indicators .active {
-  background: #ff6600;
+  background: #28a745;
 }
 
 @media (max-width: 991.98px) {
