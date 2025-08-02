@@ -41,27 +41,7 @@
         </div>
       </div>
     </div>
-    <div class="col-lg-5 col-md-12 mb-5">
-      <h5 class="text-primary text-uppercase mb-4" style="letter-spacing: 5px;">Cartas</h5>
-      <p>Nos puede contactar directamente enviando su correo electrónico mediante este apartado.</p>
-      <form (submit)="sendEmail($event)">
-        <div class="input-group">
-          <input
-            type="email"
-            class="form-control border-light"
-            style="padding: 30px;"
-            placeholder="Su dirección de Correo Electrónico"
-            [(ngModel)]="email"
-            name="email"
-            required
-          />
-          <div class="input-group-append">
-            <button type="submit" class="btn btn-primary px-4">Enviar</button>
-          </div>
-        </div>
-        <p *ngIf="message" style="margin-top: 20px;">{{ message }}</p>
-      </form>
-    </div>
+    
   </div>
 </div>
 
