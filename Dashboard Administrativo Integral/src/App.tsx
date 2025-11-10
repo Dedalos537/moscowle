@@ -12,6 +12,7 @@ import { ReportsModule } from './components/dashboard/ReportsModule';
 import { UsersModule } from './components/dashboard/UsersModule';
 import { InventoryModule } from './components/dashboard/InventoryModule';
 import { Toaster } from './components/ui/sonner';
+import { getApiUrl, API_CONFIG } from './config/api';
 
 export default function App() {
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -32,7 +33,7 @@ export default function App() {
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
+        const res = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.AUTH.ME), {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'

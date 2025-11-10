@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install OS deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y bash dos2unix --no-install-recommends \
     build-essential \
     default-libmysqlclient-dev \
     gcc \
@@ -21,11 +21,12 @@ COPY . /app
 # Copy entrypoint / wait scripts (if they exist in the build context)
 COPY ./wait_for_db_init.py /app/wait_for_db_init.py
 COPY ./entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh || true
+RUN dos2unix /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Expose port
 EXPOSE 8001
 
 # Use entrypoint wrapper to wait for DB init then start the app
-ENTRYPOINT ["sh", "/app/entrypoint.sh"]
+# TEMPORALMENTE DESHABILITADO hasta solucionar init de DB
+# ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]
 CMD ["/usr/local/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

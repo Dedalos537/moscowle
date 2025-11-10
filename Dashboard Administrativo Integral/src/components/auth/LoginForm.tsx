@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
+import { getApiUrl, API_CONFIG } from '../../config/api';
 
 interface LoginFormProps {
   onLogin: (token: string) => void;
@@ -22,7 +23,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setError('');
 
     try {
-  const response = await fetch('/api/auth/login', {
+  const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

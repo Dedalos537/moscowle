@@ -6,6 +6,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Alert, AlertDescription } from "../ui/alert";
+import { getApiUrl, API_CONFIG } from "../../config/api";
 
 interface ContactFormData {
   first_name: string;
@@ -99,7 +100,7 @@ export function Contact() {
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('/api/public/contact', {
+      const response = await fetch(getApiUrl(API_CONFIG.PUBLIC.CONTACT), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

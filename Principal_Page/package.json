@@ -1,15 +1,7 @@
-# construir y levantar en primer plano (útil para ver logs)
-docker compose up --build
-
-# o en segundo plano
-docker compose up -d --build
-
-# parar y eliminar
-docker compose down
-  {
-      "name": "Interfaz Centro Terapias Juan Pablo II",
-      "version": "0.1.0",
-      "private": true,
+{
+  "name": "Interfaz Centro Terapias Juan Pablo II",
+  "version": "0.1.0",
+  "private": true,
       "dependencies": {
           "@radix-ui/react-accordion": "^1.2.3",
           "@radix-ui/react-alert-dialog": "^1.1.6",
