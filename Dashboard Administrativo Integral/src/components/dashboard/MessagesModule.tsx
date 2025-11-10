@@ -62,7 +62,7 @@ interface Stats {
 }
 
 // Configuración de la API
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://127.0.0.1:8001';
 const getAuthToken = () => localStorage.getItem('auth_token');
 
 // Funciones de API

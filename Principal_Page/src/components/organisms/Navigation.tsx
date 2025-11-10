@@ -28,14 +28,39 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
     { name: "Contacto", href: "#contacto" },
   ];
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8001/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Credenciales inválidas');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('user_data', JSON.stringify(data.user));
+      
       setLoginOpen(false);
       onLogin();
-    }, 1000);
+      
+      // Redirigir al dashboard administrativo
+      window.open('http://localhost:3003', '_blank');
+      
+    } catch (error) {
+      console.error('Error en login:', error);
+      // Aquí podrías mostrar un mensaje de error al usuario
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
