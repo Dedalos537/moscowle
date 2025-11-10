@@ -61,8 +61,8 @@ interface Stats {
   unread_messages: number;
 }
 
-// Configuración de la API
-const API_BASE_URL = 'http://127.0.0.1:8001';
+// Configuración de la API — usar proxy relativo para que funcione local y en Docker (nginx -> /api)
+const API_BASE_URL = '/api';
 const getAuthToken = () => localStorage.getItem('auth_token');
 
 // Funciones de API

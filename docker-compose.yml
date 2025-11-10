@@ -18,6 +18,24 @@ services:
       timeout: 5s
       retries: 5
 
+  db_init:
+    build:
+      context: ./backend_messaging
+      dockerfile: Dockerfile
+    container_name: moscowle_db_init
+    restart: 'no'
+    env_file:
+      - ./backend_messaging/.env
+    environment:
+      DB_HOST: moscowle_db
+      DB_USER: root
+      DB_PASSWORD: Rucula_530
+      DB_NAME: Moscowle_Complete
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "init_db.py"]
+
   backend:
     build:
       context: ./backend_messaging
@@ -26,7 +44,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend_messaging/.env
+    environment:
+      DB_HOST: moscowle_db
+      DATABASE_URL: mysql+pymysql://root:Rucula_530@moscowle_db/Moscowle_Complete
     depends_on:
+      db_init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
     ports:

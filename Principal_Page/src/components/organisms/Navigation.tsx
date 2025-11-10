@@ -33,7 +33,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,11 +49,12 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
       localStorage.setItem('auth_token', data.access_token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
       
-      setLoginOpen(false);
-      onLogin();
-      
-      // Redirigir al dashboard administrativo
-      window.open('http://localhost:3001', '_blank');
+  setLoginOpen(false);
+  onLogin();
+
+  // Si el usuario es administrador, redirigimos la página actual al dashboard
+  // de esta forma "se cierra" la página regular y se navega al dashboard en la misma pestaña.
+  window.location.href = 'http://localhost:3001';
       
     } catch (error) {
       console.error('Error en login:', error);

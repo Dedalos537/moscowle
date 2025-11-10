@@ -22,7 +22,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/auth/login', {
+  const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,7 +34,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         throw new Error('Credenciales inválidas');
       }
 
-      const data = await response.json();
+  const data = await response.json();
       localStorage.setItem('auth_token', data.access_token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
       onLogin(data.access_token);

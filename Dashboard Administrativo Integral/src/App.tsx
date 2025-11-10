@@ -22,23 +22,59 @@ export default function App() {
 
   // Check authentication status on app load
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('user_data');
-    
-    if (token && userData) {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setIsLoading(false);
+        // Redirect to main site if no token
+        window.location.href = 'http://localhost:3002';
+        return;
+      }
+
       try {
-        const user = JSON.parse(userData);
-        // Verificar que el usuario es admin con las credenciales correctas
-        if (user.email === 'admin@juanpablo2.com') {
+        const res = await fetch('/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!res.ok) {
+          // Invalid token or not authorized
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_data');
+          setIsLoading(false);
+          window.location.href = 'http://localhost:3002';
+          return;
+        }
+
+        const user = await res.json();
+        // Only allow access to users with admin role (adjust role name if different)
+        if (user && (user.role === 'admin' || user.email === 'admin@juanpablo2.com')) {
+          // persist/update local storage user data
+          localStorage.setItem('user_data', JSON.stringify(user));
           setIsAuthenticated(true);
+        } else {
+          // Not an admin; redirect back to main site
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_data');
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          window.location.href = 'http://localhost:3002';
+          return;
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Auth validation error:', error);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
+        window.location.href = 'http://localhost:3002';
+        return;
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   // Apply dark mode class to HTML element

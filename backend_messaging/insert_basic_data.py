@@ -3,15 +3,17 @@
 Script para insertar datos básicos en la base de datos
 """
 
+import os
 import mysql.connector
 from mysql.connector import Error
 import bcrypt
 
+# Read DB config from environment if available (works inside docker-compose)
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'Rucula_530',
-    'database': 'Moscowle_Complete',
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', 'Rucula_530'),
+    'database': os.getenv('DB_NAME', 'Moscowle_Complete'),
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
 }

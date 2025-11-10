@@ -128,7 +128,7 @@ export function UserProfile({ onClose }: UserProfileProps) {
     setMessage(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/auth/change-password', {
+      const response = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

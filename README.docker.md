@@ -9,6 +9,21 @@ Este repositorio contiene tres servicios principales:
 
 Nota: Para evitar conflictos si ya tienes MySQL local en el puerto 3306, el contenedor MySQL está mapeado al puerto 3307 en el host. Conéctate desde MySQL Workbench a localhost:3307 (usuario `root`, contraseña `Rucula_530`).
 
+Inicialización automática de la base de datos
+------------------------------------------
+Este `docker-compose.yml` incluye un servicio `db_init` que ejecuta `init_db.py` (ubicado en `backend_messaging/`) una sola vez al arrancar la pila. El orden es:
+
+1. MySQL (`db`) arranca y pasa su healthcheck.
+2. `db_init` se ejecuta y crea la base de datos y tablas usando `init_database.sql`.
+3. `backend` arranca (solo después de `db_init`) y ya encontrará las tablas creadas.
+
+Si necesitas volver a ejecutar la inicialización manualmente puedes usar:
+
+```bash
+docker compose run --rm db_init
+```
+
+Nota: el servicio `db_init` está configurado para no reiniciarse (`restart: 'no'`).
 Requisitos:
 - Docker y Docker Compose v2 instalados
 

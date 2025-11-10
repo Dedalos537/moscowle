@@ -211,6 +211,13 @@ async def login(login_data: LoginRequest):
     finally:
         db.disconnect()
 
+
+# Endpoint para obtener datos del usuario autenticado desde el token
+@app.get("/auth/me", response_model=UserProfile)
+async def get_me(current_user: UserProfile = Depends(get_current_user)):
+    """Devuelve la información del usuario autenticado basado en el token JWT"""
+    return current_user
+
 # Endpoints públicos (para la web)
 @app.post("/public/contact", response_model=SuccessResponse)
 async def create_contact_inquiry(

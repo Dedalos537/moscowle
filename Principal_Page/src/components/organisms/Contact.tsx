@@ -99,20 +99,21 @@ export function Contact() {
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/public/contact', {
+      const response = await fetch('/api/public/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
-
-      const result = await response.json();
+      // Intentar parsear JSON si viene
+      let result: any = null;
+      try { result = await response.json(); } catch (e) { result = null; }
 
       if (response.ok) {
         setSubmitStatus('success');
-        setSubmitMessage(result.message || '¡Mensaje enviado exitosamente!');
-        
+        setSubmitMessage((result && (result.message || result.detail)) || '¡Mensaje enviado exitosamente!');
+
         // Limpiar formulario
         setFormData({
           first_name: '',
@@ -125,7 +126,8 @@ export function Contact() {
           urgency: 'medium'
         });
       } else {
-        throw new Error(result.detail || 'Error al enviar el mensaje');
+        const errMsg = (result && (result.detail || result.message)) || `Error ${response.status}`;
+        throw new Error(errMsg);
       }
     } catch (error) {
       setSubmitStatus('error');

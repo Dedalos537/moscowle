@@ -13,12 +13,14 @@ from dotenv import load_dotenv
 # Cargar variables de entorno
 load_dotenv()
 
-# Configuración de conexión
+import os
+
+# Configuración de conexión (leer desde variables de entorno para docker)
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'database': 'Moscowle_Complete',
-    'password': 'Rucula_530',
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'database': os.getenv('DB_NAME', 'Moscowle_Complete'),
+    'password': os.getenv('DB_PASSWORD', 'Rucula_530'),
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
 }
