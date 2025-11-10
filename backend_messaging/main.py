@@ -12,6 +12,10 @@ from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
 import bcrypt
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 from database import get_db_connection, test_connection
 from models import (
@@ -489,13 +493,17 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     
+    # Obtener configuración del .env
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8001))
+    
     print("🚀 Iniciando API de Mensajería...")
-    print("📋 Documentación disponible en: http://localhost:8000/docs")
+    print(f"📋 Documentación disponible en: http://localhost:{port}/docs")
     print("🏥 Centro de Terapias Juan Pablo II")
     
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=8000,
+        host=host,
+        port=port,
         reload=False
     )
