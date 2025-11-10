@@ -17,6 +17,7 @@ load_dotenv()
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
+    'database': 'Moscowle_Complete',
     'password': 'Rucula_530',
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
