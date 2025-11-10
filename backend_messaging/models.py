@@ -3,7 +3,7 @@ Modelos Pydantic para la API de mensajería
 Centro de Terapias Juan Pablo II
 """
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Literal
 from datetime import datetime
 from enum import Enum
@@ -50,7 +50,8 @@ class ContactInquiryCreate(BaseModel):
     service_interest: Optional[str] = Field(None, max_length=200, description="Servicio de interés")
     urgency: InquiryUrgency = Field(InquiryUrgency.MEDIUM, description="Nivel de urgencia")
     
-    @validator('phone')
+    @field_validator('phone')
+    @classmethod
     def validate_phone(cls, v):
         if v and not v.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '').isdigit():
             raise ValueError('Formato de teléfono inválido')
