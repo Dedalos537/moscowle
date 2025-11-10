@@ -1,4 +1,11 @@
+# construir y levantar en primer plano (útil para ver logs)
+docker compose up --build
 
+# o en segundo plano
+docker compose up -d --build
+
+# parar y eliminar
+docker compose down
   {
       "name": "Interfaz Centro Terapias Juan Pablo II",
       "version": "0.1.0",

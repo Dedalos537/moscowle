@@ -118,7 +118,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
 
           <div className="text-center text-sm text-gray-500">
             <p>Credenciales de prueba:</p>
-            <p>Email: admin@terapias.com</p>
+            <p>Email: admin@juanpablo2.com</p>
             <p>Contraseña: admin123</p>
           </div>
         </CardContent>

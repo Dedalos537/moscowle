@@ -53,7 +53,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
       onLogin();
       
       // Redirigir al dashboard administrativo
-      window.open('http://localhost:3003', '_blank');
+      window.open('http://localhost:3001', '_blank');
       
     } catch (error) {
       console.error('Error en login:', error);

@@ -11,7 +11,6 @@ import { AttendanceModule } from './components/dashboard/AttendanceModule';
 import { ReportsModule } from './components/dashboard/ReportsModule';
 import { UsersModule } from './components/dashboard/UsersModule';
 import { InventoryModule } from './components/dashboard/InventoryModule';
-import { LoginForm } from './components/auth/LoginForm';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
@@ -24,8 +23,20 @@ export default function App() {
   // Check authentication status on app load
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    if (token) {
-      setIsAuthenticated(true);
+    const userData = localStorage.getItem('user_data');
+    
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData);
+        // Verificar que el usuario es admin con las credenciales correctas
+        if (user.email === 'admin@juanpablo2.com') {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -38,10 +49,6 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
-
-  const handleLogin = (token: string) => {
-    setIsAuthenticated(true);
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
@@ -89,9 +96,34 @@ export default function App() {
     );
   }
 
-  // Show login form if not authenticated
+  // Show unauthorized access message if not authenticated
   if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-xl p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#4CAF50] to-[#2E7D32] rounded-full flex items-center justify-center mb-6">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Acceso Restringido
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Debes iniciar sesión desde la página principal para acceder al dashboard administrativo.
+          </p>
+          <button 
+            onClick={() => window.location.href = 'http://localhost:3002'}
+            className="w-full bg-gradient-to-r from-[#4CAF50] to-[#2E7D32] text-white py-3 px-4 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Ir a la Página Principal
+          </button>
+          <p className="text-sm text-gray-500 mt-4">
+            Centro de Terapias Juan Pablo II
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

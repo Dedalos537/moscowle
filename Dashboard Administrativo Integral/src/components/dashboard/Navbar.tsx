@@ -24,6 +24,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useUserData } from '../../hooks/useUserData';
+import { UserProfile } from './UserProfile';
 import '../../styles/navbar.css';
 
 interface NavbarProps {
@@ -51,6 +52,21 @@ export function Navbar({ isDarkMode, onToggleDarkMode, onLogout }: NavbarProps) 
 
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserEdit, setShowUserEdit] = useState(false);
+
+  const handleLogout = () => {
+    // Limpiar localStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    
+    // Llamar al callback de logout si existe
+    if (onLogout) {
+      onLogout();
+    }
+    
+    // Redirigir a la página principal
+    window.location.href = 'http://localhost:3002';
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -321,6 +337,10 @@ export function Navbar({ isDarkMode, onToggleDarkMode, onLogout }: NavbarProps) 
               <User className="w-4 h-4 mr-2" />
               Ver Perfil
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowUserEdit(true)} className="button-hover-effect">
+              <User className="w-4 h-4 mr-2" />
+              Editar Perfil
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShowSettings(true)} className="button-hover-effect">
               <Settings className="w-4 h-4 mr-2" />
               Configuración
@@ -328,7 +348,7 @@ export function Navbar({ isDarkMode, onToggleDarkMode, onLogout }: NavbarProps) 
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-red-600 button-hover-effect"
-              onClick={onLogout}
+              onClick={handleLogout}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Cerrar Sesión
@@ -432,6 +452,13 @@ export function Navbar({ isDarkMode, onToggleDarkMode, onLogout }: NavbarProps) 
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Edit Profile Modal */}
+      <Dialog open={showUserEdit} onOpenChange={setShowUserEdit}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <UserProfile onClose={() => setShowUserEdit(false)} />
         </DialogContent>
       </Dialog>
     </div>
