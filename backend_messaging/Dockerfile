@@ -8,7 +8,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     default-libmysqlclient-dev \
-    default-mysql-client \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,13 +19,13 @@ RUN if [ -f /app/requirements.txt ]; then pip install --no-cache-dir -r /app/req
 COPY . /app
 
 # Copy entrypoint / wait scripts (if they exist in the build context)
-COPY ./wait-for-db_init.sh /app/wait-for-db_init.sh
+COPY ./wait_for_db_init.py /app/wait_for_db_init.py
 COPY ./entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/wait-for-db_init.sh /app/entrypoint.sh || true
+RUN chmod +x /app/entrypoint.sh || true
 
 # Expose port
 EXPOSE 8001
 
 # Use entrypoint wrapper to wait for DB init then start the app
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]
 CMD ["/usr/local/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

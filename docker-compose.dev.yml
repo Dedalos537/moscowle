@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  frontend_dev:
+    image: node:18
+    container_name: moscowle_frontend_dev
+    working_dir: /app
+    volumes:
+      - ./Principal_Page:/app:cached
+      - /app/node_modules
+    ports:
+      - "3002:3002"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 3002"
+    depends_on:
+      - backend
+
+  dashboard_dev:
+    image: node:18
+    container_name: moscowle_dashboard_dev
+    working_dir: /app
+    volumes:
+      - "./Dashboard Administrativo Integral:/app:cached"
+      - /app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 3001"
+    depends_on:
+      - backend
+
+# Usage:
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# This will start the backend and DB from docker-compose.yml and run Vite dev servers for the frontends with hot-reload.

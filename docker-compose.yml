@@ -48,8 +48,6 @@ services:
       DB_HOST: moscowle_db
       DATABASE_URL: mysql+pymysql://root:Rucula_530@moscowle_db/Moscowle_Complete
     depends_on:
-      db_init:
-        condition: service_completed_successfully
       db:
         condition: service_healthy
     ports:

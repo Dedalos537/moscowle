@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Moon, Sun, Menu, X, LogIn, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Alert, AlertDescription } from "../ui/alert";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 
@@ -20,6 +21,8 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const navLinks = [
     { name: "Inicio", href: "#inicio" },
@@ -31,6 +34,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError(null);
 
     try {
       const response = await fetch('/api/auth/login', {
@@ -42,22 +46,48 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
       });
 
       if (!response.ok) {
-        throw new Error('Credenciales inválidas');
+        // try to parse error body
+        let errMsg = 'Credenciales inválidas';
+        try {
+          const errJson = await response.json();
+          errMsg = errJson.detail || errJson.message || errMsg;
+        } catch (e) {}
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
       localStorage.setItem('auth_token', data.access_token);
       localStorage.setItem('user_data', JSON.stringify(data.user));
-      
-  setLoginOpen(false);
-  onLogin();
 
-  // Si el usuario es administrador, redirigimos la página actual al dashboard
-  // de esta forma "se cierra" la página regular y se navega al dashboard en la misma pestaña.
-  window.location.href = 'http://localhost:3001';
+      // Cerrar diálogo y avisar al contenedor
+      setLoginOpen(false);
+      onLogin();
+
+      // Determinar URL del dashboard (prefiere env var si existe, sino localhost:3001)
+  // Prefer Vite env var VITE_DASHBOARD_URL, else build a URL using the current hostname + port 3001
+  // Usar variable de entorno si está disponible; fallback explícito a localhost:3001
+  const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
+
+      // Sólo redirigir si el usuario es admin (si la respuesta incluye role)
+      const rawRole = (data.user && (data.user.role || data.user.role_name)) || null;
+      const role = rawRole ? String(rawRole).toLowerCase().trim() : null;
+      const shouldRedirect = !role || role === 'admin' || role.includes('admin') || role === 'administrador';
+
+      if (shouldRedirect) {
+        // Marcar estado para mostrar el aviso y forzar redirección inmediatamente.
+        setIsRedirecting(true);
+        try {
+          // Redirigir de forma inmediata para evitar que re-renderizaciones oculten el flujo
+          window.location.assign(DASHBOARD_URL);
+        } catch (e) {
+          // Fallback
+          window.location.href = DASHBOARD_URL;
+        }
+      }
       
     } catch (error) {
-      console.error('Error en login:', error);
+      const message = error instanceof Error ? error.message : 'Error de conexión';
+      setLoginError(message);
       // Aquí podrías mostrar un mensaje de error al usuario
     } finally {
       setIsLoading(false);
@@ -122,6 +152,16 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
                       Accede a tu cuenta del Centro de Terapias Juan Pablo II
                     </DialogDescription>
                   </DialogHeader>
+                  {loginError && (
+                    <Alert className="mb-4 border-red-200 bg-red-50">
+                      <AlertDescription className="text-red-700">{loginError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {isRedirecting && (
+                    <Alert className="mb-4 border-blue-200 bg-blue-50">
+                      <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
+                    </Alert>
+                  )}
                   <form onSubmit={handleLogin} className="space-y-4 mt-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Correo Electrónico</Label>
@@ -199,6 +239,16 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
                       Accede a tu cuenta del Centro de Terapias Juan Pablo II
                     </DialogDescription>
                   </DialogHeader>
+                  {loginError && (
+                    <Alert className="mb-4 border-red-200 bg-red-50">
+                      <AlertDescription className="text-red-700">{loginError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {isRedirecting && (
+                    <Alert className="mb-4 border-blue-200 bg-blue-50">
+                      <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
+                    </Alert>
+                  )}
                   <form onSubmit={handleLogin} className="space-y-4 mt-4">
                     <div className="space-y-2">
                       <Label htmlFor="email-mobile">Correo Electrónico</Label>
