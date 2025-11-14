@@ -1,0 +1,7 @@
+2025-11-13 19:39:42,863 - main - INFO - Starting Moscowle Backend v1.0.0
+2025-11-13 19:39:43,142 - main - INFO - Starting Moscowle Backend...
+2025-11-13 19:39:43,142 - database - INFO - Initializing database connection pool
+2025-11-13 19:39:43,142 - main - INFO - Database connection pool initialized
+2025-11-13 19:40:30,081 - main - INFO - Shutting down Moscowle Backend...
+2025-11-13 19:40:30,081 - database - INFO - Database connection pool closed
+2025-11-13 19:40:30,081 - main - INFO - Database connections closed

@@ -6,10 +6,10 @@ interface TherapyBadgeProps {
 }
 
 const variantColors = {
-  specialized: "bg-[#4CAF50] text-white hover:bg-[#2E7D32]",
-  integral: "bg-[#8BC34A] text-white hover:bg-[#4CAF50]",
-  virtual: "bg-[#2E7D32] text-white hover:bg-[#1B5E20]",
-  material: "bg-[#E8F5E9] text-[#2E7D32] hover:bg-[#C8E6C9]",
+  specialized: "bg-[var(--hope-green)] text-[var(--primary-foreground)] hover:bg-[var(--hope-green-dark)]",
+  integral: "bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:bg-[var(--hope-green)]",
+  virtual: "bg-[var(--hope-green-dark)] text-white hover:bg-[var(--hope-green)]",
+  material: "bg-[var(--hope-green-pale)] text-[var(--hope-green-dark)] hover:bg-[var(--hope-green-light)]",
 };
 
 export function TherapyBadge({ children, variant = "specialized" }: TherapyBadgeProps) {

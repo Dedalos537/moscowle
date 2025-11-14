@@ -56,12 +56,30 @@ export default function App() {
     }
   }, [darkMode]);
 
+  // Inicializar estado de autenticación desde localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (token) setIsLoggedIn(true);
+  }, []);
+
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
   const handleLogin = () => {
     setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    setIsLoggedIn(false);
+    // opcional: redirigir a home
+    try {
+      window.location.assign('/');
+    } catch (e) {
+      window.location.href = '/';
+    }
   };
 
   const handleTherapyClick = (therapy: SelectedTherapy) => {
@@ -259,6 +277,7 @@ export default function App() {
         toggleDarkMode={toggleDarkMode}
         isLoggedIn={isLoggedIn}
         onLogin={handleLogin}
+        onLogout={handleLogout}
       />
 
       {/* Hero Section */}

@@ -6,10 +6,11 @@
   --font-size: 16px;
   
   /* Centro de Terapias Juan Pablo II - Brand Colors (adaptados al logo) */
-  --hope-green: #81A141;
-  --hope-green-light: #C2D223;
-  --hope-green-dark: #5C7A2E;
-  --hope-green-pale: #F0F5E5;
+  /* Brand: amarillo/verde principal */
+  --hope-green: #81A141; /* primary brand green (requested) */
+  --hope-green-light: #a6c96a; /* lighter accent for gradients */
+  --hope-green-dark: #5e7f2a; /* darker accent for hover/borders */
+  --hope-green-pale: #eef6df; /* very pale background */
   --professional-gray: #3E3A54;
   --warm-white: #FFFFFF;
   
@@ -20,13 +21,13 @@
   --card-foreground: #3E3A54;
   --popover: #FFFFFF;
   --popover-foreground: #3E3A54;
-  --primary: #81A141;
-  --primary-foreground: #FFFFFF;
-  --secondary: #C2D223;
+  --primary: var(--hope-green);
+  --primary-foreground: #1E1E2E; /* dark text on light yellow-green for good contrast */
+  --secondary: #dfe77c; /* supporting lighter yellow */
   --secondary-foreground: #3E3A54;
   --muted: #F0F5E5;
   --muted-foreground: #6C757D;
-  --accent: #5C7A2E;
+  --accent: var(--hope-green-dark);
   --accent-foreground: #FFFFFF;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
@@ -36,21 +37,21 @@
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #81A141;
-  --chart-1: #81A141;
-  --chart-2: #C2D223;
-  --chart-3: #5C7A2E;
+  --ring: var(--hope-green);
+  --chart-1: var(--hope-green);
+  --chart-2: var(--secondary);
+  --chart-3: var(--hope-green-dark);
   --chart-4: #F0F5E5;
   --chart-5: #3E3A54;
   --radius: 0.75rem;
   --sidebar: #F9F9F9;
   --sidebar-foreground: #3E3A54;
-  --sidebar-primary: #81A141;
+  --sidebar-primary: var(--hope-green);
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F0F5E5;
   --sidebar-accent-foreground: #3E3A54;
   --sidebar-border: rgba(129, 161, 65, 0.1);
-  --sidebar-ring: #81A141;
+  --sidebar-ring: var(--hope-green);
   
   /* Custom sizes */
   --text-2xl: 2.25rem;
@@ -66,34 +67,34 @@
   --card-foreground: #F1F1F1;
   --popover: #2A2A3E;
   --popover-foreground: #F1F1F1;
-  --primary: #81A141;
+  --primary: var(--hope-green);
   --primary-foreground: #FFFFFF;
-  --secondary: #C2D223;
+  --secondary: var(--secondary);
   --secondary-foreground: #1E1E2E;
   --muted: #3A3A4E;
   --muted-foreground: #A8A8B8;
-  --accent: #5C7A2E;
+  --accent: var(--hope-green-dark);
   --accent-foreground: #F1F1F1;
   --destructive: #d4183d;
   --destructive-foreground: #F1F1F1;
-  --border: rgba(129, 161, 65, 0.2);
+  --border: rgba(191,206,52,0.2);
   --input: #3A3A4E;
-  --ring: #81A141;
+  --ring: var(--hope-green);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: #81A141;
-  --chart-2: #C2D223;
-  --chart-3: #5C7A2E;
+  --chart-1: var(--hope-green);
+  --chart-2: var(--secondary);
+  --chart-3: var(--hope-green-dark);
   --chart-4: #F0F5E5;
   --chart-5: #3E3A54;
   --sidebar: #252535;
   --sidebar-foreground: #F1F1F1;
-  --sidebar-primary: #81A141;
+  --sidebar-primary: var(--hope-green);
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #3A3A4E;
   --sidebar-accent-foreground: #F1F1F1;
-  --sidebar-border: rgba(129, 161, 65, 0.15);
-  --sidebar-ring: #81A141;
+  --sidebar-border: rgba(191,206,52,0.15);
+  --sidebar-ring: var(--hope-green);
 }
 
 @theme inline {

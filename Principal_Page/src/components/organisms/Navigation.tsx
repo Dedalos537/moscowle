@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Moon, Sun, Menu, X, LogIn, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "../ui/button";
@@ -12,9 +12,10 @@ interface NavigationProps {
   toggleDarkMode: () => void;
   isLoggedIn: boolean;
   onLogin: () => void;
+  onLogout?: () => void;
 }
 
-export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: NavigationProps) {
+export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLogout }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +24,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const navLinks = [
     { name: "Inicio", href: "#inicio" },
@@ -56,33 +58,57 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
       }
 
       const data = await response.json();
-      localStorage.setItem('auth_token', data.access_token);
-      localStorage.setItem('user_data', JSON.stringify(data.user));
+      const token = data.access_token;
 
-      // Cerrar diálogo y avisar al contenedor
-      setLoginOpen(false);
-      onLogin();
+      // Mostrar verificación explícita con el endpoint /auth/me
+      setIsVerifying(true);
+      try {
+        const meResp = await fetch('/api/auth/me', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
 
-      // Determinar URL del dashboard (prefiere env var si existe, sino localhost:3001)
-  // Prefer Vite env var VITE_DASHBOARD_URL, else build a URL using the current hostname + port 3001
-  // Usar variable de entorno si está disponible; fallback explícito a localhost:3001
-  const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
-
-      // Sólo redirigir si el usuario es admin (si la respuesta incluye role)
-      const rawRole = (data.user && (data.user.role || data.user.role_name)) || null;
-      const role = rawRole ? String(rawRole).toLowerCase().trim() : null;
-      const shouldRedirect = !role || role === 'admin' || role.includes('admin') || role === 'administrador';
-
-      if (shouldRedirect) {
-        // Marcar estado para mostrar el aviso y forzar redirección inmediatamente.
-        setIsRedirecting(true);
-        try {
-          // Redirigir de forma inmediata para evitar que re-renderizaciones oculten el flujo
-          window.location.assign(DASHBOARD_URL);
-        } catch (e) {
-          // Fallback
-          window.location.href = DASHBOARD_URL;
+        if (!meResp.ok) {
+          let errMsg = 'Error al verificar credenciales';
+          try {
+            const errJson = await meResp.json();
+            errMsg = errJson.detail || errJson.message || errMsg;
+          } catch (e) {}
+          throw new Error(errMsg);
         }
+
+        const meData = await meResp.json();
+
+        // Guardar token y usuario sólo si la verificación fue exitosa
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_data', JSON.stringify(meData));
+
+        // Cerrar diálogo y avisar al contenedor
+        setLoginOpen(false);
+        onLogin();
+
+        // Determinar URL del dashboard (prefiere env var si existe, sino localhost:3001)
+        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
+
+        // Sólo redirigir si el usuario es admin (si la respuesta incluye role)
+        const rawRole = (meData && (meData.role || meData.role_name)) || null;
+        const role = rawRole ? String(rawRole).toLowerCase().trim() : null;
+        const shouldRedirect = !role || role === 'admin' || role.includes('admin') || role === 'administrador';
+
+        if (shouldRedirect) {
+          setIsRedirecting(true);
+          try {
+            window.location.assign(DASHBOARD_URL);
+          } catch (e) {
+            window.location.href = DASHBOARD_URL;
+          }
+        }
+
+      } finally {
+        setIsVerifying(false);
       }
       
     } catch (error) {
@@ -91,6 +117,20 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
       // Aquí podrías mostrar un mensaje de error al usuario
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // Limpiar token y datos
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    // Avisar al padre si existe
+    if (onLogout) onLogout();
+    // Redirigir a la página principal para mostrar estado no autenticado
+    try {
+      window.location.assign('/');
+    } catch (e) {
+      window.location.href = '/';
     }
   };
 
@@ -207,6 +247,11 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
                 </DialogContent>
               </Dialog>
             )}
+            {isLoggedIn && (
+              <Button variant="ghost" size="sm" className="ml-2" onClick={handleLogout}>
+                Cerrar sesión
+              </Button>
+            )}
             
             <Button
               onClick={toggleDarkMode}
@@ -242,6 +287,11 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin }: Na
                   {loginError && (
                     <Alert className="mb-4 border-red-200 bg-red-50">
                       <AlertDescription className="text-red-700">{loginError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {isVerifying && (
+                    <Alert className="mb-4 border-blue-200 bg-blue-50">
+                      <AlertDescription className="text-blue-700">Verificando credenciales...</AlertDescription>
                     </Alert>
                   )}
                   {isRedirecting && (

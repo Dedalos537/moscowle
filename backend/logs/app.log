@@ -1,0 +1,14 @@
+2025-11-13 19:25:24,107 - init_db - INFO - Connected to MySQL server
+2025-11-13 19:25:24,118 - init_db - INFO - SQL file executed successfully: /Users/apple/Documents/moscowle/backend/migrations/init_database.sql
+2025-11-13 19:25:24,118 - init_db - INFO - Database initialization completed successfully
+2025-11-13 19:34:10,694 - main - INFO - Starting Moscowle Backend v1.0.0
+2025-11-13 19:34:11,011 - main - INFO - Starting Moscowle Backend...
+2025-11-13 19:34:11,012 - database - INFO - Initializing database connection pool
+2025-11-13 19:34:11,012 - main - INFO - Database connection pool initialized
+2025-11-13 19:34:53,575 - main - INFO - Shutting down Moscowle Backend...
+2025-11-13 19:34:53,575 - database - INFO - Database connection pool closed
+2025-11-13 19:34:53,575 - main - INFO - Database connections closed
+2025-11-13 19:40:36,829 - main - INFO - Starting Moscowle Backend v1.0.0
+2025-11-13 19:40:37,098 - main - INFO - Starting Moscowle Backend...
+2025-11-13 19:40:37,098 - database - INFO - Initializing database connection pool
+2025-11-13 19:40:37,098 - main - INFO - Database connection pool initialized

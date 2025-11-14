@@ -286,7 +286,7 @@ export function Contact() {
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                     <label className="block text-sm text-foreground mb-2">
                       Nombre *
                     </label>
@@ -299,7 +299,7 @@ export function Contact() {
                     />
                   </div>
                   
-                  <div>
+                  <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                     <label className="block text-sm text-foreground mb-2">
                       Apellido *
                     </label>
@@ -313,7 +313,7 @@ export function Contact() {
                   </div>
                 </div>
                 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Correo Electrónico *
                   </label>
@@ -327,7 +327,7 @@ export function Contact() {
                   />
                 </div>
                 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Teléfono
                   </label>
@@ -340,7 +340,7 @@ export function Contact() {
                   />
                 </div>
 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Asunto
                   </label>
@@ -352,15 +352,15 @@ export function Contact() {
                   />
                 </div>
 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Servicio de Interés
                   </label>
                   <Select value={formData.service_interest} onValueChange={handleSelectChange('service_interest')}>
-                    <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary transition-colors">
+                    <SelectTrigger className="bg-white/95 dark:bg-slate-900 border-border/50 focus:border-primary transition-colors" style={{ backgroundColor: 'var(--popover)', zIndex: 9999 }}>
                       <SelectValue placeholder="Selecciona un servicio (opcional)" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="end" sideOffset={6} className="bg-white dark:bg-slate-900 origin-top-right data-[side=bottom]:translate-y-2 rounded-tr-xl rounded-tl-xl rounded-bl-2xl shadow-lg" style={{ backgroundColor: 'var(--popover)', zIndex: 9999 }}>
                       {serviceOptions.map((service) => (
                         <SelectItem key={service} value={service}>
                           {service}
@@ -370,15 +370,15 @@ export function Contact() {
                   </Select>
                 </div>
 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Prioridad
                   </label>
                   <Select value={formData.urgency} onValueChange={handleSelectChange('urgency')}>
-                    <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary transition-colors">
+                    <SelectTrigger className="bg-white/95 dark:bg-slate-900 border-border/50 focus:border-primary transition-colors" style={{ backgroundColor: 'var(--popover)', zIndex: 9999 }}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="end" sideOffset={6} className="bg-white dark:bg-slate-900 origin-top-right data-[side=bottom]:translate-y-2 rounded-tr-xl rounded-tl-xl rounded-bl-2xl shadow-lg" style={{ backgroundColor: 'var(--popover)', zIndex: 9999 }}>
                       <SelectItem value="low">Baja - Consulta general</SelectItem>
                       <SelectItem value="medium">Media - Información sobre servicios</SelectItem>
                       <SelectItem value="high">Alta - Necesito agendar una cita pronto</SelectItem>
@@ -386,7 +386,7 @@ export function Contact() {
                   </Select>
                 </div>
                 
-                <div>
+                <div className="transition-transform duration-200 focus-within:-translate-y-0.5 focus-within:shadow-md focus-within:ring-1 focus-within:ring-primary/20 rounded-lg">
                   <label className="block text-sm text-foreground mb-2">
                     Mensaje *
                   </label>
@@ -399,29 +399,45 @@ export function Contact() {
                     required
                     minLength={10}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Mínimo 10 caracteres. {formData.message.length}/2000
-                  </p>
+                  <div className="mt-2">
+                    <div className="h-1 rounded-full bg-muted/20 overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${Math.min(100, Math.round((formData.message.length / 2000) * 100))}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2 flex justify-between">
+                      <span>Mínimo 10 caracteres.</span>
+                      <span>{formData.message.length}/2000</span>
+                    </p>
+                  </div>
                 </div>
                 
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground group disabled:opacity-50"
-                  size="lg"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 w-5 h-5 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      Enviar Mensaje
-                      <Send className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </Button>
+                <div>
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className={`w-full bg-primary hover:bg-primary/90 text-primary-foreground group disabled:opacity-50 transition-transform ${submitStatus === 'success' ? 'ring-2 ring-green-300 scale-102' : ''}`}
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 w-5 h-5 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : submitStatus === 'success' ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-white animate-pulse" />
+                        <span>Enviado</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Enviar Mensaje</span>
+                        <Send className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    )}
+                  </Button>
+                </div>
                 
                 <p className="text-xs text-muted-foreground text-center">
                   Los campos marcados con * son obligatorios. 

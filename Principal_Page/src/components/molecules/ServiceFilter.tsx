@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Brain, Heart, Video, Box, LucideIcon } from "lucide-react";
 import { Button } from "../ui/button";
@@ -26,8 +27,14 @@ const filterOptions: FilterOption[] = [
 ];
 
 export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceFilterProps) {
+  const [hovered, setHovered] = useState<FilterCategory | null>(null);
+
   return (
     <div className="w-full">
+      {/* Announce hovered item for screen-readers */}
+      <div aria-live="polite" className="sr-only">
+        {hovered ? `Seleccionando: ${filterOptions.find(f => f.id === hovered)?.name}` : ""}
+      </div>
       {/* Desktop Filters */}
       <div className="hidden lg:flex items-center justify-center gap-4 flex-wrap">
         {filterOptions.map((option) => {
@@ -38,11 +45,24 @@ export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceF
           return (
             <motion.div
               key={option.id}
+              className="relative"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onMouseEnter={() => setHovered(option.id)}
+              onMouseLeave={() => setHovered((prev) => (prev === option.id ? null : prev))}
             >
+              {/* Tooltip visible on hover (desktop) */}
+              {hovered === option.id && (
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-card/90 text-sm px-2 py-1 rounded-md shadow-md z-20 pointer-events-none">
+                  <span className="font-medium">Seleccionando: </span>
+                  <span>{option.name}</span>
+                </div>
+              )}
+
               <Button
                 onClick={() => onFilterChange(option.id)}
+                onFocus={() => setHovered(option.id)}
+                onBlur={() => setHovered((prev) => (prev === option.id ? null : prev))}
                 variant={isActive ? "default" : "outline"}
                 className={`
                   relative h-auto py-4 px-6 rounded-2xl transition-all duration-300
@@ -50,6 +70,7 @@ export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceF
                     ? "bg-primary text-white shadow-lg shadow-primary/30" 
                     : "bg-card/50 hover:bg-card border-border/50 hover:border-primary/50"
                   }
+                  ${hovered === option.id && !isActive ? "ring-2 ring-offset-2 ring-primary/40" : ""}
                 `}
               >
                 <div className="flex flex-col items-center gap-2">
@@ -82,40 +103,53 @@ export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceF
             const count = counts[option.id];
             
             return (
-              <motion.div
-                key={option.id}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  onClick={() => onFilterChange(option.id)}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  className={`
-                    relative h-auto py-3 px-4 rounded-xl transition-all duration-300 whitespace-nowrap
-                    ${isActive 
-                      ? "bg-primary text-white shadow-lg shadow-primary/30" 
-                      : "bg-card/50 hover:bg-card border-border/50"
-                    }
-                  `}
+                <motion.div
+                  key={option.id}
+                  className="relative"
+                  whileTap={{ scale: 0.95 }}
+                  onMouseEnter={() => setHovered(option.id)}
+                  onMouseLeave={() => setHovered((prev) => (prev === option.id ? null : prev))}
                 >
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : option.color}`} />
-                    <span className="text-xs sm:text-sm font-medium">{option.name}</span>
-                    {count > 0 && (
-                      <span className={`
-                        text-xs px-1.5 py-0.5 rounded-full
-                        ${isActive 
-                          ? "bg-white/20 text-white" 
-                          : "bg-primary/10 text-primary"
-                        }
-                      `}>
-                        {count}
-                      </span>
-                    )}
-                  </div>
-                </Button>
-              </motion.div>
-            );
+                  {/* Small tooltip for touch/hover (will also show on focus) */}
+                  {hovered === option.id && (
+                    <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-card/90 text-xs px-2 py-0.5 rounded-md shadow z-20 pointer-events-none">
+                      {option.name}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={() => onFilterChange(option.id)}
+                    onFocus={() => setHovered(option.id)}
+                    onBlur={() => setHovered((prev) => (prev === option.id ? null : prev))}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    className={`
+                      relative h-auto py-3 px-4 rounded-xl transition-all duration-300 whitespace-nowrap
+                      ${isActive 
+                        ? "bg-primary text-white shadow-lg shadow-primary/30" 
+                        : "bg-card/50 hover:bg-card border-border/50"
+                      }
+                      ${hovered === option.id && !isActive ? "ring-2 ring-offset-1 ring-primary/30" : ""}
+                    `}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : option.color}`} />
+                      <span className="text-xs sm:text-sm font-medium">{option.name}</span>
+                      {count > 0 && (
+                        <span className={`
+                          text-xs px-1.5 py-0.5 rounded-full
+                          ${isActive 
+                            ? "bg-white/20 text-white" 
+                            : "bg-primary/10 text-primary"
+                          }
+                        `}>
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                  </Button>
+                </motion.div>
+              );
           })}
         </div>
       </div>
