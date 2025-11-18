@@ -71,17 +71,17 @@ export function Stats() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               whileHover={{ y: -8, scale: 1.05 }}
-              className="group"
+              className="group h-full"
             >
-              <div className="text-center p-8 rounded-2xl bg-background/10 backdrop-blur-sm border border-background/20 hover:bg-background/15 hover:border-primary/50 transition-all duration-300">
+              <div className="text-center p-8 rounded-2xl bg-background/10 backdrop-blur-sm border border-background/20 hover:bg-background/15 hover:border-primary/50 transition-all duration-300 h-full min-h-[500px] flex flex-col items-center pt-6">
                 <motion.div
                   initial={{ scale: 0 }}
                   whileInView={{ scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.3 + index * 0.1, type: "spring" }}
-                  className={`inline-flex items-center justify-center p-4 rounded-2xl ${stat.bgColor} mb-4`}
+                  className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl ${stat.bgColor} mb-4`}
                 >
-                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                  <stat.icon className="w-6 h-6 text-background" />
                 </motion.div>
                 
                 <motion.div

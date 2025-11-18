@@ -6,6 +6,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Alert, AlertDescription } from "../ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 
 interface ContactFormData {
   first_name: string;
@@ -83,6 +84,70 @@ export function Contact() {
     return null;
   };
 
+  // --- Contact actions: unified confirm modal for phone/email/address ---
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"phone" | "email" | "address" | null>(null);
+  const [modalTitle, setModalTitle] = useState<string | null>(null);
+  const [modalContent, setModalContent] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
+
+  const formatPhoneForWhatsapp = (phone: string) => phone.replace(/\D+/g, "");
+
+  const copyToClipboard = async (text: string) => {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "absolute";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(ta);
+    }
+  };
+
+  const showConfirmModal = async (type: "phone" | "email" | "address", title: string, content: string) => {
+    try {
+      setIsCopying(true);
+      await copyToClipboard(content);
+      setModalType(type);
+      setModalTitle(title);
+      setModalContent(content);
+      setContactModalOpen(true);
+    } catch (e) {
+      console.error("No se pudo copiar al portapapeles:", e);
+      setModalType(type);
+      setModalTitle(title);
+      setModalContent(content);
+      setContactModalOpen(true);
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  const performOpenWhatsapp = (phone?: string, address?: string) => {
+    const digits = phone ? formatPhoneForWhatsapp(phone) : "";
+    const text = address ? encodeURIComponent(`Hola, he copiado la dirección: ${address}`) : encodeURIComponent("Hola, quiero más información sobre sus servicios.");
+    const waUrl = digits ? `https://wa.me/${digits}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(waUrl, "_blank");
+  };
+
+  const performOpenGmail = (email?: string, subject?: string, body?: string) => {
+    const url = `https://mail.google.com/mail/?view=cm&fs=1${email ? `&to=${encodeURIComponent(email)}` : ""}&su=${encodeURIComponent(subject || "")}&body=${encodeURIComponent(body || "")}`;
+    window.open(url, "_blank");
+  };
+
+  const performOpenMaps = (address?: string) => {
+    if (!address) return;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    window.open(mapsUrl, "_blank");
+  };
   // Enviar formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +211,7 @@ export function Contact() {
     {
       icon: Mail,
       title: "Correo Electrónico",
-      content: "info@terapiasjuanpabloii.com",
+      content: "info@centrojuanpabloii.com",
       description: "Te respondemos en 24 horas",
     },
     {
@@ -208,33 +273,53 @@ export function Contact() {
             className="space-y-6"
           >
             <div className="grid sm:grid-cols-2 gap-6">
-              {contactInfo.map((info, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ y: -4 }}
-                  className="p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/50 transition-all duration-300"
-                >
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                    <info.icon className="w-5 h-5" />
-                  </div>
-                  
-                  <h3 className="text-foreground mb-2">
-                    {info.title}
-                  </h3>
-                  
-                  <p className="text-sm text-foreground/90 mb-1" style={{ whiteSpace: "pre-line" }}>
-                    {info.content}
-                  </p>
-                  
-                  <p className="text-xs text-muted-foreground" style={{ whiteSpace: "pre-line" }}>
-                    {info.description}
-                  </p>
-                </motion.div>
-              ))}
+              {contactInfo.map((info, index) => {
+                const isPhone = info.title === 'Teléfono';
+                const isEmail = info.title === 'Correo Electrónico';
+                const isAddress = info.title === 'Ubicación';
+                const onClick = isPhone
+                  ? () => showConfirmModal('phone', info.title, info.content)
+                  : isEmail
+                  ? () => showConfirmModal('email', info.title, info.content)
+                  : isAddress
+                  ? () => showConfirmModal('address', info.title, `${info.content} ${info.description || ''}`)
+                  : undefined;
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    whileHover={{ y: -4 }}
+                    onClick={onClick}
+                    role={onClick ? 'button' : undefined}
+                    tabIndex={onClick ? 0 : undefined}
+                    onKeyDown={(e) => {
+                      if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        (onClick as () => void)();
+                      }
+                    }}
+                    className={`p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl hover:border-primary/50 transition-all duration-300 ${onClick ? 'cursor-pointer select-none' : ''}`}
+                  >
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary w-fit mb-4">
+                      <info.icon className="w-5 h-5" />
+                    </div>
+
+                    <h3 className="text-foreground mb-2">{info.title}</h3>
+
+                    <p className="text-sm text-foreground/90 mb-1" style={{ whiteSpace: 'pre-line' }}>
+                      {info.content}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground" style={{ whiteSpace: 'pre-line' }}>
+                      {info.description}
+                    </p>
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* Google Maps */}
@@ -256,6 +341,88 @@ export function Contact() {
                 title="Centro de Terapias Juan Pablo II"
               />
             </motion.div>
+            {/* Confirmation modal for phone / email / address */}
+            <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
+              <DialogContent className="sm:max-w-md ">
+                <DialogHeader>
+                  <DialogTitle>{modalTitle ? `${modalTitle}` : 'Confirmar'}</DialogTitle>
+                  <DialogDescription>
+                    {modalType === 'phone' && 'Se ha copiado el número al portapapeles. ¿Deseas abrir WhatsApp?'}
+                    {modalType === 'email' && 'Se ha copiado el correo al portapapeles. ¿Deseas abrir Gmail?'}
+                    {modalType === 'address' && 'La dirección se ha copiado al portapapeles. ¿Qué deseas hacer ahora?'}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="mt-4 space-y-4 ">
+                  <p className="text-sm text-foreground/90 break-words">{modalContent}</p>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {modalType === 'phone' && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            performOpenWhatsapp(modalContent || undefined);
+                            setContactModalOpen(false);
+                          }}
+                          className="flex-1 min-w-0"
+                        >
+                          Abrir WhatsApp
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setContactModalOpen(false)}
+                          className="flex-1 min-w-0"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+
+                    {modalType === 'email' && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            performOpenGmail(modalContent || undefined, `Consulta: ${modalTitle || ''}`, `Hola, quisiera más información sobre ${modalTitle || ''}`);
+                            setContactModalOpen(false);
+                          }}
+                          className="flex-1 min-w-0"
+                        >
+                          Abrir Gmail
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setContactModalOpen(false)}
+                          className="flex-1 min-w-0"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+
+                    {modalType === 'address' && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            performOpenMaps(modalContent || undefined);
+                            setContactModalOpen(false);
+                          }}
+                          className="flex-1 min-w-0"
+                        >
+                          Abrir Maps
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setContactModalOpen(false)}
+                          className="flex-1 min-w-0"
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </motion.div>
 
           {/* Contact Form */}

@@ -51,14 +51,7 @@ export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceF
               onMouseEnter={() => setHovered(option.id)}
               onMouseLeave={() => setHovered((prev) => (prev === option.id ? null : prev))}
             >
-              {/* Tooltip visible on hover (desktop) */}
-              {hovered === option.id && (
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-card/90 text-sm px-2 py-1 rounded-md shadow-md z-20 pointer-events-none">
-                  <span className="font-medium">Seleccionando: </span>
-                  <span>{option.name}</span>
-                </div>
-              )}
-
+              
               <Button
                 onClick={() => onFilterChange(option.id)}
                 onFocus={() => setHovered(option.id)}
@@ -110,12 +103,6 @@ export function ServiceFilter({ activeFilter, onFilterChange, counts }: ServiceF
                   onMouseEnter={() => setHovered(option.id)}
                   onMouseLeave={() => setHovered((prev) => (prev === option.id ? null : prev))}
                 >
-                  {/* Small tooltip for touch/hover (will also show on focus) */}
-                  {hovered === option.id && (
-                    <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-card/90 text-xs px-2 py-0.5 rounded-md shadow z-20 pointer-events-none">
-                      {option.name}
-                    </div>
-                  )}
 
                   <Button
                     onClick={() => onFilterChange(option.id)}

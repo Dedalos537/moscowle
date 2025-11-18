@@ -102,14 +102,14 @@ export function TherapyModal({
               <Clock className="w-5 h-5 text-primary mx-auto mb-2" />
               <div className="text-sm text-foreground">Duración</div>
               <div className="text-xs text-muted-foreground mt-1">
-                45-60 min
+                30 - 60 min
               </div>
             </div>
             <div className="p-4 rounded-xl bg-muted/50 text-center">
               <Users className="w-5 h-5 text-primary mx-auto mb-2" />
               <div className="text-sm text-foreground">Modalidad</div>
               <div className="text-xs text-muted-foreground mt-1">
-                Individual
+                Individual - Grupal
               </div>
             </div>
             <div className="p-4 rounded-xl bg-muted/50 text-center">

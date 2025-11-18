@@ -207,3 +207,76 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Custom Scrollbar Styles */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thumb-primary\/20::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thumb-primary\/20::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thumb-primary\/20::-webkit-scrollbar-thumb {
+    background-color: rgba(129, 161, 65, 0.2);
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .scrollbar-thumb-primary\/20:hover::-webkit-scrollbar-thumb,
+  .hover\:scrollbar-thumb-primary\/40:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(129, 161, 65, 0.4);
+  }
+  
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Dark mode scrollbar */
+  .dark .scrollbar-thumb-primary\/20::-webkit-scrollbar-thumb {
+    background-color: rgba(129, 161, 65, 0.3);
+  }
+  
+  .dark .scrollbar-thumb-primary\/20:hover::-webkit-scrollbar-thumb,
+  .dark .hover\:scrollbar-thumb-primary\/40:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(129, 161, 65, 0.5);
+  }
+}
+
+/* Fixed card height and internal scroll behavior */
+@layer components {
+  .fixed-card {
+    height: var(--card-height, 500px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ensure the card content becomes the flexible scrollable area */
+  .fixed-card > [data-slot="card-content"] {
+    flex: 1 1 auto;
+    min-height: 0; /* important for proper flexbox overflow */
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Keep footer at bottom */
+  .fixed-card > [data-slot="card-footer"] {
+    margin-top: auto;
+  }
+
+  /* Optional: subtle shadow/gradient when content overflows handled by components */
+  /* Opt-out helper: apply on a Card to restore auto height and normal content flow */
+  .no-fixed-card {
+    height: auto !important;
+  }
+
+  .no-fixed-card > [data-slot="card-content"] {
+    overflow: visible !important;
+    min-height: 0;
+  }
+}

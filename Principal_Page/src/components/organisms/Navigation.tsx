@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from "../ui/alert";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { link } from "fs";
 
 interface NavigationProps {
   darkMode: boolean;
@@ -53,7 +54,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
         try {
           const errJson = await response.json();
           errMsg = errJson.detail || errJson.message || errMsg;
-        } catch (e) {}
+        } catch (e) { }
         throw new Error(errMsg);
       }
 
@@ -76,7 +77,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
           try {
             const errJson = await meResp.json();
             errMsg = errJson.detail || errJson.message || errMsg;
-          } catch (e) {}
+          } catch (e) { }
           throw new Error(errMsg);
         }
 
@@ -110,7 +111,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
       } finally {
         setIsVerifying(false);
       }
-      
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error de conexión';
       setLoginError(message);
@@ -134,30 +135,41 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6 }}
+      
       className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/80 border-b border-border/50 shadow-sm"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-3"
-          >
-            <img 
-              src="/logo.svg" 
-              alt="Centro de Terapias Juan Pablo II" 
-              className="h-12 w-auto"
-            />
-            <div className="flex flex-col">
-              <span className="font-semibold text-primary">Centro de Terapias</span>
-              <span className="text-xs text-muted-foreground">Juan Pablo II</span>
-            </div>
-          </motion.div>
+     
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-3"
+              onClick={scrollToTop}
+            > 
+              <img
+                src="/logo.svg"
+                alt="Centro de Terapias Juan Pablo II"
+                className="h-12 w-auto"
+              />
+              <div className="flex flex-col">
+                <span className="font-semibold text-primary">Centro de Terapias</span>
+                <span className="text-xs text-muted-foreground">Juan Pablo II</span>
+              </div>
+
+            </motion.div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
@@ -171,7 +183,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
               </a>
             ))}
-            
+
             {!isLoggedIn && (
               <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
                 <DialogTrigger asChild>
@@ -252,7 +264,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
                 Cerrar sesión
               </Button>
             )}
-            
+
             <Button
               onClick={toggleDarkMode}
               variant="outline"
@@ -344,7 +356,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
                 </DialogContent>
               </Dialog>
             )}
-            
+
             <Button
               onClick={toggleDarkMode}
               variant="outline"
@@ -353,7 +365,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
-            
+
             <Button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               variant="outline"

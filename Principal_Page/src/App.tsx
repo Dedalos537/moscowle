@@ -91,7 +91,7 @@ export default function App() {
   const fundamentalTherapies = [
     {
       title: "Lecto-Escritura",
-      description: "En esta terapia, trabajamos para potenciar las habilidades de lectura y escritura de los niños, utilizando métodos innovadores y personalizados que nos permiten alcanzar grandes logros en el desarrollo de estas competencias esenciales para el aprendizaje.",
+      description: "Potenciamos las habilidades de lectura y escritura, utilizando métodos innovadores y personalizados que utilizan desde recursos tangibles como libros sensoriales y material didáctico hasta software diseñado especialmente según a las necesidades del participante. Nuestro enfoque personalizado permite alcanzar grandes logros en el desempeño académico.",
       icon: BookOpen,
       image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&h=400&fit=crop",
       category: "Terapias" as const,
@@ -99,7 +99,7 @@ export default function App() {
     },
     {
       title: "Conductual",
-      description: "Ofrecemos terapia de conducta integral para tratar problemas como agresividad, impulsividad, ansiedad y depresión. Nuestro enfoque ayuda a mejorar la calidad de vida, comenzando con la modificación de conductas, clave para el bienestar y desarrollo personal.",
+      description: "Terapia integral para tratar agresividad, impulsividad, ansiedad y depresión. Mejoramos la calidad de vida mediante modificación de conductas, siendo clave para el bienestar y desarrollo personal.",
       icon: Brain,
       image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=400&fit=crop",
       category: "Terapias" as const,
@@ -107,7 +107,7 @@ export default function App() {
     },
     {
       title: "De Lenguaje",
-      description: "Proceso enfocado en ayudar a personas que enfrentan dificultades para hablar y sus consecuencias como entender, leer o escribir. A través de técnicas personalizadas, solucionamos problemas como la articulación incorrecta y el retraso en el desarrollo del habla.",
+      description: "Ayudamos a personas con dificultades para hablar y comunicarse. Mediante técnicas personalizadas solucionamos problemas retraso en el desarrollo y trastornos del habla. Perfeccionando la producción de sonidos, incrementando el vocabulario, mejorando la estructura de oraciones y desarrollando el uso social del lenguaje para lograr una comunicación funcional y efectiva.",
       icon: MessageCircle,
       image: "https://images.unsplash.com/photo-1576267423445-b2e0074d68a4?w=600&h=400&fit=crop",
       category: "Terapias" as const,
@@ -115,7 +115,7 @@ export default function App() {
     },
     {
       title: "De Aprendizaje",
-      description: "Terapia especializada en superar dificultades de aprendizaje, utilizando técnicas personalizadas para mejorar el rendimiento académico y las habilidades cognitivas de cada paciente. Trabajamos con estrategias adaptadas a cada estilo de aprendizaje.",
+      description: "Superamos dificultades de aprendizaje utilizando técnicas personalizadas para mejorar el rendimiento académico y habilidades cognitivas. Trabajamos con estrategias adaptadas a cada estilo individual.",
       icon: GraduationCap,
       image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop",
       category: "Terapias" as const,
@@ -123,7 +123,7 @@ export default function App() {
     },
     {
       title: "Ocupacional",
-      description: "La terapia ocupacional ayuda a superar dificultades en actividades cotidianas esenciales como la alimentación, la higiene personal, el control de esfínteres, el estudio y la recreación. Ofrecemos intervenciones personalizadas para fomentar la autosuficiencia.",
+      description: "Superamos dificultades en actividades cotidianas como alimentación, higiene personal, control de esfínteres, estudio y recreación. Ofrecemos intervenciones personalizadas para fomentar la autosuficiencia.",
       icon: Home,
       image: "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=400&fit=crop",
       category: "Terapias" as const,
@@ -135,7 +135,7 @@ export default function App() {
   const integralTherapies = [
     {
       title: "Autismo (TEA)",
-      description: "Ofrecemos apoyo especializado para personas con Trastorno del Espectro Autista (TEA). Utilizamos técnicas propias para ayudar a mejorar la comunicación, la interacción social y la adaptación al entorno, promoviendo el desarrollo integral.",
+      description: "Apoyo especializado para personas con Trastorno del Espectro Autista. Utilizamos técnicas propias para mejorar la comunicación, interacción social y adaptación al entorno, promoviendo el desarrollo integral.",
       icon: Puzzle,
       image: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=600&h=400&fit=crop",
       category: "Terapias Integrales" as const,
@@ -143,7 +143,7 @@ export default function App() {
     },
     {
       title: "TDA",
-      description: "Tratamiento especializado para el Trastorno por Déficit de Atención, enfocado en mejorar la concentración, organización y habilidades ejecutivas a través de técnicas terapéuticas personalizadas y estrategias de autorregulación.",
+      description: "Tratamiento especializado para el Trastorno por Déficit de Atención. Mejoramos la concentración, organización y habilidades ejecutivas mediante técnicas terapéuticas personalizadas y estrategias efectivas.",
       icon: Target,
       image: "https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=600&h=400&fit=crop",
       category: "Terapias Integrales" as const,
@@ -151,7 +151,7 @@ export default function App() {
     },
     {
       title: "TDAH",
-      description: "Abordaje integral del Trastorno por Déficit de Atención e Hiperactividad, combinando estrategias conductuales y cognitivas para mejorar el autocontrol, la atención y las habilidades sociales, favoreciendo el éxito académico y personal.",
+      description: "Abordaje integral del Trastorno por Déficit de Atención e Hiperactividad. Combinamos estrategias conductuales y cognitivas para mejorar autocontrol, atención y habilidades sociales favoreciendo el éxito.",
       icon: Zap,
       image: "https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=600&h=400&fit=crop",
       category: "Terapias Integrales" as const,
@@ -159,7 +159,7 @@ export default function App() {
     },
     {
       title: "Síndrome de Down",
-      description: "Ofrecemos apoyo especializado para personas con Síndrome de Down. Utilizamos técnicas propias para mejorar el desarrollo psicomotor, el lenguaje y la autonomía personal, potenciando todas sus capacidades.",
+      description: "Apoyo especializado para personas con Síndrome de Down. Utilizamos técnicas propias para mejorar el desarrollo psicomotor, lenguaje y autonomía personal, potenciando todas sus capacidades individuales.",
       icon: Heart,
       image: "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=600&h=400&fit=crop",
       category: "Terapias Integrales" as const,
@@ -167,7 +167,7 @@ export default function App() {
     },
     {
       title: "Discapacidad Intelectual",
-      description: "Ofrecemos apoyo especializado para personas con Discapacidad Intelectual. Utilizamos técnicas propias para fortalecer las habilidades cognitivas, la comunicación y la independencia funcional.",
+      description: "Apoyo especializado para personas con cualquier tipo de Discapacidad Intelectual. Utilizamos técnicas innovadoras propias para fortalecer habilidades cognitivas, comunicación e independencia funcional.",
       icon: Users,
       image: "https://images.unsplash.com/photo-1609081219090-a6d81d3085bf?w=600&h=400&fit=crop",
       category: "Terapias Integrales" as const,
@@ -179,7 +179,7 @@ export default function App() {
   const virtualSupport = [
     {
       title: "Comunicación Oral",
-      description: "Apoyo virtual especializado en el desarrollo de habilidades de comunicación oral, utilizando herramientas digitales innovadoras para mejorar la expresión verbal y la comprensión auditiva de forma interactiva y personalizada.",
+      description: "Apoyo virtual especializado en desarrollo de habilidades de comunicación oral. Mejoramos la expresión verbal y comprensión auditiva de forma interactiva, personalizada y adaptada a cada necesidad.",
       icon: Video,
       image: "https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&h=400&fit=crop",
       category: "Apoyo Virtual" as const,
@@ -187,7 +187,7 @@ export default function App() {
     },
     {
       title: "Lecto-Escritura Virtual",
-      description: "Programa virtual de apoyo en lectoescritura, diseñado para fortalecer las habilidades de lectura y escritura a través de plataformas digitales interactivas y ejercicios gamificados.",
+      description: "Método virtual innovador diseñado para fortalecer habilidades de lectura y escritura. Utilizamos plataformas digitales interactivas y ejercicios gamificados especializados.",
       icon: BookMarked,
       image: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=600&h=400&fit=crop",
       category: "Apoyo Virtual" as const,
@@ -195,7 +195,7 @@ export default function App() {
     },
     {
       title: "Matemáticas",
-      description: "Apoyo virtual en matemáticas que utiliza metodologías digitales para facilitar el aprendizaje de conceptos numéricos y operaciones matemáticas básicas y avanzadas de manera lúdica.",
+      description: "Apoyo virtual en matemáticas utilizando metodologías digitales propias e innovadoras. Facilitamos el aprendizaje de conceptos numéricos y operaciones matemáticas básicas y avanzadas de manera lúdica y efectiva.",
       icon: Calculator,
       image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=600&h=400&fit=crop",
       category: "Apoyo Virtual" as const,
@@ -203,7 +203,7 @@ export default function App() {
     },
     {
       title: "Desarrollo Cognitivo",
-      description: "Programa virtual enfocado en estimular y desarrollar las funciones cognitivas superiores como memoria, atención, percepción y funciones ejecutivas mediante ejercicios digitales especializados.",
+      description: "Programa virtual para estimular y desarrollar funciones cognitivas superiores como memoria, atención, percepción y funciones ejecutivas. Utilizamos ejercicios especializados para resultados óptimos y efectivos integrales.",
       icon: Lightbulb,
       image: "https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=600&h=400&fit=crop",
       category: "Apoyo Virtual" as const,
@@ -215,7 +215,7 @@ export default function App() {
   const materialSupport = [
     {
       title: "Comunicación Oral",
-      description: "Material concreto diseñado para estimular y desarrollar las habilidades de comunicación oral a través de juegos, tarjetas y actividades interactivas que favorecen la expresión verbal.",
+      description: "Material para estimular y desarrollar habilidades de comunicación oral mediante juegos, tarjetas y actividades interactivas especializadas. Favorecemos la expresión verbal de manera tangible y práctica.",
       icon: Boxes,
       image: "https://images.unsplash.com/photo-1596464716127-f2a82984de30?w=600&h=400&fit=crop",
       category: "Material Concreto" as const,
@@ -223,7 +223,7 @@ export default function App() {
     },
     {
       title: "Lecto-Escritura",
-      description: "Recursos tangibles y manipulativos para el aprendizaje de la lectura y escritura, incluyendo letras móviles, libros sensoriales y material didáctico especializado de alta calidad.",
+      description: "Recursos tangibles y manipulativos para aprendizaje de lectura y escritura. Incluimos letras móviles, libros sensoriales y material didáctico especializado de alta calidad para el desarrollo académico.",
       icon: Type,
       image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&h=400&fit=crop",
       category: "Material Concreto" as const,
@@ -231,7 +231,7 @@ export default function App() {
     },
     {
       title: "Matemáticas",
-      description: "Material manipulativo para el aprendizaje de conceptos matemáticos, incluyendo ábacos, bloques lógicos, regletas y otros recursos didácticos concretos que facilitan la comprensión.",
+      description: "Material manipulativo para aprendizaje de conceptos matemáticos, incluyendo ábacos, bloques lógicos, regletas y recursos didácticos concretos. Facilitamos la comprensión matemática mediante experiencias táctiles.",
       icon: Calculator,
       image: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=600&h=400&fit=crop",
       category: "Material Concreto" as const,
@@ -239,7 +239,7 @@ export default function App() {
     },
     {
       title: "Desarrollo Cognitivo",
-      description: "Recursos físicos y tangibles diseñados para estimular el desarrollo cognitivo, incluyendo rompecabezas, juegos de memoria y material sensorial especializado de última generación.",
+      description: "Recursos físicos y tangibles para estimular el desarrollo cognitivo, incluyendo rompecabezas, juegos de memoria y material sensorial especializado. Promovemos el crecimiento cognitivo integral.",
       icon: Box,
       image: "https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=600&h=400&fit=crop",
       category: "Material Concreto" as const,
@@ -337,7 +337,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 "
           >
             {filteredTherapies.map((therapy, index) => (
               <motion.div
@@ -345,6 +345,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="h-full"
               >
                 <TherapyCard 
                   {...therapy} 
