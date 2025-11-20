@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from "../ui/alert";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { link } from "fs";
+
 
 interface NavigationProps {
   darkMode: boolean;
@@ -40,7 +40,10 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
     setLoginError(null);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const BACKEND = ((import.meta as any)?.env?.VITE_BACKEND_URL as string) || '';
+      const loginUrl = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/auth/login` : '/api/auth/login';
+
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +67,8 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
       // Mostrar verificación explícita con el endpoint /auth/me
       setIsVerifying(true);
       try {
-        const meResp = await fetch('/api/auth/me', {
+        const meUrl = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/auth/me` : '/api/auth/me';
+        const meResp = await fetch(meUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

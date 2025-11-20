@@ -106,6 +106,8 @@ export function TherapyCard({
           <Button 
             onClick={onDetailsClick} 
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
+            attention
+            attentionInterval={10000}
           >
             Ver detalles
           </Button>

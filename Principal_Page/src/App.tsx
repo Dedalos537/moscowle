@@ -346,6 +346,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 className="h-full"
+                data-therapy={therapy.title}
               >
                 <TherapyCard 
                   {...therapy} 

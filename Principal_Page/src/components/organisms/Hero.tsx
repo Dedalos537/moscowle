@@ -1,8 +1,178 @@
+import React, { useCallback } from "react";
 import { motion } from "motion/react";
 import { Heart, ArrowRight, Sparkles, Users, Brain, MessageCircle, Smile, Puzzle, Dna, Handshake } from "lucide-react";
 import { Button } from "../ui/button";
 
 export function Hero() {
+  const getBorderColor = (colorClass: string) => {
+    try {
+      const root = getComputedStyle(document.documentElement);
+      switch (colorClass) {
+        case "text-primary":
+          return root.getPropertyValue("--primary").trim() || "#81A141";
+        case "text-accent":
+          return root.getPropertyValue("--accent").trim() || "#5e7f2a";
+        case "text-secondary":
+          return root.getPropertyValue("--secondary").trim() || "#dfe77c";
+        default:
+          return root.getPropertyValue("--primary").trim() || "#81A141";
+      }
+    } catch (e) {
+      return "#81A141";
+    }
+  };
+
+  const hexToRgba = (hex: string, alpha = 1) => {
+    if (!hex) return `rgba(129,161,65,${alpha})`;
+    const h = hex.replace('#','').trim();
+    if (h.startsWith('rgb')) {
+      // already rgb/rgba string
+      return hex;
+    }
+    if (h.length === 3) {
+      const r = parseInt(h[0]+h[0], 16);
+      const g = parseInt(h[1]+h[1], 16);
+      const b = parseInt(h[2]+h[2], 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+    if (h.length === 6) {
+      const r = parseInt(h.substring(0,2), 16);
+      const g = parseInt(h.substring(2,4), 16);
+      const b = parseInt(h.substring(4,6), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+    return hex;
+  };
+
+  const handleHeroFocus = useCallback((label: string) => {
+    if (!label) return;
+    const nodes = Array.from(document.querySelectorAll('[data-therapy]')) as HTMLElement[];
+    if (!nodes.length) return;
+
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .trim();
+
+    const query = normalize(label);
+
+    // First try: exact includes (normalized)
+    let target: HTMLElement | undefined = nodes.find(n => {
+      const t = normalize(n.getAttribute('data-therapy') || '');
+      return t.includes(query);
+    });
+
+    // Second try: exact word-start match
+    if (!target) {
+      target = nodes.find(n => {
+        const t = normalize(n.getAttribute('data-therapy') || '');
+        return t.split(' ').some(w => query.startsWith(w) || w.startsWith(query));
+      });
+    }
+
+    // Third: scoring by number of overlapping words (simple fuzzy match)
+    if (!target) {
+      const qWords = new Set(query.split(/\s+/).filter(Boolean));
+      let best: { node: HTMLElement; score: number } | null = null;
+      for (const n of nodes) {
+        const t = normalize(n.getAttribute('data-therapy') || '');
+        const words = new Set(t.split(/\s+/).filter(Boolean));
+        let score = 0;
+        for (const w of qWords) if (words.has(w)) score++;
+        if (!best || score > best.score) best = { node: n, score };
+      }
+      if (best && best.score > 0) target = best.node;
+    }
+
+    if (!target) target = nodes[0];
+
+    const el = target as HTMLElement;
+
+    // Scroll into view but account for sticky header if present
+    const header = document.querySelector('header, nav, [data-header]') as HTMLElement | null;
+    const headerHeight = header ? header.getBoundingClientRect().height : 84; // reasonable default
+    const rect = el.getBoundingClientRect();
+    const top = rect.top + window.scrollY - headerHeight - 24; // small offset
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+
+    // try to find the inner Card element to apply the neon highlight flush to the card border
+    const cardEl = el.querySelector('[data-slot="card"]') as HTMLElement | null;
+    const color = getBorderColor(itemColorFromLabel(label));
+    const rgba = hexToRgba(color, 0.26);
+    const HIGHLIGHT_MS = 1500; // 1.5s bounce preview
+
+    if (cardEl) {
+      // Prefer Web Animations API for a reliable bounce (works even when other transforms exist)
+      try {
+        if (cardEl.animate) {
+          const keyframes = [
+            { transform: 'translateY(0) scale(1)' },
+            { transform: 'translateY(-12px) scale(1.02)' },
+            { transform: 'translateY(0) scale(0.995)' },
+            { transform: 'translateY(-6px) scale(1.01)' },
+            { transform: 'translateY(0) scale(1)' },
+          ];
+          const anim = cardEl.animate(keyframes, { duration: HIGHLIGHT_MS, easing: 'cubic-bezier(.22,.9,.35,1)', fill: 'both' });
+          // ensure removal of any fallback class if present
+          cardEl.classList.remove('card-bounce');
+          // no further cleanup required; animation will end naturally
+        } else {
+          // fallback to CSS class if Web Animations API not available
+          cardEl.classList.add('card-bounce');
+          // ensure reflow so animation starts reliably
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          cardEl.offsetHeight;
+          setTimeout(() => {
+            cardEl.classList.remove('card-bounce');
+          }, HIGHLIGHT_MS);
+        }
+      } catch (e) {
+        // final fallback: CSS class
+        cardEl.classList.add('card-bounce');
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        cardEl.offsetHeight;
+        setTimeout(() => cardEl.classList.remove('card-bounce'), HIGHLIGHT_MS);
+      }
+    } else {
+      // fallback: briefly add bounce to wrapper element
+      if ((el as HTMLElement).animate) {
+        try {
+          (el as HTMLElement).animate([
+            { transform: 'translateY(0) scale(1)' },
+            { transform: 'translateY(-12px) scale(1.02)' },
+            { transform: 'translateY(0) scale(0.995)' },
+            { transform: 'translateY(-6px) scale(1.01)' },
+            { transform: 'translateY(0) scale(1)' },
+          ], { duration: HIGHLIGHT_MS, easing: 'cubic-bezier(.22,.9,.35,1)', fill: 'both' });
+        } catch (e) {
+          el.classList.add('card-bounce');
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          el.offsetHeight;
+          setTimeout(() => el.classList.remove('card-bounce'), HIGHLIGHT_MS);
+        }
+      } else {
+        el.classList.add('card-bounce');
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        el.offsetHeight;
+        setTimeout(() => el.classList.remove('card-bounce'), HIGHLIGHT_MS);
+      }
+    }
+  }, []);
+
+  // heuristic: choose color by matching label to known items
+  function itemColorFromLabel(label: string) {
+    const l = label.toLowerCase();
+    if (l.includes('social') || l.includes('habil') ) return 'text-primary';
+    if (l.includes('aprendiz') || l.includes('matem') ) return 'text-accent';
+    if (l.includes('lenguaje') || l.includes('comunic') ) return 'text-primary';
+    if (l.includes('conduct') ) return 'text-secondary';
+    if (l.includes('tea') ) return 'text-accent';
+    if (l.includes('down') ) return 'text-primary';
+    return 'text-primary';
+  }
   return (
     <section id="inicio" className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       {/* Gradient Background */}
@@ -45,14 +215,14 @@ export function Hero() {
 
             <div className="flex flex-wrap gap-4">
               <a href="#servicios">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground group">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground group" attention attentionInterval={9000}>
                   Explorar Servicios
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </a>
               
               <a href="#contacto">
-                <Button size="lg" variant="outline" className="border-primary/50 hover:bg-primary/5">
+                <Button size="lg" variant="outline" className="border-primary/50 hover:bg-primary/5" attention attentionInterval={12000}>
                   Contáctanos
                 </Button>
               </a>
@@ -102,7 +272,9 @@ export function Hero() {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.8 + index * 0.1, type: "spring" }}
-                      className="bg-background/80 backdrop-blur-sm rounded-2xl p-6 border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+                      className="bg-background/80 backdrop-blur-sm rounded-2xl p-6 border transition-all duration-300 hover:shadow-lg cursor-pointer"
+                      style={{ borderColor: getBorderColor(item.color) }}
+                      onClick={() => handleHeroFocus(item.label)}
                     >
                       <item.icon className={`w-8 h-8 ${item.color} mb-3`} />
                       <p className="text-sm text-foreground/80">{item.label}</p>

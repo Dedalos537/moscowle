@@ -11,6 +11,7 @@ import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { motion } from "motion/react";
 import { CheckCircle2, Clock, Users, Target, Phone } from "lucide-react";
 import { Separator } from "../ui/separator";
+import { useEffect, useState } from "react";
 
 interface TherapyModalProps {
   open: boolean;
@@ -42,6 +43,25 @@ export function TherapyModal({
     "Materiales y recursos especializados",
   ],
 }: TherapyModalProps) {
+  const [showGuide, setShowGuide] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      // show guide banner briefly
+      setShowGuide(true);
+      setShowToast(true);
+      const t = setTimeout(() => setShowGuide(false), 6000);
+      const t2 = setTimeout(() => setShowToast(false), 4500);
+      return () => {
+        clearTimeout(t);
+        clearTimeout(t2);
+      };
+    } else {
+      setShowGuide(false);
+      setShowToast(false);
+    }
+  }, [open]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -64,6 +84,24 @@ export function TherapyModal({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Guide banner - appears briefly when modal opens */}
+          {showGuide && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className="modal-guide p-3 rounded-md text-sm text-foreground/90 flex items-center gap-3"
+            >
+              <div className="p-2 rounded-md bg-primary/10 text-primary">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-semibold">Sugerencia de lectura</div>
+                <div className="text-xs text-muted-foreground">Recomendamos leer la información paso por paso: descripción, beneficios y luego agendar.</div>
+              </div>
+            </motion.div>
+          )}
           {/* Image */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -173,7 +211,8 @@ export function TherapyModal({
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-              
+              attention
+              attentionInterval={8000}
               onClick={() => {
                 onOpenChange(false);
                 const contactSection = document.getElementById("contacto");
@@ -195,6 +234,19 @@ export function TherapyModal({
             </Button>
           </div>
         </div>
+        {/* Small ephemeral toast */}
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
+            className="fixed right-6 bottom-6 z-50 p-3 rounded-lg shadow-lg bg-background/90 border border-border/50 text-sm"
+          >
+            <div className="font-medium">Tip</div>
+            <div className="text-xs text-muted-foreground">Navega la información en orden y al final agenda una cita para garantizar el mejor plan.</div>
+          </motion.div>
+        )}
       </DialogContent>
     </Dialog>
   );
