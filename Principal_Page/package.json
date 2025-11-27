@@ -56,6 +56,7 @@
         },
         "scripts": {
                 "dev": "vite",
+                "dev:3002": "vite --port 3002",
                 "build": "vite build"
         }
 }

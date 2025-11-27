@@ -31,10 +31,16 @@ def create_app(config_object: str = None):
     from .routes.auth_routes import auth_bp
     from .routes.patient_routes import patient_bp
     from .routes.appointment_routes import appointment_bp
+    from .routes.roles_routes import roles_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(patient_bp, url_prefix="/api/patients")
     app.register_blueprint(appointment_bp, url_prefix="/api/appointments")
+    app.register_blueprint(roles_bp, url_prefix="/api/roles")
+
+    # Register centralized error handlers
+    from .errors import register_error_handlers
+    register_error_handlers(app)
 
     @app.route("/health")
     def health():

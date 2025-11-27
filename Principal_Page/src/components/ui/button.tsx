@@ -34,50 +34,60 @@ const buttonVariants = cva(
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  attention,
-  attentionInterval = 7000,
-  ...props
-}: React.ComponentProps<"button"> &
+type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     /** If true, the button will perform a short attention animation periodically */
     attention?: boolean;
     /** Interval in ms between attention pulses (default 7000ms) */
     attentionInterval?: number;
-  }) {
-  const Comp = asChild ? Slot : "button";
-  const [pulse, setPulse] = React.useState(false);
+  };
 
-  React.useEffect(() => {
-    if (!attention) return;
-    let mounted = true;
-    const interval = setInterval(() => {
-      if (!mounted) return;
-      setPulse(true);
-      // keep pulse for a short moment
-      setTimeout(() => setPulse(false), 650);
-    }, attentionInterval);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [attention, attentionInterval]);
+const Button = React.forwardRef<HTMLElement, ButtonProps>(
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      attention,
+      attentionInterval = 7000,
+      ...props
+    },
+    ref,
+  ) => {
+    const Comp: any = asChild ? Slot : "button";
+    const [pulse, setPulse] = React.useState(false);
 
-  return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-attention={attention ? "true" : undefined}
-      data-pulse={pulse ? "true" : undefined}
-      className={cn(buttonVariants({ variant, size, className }), pulse ? "attention-active" : "")}
-      {...props}
-    />
-  );
-}
+    React.useEffect(() => {
+      if (!attention) return;
+      let mounted = true;
+      const interval = setInterval(() => {
+        if (!mounted) return;
+        setPulse(true);
+        // keep pulse for a short moment
+        setTimeout(() => setPulse(false), 650);
+      }, attentionInterval);
+      return () => {
+        mounted = false;
+        clearInterval(interval);
+      };
+    }, [attention, attentionInterval]);
+
+    return (
+      <Comp
+        ref={ref}
+        data-slot="button"
+        data-variant={variant}
+        data-attention={attention ? "true" : undefined}
+        data-pulse={pulse ? "true" : undefined}
+        className={cn(buttonVariants({ variant, size, className }), pulse ? "attention-active" : "")}
+        {...props}
+      />
+    );
+  },
+);
+
+Button.displayName = "Button";
 
 export { Button, buttonVariants };

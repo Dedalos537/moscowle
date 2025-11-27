@@ -40,8 +40,9 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
     setLoginError(null);
 
     try {
-      const BACKEND = ((import.meta as any)?.env?.VITE_BACKEND_URL as string) || '';
-      const loginUrl = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/auth/login` : '/api/auth/login';
+      // Prefer explicit VITE_BACKEND_URL, fall back to localhost backend for local dev
+      const BACKEND = ((import.meta as any)?.env?.VITE_BACKEND_URL as string) || 'http://127.0.0.1:8002';
+      const loginUrl = `${BACKEND.replace(/\/$/, '')}/api/auth/login`;
 
       const response = await fetch(loginUrl, {
         method: 'POST',
@@ -96,7 +97,7 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
         onLogin();
 
         // Determinar URL del dashboard (prefiere env var si existe, sino localhost:3001)
-        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
+        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3008';
 
         // Sólo redirigir si el usuario es admin (si la respuesta incluye role)
         const rawRole = (meData && (meData.role || meData.role_name)) || null;
@@ -104,6 +105,11 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
         const shouldRedirect = !role || role === 'admin' || role.includes('admin') || role === 'administrador';
 
         if (shouldRedirect) {
+          // Debug: log dashboard target + user role to help diagnose redirect issues
+          try {
+            // eslint-disable-next-line no-console
+            console.debug('[Navigation] redirect target:', DASHBOARD_URL, 'role:', role, 'meData:', meData);
+          } catch (e) {}
           setIsRedirecting(true);
           try {
             window.location.assign(DASHBOARD_URL);
@@ -188,81 +194,111 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
               </a>
             ))}
 
-            {!isLoggedIn && (
-              <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" size="sm" className="gap-2 bg-primary hover:bg-primary/90">
-                    <LogIn className="w-4 h-4" />
-                    <span className="hidden lg:inline">Iniciar Sesión</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Lock className="w-5 h-5 text-primary" />
-                      </div>
-                      Iniciar Sesión
-                    </DialogTitle>
-                    <DialogDescription>
-                      Accede a tu cuenta del Centro de Terapias Juan Pablo II
-                    </DialogDescription>
-                  </DialogHeader>
-                  {loginError && (
-                    <Alert className="mb-4 border-red-200 bg-red-50">
-                      <AlertDescription className="text-red-700">{loginError}</AlertDescription>
-                    </Alert>
-                  )}
-                  {isRedirecting && (
-                    <Alert className="mb-4 border-blue-200 bg-blue-50">
-                      <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
-                    </Alert>
-                  )}
-                  <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo Electrónico</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="tu@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Contraseña</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10 pr-10"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {!isLoggedIn && (() => {
+              const env: any = (import.meta as any)?.env || {};
+              const ALLOW_BYPASS = env.VITE_BYPASS_AUTH === 'true' || env.DEV === true;
+              if (ALLOW_BYPASS) {
+                return (
+                  <>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-2 bg-primary hover:bg-primary/90"
+                      onClick={() => {
+                        // Bypass auth in development/demo only
+                        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
+                        try {
+                          localStorage.setItem('auth_token', 'BYPASS');
+                          localStorage.setItem('user_data', JSON.stringify({ id: 1, email: 'admin@local', is_admin: true }));
+                        } catch (e) { }
+                        if (onLogin) onLogin();
+                        try { window.location.assign(DASHBOARD_URL); } catch (e) { window.location.href = DASHBOARD_URL; }
+                      }}
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span className="hidden lg:inline">Ingresar</span>
                     </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
+                  </>
+                );
+              }
+
+              // Production: render the real login dialog
+              return (
+                <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" size="sm" className="gap-2 bg-primary hover:bg-primary/90">
+                      <LogIn className="w-4 h-4" />
+                      <span className="hidden lg:inline">Iniciar Sesión</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Lock className="w-5 h-5 text-primary" />
+                        </div>
+                        Iniciar Sesión
+                      </DialogTitle>
+                      <DialogDescription>
+                        Accede a tu cuenta del Centro de Terapias Juan Pablo II
+                      </DialogDescription>
+                    </DialogHeader>
+                    {loginError && (
+                      <Alert className="mb-4 border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-700">{loginError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {isRedirecting && (
+                      <Alert className="mb-4 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
+                      </Alert>
+                    )}
+                    <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Correo Electrónico</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="tu@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Contraseña</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="pl-10 pr-10"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              );
+            })()}
             {isLoggedIn && (
               <Button variant="ghost" size="sm" className="ml-2" onClick={handleLogout}>
                 Cerrar sesión
@@ -281,85 +317,113 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
-            {!isLoggedIn && (
-              <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" size="icon" className="rounded-full bg-primary hover:bg-primary/90">
-                    <LogIn className="w-4 h-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Lock className="w-5 h-5 text-primary" />
-                      </div>
-                      Iniciar Sesión
-                    </DialogTitle>
-                    <DialogDescription>
-                      Accede a tu cuenta del Centro de Terapias Juan Pablo II
-                    </DialogDescription>
-                  </DialogHeader>
-                  {loginError && (
-                    <Alert className="mb-4 border-red-200 bg-red-50">
-                      <AlertDescription className="text-red-700">{loginError}</AlertDescription>
-                    </Alert>
-                  )}
-                  {isVerifying && (
-                    <Alert className="mb-4 border-blue-200 bg-blue-50">
-                      <AlertDescription className="text-blue-700">Verificando credenciales...</AlertDescription>
-                    </Alert>
-                  )}
-                  {isRedirecting && (
-                    <Alert className="mb-4 border-blue-200 bg-blue-50">
-                      <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
-                    </Alert>
-                  )}
-                  <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email-mobile">Correo Electrónico</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="email-mobile"
-                          type="email"
-                          placeholder="tu@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password-mobile">Contraseña</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          id="password-mobile"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10 pr-10"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {!isLoggedIn && (() => {
+              const env: any = (import.meta as any)?.env || {};
+              const ALLOW_BYPASS = env.VITE_BYPASS_AUTH === 'true' || env.DEV === true;
+              if (ALLOW_BYPASS) {
+                return (
+                  <>
+                    <Button
+                      variant="default"
+                      size="icon"
+                      className="rounded-full bg-primary hover:bg-primary/90"
+                      onClick={() => {
+                        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3001';
+                        try {
+                          localStorage.setItem('auth_token', 'BYPASS');
+                          localStorage.setItem('user_data', JSON.stringify({ id: 1, email: 'admin@local', is_admin: true }));
+                        } catch (e) { }
+                        if (onLogin) onLogin();
+                        try { window.location.assign(DASHBOARD_URL); } catch (e) { window.location.href = DASHBOARD_URL; }
+                      }}
+                    >
+                      <LogIn className="w-4 h-4" />
                     </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
+                  </>
+                );
+              }
+
+              // Production: render the dialog trigger (icon) and the dialog itself
+              return (
+                <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" size="icon" className="rounded-full bg-primary hover:bg-primary/90">
+                      <LogIn className="w-4 h-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Lock className="w-5 h-5 text-primary" />
+                        </div>
+                        Iniciar Sesión
+                      </DialogTitle>
+                      <DialogDescription>
+                        Accede a tu cuenta del Centro de Terapias Juan Pablo II
+                      </DialogDescription>
+                    </DialogHeader>
+                    {loginError && (
+                      <Alert className="mb-4 border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-700">{loginError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {isVerifying && (
+                      <Alert className="mb-4 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-blue-700">Verificando credenciales...</AlertDescription>
+                      </Alert>
+                    )}
+                    {isRedirecting && (
+                      <Alert className="mb-4 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-blue-700">Redirigiendo al dashboard...</AlertDescription>
+                      </Alert>
+                    )}
+                    <form onSubmit={handleLogin} className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email-mobile">Correo Electrónico</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="email-mobile"
+                            type="email"
+                            placeholder="tu@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password-mobile">Contraseña</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="password-mobile"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="pl-10 pr-10"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              );
+            })()}
 
             <Button
               onClick={toggleDarkMode}

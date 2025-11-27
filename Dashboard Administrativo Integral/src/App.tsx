@@ -19,32 +19,62 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const env: any = (import.meta as any)?.env || {};
+  const BACKEND = (env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:8002';
+  const PRINCIPAL = (env.VITE_PRINCIPAL_URL as string) || 'http://localhost:3002';
 
   // Check authentication status on app load
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('auth_token');
+      const ALLOW_BYPASS = env.VITE_BYPASS_AUTH === 'true' || env.DEV === true;
       if (!token) {
         setIsLoading(false);
         // Redirect to main site if no token
-        window.location.href = 'http://localhost:3002';
+        window.location.href = PRINCIPAL;
+        return;
+      }
+
+      // Development/demo bypass: accept a special BYPASS token and skip server validation
+      if (token === 'BYPASS' && ALLOW_BYPASS) {
+        try {
+          const stored = localStorage.getItem('user_data');
+          if (stored) {
+            // keep provided user_data
+            setIsAuthenticated(true);
+          } else {
+            // set a minimal user_data object so app can render
+            localStorage.setItem('user_data', JSON.stringify({ id: 1, email: 'admin@local', is_admin: true }));
+            setIsAuthenticated(true);
+          }
+        } finally {
+          setIsLoading(false);
+        }
         return;
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
+        // Debug: log token and target URL used for /api/auth/me
+        // eslint-disable-next-line no-console
+        console.debug('[Dashboard] token:', token, 'BACKEND:', BACKEND);
+        const meUrl = `${BACKEND.replace(/\/$/, '')}/api/auth/me`;
+        // eslint-disable-next-line no-console
+        console.debug('[Dashboard] fetching', meUrl);
+        const res = await fetch(`${BACKEND.replace(/\/$/, '')}/api/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
+        // eslint-disable-next-line no-console
+        console.debug('[Dashboard] /api/auth/me status:', res.status);
 
         if (!res.ok) {
           // Invalid token or not authorized
           localStorage.removeItem('auth_token');
           localStorage.removeItem('user_data');
           setIsLoading(false);
-          window.location.href = 'http://localhost:3002';
+          window.location.href = PRINCIPAL;
           return;
         }
 
@@ -60,14 +90,14 @@ export default function App() {
           localStorage.removeItem('user_data');
           setIsAuthenticated(false);
           setIsLoading(false);
-          window.location.href = 'http://localhost:3002';
+          window.location.href = PRINCIPAL;
           return;
         }
       } catch (error) {
         console.error('Auth validation error:', error);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
-        window.location.href = 'http://localhost:3002';
+        window.location.href = PRINCIPAL;
         return;
       } finally {
         setIsLoading(false);
@@ -149,7 +179,7 @@ export default function App() {
             Debes iniciar sesión desde la página principal para acceder al dashboard administrativo.
           </p>
           <button 
-            onClick={() => window.location.href = 'http://localhost:3002'}
+            onClick={() => window.location.href = PRINCIPAL}
             className="w-full bg-gradient-to-r from-[#4CAF50] to-[#2E7D32] text-white py-3 px-4 rounded-lg hover:opacity-90 transition-opacity"
           >
             Ir a la Página Principal

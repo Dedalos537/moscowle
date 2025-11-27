@@ -1,0 +1,31 @@
+ * Serving Flask app 'app'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8002
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [26/Nov/2025 21:09:40] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:09:41] "GET /api/roles HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:14:27] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:15:09] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:26:47] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:26:48] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:26:48] "OPTIONS /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:26:48] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:28:21] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:28:22] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:28:22] "OPTIONS /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:28:22] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:08] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:08] "[31m[1mPOST /api/auth/login HTTP/1.1[0m" 401 -
+127.0.0.1 - - [26/Nov/2025 21:29:14] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:14] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:14] "OPTIONS /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:15] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:44] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:44] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:44] "OPTIONS /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:29:44] "GET /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:32:12] "OPTIONS /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:32:12] "POST /api/auth/login HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:32:12] "OPTIONS /api/auth/me HTTP/1.1" 200 -
+127.0.0.1 - - [26/Nov/2025 21:32:12] "GET /api/auth/me HTTP/1.1" 200 -

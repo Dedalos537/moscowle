@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, Search, Filter, Edit, Trash2, CheckCircle, XCircle, Shield, UserPlus, Mail, Phone, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -152,20 +152,109 @@ export function UsersModule() {
     specialty: '',
     status: 'active' as User['status'],
   });
+  const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    let mounted = true;
+    setRolesLoading(true);
+    setRolesError(null);
+
+    const BACKEND = (import.meta as any)?.env?.VITE_BACKEND_URL || '';
+    const url = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/roles` : '/api/roles';
+
+    fetch(url)
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message || body?.error || 'Error cargando roles');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!mounted) return;
+        setRoles(Array.isArray(data?.roles) ? data.roles : []);
+      })
+      .catch((err: any) => {
+        if (!mounted) return;
+        setRolesError(err?.message || String(err));
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setRolesLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, []);
+  const [isCreating, setIsCreating] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const handleCreateUser = () => {
-    const newUser: User = {
-      id: users.length + 1,
-      ...formData,
-      joinDate: new Date().toISOString().split('T')[0],
-      patients: formData.role === 'therapist' ? 0 : undefined,
-      sessions: formData.role === 'therapist' ? 0 : undefined,
-    };
+    // Call backend register endpoint as admin
+    setIsCreating(true);
+    setServerError(null);
 
-    setUsers([...users, newUser]);
-    toast.success(`${roleConfig[formData.role].label} creado exitosamente`);
-    setIsCreateOpen(false);
-    resetForm();
+    const BACKEND = (import.meta as any)?.env?.VITE_BACKEND_URL || '';
+    const url = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/auth/register` : '/api/auth/register';
+
+    // send role name to backend; backend will map to role_id
+
+    // generate a temporary password for initial login (will be emailed by server if implemented)
+    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+
+    const token = (() => {
+      try {
+        return localStorage.getItem('auth_token') || '';
+      } catch (e) {
+        return '';
+      }
+    })();
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ email: formData.email, password: tempPassword, role: formData.role }),
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = body?.msg || (body?.message || 'Error al crear usuario');
+          throw new Error(msg || 'Error al crear usuario');
+        }
+
+        const created = body.user;
+        const newUser: User = {
+          id: created.id || users.length + 1,
+          name: formData.name,
+          email: created.email,
+          phone: formData.phone,
+          role: formData.role as User['role'],
+          specialty: formData.specialty || undefined,
+          status: formData.status as User['status'],
+          joinDate: created.created_at ? created.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          patients: formData.role === 'therapist' ? 0 : undefined,
+          sessions: formData.role === 'therapist' ? 0 : undefined,
+        };
+
+        setUsers((u) => [...u, newUser]);
+        toast.success(`${roleConfig[formData.role].label} creado exitosamente`);
+        // show generated password to admin so they can copy it or send it to the user
+        setCreatedPassword(tempPassword);
+        setShowPasswordModal(true);
+        setIsCreateOpen(false);
+        resetForm();
+      })
+      .catch((err: Error) => {
+        setServerError(err.message);
+        toast.error(err.message || 'Error del servidor');
+      })
+      .finally(() => setIsCreating(false));
   };
 
   const handleEditUser = () => {
@@ -240,6 +329,11 @@ export function UsersModule() {
   const UserForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
     <ScrollArea className="max-h-[500px] pr-4">
       <div className="space-y-4 py-4">
+        {serverError && (
+          <div className="mb-4 text-sm text-red-700 bg-red-50 p-2 rounded">
+            {serverError}
+          </div>
+        )}
         <div className="space-y-2">
           <Label>Nombre Completo *</Label>
           <Input
@@ -272,15 +366,25 @@ export function UsersModule() {
           <Label>Rol *</Label>
           <Select
             value={formData.role}
-            onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
+            onValueChange={(value: string) => setFormData({ ...formData, role: value as User['role'] })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="therapist">Terapeuta</SelectItem>
-              <SelectItem value="assistant">Asistente</SelectItem>
-              <SelectItem value="admin">Administrador</SelectItem>
+              {rolesLoading && <SelectItem value="loading" disabled>Cargando roles...</SelectItem>}
+              {!rolesLoading && roles.length > 0 && roles.map((r) => (
+                <SelectItem key={r.id} value={r.name}>
+                  { (roleConfig as any)[r.name]?.label ?? r.name }
+                </SelectItem>
+              ))}
+              {!rolesLoading && roles.length === 0 && (
+                <>
+                  <SelectItem value="therapist">Terapeuta</SelectItem>
+                  <SelectItem value="assistant">Asistente</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -290,7 +394,7 @@ export function UsersModule() {
             <Label>Especialidad *</Label>
             <Select
               value={formData.specialty}
-              onValueChange={(value) => setFormData({ ...formData, specialty: value })}
+              onValueChange={(value: string) => setFormData({ ...formData, specialty: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar especialidad" />
@@ -316,7 +420,7 @@ export function UsersModule() {
           </div>
           <Switch
             checked={formData.status === 'active'}
-            onCheckedChange={(checked) => 
+            onCheckedChange={(checked: boolean) => 
               setFormData({ ...formData, status: checked ? 'active' : 'inactive' })
             }
           />
@@ -342,9 +446,9 @@ export function UsersModule() {
           className="bg-gradient-to-r from-[#4CAF50] to-[#2E7D32] text-white"
           onClick={onSubmit}
           disabled={!formData.name || !formData.email || !formData.phone || 
-                   (formData.role === 'therapist' && !formData.specialty)}
+                   (formData.role === 'therapist' && !formData.specialty) || isCreating}
         >
-          {submitLabel}
+          {isCreating ? 'Creando...' : submitLabel}
         </Button>
       </DialogFooter>
     </ScrollArea>
@@ -374,7 +478,7 @@ export function UsersModule() {
                 Complete los datos del usuario. Los campos marcados con * son obligatorios.
               </DialogDescription>
             </DialogHeader>
-            <UserForm onSubmit={handleCreateUser} submitLabel="Crear Usuario" />
+                <UserForm onSubmit={handleCreateUser} submitLabel="Crear Usuario" />
           </DialogContent>
         </Dialog>
       </div>
@@ -665,6 +769,45 @@ export function UsersModule() {
             </DialogDescription>
           </DialogHeader>
           <UserForm onSubmit={handleEditUser} submitLabel="Guardar Cambios" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Created password modal */}
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Credenciales creadas</DialogTitle>
+            <DialogDescription>
+              Se generó una contraseña temporal para el usuario. Copia y comparte con el usuario o envíala por correo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-3">
+            <div className="text-sm">
+              <strong>Correo:</strong> {formData.email}
+            </div>
+            <div className="text-sm">
+              <strong>Contraseña temporal:</strong>
+              <div className="mt-2 flex items-center gap-2">
+                <code className="bg-gray-100 px-3 py-1 rounded">{createdPassword}</code>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    try {
+                      navigator.clipboard.writeText(createdPassword || '');
+                      toast.success('Contraseña copiada al portapapeles');
+                    } catch (e) {
+                      toast('No fue posible copiar');
+                    }
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordModal(false)}>Cerrar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
