@@ -6,6 +6,7 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { getBackendUrl } from '../../utils/urlResolver';
 import {
   Select,
   SelectContent,
@@ -135,7 +136,7 @@ const roleConfig = {
 };
 
 export function UsersModule() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -155,14 +156,16 @@ export function UsersModule() {
   const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesError, setRolesError] = useState<string | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
   
   useEffect(() => {
     let mounted = true;
     setRolesLoading(true);
     setRolesError(null);
 
-    const BACKEND = (import.meta as any)?.env?.VITE_BACKEND_URL || '';
-    const url = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/roles` : '/api/roles';
+    const BACKEND = getBackendUrl((import.meta as any)?.env?.VITE_BACKEND_URL);
+    const url = `${BACKEND.replace(/\/$/, '')}/api/roles`;
 
     fetch(url)
       .then(async (res) => {
@@ -187,6 +190,61 @@ export function UsersModule() {
 
     return () => { mounted = false; };
   }, []);
+
+  // Load users from backend (use initialUsers as fallback on error)
+  useEffect(() => {
+    let mounted = true;
+    setUsersLoading(true);
+    setUsersError(null);
+
+    const BACKEND = getBackendUrl((import.meta as any)?.env?.VITE_BACKEND_URL);
+    const url = `${BACKEND.replace(/\/$/, '')}/api/users`;
+
+    fetch(url)
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message || body?.error || 'Error cargando usuarios');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (!mounted) return;
+        // Expecting { users: [...] } or an array directly
+        const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+        if (list.length === 0) {
+          // fallback to local sample data if backend returns empty
+          setUsers(initialUsers);
+        } else {
+          // Map backend shape to local User type if necessary
+          const mapped = list.map((u: any, idx: number) => ({
+            id: u.id ?? idx + 1,
+            name: u.name ?? u.full_name ?? u.email,
+            email: u.email ?? '',
+            phone: u.phone ?? u.telefono ?? '',
+            role: (u.role_name || u.role || 'therapist') as User['role'],
+            specialty: u.specialty ?? u.especialidad,
+            status: (u.status || 'active') as User['status'],
+            joinDate: u.created_at ? u.created_at.split('T')[0] : (u.joinDate ?? new Date().toISOString().split('T')[0]),
+            patients: typeof u.patients === 'number' ? u.patients : undefined,
+            sessions: typeof u.sessions === 'number' ? u.sessions : undefined,
+          }));
+          setUsers(mapped);
+        }
+      })
+      .catch((err: any) => {
+        if (!mounted) return;
+        setUsersError(err?.message || String(err));
+        // fallback to local mock data so UI remains usable
+        setUsers(initialUsers);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setUsersLoading(false);
+      });
+
+    return () => { mounted = false; };
+  }, []);
   const [isCreating, setIsCreating] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
@@ -197,8 +255,8 @@ export function UsersModule() {
     setIsCreating(true);
     setServerError(null);
 
-    const BACKEND = (import.meta as any)?.env?.VITE_BACKEND_URL || '';
-    const url = BACKEND ? `${BACKEND.replace(/\/$/, '')}/api/auth/register` : '/api/auth/register';
+    const BACKEND = getBackendUrl((import.meta as any)?.env?.VITE_BACKEND_URL);
+    const url = `${BACKEND.replace(/\/$/, '')}/api/auth/register`;
 
     // send role name to backend; backend will map to role_id
 

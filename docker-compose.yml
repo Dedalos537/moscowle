@@ -7,9 +7,9 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: Rucula_530
-      MYSQL_DATABASE: Moscowle_Complete
+      MYSQL_DATABASE: moscowle
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
@@ -18,42 +18,26 @@ services:
       timeout: 5s
       retries: 5
 
-  db_init:
-    build:
-      context: ./backend_messaging
-      dockerfile: Dockerfile
-    container_name: moscowle_db_init
-    restart: 'no'
-    env_file:
-      - ./backend_messaging/.env
-    environment:
-      DB_HOST: moscowle_db
-      DB_USER: root
-      DB_PASSWORD: Rucula_530
-      DB_NAME: Moscowle_Complete
-    depends_on:
-      db:
-        condition: service_healthy
-    command: ["python", "init_db.py"]
-
   backend:
     build:
-      context: ./backend_messaging
+      context: ./backend
       dockerfile: Dockerfile
     container_name: moscowle_backend
     restart: unless-stopped
     env_file:
-      - ./backend_messaging/.env
+      - ./backend/.env
     environment:
       DB_HOST: moscowle_db
-      DATABASE_URL: mysql+pymysql://root:Rucula_530@moscowle_db/Moscowle_Complete
+      DATABASE_URL: mysql+pymysql://root:Rucula_530@moscowle_db/moscowle
+      FLASK_APP: wsgi:app
+      FLASK_ENV: development
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8001:8001"
+      - "8000:5000"
     volumes:
-      - ./backend_messaging:/app
+      - ./backend:/app
 
   frontend:
     build:

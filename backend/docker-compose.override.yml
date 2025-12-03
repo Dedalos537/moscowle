@@ -1,0 +1,24 @@
+version: '3.8'
+
+# Override para desarrollo local con cambios en backend/
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: moscowle_backend_ai
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: moscowle_db
+      DATABASE_URL: mysql+pymysql://root:Rucula_530@moscowle_db/Moscowle_Complete
+      FLASK_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:5000"
+    volumes:
+      - ./backend:/app
+    command: ["python", "-m", "flask", "run", "--host=0.0.0.0"]

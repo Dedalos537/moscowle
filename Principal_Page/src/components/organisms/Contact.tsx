@@ -164,7 +164,8 @@ export function Contact() {
     setSubmitStatus('idle');
 
     try {
-      const response = await fetch('/api/public/contact', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}/api/public/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

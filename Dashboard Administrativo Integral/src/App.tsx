@@ -11,7 +11,9 @@ import { AttendanceModule } from './components/dashboard/AttendanceModule';
 import { ReportsModule } from './components/dashboard/ReportsModule';
 import { UsersModule } from './components/dashboard/UsersModule';
 import { InventoryModule } from './components/dashboard/InventoryModule';
+import { NPSSurvey } from './components/dashboard/NPSSurvey';
 import { Toaster } from './components/ui/sonner';
+import { getBackendUrl } from './utils/urlResolver';
 
 export default function App() {
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -19,93 +21,62 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showNPSSurvey, setShowNPSSurvey] = useState(false);
   const env: any = (import.meta as any)?.env || {};
-  const BACKEND = (env.VITE_BACKEND_URL as string) || 'http://127.0.0.1:8002';
+  const BACKEND = getBackendUrl((env.VITE_BACKEND_URL as string));
   const PRINCIPAL = (env.VITE_PRINCIPAL_URL as string) || 'http://localhost:3002';
 
   // Check authentication status on app load
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('[Dashboard] Starting auth check...');
+      
+      // Primero intenta leer de los parámetros de URL (pasados desde Principal_Page)
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get('token');
+      const userFromUrl = params.get('user');
+      
+      console.log('[Dashboard] URL parameters:', { 
+        tokenFromUrl: tokenFromUrl ? tokenFromUrl.substring(0, 50) + '...' : null,
+        userFromUrl: userFromUrl ? userFromUrl.substring(0, 50) + '...' : null
+      });
+      
+      // Si vinieron en URL, guardar en localStorage
+      if (tokenFromUrl && userFromUrl) {
+        console.log('[Dashboard] Found token in URL, saving to localStorage');
+        localStorage.setItem('auth_token', tokenFromUrl);
+        localStorage.setItem('user_data', userFromUrl);
+      }
+      
+      // Ahora revisar localStorage
       const token = localStorage.getItem('auth_token');
-      const ALLOW_BYPASS = env.VITE_BYPASS_AUTH === 'true' || env.DEV === true;
-      if (!token) {
+      const userData = localStorage.getItem('user_data');
+      
+      console.log('[Dashboard] Auth check result:', {
+        hasToken: !!token,
+        hasUserData: !!userData,
+        tokenValue: token ? token.substring(0, 50) + '...' : null,
+        userDataValue: userData,
+        principalUrl: PRINCIPAL,
+      });
+      
+      if (!token || !userData) {
+        console.warn('[Dashboard] ❌ No token or user data found. Redirecting to:', PRINCIPAL);
         setIsLoading(false);
-        // Redirect to main site if no token
-        window.location.href = PRINCIPAL;
-        return;
-      }
-
-      // Development/demo bypass: accept a special BYPASS token and skip server validation
-      if (token === 'BYPASS' && ALLOW_BYPASS) {
-        try {
-          const stored = localStorage.getItem('user_data');
-          if (stored) {
-            // keep provided user_data
-            setIsAuthenticated(true);
-          } else {
-            // set a minimal user_data object so app can render
-            localStorage.setItem('user_data', JSON.stringify({ id: 1, email: 'admin@local', is_admin: true }));
-            setIsAuthenticated(true);
-          }
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        // Debug: log token and target URL used for /api/auth/me
-        // eslint-disable-next-line no-console
-        console.debug('[Dashboard] token:', token, 'BACKEND:', BACKEND);
-        const meUrl = `${BACKEND.replace(/\/$/, '')}/api/auth/me`;
-        // eslint-disable-next-line no-console
-        console.debug('[Dashboard] fetching', meUrl);
-        const res = await fetch(`${BACKEND.replace(/\/$/, '')}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        // eslint-disable-next-line no-console
-        console.debug('[Dashboard] /api/auth/me status:', res.status);
-
-        if (!res.ok) {
-          // Invalid token or not authorized
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          setIsLoading(false);
+        setTimeout(() => {
           window.location.href = PRINCIPAL;
-          return;
-        }
-
-        const user = await res.json();
-        // Only allow access to users with admin role (adjust role name if different)
-        if (user && (user.role === 'admin' || user.email === 'admin@juanpablo2.com')) {
-          // persist/update local storage user data
-          localStorage.setItem('user_data', JSON.stringify(user));
-          setIsAuthenticated(true);
-        } else {
-          // Not an admin; redirect back to main site
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          window.location.href = PRINCIPAL;
-          return;
-        }
-      } catch (error) {
-        console.error('Auth validation error:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        window.location.href = PRINCIPAL;
+        }, 100);
         return;
-      } finally {
-        setIsLoading(false);
       }
+
+      console.log('[Dashboard] ✅ Auth check passed. Setting authenticated = true');
+      // User has token and user_data - allow access
+      setIsAuthenticated(true);
+      setIsLoading(false);
     };
 
     checkAuth();
-  }, []);
+  }, [PRINCIPAL]);
 
   // Apply dark mode class to HTML element
   useEffect(() => {
@@ -116,11 +87,52 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Show NPS survey after user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const timer = setTimeout(() => {
+        // Check if user has already completed survey today
+        const lastSurveyDate = localStorage.getItem('nps_survey_date');
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (!lastSurveyDate || lastSurveyDate !== today) {
+          setShowNPSSurvey(true);
+        }
+      }, 3000); // Show after 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
+
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_data');
     setIsAuthenticated(false);
     setActiveModule('dashboard');
+  };
+
+  const handleNPSSubmit = async (score: number, feedback: string) => {
+    try {
+      console.log('[Dashboard] NPS Survey submitted:', { score, feedback });
+      
+      // Mark survey as completed for today
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('nps_survey_date', today);
+      
+      // TODO: Send NPS data to backend if needed
+      // const response = await fetch(`${BACKEND}/api/nps`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+      //   },
+      //   body: JSON.stringify({ score, feedback })
+      // });
+      
+      setShowNPSSurvey(false);
+    } catch (error) {
+      console.error('[Dashboard] Error submitting NPS:', error);
+    }
   };
 
   const renderModule = () => {
@@ -221,6 +233,13 @@ export default function App() {
 
       {/* Toast Notifications */}
       <Toaster />
+      
+      {/* NPS Survey Modal */}
+      <NPSSurvey 
+        isOpen={showNPSSurvey}
+        onClose={() => setShowNPSSurvey(false)}
+        onSubmit={handleNPSSubmit}
+      />
     </div>
   );
 }

@@ -1,28 +1,17 @@
-import { useState, useEffect } from 'react';
-import { MessageSquare, Search, Filter, Star, Reply, Archive, MoreVertical, Loader2, RefreshCw, Clock, AlertCircle, Eye, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  MessageSquare, Clock, AlertCircle, Eye, Send, RefreshCw, Star, Archive, MoreVertical, Reply, Loader2, Search
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '../ui/select';
 
 // Tipos de datos
 interface ContactInquiry {
@@ -45,13 +34,15 @@ interface Message {
   id: number;
   conversation_id?: number;
   inquiry_id?: number;
-  sender_type: 'user' | 'anonymous' | 'system';
+  sender_type: 'user' | 'anonymous' | 'system' | 'admin';
   sender_name?: string;
   sender_email?: string;
   message_text: string;
   message_type: 'text' | 'file' | 'image' | 'system';
   is_read: boolean;
+  is_internal: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface Stats {
@@ -61,14 +52,14 @@ interface Stats {
   unread_messages: number;
 }
 
-// Configuración de la API — usar proxy relativo para que funcione local y en Docker (nginx -> /api)
-const API_BASE_URL = '/api';
+// Configuración de la API
+const API_BASE_URL = process.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const getAuthToken = () => localStorage.getItem('auth_token');
 
 // Funciones de API
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const token = getAuthToken();
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -78,7 +69,12 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    if (response.status === 401) {
+      window.location.href = '/login';
+      throw new Error('Unauthorized');
+    }
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || `API Error: ${response.statusText}`);
   }
 
   return response.json();
@@ -95,9 +91,11 @@ export function MessagesModule() {
 
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<ContactInquiry | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Estados de UI
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [replyText, setReplyText] = useState('');
@@ -106,8 +104,15 @@ export function MessagesModule() {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const data = await apiCall('/admin/stats');
-      setStats(data);
+      const result = await apiCall('/admin/stats');
+      if (result.data) {
+        setStats({
+          total_inquiries: result.data.total_inquiries || 0,
+          new_inquiries_24h: result.data.new_inquiries_24h || 0,
+          pending_inquiries: result.data.pending_inquiries || 0,
+          unread_messages: result.data.unread_messages || 0,
+        });
+      }
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -122,8 +127,10 @@ export function MessagesModule() {
       if (searchTerm) params.append('search', searchTerm);
       params.append('per_page', '50');
 
-      const data = await apiCall(`/admin/inquiries?${params}`);
-      setInquiries(data.items || []);
+      const result = await apiCall(`/admin/inquiries?${params}`);
+      if (result.data && result.data.items) {
+        setInquiries(result.data.items);
+      }
     } catch (error) {
       console.error('Error loading inquiries:', error);
     } finally {
@@ -131,13 +138,44 @@ export function MessagesModule() {
     }
   };
 
+  // Cargar mensajes para una inquired
+  const loadMessages = async (inquiryId: number) => {
+    setIsLoadingMessages(true);
+    try {
+      const result = await apiCall(`/admin/messages/${inquiryId}`);
+      if (result.data && Array.isArray(result.data)) {
+        setMessages(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  // Seleccionar inquired y cargar mensajes
+  const selectInquiry = (inquiry: ContactInquiry) => {
+    setSelectedInquiry(inquiry);
+    loadMessages(inquiry.id);
+  };
+
   // Actualizar estado de consulta
   const updateInquiryStatus = async (inquiryId: number, status: string) => {
     try {
-      await apiCall(`/admin/inquiries/${inquiryId}`, {
+      const result = await apiCall(`/admin/inquiries/${inquiryId}`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
+
+      if (result.success && selectedInquiry && selectedInquiry.id === inquiryId) {
+        setSelectedInquiry({
+          ...selectedInquiry,
+          status: status as any
+        });
+      }
+
+      await loadStats();
       await loadInquiries();
     } catch (error) {
       console.error('Error updating inquiry:', error);
@@ -150,17 +188,22 @@ export function MessagesModule() {
 
     setIsSubmittingReply(true);
     try {
-      await apiCall('/admin/messages', {
+      const response = await apiCall('/admin/messages', {
         method: 'POST',
         body: JSON.stringify({
           inquiry_id: selectedInquiry.id,
           message_text: replyText,
+          sender_type: 'admin',
           is_internal: false,
         }),
       });
 
-      setReplyText('');
-      await updateInquiryStatus(selectedInquiry.id, 'contacted');
+      if (response.success) {
+        setReplyText('');
+        // Reload messages
+        await loadMessages(selectedInquiry.id);
+        await loadStats();
+      }
     } catch (error) {
       console.error('Error sending reply:', error);
     } finally {
@@ -207,6 +250,19 @@ export function MessagesModule() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getSenderDisplay = (msg: Message) => {
+    if (msg.sender_type === 'admin') {
+      return `Administrador`;
+    }
+    if (msg.sender_name) {
+      return msg.sender_name;
+    }
+    if (msg.sender_email) {
+      return msg.sender_email;
+    }
+    return 'Usuario';
   };
 
   return (
@@ -329,7 +385,7 @@ export function MessagesModule() {
                   inquiries.map((inquiry) => (
                     <button
                       key={inquiry.id}
-                      onClick={() => setSelectedInquiry(inquiry)}
+                      onClick={() => selectInquiry(inquiry)}
                       className={`w-full text-left p-4 rounded-lg transition-all ${
                         selectedInquiry?.id === inquiry.id
                           ? 'bg-[#E8F5E9] dark:bg-[#2E7D32]/20 border-l-4 border-[#4CAF50]'
@@ -344,14 +400,14 @@ export function MessagesModule() {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-gray-900 dark:text-white">
+                            <span className="text-sm text-gray-900 dark:text-white font-medium">
                               {inquiry.first_name} {inquiry.last_name}
                             </span>
                             <span className="text-xs text-gray-500">
                               {formatDate(inquiry.created_at)}
                             </span>
                           </div>
-                          <p className="text-sm mb-1 text-gray-900 dark:text-white">
+                          <p className="text-sm mb-1 text-gray-900 dark:text-white font-medium">
                             {inquiry.subject || 'Sin asunto'}
                           </p>
                           <p className="text-xs text-gray-500 truncate">{inquiry.message}</p>
@@ -390,13 +446,13 @@ export function MessagesModule() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-gray-900 dark:text-white">
+                      <h3 className="text-gray-900 dark:text-white font-medium">
                         {selectedInquiry.subject || 'Sin asunto'}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         De: {selectedInquiry.first_name} {selectedInquiry.last_name} • {formatDate(selectedInquiry.created_at)}
                       </p>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {selectedInquiry.email}
                         </Badge>
@@ -448,39 +504,60 @@ export function MessagesModule() {
               </CardHeader>
 
               <CardContent className="p-6">
-                <ScrollArea className="h-[400px] mb-6">
-                  <div className="prose dark:prose-invert max-w-none">
+                <ScrollArea className="h-[400px] mb-6 pr-4">
+                  <div className="space-y-4">
+                    {/* Original message */}
                     <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedInquiry.first_name} {selectedInquiry.last_name}
+                        </p>
+                        <span className="text-xs text-gray-500">{formatDate(selectedInquiry.created_at)}</span>
+                      </div>
                       <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                         {selectedInquiry.message}
                       </p>
                     </div>
-                    
-                    <div className="mt-4 space-y-2">
-                      <div className="flex gap-4">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Código:</span>
-                        <span className="text-sm text-gray-900 dark:text-white">{selectedInquiry.inquiry_code}</span>
+
+                    {/* Conversation messages */}
+                    {isLoadingMessages ? (
+                      <div className="flex items-center justify-center p-8">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <span className="text-sm">Cargando mensajes...</span>
                       </div>
-                      <div className="flex gap-4">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Urgencia:</span>
-                        <Badge className={getUrgencyColor(selectedInquiry.urgency)}>
-                          {selectedInquiry.urgency === 'high' ? 'Alta' : 
-                           selectedInquiry.urgency === 'medium' ? 'Media' : 'Baja'}
-                        </Badge>
-                      </div>
-                      {selectedInquiry.service_interest && (
-                        <div className="flex gap-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Servicio de interés:</span>
-                          <span className="text-sm text-gray-900 dark:text-white">{selectedInquiry.service_interest}</span>
+                    ) : messages.length === 0 ? (
+                      <p className="text-center text-sm text-gray-500 py-4">No hay respuestas aún</p>
+                    ) : (
+                      messages.map((msg) => (
+                        <div 
+                          key={msg.id} 
+                          className={`p-4 rounded-lg ${
+                            msg.sender_type === 'admin' 
+                              ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                              : 'bg-gray-50 dark:bg-gray-800'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {getSenderDisplay(msg)}
+                              {msg.sender_type === 'admin' && (
+                                <Badge className="ml-2 text-xs">Admin</Badge>
+                              )}
+                            </p>
+                            <span className="text-xs text-gray-500">{formatDate(msg.created_at)}</span>
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {msg.message_text}
+                          </p>
                         </div>
-                      )}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
 
                 {/* Reply Section */}
                 <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
-                  <h4 className="text-sm text-gray-900 dark:text-white mb-3">Responder</h4>
+                  <h4 className="text-sm text-gray-900 dark:text-white mb-3 font-medium">Responder</h4>
                   <Textarea
                     placeholder="Escriba su respuesta..."
                     value={replyText}
@@ -489,10 +566,10 @@ export function MessagesModule() {
                   />
                   <div className="flex justify-between items-center">
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" disabled>
                         Adjuntar archivo
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" disabled>
                         Plantilla
                       </Button>
                     </div>

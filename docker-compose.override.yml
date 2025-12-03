@@ -1,0 +1,32 @@
+version: '3.8'
+
+# Override para desarrollo local - ejecuta migraciones de contacto/mensajes
+services:
+  db:
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_INITDB_SKIP_TZINFO: "yes"
+
+  backend:
+    environment:
+      FLASK_DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    command: sh -c "
+      echo 'Esperando BD...' &&
+      sleep 5 &&
+      echo 'Ejecutando migraciones...' &&
+      mysql -h moscowle_db -u root -pRucula_530 moscowle < /app/migrations/add_contact_messages_tables.sql &&
+      echo 'Iniciando Flask...' &&
+      python -m flask run --host=0.0.0.0 --port=5000
+      "
+    stdin_open: true
+    tty: true
+
+  frontend:
+    environment:
+      VITE_BACKEND_URL: "http://localhost:8000"
+
+  dashboard:
+    environment:
+      VITE_BACKEND_URL: "http://localhost:8000"

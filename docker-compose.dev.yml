@@ -1,6 +1,43 @@
 version: '3.8'
 
 services:
+  db:
+    image: mysql:8.0
+    container_name: moscowle_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Rucula_530
+      MYSQL_DATABASE: centroju_moscowle
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: moscowle_backend_dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      FLASK_APP: wsgi:app
+      FLASK_ENV: development
+      DATABASE_URL: mysql+pymysql://root:Rucula_530@db/centroju_moscowle
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend_dev:
     image: node:18
     container_name: moscowle_frontend_dev
@@ -12,6 +49,7 @@ services:
       - "3002:3002"
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - VITE_BACKEND_URL=http://backend:5000
     command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 3002"
     depends_on:
       - backend
@@ -21,16 +59,22 @@ services:
     container_name: moscowle_dashboard_dev
     working_dir: /app
     volumes:
-      - "./Dashboard Administrativo Integral:/app:cached"
+      - ./Dashboard Administrativo Integral:/app:cached
       - /app/node_modules
     ports:
       - "3001:3001"
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - VITE_BACKEND_URL=http://backend:5000
     command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0 --port 3001"
     depends_on:
       - backend
 
+volumes:
+  db_data:
+
 # Usage:
-# docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-# This will start the backend and DB from docker-compose.yml and run Vite dev servers for the frontends with hot-reload.
+# From repo root run:
+# docker compose -f docker-compose.dev.yml up --build
+# This will build the backend image (installing dependencies once), start a MySQL 8 container,
+# run the Flask dev server (bound to 0.0.0.0:5000) and two Vite dev servers for the frontends with hot-reload.

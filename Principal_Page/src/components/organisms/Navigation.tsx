@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from "../ui/alert";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { getBackendUrl, getDashboardUrl } from "../../utils/urlResolver";
 
 
 interface NavigationProps {
@@ -34,30 +35,39 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
     { name: "Contacto", href: "#contacto" },
   ];
 
+  const handleGoToDashboard = () => {
+    const DASHBOARD_URL = getDashboardUrl((import.meta as any)?.env?.VITE_DASHBOARD_URL);
+    window.location.href = DASHBOARD_URL;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setLoginError(null);
 
     try {
-      // Prefer explicit VITE_BACKEND_URL, fall back to localhost backend for local dev
-      const BACKEND = ((import.meta as any)?.env?.VITE_BACKEND_URL as string) || 'http://127.0.0.1:8002';
+      const BACKEND = getBackendUrl((import.meta as any)?.env?.VITE_BACKEND_URL);
       const loginUrl = `${BACKEND.replace(/\/$/, '')}/api/auth/login`;
+      
+      const payload = { email, password };
+      console.log('[Navigation] Attempting login:', { url: loginUrl, payload });
 
       const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(payload),
       });
+
+      console.log('[Navigation] Login response:', { status: response.status, ok: response.ok });
 
       if (!response.ok) {
         // try to parse error body
         let errMsg = 'Credenciales inválidas';
         try {
           const errJson = await response.json();
-          errMsg = errJson.detail || errJson.message || errMsg;
+          errMsg = errJson.msg || errJson.detail || errJson.message || errMsg;
         } catch (e) { }
         throw new Error(errMsg);
       }
@@ -81,12 +91,15 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
           let errMsg = 'Error al verificar credenciales';
           try {
             const errJson = await meResp.json();
-            errMsg = errJson.detail || errJson.message || errMsg;
+            errMsg = errJson.msg || errJson.detail || errJson.message || errMsg;
           } catch (e) { }
           throw new Error(errMsg);
         }
 
         const meData = await meResp.json();
+
+        console.log('[Navigation] meData received:', meData);
+        console.log('[Navigation] meData.is_admin:', meData?.is_admin);
 
         // Guardar token y usuario sólo si la verificación fue exitosa
         localStorage.setItem('auth_token', token);
@@ -97,25 +110,44 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
         onLogin();
 
         // Determinar URL del dashboard (prefiere env var si existe, sino localhost:3001)
-        const DASHBOARD_URL = ((import.meta as any)?.env?.VITE_DASHBOARD_URL as string) || 'http://localhost:3008';
+        const DASHBOARD_URL = getDashboardUrl((import.meta as any)?.env?.VITE_DASHBOARD_URL);
 
-        // Sólo redirigir si el usuario es admin (si la respuesta incluye role)
-        const rawRole = (meData && (meData.role || meData.role_name)) || null;
-        const role = rawRole ? String(rawRole).toLowerCase().trim() : null;
-        const shouldRedirect = !role || role === 'admin' || role.includes('admin') || role === 'administrador';
+        // Sólo redirigir si el usuario es admin
+        const isAdmin = meData?.is_admin === true;
+        const shouldRedirect = isAdmin;
+
+        console.log('[Navigation] isAdmin:', isAdmin, 'shouldRedirect:', shouldRedirect);
 
         if (shouldRedirect) {
-          // Debug: log dashboard target + user role to help diagnose redirect issues
+          // Debug: log dashboard target + admin status to help diagnose redirect issues
           try {
             // eslint-disable-next-line no-console
-            console.debug('[Navigation] redirect target:', DASHBOARD_URL, 'role:', role, 'meData:', meData);
+            console.debug('[Navigation] redirect target:', DASHBOARD_URL, 'isAdmin:', isAdmin, 'meData:', meData);
           } catch (e) {}
+          
+          // Guardar en localStorage antes de redirigir
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('user_data', JSON.stringify(meData));
+          
+          // También pasar como parámetros de URL como respaldo
+          const params = new URLSearchParams({
+            token: token,
+            user: JSON.stringify(meData)
+          });
+          const dashboardUrlWithParams = `${DASHBOARD_URL}?${params.toString()}`;
+          
+          console.log('[Navigation] Final redirect URL:', dashboardUrlWithParams);
+          
           setIsRedirecting(true);
-          try {
-            window.location.assign(DASHBOARD_URL);
-          } catch (e) {
-            window.location.href = DASHBOARD_URL;
-          }
+          
+          // Esperar un momento para asegurar que localStorage se sincronize
+          setTimeout(() => {
+            try {
+              window.location.assign(dashboardUrlWithParams);
+            } catch (e) {
+              window.location.href = dashboardUrlWithParams;
+            }
+          }, 100);
         }
 
       } finally {
@@ -300,9 +332,19 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
               );
             })()}
             {isLoggedIn && (
-              <Button variant="ghost" size="sm" className="ml-2" onClick={handleLogout}>
-                Cerrar sesión
-              </Button>
+              <>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="gap-2 bg-primary hover:bg-primary/90"
+                  onClick={handleGoToDashboard}
+                >
+                  Dashboard
+                </Button>
+                <Button variant="ghost" size="sm" className="ml-2" onClick={handleLogout}>
+                  Cerrar sesión
+                </Button>
+              </>
             )}
 
             <Button
@@ -463,6 +505,32 @@ export function Navigation({ darkMode, toggleDarkMode, isLoggedIn, onLogin, onLo
                 {link.name}
               </a>
             ))}
+            {isLoggedIn && (
+              <>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  className="w-full gap-2 bg-primary hover:bg-primary/90 mt-2 mx-4"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleGoToDashboard();
+                  }}
+                >
+                  Dashboard
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full mt-2 mx-4"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  Cerrar sesión
+                </Button>
+              </>
+            )}
           </motion.div>
         )}
       </div>
