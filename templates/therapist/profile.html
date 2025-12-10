@@ -1,137 +1,153 @@
 {% extends "therapist/base.html" %}
 
-{% block title %}Mi Perfil - Moscowle{% endblock %}
+{% block header_content %}
+<div>
+    <h2 class="text-2xl font-bold text-textDark">Mi Perfil</h2>
+    <p class="text-sm text-gray-500">Administra tu información profesional</p>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h2 class="text-3xl font-bold text-charcoal mb-2">Mi Perfil</h2>
-    <p class="text-gray-600">Administra tu información profesional</p>
-</div>
 
-<div class="grid grid-cols-3 gap-8">
-    <!-- Profile Info -->
-    <div class="col-span-2 space-y-6">
-        
-        <!-- Personal Information -->
-        <div class="bg-white rounded-soft shadow-soft p-6">
-            <h3 class="text-xl font-semibold text-charcoal mb-6">Información Personal</h3>
-            <form id="profileForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+<div class="p-4">
+    <div class="grid grid-cols-3 gap-8">
+        <!-- Profile Info -->
+        <div class="col-span-2 space-y-6">
+
+            <!-- Personal Information -->
+            <div class="bg-white rounded-soft shadow-soft p-6">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Información Personal</h3>
+                <form id="profileForm" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-charcoal mb-2">Nombre Completo</label>
+                            <input type="text" id="username" value="{{ current_user.username or '' }}"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-charcoal mb-2">Correo Electrónico</label>
+                            <input type="email" value="{{ current_user.email }}" disabled
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-charcoal mb-2">Teléfono</label>
+                            <input type="tel" id="phone" value="{{ current_user.phone or '' }}"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-charcoal mb-2">Zona Horaria</label>
+                            <select id="timezone"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="America/Lima" {% if current_user.timezone=='America/Lima' %}selected{%
+                                    endif %}>Lima (UTC-5)</option>
+                                <option value="America/New_York" {% if current_user.timezone=='America/New_York'
+                                    %}selected{% endif %}>New York (UTC-5)</option>
+                                <option value="America/Mexico_City" {% if current_user.timezone=='America/Mexico_City'
+                                    %}selected{% endif %}>Ciudad de México (UTC-6)</option>
+                                <option value="America/Bogota" {% if current_user.timezone=='America/Bogota'
+                                    %}selected{% endif %}>Bogotá (UTC-5)</option>
+                                <option value="America/Argentina/Buenos_Aires" {% if
+                                    current_user.timezone=='America/Argentina/Buenos_Aires' %}selected{% endif %}>Buenos
+                                    Aires (UTC-3)</option>
+                                <option value="Europe/Madrid" {% if current_user.timezone=='Europe/Madrid' %}selected{%
+                                    endif %}>Madrid (UTC+1)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit"
+                            class="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-save mr-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-white rounded-soft shadow-soft p-6">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Cambiar Contraseña</h3>
+                <form id="passwordForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-charcoal mb-2">Nombre Completo</label>
-                        <input type="text" id="username" value="{{ current_user.username or '' }}" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <label class="block text-sm font-medium text-charcoal mb-2">Contraseña Actual</label>
+                        <input type="password" id="current_password"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-charcoal mb-2">Correo Electrónico</label>
-                        <input type="email" value="{{ current_user.email }}" disabled
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 cursor-not-allowed">
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-charcoal mb-2">Teléfono</label>
-                        <input type="tel" id="phone" value="{{ current_user.phone or '' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <label class="block text-sm font-medium text-charcoal mb-2">Nueva Contraseña</label>
+                        <input type="password" id="new_password"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-charcoal mb-2">Zona Horaria</label>
-                        <select id="timezone" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-                            <option value="America/Lima" {% if current_user.timezone == 'America/Lima' %}selected{% endif %}>Lima (UTC-5)</option>
-                            <option value="America/New_York" {% if current_user.timezone == 'America/New_York' %}selected{% endif %}>New York (UTC-5)</option>
-                            <option value="America/Mexico_City" {% if current_user.timezone == 'America/Mexico_City' %}selected{% endif %}>Ciudad de México (UTC-6)</option>
-                            <option value="America/Bogota" {% if current_user.timezone == 'America/Bogota' %}selected{% endif %}>Bogotá (UTC-5)</option>
-                            <option value="America/Argentina/Buenos_Aires" {% if current_user.timezone == 'America/Argentina/Buenos_Aires' %}selected{% endif %}>Buenos Aires (UTC-3)</option>
-                            <option value="Europe/Madrid" {% if current_user.timezone == 'Europe/Madrid' %}selected{% endif %}>Madrid (UTC+1)</option>
-                        </select>
+                        <label class="block text-sm font-medium text-charcoal mb-2">Confirmar Nueva Contraseña</label>
+                        <input type="password" id="confirm_password"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                     </div>
-                </div>
+                    <div class="pt-4">
+                        <button type="submit"
+                            class="bg-accent text-white px-8 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors">
+                            <i class="fas fa-key mr-2"></i>Cambiar Contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-                <div class="pt-4">
-                    <button type="submit" class="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors">
-                        <i class="fas fa-save mr-2"></i>Guardar Cambios
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Change Password -->
-        <div class="bg-white rounded-soft shadow-soft p-6">
-            <h3 class="text-xl font-semibold text-charcoal mb-6">Cambiar Contraseña</h3>
-            <form id="passwordForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-charcoal mb-2">Contraseña Actual</label>
-                    <input type="password" id="current_password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-charcoal mb-2">Nueva Contraseña</label>
-                    <input type="password" id="new_password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-charcoal mb-2">Confirmar Nueva Contraseña</label>
-                    <input type="password" id="confirm_password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-                </div>
-                <div class="pt-4">
-                    <button type="submit" class="bg-accent text-white px-8 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors">
-                        <i class="fas fa-key mr-2"></i>Cambiar Contraseña
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Professional Information -->
-        <div class="bg-white rounded-soft shadow-soft p-6">
-            <h3 class="text-xl font-semibold text-charcoal mb-6">Información Profesional</h3>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div class="p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-600 mb-1">Total Pacientes</p>
-                    <p class="text-2xl font-bold text-primary">{{ patients_count }}</p>
-                </div>
-                <div class="p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-600 mb-1">Sesiones Realizadas</p>
-                    <p class="text-2xl font-bold text-accent">{{ sessions_count }}</p>
-                </div>
-                <div class="p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-600 mb-1">Citas Pendientes</p>
-                    <p class="text-2xl font-bold text-olive">{{ upcoming_appointments }}</p>
-                </div>
-                <div class="p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-600 mb-1">Miembro Desde</p>
-                    <p class="text-xl font-semibold text-charcoal">{{ current_user.created_at.strftime('%b %Y') }}</p>
+            <!-- Professional Information -->
+            <div class="bg-white rounded-soft shadow-soft p-6">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Información Profesional</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600 mb-1">Total Pacientes</p>
+                        <p class="text-2xl font-bold text-primary">{{ patients_count }}</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600 mb-1">Sesiones Realizadas</p>
+                        <p class="text-2xl font-bold text-accent">{{ sessions_count }}</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600 mb-1">Citas Pendientes</p>
+                        <p class="text-2xl font-bold text-olive">{{ upcoming_appointments }}</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-600 mb-1">Miembro Desde</p>
+                        <p class="text-xl font-semibold text-charcoal">{{ current_user.created_at.strftime('%b %Y') }}
+                        </p>
+                    </div>
                 </div>
             </div>
+
         </div>
 
-    </div>
-
-    <!-- Profile Summary -->
-    <div class="space-y-6">
-        <div class="bg-white rounded-soft shadow-soft p-6 text-center">
-            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent mx-auto mb-4 flex items-center justify-center">
-                <span class="text-white text-4xl font-bold">{{ current_user.username[0].upper() if current_user.username else 'T' }}</span>
+        <!-- Profile Summary -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-soft shadow-soft p-6 text-center">
+                <div
+                    class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent mx-auto mb-4 flex items-center justify-center">
+                    <span class="text-white text-4xl font-bold">{{ current_user.username[0].upper() if
+                        current_user.username else 'T' }}</span>
+                </div>
+                <h3 class="text-xl font-bold text-charcoal mb-1">{{ current_user.username or 'Terapeuta' }}</h3>
+                <p class="text-sm text-gray-500 mb-4">Terapeuta</p>
+                <span class="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    <i class="fas fa-circle text-green-500 text-xs mr-1"></i>Activo
+                </span>
             </div>
-            <h3 class="text-xl font-bold text-charcoal mb-1">{{ current_user.username or 'Terapeuta' }}</h3>
-            <p class="text-sm text-gray-500 mb-4">Terapeuta</p>
-            <span class="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                <i class="fas fa-circle text-green-500 text-xs mr-1"></i>Activo
-            </span>
-        </div>
 
-        <div class="bg-gradient-to-br from-primary/10 to-accent/10 rounded-soft p-6">
-            <div class="flex items-center space-x-3 mb-4">
-                <i class="fas fa-star text-accent text-2xl"></i>
-                <h4 class="font-semibold text-charcoal">Consejos</h4>
+            <div class="bg-gradient-to-br from-primary/10 to-accent/10 rounded-soft p-6">
+                <div class="flex items-center space-x-3 mb-4">
+                    <i class="fas fa-star text-accent text-2xl"></i>
+                    <h4 class="font-semibold text-charcoal">Consejos</h4>
+                </div>
+                <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• Mantén actualizada tu información de contacto</li>
+                    <li>• Usa contraseñas seguras y cámbialas regularmente</li>
+                    <li>• Configura tu zona horaria correctamente para las citas</li>
+                    <li>• Revisa tus notificaciones diariamente</li>
+                </ul>
             </div>
-            <ul class="text-sm text-gray-700 space-y-2">
-                <li>• Mantén actualizada tu información de contacto</li>
-                <li>• Usa contraseñas seguras y cámbialas regularmente</li>
-                <li>• Configura tu zona horaria correctamente para las citas</li>
-                <li>• Revisa tus notificaciones diariamente</li>
-            </ul>
         </div>
     </div>
 </div>
@@ -142,7 +158,7 @@
     // Profile Form
     document.getElementById('profileForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        
+
         const formData = {
             username: document.getElementById('username').value,
             phone: document.getElementById('phone').value,
@@ -156,25 +172,25 @@
             },
             body: JSON.stringify(formData)
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ ' + data.message);
-                location.reload();
-            } else {
-                alert('❌ ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            alert('❌ Error al actualizar el perfil');
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    location.reload();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('❌ Error al actualizar el perfil');
+            });
     });
 
     // Password Form
     document.getElementById('passwordForm').addEventListener('submit', (e) => {
         e.preventDefault();
-        
+
         const currentPassword = document.getElementById('current_password').value;
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
@@ -199,19 +215,19 @@
                 new_password: newPassword
             })
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ ' + data.message);
-                document.getElementById('passwordForm').reset();
-            } else {
-                alert('❌ ' + data.message);
-            }
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            alert('❌ Error al cambiar la contraseña');
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('❌ Error al cambiar la contraseña');
+            });
     });
 </script>
 {% endblock %}

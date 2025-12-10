@@ -104,8 +104,8 @@ with app.app_context():
     train_model()
     
     # Create admin user (therapist)
-    admin_email = os.getenv('ADMIN_EMAIL', 'mamiebamos2@gmail.com')
-    admin_password = os.getenv('ADMIN_PASSWORD', '@dm1n_123!')
+    admin_email = os.getenv('ADMIN_EMAIL')
+    admin_password = os.getenv('ADMIN_PASSWORD')
     
     admin = User.query.filter_by(email=admin_email).first()
     if not admin:
@@ -1363,11 +1363,10 @@ def unread_messages_count():
 def profile():
     if current_user.role == 'terapista':
         # Get therapist stats
-        patients_count = User.query.filter_by(therapist_id=current_user.id, is_active=True).count()
-        sessions_count = SessionMetrics.query.join(User).filter(User.therapist_id == current_user.id).count()
+        patients_count = User.query.filter_by(id=current_user.id, is_active=True).count()
+        sessions_count = SessionMetrics.query.join(User).filter(User.id == current_user.id).count()
         upcoming_appointments = Appointment.query.filter(
-            Appointment.therapist_id == current_user.id,
-            Appointment.date >= datetime.now(),
+            Appointment.id == current_user.id,
             Appointment.status == 'scheduled'
         ).count()
         

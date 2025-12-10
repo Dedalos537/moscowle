@@ -1,932 +1,1450 @@
-{% extends "therapist/base.html" %}
-{% set active_page = "sessions" %}
-
-{% block header_content %}
+{% extends "therapist/base.html" %} {% set active_page = "sessions" %} {% block
+header_content %}
 <div>
-    <h2 class="text-2xl font-bold text-textDark">Sesiones de Terapia</h2>
-    <p class="text-sm text-gray-500">Gestiona y programa las sesiones con tus pacientes</p>
+  <h2 class="text-2xl font-bold text-textDark">Sesiones de Terapia</h2>
+  <p class="text-sm text-gray-500">
+    Gestiona y programa las sesiones con tus pacientes
+  </p>
 </div>
-{% endblock %}
-
-{% block header_action %}
-<button id="btn-new-session" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
-    <i class="fas fa-plus mr-2"></i> Nueva Sesión
+{% endblock %} {% block header_action %}
+<button
+  id="btn-new-session"
+  class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2"
+>
+  <i class="fa fa-plus mr-2"></i> Nueva Sesión
 </button>
-{% endblock %}
+{% endblock %} {% block content %}
+<div id="content-area" class="p-8">
+  <div
+    id="filters-section"
+    class="bg-surface rounded-soft shadow-soft p-6 mb-6"
+  >
+    <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex-1 min-w-[280px]">
+        <div class="relative">
+          <i
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-magnifying-glass"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="magnifying-glass"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"
+              ></path></svg
+          ></i>
+          <input
+            type="text"
+            placeholder="Buscar paciente o sesión..."
+            class="w-full pl-12 pr-4 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20"
+          />
+        </div>
+      </div>
+      <select
+        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600"
+      >
+        <option>Todas las sesiones</option>
+        <option>Programadas</option>
+        <option>Completadas</option>
+        <option>Canceladas</option>
+      </select>
+      <select
+        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600"
+      >
+        <option>Este mes</option>
+        <option>Esta semana</option>
+        <option>Hoy</option>
+        <option>Personalizado</option>
+      </select>
+      <button
+        class="px-5 py-3 rounded-soft border border-gray-200 text-gray-600 hover:bg-lightGreen hover:border-primary transition-all"
+      >
+        <i data-fa-i2svg=""
+          ><svg
+            class="svg-inline--fa fa-filter"
+            aria-hidden="true"
+            focusable="false"
+            data-prefix="fas"
+            data-icon="filter"
+            role="img"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 512 512"
+            data-fa-i2svg=""
+          >
+            <path
+              fill="currentColor"
+              d="M3.9 54.9C10.5 40.9 24.5 32 40 32H472c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9V448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6V320.9L9 97.3C-.7 85.4-2.8 68.8 3.9 54.9z"
+            ></path></svg
+        ></i>
+      </button>
+    </div>
+  </div>
 
-{% block content %}
-    <div id="content-area" class="p-8">
-            
-            <div id="filters-section" class="bg-surface rounded-soft shadow-soft p-6 mb-6">
-                <div class="flex items-center gap-4 flex-wrap">
-                    <div class="flex-1 min-w-[280px]">
-                        <div class="relative">
-                            <i class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" data-fa-i2svg=""><svg class="svg-inline--fa fa-magnifying-glass" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="magnifying-glass" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"></path></svg></i>
-                            <input type="text" placeholder="Buscar paciente o sesión..." class="w-full pl-12 pr-4 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20">
-                        </div>
-                    </div>
-                    <select class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
-                        <option>Todas las sesiones</option>
-                        <option>Programadas</option>
-                        <option>Completadas</option>
-                        <option>Canceladas</option>
-                    </select>
-                    <select class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
-                        <option>Este mes</option>
-                        <option>Esta semana</option>
-                        <option>Hoy</option>
-                        <option>Personalizado</option>
-                    </select>
-                    <button class="px-5 py-3 rounded-soft border border-gray-200 text-gray-600 hover:bg-lightGreen hover:border-primary transition-all">
-                        <i data-fa-i2svg=""><svg class="svg-inline--fa fa-filter" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="filter" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M3.9 54.9C10.5 40.9 24.5 32 40 32H472c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9V448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6V320.9L9 97.3C-.7 85.4-2.8 68.8 3.9 54.9z"></path></svg></i>
-                    </button>
-                </div>
+  <div id="stats-cards" class="grid grid-cols-4 gap-6 mb-8">
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div
+          class="w-12 h-12 bg-primary bg-opacity-10 rounded-soft flex items-center justify-center"
+        >
+          <i class="text-primary text-xl" data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-calendar-day"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="calendar-day"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 448 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm80 64c-8.8 0-16 7.2-16 16v96c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80z"
+              ></path></svg
+          ></i>
+        </div>
+        <span
+          class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium"
+          >Hoy</span
+        >
+      </div>
+      <h3 class="text-3xl font-bold text-textDark mb-1">
+        {{ sessions_today }}
+      </h3>
+      <p class="text-gray-500 text-sm">Sesiones programadas</p>
+    </div>
+
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div
+          class="w-12 h-12 bg-blue-500 bg-opacity-10 rounded-soft flex items-center justify-center"
+        >
+          <i class="text-blue-500 text-xl" data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-circle-check"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="circle-check"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"
+              ></path></svg
+          ></i>
+        </div>
+        <span
+          class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium"
+          >+12%</span
+        >
+      </div>
+      <h3 class="text-3xl font-bold text-textDark mb-1">
+        {{ completed_sessions }}
+      </h3>
+      <p class="text-gray-500 text-sm">Sesiones completadas</p>
+    </div>
+
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div
+          class="w-12 h-12 bg-orange-500 bg-opacity-10 rounded-soft flex items-center justify-center"
+        >
+          <i class="text-orange-500 text-xl" data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-clock"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="clock"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"
+              ></path></svg
+          ></i>
+        </div>
+        <span
+          class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium"
+          >Pendiente</span
+        >
+      </div>
+      <h3 class="text-3xl font-bold text-textDark mb-1">
+        {{ pending_sessions }}
+      </h3>
+      <p class="text-gray-500 text-sm">Sesiones pendientes</p>
+    </div>
+
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div
+          class="w-12 h-12 bg-purple-500 bg-opacity-10 rounded-soft flex items-center justify-center"
+        >
+          <i class="text-purple-500 text-xl" data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-users"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="users"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 640 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M144 0a80 80 0 1 1 0 160A80 80 0 1 1 144 0zM512 0a80 80 0 1 1 0 160A80 80 0 1 1 512 0zM0 298.7C0 239.8 47.8 192 106.7 192h42.7c15.9 0 31 3.5 44.6 9.7c-1.3 7.2-1.9 14.7-1.9 22.3c0 38.2 16.8 72.5 43.3 96c-.2 0-.4 0-.7 0H21.3C9.6 320 0 310.4 0 298.7zM405.3 320c-.2 0-.4 0-.7 0c26.6-23.5 43.3-57.8 43.3-96c0-7.6-.7-15-1.9-22.3c13.6-6.3 28.7-9.7 44.6-9.7h42.7C592.2 192 640 239.8 640 298.7c0 11.8-9.6 21.3-21.3 21.3H405.3zM224 224a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zM128 485.3C128 411.7 187.7 352 261.3 352H378.7C452.3 352 512 411.7 512 485.3c0 14.7-11.9 26.7-26.7 26.7H154.7c-14.7 0-26.7-11.9-26.7-26.7z"
+              ></path></svg
+          ></i>
+        </div>
+        <span
+          class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium"
+          >Activos</span
+        >
+      </div>
+      <h3 class="text-3xl font-bold text-textDark mb-1">
+        {{ active_patients }}
+      </h3>
+      <p class="text-gray-500 text-sm">Pacientes activos</p>
+    </div>
+  </div>
+
+  <div id="calendar-sessions-section" class="grid grid-cols-3 gap-6 mb-8">
+    <div class="col-span-2 bg-surface rounded-soft shadow-soft p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-textDark">Calendario de Sesiones</h3>
+        <div class="flex items-center gap-3">
+          <button
+            id="cal-prev"
+            class="p-2 text-gray-600 hover:text-primary transition-colors"
+            type="button"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <span
+            id="calendar-month-label"
+            class="font-semibold text-textDark px-4"
+          ></span>
+          <button
+            id="cal-next"
+            class="p-2 text-gray-600 hover:text-primary transition-colors"
+            type="button"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-7 gap-2 mb-3">
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Lun
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Mar
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Mié
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Jue
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Vie
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Sáb
+        </div>
+        <div class="text-center text-xs font-semibold text-gray-500 py-2">
+          Dom
+        </div>
+      </div>
+
+      <div id="calendar-grid" class="grid grid-cols-7 gap-2 mb-3"></div>
+
+      <div class="flex items-center gap-6 mt-6 pt-6 border-t border-gray-100">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-primary rounded-full"></span>
+          <span class="text-xs text-gray-600">Programada</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
+          <span class="text-xs text-gray-600">Completada</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
+          <span class="text-xs text-gray-600">Pendiente</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <div id="day-sessions-container">
+        <h3
+          id="day-sessions-title"
+          class="text-xl font-bold text-textDark mb-4"
+        >
+          Sesiones de Hoy
+        </h3>
+        <p id="day-sessions-subtitle" class="text-sm text-gray-500 mb-6">
+          Selecciona un día en el calendario para ver las sesiones
+        </p>
+
+        <div id="day-sessions" class="space-y-4">
+          <p class="text-sm text-gray-500">No hay sesiones seleccionadas.</p>
+        </div>
+
+        <button
+          id="btn-view-all"
+          class="w-full py-3 text-primary text-sm font-medium hover:bg-lightGreen rounded-soft transition-colors mt-4"
+        >
+          Ver todas las sesiones
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sessions-list-section" class="bg-surface rounded-soft shadow-soft">
+    <div class="p-6 border-b border-gray-100">
+      <h3 class="text-xl font-bold text-textDark">Lista de Sesiones</h3>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Paciente
+            </th>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Fecha &amp; Hora
+            </th>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Tipo de Terapia
+            </th>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Duración
+            </th>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Estado
+            </th>
+            <th
+              class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+            >
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100" id="sessions-tbody">
+          <!-- Sessions will be dynamically loaded here -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 flex items-center justify-between">
+      <p id="sessions-count" class="text-sm text-gray-600">
+        Mostrando 0 de 0 sesiones
+      </p>
+      <div class="flex items-center gap-2">
+        <button
+          id="prev-page"
+          class="px-4 py-2 text-gray-600 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          <i data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-chevron-left"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="chevron-left"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 320 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z"
+              ></path></svg
+          ></i>
+        </button>
+        <div id="pagination" class="flex items-center gap-2"></div>
+        <button
+          id="next-page"
+          class="px-4 py-2 text-gray-600 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          <i data-fa-i2svg=""
+            ><svg
+              class="svg-inline--fa fa-chevron-right"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="chevron-right"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 320 512"
+              data-fa-i2svg=""
+            >
+              <path
+                fill="currentColor"
+                d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"
+              ></path></svg
+          ></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Feedback / Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 hidden">
+      <div
+        class="bg-white border border-gray-200 shadow-soft rounded-soft px-4 py-3 text-sm text-textDark"
+        id="toast-message"
+      ></div>
+    </div>
+
+    <!-- Modals -->
+    <div
+      id="modal-backdrop"
+      class="fixed inset-0 bg-black bg-opacity-40 hidden z-50"
+    ></div>
+    <div
+      id="details-modal"
+      class="fixed inset-0 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-soft shadow-soft w-full max-w-lg">
+        <div
+          class="p-4 border-b border-gray-100 flex items-center justify-between"
+        >
+          <h3 class="text-lg font-semibold">Detalles de la sesión</h3>
+          <button class="text-gray-500 hover:text-textDark" data-close-modal>
+            ✕
+          </button>
+        </div>
+        <div class="p-4 space-y-2" id="details-content"></div>
+        <div class="p-4 border-t border-gray-100 text-right">
+          <button
+            class="px-4 py-2 bg-primary text-white rounded-soft"
+            data-close-modal
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="edit-modal"
+      class="fixed inset-0 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-soft shadow-soft w-full max-w-lg">
+        <div
+          class="p-4 border-b border-gray-100 flex items-center justify-between"
+        >
+          <h3 class="text-lg font-semibold">Editar sesión</h3>
+          <button class="text-gray-500 hover:text-textDark" data-close-modal>
+            ✕
+          </button>
+        </div>
+        <form id="edit-form" class="p-4 space-y-3">
+          <input type="hidden" name="id" />
+          <div>
+            <label class="text-sm text-gray-600">Título</label>
+            <input
+              name="title"
+              class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm text-gray-600">Inicio</label>
+              <input
+                type="datetime-local"
+                name="start_time"
+                class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+              />
             </div>
-
-            <div id="stats-cards" class="grid grid-cols-4 gap-6 mb-8">
-                <div class="bg-surface rounded-soft shadow-soft p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="w-12 h-12 bg-primary bg-opacity-10 rounded-soft flex items-center justify-center">
-                            <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-calendar-day" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="calendar-day" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm80 64c-8.8 0-16 7.2-16 16v96c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16V272c0-8.8-7.2-16-16-16H80z"></path></svg></i>
-                        </div>
-                        <span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">Hoy</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-textDark mb-1">{{ sessions_today }}</h3>
-                    <p class="text-gray-500 text-sm">Sesiones programadas</p>
-                </div>
-
-                <div class="bg-surface rounded-soft shadow-soft p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="w-12 h-12 bg-blue-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-                            <i class="text-blue-500 text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"></path></svg></i>
-                        </div>
-                        <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">+12%</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-textDark mb-1">{{ completed_sessions }}</h3>
-                    <p class="text-gray-500 text-sm">Sesiones completadas</p>
-                </div>
-
-                <div class="bg-surface rounded-soft shadow-soft p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="w-12 h-12 bg-orange-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-                            <i class="text-orange-500 text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-clock" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="clock" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"></path></svg></i>
-                        </div>
-                        <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium">Pendiente</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-textDark mb-1">{{ pending_sessions }}</h3>
-                    <p class="text-gray-500 text-sm">Sesiones pendientes</p>
-                </div>
-
-                <div class="bg-surface rounded-soft shadow-soft p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="w-12 h-12 bg-purple-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-                            <i class="text-purple-500 text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-users" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="users" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M144 0a80 80 0 1 1 0 160A80 80 0 1 1 144 0zM512 0a80 80 0 1 1 0 160A80 80 0 1 1 512 0zM0 298.7C0 239.8 47.8 192 106.7 192h42.7c15.9 0 31 3.5 44.6 9.7c-1.3 7.2-1.9 14.7-1.9 22.3c0 38.2 16.8 72.5 43.3 96c-.2 0-.4 0-.7 0H21.3C9.6 320 0 310.4 0 298.7zM405.3 320c-.2 0-.4 0-.7 0c26.6-23.5 43.3-57.8 43.3-96c0-7.6-.7-15-1.9-22.3c13.6-6.3 28.7-9.7 44.6-9.7h42.7C592.2 192 640 239.8 640 298.7c0 11.8-9.6 21.3-21.3 21.3H405.3zM224 224a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zM128 485.3C128 411.7 187.7 352 261.3 352H378.7C452.3 352 512 411.7 512 485.3c0 14.7-11.9 26.7-26.7 26.7H154.7c-14.7 0-26.7-11.9-26.7-26.7z"></path></svg></i>
-                        </div>
-                        <span class="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-medium">Activos</span>
-                    </div>
-                    <h3 class="text-3xl font-bold text-textDark mb-1">{{ active_patients }}</h3>
-                    <p class="text-gray-500 text-sm">Pacientes activos</p>
-                </div>
+            <div>
+              <label class="text-sm text-gray-600">Fin</label>
+              <input
+                type="datetime-local"
+                name="end_time"
+                class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+              />
             </div>
-
-            <div id="calendar-sessions-section" class="grid grid-cols-3 gap-6 mb-8">
-                
-                <div class="col-span-2 bg-surface rounded-soft shadow-soft p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xl font-bold text-textDark">Calendario de Sesiones</h3>
-                        <div class="flex items-center gap-3">
-                            <button id="cal-prev" class="p-2 text-gray-600 hover:text-primary transition-colors" type="button">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <span id="calendar-month-label" class="font-semibold text-textDark px-4"></span>
-                            <button id="cal-next" class="p-2 text-gray-600 hover:text-primary transition-colors" type="button">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-7 gap-2 mb-3">
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Lun</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Mar</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Mié</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Jue</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Vie</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Sáb</div>
-                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Dom</div>
-                    </div>
-
-                    <div id="calendar-grid" class="grid grid-cols-7 gap-2 mb-3"></div>
-
-                    <div class="flex items-center gap-6 mt-6 pt-6 border-t border-gray-100">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 bg-primary rounded-full"></span>
-                            <span class="text-xs text-gray-600">Programada</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
-                            <span class="text-xs text-gray-600">Completada</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
-                            <span class="text-xs text-gray-600">Pendiente</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-surface rounded-soft shadow-soft p-6">
-                    <div id="day-sessions-container">
-                        <h3 id="day-sessions-title" class="text-xl font-bold text-textDark mb-4">Sesiones de Hoy</h3>
-                        <p id="day-sessions-subtitle" class="text-sm text-gray-500 mb-6">Selecciona un día en el calendario para ver las sesiones</p>
-
-                        <div id="day-sessions" class="space-y-4">
-                            <p class="text-sm text-gray-500">No hay sesiones seleccionadas.</p>
-                        </div>
-
-                        <button id="btn-view-all" class="w-full py-3 text-primary text-sm font-medium hover:bg-lightGreen rounded-soft transition-colors mt-4">
-                            Ver todas las sesiones
-                        </button>
-                    </div>
-                </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm text-gray-600">Estado</label>
+              <select
+                name="status"
+                class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+              >
+                <option value="in_progress">En curso</option>
+                <option value="scheduled">Programada</option>
+                <option value="completed">Completada</option>
+                <option value="cancelled">Cancelada</option>
+              </select>
             </div>
+            <div>
+              <label class="text-sm text-gray-600">Lugar</label>
+              <input
+                name="location"
+                class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-gray-600">Notas</label>
+            <textarea
+              name="notes"
+              class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+            ></textarea>
+          </div>
+          <div class="pt-2 border-t border-gray-100 text-right">
+            <button
+              type="button"
+              class="px-4 py-2 text-gray-700"
+              data-close-modal
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-primary text-white rounded-soft"
+            >
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-            <div id="sessions-list-section" class="bg-surface rounded-soft shadow-soft">
-                <div class="p-6 border-b border-gray-100">
-                    <h3 class="text-xl font-bold text-textDark">Lista de Sesiones</h3>
-                </div>
+    <div id="create-modal" class="fixed inset-0 hidden z-50">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-soft shadow-soft w-full max-w-lg relative">
+          <div
+            class="p-4 border-b border-gray-100 flex items-center justify-between"
+          >
+            <h3 class="text-lg font-semibold">Nueva sesión</h3>
+            <button class="text-gray-500 hover:text-textDark" data-close-modal>
+              ✕
+            </button>
+          </div>
+          <form id="create-form" class="p-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Paciente</label>
+                <select
+                  name="patient_id"
+                  id="patient-select"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                  required
+                >
+                  <option value="" disabled selected>
+                    Seleccione un paciente
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Título</label>
+                <input
+                  name="title"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Inicio</label>
+                <input
+                  type="datetime-local"
+                  name="start_time"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Fin</label>
+                <input
+                  type="datetime-local"
+                  name="end_time"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                  required
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Estado</label>
+                <select
+                  name="status"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                >
+                  <option value="scheduled">Programada</option>
+                  <option value="in_progress">En curso</option>
+                  <option value="completed">Completada</option>
+                  <option value="cancelled">Cancelada</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Lugar</label>
+                <input
+                  name="location"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Notas</label>
+              <textarea
+                name="notes"
+                class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"
+              ></textarea>
+            </div>
+            <div class="pt-2 border-t border-gray-100 text-right">
+              <button
+                type="button"
+                class="px-4 py-2 text-gray-700"
+                data-close-modal
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-primary text-white rounded-soft"
+              >
+                Crear
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paciente</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha &amp; Hora</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo de Terapia</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duración</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100" id="sessions-tbody">
-                            <!-- Sessions will be dynamically loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="p-6 border-t border-gray-100 flex items-center justify-between">
-                    <p id="sessions-count" class="text-sm text-gray-600">Mostrando 0 de 0 sesiones</p>
-                    <div class="flex items-center gap-2">
-                        <button id="prev-page" class="px-4 py-2 text-gray-600 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-chevron-left" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-left" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg=""><path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z"></path></svg></i>
-                        </button>
-                        <div id="pagination" class="flex items-center gap-2"></div>
-                        <button id="next-page" class="px-4 py-2 text-gray-600 hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-chevron-right" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg=""><path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"></path></svg></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Feedback / Toast -->
-                <div id="toast" class="fixed bottom-4 right-4 hidden">
-                    <div class="bg-white border border-gray-200 shadow-soft rounded-soft px-4 py-3 text-sm text-textDark" id="toast-message"></div>
-                </div>
-
-                <!-- Modals -->
-                <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50"></div>
-                <div id="details-modal" class="fixed inset-0 hidden items-center justify-center z-50">
-                    <div class="bg-white rounded-soft shadow-soft w-full max-w-lg">
-                        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold">Detalles de la sesión</h3>
-                            <button class="text-gray-500 hover:text-textDark" data-close-modal>✕</button>
-                        </div>
-                        <div class="p-4 space-y-2" id="details-content"></div>
-                        <div class="p-4 border-t border-gray-100 text-right">
-                            <button class="px-4 py-2 bg-primary text-white rounded-soft" data-close-modal>Cerrar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="edit-modal" class="fixed inset-0 hidden items-center justify-center z-50">
-                    <div class="bg-white rounded-soft shadow-soft w-full max-w-lg">
-                        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold">Editar sesión</h3>
-                            <button class="text-gray-500 hover:text-textDark" data-close-modal>✕</button>
-                        </div>
-                        <form id="edit-form" class="p-4 space-y-3">
-                            <input type="hidden" name="id" />
-                            <div>
-                                <label class="text-sm text-gray-600">Título</label>
-                                <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-sm text-gray-600">Inicio</label>
-                                    <input type="datetime-local" name="start_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                                </div>
-                                <div>
-                                    <label class="text-sm text-gray-600">Fin</label>
-                                    <input type="datetime-local" name="end_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-sm text-gray-600">Estado</label>
-                                    <select name="status" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
-                                        <option value="in_progress">En curso</option>
-                                        <option value="scheduled">Programada</option>
-                                        <option value="completed">Completada</option>
-                                        <option value="cancelled">Cancelada</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-sm text-gray-600">Lugar</label>
-                                    <input name="location" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-sm text-gray-600">Notas</label>
-                                <textarea name="notes" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"></textarea>
-                            </div>
-                            <div class="pt-2 border-t border-gray-100 text-right">
-                                <button type="button" class="px-4 py-2 text-gray-700" data-close-modal>Cancelar</button>
-                                <button type="submit" class="px-4 py-2 bg-primary text-white rounded-soft">Guardar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div id="create-modal" class="fixed inset-0 hidden z-50">
-                    <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-soft shadow-soft w-full max-w-lg relative">
-                        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="text-lg font-semibold">Nueva sesión</h3>
-                            <button class="text-gray-500 hover:text-textDark" data-close-modal>✕</button>
-                        </div>
-                        <form id="create-form" class="p-4 space-y-3">
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-sm text-gray-600">Paciente</label>
-                                    <select name="patient_id" id="patient-select" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required>
-                                        <option value="" disabled selected>Seleccione un paciente</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-sm text-gray-600">Título</label>
-                                    <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-sm text-gray-600">Inicio</label>
-                                    <input type="datetime-local" name="start_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
-                                </div>
-                                <div>
-                                    <label class="text-sm text-gray-600">Fin</label>
-                                    <input type="datetime-local" name="end_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="text-sm text-gray-600">Estado</label>
-                                    <select name="status" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
-                                        <option value="scheduled">Programada</option>
-                                        <option value="in_progress">En curso</option>
-                                        <option value="completed">Completada</option>
-                                        <option value="cancelled">Cancelada</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-sm text-gray-600">Lugar</label>
-                                    <input name="location" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
-                                </div>
-                            </div>
-                            <div>
-                                <label class="text-sm text-gray-600">Notas</label>
-                                <textarea name="notes" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"></textarea>
-                            </div>
-                            <div class="pt-2 border-t border-gray-100 text-right">
-                                <button type="button" class="px-4 py-2 text-gray-700" data-close-modal>Cancelar</button>
-                                <button type="submit" class="px-4 py-2 bg-primary text-white rounded-soft">Crear</button>
-                            </div>
-                        </form>
-                    </div>
-                    </div>
-                </div>
-
-                <script>
-                (function() {
-                    const API_URL = '/api/sessions';
-                    const PAGE_SIZE = 5;
-                    let allSessions = [];
-                    let currentPage = 1;
-
-                    const tbody = document.querySelector('#sessions-tbody');
-                    const countEl = document.getElementById('sessions-count');
-                    const paginationEl = document.getElementById('pagination');
-                    const prevBtn = document.getElementById('prev-page');
-                    const nextBtn = document.getElementById('next-page');
-
-                    const toast = document.getElementById('toast');
-                    const toastMsg = document.getElementById('toast-message');
-
-                    async function refreshNotifications() {
-                        try {
-                            const res = await fetch('/api/notifications');
-                            if (!res.ok) return;
-                            const list = await res.json();
-                            window.dispatchEvent(new CustomEvent('notifications-updated', { detail: list }));
-                        } catch (_) {}
-                    }
-
-                    const modalBackdrop = document.getElementById('modal-backdrop');
-                    const detailsModal = document.getElementById('details-modal');
-                    const detailsContent = document.getElementById('details-content');
-                    const editModal = document.getElementById('edit-modal');
-                    const editForm = document.getElementById('edit-form');
-                    const createModal = document.getElementById('create-modal');
-                    const createForm = document.getElementById('create-form');
-                    const newBtn = document.getElementById('btn-new-session');
-
-                    function showToast(message) {
-                        toastMsg.textContent = message;
-                        toast.classList.remove('hidden');
-                        setTimeout(() => toast.classList.add('hidden'), 3000);
-                    }
-
-                    function openModal(modal) {
-                        console.log('[DEBUG] openModal called with:', modal);
-                        if (!modal) {
-                            console.error('[DEBUG] openModal: modal is null or undefined');
-                            return;
-                        }
-                        console.log('[DEBUG] openModal: showing backdrop and modal');
-                        modalBackdrop.classList.remove('hidden');
-                        modal.classList.remove('hidden');
-                        modal.style.display = 'flex';
-                        modal.style.alignItems = 'center';
-                        modal.style.justifyContent = 'center';
-                        document.body.style.overflow = 'hidden';
-                        console.log('[DEBUG] openModal: modal should now be visible');
-                    }
-
-                    function closeModals() {
-                        modalBackdrop.classList.add('hidden');
-                        [detailsModal, editModal, createModal].forEach(m => {
-                            if (m) {
-                                m.classList.add('hidden');
-                                m.style.display = 'none';
-                            }
-                        });
-                        document.body.style.overflow = '';
-                    }
-
-                    document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', closeModals));
-                    modalBackdrop.addEventListener('click', closeModals);
-
-                    function estadoBadge(status) {
-                        switch (status) {
-                            case 'in_progress':
-                                return '<span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">En curso</span>';
-                            case 'scheduled':
-                                return '<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Programada</span>';
-                            case 'completed':
-                                return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">Completada</span>';
-                            case 'cancelled':
-                                return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">Cancelada</span>';
-                            default:
-                                return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">-</span>';
-                        }
-                    }
-
-                    function formatDateEs(iso) {
-                        const d = new Date(iso);
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-                        const month = months[d.getMonth()];
-                        const year = d.getFullYear();
-                        return `${day} ${month} ${year}`;
-                    }
-
-                    function formatTimeEs(iso) {
-                        const d = new Date(iso);
-                        let hours = d.getHours();
-                        const minutes = String(d.getMinutes()).padStart(2, '0');
-                        const ampm = hours >= 12 ? 'PM' : 'AM';
-                        hours = hours % 12;
-                        if (hours === 0) hours = 12;
-                        return `${String(hours).padStart(2,'0')}:${minutes} ${ampm}`;
-                    }
-
-                    function durationMinutes(start, end) {
-                        const ms = new Date(end) - new Date(start);
-                        return Math.max(0, Math.round(ms / 60000));
-                    }
-
-                    function avatarForPatient(name) {
-                        const list = [1,2,3,4,5,6,7,8,9];
-                        let hash = 0;
-                        for (let i=0;i<name.length;i++) hash = (hash*31 + name.charCodeAt(i)) >>> 0;
-                        const idx = list[hash % list.length];
-                        return `https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-${idx}.jpg`;
-                    }
-
-                    function renderTable() {
-                        console.log('[DEBUG] renderTable called, allSessions:', allSessions);
-                        const startIdx = (currentPage - 1) * PAGE_SIZE;
-                        const pageItems = allSessions.slice(startIdx, startIdx + PAGE_SIZE);
-                        tbody.innerHTML = pageItems.map(s => {
-                            const avatar = avatarForPatient(s.patient?.name || '');
-                            const dateStr = formatDateEs(s.start_time);
-                            const timeStr = formatTimeEs(s.start_time);
-                            const dur = durationMinutes(s.start_time, s.end_time);
-                            return `
-                            <tr class="hover:bg-gray-50 transition-colors" data-id="${s.id}">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${avatar}" alt="${s.patient?.name || ''}" class="w-10 h-10 rounded-full object-cover">
-                                        <div>
-                                            <p class="font-semibold text-textDark">${s.patient?.name || '-'}</p>
-                                            <p class="text-xs text-gray-500">ID: ${s.patient?.id || ''}</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <p class="font-medium text-textDark">${dateStr}</p>
-                                    <p class="text-sm text-gray-500">${timeStr}</p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="text-sm text-textDark">${s.title || '-'}</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="text-sm text-gray-600">${dur} min</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    ${estadoBadge(s.status)}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-2">
-                                        <button class="p-2 text-gray-600 hover:text-primary transition-colors" title="Ver detalles" data-action="view">
-                                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-eye" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="eye" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64c-7.1 0-13.9-1.2-20.3-3.3c-5.5-1.8-11.9 1.6-11.7 7.4c.3 6.9 1.3 13.8 3.2 20.7c13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3z"></path></svg></i>
-                                        </button>
-                                        <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
-                                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-pen-to-square" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="pen-to-square" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"></path></svg></i>
-                                        </button>
-                                        <button class="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Cancelar" data-action="cancel">
-                                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-xmark" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-xmark" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s-9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4-9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"></path></svg></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>`;
-                        }).join('');
-
-                        tbody.querySelectorAll('button[data-action]').forEach(btn => {
-                            btn.addEventListener('click', (e) => {
-                                const tr = e.currentTarget.closest('tr');
-                                const id = tr.getAttribute('data-id');
-                                const session = allSessions.find(s => String(s.id) === String(id));
-                                const action = e.currentTarget.getAttribute('data-action');
-                                if (action === 'view') {
-                                    renderDetails(session);
-                                    openModal(detailsModal);
-                                } else if (action === 'edit') {
-                                    fillEditForm(session);
-                                    openModal(editModal);
-                                } else if (action === 'cancel') {
-                                    // Use patients confirmation modal pattern if available; fallback to window.confirm
-                                    if (typeof openConfirm === 'function') {
-                                        openConfirm('¿Desea cancelar esta sesión?', async () => { await cancelSession(session); });
-                                    } else {
-                                        if (confirm('¿Desea cancelar esta sesión?')) { await cancelSession(session); }
-                                    }
-                                }
-                            });
-                        });
-
-                        updateCounter();
-                        renderPagination();
-                    }
-
-                    function updateCounter() {
-                        const showing = Math.min(PAGE_SIZE, Math.max(0, allSessions.length - (currentPage - 1)*PAGE_SIZE));
-                        countEl.textContent = `Mostrando ${Math.max(0, showing)} de ${allSessions.length} sesiones`;
-                    }
-
-                    function renderPagination() {
-                        const totalPages = Math.max(1, Math.ceil(allSessions.length / PAGE_SIZE));
-                        paginationEl.innerHTML = '';
-                        prevBtn.disabled = currentPage <= 1;
-                        nextBtn.disabled = currentPage >= totalPages;
-
-                        const maxButtons = 5;
-                        let start = Math.max(1, currentPage - 2);
-                        let end = Math.min(totalPages, start + maxButtons - 1);
-                        if (end - start < maxButtons - 1) {
-                            start = Math.max(1, end - maxButtons + 1);
-                        }
-
-                        for (let i = start; i <= end; i++) {
-                            const btn = document.createElement('button');
-                            btn.className = `px-4 py-2 rounded-soft ${i === currentPage ? 'bg-primary text-white' : 'text-gray-600 hover:bg-lightGreen transition-colors'}`;
-                            btn.textContent = i;
-                            btn.addEventListener('click', () => { currentPage = i; renderTable(); });
-                            paginationEl.appendChild(btn);
-                        }
-                    }
-
-                    prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); } });
-                    nextBtn.addEventListener('click', () => {
-                        const totalPages = Math.max(1, Math.ceil(allSessions.length / PAGE_SIZE));
-                        if (currentPage < totalPages) { currentPage++; renderTable(); }
-                    });
-
-                    function renderDetails(s) {
-                        const dateStr = formatDateEs(s.start_time);
-                        const timeStr = formatTimeEs(s.start_time);
-                        const dur = durationMinutes(s.start_time, s.end_time);
-                        detailsContent.innerHTML = `
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <div class="text-sm text-gray-600">Paciente</div>
-                                    <div class="font-medium">${s.patient?.name || '-'}</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-600">Título</div>
-                                    <div class="font-medium">${s.title || '-'}</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-600">Fecha</div>
-                                    <div class="font-medium">${dateStr}</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-600">Hora</div>
-                                    <div class="font-medium">${timeStr}</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-600">Duración</div>
-                                    <div class="font-medium">${dur} min</div>
-                                </div>
-                                <div>
-                                    <div class="text-sm text-gray-600">Estado</div>
-                                    <div class="font-medium">${estadoBadge(s.status)}</div>
-                                </div>
-                                <div class="col-span-2">
-                                    <div class="text-sm text-gray-600">Lugar</div>
-                                    <div class="font-medium">${s.location || '-'}</div>
-                                </div>
-                                <div class="col-span-2">
-                                    <div class="text-sm text-gray-600">Notas</div>
-                                    <div class="font-medium whitespace-pre-line">${s.notes || '-'}</div>
-                                </div>
-                            </div>`;
-                    }
-
-                    function toLocalInputValue(iso) {
-                        const d = new Date(iso);
-                        const pad = n => String(n).padStart(2, '0');
-                        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                    }
-
-                    function fillEditForm(s) {
-                        editForm.id.value = s.id;
-                        editForm.title.value = s.title || '';
-                        editForm.start_time.value = toLocalInputValue(s.start_time);
-                        editForm.end_time.value = toLocalInputValue(s.end_time);
-                        editForm.status.value = s.status || 'scheduled';
-                        editForm.location.value = s.location || '';
-                        editForm.notes.value = s.notes || '';
-                    }
-
-                    editForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const id = editForm.id.value;
-                        const payload = {
-                            title: editForm.title.value,
-                            start_time: new Date(editForm.start_time.value).toISOString(),
-                            end_time: new Date(editForm.end_time.value).toISOString(),
-                            status: editForm.status.value,
-                            location: editForm.location.value,
-                            notes: editForm.notes.value
-                        };
-                        try {
-                            const res = await fetch(`${API_URL}/${id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            if (!res.ok) throw new Error('Error al actualizar la sesión');
-                            const updated = await res.json();
-                            const idx = allSessions.findIndex(s => String(s.id) === String(id));
-                            if (idx >= 0) allSessions[idx] = updated;
-                            showToast('Sesión actualizada');
-                            closeModals();
-                            renderTable();
-                        } catch (err) {
-                            console.error(err);
-                            showToast(err.message || 'Error inesperado');
-                        }
-                    });
-
-                    newBtn.addEventListener('click', () => {
-                        console.log('[DEBUG] Nueva Sesión button clicked');
-                        console.log('[DEBUG] createForm:', createForm);
-                        console.log('[DEBUG] createModal:', createModal);
-                        if (!createForm) {
-                            console.error('[DEBUG] createForm not found!');
-                            return;
-                        }
-                        // reset form defaults
-                        try {
-                            createForm.reset();
-                        } catch(_) {}
-                        const now = new Date();
-                        const pad = n => String(n).padStart(2,'0');
-                        const isoLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                        const start = new Date(now.getTime() + 5*60*1000);
-                        const end = new Date(start.getTime() + 60*60*1000);
-                        if (createForm.start_time) createForm.start_time.value = isoLocal(start);
-                        if (createForm.end_time) createForm.end_time.value = isoLocal(end);
-                        if (createForm.status) createForm.status.value = 'scheduled';
-                        console.log('[DEBUG] About to open modal...');
-                        // open modal immediately for faster UX
-                        openModal(createModal);
-                        // load patients asynchronously; do not block modal
-                        ensurePatientsLoaded();
-                    });
-                    let patientsLoaded = false;
-                    async function ensurePatientsLoaded(){
-                        if (patientsLoaded) return;
-                        try {
-                            const res = await fetch('/api/patients');
-                            if (!res.ok) throw new Error('No se pudo cargar pacientes');
-                            const patients = await res.json();
-                            const select = document.getElementById('patient-select');
-                            select.innerHTML = '<option value="" disabled selected>Seleccione un paciente</option>' +
-                                patients.map(p => `<option value="${p.id}">${p.username} (${p.email})</option>`).join('');
-                            patientsLoaded = true;
-                        } catch (e) {
-                            showToast(e.message || 'Error cargando pacientes');
-                        }
-                    }
-
-                    createForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const payload = {
-                            patient_id: createForm.patient_id.value,
-                            title: createForm.title.value,
-                            start_time: new Date(createForm.start_time.value).toISOString(),
-                            end_time: new Date(createForm.end_time.value).toISOString(),
-                            status: createForm.status.value,
-                            location: createForm.location.value,
-                            notes: createForm.notes.value
-                        };
-                        try {
-                            const res = await fetch(API_URL, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-                            if (!res.ok) throw new Error('Error al crear la sesión');
-                            const created = await res.json();
-                            allSessions.unshift(created);
-                            currentPage = 1;
-                            showToast('Sesión creada');
-                            refreshNotifications();
-                            closeModals();
-                            renderTable();
-                        } catch (err) {
-                            console.error(err);
-                            showToast(err.message || 'Error inesperado');
-                        }
-                    });
-
-                    async function cancelSession(s) {
-                        if (!confirm('¿Desea cancelar esta sesión?')) return;
-                        try {
-                            const res = await fetch(`${API_URL}/${s.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ status: 'cancelled' })
-                            });
-                            if (!res.ok) throw new Error('No se pudo cancelar la sesión');
-                            const updated = await res.json();
-                            const idx = allSessions.findIndex(x => String(x.id) === String(s.id));
-                            if (idx >= 0) allSessions[idx] = updated;
-                            showToast('Sesión cancelada');
-                            refreshNotifications();
-                            renderTable();
-                        } catch (err) {
-                            console.error(err);
-                            showToast(err.message || 'Error inesperado');
-                        }
-                    }
-
-                    async function loadSessions() {
-                        console.log('[DEBUG] loadSessions called');
-                        try {
-                            console.log('[DEBUG] Fetching from:', API_URL);
-                            const res = await fetch(API_URL);
-                            console.log('[DEBUG] Response status:', res.status);
-                            if (!res.ok) throw new Error('Error al cargar sesiones');
-                            const data = await res.json();
-                            console.log('[DEBUG] Loaded data:', data);
-                            allSessions = Array.isArray(data) ? data : [];
-                            console.log('[DEBUG] allSessions length:', allSessions.length);
-                            currentPage = 1;
-                            renderTable();
-                        } catch (err) {
-                            console.error('[DEBUG] Error loading sessions:', err);
-                            tbody.innerHTML = '<tr><td class="px-6 py-4 text-red-600" colspan="6">No se pudieron cargar las sesiones.</td></tr>';
-                            countEl.textContent = 'Mostrando 0 de 0 sesiones';
-                            showToast(err.message || 'Error al cargar');
-                        }
-                    }
-
-                    loadSessions();
-                })();
-                </script>
-    
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const monthLabelEl = document.getElementById('calendar-month-label');
-        const gridEl = document.getElementById('calendar-grid');
-        const prevBtn = document.getElementById('cal-prev');
-        const nextBtn = document.getElementById('cal-next');
-        const daySessionsContainer = document.getElementById('day-sessions');
-        const dayTitle = document.getElementById('day-sessions-title');
-        const daySubtitle = document.getElementById('day-sessions-subtitle');
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log(
+          "[DEBUG] Sessions script started execution (DOMContentLoaded)"
+        );
+        const API_URL = "/api/sessions";
+        const PAGE_SIZE = 5;
+        let allSessions = [];
+        let currentPage = 1;
 
-        const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const tbody = document.querySelector("#sessions-tbody");
+        const countEl = document.getElementById("sessions-count");
+        const paginationEl = document.getElementById("pagination");
+        const prevBtn = document.getElementById("prev-page");
+        const nextBtn = document.getElementById("next-page");
+
+        const toast = document.getElementById("toast");
+        const toastMsg = document.getElementById("toast-message");
+
+        async function refreshNotifications() {
+          try {
+            const res = await fetch("/api/notifications");
+            if (!res.ok) return;
+            const list = await res.json();
+            window.dispatchEvent(
+              new CustomEvent("notifications-updated", { detail: list })
+            );
+          } catch (_) {}
+        }
+
+        const modalBackdrop = document.getElementById("modal-backdrop");
+        const detailsModal = document.getElementById("details-modal");
+        const detailsContent = document.getElementById("details-content");
+        const editModal = document.getElementById("edit-modal");
+        const editForm = document.getElementById("edit-form");
+        const createModal = document.getElementById("create-modal");
+        const createForm = document.getElementById("create-form");
+        const newBtn = document.getElementById("btn-new-session");
+
+        function showToast(message) {
+          toastMsg.textContent = message;
+          toast.classList.remove("hidden");
+          setTimeout(() => toast.classList.add("hidden"), 3000);
+        }
+
+        function openModal(modal) {
+          console.log("[DEBUG] openModal called with:", modal);
+          if (!modal) {
+            console.error("[DEBUG] openModal: modal is null or undefined");
+            return;
+          }
+          console.log("[DEBUG] openModal: showing backdrop and modal");
+          modalBackdrop.classList.remove("hidden");
+          modal.classList.remove("hidden");
+          modal.style.display = "flex";
+          modal.style.alignItems = "center";
+          modal.style.justifyContent = "center";
+          document.body.style.overflow = "hidden";
+          console.log("[DEBUG] openModal: modal should now be visible");
+        }
+
+        function closeModals() {
+          modalBackdrop.classList.add("hidden");
+          [detailsModal, editModal, createModal].forEach((m) => {
+            if (m) {
+              m.classList.add("hidden");
+              m.style.display = "none";
+            }
+          });
+          document.body.style.overflow = "";
+        }
+
+        document
+          .querySelectorAll("[data-close-modal]")
+          .forEach((btn) => btn.addEventListener("click", closeModals));
+        modalBackdrop.addEventListener("click", closeModals);
+
+        function estadoBadge(status) {
+          switch (status) {
+            case "in_progress":
+              return '<span class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">En curso</span>';
+            case "scheduled":
+              return '<span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">Programada</span>';
+            case "completed":
+              return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">Completada</span>';
+            case "cancelled":
+              return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">Cancelada</span>';
+            default:
+              return '<span class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full font-medium">-</span>';
+          }
+        }
+
+        function formatDateEs(iso) {
+          const d = new Date(iso);
+          const day = String(d.getDate()).padStart(2, "0");
+          const months = [
+            "Ene",
+            "Feb",
+            "Mar",
+            "Abr",
+            "May",
+            "Jun",
+            "Jul",
+            "Ago",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dic",
+          ];
+          const month = months[d.getMonth()];
+          const year = d.getFullYear();
+          return `${day} ${month} ${year}`;
+        }
+
+        function formatTimeEs(iso) {
+          const d = new Date(iso);
+          let hours = d.getHours();
+          const minutes = String(d.getMinutes()).padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12;
+          if (hours === 0) hours = 12;
+          return `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+        }
+
+        function durationMinutes(start, end) {
+          const ms = new Date(end) - new Date(start);
+          return Math.max(0, Math.round(ms / 60000));
+        }
+
+        function avatarForPatient(name) {
+          const list = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+          let hash = 0;
+          for (let i = 0; i < name.length; i++)
+            hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+          const idx = list[hash % list.length];
+          return `https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-${idx}.jpg`;
+        }
+
+        function renderTable() {
+          console.log("[DEBUG] renderTable called, allSessions:", allSessions);
+          const startIdx = (currentPage - 1) * PAGE_SIZE;
+          const pageItems = allSessions.slice(startIdx, startIdx + PAGE_SIZE);
+          tbody.innerHTML = pageItems
+            .map((s) => {
+              const avatar = avatarForPatient(s.patient?.name || "");
+              const dateStr = formatDateEs(s.start_time);
+              const timeStr = formatTimeEs(s.start_time);
+              const dur = durationMinutes(s.start_time, s.end_time);
+              return `
+                  <tr class="hover:bg-gray-50 transition-colors" data-id="${
+                    s.id
+                  }">
+                      <td class="px-6 py-4">
+                          <div class="flex items-center gap-3">
+                              <img src="${avatar}" alt="${
+                s.patient?.name || ""
+              }" class="w-10 h-10 rounded-full object-cover">
+                              <div>
+                                  <p class="font-semibold text-textDark">${
+                                    s.patient?.name || "-"
+                                  }</p>
+                                  <p class="text-xs text-gray-500">ID: ${
+                                    s.patient?.id || ""
+                                  }</p>
+                              </div>
+                          </div>
+                      </td>
+                      <td class="px-6 py-4">
+                          <p class="font-medium text-textDark">${dateStr}</p>
+                          <p class="text-sm text-gray-500">${timeStr}</p>
+                      </td>
+                      <td class="px-6 py-4">
+                          <span class="text-sm text-textDark">${
+                            s.title || "-"
+                          }</span>
+                      </td>
+                      <td class="px-6 py-4">
+                          <span class="text-sm text-gray-600">${dur} min</span>
+                      </td>
+                      <td class="px-6 py-4">
+                          ${estadoBadge(s.status)}
+                      </td>
+                      <td class="px-6 py-4">
+                          <div class="flex items-center gap-2">
+                              <button class="p-2 text-gray-600 hover:text-primary transition-colors" title="Ver detalles" data-action="view">
+                                  <i data-fa-i2svg=""><svg class="svg-inline--fa fa-eye" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="eye" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64c-7.1 0-13.9-1.2-20.3-3.3c-5.5-1.8-11.9 1.6-11.7 7.4c.3 6.9 1.3 13.8 3.2 20.7c13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3z"></path></svg></i>
+                              </button>
+                              <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
+                                  <i data-fa-i2svg=""><svg class="svg-inline--fa fa-pen-to-square" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="pen-to-square" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"></path></svg></i>
+                              </button>
+                              <button class="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Cancelar" data-action="cancel">
+                                  <i data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-xmark" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-xmark" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s-9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4-9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z"></path></svg></i>
+                              </button>
+                          </div>
+                      </td>
+                  </tr>`;
+            })
+            .join("");
+
+          tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              const tr = e.currentTarget.closest("tr");
+              const id = tr.getAttribute("data-id");
+              const session = allSessions.find(
+                (s) => String(s.id) === String(id)
+              );
+              const action = e.currentTarget.getAttribute("data-action");
+              if (action === "view") {
+                renderDetails(session);
+                openModal(detailsModal);
+              } else if (action === "edit") {
+                fillEditForm(session);
+                openModal(editModal);
+              } else if (action === "cancel") {
+                // Use patients confirmation modal pattern if available; fallback to window.confirm
+                if (typeof openConfirm === "function") {
+                  openConfirm("¿Desea cancelar esta sesión?", async () => {
+                    await cancelSession(session);
+                  });
+                } else {
+                  if (confirm("¿Desea cancelar esta sesión?")) {
+                    cancelSession(session);
+                  }
+                }
+              }
+            });
+          });
+
+          updateCounter();
+          renderPagination();
+        }
+
+        function updateCounter() {
+          const showing = Math.min(
+            PAGE_SIZE,
+            Math.max(0, allSessions.length - (currentPage - 1) * PAGE_SIZE)
+          );
+          countEl.textContent = `Mostrando ${Math.max(0, showing)} de ${
+            allSessions.length
+          } sesiones`;
+        }
+
+        function renderPagination() {
+          const totalPages = Math.max(
+            1,
+            Math.ceil(allSessions.length / PAGE_SIZE)
+          );
+          paginationEl.innerHTML = "";
+          prevBtn.disabled = currentPage <= 1;
+          nextBtn.disabled = currentPage >= totalPages;
+
+          const maxButtons = 5;
+          let start = Math.max(1, currentPage - 2);
+          let end = Math.min(totalPages, start + maxButtons - 1);
+          if (end - start < maxButtons - 1) {
+            start = Math.max(1, end - maxButtons + 1);
+          }
+
+          for (let i = start; i <= end; i++) {
+            const btn = document.createElement("button");
+            btn.className = `px-4 py-2 rounded-soft ${
+              i === currentPage
+                ? "bg-primary text-white"
+                : "text-gray-600 hover:bg-lightGreen transition-colors"
+            }`;
+            btn.textContent = i;
+            btn.addEventListener("click", () => {
+              currentPage = i;
+              renderTable();
+            });
+            paginationEl.appendChild(btn);
+          }
+        }
+
+        prevBtn.addEventListener("click", () => {
+          if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+          }
+        });
+        nextBtn.addEventListener("click", () => {
+          const totalPages = Math.max(
+            1,
+            Math.ceil(allSessions.length / PAGE_SIZE)
+          );
+          if (currentPage < totalPages) {
+            currentPage++;
+            renderTable();
+          }
+        });
+
+        function renderDetails(s) {
+          const dateStr = formatDateEs(s.start_time);
+          const timeStr = formatTimeEs(s.start_time);
+          const dur = durationMinutes(s.start_time, s.end_time);
+          detailsContent.innerHTML = `
+                  <div class="grid grid-cols-2 gap-3">
+                      <div>
+                          <div class="text-sm text-gray-600">Paciente</div>
+                          <div class="font-medium">${
+                            s.patient?.name || "-"
+                          }</div>
+                      </div>
+                      <div>
+                          <div class="text-sm text-gray-600">Título</div>
+                          <div class="font-medium">${s.title || "-"}</div>
+                      </div>
+                      <div>
+                          <div class="text-sm text-gray-600">Fecha</div>
+                          <div class="font-medium">${dateStr}</div>
+                      </div>
+                      <div>
+                          <div class="text-sm text-gray-600">Hora</div>
+                          <div class="font-medium">${timeStr}</div>
+                      </div>
+                      <div>
+                          <div class="text-sm text-gray-600">Duración</div>
+                          <div class="font-medium">${dur} min</div>
+                      </div>
+                      <div>
+                          <div class="text-sm text-gray-600">Estado</div>
+                          <div class="font-medium">${estadoBadge(
+                            s.status
+                          )}</div>
+                      </div>
+                      <div class="col-span-2">
+                          <div class="text-sm text-gray-600">Lugar</div>
+                          <div class="font-medium">${s.location || "-"}</div>
+                      </div>
+                      <div class="col-span-2">
+                          <div class="text-sm text-gray-600">Notas</div>
+                          <div class="font-medium whitespace-pre-line">${
+                            s.notes || "-"
+                          }</div>
+                      </div>
+                  </div>`;
+        }
+
+        function toLocalInputValue(iso) {
+          const d = new Date(iso);
+          const pad = (n) => String(n).padStart(2, "0");
+          return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function fillEditForm(s) {
+          editForm.id.value = s.id;
+          editForm.title.value = s.title || "";
+          editForm.start_time.value = toLocalInputValue(s.start_time);
+          editForm.end_time.value = toLocalInputValue(s.end_time);
+          editForm.status.value = s.status || "scheduled";
+          editForm.location.value = s.location || "";
+          editForm.notes.value = s.notes || "";
+        }
+
+        editForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = editForm.id.value;
+          const payload = {
+            title: editForm.title.value,
+            start_time: new Date(editForm.start_time.value).toISOString(),
+            end_time: new Date(editForm.end_time.value).toISOString(),
+            status: editForm.status.value,
+            location: editForm.location.value,
+            notes: editForm.notes.value,
+          };
+          try {
+            const res = await fetch(`${API_URL}/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error("Error al actualizar la sesión");
+            const updated = await res.json();
+            const idx = allSessions.findIndex(
+              (s) => String(s.id) === String(id)
+            );
+            if (idx >= 0) allSessions[idx] = updated;
+            showToast("Sesión actualizada");
+            closeModals();
+            renderTable();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || "Error inesperado");
+          }
+        });
+
+        console.log("[DEBUG] Attempting to check new session button...");
+        console.log("[DEBUG] btn-new-session variable value:", newBtn);
+
+        if (newBtn) {
+          console.log("[DEBUG] Adding click listener to new session button");
+          newBtn.addEventListener("click", () => {
+            console.log("[DEBUG] Nueva Sesión button clicked");
+            console.log("[DEBUG] createForm:", createForm);
+            console.log("[DEBUG] createModal:", createModal);
+            if (!createForm) {
+              console.error("[DEBUG] createForm not found!");
+              return;
+            }
+            // reset form defaults
+            try {
+              createForm.reset();
+            } catch (_) {}
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, "0");
+            const isoLocal = (d) =>
+              `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+                d.getDate()
+              )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            const start = new Date(now.getTime() + 5 * 60 * 1000);
+            const end = new Date(start.getTime() + 60 * 60 * 1000);
+            if (createForm.start_time)
+              createForm.start_time.value = isoLocal(start);
+            if (createForm.end_time) createForm.end_time.value = isoLocal(end);
+            if (createForm.status) createForm.status.value = "scheduled";
+            console.log("[DEBUG] About to open modal...");
+            // open modal immediately for faster UX
+            openModal(createModal);
+            // load patients asynchronously; do not block modal
+            ensurePatientsLoaded();
+          });
+        } else {
+          console.error(
+            'Error: Botón "btn-new-session" no encontrado en el DOM.'
+          );
+        }
+        let patientsLoaded = false;
+        async function ensurePatientsLoaded() {
+          if (patientsLoaded) return;
+          try {
+            const res = await fetch("/api/patients");
+            if (!res.ok) throw new Error("No se pudo cargar pacientes");
+            const patients = await res.json();
+            const select = document.getElementById("patient-select");
+            select.innerHTML =
+              '<option value="" disabled selected>Seleccione un paciente</option>' +
+              patients
+                .map(
+                  (p) =>
+                    `<option value="${p.id}">${p.username} (${p.email})</option>`
+                )
+                .join("");
+            patientsLoaded = true;
+          } catch (e) {
+            showToast(e.message || "Error cargando pacientes");
+          }
+        }
+
+        createForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const formData = new FormData(createForm);
+          const patientIdRaw = formData.get("patient_id");
+          const startTimeRaw = formData.get("start_time");
+          const endTimeRaw = formData.get("end_time");
+
+          if (!patientIdRaw) {
+            showToast("Por favor seleccione un paciente");
+            return;
+          }
+
+          // Ensure proper datetime string format (append seconds if missing)
+          const formatDt = (val) => {
+            if (!val) return null;
+            // If browser gives YYYY-MM-DDTHH:MM, append :00
+            if (val.length === 16) return val + ":00";
+            return val;
+          };
+
+          const payload = {
+            patient_id: parseInt(patientIdRaw, 10),
+            title: formData.get("title"),
+            start_time: formatDt(startTimeRaw),
+            end_time: formatDt(endTimeRaw),
+            status: formData.get("status"),
+            location: formData.get("location"),
+            notes: formData.get("notes"),
+          };
+
+          console.log("[DEBUG] Submitting payload via FormData:", payload);
+
+          if (!payload.start_time) {
+            showToast("Fecha de inicio requerida");
+            return;
+          }
+          try {
+            const res = await fetch(API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error("Error al crear la sesión");
+            const created = await res.json();
+            allSessions.unshift(created);
+            currentPage = 1;
+            showToast("Sesión creada");
+            refreshNotifications();
+            closeModals();
+            renderTable();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || "Error inesperado");
+          }
+        });
+
+        async function cancelSession(s) {
+          if (!confirm("¿Desea cancelar esta sesión?")) return;
+          try {
+            const res = await fetch(`${API_URL}/${s.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "cancelled" }),
+            });
+            if (!res.ok) throw new Error("No se pudo cancelar la sesión");
+            const updated = await res.json();
+            const idx = allSessions.findIndex(
+              (x) => String(x.id) === String(s.id)
+            );
+            if (idx >= 0) allSessions[idx] = updated;
+            showToast("Sesión cancelada");
+            refreshNotifications();
+            renderTable();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || "Error inesperado");
+          }
+        }
+
+        async function loadSessions() {
+          console.log("[DEBUG] loadSessions called");
+          try {
+            console.log("[DEBUG] Fetching from:", API_URL);
+            const res = await fetch(API_URL);
+            console.log("[DEBUG] Response status:", res.status);
+            if (!res.ok) throw new Error("Error al cargar sesiones");
+            const data = await res.json();
+            console.log("[DEBUG] Loaded data:", data);
+            allSessions = Array.isArray(data) ? data : [];
+            console.log("[DEBUG] allSessions length:", allSessions.length);
+            currentPage = 1;
+            renderTable();
+          } catch (err) {
+            console.error("[DEBUG] Error loading sessions:", err);
+            tbody.innerHTML =
+              '<tr><td class="px-6 py-4 text-red-600" colspan="6">No se pudieron cargar las sesiones.</td></tr>';
+            countEl.textContent = "Mostrando 0 de 0 sesiones";
+            showToast(err.message || "Error al cargar");
+          }
+        }
+
+        loadSessions();
+      });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const monthLabelEl = document.getElementById("calendar-month-label");
+        const gridEl = document.getElementById("calendar-grid");
+        const prevBtn = document.getElementById("cal-prev");
+        const nextBtn = document.getElementById("cal-next");
+        const daySessionsContainer = document.getElementById("day-sessions");
+        const dayTitle = document.getElementById("day-sessions-title");
+        const daySubtitle = document.getElementById("day-sessions-subtitle");
+
+        const monthNames = [
+          "Enero",
+          "Febrero",
+          "Marzo",
+          "Abril",
+          "Mayo",
+          "Junio",
+          "Julio",
+          "Agosto",
+          "Septiembre",
+          "Octubre",
+          "Noviembre",
+          "Diciembre",
+        ];
 
         let view = new Date(); // current view month
 
-        function pad(n){ return n.toString().padStart(2,'0'); }
-
-        function startOfMonth(date){ return new Date(date.getFullYear(), date.getMonth(), 1); }
-        function endOfMonth(date){ return new Date(date.getFullYear(), date.getMonth()+1, 0); }
-
-        async function fetchMonthEvents(startDate, endDate){
-            const s = `${startDate.getFullYear()}-${pad(startDate.getMonth()+1)}-${pad(startDate.getDate())}`;
-            const e = `${endDate.getFullYear()}-${pad(endDate.getMonth()+1)}-${pad(endDate.getDate())}`;
-            const res = await fetch(`/api/sessions?start=${s}&end=${e}`);
-            if (!res.ok) return [];
-            return await res.json();
+        function pad(n) {
+          return n.toString().padStart(2, "0");
         }
 
-        function isoDateOnly(date){ return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
+        function startOfMonth(date) {
+          return new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+        function endOfMonth(date) {
+          return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        }
 
-        function renderGrid(events){
-            gridEl.innerHTML = '';
-            const first = startOfMonth(view);
-            const last = endOfMonth(view);
-            // day of week where Monday=1..Sunday=7 in our header (Lun..Dom). JS getDay() gives 0=Sun..6=Sat
-            let startWeekday = first.getDay(); // 0 (Sun) .. 6 (Sat)
-            // convert to Monday-based index: 0->6, 1->0, 2->1 ...
-            startWeekday = (startWeekday + 6) % 7;
+        async function fetchMonthEvents(startDate, endDate) {
+          const s = `${startDate.getFullYear()}-${pad(
+            startDate.getMonth() + 1
+          )}-${pad(startDate.getDate())}`;
+          const e = `${endDate.getFullYear()}-${pad(
+            endDate.getMonth() + 1
+          )}-${pad(endDate.getDate())}`;
+          const res = await fetch(`/api/sessions?start=${s}&end=${e}`);
+          if (!res.ok) return [];
+          return await res.json();
+        }
 
-            const daysInMonth = last.getDate();
-            // previous month's last days to fill
-            const prevMonthFill = startWeekday;
-            const totalCells = 42; // 6 weeks
+        function isoDateOnly(date) {
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        }
 
-            const todayIso = isoDateOnly(new Date());
+        function renderGrid(events) {
+          gridEl.innerHTML = "";
+          const first = startOfMonth(view);
+          const last = endOfMonth(view);
+          // day of week where Monday=1..Sunday=7 in our header (Lun..Dom). JS getDay() gives 0=Sun..6=Sat
+          let startWeekday = first.getDay(); // 0 (Sun) .. 6 (Sat)
+          // convert to Monday-based index: 0->6, 1->0, 2->1 ...
+          startWeekday = (startWeekday + 6) % 7;
 
-            for(let i=0;i<totalCells;i++){
-                const cell = document.createElement('div');
-                cell.className = 'aspect-square rounded-soft border border-gray-200 p-2 text-center cursor-pointer select-none relative';
+          const daysInMonth = last.getDate();
+          // previous month's last days to fill
+          const prevMonthFill = startWeekday;
+          const totalCells = 42; // 6 weeks
 
-                const dayNumberEl = document.createElement('span');
-                dayNumberEl.className = 'text-sm font-medium';
+          const todayIso = isoDateOnly(new Date());
 
-                let dayDate = null;
-                const dayIndex = i - prevMonthFill + 1;
-                if(dayIndex < 1){
-                    // previous month day
-                    const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
-                    dayNumberEl.textContent = d.getDate();
-                    cell.classList.add('text-gray-300');
-                    dayDate = d;
-                } else if(dayIndex > daysInMonth){
-                    // next month
-                    const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
-                    dayNumberEl.textContent = d.getDate();
-                    cell.classList.add('text-gray-300');
-                    dayDate = d;
-                } else {
-                    const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
-                    dayNumberEl.textContent = dayIndex;
-                    dayDate = d;
-                    // highlight today
-                    if(isoDateOnly(d) === todayIso){
-                        cell.classList.add('bg-primary','text-white');
-                    }
-                }
+          for (let i = 0; i < totalCells; i++) {
+            const cell = document.createElement("div");
+            cell.className =
+              "aspect-square rounded-soft border border-gray-200 p-2 text-center cursor-pointer select-none relative";
 
-                cell.appendChild(dayNumberEl);
+            const dayNumberEl = document.createElement("span");
+            dayNumberEl.className = "text-sm font-medium";
 
-                // add event dots container
-                const dots = document.createElement('div');
-                dots.className = 'absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5';
-                cell.appendChild(dots);
-
-                // attach data-date
-                cell.dataset.date = isoDateOnly(dayDate);
-
-                // click handler loads day sessions
-                cell.addEventListener('click', () => {
-                    loadDaySessions(dayDate.getFullYear(), dayDate.getMonth()+1, dayDate.getDate());
-                });
-
-                gridEl.appendChild(cell);
+            let dayDate = null;
+            const dayIndex = i - prevMonthFill + 1;
+            if (dayIndex < 1) {
+              // previous month day
+              const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
+              dayNumberEl.textContent = d.getDate();
+              cell.classList.add("text-gray-300");
+              dayDate = d;
+            } else if (dayIndex > daysInMonth) {
+              // next month
+              const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
+              dayNumberEl.textContent = d.getDate();
+              cell.classList.add("text-gray-300");
+              dayDate = d;
+            } else {
+              const d = new Date(view.getFullYear(), view.getMonth(), dayIndex);
+              dayNumberEl.textContent = dayIndex;
+              dayDate = d;
+              // highlight today
+              if (isoDateOnly(d) === todayIso) {
+                cell.classList.add("bg-primary", "text-white");
+              }
             }
 
-            // place dots for events
-            const eventsByDate = {};
-            events.forEach(ev => {
-                const d = ev.start.split('T')[0];
-                eventsByDate[d] = eventsByDate[d] || [];
-                eventsByDate[d].push(ev);
+            cell.appendChild(dayNumberEl);
+
+            // add event dots container
+            const dots = document.createElement("div");
+            dots.className =
+              "absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-0.5";
+            cell.appendChild(dots);
+
+            // attach data-date
+            cell.dataset.date = isoDateOnly(dayDate);
+
+            // click handler loads day sessions
+            cell.addEventListener("click", () => {
+              loadDaySessions(
+                dayDate.getFullYear(),
+                dayDate.getMonth() + 1,
+                dayDate.getDate()
+              );
             });
 
-            gridEl.querySelectorAll('[data-date]').forEach(cell => {
-                const date = cell.dataset.date;
-                const list = eventsByDate[date] || [];
-                const dots = cell.querySelector('div');
-                dots.innerHTML = '';
-                list.slice(0,3).forEach((ev, idx) => {
-                    const dot = document.createElement('span');
-                    dot.className = 'w-2 h-2 rounded-full';
-                    // color by status
-                    if(ev.status === 'scheduled') dot.style.backgroundColor = '#75a83a';
-                    else if(ev.status === 'completed') dot.style.backgroundColor = '#3b82f6';
-                    else dot.style.backgroundColor = '#f59e0b';
-                    dots.appendChild(dot);
-                });
-                if(list.length > 3){
-                    const more = document.createElement('span');
-                    more.className = 'text-xs text-gray-500 ml-1';
-                    more.textContent = `+${list.length-3}`;
-                    dots.appendChild(more);
-                }
+            gridEl.appendChild(cell);
+          }
+
+          // place dots for events
+          const eventsByDate = {};
+          events.forEach((ev) => {
+            const d = ev.start.split("T")[0];
+            eventsByDate[d] = eventsByDate[d] || [];
+            eventsByDate[d].push(ev);
+          });
+
+          gridEl.querySelectorAll("[data-date]").forEach((cell) => {
+            const date = cell.dataset.date;
+            const list = eventsByDate[date] || [];
+            const dots = cell.querySelector("div");
+            dots.innerHTML = "";
+            list.slice(0, 3).forEach((ev, idx) => {
+              const dot = document.createElement("span");
+              dot.className = "w-2 h-2 rounded-full";
+              // color by status
+              if (ev.status === "scheduled")
+                dot.style.backgroundColor = "#75a83a";
+              else if (ev.status === "completed")
+                dot.style.backgroundColor = "#3b82f6";
+              else dot.style.backgroundColor = "#f59e0b";
+              dots.appendChild(dot);
             });
-        }
-
-        async function renderMonth(){
-            const first = startOfMonth(view);
-            const last = endOfMonth(view);
-            // update label
-            monthLabelEl.textContent = `${monthNames[view.getMonth()]} ${view.getFullYear()}`;
-            // fetch events for range
-            const events = await fetchMonthEvents(first, last);
-            renderGrid(events);
-        }
-
-        async function loadDaySessions(year, month, day){
-            const dateStr = `${year}-${pad(month)}-${pad(day)}`;
-            try{
-                const res = await fetch(`/api/sessions/day?date=${dateStr}`);
-                if(!res.ok) throw new Error('Error fetching sessions');
-                const data = await res.json();
-                renderDaySessions(data);
-            }catch(err){
-                daySessionsContainer.innerHTML = `<p class="text-sm text-red-500">No se pudieron cargar las sesiones. ${err.message}</p>`;
+            if (list.length > 3) {
+              const more = document.createElement("span");
+              more.className = "text-xs text-gray-500 ml-1";
+              more.textContent = `+${list.length - 3}`;
+              dots.appendChild(more);
             }
+          });
         }
 
-        function renderDaySessions(data){
-            const sessions = data.sessions || [];
-            dayTitle.textContent = `Sesiones — ${data.date}`;
-            daySubtitle.textContent = sessions.length ? `${sessions.length} sesión(es) encontradas` : 'No hay sesiones para esta fecha';
-            if(!sessions.length){
-                daySessionsContainer.innerHTML = `<p class="text-sm text-gray-500">No hay sesiones para esta fecha.</p>`;
-                return;
-            }
-            daySessionsContainer.innerHTML = '';
-            sessions.forEach(s => {
-                const statusClass = s.status === 'scheduled' ? 'border-l-4 border-primary bg-lightGreen bg-opacity-30' : (s.status === 'completed' ? 'border-l-4 border-blue-300 bg-gray-50' : 'border-l-4 border-orange-300 bg-gray-50');
-                const start = new Date(s.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const end = s.end ? new Date(s.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-                const timeRange = end ? `${start} - ${end}` : start;
-                const patientName = s.patient ? s.patient.name : 'Paciente';
+        async function renderMonth() {
+          const first = startOfMonth(view);
+          const last = endOfMonth(view);
+          // update label
+          monthLabelEl.textContent = `${
+            monthNames[view.getMonth()]
+          } ${view.getFullYear()}`;
+          // fetch events for range
+          const events = await fetchMonthEvents(first, last);
+          renderGrid(events);
+        }
 
-                const el = document.createElement('div');
-                el.className = `${statusClass} rounded-r-soft p-4`;
-                el.innerHTML = `
+        async function loadDaySessions(year, month, day) {
+          const dateStr = `${year}-${pad(month)}-${pad(day)}`;
+          try {
+            const res = await fetch(`/api/sessions/day?date=${dateStr}`);
+            if (!res.ok) throw new Error("Error fetching sessions");
+            const data = await res.json();
+            renderDaySessions(data);
+          } catch (err) {
+            daySessionsContainer.innerHTML = `<p class="text-sm text-red-500">No se pudieron cargar las sesiones. ${err.message}</p>`;
+          }
+        }
+
+        function renderDaySessions(data) {
+          const sessions = data.sessions || [];
+          dayTitle.textContent = `Sesiones — ${data.date}`;
+          daySubtitle.textContent = sessions.length
+            ? `${sessions.length} sesión(es) encontradas`
+            : "No hay sesiones para esta fecha";
+          if (!sessions.length) {
+            daySessionsContainer.innerHTML = `<p class="text-sm text-gray-500">No hay sesiones para esta fecha.</p>`;
+            return;
+          }
+          daySessionsContainer.innerHTML = "";
+          sessions.forEach((s) => {
+            const statusClass =
+              s.status === "scheduled"
+                ? "border-l-4 border-primary bg-lightGreen bg-opacity-30"
+                : s.status === "completed"
+                ? "border-l-4 border-blue-300 bg-gray-50"
+                : "border-l-4 border-orange-300 bg-gray-50";
+            const start = new Date(s.start).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const end = s.end
+              ? new Date(s.end).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "";
+            const timeRange = end ? `${start} - ${end}` : start;
+            const patientName = s.patient ? s.patient.name : "Paciente";
+
+            const el = document.createElement("div");
+            el.className = `${statusClass} rounded-r-soft p-4`;
+            el.innerHTML = `
                     <div class="flex items-start justify-between mb-2">
                         <span class="text-xs font-semibold text-primary">${timeRange}</span>
-                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">${s.status}</span>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">${
+                          s.status
+                        }</span>
                     </div>
                     <p class="font-semibold text-textDark mb-1">${patientName}</p>
-                    <p class="text-xs text-gray-600">${s.title || ''}</p>
+                    <p class="text-xs text-gray-600">${s.title || ""}</p>
                 `;
-                daySessionsContainer.appendChild(el);
-            });
+            daySessionsContainer.appendChild(el);
+          });
         }
 
-        prevBtn.addEventListener('click', () => { view = new Date(view.getFullYear(), view.getMonth()-1, 1); renderMonth(); });
-        nextBtn.addEventListener('click', () => { view = new Date(view.getFullYear(), view.getMonth()+1, 1); renderMonth(); });
+        prevBtn.addEventListener("click", () => {
+          view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+          renderMonth();
+        });
+        nextBtn.addEventListener("click", () => {
+          view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+          renderMonth();
+        });
 
         // initial render
         renderMonth();
-    });
+      });
     </script>
-            </div>
-{% endblock %}
+  </div>
+  {% endblock %}
+</div>

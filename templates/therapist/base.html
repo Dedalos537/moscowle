@@ -1,256 +1,356 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Centro de Terapias{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#75a83a',
-                        background: '#f9fcf8',
-                        surface: '#ffffff',
-                        textDark: '#374151',
-                        lightGreen: '#ecfccb',
-                        statusGreen: '#10b981',
-                        statusYellow: '#f59e0b',
-                        statusRed: '#ef4444'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif']
-                    },
-                    borderRadius: {
-                        'soft': '1.5rem'
-                    },
-                    boxShadow: {
-                        'soft': '0 10px 30px -5px rgba(117, 168, 58, 0.15)',
-                        'soft-lg': '0 20px 40px -10px rgba(117, 168, 58, 0.2)'
-                    }
-                }
-            }
-        }
+      window.FontAwesomeConfig = { autoReplaceSvg: "nest" };
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#75a83a",
+              background: "#f9fcf8",
+              surface: "#ffffff",
+              textDark: "#374151",
+              lightGreen: "#ecfccb",
+              statusGreen: "#10b981",
+              statusYellow: "#f59e0b",
+              statusRed: "#ef4444",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              soft: "1.5rem",
+            },
+            boxShadow: {
+              soft: "0 10px 30px -5px rgba(117, 168, 58, 0.15)",
+              "soft-lg": "0 20px 40px -10px rgba(117, 168, 58, 0.2)",
+            },
+          },
+        },
+      };
     </script>
     <style>
-        ::-webkit-scrollbar { display: none; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+      ::-webkit-scrollbar {
+        display: none;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
         }
-        .fade-in-content {
-            animation: fadeIn 0.5s ease-in-out;
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
+      }
+      .fade-in-content {
+        animation: fadeIn 0.5s ease-in-out;
+      }
     </style>
-</head>
-<body class="bg-background font-sans text-textDark">
-
-<div id="sidebar" class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto">
-    <div id="logo-section" class="px-8 py-8 border-b border-gray-100">
+  </head>
+  <body class="bg-background font-sans text-textDark">
+    <div
+      id="sidebar"
+      class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto"
+    >
+      <div id="logo-section" class="px-8 py-8 border-b border-gray-100">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-primary rounded-soft flex items-center justify-center">
-                <i class="fa-solid fa-brain text-white text-xl"></i>
-            </div>
-            <div>
-                <h1 class="text-lg font-bold text-textDark leading-tight">Centro de Terapias</h1>
-                <p class="text-xs text-gray-500 font-medium">Juan Pablo II</p>
-            </div>
+          <div
+            class="w-12 h-12 bg-primary rounded-soft flex items-center justify-center"
+          >
+            <i class="fa-solid fa-brain text-white text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-textDark leading-tight">
+              Centro de Terapias
+            </h1>
+            <p class="text-xs text-gray-500 font-medium">Juan Pablo II</p>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
-        <a href="{{ url_for('dashboard') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-chart-line text-lg"></i>
-            <span class="font-semibold">Dashboard</span>
+      <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
+        <a
+          href="{{ url_for('dashboard') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-chart-line text-lg"></i>
+          <span class="font-semibold">Dashboard</span>
         </a>
-        <a href="{{ url_for('manage_patients') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-users text-lg"></i>
-            <span class="font-medium">Pacientes</span>
+        <a
+          href="{{ url_for('manage_patients') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-users text-lg"></i>
+          <span class="font-medium">Pacientes</span>
         </a>
-        <a href="{{ url_for('games_list') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-gamepad text-lg"></i>
-            <span class="font-medium">Ejercicios</span>
+        <a
+          href="{{ url_for('games_list') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-gamepad text-lg"></i>
+          <span class="font-medium">Ejercicios</span>
         </a>
-        <a href="{{ url_for('analytics') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-chart-line text-lg"></i>
-            <span class="font-medium">IA Analytics</span>
+        <a
+          href="{{ url_for('analytics') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-chart-line text-lg"></i>
+          <span class="font-medium">IA Analytics</span>
         </a>
-        <a href="{{ url_for('sessions') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-calendar-check text-lg"></i>
-            <span class="font-medium">Sesiones</span>
+        <a
+          href="{{ url_for('sessions') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-calendar-check text-lg"></i>
+          <span class="font-medium">Sesiones</span>
         </a>
-        <a href="{{ url_for('calendar_therapist') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'calendar' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-calendar-days text-lg"></i>
-            <span class="font-medium">Calendario</span>
+        <a
+          href="{{ url_for('reports') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-file-alt text-lg"></i>
+          <span class="font-medium">Reportes</span>
         </a>
-        <a href="{{ url_for('reports') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-file-alt text-lg"></i>
-            <span class="font-medium">Reportes</span>
+        <a
+          href="{{ url_for('messages_list') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative"
+        >
+          <i class="fa-solid fa-comments text-lg"></i>
+          <span class="font-medium">Mensajes</span>
+          <span
+            id="sidebar-unread-badge"
+            class="hidden absolute top-2 right-2 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold"
+          ></span>
         </a>
-        <a href="{{ url_for('messages_list') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
-            <i class="fa-solid fa-comments text-lg"></i>
-            <span class="font-medium">Mensajes</span>
-            <span id="sidebar-unread-badge" class="hidden absolute top-2 right-2 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold"></span>
+        <a
+          href="{{ url_for('profile') }}"
+          class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'profile' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all"
+        >
+          <i class="fa-solid fa-user-circle text-lg"></i>
+          <span class="font-medium">Perfil</span>
         </a>
-        <a href="{{ url_for('profile') }}" class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'profile' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-            <i class="fa-solid fa-user-circle text-lg"></i>
-            <span class="font-medium">Perfil</span>
-        </a>
-    </nav>
+      </nav>
 
-    <div id="user-profile" class="px-4 py-6 border-t border-gray-100">
+      <div id="user-profile" class="px-4 py-6 border-t border-gray-100">
         <div class="flex items-center gap-4 px-4">
-            <img src="https://ui-avatars.com/api/?name={{current_user.username}}&background=random" alt="Therapist" class="w-12 h-12 rounded-full object-cover">
-            <div class="flex-1">
-                <p class="font-semibold text-sm text-textDark">{{ current_user.username }}</p>
-                <p class="text-xs text-gray-500">Terapeuta Principal</p>
-            </div>
-            <a href="{{ url_for('logout') }}"><i class="fa-solid fa-sign-out-alt text-gray-400 text-sm hover:text-primary"></i></a>
+          <img
+            src="https://ui-avatars.com/api/?name={{current_user.username}}&background=random"
+            alt="Therapist"
+            class="w-12 h-12 rounded-full object-cover"
+          />
+          <div class="flex-1">
+            <p class="font-semibold text-sm text-textDark">
+              {{ current_user.username }}
+            </p>
+            <p class="text-xs text-gray-500">Terapeuta Principal</p>
+          </div>
+          <a href="{{ url_for('logout') }}"
+            ><i
+              class="fa-solid fa-sign-out-alt text-gray-400 text-sm hover:text-primary"
+            ></i
+          ></a>
         </div>
+      </div>
     </div>
-</div>
 
-<div id="main-content" class="ml-72 min-h-screen fade-in-content">
-    <header class="bg-surface border-b border-gray-100 px-8 py-5 sticky top-0 z-30">
+    <div id="main-content" class="ml-72 min-h-screen fade-in-content">
+      <header
+        class="bg-surface border-b border-gray-100 px-8 py-5 sticky top-0 z-30"
+      >
         <div class="flex items-center justify-between">
-            {% block header_content %}
-                <div>
-                    <h2 class="text-2xl font-bold text-textDark">Panel de Control</h2>
-                    <p class="text-sm text-gray-500">Monitoreo y gestión de pacientes</p>
-                </div>
-            {% endblock %}
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <button id="notification-bell" class="relative p-3 rounded-full bg-lightGreen text-primary hover:bg-primary hover:text-white transition-all">
-                        <i class="fa-solid fa-bell text-lg"></i>
-                        <span id="notification-count" class="absolute -top-1 -right-1 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold hidden"></span>
-                    </button>
-                    
-                    <div id="notification-popover" class="absolute right-0 mt-3 w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden">
-                        <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                            <h3 class="text-md font-bold text-textDark">Notificaciones</h3>
-                        </div>
-                        <div id="notification-list" class="p-2 max-h-96 overflow-y-auto">
-                        </div>
-                        <div class="p-2 bg-gray-50 text-center rounded-b-soft">
-                            <a href="#" id="mark-all-read" class="text-sm text-primary font-medium hover:underline">Marcar todas como leídas</a>
-                        </div>
-                    </div>
-                </div>
+          {% block header_content %}
+          <div>
+            <h2 class="text-2xl font-bold text-textDark">Panel de Control</h2>
+            <p class="text-sm text-gray-500">
+              Monitoreo y gestión de pacientes
+            </p>
+          </div>
+          {% endblock %}
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <button
+                id="notification-bell"
+                class="relative p-3 rounded-full bg-lightGreen text-primary hover:bg-primary hover:text-white transition-all"
+              >
+                <i class="fa-solid fa-bell text-lg"></i>
+                <span
+                  id="notification-count"
+                  class="absolute -top-1 -right-1 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold hidden"
+                ></span>
+              </button>
 
-                {% block header_action %}
-                <button class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-                    <i class="fas fa-plus mr-2"></i>
-                    Nueva Sesión
-                </button>
-                {% endblock %}
+              <div
+                id="notification-popover"
+                class="absolute right-0 mt-3 w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden"
+              >
+                <div
+                  class="p-4 border-b border-gray-100 flex justify-between items-center"
+                >
+                  <h3 class="text-md font-bold text-textDark">
+                    Notificaciones
+                  </h3>
+                </div>
+                <div
+                  id="notification-list"
+                  class="p-2 max-h-96 overflow-y-auto"
+                ></div>
+                <div class="p-2 bg-gray-50 text-center rounded-b-soft">
+                  <a
+                    href="#"
+                    id="mark-all-read"
+                    class="text-sm text-primary font-medium hover:underline"
+                    >Marcar todas como leídas</a
+                  >
+                </div>
+              </div>
             </div>
+
+            {% block header_action %}
+            <button
+              class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium"
+            >
+              <i class="fas fa-plus mr-2"></i>
+              Nueva Sesión
+            </button>
+            {% endblock %}
+          </div>
         </div>
-    </header>
-    {% block content %}{% endblock %}
-</div>
+      </header>
+      {% block content %}{% endblock %}
+    </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const notificationBell = document.getElementById('notification-bell');
-    const notificationPopover = document.getElementById('notification-popover');
-    const notificationList = document.getElementById('notification-list');
-    const notificationCount = document.getElementById('notification-count');
-    const markAllRead = document.getElementById('mark-all-read');
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const notificationBell = document.getElementById("notification-bell");
+        const notificationPopover = document.getElementById(
+          "notification-popover"
+        );
+        const notificationList = document.getElementById("notification-list");
+        const notificationCount = document.getElementById("notification-count");
+        const markAllRead = document.getElementById("mark-all-read");
 
-    function fetchNotifications() {
-        fetch('/api/notifications')
-            .then(response => response.json())
-            .then(data => {
-                notificationList.innerHTML = '';
-                if (data.length > 0) {
-                    notificationCount.textContent = data.length;
-                    notificationCount.classList.remove('hidden');
-                    data.forEach(notif => {
-                        const notifElement = `
+        function fetchNotifications() {
+          fetch("/api/notifications")
+            .then((response) => response.json())
+            .then((data) => {
+              notificationList.innerHTML = "";
+              if (data.length > 0) {
+                notificationCount.textContent = data.length;
+                notificationCount.classList.remove("hidden");
+                data.forEach((notif) => {
+                  const notifElement = `
                             <div class="p-3 hover:bg-lightGreen rounded-lg transition-colors">
                                 <div class="flex items-start gap-3">
                                     <div class="w-8 h-8 bg-lightGreen rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                                         <i class="fas fa-info-circle text-primary"></i>
                                     </div>
                                     <div>
-                                        <p class="text-sm text-textDark">${notif.message}</p>
-                                        <p class="text-xs text-gray-400 mt-1">${notif.timestamp}</p>
-                                        ${notif.link ? `<a href="${notif.link}" class="text-xs text-primary hover:underline">Ver detalles</a>` : ''}
+                                        <p class="text-sm text-textDark">${
+                                          notif.message
+                                        }</p>
+                                        <p class="text-xs text-gray-400 mt-1">${
+                                          notif.timestamp
+                                        }</p>
+                                        ${
+                                          notif.link
+                                            ? `<a href="${notif.link}" class="text-xs text-primary hover:underline">Ver detalles</a>`
+                                            : ""
+                                        }
                                     </div>
                                 </div>
                             </div>
                         `;
-                        notificationList.insertAdjacentHTML('beforeend', notifElement);
-                    });
-                } else {
-                    notificationCount.classList.add('hidden');
-                    notificationList.innerHTML = '<p class="text-sm text-gray-500 text-center p-8">No tienes notificaciones nuevas.</p>';
-                }
+                  notificationList.insertAdjacentHTML(
+                    "beforeend",
+                    notifElement
+                  );
+                });
+              } else {
+                notificationCount.classList.add("hidden");
+                notificationList.innerHTML =
+                  '<p class="text-sm text-gray-500 text-center p-8">No tienes notificaciones nuevas.</p>';
+              }
             });
-    }
+        }
 
-    notificationBell.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const isHidden = notificationPopover.classList.toggle('hidden');
-        if (!isHidden) {
+        notificationBell.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const isHidden = notificationPopover.classList.toggle("hidden");
+          if (!isHidden) {
             fetchNotifications();
             // Mark as read when opening
-            fetch('/api/notifications/mark-read', { method: 'POST' });
-        }
-    });
+            fetch("/api/notifications/mark-read", { method: "POST" });
+          }
+        });
 
-    markAllRead.addEventListener('click', (e) => {
-        e.preventDefault();
-        fetch('/api/notifications/mark-read', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    fetchNotifications();
-                }
+        markAllRead.addEventListener("click", (e) => {
+          e.preventDefault();
+          fetch("/api/notifications/mark-read", { method: "POST" })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                fetchNotifications();
+              }
             });
-    });
+        });
 
-    // Close popover if clicking outside
-    document.addEventListener('click', (event) => {
-        if (!notificationPopover.contains(event.target) && !notificationBell.contains(event.target)) {
-            notificationPopover.classList.add('hidden');
-        }
-    });
+        // Close popover if clicking outside
+        document.addEventListener("click", (event) => {
+          if (
+            !notificationPopover.contains(event.target) &&
+            !notificationBell.contains(event.target)
+          ) {
+            notificationPopover.classList.add("hidden");
+          }
+        });
 
-    // Initial fetch for the notification count
-    fetchNotifications();
+        // Initial fetch for the notification count
+        fetchNotifications();
 
-    // Poll for new notifications every 30 seconds
-    setInterval(fetchNotifications, 30000);
+        // Poll for new notifications every 30 seconds
+        setInterval(fetchNotifications, 30000);
 
-    // Fetch unread message count
-    function fetchUnreadMessages() {
-        fetch('/api/messages/unread-count')
-            .then(res => res.json())
-            .then(data => {
-                const badge = document.getElementById('sidebar-unread-badge');
-                if (data.count > 0) {
-                    badge.textContent = data.count > 9 ? '9+' : data.count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
+        // Fetch unread message count
+        function fetchUnreadMessages() {
+          fetch("/api/messages/unread-count")
+            .then((res) => res.json())
+            .then((data) => {
+              const badge = document.getElementById("sidebar-unread-badge");
+              if (data.count > 0) {
+                badge.textContent = data.count > 9 ? "9+" : data.count;
+                badge.classList.remove("hidden");
+              } else {
+                badge.classList.add("hidden");
+              }
             })
-            .catch(err => console.error('Error fetching unread messages:', err));
-    }
+            .catch((err) =>
+              console.error("Error fetching unread messages:", err)
+            );
+        }
 
-    // Initial fetch and poll every 30 seconds
-    fetchUnreadMessages();
-    setInterval(fetchUnreadMessages, 30000);
-});
-</script>
-
-</body>
+        // Initial fetch and poll every 30 seconds
+        fetchUnreadMessages();
+        setInterval(fetchUnreadMessages, 30000);
+      });
+    </script>
+  </body>
 </html>
