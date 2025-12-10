@@ -22,7 +22,7 @@
                         <div>
                             <label class="block text-sm font-medium text-charcoal mb-2">Nombre Completo</label>
                             <input type="text" id="username" value="{{ current_user.username or '' }}"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-charcoal mb-2">Correo Electrónico</label>
@@ -35,38 +35,38 @@
                         <div>
                             <label class="block text-sm font-medium text-charcoal mb-2">Teléfono</label>
                             <input type="tel" id="phone" value="{{ current_user.phone or '' }}"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-charcoal mb-2">Zona Horaria</label>
-                            <select id="timezone"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <option value="America/Lima" {% if current_user.timezone=='America/Lima' %}selected{%
-                                    endif %}>Lima (UTC-5)</option>
-                                <option value="America/New_York" {% if current_user.timezone=='America/New_York'
-                                    %}selected{% endif %}>New York (UTC-5)</option>
-                                <option value="America/Mexico_City" {% if current_user.timezone=='America/Mexico_City'
-                                    %}selected{% endif %}>Ciudad de México (UTC-6)</option>
-                                <option value="America/Bogota" {% if current_user.timezone=='America/Bogota'
-                                    %}selected{% endif %}>Bogotá (UTC-5)</option>
-                                <option value="America/Argentina/Buenos_Aires" {% if
-                                    current_user.timezone=='America/Argentina/Buenos_Aires' %}selected{% endif %}>Buenos
-                                    Aires (UTC-3)</option>
-                                <option value="Europe/Madrid" {% if current_user.timezone=='Europe/Madrid' %}selected{%
-                                    endif %}>Madrid (UTC+1)</option>
-                            </select>
+                            <label class="block text-sm font-medium text-charcoal mb-2">Fecha de Nacimiento</label>
+                            <input type="date" id="date_of_birth"
+                                value="{{ current_user.date_of_birth.strftime('%Y-%m-%d') if current_user.date_of_birth else '' }}"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
                         </div>
+                    </div>
+
+
+                    <div>
+                        <label class="block text-sm font-medium text-charcoal mb-2">Zona Horaria</label>
+                        <select id="timezone"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
+                            <option value="America/Lima" {% if current_user.timezone=='America/Lima' %}selected{% endif %}>Lima (UTC-5)</option>
+                            <option value="America/New_York" {% if current_user.timezone=='America/New_York' %}selected{% endif %}>New York (UTC-5)</option>
+                            <option value="America/Mexico_City" {% if current_user.timezone=='America/Mexico_City' %}selected{% endif %}>Ciudad de México (UTC-6)</option>
+                            <option value="America/Bogota" {% if current_user.timezone=='America/Bogota' %}selected{% endif %}>Bogotá (UTC-5)</option>
+                            <option value="America/Argentina/Buenos_Aires" {% if current_user.timezone=='America/Argentina/Buenos_Aires' %}selected{% endif %}>Buenos Aires (UTC-3)</option>
+                            <option value="Europe/Madrid" {% if current_user.timezone=='Europe/Madrid' %}selected{% endif %}>Madrid (UTC+1)</option>
+                        </select>
                     </div>
 
                     <div class="pt-4">
                         <button type="submit"
-                            class="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors">
+                            class="bg-olive text-white px-8 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
                             <i class="fas fa-save mr-2"></i>Guardar Cambios
                         </button>
                     </div>
                 </form>
             </div>
-
             <!-- Change Password -->
             <div class="bg-white rounded-soft shadow-soft p-6">
                 <h3 class="text-xl font-semibold text-charcoal mb-6">Cambiar Contraseña</h3>
@@ -74,21 +74,59 @@
                     <div>
                         <label class="block text-sm font-medium text-charcoal mb-2">Contraseña Actual</label>
                         <input type="password" id="current_password"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-charcoal mb-2">Nueva Contraseña</label>
                         <input type="password" id="new_password"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent"
+                            placeholder="Ingresa tu nueva contraseña">
+
+                        <!-- Password Strength Bar -->
+                        <div class="mt-3 space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="strengthBar" class="h-full w-0 transition-all duration-300 rounded-full"></div>
+                                </div>
+                                <span id="strengthText" class="text-sm font-medium text-gray-500 min-w-max">Muy débil</span>
+                            </div>
+                            <div id="strengthRequirements" class="text-xs space-y-1">
+                                <div id="req-length" class="flex items-center space-x-2 text-gray-500">
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
+                                    <span>Mínimo 8 caracteres</span>
+                                </div>
+                                <div id="req-uppercase" class="flex items-center space-x-2 text-gray-500">
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
+                                    <span>Una letra mayúscula</span>
+                                </div>
+                                <div id="req-lowercase" class="flex items-center space-x-2 text-gray-500">
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
+                                    <span>Una letra minúscula</span>
+                                </div>
+                                <div id="req-number" class="flex items-center space-x-2 text-gray-500">
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
+                                    <span>Un número</span>
+                                </div>
+                                <div id="req-special" class="flex items-center space-x-2 text-gray-500">
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
+                                    <span>Un carácter especial (!@#$%)</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-charcoal mb-2">Confirmar Nueva Contraseña</label>
                         <input type="password" id="confirm_password"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent"
+                            placeholder="Confirma tu nueva contraseña">
+                        <div id="confirmMatch" class="mt-2 text-sm hidden">
+                            <i id="matchIcon" class="fas mr-1"></i>
+                            <span id="matchText"></span>
+                        </div>
                     </div>
                     <div class="pt-4">
                         <button type="submit"
-                            class="bg-accent text-white px-8 py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors">
+                            class="bg-blue-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors">
                             <i class="fas fa-key mr-2"></i>Cambiar Contraseña
                         </button>
                     </div>
@@ -113,8 +151,7 @@
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-gray-600 mb-1">Miembro Desde</p>
-                        <p class="text-xl font-semibold text-charcoal">{{ current_user.created_at.strftime('%b %Y') }}
-                        </p>
+                        <p class="text-xl font-semibold text-charcoal">{{ current_user.created_at.strftime('%b %Y') }}</p>
                     </div>
                 </div>
             </div>
@@ -124,10 +161,8 @@
         <!-- Profile Summary -->
         <div class="space-y-6">
             <div class="bg-white rounded-soft shadow-soft p-6 text-center">
-                <div
-                    class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent mx-auto mb-4 flex items-center justify-center">
-                    <span class="text-white text-4xl font-bold">{{ current_user.username[0].upper() if
-                        current_user.username else 'T' }}</span>
+                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent mx-auto mb-4 flex items-center justify-center">
+                    <span class="text-white text-4xl font-bold">{{ current_user.username[0].upper() if current_user.username else 'T' }}</span>
                 </div>
                 <h3 class="text-xl font-bold text-charcoal mb-1">{{ current_user.username or 'Terapeuta' }}</h3>
                 <p class="text-sm text-gray-500 mb-4">Terapeuta</p>
@@ -151,17 +186,80 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Alert -->
+<div id="alertModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden">
+        <div id="modalHeader" class="px-6 py-4 border-b flex items-center space-x-3">
+            <i id="modalIcon" class="fas text-2xl"></i>
+            <h3 id="modalTitle" class="text-lg font-semibold text-charcoal"></h3>
+        </div>
+        <div class="px-6 py-4">
+            <p id="modalMessage" class="text-gray-700"></p>
+        </div>
+        <div class="px-6 py-4 bg-gray-50 border-t flex justify-end">
+            <button id="modalButton" class="px-6 py-2 bg-olive text-white rounded-lg font-medium hover:bg-green-600 transition-colors">
+                Aceptar
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    body.modal-open { overflow: hidden; }
+</style>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+    function showAlert(type, title, message) {
+        const modal = document.getElementById('alertModal');
+        const icon = document.getElementById('modalIcon');
+        const titleElem = document.getElementById('modalTitle');
+        const msgElem = document.getElementById('modalMessage');
+        const header = document.getElementById('modalHeader');
+        
+        // Set icon and colors based on type
+        if (type === 'success') {
+            icon.className = 'fas fa-check-circle text-green-500';
+            header.className = 'px-6 py-4 border-b border-green-200 bg-green-50 flex items-center space-x-3';
+        } else if (type === 'error') {
+            icon.className = 'fas fa-exclamation-circle text-red-500';
+            header.className = 'px-6 py-4 border-b border-red-200 bg-red-50 flex items-center space-x-3';
+        } else {
+            icon.className = 'fas fa-info-circle text-blue-500';
+            header.className = 'px-6 py-4 border-b border-blue-200 bg-blue-50 flex items-center space-x-3';
+        }
+        
+        titleElem.textContent = title;
+        msgElem.textContent = message;
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        
+        // Close modal on button click
+        document.getElementById('modalButton').onclick = () => {
+            modal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        };
+        
+        // Close modal on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-open');
+            }
+        };
+    }
+
     // Profile Form
     document.getElementById('profileForm').addEventListener('submit', (e) => {
         e.preventDefault();
-
+        
         const formData = {
             username: document.getElementById('username').value,
             phone: document.getElementById('phone').value,
+            date_of_birth: document.getElementById('date_of_birth').value,
             timezone: document.getElementById('timezone').value
         };
 
@@ -172,36 +270,128 @@
             },
             body: JSON.stringify(formData)
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    location.reload();
-                } else {
-                    alert('❌ ' + data.message);
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('❌ Error al actualizar el perfil');
-            });
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Éxito', data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showAlert('error', 'Error', data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showAlert('error', 'Error', 'Error al actualizar el perfil');
+        });
     });
 
-    // Password Form
+    // Password Strength Analyzer
+    const newPasswordInput = document.getElementById('new_password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    
+    function analyzePasswordStrength(password) {
+        let strength = 0;
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+        };
+        
+        // Update requirement indicators
+        updateRequirement('length', requirements.length);
+        updateRequirement('uppercase', requirements.uppercase);
+        updateRequirement('lowercase', requirements.lowercase);
+        updateRequirement('number', requirements.number);
+        updateRequirement('special', requirements.special);
+        
+        // Calculate strength
+        if (requirements.length) strength++;
+        if (requirements.uppercase) strength++;
+        if (requirements.lowercase) strength++;
+        if (requirements.number) strength++;
+        if (requirements.special) strength++;
+        
+        return { strength, requirements };
+    }
+    
+    function updateRequirement(id, met) {
+        const elem = document.getElementById(`req-${id}`);
+        if (met) {
+            elem.classList.remove('text-gray-500');
+            elem.classList.add('text-green-600');
+            elem.querySelector('i').className = 'fas fa-check-circle text-green-500';
+        } else {
+            elem.classList.remove('text-green-600');
+            elem.classList.add('text-gray-500');
+            elem.querySelector('i').className = 'fas fa-circle text-gray-300 text-[6px]';
+        }
+    }
+    
+    function updateStrengthBar() {
+        const password = newPasswordInput.value;
+        const { strength } = analyzePasswordStrength(password);
+        
+        const bar = document.getElementById('strengthBar');
+        const text = document.getElementById('strengthText');
+        
+        const percentages = [0, 20, 40, 60, 80, 100];
+        const labels = ['Muy débil', 'Débil', 'Regular', 'Buena', 'Fuerte', 'Muy fuerte'];
+        const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500', 'bg-green-600'];
+        
+        bar.style.width = percentages[strength] + '%';
+        bar.className = `h-full transition-all duration-300 rounded-full ${colors[strength]}`;
+        text.textContent = labels[strength];
+        text.className = `text-sm font-medium min-w-max`;
+        
+        if (strength <= 1) text.classList.add('text-red-600');
+        else if (strength === 2) text.classList.add('text-yellow-600');
+        else if (strength === 3) text.classList.add('text-blue-600');
+        else text.classList.add('text-green-600');
+    }
+    
+    function checkPasswordMatch() {
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        const matchDiv = document.getElementById('confirmMatch');
+        const matchIcon = document.getElementById('matchIcon');
+        const matchText = document.getElementById('matchText');
+        
+        if (confirmPassword.length === 0) {
+            matchDiv.classList.add('hidden');
+            return;
+        }
+        
+        matchDiv.classList.remove('hidden');
+        
+        if (newPassword === confirmPassword) {
+            matchIcon.className = 'fas fa-check-circle text-green-500';
+            matchText.textContent = 'Las contraseñas coinciden';
+            matchText.className = 'text-green-600';
+        } else {
+            matchIcon.className = 'fas fa-times-circle text-red-500';
+            matchText.textContent = 'Las contraseñas no coinciden';
+            matchText.className = 'text-red-600';
+        }
+    }
+    
+    newPasswordInput.addEventListener('input', updateStrengthBar);
+    confirmPasswordInput.addEventListener('input', checkPasswordMatch);
     document.getElementById('passwordForm').addEventListener('submit', (e) => {
         e.preventDefault();
-
+        
         const currentPassword = document.getElementById('current_password').value;
         const newPassword = document.getElementById('new_password').value;
         const confirmPassword = document.getElementById('confirm_password').value;
 
         if (newPassword !== confirmPassword) {
-            alert('❌ Las contraseñas no coinciden');
+            showAlert('error', 'Error', 'Las contraseñas no coinciden');
             return;
         }
 
         if (newPassword.length < 6) {
-            alert('❌ La contraseña debe tener al menos 6 caracteres');
+            showAlert('error', 'Error', 'La contraseña debe tener al menos 6 caracteres');
             return;
         }
 
@@ -215,19 +405,19 @@
                 new_password: newPassword
             })
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ ' + data.message);
-                    document.getElementById('passwordForm').reset();
-                } else {
-                    alert('❌ ' + data.message);
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('❌ Error al cambiar la contraseña');
-            });
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', 'Éxito', data.message);
+                document.getElementById('passwordForm').reset();
+            } else {
+                showAlert('error', 'Error', data.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showAlert('error', 'Error', 'Error al cambiar la contraseña');
+        });
     });
 </script>
 {% endblock %}

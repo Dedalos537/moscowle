@@ -28,14 +28,14 @@
         {% endwith %}
 
         <!-- Login Form -->
-        <form method="POST">
+        <form method="POST" id="loginForm">
             <div class="input-group">
                 <label class="input-label">Correo Electrónico</label>
                 <div style="position: relative;">
                     <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--color-text-light);">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                     </span>
-                    <input type="email" name="email" class="input" placeholder="usuario@ejemplo.com" style="padding-left: 2.75rem;" required>
+                    <input type="email" id="email" name="email" class="input" placeholder="usuario@ejemplo.com" style="padding-left: 2.75rem;" required>
                 </div>
             </div>
             
@@ -45,7 +45,10 @@
                     <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--color-text-light);">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </span>
-                    <input type="password" name="password" class="input" placeholder="Ingresa tu contraseña" style="padding-left: 2.75rem;" required>
+                    <input type="password" id="password" name="password" class="input" placeholder="Ingresa tu contraseña" style="padding-left: 2.75rem; padding-right: 2.75rem;" required>
+                    <button type="button" id="togglePassword" aria-label="Mostrar/Ocultar" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: transparent; border: none; cursor: pointer; color: var(--color-text-light);">
+                        <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
                 </div>
             </div>
 
@@ -56,7 +59,7 @@
                 <a href="#" class="text-sm" style="color: var(--color-primary); text-decoration: none; font-weight: 500;">¿Olvidaste tu contraseña?</a>
             </div>
 
-            <button type="submit" class="btn btn-primary full-width" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <button type="submit" id="loginBtn" class="btn full-width" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; background-color: #e5e7eb; color: #9ca3af;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
                 Iniciar Sesión
             </button>
@@ -66,7 +69,7 @@
         <!-- Footer -->
         <div class="mt-4 text-sm text-muted">
             <p style="text-align: center; font-size: 0.8rem; color: gray; margin-top: 1rem;">
-                Prueba: <b>mamiebamos2@gmail.com</b> / @dm1n_123!
+                Prueba: <b>mamiebamos2@gmail.com</b> / @dm1N_123!
             </p>
         </div>
         <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border);" class="text-xs text-muted">
@@ -74,4 +77,54 @@
         </div>
     </div>
 </div>
+<script>
+    (function(){
+        const email = document.getElementById('email');
+        const password = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        function setBtnValid(valid){
+            if(valid){
+                loginBtn.classList.add('primary');
+                loginBtn.style.backgroundColor = '';
+                loginBtn.style.color = '';
+            } else {
+                loginBtn.classList.remove('primary');
+                loginBtn.style.backgroundColor = '#e5e7eb';
+                loginBtn.style.color = '#9ca3af';
+            }
+        }
+
+        function debounce(fn, delay){
+            let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); };
+        }
+
+        async function validate(){
+            const e = (email.value || '').trim();
+            const p = password.value || '';
+            if(!e || !p){ setBtnValid(false); return; }
+            try{
+                const res = await fetch('/api/auth/validate',{
+                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:e, password:p})
+                });
+                const data = await res.json();
+                setBtnValid(Boolean(data && data.valid));
+            }catch(err){ setBtnValid(false); }
+        }
+
+        const debouncedValidate = debounce(validate, 250);
+        email.addEventListener('input', debouncedValidate);
+        password.addEventListener('input', debouncedValidate);
+
+        togglePassword.addEventListener('click', function(){
+            const isHidden = password.getAttribute('type') === 'password';
+            password.setAttribute('type', isHidden ? 'text' : 'password');
+            eyeIcon.innerHTML = isHidden
+                ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.88m3.38-1.71A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.77 21.77 0 0 1-3.16 4.19"/><line x1="1" y1="1" x2="23" y2="23"></line>'
+                : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+        });
+    })();
+</script>
 {% endblock %}
