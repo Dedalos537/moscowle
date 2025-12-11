@@ -192,6 +192,26 @@
     {% endwith %}
 
     <!-- Notifications Script -->
+        <!-- Toast Utility -->
+        <div id="toast-container" class="fixed top-6 right-6 z-50 space-y-3"></div>
+        <script>
+            function showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const el = document.createElement('div');
+                el.className = `bg-white border-l-4 ${type === 'error' ? 'border-red-500' : 'border-olive'} rounded-lg shadow-lg p-4 max-w-sm`;
+                el.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas ${type === 'error' ? 'fa-exclamation-circle text-red-500' : 'fa-check-circle text-olive'} text-xl mr-3"></i>
+                        <p class="text-charcoal">${message}</p>
+                    </div>`;
+                container.appendChild(el);
+                setTimeout(() => {
+                    el.classList.add('opacity-0');
+                    el.style.transition = 'opacity 0.4s';
+                    setTimeout(() => el.remove(), 400);
+                }, 2000);
+            }
+        </script>
     <script>
         let notificationsOpen = false;
         
@@ -265,6 +285,7 @@
                 .then(res => res.json())
                 .then(() => {
                     loadNotifications();
+                    showToast('Notificaciones marcadas como leídas');
                 })
                 .catch(err => console.error('Error marking notifications as read:', err));
         });

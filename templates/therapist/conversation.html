@@ -50,8 +50,8 @@
                     <textarea id="messageBody" rows="3" placeholder="Escribe tu mensaje..." 
                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent resize-none"></textarea>
                 </div>
-                <button type="submit" class="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
-                    <i class="fas fa-paper-plane mr-2"></i>Enviar
+                <button type="submit" id="sendBtn" class="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
+                    <span class="btn-label"><i class="fas fa-paper-plane mr-2"></i>Enviar</span>
                 </button>
             </form>
         </div>
@@ -68,11 +68,25 @@
     // Scroll to bottom on load
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-    messageForm.addEventListener('submit', (e) => {
+        const sendBtn = document.getElementById('sendBtn');
+        const btnLabel = sendBtn.querySelector('.btn-label');
+
+        function setSending(state) {
+            if (state) {
+                sendBtn.disabled = true;
+                btnLabel.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enviando…';
+            } else {
+                sendBtn.disabled = false;
+                btnLabel.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Enviar';
+            }
+        }
+
+        messageForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
         const body = messageBody.value.trim();
         if (!body) return;
+                setSending(true);
 
         fetch('/api/messages/send', {
             method: 'POST',
@@ -102,12 +116,15 @@
                 // Clear input
                 messageBody.value = '';
             } else {
-                alert('❌ Error al enviar mensaje');
+                const msg = (data.errors && JSON.stringify(data.errors)) || data.message || 'Error al enviar mensaje';
+                showToast(`❌ ${msg}`, 'error');
             }
+            setSending(false);
         })
         .catch(err => {
             console.error('Error:', err);
-            alert('❌ Error al enviar mensaje');
+            showToast('❌ Error al enviar mensaje', 'error');
+            setSending(false);
         });
     });
 </script>

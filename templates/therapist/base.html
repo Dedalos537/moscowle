@@ -69,6 +69,23 @@
 </head>
 
 <body class="bg-background font-sans text-textDark">
+  <!-- Toast Utility -->
+  <div id="toast-container" class="fixed top-6 right-6 z-50 space-y-3"></div>
+  <script>
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `bg-white border-l-4 ${type === 'error' ? 'border-statusRed' : 'border-olive'} rounded-lg shadow-lg p-4 max-w-sm`;
+      el.innerHTML = `
+        <div class=\"flex items-center\">\n          <i class=\"fas ${type === 'error' ? 'fa-exclamation-circle text-statusRed' : 'fa-check-circle text-olive'} text-xl mr-3\"></i>\n          <p class=\"text-charcoal\">${message}</p>\n        </div>`;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.classList.add('opacity-0');
+        el.style.transition = 'opacity 0.4s';
+        setTimeout(() => el.remove(), 400);
+      }, 2000);
+    }
+  </script>
   <div id="sidebar" class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto">
     <div id="logo-section" class="px-8 py-8 border-b border-gray-100">
       <div class="flex items-center gap-3">
@@ -305,6 +322,7 @@
           .then((data) => {
             if (data.success) {
               fetchNotifications();
+              showToast('Notificaciones marcadas como leídas');
             }
           });
       });

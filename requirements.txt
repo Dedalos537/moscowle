@@ -10,5 +10,6 @@ numpy<2
 pandas
 scikit-learn
 joblib
+marshmallow>=3.21.0
 Werkzeug==2.3.8
 requests

@@ -155,7 +155,17 @@
           body: JSON.stringify({ email: emailEl.value, username: userEl.value, role: roleEl.value })
         });
         const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.message || 'Error al crear');
+        if (!res.ok || !data.success) {
+          const errs = data.errors || {};
+          // Clear previous errors
+          [emailEl, userEl, roleEl].forEach(el => el.classList.remove('border-red-500'));
+          if (errs.email) emailEl.classList.add('border-red-500');
+          if (errs.username) userEl.classList.add('border-red-500');
+          if (errs.role) roleEl.classList.add('border-red-500');
+          const msg = data.message || 'Error al crear';
+          showToast(`${msg}${Object.keys(errs).length ? ': ' + JSON.stringify(errs) : ''}`, 'error');
+          throw new Error(msg);
+        }
         statusEl.textContent = `Creado. Contraseña temporal: ${data.temp_password}`;
         showToast('Usuario creado', 'success');
         setTimeout(() => window.location.reload(), 800);
@@ -184,7 +194,11 @@
             body: JSON.stringify({ patient_id: Number(patientId), therapist_id: Number(therapistId) })
           });
           const data = await res.json();
-          if (!res.ok || !data.success) throw new Error(data.message || 'Error al asignar');
+          if (!res.ok || !data.success) {
+            const msg = data.message || 'Error al asignar';
+            showToast(`${msg}${data.errors ? ': ' + JSON.stringify(data.errors) : ''}`, 'error');
+            throw new Error(msg);
+          }
           showToast('Terapeuta asignado', 'success');
         } catch (e) {
           showToast(e.message, 'error');
@@ -211,7 +225,15 @@
             body: JSON.stringify({ id, username: nameEl.value, role: roleEl.value, is_active: activeEl.checked })
           });
           const data = await res.json();
-          if (!res.ok || !data.success) throw new Error(data.message || 'Error al actualizar');
+          if (!res.ok || !data.success) {
+            const errs = data.errors || {};
+            [nameEl, roleEl].forEach(el => el && el.classList.remove('border-red-500'));
+            if (errs.username && nameEl) nameEl.classList.add('border-red-500');
+            if (errs.role && roleEl) roleEl.classList.add('border-red-500');
+            const msg = data.message || 'Error al actualizar';
+            showToast(`${msg}${Object.keys(errs).length ? ': ' + JSON.stringify(errs) : ''}`, 'error');
+            throw new Error(msg);
+          }
           showToast('Usuario actualizado', 'success');
         } catch (e) { showToast(e.message, 'error'); }
         finally {
@@ -235,7 +257,11 @@
             body: JSON.stringify({ id })
           });
           const data = await res.json();
-          if (!res.ok || !data.success) throw new Error(data.message || 'Error al eliminar');
+          if (!res.ok || !data.success) {
+            const msg = data.message || 'Error al eliminar';
+            showToast(msg, 'error');
+            throw new Error(msg);
+          }
           showToast('Usuario eliminado', 'success');
           window.location.reload();
         } catch (e) { showToast(e.message, 'error'); }

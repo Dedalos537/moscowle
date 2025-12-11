@@ -86,9 +86,13 @@
       }
     });
 
+    const sendBtn = document.getElementById('send');
     document.getElementById('send').addEventListener('click', async () => {
       if (!targetIds.length) { statusEl.textContent = 'Selecciona un destinatario'; return; }
       statusEl.textContent = 'Enviando...';
+      const prevTxt = sendBtn.textContent;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Enviando…';
       try {
         // Send individually for selected IDs
         let count = 0;
@@ -102,8 +106,13 @@
           count += 1;
         }
         statusEl.textContent = `Enviado a ${count} usuario(s).`;
+        showToast(`Mensaje enviado a ${count} usuario(s)`, 'success');
       } catch (e) {
         statusEl.textContent = e.message;
+        showToast(e.message || 'Error al enviar', 'error');
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = prevTxt;
       }
     });
   });

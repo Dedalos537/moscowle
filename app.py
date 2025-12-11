@@ -4,6 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message as MailMessage
 from authlib.integrations.flask_client import OAuth
 from models import SessionMetrics, db, User, Notification, Appointment, Message
+from schemas import CreateUserSchema, UpdateUserSchema, AssignTherapistSchema, SendMessageSchema
 from ai_service import predict_level, get_cluster, train_model
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
@@ -803,8 +804,11 @@ def api_create_session():
     db.session.commit()
 
     # Notifications: notify therapist and patient
-    create_notification(user_id=current_user.id, message=f'Sesión programada: {appt.title} — {start_time.strftime("%d %b %H:%M")}', link=url_for('sessions'))
-    create_notification(user_id=patient_id, message=f'Tienes una nueva sesión programada con {current_user.username} el {start_time.strftime("%d %b %H:%M")}', link=url_for('game'))
+    try:
+        create_notification(user_id=current_user.id, message=f'Sesión programada: {appt.title} — {start_time.strftime("%d %b %H:%M")}', link=url_for('sessions'))
+        create_notification(user_id=patient_id, message=f'Tienes una nueva sesión programada con {current_user.username} el {start_time.strftime("%d %b %H:%M")}', link=url_for('game'))
+    except Exception:
+        pass
 
     created = {
         'id': appt.id,
@@ -840,7 +844,10 @@ def api_update_session(session_id):
     db.session.commit()
 
     # Notify patient about update
-    create_notification(user_id=appt.patient_id, message=f'Se actualizó la sesión: {appt.title} — {appt.start_time.strftime("%d %b %H:%M") if appt.start_time else ""}')
+    try:
+        create_notification(user_id=appt.patient_id, message=f'Se actualizó la sesión: {appt.title} — {appt.start_time.strftime("%d %b %H:%M") if appt.start_time else ""}', link=url_for('calendar_patient'))
+    except Exception:
+        pass
 
     updated = {
         'id': appt.id,
@@ -868,8 +875,11 @@ def api_delete_session(session_id):
     db.session.delete(appt)
     db.session.commit()
 
-    create_notification(user_id=current_user.id, message=f'Sesión eliminada: {title}')
-    create_notification(user_id=patient_id, message=f'Tu sesión programada ({title}) ha sido cancelada.')
+    try:
+        create_notification(user_id=current_user.id, message=f'Sesión eliminada: {title}', link=url_for('sessions'))
+        create_notification(user_id=patient_id, message=f'Tu sesión programada ({title}) ha sido cancelada.', link=url_for('calendar_patient'))
+    except Exception:
+        pass
 
     return jsonify({'success': True})
 
@@ -961,10 +971,11 @@ def api_admin_assign_therapist():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
-    patient_id = data.get('patient_id')
-    therapist_id = data.get('therapist_id')
-    if not patient_id or not therapist_id:
-        return jsonify({'success': False, 'message': 'IDs requeridos'}), 400
+    errors = AssignTherapistSchema().validate(data)
+    if errors:
+        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
+    patient_id = data['patient_id']
+    therapist_id = data['therapist_id']
     patient = User.query.get(patient_id)
     therapist = User.query.get(therapist_id)
     if not patient or not therapist:
@@ -987,14 +998,14 @@ def api_admin_create_user():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
+    errors = CreateUserSchema().validate(data)
+    if errors:
+        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
     email = (data.get('email') or '').strip().lower()
     username = (data.get('username') or '').strip() or email.split('@')[0]
     role = (data.get('role') or '').strip().lower()
-    # Accept common alias
     if role == 'terapeuta':
         role = 'terapista'
-    if role not in ('terapista', 'jugador'):
-        return jsonify({'success': False, 'message': 'Rol inválido'}), 400
     try:
         valid = validate_email(email)
         email = valid.email
@@ -1132,9 +1143,10 @@ def api_admin_update_user():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
+    errors = UpdateUserSchema().validate(data)
+    if errors:
+        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
     user_id = data.get('id')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'ID requerido'}), 400
     u = User.query.get(user_id)
     if not u:
         return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
@@ -1870,9 +1882,10 @@ def complete_session(session_id):
     patient.game_profile = json.dumps(existing, ensure_ascii=False)
     db.session.commit()
 
-    # Optional: notify therapist
+    # Notify both therapist and patient about completion
     try:
-        create_notification(appt.therapist_id, f"Sesión #{appt.id} procesada. {plays} juegos registrados.")
+        create_notification(appt.therapist_id, f"Sesión #{appt.id} completada. {plays} juegos registrados.", link=url_for('reports'))
+        create_notification(appt.patient_id, f"Sesión completada. ¡Buen trabajo!", link=url_for('progress'))
     except Exception:
         pass
 
@@ -2219,13 +2232,13 @@ def messages_conversation(user_id):
 @app.route('/api/messages/send', methods=['POST'])
 @login_required
 def send_message():
-    data = request.json
+    data = request.get_json(silent=True) or {}
+    errors = SendMessageSchema().validate(data)
+    if errors:
+        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
     receiver_id = data.get('receiver_id')
     subject = data.get('subject')
     body = data.get('body')
-    
-    if not receiver_id or not body:
-        return jsonify({'success': False, 'message': 'Faltan datos requeridos'}), 400
     
     receiver = User.query.get(receiver_id)
     if not receiver:

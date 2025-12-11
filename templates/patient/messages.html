@@ -125,13 +125,23 @@
                 messageSubject.value = '';
                 messageBody.value = '';
             } else {
-                alert('❌ Error al enviar mensaje');
+                const msg = (data.errors && JSON.stringify(data.errors)) || data.message || 'Error al enviar mensaje';
+                // highlight invalid inputs
+                messageSubject.classList.remove('border-red-500');
+                messageBody.classList.remove('border-red-500');
+                if (data.errors && data.errors.subject) {
+                    messageSubject.classList.add('border-red-500');
+                }
+                if (data.errors && data.errors.body) {
+                    messageBody.classList.add('border-red-500');
+                }
+                showToast(`❌ ${msg}`, 'error');
             }
             setSending(false);
         })
         .catch(err => {
             console.error('Error:', err);
-            alert('❌ Error al enviar mensaje');
+            showToast('❌ Error al enviar mensaje', 'error');
             setSending(false);
         });
     });
