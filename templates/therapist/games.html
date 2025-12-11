@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block header_action %}
-<button class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+<button id="open-new-exercise" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
     <i class="fas fa-plus mr-2"></i>
     Nuevo Ejercicio
 </button>
@@ -80,5 +80,272 @@
                     </div>
                 </div>
             </div>
-        </div>
+
+                        <!-- Modal: Nuevo Ejercicio with tabs -->
+                        <div id="new-exercise-modal" class="hidden fixed inset-0 z-50 items-center justify-center">
+                            <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+                            <div class="relative bg-surface rounded-soft shadow-soft p-6 w-full max-w-4xl">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xl font-bold text-textDark">Nuevo Ejercicio</h3>
+                                    <button id="close-new-exercise" class="text-gray-500 hover:text-primary"><i class="fa-solid fa-times"></i></button>
+                                </div>
+                                <div class="border-b border-gray-100 mb-4 flex gap-2">
+                                    <button class="tab-btn px-4 py-2 rounded-full bg-gray-100 text-gray-700 font-medium" data-tab="playground">Playground</button>
+                                    <button class="tab-btn px-4 py-2 rounded-full text-gray-700 font-medium" data-tab="ai">Generar con IA</button>
+                                </div>
+                                <div id="tab-playground" class="tab-panel">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-lg font-semibold text-textDark">Playground de Juegos</h4>
+                                        <a href="{{ url_for('game') }}" class="px-4 py-2 rounded-full bg-primary text-white font-semibold shadow-soft hover:shadow-soft-lg">Probar Juego de Reflejos</a>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mb-4">Sube un archivo HTML de juego. Se servirá desde <code>/static/games/</code> y podrás previsualizarlo.</p>
+                                    <form id="upload-form" class="flex items-center gap-4 mb-4">
+                                        <input id="game-name" type="text" placeholder="nombre-del-juego" class="flex-1 px-4 py-2 border rounded-soft" />
+                                        <input id="game-file" type="file" accept=".html" class="px-4 py-2 border rounded-soft" />
+                                        <button type="submit" class="px-5 py-2 bg-primary text-white rounded-soft shadow-soft">Subir</button>
+                                    </form>
+                                    <div class="grid grid-cols-2 gap-6">
+                                        <div>
+                                            <h4 class="font-semibold text-textDark mb-2">Juegos Subidos</h4>
+                                            <ul id="games-list" class="space-y-2">
+                                                {% for g in custom_games or [] %}
+                                                    <li class="flex items-center justify-between p-2 rounded-soft bg-gray-50">
+                                                        <label class="flex items-center gap-3">
+                                                            <input type="checkbox" class="assign-check" value="{{ g }}" />
+                                                            <span class="text-sm text-textDark">{{ g }}</span>
+                                                        </label>
+                                                        <a class="text-primary text-sm font-medium" target="preview-frame" href="{{ url_for('static', filename='games/' + g) }}">Previsualizar</a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="text-sm text-gray-500">No hay juegos aún.</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-semibold text-textDark mb-2">Vista Previa</h4>
+                                            <iframe name="preview-frame" id="preview-frame" class="w-full h-[400px] rounded-soft border"></iframe>
+                                        </div>
+                                    </div>
+                                    <div class="mt-10">
+                                        <h4 class="font-semibold text-textDark mb-2">Asignar Juegos a una Sesión</h4>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="text-sm text-gray-600">Sesión (Próximas)</label>
+                                                <select id="session-select" class="w-full px-3 py-2 border rounded-soft"></select>
+                                            </div>
+                                            <div class="flex items-end">
+                                                <button id="assign-games" class="px-4 py-2 bg-primary text-white rounded-soft">Asignar seleccionados</button>
+                                                <button id="finalize-session" class="ml-3 px-4 py-2 bg-amber-500 text-white rounded-soft">Finalizar sesión</button>
+                                                <span id="assign-status" class="ml-3 text-sm text-gray-600"></span>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2">Selecciona juegos en la lista y asigna a la sesión elegida. Finalizar marcará la sesión como completada y agregará KPIs.</p>
+                                    </div>
+                                </div>
+                                <div id="tab-ai" class="tab-panel hidden">
+                                    <h4 class="text-lg font-semibold text-textDark mb-4">Generar Juego con IA</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-sm text-gray-600">Paciente</label>
+                                            <select id="patient-select" class="w-full px-3 py-2 border rounded-soft"></select>
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-600">Nombre del Juego</label>
+                                            <input id="ai-game-name" type="text" placeholder="reflejos-personalizado" class="w-full px-3 py-2 border rounded-soft" />
+                                        </div>
+                                    </div>
+                                    <label class="text-sm text-gray-600 mt-3 block">Prompt</label>
+                                    <textarea id="ai-prompt" class="w-full px-3 py-2 border rounded-soft" rows="5" placeholder="Genera un juego terapéutico con KPIs y tracking..."></textarea>
+                                    <div class="mt-3 flex items-center gap-3">
+                                        <button id="generate-ai-game" class="px-4 py-2 bg-primary text-white rounded-soft">Generar Juego</button>
+                                        <span id="ai-gen-status" class="text-sm text-gray-600"></span>
+                                    </div>
+                                    <div class="mt-6">
+                                        <h4 class="font-semibold text-textDark mb-2">Probar Recomendaciones de IA</h4>
+                                        <div class="flex items-center gap-3 mb-3">
+                                            <input id="acc-input" type="number" placeholder="precisión (%)" class="px-3 py-2 border rounded-soft" />
+                                            <input id="avg-input" type="number" placeholder="tiempo promedio (ms)" class="px-3 py-2 border rounded-soft" />
+                                            <button id="ask-ai" class="px-4 py-2 bg-primary text-white rounded-soft">Consultar IA</button>
+                                        </div>
+                                        <p id="ai-output" class="text-sm text-gray-700"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal controls
+    const openBtn = document.getElementById('open-new-exercise');
+    const modal = document.getElementById('new-exercise-modal');
+    const closeBtn = document.getElementById('close-new-exercise');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanels = {
+        playground: document.getElementById('tab-playground'),
+        ai: document.getElementById('tab-ai')
+    };
+    const showModal = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); };
+    const hideModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+    openBtn.addEventListener('click', showModal);
+    closeBtn.addEventListener('click', hideModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+    tabBtns.forEach(btn => btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('bg-gray-100'));
+        btn.classList.add('bg-gray-100');
+        const t = btn.dataset.tab;
+        Object.keys(tabPanels).forEach(k => {
+            if (k === t) tabPanels[k].classList.remove('hidden'); else tabPanels[k].classList.add('hidden');
+        });
+    }));
+    const uploadForm = document.getElementById('upload-form');
+    const gameName = document.getElementById('game-name');
+    const gameFile = document.getElementById('game-file');
+    const gamesList = document.getElementById('games-list');
+    const askBtn = document.getElementById('ask-ai');
+    const accInput = document.getElementById('acc-input');
+    const avgInput = document.getElementById('avg-input');
+    const aiOutput = document.getElementById('ai-output');
+    const patientSelect = document.getElementById('patient-select');
+    const aiPrompt = document.getElementById('ai-prompt');
+    const aiGameName = document.getElementById('ai-game-name');
+    const aiGenBtn = document.getElementById('generate-ai-game');
+    const aiGenStatus = document.getElementById('ai-gen-status');
+    const sessionSelect = document.getElementById('session-select');
+    const assignBtn = document.getElementById('assign-games');
+    const finalizeBtn = document.getElementById('finalize-session');
+    const assignStatus = document.getElementById('assign-status');
+
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = gameFile.files[0];
+        const name = (gameName.value || '').trim();
+        if (!file || !name) return alert('Selecciona archivo y nombre.');
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('name', name);
+        const res = await fetch('/api/games/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.status === 'ok') {
+            const li = document.createElement('li');
+            li.className = 'flex items-center justify-between p-2 rounded-soft bg-gray-50';
+            li.innerHTML = `<span class="text-sm text-textDark">${data.file}</span>
+                                            <a class="text-primary text-sm font-medium" target="preview-frame" href="${data.url}">Previsualizar</a>`;
+            gamesList.appendChild(li);
+            gameName.value = '';
+            gameFile.value = '';
+        } else {
+            alert('Error al subir: ' + (data.error || '')); 
+        }
+    });
+
+    askBtn.addEventListener('click', async () => {
+        const acc = parseFloat(accInput.value || '0');
+        const avg = parseFloat(avgInput.value || '0');
+        aiOutput.textContent = 'Consultando IA...';
+        const res = await fetch('/api/ai/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: 'Genera recomendación terapéutica personalizada',
+                context: { accuracy: acc, avg_time: avg }
+            })
+        });
+        const data = await res.json();
+        aiOutput.textContent = data.recommendation ? data.recommendation : (data.error || 'Sin respuesta');
+    });
+
+    // Load patients for select
+    (async () => {
+        try {
+            const res = await fetch('/api/patients');
+            const pts = await res.json();
+            patientSelect.innerHTML = pts.map(p => `<option value="${p.id}">${p.username || p.email}</option>`).join('');
+        } catch(e) {
+            patientSelect.innerHTML = '<option>Error cargando pacientes</option>'
+        }
+    })();
+
+    // Load upcoming sessions
+    (async () => {
+        try {
+            const res = await fetch('/api/sessions/upcoming');
+            const sessions = await res.json();
+            sessionSelect.innerHTML = sessions.map(s => `<option value="${s.id}">${s.patient} — ${new Date(s.start_time).toLocaleString()}</option>`).join('');
+        } catch(e) {
+            sessionSelect.innerHTML = '<option>Error cargando sesiones</option>'
+        }
+    })();
+
+    // Generate AI game for selected patient
+    aiGenBtn.addEventListener('click', async () => {
+        const userId = patientSelect.value;
+        const name = (aiGameName.value || 'ai_game').trim();
+        const prompt = (aiPrompt.value || '').trim();
+        if (!userId || !name || !prompt) {
+            aiGenStatus.textContent = 'Selecciona paciente, nombre y prompt.';
+            return;
+        }
+        aiGenStatus.textContent = 'Generando juego con IA...';
+        try {
+            const res = await fetch('/api/ai/generate_game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: parseInt(userId, 10), name, prompt })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                aiGenStatus.textContent = 'Juego generado.';
+                // add to list and preview
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between p-2 rounded-soft bg-gray-50';
+                li.innerHTML = `<span class="text-sm text-textDark">${data.file}</span>
+                                                <a class="text-primary text-sm font-medium" target="preview-frame" href="${data.url}">Previsualizar</a>`;
+                gamesList.appendChild(li);
+                // auto preview in iframe
+                document.getElementById('preview-frame').setAttribute('src', data.url);
+            } else {
+                aiGenStatus.textContent = 'Error: ' + (data.error || '');
+            }
+        } catch(err) {
+            aiGenStatus.textContent = 'Error generando juego';
+        }
+    });
+
+    // Assign selected games to session
+    assignBtn.addEventListener('click', async () => {
+        const sid = sessionSelect.value;
+        const checks = Array.from(document.querySelectorAll('.assign-check:checked'));
+        if (!sid || checks.length === 0) { assignStatus.textContent = 'Elige sesión y juegos.'; return; }
+        const games = checks.map(c => ({ name: c.value, url: `/static/games/${c.value}` }));
+        assignStatus.textContent = 'Asignando...';
+        try {
+            const res = await fetch('/api/sessions/assign-games', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: parseInt(sid, 10), games })
+            });
+            const data = await res.json();
+            assignStatus.textContent = data.status === 'ok' ? 'Asignado.' : ('Error: ' + (data.error || ''));
+        } catch(e) {
+            assignStatus.textContent = 'Error asignando.';
+        }
+    });
+
+    // Finalize session
+    finalizeBtn.addEventListener('click', async () => {
+        const sid = sessionSelect.value;
+        if (!sid) { assignStatus.textContent = 'Elige sesión.'; return; }
+        assignStatus.textContent = 'Finalizando sesión...';
+        try {
+            const res = await fetch(`/api/sessions/${sid}/complete`, { method: 'POST' });
+            const data = await res.json();
+            assignStatus.textContent = data.status === 'ok' ? 'Sesión finalizada.' : ('Error: ' + (data.error || ''));
+        } catch(e) {
+            assignStatus.textContent = 'Error finalizando.';
+        }
+    });
+});
+</script>
 {% endblock %}

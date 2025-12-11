@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Starter Game - Moscowle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, sans-serif; background:#f8fafc; color:#111827; }
+    .card { background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.05); padding:24px; max-width:800px; margin:40px auto; }
+    .btn { background:#16a34a; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-weight:600; cursor:pointer; }
+    .btn.secondary { background:#e5e7eb; color:#111827; }
+    #area { height:360px; background:linear-gradient(135deg,#f9fcf8 0%, #ecfccb 100%); border-radius:16px; position:relative; overflow:hidden; margin:12px 0; }
+    #dot { width:40px; height:40px; background:#dc2626; border-radius:50%; position:absolute; display:none; box-shadow:0 8px 20px rgba(220,38,38,0.35); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Starter Game (Click the dot)</h2>
+    <p>Demo para probar guardado y recomendaciones de IA.</p>
+    <div id="area">
+      <div id="dot"></div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="start" class="btn">Comenzar</button>
+      <button id="reset" class="btn secondary">Reiniciar</button>
+      <span id="stats">Intentos: 0 | Aciertos: 0 | Promedio: 0 ms</span>
+    </div>
+    <hr style="margin:20px 0;" />
+    <div>
+      <button id="save" class="btn">Guardar y pedir recomendación</button>
+      <p id="ai"></p>
+    </div>
+  </div>
+  <script>
+    const area = document.getElementById('area');
+    const dot = document.getElementById('dot');
+    const stats = document.getElementById('stats');
+    const start = document.getElementById('start');
+    const reset = document.getElementById('reset');
+    const saveBtn = document.getElementById('save');
+    const aiText = document.getElementById('ai');
+
+    let attempts = 0, hits = 0, times = [], startTime = 0, active = false;
+
+    start.addEventListener('click', () => { active = true; schedule(); });
+    reset.addEventListener('click', () => { attempts=0; hits=0; times=[]; update(); dot.style.display='none'; });
+    dot.addEventListener('click', () => {
+      if (!active || dot.style.display==='none') return;
+      const rt = Date.now() - startTime; times.push(rt); hits++; update(); dot.style.display='none'; schedule();
+    });
+
+    function update(){
+      const avg = times.length? Math.round(times.reduce((a,b)=>a+b,0)/times.length):0;
+      stats.textContent = `Intentos: ${attempts} | Aciertos: ${hits} | Promedio: ${avg} ms`;
+    }
+    function schedule(){
+      if (attempts>=10){ active=false; return; }
+      const delay = 800 + Math.random()*1000;
+      setTimeout(()=>{
+        if (!active) return;
+        const maxX = area.offsetWidth - 40, maxY = area.offsetHeight - 40;
+        dot.style.left = Math.floor(Math.random()*maxX) + 'px';
+        dot.style.top = Math.floor(Math.random()*maxY) + 'px';
+        dot.style.display='block'; startTime = Date.now(); attempts++; update();
+      }, delay);
+    }
+
+    saveBtn.addEventListener('click', async () => {
+      const accuracy = attempts? (hits/attempts)*100 : 0;
+      const avg = times.length? times.reduce((a,b)=>a+b,0)/times.length : 0; // ms
+      aiText.textContent = 'Guardando y solicitando IA...';
+      try {
+        const saveRes = await fetch('/api/save_game', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ game_name:'Starter Demo', accuracy, avg_time: avg/1000 }) // seconds for backend
+        });
+        const saveData = await saveRes.json();
+        const recBase = saveData.recommendation || 'Recomendación interna no disponible';
+        const aiRes = await fetch('/api/ai/gemini', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ prompt: 'Genera recomendación terapéutica personalizada', context: { accuracy, avg_time: avg } })
+        });
+        const aiData = await aiRes.json();
+        aiText.textContent = aiData.summary ? `${recBase} — ${aiData.summary}` : (aiData.recommendation || recBase);
+      } catch(err){
+        aiText.textContent = 'Error al consultar IA';
+      }
+    });
+  </script>
+</body>
+</html>

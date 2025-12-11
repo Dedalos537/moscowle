@@ -23,10 +23,13 @@ class User(db.Model, UserMixin):
     therapy_goals = db.Column(db.Text, nullable=True)
     timezone = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # JSON string for AI-generated game profile/config per user
+    game_profile = db.Column(db.Text, nullable=True)
 
 class SessionMetrics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=True)
     game_name = db.Column(db.String(100), nullable=False)
     accurracy = db.Column(db.Float, nullable=False)
     avg_time = db.Column(db.Float, nullable=False)
@@ -45,6 +48,8 @@ class Appointment(db.Model):
     status = db.Column(db.String(50), default='scheduled')  # scheduled, completed, cancelled
     location = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # JSON string list of assigned games for this session
+    games = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -8,6 +8,8 @@ from ai_service import predict_level, get_cluster, train_model
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
 from email_validator import validate_email, EmailNotValidError
+import requests
+import json
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -25,6 +27,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'moscowle_secret')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///moscowle.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
 
 # Email configuration
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -145,6 +148,27 @@ with app.app_context():
     if not os.path.exists('ai_models'): 
         os.mkdir('ai_models')
     db.create_all()
+    # Lightweight SQLite schema migration for newly added columns
+    try:
+        from sqlalchemy import text
+        conn = db.engine.connect()
+        # Check columns via PRAGMA and add if missing
+        def has_column(table, col):
+            rows = conn.execute(text(f"PRAGMA table_info({table})")).mappings().all()
+            return any(r['name'] == col for r in rows)
+        # user.game_profile
+        if not has_column('user', 'game_profile'):
+            conn.execute(text("ALTER TABLE user ADD COLUMN game_profile TEXT"))
+        # appointment.games
+        if not has_column('appointment', 'games'):
+            conn.execute(text("ALTER TABLE appointment ADD COLUMN games TEXT"))
+        # sessionmetrics.session_id
+        if not has_column('session_metrics', 'session_id'):
+            conn.execute(text("ALTER TABLE session_metrics ADD COLUMN session_id INTEGER REFERENCES appointment(id)"))
+        conn.close()
+    except Exception as e:
+        # Log but continue; in dev environments manual migration may be needed
+        app.logger.warning(f"Schema migration warning: {e}")
     train_model()
     
     # Create admin user (therapist)
@@ -194,79 +218,79 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/login/google')
-def login_google():
-    if not os.getenv('GOOGLE_CLIENT_ID') or os.getenv('GOOGLE_CLIENT_ID') == 'your_google_client_id_here':
-        flash('Error: Google Login no configurado. Revisa el archivo .env', 'error')
-        return redirect(url_for('login'))
-    redirect_uri = url_for('authorize_google', _external=True)
-    return google.authorize_redirect(redirect_uri)
+#@app.route('/login/google')
+#def login_google():
+ #   if not os.getenv('GOOGLE_CLIENT_ID') or os.getenv('GOOGLE_CLIENT_ID') == 'your_google_client_id_here':
+  #      flash('Error: Google Login no configurado. Revisa el archivo .env', 'error')
+   #     return redirect(url_for('login'))
+   # redirect_uri = url_for('authorize_google', _external=True)
+   # return google.authorize_redirect(redirect_uri)
 
-@app.route('/authorize/google')
-def authorize_google():
-    try:
-        token = google.authorize_access_token()
-        user_info = token.get('userinfo')
+#@app.route('/authorize/google')
+#def authorize_google():
+ #   try:
+  #      token = google.authorize_access_token()
+   #     user_info = token.get('userinfo')
         
-        if user_info:
-            email = user_info.get('email')
-            name = user_info.get('name', email.split('@')[0])
-            oauth_id = user_info.get('sub')
+    #    if user_info:
+      #      email = user_info.get('email')
+     #      name = user_info.get('name', email.split('@')[0])
+      #      oauth_id = user_info.get('sub')
             
             # Check if user exists
-            user = User.query.filter_by(email=email).first()
+       #     user = User.query.filter_by(email=email).first()
             
-            if user:
-                if user.oauth_provider != 'google':
-                    user.oauth_provider = 'google'
-                    user.oauth_id = oauth_id
-                    db.session.commit()
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Tu cuenta no está registrada. Por favor, contacta al administrador.', 'error')
-                return redirect(url_for('login'))
-    except Exception as e:
-        print(f"Error in Google OAuth: {str(e)}")
-        flash('Error al iniciar sesión con Google.', 'error')
-        return redirect(url_for('login'))
+        #    if user:
+         #       if user.oauth_provider != 'google':
+          #          user.oauth_provider = 'google'
+           #         user.oauth_id = oauth_id
+            #        db.session.commit()
+             #   login_user(user)
+              #  return redirect(url_for('dashboard'))
+           # else:
+           #     flash('Tu cuenta no está registrada. Por favor, contacta al administrador.', 'error')
+            #    return redirect(url_for('login'))
+    #except Exception as e:
+     #   print(f"Error in Google OAuth: {str(e)}")
+      #  flash('Error al iniciar sesión con Google.', 'error')
+       # return redirect(url_for('login'))
 
-@app.route('/login/microsoft')
-def login_microsoft():
-    if not os.getenv('MICROSOFT_CLIENT_ID') or os.getenv('MICROSOFT_CLIENT_ID') == 'your_microsoft_client_id_here':
-        flash('Error: Microsoft Login no configurado. Revisa el archivo .env', 'error')
-        return redirect(url_for('login'))
-    redirect_uri = url_for('authorize_microsoft', _external=True)
-    return microsoft.authorize_redirect(redirect_uri)
+#@app.route('/login/microsoft')
+#def login_microsoft():
+    #if not os.getenv('MICROSOFT_CLIENT_ID') or os.getenv('MICROSOFT_CLIENT_ID') == 'your_microsoft_client_id_here':
+        #flash('Error: Microsoft Login no configurado. Revisa el archivo .env', 'error')
+       # return redirect(url_for('login'))
+    #redirect_uri = url_for('authorize_microsoft', _external=True)
+    #return microsoft.authorize_redirect(redirect_uri)
 
-@app.route('/authorize/microsoft')
-def authorize_microsoft():
-    try:
-        token = microsoft.authorize_access_token()
-        user_info = token.get('userinfo')
+#@app.route('/authorize/microsoft')
+#def authorize_microsoft():
+    #try:
+        #token = microsoft.authorize_access_token()
+        #user_info = token.get('userinfo')
         
-        if user_info:
-            email = user_info.get('email')
-            name = user_info.get('name', email.split('@')[0])
-            oauth_id = user_info.get('sub')
+        #if user_info:
+         #   email = user_info.get('email')
+          #  name = user_info.get('name', email.split('@')[0])
+           # oauth_id = user_info.get('sub')
             
             # Check if user exists
-            user = User.query.filter_by(email=email).first()
+            #user = User.query.filter_by(email=email).first()
             
-            if user:
-                if user.oauth_provider != 'microsoft':
-                    user.oauth_provider = 'microsoft'
-                    user.oauth_id = oauth_id
-                    db.session.commit()
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Tu cuenta no está registrada. Por favor, contacta al administrador.', 'error')
-                return redirect(url_for('login'))
-    except Exception as e:
-        print(f"Error in Microsoft OAuth: {str(e)}")
-        flash('Error al iniciar sesión con Microsoft.', 'error')
-        return redirect(url_for('login'))
+            #if user:
+             #   if user.oauth_provider != 'microsoft':
+              #      user.oauth_provider = 'microsoft'
+               #     user.oauth_id = oauth_id
+                #    db.session.commit()
+                #login_user(user)
+                #return redirect(url_for('dashboard'))
+            #else:
+             #   flash('Tu cuenta no está registrada. Por favor, contacta al administrador.', 'error')
+              #  return redirect(url_for('login'))
+   #except Exception as e:
+    #    print(f"Error in Microsoft OAuth: {str(e)}")
+     #   flash('Error al iniciar sesión con Microsoft.', 'error')
+      #  return redirect(url_for('login'))
 
 @app.route('/dashboard')
 @login_required
@@ -401,6 +425,39 @@ def dashboard():
                                player_stats=player_stats,
                                active_page='dashboard')
 
+# Therapist insights API: weekly progress and alerts
+@app.route('/api/therapist/insights')
+@login_required
+def therapist_insights():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    # Build last 7 days average accuracy for all active patients
+    today = datetime.utcnow().date()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    series = []
+    for d in days:
+        day_start = datetime(d.year, d.month, d.day)
+        day_end = day_start + timedelta(days=1)
+        avg_acc = db.session.query(func.avg(SessionMetrics.accurracy))\
+            .filter(SessionMetrics.date >= day_start, SessionMetrics.date < day_end).scalar() or 0
+        series.append({'date': d.strftime('%Y-%m-%d'), 'avg_accuracy': round(avg_acc, 2)})
+
+    # Alerts: recent risky predictions (prediction==2)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    risky = SessionMetrics.query.filter(SessionMetrics.date >= seven_days_ago, SessionMetrics.prediction == 2)\
+        .order_by(SessionMetrics.date.desc()).limit(5).all()
+    alerts = []
+    for r in risky:
+        u = User.query.get(r.user_id)
+        alerts.append({
+            'type': 'red',
+            'patient': (u.username or u.email),
+            'message': f'Baja precisión ({int(r.accurracy)}%) en {r.game_name}. Sugerido apoyo.'
+        })
+
+    return jsonify({'weekly_progress': series, 'alerts': alerts})
+
 @app.route('/api/notifications')
 @login_required
 def get_notifications():
@@ -521,6 +578,30 @@ def api_get_sessions():
         })
 
     return jsonify(events)
+
+
+# Therapist upcoming sessions (compact list)
+@app.route('/api/sessions/upcoming', methods=['GET'])
+@login_required
+def api_upcoming_sessions():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+    now = datetime.utcnow()
+    appts = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.start_time >= now,
+        Appointment.status == 'scheduled'
+    ).order_by(Appointment.start_time.asc()).limit(20).all()
+    results = []
+    for a in appts:
+        patient = User.query.get(a.patient_id)
+        results.append({
+            'id': a.id,
+            'patient': patient.username or patient.email,
+            'start_time': a.start_time.isoformat(),
+            'end_time': (a.end_time.isoformat() if a.end_time else None)
+        })
+    return jsonify(results)
 
 
 @app.route('/api/appointments/patient', methods=['GET'])
@@ -754,6 +835,15 @@ def sessions():
 @app.route('/games')
 @login_required
 def games_list():
+    if current_user.role != 'terapista':
+        return redirect(url_for('dashboard'))
+    # List saved custom games in static/games
+    games_dir = os.path.join(app.root_path, 'static', 'games')
+    try:
+        files = [f for f in os.listdir(games_dir) if f.lower().endswith('.html')]
+    except Exception:
+        files = []
+    return render_template('therapist/games.html', custom_games=files, active_page='games')
     if current_user.role != 'terapista':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
@@ -1097,10 +1187,335 @@ def delete_patient(patient_id):
 @login_required
 def game():
     return render_template('game.html')
+    return render_template('game.html')
 
 @app.route('/api/save_game', methods=['POST'])
 @login_required
 def save_game():
+    try:
+        data = request.get_json() or {}
+        game_name = data.get('game_name') or 'Juego'
+        accuracy = float(data.get('accuracy') or 0)
+        avg_time = float(data.get('avg_time') or 0)
+        session_id = data.get('session_id')
+        pred_code, label = predict_level(accuracy, avg_time * 1000)  # avg_time expected in seconds; convert ms for model input
+
+        # Persist metrics
+        m = SessionMetrics(
+            user_id=current_user.id,
+            session_id=int(session_id) if session_id else None,
+            game_name=game_name,
+            accurracy=accuracy,
+            avg_time=avg_time,
+            prediction=pred_code
+        )
+        db.session.add(m)
+
+        # If tied to a session, mark completed and close window
+        if session_id:
+            appt = Appointment.query.get(int(session_id))
+            if appt:
+                # Basic authorization: only therapist or the patient in the appointment can close it
+                if current_user.id in (appt.patient_id, appt.therapist_id):
+                    appt.status = 'completed'
+                    appt.end_time = datetime.utcnow()
+                    db.session.add(appt)
+                    # Optional: create a notification for therapist
+                    try:
+                        create_notification(appt.therapist_id, f"Sesión #{appt.id} completada con {game_name}", link=url_for('patients', _external=False))
+                    except Exception:
+                        pass
+
+        db.session.commit()
+
+        return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
+    except Exception as e:
+        return jsonify({'error': 'save_failed', 'detail': str(e)}), 400
+
+
+# Upload custom game HTML to static/games
+@app.route('/api/games/upload', methods=['POST'])
+@login_required
+def upload_game():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+    file = request.files.get('file')
+    name = request.form.get('name')
+    if not file or not name:
+        return jsonify({'error': 'Falta archivo o nombre'}), 400
+    if not name.lower().endswith('.html'):
+        name = f"{name}.html"
+    dest_dir = os.path.join(app.root_path, 'static', 'games')
+    os.makedirs(dest_dir, exist_ok=True)
+    path = os.path.join(dest_dir, name)
+    file.save(path)
+    return jsonify({'status': 'ok', 'file': name, 'url': url_for('static', filename=f'games/{name}')})
+
+
+# Gemini proxy for recommendations (requires GEMINI_API_KEY)
+@app.route('/api/ai/gemini', methods=['POST'])
+@login_required
+def gemini_proxy():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+    api_key = app.config.get('GEMINI_API_KEY')
+    payload = request.get_json() or {}
+    prompt = payload.get('prompt')
+    context = payload.get('context')
+    if not prompt:
+        return jsonify({'error': 'Falta prompt'}), 400
+    if not api_key:
+        # Fallback: use internal recommendation label based on context if available
+        acc = (context or {}).get('accuracy') or 0
+        avg = (context or {}).get('avg_time') or 0
+        _, label = predict_level(acc, avg)
+        return jsonify({'status': 'no_external', 'recommendation': label})
+    # Real call to Gemini Pro
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+        # Construct content: include prompt and structured context
+        text_parts = [prompt]
+        if context:
+            text_parts.append(f"Contexto: precision={context.get('accuracy')}, tiempo_promedio={context.get('avg_time')} ms")
+        body = {
+            "contents": [
+                {
+                    "parts": [{"text": "\n\n".join([str(p) for p in text_parts])}]
+                }
+            ]
+        }
+        resp = requests.post(url, json=body, timeout=10)
+        resp.raise_for_status()
+        j = resp.json()
+        # Parse response text
+        candidate = (
+            j.get('candidates', [{}])[0]
+            .get('content', {})
+            .get('parts', [{}])[0]
+            .get('text')
+        )
+        # Blend internal recommendation for consistency
+        acc = (context or {}).get('accuracy') or 0
+        avg = (context or {}).get('avg_time') or 0
+        _, label = predict_level(acc, avg)
+        return jsonify({
+            'status': 'ok',
+            'model': 'gemini-pro',
+            'recommendation': label,
+            'summary': candidate or f"Basado en IA: {label}"
+        })
+    except Exception as e:
+        # Fallback on error
+        acc = (context or {}).get('accuracy') or 0
+        avg = (context or {}).get('avg_time') or 0
+        _, label = predict_level(acc, avg)
+        return jsonify({'status': 'error', 'recommendation': label, 'detail': str(e)}), 502
+
+
+# Generate an AI-driven game (HTML + JSON KPIs) and persist JSON to user
+@app.route('/api/ai/generate_game', methods=['POST'])
+@login_required
+def generate_game():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+    api_key = app.config.get('GEMINI_API_KEY')
+    payload = request.get_json() or {}
+    prompt = payload.get('prompt') or 'Genera un juego terapéutico en HTML.'
+    target_user_id = payload.get('user_id')
+    game_name = (payload.get('name') or 'ai_game').strip().replace(' ', '_')
+    if not target_user_id:
+        return jsonify({'error': 'Falta user_id'}), 400
+    user = User.query.get(target_user_id)
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+
+    # Collect KPIs from DB for user
+    kpi = {}
+    kpi['total_sessions'] = SessionMetrics.query.filter_by(user_id=user.id).count()
+    kpi['avg_accuracy'] = float(db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=user.id).scalar() or 0)
+    kpi['avg_time_ms'] = float((db.session.query(func.avg(SessionMetrics.avg_time)).filter_by(user_id=user.id).scalar() or 0) * 1000)
+    kpi['last_games'] = [
+        {
+            'game_name': m.game_name,
+            'accuracy': float(m.accurracy),
+            'avg_time_ms': float(m.avg_time * 1000),
+            'prediction': int(m.prediction),
+            'date': m.date.isoformat()
+        } for m in SessionMetrics.query.filter_by(user_id=user.id).order_by(SessionMetrics.date.desc()).limit(10)
+    ]
+
+    # Build prompt including KPIs to instruct Gemini to output HTML and JSON
+    full_prompt = (
+        f"{prompt}\n\n"
+        "Genera dos bloques: 1) HTML completo para un juego sencillo de reflejos/cognitivo con UI moderna, tailwindcdn y FontAwesome (no frameworks).\n"
+        "2) JSON de configuración KPI con claves: kpis(avg_accuracy, avg_time_ms, total_sessions), goals, difficulty, and tracking schema for events.\n"
+        f"KPIs del paciente: {json.dumps(kpi, ensure_ascii=False)}\n"
+        "Devuelve primero el JSON (entre marcadores ---JSON---) y luego el HTML (entre ---HTML---)."
+    )
+
+    if not api_key:
+        # Fallback: simple generated HTML and JSON locally
+        config = {
+            'kpis': {'avg_accuracy': kpi['avg_accuracy'], 'avg_time_ms': kpi['avg_time_ms'], 'total_sessions': kpi['total_sessions']},
+            'goals': ['Mejorar reflejos', 'Reducir tiempo de reacción'],
+            'difficulty': 'medium',
+            'tracking': {'events': ['click', 'hit', 'miss'], 'schema_version': 1}
+        }
+        html = '<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6">\n' \
+               '<h2 class="text-2xl font-bold">Juego IA (fallback)</h2>\n' \
+               '<p class="text-gray-600">Config basado en KPIs.</p>\n' \
+               '</body></html>'
+    else:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+            body = {"contents": [{"parts": [{"text": full_prompt}]}]}
+            resp = requests.post(url, json=body, timeout=15)
+            resp.raise_for_status()
+            j = resp.json()
+            text = (
+                j.get('candidates', [{}])[0]
+                .get('content', {})
+                .get('parts', [{}])[0]
+                .get('text') or ''
+            )
+            # Extract JSON and HTML by markers
+            json_start = text.find('---JSON---')
+            html_start = text.find('---HTML---')
+            if json_start != -1 and html_start != -1:
+                json_block = text[json_start + len('---JSON---'): html_start].strip()
+                html_block = text[html_start + len('---HTML---'):].strip()
+                try:
+                    config = json.loads(json_block)
+                except Exception:
+                    config = {'raw': json_block}
+                html = html_block
+            else:
+                # If markers missing, store raw
+                config = {'raw': text}
+                html = '<!DOCTYPE html><html><body><pre>Salida IA sin marcadores</pre></body></html>'
+        except Exception as e:
+            config = {'error': str(e), 'kpis': kpi}
+            html = '<!DOCTYPE html><html><body><pre>Error generando juego IA</pre></body></html>'
+
+    # Save HTML file
+    dest_dir = os.path.join(app.root_path, 'static', 'games')
+    os.makedirs(dest_dir, exist_ok=True)
+    filename = f"{game_name}.html"
+    path = os.path.join(dest_dir, filename)
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(html)
+    except Exception as e:
+        return jsonify({'error': 'write_failed', 'detail': str(e)}), 500
+
+    # Persist JSON config in user.game_profile
+    try:
+        user.game_profile = json.dumps(config, ensure_ascii=False)
+        db.session.commit()
+    except Exception as e:
+        return jsonify({'error': 'persist_failed', 'detail': str(e)}), 500
+
+    return jsonify({
+        'status': 'ok',
+        'file': filename,
+        'url': url_for('static', filename=f'games/{filename}'),
+        'config': config
+    })
+
+
+# Assign games to a session (Appointment.games JSON list) and enable during session
+@app.route('/api/sessions/assign-games', methods=['POST'])
+@login_required
+def assign_games_to_session():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+    data = request.get_json() or {}
+    session_id = data.get('session_id')
+    games = data.get('games') or []  # list of {'name': 'file.html', 'url': '/static/games/file.html'}
+    appt = Appointment.query.get(session_id)
+    if not appt:
+        return jsonify({'error': 'Sesión no encontrada'}), 404
+    appt.games = json.dumps(games, ensure_ascii=False)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'assigned': games})
+
+
+# Check available games for a session (only during time window)
+@app.route('/api/sessions/<int:session_id>/games', methods=['GET'])
+@login_required
+def session_games(session_id):
+    appt = Appointment.query.get(session_id)
+    if not appt:
+        return jsonify({'error': 'Sesión no encontrada'}), 404
+    now = datetime.utcnow()
+    # Allow access if now is between start and end (or within scheduled with end None -> 2h)
+    end_time = appt.end_time or (appt.start_time + timedelta(hours=2))
+    enabled = appt.status == 'scheduled' and appt.start_time <= now <= end_time
+    games = []
+    try:
+        games = json.loads(appt.games) if appt.games else []
+    except Exception:
+        games = []
+    return jsonify({'enabled': enabled, 'games': games})
+
+
+# Aggregate session results and update user profile (game_profile)
+@app.route('/api/sessions/<int:session_id>/complete', methods=['POST'])
+@login_required
+def complete_session(session_id):
+    appt = Appointment.query.get(session_id)
+    if not appt:
+        return jsonify({'error': 'Sesión no encontrada'}), 404
+    # Authorization: therapist owns session
+    if current_user.id != appt.therapist_id:
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    # Mark completed if not already
+    if appt.status != 'completed':
+        appt.status = 'completed'
+        appt.end_time = datetime.utcnow()
+        db.session.add(appt)
+
+    # Aggregate metrics for patient within this session
+    metrics = SessionMetrics.query.filter_by(user_id=appt.patient_id, session_id=session_id).all()
+    if not metrics:
+        db.session.commit()
+        return jsonify({'status': 'ok', 'message': 'Sin métricas para agregar'})
+
+    avg_acc = float(sum(m.accurracy for m in metrics) / len(metrics))
+    avg_time_ms = float(sum(m.avg_time for m in metrics) / len(metrics) * 1000)
+    plays = len(metrics)
+    last_games = [{
+        'game_name': m.game_name,
+        'accuracy': float(m.accurracy),
+        'avg_time_ms': float(m.avg_time * 1000),
+        'prediction': int(m.prediction),
+        'date': m.date.isoformat()
+    } for m in metrics]
+
+    # Merge into user.game_profile JSON
+    patient = User.query.get(appt.patient_id)
+    try:
+        existing = json.loads(patient.game_profile) if patient.game_profile else {}
+    except Exception:
+        existing = {}
+    existing.setdefault('history', []).extend(last_games)
+    existing['kpis'] = {
+        'avg_accuracy': avg_acc,
+        'avg_time_ms': avg_time_ms,
+        'plays': plays
+    }
+
+    patient.game_profile = json.dumps(existing, ensure_ascii=False)
+    db.session.commit()
+
+    # Optional: notify therapist
+    try:
+        create_notification(appt.therapist_id, f"Sesión #{appt.id} procesada. {plays} juegos registrados.")
+    except Exception:
+        pass
+
+    return jsonify({'status': 'ok', 'updated_profile': existing})
     data = request.json
     acc = data['accuracy']
     time = data['avg_time']
@@ -1179,7 +1594,79 @@ def patient_detail(patient_id):
     if current_user.role != 'terapista':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
-    
+    # Therapist-only view
+    if current_user.role != 'terapista':
+        flash('Acceso no autorizado', 'error')
+        return redirect(url_for('dashboard'))
+
+    patient = User.query.get_or_404(patient_id)
+
+    # Basic stats
+    total_sessions = Appointment.query.filter(Appointment.patient_id == patient.id).count()
+    completed_sessions = Appointment.query.filter(Appointment.patient_id == patient.id,
+                                                  Appointment.status == 'completed').count()
+
+    # Recent metrics (serialize to JSON-safe dicts)
+    metrics_rows = SessionMetrics.query.filter(SessionMetrics.user_id == patient.id).order_by(SessionMetrics.date.desc()).limit(50).all()
+    metrics = [
+        {
+            'id': m.id,
+            'game_name': m.game_name,
+            'accuracy': m.accurracy,
+            'avg_time': m.avg_time,
+            'prediction': m.prediction,
+            'date': m.date.isoformat() if m.date else None
+        } for m in metrics_rows
+    ]
+
+    # Upcoming appointments
+    upcoming = Appointment.query.filter(Appointment.patient_id == patient.id,
+                                        Appointment.status == 'scheduled',
+                                        Appointment.start_time >= datetime.utcnow()).order_by(Appointment.start_time.asc()).limit(10).all()
+    upcoming_appts = [
+        {
+            'id': a.id,
+            'title': a.title,
+            'start_time': a.start_time.isoformat() if a.start_time else None,
+            'end_time': a.end_time.isoformat() if a.end_time else None,
+            'location': a.location,
+            'status': a.status
+        } for a in upcoming
+    ]
+
+    # All sessions for charts
+    all_appts = Appointment.query.filter(Appointment.patient_id == patient.id).order_by(Appointment.start_time.asc()).all()
+    all_sessions = [
+        {
+            'id': a.id,
+            'title': a.title,
+            'start_time': a.start_time.isoformat() if a.start_time else None,
+            'status': a.status
+        } for a in all_appts
+    ]
+
+    # Player info block
+    player_info = {
+        'username': patient.username,
+        'email': patient.email,
+        'created_at': patient.created_at.strftime('%d %B, %Y') if patient.created_at else '',
+        'phone': patient.phone,
+        'date_of_birth': patient.date_of_birth.strftime('%d/%m/%Y') if patient.date_of_birth else '',
+        'guardian_name': patient.guardian_name,
+        'guardian_contact': patient.guardian_contact,
+        'therapy_goals': patient.therapy_goals,
+        'notes': patient.notes,
+    }
+
+    return render_template('therapist/patient_detail.html',
+                           patient=patient,
+                           player_info=player_info,
+                           total_sessions=total_sessions,
+                           completed_sessions=completed_sessions,
+                           metrics=metrics,
+                           upcoming_appts=upcoming_appts,
+                           all_sessions=all_sessions,
+                           active_page='patients')
     patient = User.query.get_or_404(patient_id)
     if patient.role != 'jugador':
         flash('Usuario no es un paciente.', 'error')
