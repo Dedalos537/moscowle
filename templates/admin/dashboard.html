@@ -1,0 +1,60 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_dashboard' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Panel de Administración</h2>
+  <p class="text-sm text-gray-500">Control integral de terapeutas y pacientes</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="grid grid-cols-4 gap-6">
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <p class="text-sm text-gray-500">Terapeutas</p>
+      <h3 class="text-3xl font-bold text-textDark">{{ overview.therapists }}</h3>
+    </div>
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <p class="text-sm text-gray-500">Pacientes</p>
+      <h3 class="text-3xl font-bold text-textDark">{{ overview.patients }}</h3>
+    </div>
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <p class="text-sm text-gray-500">Sesiones</p>
+      <h3 class="text-3xl font-bold text-textDark">{{ overview.sessions_total }}</h3>
+    </div>
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+      <p class="text-sm text-gray-500">Precisión Promedio</p>
+      <h3 class="text-3xl font-bold text-textDark">{{ overview.avg_accuracy }}%</h3>
+    </div>
+  </div>
+  <div class="mt-8 grid grid-cols-2 gap-6">
+    <a href="{{ url_for('admin_users') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-textDark">Usuarios</h3>
+        <p class="text-sm text-gray-500">Crear y gestionar terapeutas y pacientes</p>
+      </div>
+      <i class="fas fa-users text-2xl text-primary"></i>
+    </a>
+    <a href="{{ url_for('admin_games') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-textDark">Juegos</h3>
+        <p class="text-sm text-gray-500">Crear, eliminar y administrar juegos</p>
+      </div>
+      <i class="fas fa-gamepad text-2xl text-primary"></i>
+    </a>
+    <a href="{{ url_for('admin_reports') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-textDark">Reportes</h3>
+        <p class="text-sm text-gray-500">Ver reportes por terapeuta y paciente</p>
+      </div>
+      <i class="fas fa-chart-line text-2xl text-primary"></i>
+    </a>
+    <a href="{{ url_for('admin_messages') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-textDark">Mensajería</h3>
+        <p class="text-sm text-gray-500">Enviar mensajes a todos los usuarios</p>
+      </div>
+      <i class="fas fa-envelope text-2xl text-primary"></i>
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -83,7 +83,7 @@
         </div>
       </div>
     </div>
-
+    {% if current_user.role == 'terapista' %}
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
       <a href="{{ url_for('dashboard') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
@@ -115,29 +115,48 @@
         <i class="fa-solid fa-file-alt text-lg"></i>
         <span class="font-medium">Reportes</span>
       </a>
-      <a href="{{ url_for('messages_list') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
-        <i class="fa-solid fa-comments text-lg"></i>
-        <span class="font-medium">Mensajes</span>
-        <span id="sidebar-unread-badge"
-          class="hidden absolute top-2 right-2 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold"></span>
+      <a href="#" id="logout-btn-sidebar"
+        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors">
+        <i class="fa-solid fa-right-from-bracket text-lg"></i>
+        <span class="font-medium">Cerrar Sesión</span>
       </a>
-      <a href="{{ url_for('profile') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'profile' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-user-circle text-lg"></i>
-        <span class="font-medium">Perfil</span>
+      
+      {% endif %}
+      {% if current_user.role == 'admin' %}
+      <div class="pt-2 mt-2 border-t border-gray-100"></div>
+      <a href="{{ url_for('admin_dashboard') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-toolbox text-lg"></i>
+        <span class="font-medium">Admin Panel</span>
       </a>
-    </nav>
-
-    <div id="user-profile" class="px-4 py-6 border-t border-gray-100">
-      <div class="flex items-center gap-4 px-4">
-        <img src="https://ui-avatars.com/api/?name={{current_user.username}}&background=random" alt="Therapist"
-          class="w-12 h-12 rounded-full object-cover" />
-        <div class="flex-1">
-          <p class="font-semibold text-sm text-textDark">
-            {{ current_user.username }}
-          </p>
-          <p class="text-xs text-gray-500">Terapeuta Principal</p>
+      <a href="{{ url_for('admin_users') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-user-gear text-lg"></i>
+        <span class="font-medium">Admin Usuarios</span>
+      </a>
+      <a href="{{ url_for('admin_games') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-gamepad text-lg"></i>
+        <span class="font-medium">Admin Juegos</span>
+      </a>
+      <a href="{{ url_for('admin_reports') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-chart-pie text-lg"></i>
+        <span class="font-medium">Admin Reportes</span>
+      </a>
+      <a href="{{ url_for('admin_messages') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-envelope text-lg"></i>
+        <span class="font-medium">Admin Mensajes</span>
+      </a>
+      <a href="#" id="logout-btn-sidebar"
+        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors">
+        <i class="fa-solid fa-right-from-bracket text-lg"></i>
+        <span class="font-medium">Cerrar Sesión</span>
+      </a>
+       {% endif %}
+      
+  
         </div>
         <button id="logout-btn-header"><i
             class="fa-solid fa-sign-out-alt text-gray-400 text-sm hover:text-primary"></i></button>
@@ -308,10 +327,11 @@
 
       // Fetch unread message count
       function fetchUnreadMessages() {
+        const badge = document.getElementById("sidebar-unread-badge");
+        if (!badge) return; // Sidebar badge removed in some roles
         fetch("/api/messages/unread-count")
           .then((res) => res.json())
           .then((data) => {
-            const badge = document.getElementById("sidebar-unread-badge");
             if (data.count > 0) {
               badge.textContent = data.count > 9 ? "9+" : data.count;
               badge.classList.remove("hidden");

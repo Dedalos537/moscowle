@@ -23,6 +23,9 @@ class User(db.Model, UserMixin):
     therapy_goals = db.Column(db.Text, nullable=True)
     timezone = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    # Assigned therapist relationship (optional for patients)
+    assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    assigned_therapist = db.relationship('User', remote_side=[id], backref=db.backref('assigned_patients', lazy=True))
     # JSON string for AI-generated game profile/config per user
     game_profile = db.Column(db.Text, nullable=True)
 
@@ -81,4 +84,5 @@ class Message(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True))
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref=db.backref('received_messages', lazy=True))
     replies = db.relationship('Message', backref=db.backref('parent', remote_side=[id]), lazy=True)
+
 

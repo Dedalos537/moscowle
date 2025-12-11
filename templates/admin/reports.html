@@ -1,0 +1,54 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_reports' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Reportes</h2>
+  <p class="text-sm text-gray-500">Resumen por terapeuta y paciente</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8 grid grid-cols-2 gap-6">
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Terapeutas</h3>
+    <table class="w-full">
+      <thead class="bg-gray-50"><tr>
+        <th class="px-3 py-2 text-left">Nombre</th>
+        <th class="px-3 py-2 text-left">Email</th>
+        <th class="px-3 py-2 text-left">Sesiones</th>
+        <th class="px-3 py-2 text-left">Precisión</th>
+      </tr></thead>
+      <tbody>
+        {% for t in therapists %}
+        <tr class="border-t">
+          <td class="px-3 py-2">{{ t.name }}</td>
+          <td class="px-3 py-2">{{ t.email }}</td>
+          <td class="px-3 py-2">{{ t.sessions }}</td>
+          <td class="px-3 py-2">{{ t.avg_accuracy }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Pacientes</h3>
+    <table class="w-full">
+      <thead class="bg-gray-50"><tr>
+        <th class="px-3 py-2 text-left">Nombre</th>
+        <th class="px-3 py-2 text-left">Email</th>
+        <th class="px-3 py-2 text-left">Juegos</th>
+        <th class="px-3 py-2 text-left">Precisión</th>
+      </tr></thead>
+      <tbody>
+        {% for p in patients %}
+        <tr class="border-t">
+          <td class="px-3 py-2">{{ p.name }}</td>
+          <td class="px-3 py-2">{{ p.email }}</td>
+          <td class="px-3 py-2">{{ p.plays }}</td>
+          <td class="px-3 py-2">{{ p.avg_accuracy }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

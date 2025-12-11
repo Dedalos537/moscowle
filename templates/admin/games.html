@@ -1,0 +1,77 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_games' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Juegos</h2>
+  <p class="text-sm text-gray-500">Gestiona los juegos del sistema</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="bg-surface rounded-soft shadow-soft p-6 mb-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Subir Juego</h3>
+    <form id="upload-form" class="flex items-center gap-3">
+      <input id="game-name" class="px-3 py-2 border rounded-soft" placeholder="nombre-del-juego" />
+      <input id="game-file" type="file" accept=".html" class="px-3 py-2 border rounded-soft" />
+      <button class="px-4 py-2 bg-primary text-white rounded-soft">Subir</button>
+      <span id="upload-status" class="text-sm text-gray-600 ml-2"></span>
+    </form>
+  </div>
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Lista de juegos</h3>
+    <ul class="space-y-2" id="games-list">
+      {% for g in games %}
+        <li class="flex items-center justify-between p-2 bg-gray-50 rounded-soft">
+          <span class="text-sm">{{ g }}</span>
+          <div class="flex items-center gap-2">
+            <a class="text-primary text-sm" target="_blank" href="{{ url_for('static', filename='games/' + g) }}">Abrir</a>
+            <button class="px-3 py-1 bg-red-500 text-white text-xs rounded-soft" data-del="{{ g }}">Eliminar</button>
+          </div>
+        </li>
+      {% else %}
+        <li class="text-sm text-gray-500">No hay juegos.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const upForm = document.getElementById('upload-form');
+    const statusEl = document.getElementById('upload-status');
+    upForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusEl.textContent = 'Subiendo...';
+      const fd = new FormData();
+      fd.append('name', document.getElementById('game-name').value);
+      fd.append('file', document.getElementById('game-file').files[0]);
+      try {
+        const res = await fetch('/api/games/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error');
+        statusEl.textContent = 'Subido';
+        window.location.reload();
+      } catch (e) {
+        statusEl.textContent = e.message;
+      }
+    });
+    document.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Eliminar este juego?')) return;
+        const name = btn.getAttribute('data-del');
+        try {
+          const res = await fetch('/api/admin/games/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Error');
+          window.location.reload();
+        } catch (e) {
+          alert(e.message);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

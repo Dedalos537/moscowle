@@ -16,6 +16,26 @@
 
 {% block content %}
     <div id="reports-content" class="p-8">
+        <form id="filters-form" method="get" class="bg-white rounded-soft p-4 shadow-soft mb-6">
+            <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-3 md:space-y-0">
+                <div>
+                    <label for="start" class="block text-sm text-gray-600 mb-1">Desde</label>
+                    <input type="date" id="start" name="start" value="{{ start if start else '' }}" class="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-olive">
+                </div>
+                <div>
+                    <label for="end" class="block text-sm text-gray-600 mb-1">Hasta</label>
+                    <input type="date" id="end" name="end" value="{{ end if end else '' }}" class="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-olive">
+                </div>
+                <div class="flex space-x-2">
+                    <button type="submit" class="px-4 py-2 bg-olive text-white rounded-xl hover:bg-opacity-90 transition-all">
+                        <i class="fas fa-filter mr-2"></i>Aplicar filtros
+                    </button>
+                    <a href="{{ url_for('therapist_reports') }}" class="px-4 py-2 bg-gray-100 text-charcoal rounded-xl hover:bg-gray-200 transition-all">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
         
         <div id="overview-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-soft p-6 shadow-soft">
@@ -193,6 +213,19 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-submit on date change for quick filtering
+            const startInput = document.getElementById('start');
+            const endInput = document.getElementById('end');
+            const form = document.getElementById('filters-form');
+            function maybeAutoSubmit() {
+                // Submit when both dates are set
+                if (startInput && endInput && startInput.value && endInput.value) {
+                    form.submit();
+                }
+            }
+            if (startInput) startInput.addEventListener('change', maybeAutoSubmit);
+            if (endInput) endInput.addEventListener('change', maybeAutoSubmit);
+
             const plotlyLayout = {
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0)',

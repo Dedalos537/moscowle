@@ -80,11 +80,45 @@ def send_welcome_email(recipient_email: str, plain_password: str, username: str)
     if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
         app.logger.warning("Email not configured. Skipping welcome email.")
         return False
+    try:
+        subject = "Bienvenido a Moscowle"
+        body = (
+            f"Hola {username or recipient_email},\n\n"
+            f"Tu cuenta ha sido creada exitosamente en Moscowle.\n\n"
+            f"Credenciales de acceso:\n"
+            f"Correo: {recipient_email}\n"
+            f"Contraseña temporal: {plain_password}\n\n"
+            f"Inicia sesión y cambia tu contraseña temporal por una más segura desde tu perfil.\n\n"
+            "Saludos,\nEquipo Moscowle"
+        )
+        msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+        mail.send(msg)
+        app.logger.info(f"Welcome email sent successfully to {recipient_email}")
+        return True
+    except Exception as e:
+        app.logger.error(f"Failed to send welcome email to {recipient_email}: {str(e)}")
+        return False
 
 def send_password_change_email(recipient_email: str, new_password: str, username: str):
     """Send an email notifying password change with the new password. Skips if mail is not configured."""
     if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
         app.logger.warning("Email not configured. Skipping password change email.")
+        return False
+    try:
+        subject = "Cambio de contraseña en Moscowle"
+        body = (
+            f"Hola {username or recipient_email},\n\n"
+            f"Tu contraseña ha sido actualizada exitosamente.\n\n"
+            f"Nueva contraseña: {new_password}\n\n"
+            "Si no realizaste este cambio, por favor contacta al administrador de inmediato.\n\n"
+            "Saludos,\nEquipo Moscowle"
+        )
+        msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+        mail.send(msg)
+        app.logger.info(f"Password change email sent to {recipient_email}")
+        return True
+    except Exception as e:
+        app.logger.error(f"Failed to send password change email to {recipient_email}: {str(e)}")
         return False
 
 # Lightweight credential validation for live login feedback
@@ -159,6 +193,9 @@ with app.app_context():
         # user.game_profile
         if not has_column('user', 'game_profile'):
             conn.execute(text("ALTER TABLE user ADD COLUMN game_profile TEXT"))
+        # user.assigned_therapist_id
+        if not has_column('user', 'assigned_therapist_id'):
+            conn.execute(text("ALTER TABLE user ADD COLUMN assigned_therapist_id INTEGER REFERENCES user(id)"))
         # appointment.games
         if not has_column('appointment', 'games'):
             conn.execute(text("ALTER TABLE appointment ADD COLUMN games TEXT"))
@@ -171,10 +208,9 @@ with app.app_context():
         app.logger.warning(f"Schema migration warning: {e}")
     train_model()
     
-    # Create admin user (therapist)
-    admin_email = os.getenv('ADMIN_EMAIL')
-    admin_password = os.getenv('ADMIN_PASSWORD')
-    
+    # Create admin user (real admin)
+    admin_email = os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'
+    admin_password = os.getenv('ADMIN_PASSWORD') or 'Rucula_530'
     admin = User.query.filter_by(email=admin_email).first()
     if not admin:
         hashed_pw = bcrypt.generate_password_hash(admin_password).decode('utf-8')
@@ -182,12 +218,43 @@ with app.app_context():
             username='Administrador',
             email=admin_email,
             password=hashed_pw,
-            role='terapista',
+            role='admin',
             is_active=True
         )
         db.session.add(admin)
         db.session.commit()
         print(f"Admin user created: {admin_email}")
+    else:
+        changed = False
+        if admin.role != 'admin':
+            admin.role = 'admin'
+            changed = True
+        if not admin.is_active:
+            admin.is_active = True
+            changed = True
+        # Optional password reset if env flag set
+        if os.getenv('ADMIN_FORCE_RESET') == '1':
+            admin.password = bcrypt.generate_password_hash(admin_password).decode('utf-8')
+            changed = True
+        if changed:
+            db.session.commit()
+            print(f"Admin user ensured/updated: {admin_email}")
+
+    # Ensure no other users remain with admin role (avoid mixing therapist as admin)
+    try:
+        from sqlalchemy import and_
+        others = User.query.filter(and_(User.role == 'admin', User.email != admin_email)).all()
+        demoted = 0
+        for u in others:
+            u.role = 'terapista'
+            if not u.is_active:
+                u.is_active = True
+            demoted += 1
+        if demoted:
+            db.session.commit()
+            print(f"Demoted {demoted} non-primary admin user(s) to 'terapista'.")
+    except Exception as e:
+        app.logger.warning(f"Role normalization warning: {e}")
 
 @app.route('/')
 def index():
@@ -295,7 +362,20 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'terapista':
+    if current_user.role == 'admin':
+        # Admin overview: counts and quick stats
+        therapists = User.query.filter_by(role='terapista').count()
+        patients = User.query.filter_by(role='jugador').count()
+        sessions_total = Appointment.query.count()
+        avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).scalar() or 0
+        overview = {
+            'therapists': therapists,
+            'patients': patients,
+            'sessions_total': sessions_total,
+            'avg_accuracy': round(avg_acc, 1)
+        }
+        return render_template('admin/dashboard.html', overview=overview, active_page='admin_dashboard')
+    elif current_user.role == 'terapista':
         # Stats from DB
         active_patients = User.query.filter_by(role='jugador', is_active=True).count()
         total_sessions = Appointment.query.filter_by(therapist_id=current_user.id).count()
@@ -472,7 +552,7 @@ def get_notifications():
 @app.route('/api/patients')
 @login_required
 def api_patients():
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
     patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
     return jsonify([{'id': p.id, 'username': p.username, 'email': p.email} for p in patients])
@@ -835,7 +915,7 @@ def sessions():
 @app.route('/games')
 @login_required
 def games_list():
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista','admin'):
         return redirect(url_for('dashboard'))
     # List saved custom games in static/games
     games_dir = os.path.join(app.root_path, 'static', 'games')
@@ -844,10 +924,261 @@ def games_list():
     except Exception:
         files = []
     return render_template('therapist/games.html', custom_games=files, active_page='games')
-    if current_user.role != 'terapista':
+    
+    
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    if current_user.role != 'admin':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
-    return render_template('therapist/games.html', active_page='games')
+    # Redirect to admin landing
+    therapists = User.query.filter_by(role='terapista').count()
+    patients = User.query.filter_by(role='jugador').count()
+    sessions_total = Appointment.query.count()
+    avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).scalar() or 0
+    overview = {
+        'therapists': therapists,
+        'patients': patients,
+        'sessions_total': sessions_total,
+        'avg_accuracy': round(avg_acc, 1)
+    }
+    return render_template('admin/dashboard.html', overview=overview, active_page='admin_dashboard')
+
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('dashboard'))
+    users = User.query.order_by(User.created_at.desc()).all()
+    therapists = User.query.filter_by(role='terapista').order_by(User.username.asc()).all()
+    return render_template('admin/users.html', users=users, therapists=therapists, active_page='admin_users')
+
+@app.route('/api/admin/assign-therapist', methods=['POST'])
+@login_required
+def api_admin_assign_therapist():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    patient_id = data.get('patient_id')
+    therapist_id = data.get('therapist_id')
+    if not patient_id or not therapist_id:
+        return jsonify({'success': False, 'message': 'IDs requeridos'}), 400
+    patient = User.query.get(patient_id)
+    therapist = User.query.get(therapist_id)
+    if not patient or not therapist:
+        return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+    if patient.role != 'jugador' or therapist.role != 'terapista':
+        return jsonify({'success': False, 'message': 'Roles inválidos para asignación'}), 400
+    patient.assigned_therapist_id = therapist.id
+    db.session.commit()
+    # Notify patient and therapist
+    try:
+        create_notification(patient.id, f"Terapeuta asignado: {therapist.username}")
+        create_notification(therapist.id, f"Nuevo paciente asignado: {patient.username}")
+    except Exception:
+        pass
+    return jsonify({'success': True})
+
+@app.route('/api/admin/create-user', methods=['POST'])
+@login_required
+def api_admin_create_user():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    username = (data.get('username') or '').strip() or email.split('@')[0]
+    role = (data.get('role') or '').strip().lower()
+    # Accept common alias
+    if role == 'terapeuta':
+        role = 'terapista'
+    if role not in ('terapista', 'jugador'):
+        return jsonify({'success': False, 'message': 'Rol inválido'}), 400
+    try:
+        valid = validate_email(email)
+        email = valid.email
+    except EmailNotValidError as e:
+        app.logger.warning(f"Email inválido al crear usuario admin: {email} - {str(e)}")
+        return jsonify({'success': False, 'message': 'Email inválido'}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({'success': False, 'message': 'Email ya registrado'}), 400
+    temp_pw = generate_password()
+    hashed_pw = bcrypt.generate_password_hash(temp_pw).decode('utf-8')
+    try:
+        u = User(username=username, email=email, password=hashed_pw, role=role, is_active=True)
+        db.session.add(u)
+        db.session.commit()
+    except Exception as e:
+        app.logger.error(f"Error al crear usuario: {str(e)}")
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error al crear usuario'}), 500
+    send_welcome_email(email, temp_pw, username)
+    try:
+        create_notification(u.id, "Tu cuenta ha sido creada", link=url_for('dashboard'))
+    except Exception:
+        pass
+    return jsonify({'success': True, 'user': {'id': u.id, 'email': u.email, 'role': u.role}, 'temp_password': temp_pw})
+
+@app.route('/admin/games')
+@login_required
+def admin_games():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('dashboard'))
+    games_dir = os.path.join(app.root_path, 'static', 'games')
+    try:
+        files = [f for f in os.listdir(games_dir) if f.lower().endswith('.html')]
+    except Exception:
+        files = []
+    return render_template('admin/games.html', games=files, active_page='admin_games')
+
+@app.route('/api/admin/games/delete', methods=['POST'])
+@login_required
+def api_admin_delete_game():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'message': 'Nombre requerido'}), 400
+    games_dir = os.path.join(app.root_path, 'static', 'games')
+    path = os.path.join(games_dir, name)
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'message': 'Archivo no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/admin/reports')
+@login_required
+def admin_reports():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('dashboard'))
+    # Aggregate simple stats per therapist and patient
+    therapists = User.query.filter_by(role='terapista').all()
+    t_rows = []
+    for t in therapists:
+        count_appts = Appointment.query.filter_by(therapist_id=t.id).count()
+        avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).scalar() or 0
+        t_rows.append({'name': t.username, 'email': t.email, 'sessions': count_appts, 'avg_accuracy': round(avg_acc,1)})
+    patients = User.query.filter_by(role='jugador').all()
+    p_rows = []
+    for p in patients:
+        plays = SessionMetrics.query.filter_by(user_id=p.id).count()
+        acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=p.id).scalar() or 0
+        p_rows.append({'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc,1)})
+    return render_template('admin/reports.html', therapists=t_rows, patients=p_rows, active_page='admin_reports')
+
+@app.route('/admin/messages')
+@login_required
+def admin_messages():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('dashboard'))
+    therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
+    patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
+    return render_template('admin/messages.html', therapists=therapists, patients=patients, active_page='admin_messages')
+
+@app.route('/api/admin/messages/broadcast', methods=['POST'])
+@login_required
+def api_admin_broadcast():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+    target = (data.get('target') or 'all').strip()  # 'all' | 'terapista' | 'jugador' | 'single'
+    receiver_id = data.get('receiver_id')
+    if not body:
+        return jsonify({'success': False, 'message': 'Mensaje requerido'}), 400
+    recipients = []
+    if target == 'single' and receiver_id:
+        u = User.query.get(receiver_id)
+        if not u:
+            return jsonify({'success': False, 'message': 'Destinatario no encontrado'}), 404
+        recipients = [u]
+    else:
+        q = User.query
+        if target in ('terapista','jugador'):
+            q = q.filter_by(role=target)
+        recipients = q.all()
+    for u in recipients:
+        msg = Message(sender_id=current_user.id, receiver_id=u.id, subject=subject, body=body)
+        db.session.add(msg)
+        create_notification(u.id, f"Mensaje del administrador: {subject or 'Sin asunto'}", link=url_for('messages_list'))
+    db.session.commit()
+    return jsonify({'success': True, 'count': len(recipients)})
+
+@app.route('/api/admin/list-users')
+@login_required
+def api_admin_list_users():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    role = (request.args.get('role') or '').strip()
+    q = User.query
+    if role in ('terapista', 'jugador'):
+        q = q.filter_by(role=role)
+    users = [{'id': u.id, 'email': u.email, 'username': u.username, 'role': u.role} for u in q.order_by(User.username.asc()).all()]
+    return jsonify({'success': True, 'users': users})
+
+@app.route('/api/admin/update-user', methods=['POST'])
+@login_required
+def api_admin_update_user():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    user_id = data.get('id')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'ID requerido'}), 400
+    u = User.query.get(user_id)
+    if not u:
+        return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+    username = (data.get('username') or '').strip()
+    role = (data.get('role') or '').strip().lower()
+    active = data.get('is_active')
+    if username:
+        u.username = username
+    if role:
+        if role == 'terapeuta':
+            role = 'terapista'
+        if role not in ('terapista','jugador','admin'):
+            return jsonify({'success': False, 'message': 'Rol inválido'}), 400
+        u.role = role
+    if active is not None:
+        u.is_active = bool(active)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/admin/delete-user', methods=['POST'])
+@login_required
+def api_admin_delete_user():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    user_id = data.get('id')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'ID requerido'}), 400
+    u = User.query.get(user_id)
+    if not u:
+        return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+    if u.email == (os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'):
+        return jsonify({'success': False, 'message': 'No se puede eliminar el admin principal'}), 400
+    try:
+        # Cascade delete messages and appointments
+        Message.query.filter((Message.sender_id==u.id)|(Message.receiver_id==u.id)).delete()
+        Appointment.query.filter((Appointment.therapist_id==u.id)|(Appointment.patient_id==u.id)).delete()
+        SessionMetrics.query.filter(SessionMetrics.user_id==u.id).delete()
+        db.session.delete(u)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/analytics')
 @login_required
@@ -954,6 +1285,11 @@ def reports():
     if current_user.role != 'terapista':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
+    # Filters
+    start = request.args.get('start')
+    end = request.args.get('end')
+    start_dt = _parse_datetime(start) if start else None
+    end_dt = _parse_datetime(end) if end else None
     # Overview stats from DB
     # Improvement rate similar to dashboard
     now = datetime.utcnow()
@@ -992,7 +1328,12 @@ def reports():
     q_monthly = db.session.query(
         func.strftime('%Y-%m', SessionMetrics.date).label('Mes'),
         func.avg(SessionMetrics.accurracy).label('Progreso')
-    ).group_by(func.strftime('%Y-%m', SessionMetrics.date))
+    )
+    if start_dt:
+        q_monthly = q_monthly.filter(SessionMetrics.date >= start_dt)
+    if end_dt:
+        q_monthly = q_monthly.filter(SessionMetrics.date <= end_dt)
+    q_monthly = q_monthly.group_by(func.strftime('%Y-%m', SessionMetrics.date))
     df_monthly = pd.read_sql(q_monthly.statement, db.engine)
     if df_monthly.empty:
         df_monthly = pd.DataFrame({'Mes': [], 'Progreso': []})
@@ -1008,6 +1349,10 @@ def reports():
     ).filter(Appointment.therapist_id == current_user.id).group_by(
         func.strftime('%w', Appointment.start_time)
     )
+    if start_dt:
+        q_sessions = q_sessions.filter(Appointment.start_time >= start_dt)
+    if end_dt:
+        q_sessions = q_sessions.filter(Appointment.start_time <= end_dt)
     df_sessions = pd.read_sql(q_sessions.statement, db.engine)
     # Map weekdays to labels
     weekday_map = {'1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'}
@@ -1022,7 +1367,12 @@ def reports():
     q_games = db.session.query(
         SessionMetrics.game_name.label('Juego'),
         func.count(SessionMetrics.id).label('Rendimiento')
-    ).group_by(SessionMetrics.game_name)
+    )
+    if start_dt:
+        q_games = q_games.filter(SessionMetrics.date >= start_dt)
+    if end_dt:
+        q_games = q_games.filter(SessionMetrics.date <= end_dt)
+    q_games = q_games.group_by(SessionMetrics.game_name)
     df_games = pd.read_sql(q_games.statement, db.engine)
     colors = ['#75a83a', '#3b82f6', '#8b5cf6', '#f59e0b']
     fig_games = go.Figure(data=[go.Pie(labels=df_games['Juego'], values=df_games['Rendimiento'], hole=.4, marker_colors=colors)])
@@ -1032,7 +1382,12 @@ def reports():
     q_pred = db.session.query(
         SessionMetrics.prediction,
         func.count(SessionMetrics.id).label('cnt')
-    ).group_by(SessionMetrics.prediction)
+    )
+    if start_dt:
+        q_pred = q_pred.filter(SessionMetrics.date >= start_dt)
+    if end_dt:
+        q_pred = q_pred.filter(SessionMetrics.date <= end_dt)
+    q_pred = q_pred.group_by(SessionMetrics.prediction)
     df_pred = pd.read_sql(q_pred.statement, db.engine)
     difficulty_analysis = [
         {'name': 'Fácil', 'percentage': int(df_pred['cnt'].sum()), 'color': 'bg-green-500'}
@@ -1043,7 +1398,12 @@ def reports():
     q_insights = db.session.query(
         SessionMetrics.user_id.label('uid'),
         func.avg(SessionMetrics.accurracy).label('acc')
-    ).group_by(SessionMetrics.user_id)
+    )
+    if start_dt:
+        q_insights = q_insights.filter(SessionMetrics.date >= start_dt)
+    if end_dt:
+        q_insights = q_insights.filter(SessionMetrics.date <= end_dt)
+    q_insights = q_insights.group_by(SessionMetrics.user_id)
     df_insights = pd.read_sql(q_insights.statement, db.engine)
     patient_insights = []
     for _, row in df_insights.iterrows():
@@ -1066,6 +1426,7 @@ def reports():
                            difficulty_analysis=difficulty_analysis,
                            patient_insights=patient_insights,
                            detailed_reports=detailed_reports,
+                           start=start or '', end=end or '',
                            active_page='reports')
 
 
@@ -1256,7 +1617,7 @@ def upload_game():
 @app.route('/api/ai/gemini', methods=['POST'])
 @login_required
 def gemini_proxy():
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista','admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
     api_key = app.config.get('GEMINI_API_KEY')
     payload = request.get_json() or {}
@@ -1316,7 +1677,7 @@ def gemini_proxy():
 @app.route('/api/ai/generate_game', methods=['POST'])
 @login_required
 def generate_game():
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista','admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
     api_key = app.config.get('GEMINI_API_KEY')
     payload = request.get_json() or {}
@@ -1427,7 +1788,7 @@ def generate_game():
 @app.route('/api/sessions/assign-games', methods=['POST'])
 @login_required
 def assign_games_to_session():
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista','admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
     data = request.get_json() or {}
     session_id = data.get('session_id')
@@ -1578,7 +1939,13 @@ def my_therapist():
         'total_sessions': total_sessions,
         'last_played': last_played
     }
-    return render_template('patient/my_therapist.html', active_page='therapist', player_stats=player_stats)
+    # Resolve assigned therapist for this patient
+    therapist = None
+    if current_user.assigned_therapist_id:
+        therapist = User.query.get(current_user.assigned_therapist_id)
+    if not therapist:
+        therapist = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).first()
+    return render_template('patient/my_therapist.html', active_page='therapist', player_stats=player_stats, therapist=therapist)
 
 @app.route('/logout')
 @login_required
@@ -1746,6 +2113,9 @@ def update_patient(patient_id):
 @app.route('/messages')
 @login_required
 def messages_list():
+    if current_user.role == 'admin':
+        # Admin uses the dedicated admin messaging page
+        return redirect(url_for('admin_messages'))
     # Get conversations grouped by other user
     if current_user.role == 'terapista':
         # Therapist sees all patients they've messaged
@@ -1773,8 +2143,12 @@ def messages_list():
                              conversations=conversations, 
                              active_page='messages')
     else:
-        # Patient sees their therapist(s)
-        therapist = User.query.filter_by(role='terapista').first()
+        # Patient sees assigned therapist; fallback to any active therapist
+        therapist = None
+        if current_user.assigned_therapist_id:
+            therapist = User.query.get(current_user.assigned_therapist_id)
+        if not therapist:
+            therapist = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).first()
         if not therapist:
             flash('No hay terapeutas disponibles', 'error')
             return redirect(url_for('dashboard'))
@@ -1892,6 +2266,8 @@ def unread_messages_count():
 @app.route('/profile')
 @login_required
 def profile():
+    if current_user.role == 'admin':
+        return redirect(url_for('admin_profile'))
     if current_user.role == 'terapista':
         # Get therapist stats
         patients_count = User.query.filter_by(id=current_user.id, is_active=True).count()
@@ -1916,6 +2292,38 @@ def profile():
             'last_played': last_played
         }
         return render_template('patient/profile.html', player_stats=player_stats, active_page='profile')
+
+# ==================== ADMIN PROFILE ====================
+@app.route('/admin/profile')
+@login_required
+def admin_profile():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('dashboard'))
+    return render_template('admin/profile.html', active_page='admin_dashboard')
+
+@app.route('/api/admin/profile', methods=['POST'])
+@login_required
+def api_admin_update_profile():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    data = request.get_json(silent=True) or {}
+    name = (data.get('username') or '').strip()
+    new_password = (data.get('new_password') or '').strip()
+    changed = False
+    if name:
+        current_user.username = name
+        changed = True
+    if new_password:
+        current_user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        changed = True
+        try:
+            send_password_change_email(current_user.email, new_password, current_user.username or 'Administrador')
+        except Exception:
+            pass
+    if changed:
+        db.session.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/profile/update', methods=['POST'])

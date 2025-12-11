@@ -1,0 +1,111 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_messages' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Mensajería Administrador</h2>
+  <p class="text-sm text-gray-500">Enviar mensajes a terapeutas y pacientes</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+    <div class="flex space-x-3 mb-4">
+      <button id="tab-therapists" class="px-4 py-2 rounded-soft bg-olive text-white">Terapeutas</button>
+      <button id="tab-users" class="px-4 py-2 rounded-soft bg-gray-100">Pacientes</button>
+    </div>
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <h4 class="text-sm font-semibold mb-2">Destinatarios</h4>
+        <div id="list-therapists" class="space-y-2">
+          {% for u in therapists %}
+          <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
+            <span class="text-sm">{{ u.username or u.email }}</span>
+            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat" data-id="{{ u.id }}">Seleccionar</button>
+          </div>
+          {% endfor %}
+        </div>
+        <div id="list-users" class="space-y-2 hidden">
+          {% for u in patients %}
+          <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
+            <span class="text-sm">{{ u.username or u.email }}</span>
+            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat" data-id="{{ u.id }}">Seleccionar</button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-span-2">
+        <div class="grid grid-cols-3 gap-3">
+          <input id="subject" class="px-3 py-2 border rounded-soft" placeholder="Asunto (opcional)" />
+          <div class="col-span-2 text-right">
+            <button id="send" class="px-4 py-2 bg-primary text-white rounded-soft">Enviar</button>
+          </div>
+        </div>
+        <textarea id="body" class="w-full mt-3 px-3 py-2 border rounded-soft" rows="6" placeholder="Escribe tu mensaje..."></textarea>
+        <p id="status" class="text-sm text-gray-600 mt-2"></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const statusEl = document.getElementById('status');
+    const tabTher = document.getElementById('tab-therapists');
+    const tabUsers = document.getElementById('tab-users');
+    const listTher = document.getElementById('list-therapists');
+    const listUsers = document.getElementById('list-users');
+
+    function switchTab(to) {
+      if (to === 'ther') {
+        tabTher.classList.add('bg-olive','text-white');
+        tabUsers.classList.remove('bg-olive','text-white');
+        tabUsers.classList.add('bg-gray-100');
+        listTher.classList.remove('hidden');
+        listUsers.classList.add('hidden');
+      } else {
+        tabUsers.classList.add('bg-olive','text-white');
+        tabTher.classList.remove('bg-olive','text-white');
+        tabTher.classList.add('bg-gray-100');
+        listUsers.classList.remove('hidden');
+        listTher.classList.add('hidden');
+      }
+    }
+    tabTher.addEventListener('click', () => switchTab('ther'));
+    tabUsers.addEventListener('click', () => switchTab('users'));
+
+    // lists pre-rendered server-side
+
+    let targetIds = [];
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('start-chat')) {
+        const id = Number(e.target.getAttribute('data-id'));
+        // Single select for now
+        targetIds = [id];
+        statusEl.textContent = `Destinatario seleccionado (ID: ${id})`;
+      }
+    });
+
+    document.getElementById('send').addEventListener('click', async () => {
+      if (!targetIds.length) { statusEl.textContent = 'Selecciona un destinatario'; return; }
+      statusEl.textContent = 'Enviando...';
+      try {
+        // Send individually for selected IDs
+        let count = 0;
+        for (const rid of targetIds) {
+          const res = await fetch('/api/admin/messages/broadcast', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: 'single', receiver_id: rid, subject: document.getElementById('subject').value, body: document.getElementById('body').value })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || 'Error');
+          count += 1;
+        }
+        statusEl.textContent = `Enviado a ${count} usuario(s).`;
+      } catch (e) {
+        statusEl.textContent = e.message;
+      }
+    });
+  });
+</script>
+{% endblock %}

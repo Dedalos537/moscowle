@@ -10,27 +10,39 @@
 </div>
 
 <!-- Therapist Profile -->
+{% if therapist %}
 <div class="bg-gradient-to-r from-olive to-green-600 rounded-soft shadow-soft p-8 mb-6 text-white">
     <div class="flex items-center space-x-6">
         <div class="w-24 h-24 rounded-full bg-white flex items-center justify-center">
             <i class="fas fa-user-doctor text-olive text-4xl"></i>
         </div>
         <div class="flex-1">
-            <h3 class="text-2xl font-bold mb-2">Centro de Terapias Juan Pablo II</h3>
-            <p class="text-green-100 mb-4">Equipo profesional de terapia cognitiva</p>
+            <h3 class="text-2xl font-bold mb-2">{{ therapist.username or 'Tu Terapeuta' }}</h3>
+            <p class="text-green-100 mb-4">{{ therapist.email }}</p>
             <div class="flex items-center space-x-6 text-sm">
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-envelope"></i>
-                    <span>info@centrojuanpabloii.com</span>
+                    <span>{{ therapist.email }}</span>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-phone"></i>
-                    <span>+51 921 507 470</span>
+                    <i class="fas fa-id-badge"></i>
+                    <span>ID: {{ therapist.id }}</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% else %}
+<div class="bg-yellow-50 rounded-soft border border-yellow-200 p-6 mb-6">
+    <div class="flex items-start space-x-3">
+        <i class="fas fa-exclamation-triangle text-yellow-600 mt-1"></i>
+        <div>
+            <h3 class="text-yellow-800 font-semibold">No tienes terapeuta asignado</h3>
+            <p class="text-yellow-700 text-sm mt-1">Pide al administrador que te asigne un terapeuta para poder conversar y recibir seguimiento.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Contact Options -->
 <div class="grid grid-cols-3 gap-6 mb-6">

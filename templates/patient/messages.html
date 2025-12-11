@@ -53,8 +53,8 @@
             <div class="flex items-end space-x-3">
                 <textarea id="messageBody" rows="2" placeholder="Escribe tu mensaje..." 
                           class="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent resize-none"></textarea>
-                <button type="submit" class="bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors shadow-sm">
-                    <i class="fas fa-paper-plane"></i>
+                <button type="submit" id="sendBtn" class="bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors shadow-sm">
+                    <span class="btn-label"><i class="fas fa-paper-plane"></i></span>
                 </button>
             </div>
         </form>
@@ -73,11 +73,25 @@
     // Scroll to bottom on load
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
+    const sendBtn = document.getElementById('sendBtn');
+    const btnLabel = sendBtn.querySelector('.btn-label');
+
+    function setSending(state) {
+        if (state) {
+            sendBtn.disabled = true;
+            btnLabel.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        } else {
+            sendBtn.disabled = false;
+            btnLabel.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+    }
+
     messageForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
         const body = messageBody.value.trim();
         if (!body) return;
+        setSending(true);
 
         fetch('/api/messages/send', {
             method: 'POST',
@@ -113,10 +127,12 @@
             } else {
                 alert('❌ Error al enviar mensaje');
             }
+            setSending(false);
         })
         .catch(err => {
             console.error('Error:', err);
             alert('❌ Error al enviar mensaje');
+            setSending(false);
         });
     });
 </script>

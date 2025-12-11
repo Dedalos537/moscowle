@@ -1,0 +1,250 @@
+{% block extra_styles %}
+<style>
+  /* Scoped styles for Admin Usuarios buttons layout */
+  #create-user,
+  .assign-save,
+  .admin-update-btn,
+  .admin-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.75rem; /* px-3 py-1.5 */
+    border-radius: 0.5rem; /* rounded-soft */
+    gap: 0.375rem; /* space between icon/text if any */
+    white-space: nowrap;
+  }
+
+  /* Consistent sizing for green primary actions */
+  .assign-save,
+  #create-user {
+    min-height: 2rem;
+    min-width: 6rem;
+    font-weight: 600;
+  }
+
+  /* Action group spacing in the table */
+  .admin-actions-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem; /* space between buttons */
+  }
+
+  /* Fallback: if group class is not present, space buttons individually */
+  .assign-save { margin-right: 0.5rem; }
+  .admin-update-btn { margin-left: 0.25rem; }
+  .admin-delete-btn { margin-left: 0.25rem; }
+
+  /* Table cells: ensure vertical centering */
+  td.actions-cell { vertical-align: middle; }
+</style>
+{% endblock %}
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_users' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Usuarios</h2>
+  <p class="text-sm text-gray-500">Crear y gestionar terapeutas y pacientes</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8">
+  <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div id="toast-inner" class="px-4 py-3 rounded-soft shadow-soft text-white"></div>
+  </div>
+  <div class="bg-surface rounded-soft shadow-soft p-6 mb-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Crear Usuario</h3>
+    <div class="grid grid-cols-3 gap-3">
+      <input id="new-email" class="px-3 py-2 border rounded-soft" placeholder="email@ejemplo.com" />
+      <input id="new-username" class="px-3 py-2 border rounded-soft" placeholder="Nombre" />
+      <select id="new-role" class="px-3 py-2 border rounded-soft">
+        <option value="terapista">Terapeuta</option>
+        <option value="jugador">Paciente</option>
+      </select>
+    </div>
+    <div class="mt-3">
+      <button id="create-user" class="px-4 py-2 bg-primary text-white rounded-soft">Crear</button>
+      <span id="create-status" class="text-sm text-gray-600 ml-2"></span>
+    </div>
+  </div>
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Listado</h3>
+    <table class="w-full">
+      <thead class="bg-gray-50"><tr>
+        <th class="px-3 py-2 text-left">Nombre</th>
+        <th class="px-3 py-2 text-left">Email</th>
+        <th class="px-3 py-2 text-left">Rol</th>
+        <th class="px-3 py-2 text-left">Activo</th>
+        <th class="px-3 py-2 text-left">Terapeuta Asignado</th>
+        <th class="px-3 py-2 text-left">Acciones</th>
+      </tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="border-t">
+          <td class="px-3 py-2">
+            <input class="px-2 py-1 border rounded-soft w-40 admin-edit-name" data-id="{{ u.id }}" value="{{ u.username }}" />
+          </td>
+          <td class="px-3 py-2">{{ u.email }}</td>
+          <td class="px-3 py-2">
+            <select class="px-2 py-1 border rounded-soft admin-edit-role" data-id="{{ u.id }}">
+              <option value="terapista" {{ 'selected' if u.role == 'terapista' else '' }}>Terapeuta</option>
+              <option value="jugador" {{ 'selected' if u.role == 'jugador' else '' }}>Paciente</option>
+              <option value="admin" {{ 'selected' if u.role == 'admin' else '' }}>Admin</option>
+            </select>
+          </td>
+          <td class="px-3 py-2">
+            <label class="inline-flex items-center space-x-2">
+              <input type="checkbox" class="admin-edit-active" data-id="{{ u.id }}" {{ 'checked' if u.is_active else '' }} />
+              <span class="text-sm">Activo</span>
+            </label>
+          </td>
+          <td class="px-3 py-2">
+            {% if u.role == 'jugador' %}
+              <select class="px-2 py-1 border rounded-soft assign-select" data-patient-id="{{ u.id }}">
+                <option value="">Sin asignar</option>
+                {% for t in therapists %}
+                  <option value="{{ t.id }}" {{ 'selected' if u.assigned_therapist_id == t.id else '' }}>{{ t.username or t.email }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-sm text-gray-600">
+            {% if u.role == 'jugador' %}
+            <button class="px-3 py-1 bg-primary text-white rounded-soft assign-btn" data-patient-id="{{ u.id }}">Guardar</button>
+            {% else %}—{% endif %}
+            <button class="ml-2 px-3 py-1 bg-gray-100 text-charcoal rounded-soft admin-update-btn" data-id="{{ u.id }}">Actualizar</button>
+            {% if u.role != 'admin' %}
+            <button class="ml-2 px-3 py-1 bg-red-600 text-white rounded-soft admin-delete-btn" data-id="{{ u.id }}">Eliminar</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const inner = document.getElementById('toast-inner');
+    inner.textContent = message;
+    inner.className = 'px-4 py-3 rounded-soft shadow-soft text-white ' + (type === 'success' ? 'bg-olive' : type === 'error' ? 'bg-statusRed' : 'bg-accent');
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 2500);
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const emailEl = document.getElementById('new-email');
+    const userEl = document.getElementById('new-username');
+    const roleEl = document.getElementById('new-role');
+    const statusEl = document.getElementById('create-status');
+    const createBtn = document.getElementById('create-user');
+    document.getElementById('create-user').addEventListener('click', async () => {
+      statusEl.textContent = 'Creando...';
+      const prevTxt = createBtn.textContent;
+      createBtn.disabled = true;
+      createBtn.textContent = 'Creando…';
+      try {
+        const res = await fetch('/api/admin/create-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailEl.value, username: userEl.value, role: roleEl.value })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Error al crear');
+        statusEl.textContent = `Creado. Contraseña temporal: ${data.temp_password}`;
+        showToast('Usuario creado', 'success');
+        setTimeout(() => window.location.reload(), 800);
+      } catch (e) {
+        statusEl.textContent = e.message;
+        showToast(e.message, 'error');
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = prevTxt;
+      }
+    });
+
+    // Assign therapist actions
+    document.querySelectorAll('.assign-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const patientId = btn.getAttribute('data-patient-id');
+        const select = document.querySelector(`.assign-select[data-patient-id="${patientId}"]`);
+        const therapistId = select ? select.value : '';
+        if (!therapistId) { alert('Selecciona un terapeuta'); return; }
+        const prevTxt = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+        try {
+          const res = await fetch('/api/admin/assign-therapist', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_id: Number(patientId), therapist_id: Number(therapistId) })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.message || 'Error al asignar');
+          showToast('Terapeuta asignado', 'success');
+        } catch (e) {
+          showToast(e.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = prevTxt;
+        }
+      });
+    });
+
+    // Update user actions
+    document.querySelectorAll('.admin-update-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-id'));
+        const nameEl = document.querySelector(`.admin-edit-name[data-id="${id}"]`);
+        const roleEl = document.querySelector(`.admin-edit-role[data-id="${id}"]`);
+        const activeEl = document.querySelector(`.admin-edit-active[data-id="${id}"]`);
+        const prevTxt = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Actualizando…';
+        try {
+          const res = await fetch('/api/admin/update-user', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, username: nameEl.value, role: roleEl.value, is_active: activeEl.checked })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.message || 'Error al actualizar');
+          showToast('Usuario actualizado', 'success');
+        } catch (e) { showToast(e.message, 'error'); }
+        finally {
+          btn.disabled = false;
+          btn.textContent = prevTxt;
+        }
+      });
+    });
+
+    // Delete user actions
+    document.querySelectorAll('.admin-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-id'));
+        if (!confirm('¿Eliminar usuario? Esta acción es permanente.')) return;
+        const prevTxt = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Eliminando…';
+        try {
+          const res = await fetch('/api/admin/delete-user', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.message || 'Error al eliminar');
+          showToast('Usuario eliminado', 'success');
+          window.location.reload();
+        } catch (e) { showToast(e.message, 'error'); }
+        finally {
+          btn.disabled = false;
+          btn.textContent = prevTxt;
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

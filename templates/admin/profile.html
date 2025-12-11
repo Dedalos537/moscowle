@@ -1,0 +1,59 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_dashboard' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Perfil de Administrador</h2>
+  <p class="text-sm text-gray-500">Gestiona tu nombre y contraseña</p>
+</div>
+{% endblock %}
+{% block content %}
+<div class="p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="bg-white rounded-soft shadow-soft p-6 lg:col-span-2">
+    <h3 class="text-lg font-semibold mb-4">Información</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm text-gray-600">Nombre</label>
+        <input id="admin-name" class="w-full px-3 py-2 border rounded-soft" value="{{ current_user.username or '' }}" />
+      </div>
+      <div>
+        <label class="text-sm text-gray-600">Correo</label>
+        <input class="w-full px-3 py-2 border rounded-soft bg-gray-100" value="{{ current_user.email }}" disabled />
+      </div>
+      <div>
+        <label class="text-sm text-gray-600">Nueva contraseña</label>
+        <input id="admin-pass" type="password" class="w-full px-3 py-2 border rounded-soft" placeholder="Opcional" />
+      </div>
+    </div>
+    <div class="mt-4">
+      <button id="save-admin" class="px-4 py-2 bg-primary text-white rounded-soft">Guardar cambios</button>
+      <span id="save-status" class="text-sm text-gray-600 ml-2"></span>
+    </div>
+  </div>
+  <div class="bg-white rounded-soft shadow-soft p-6">
+    <h3 class="text-lg font-semibold mb-4">Resumen</h3>
+    <p class="text-sm text-gray-600">Rol: <span class="font-medium">Administrador</span></p>
+    <p class="text-sm text-gray-600">Activo: <span class="font-medium">Sí</span></p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const statusEl = document.getElementById('save-status');
+    document.getElementById('save-admin').addEventListener('click', async () => {
+      statusEl.textContent = 'Guardando...';
+      try {
+        const res = await fetch('/api/admin/profile', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: document.getElementById('admin-name').value, new_password: document.getElementById('admin-pass').value })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || 'Error');
+        statusEl.textContent = 'Cambios guardados';
+      } catch (e) {
+        statusEl.textContent = e.message;
+      }
+    });
+  });
+</script>
+{% endblock %}
