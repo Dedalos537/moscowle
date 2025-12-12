@@ -242,20 +242,21 @@ with app.app_context():
             print(f"Admin user ensured/updated: {admin_email}")
 
     # Ensure no other users remain with admin role (avoid mixing therapist as admin)
-    try:
-        from sqlalchemy import and_
-        others = User.query.filter(and_(User.role == 'admin', User.email != admin_email)).all()
-        demoted = 0
-        for u in others:
-            u.role = 'terapista'
-            if not u.is_active:
-                u.is_active = True
-            demoted += 1
-        if demoted:
-            db.session.commit()
-            print(f"Demoted {demoted} non-primary admin user(s) to 'terapista'.")
-    except Exception as e:
-        app.logger.warning(f"Role normalization warning: {e}")
+    # Ensure no other users remain with admin role (avoid mixing therapist as admin)
+    # try:
+    #     from sqlalchemy import and_
+    #     others = User.query.filter(and_(User.role == 'admin', User.email != admin_email)).all()
+    #     demoted = 0
+    #     for u in others:
+    #         u.role = 'terapista'
+    #         if not u.is_active:
+    #             u.is_active = True
+    #         demoted += 1
+    #     if demoted:
+    #         db.session.commit()
+    #         print(f"Demoted {demoted} non-primary admin user(s) to 'terapista'.")
+    # except Exception as e:
+    #     app.logger.warning(f"Role normalization warning: {e}")
 
 @app.route('/')
 def index():
@@ -460,7 +461,6 @@ def dashboard():
                                patients=patients,
                                alerts=alerts,
                                active_page='dashboard')
-
     elif current_user.role == 'jugador':
         # Expanded logic for player dashboard
         total_sessions = SessionMetrics.query.filter_by(user_id=current_user.id).count()
