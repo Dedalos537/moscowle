@@ -111,13 +111,13 @@
               —
             {% endif %}
           </td>
-          <td class="px-3 py-2 text-sm text-gray-600">
+          <td class="px-3 py-2 flex flex-col flex-wrap items-center justify-center gap-2 text-sm text-gray-600">
             {% if u.role == 'jugador' %}
-            <button class="px-3 py-1 bg-primary text-white rounded-soft assign-btn" data-patient-id="{{ u.id }}">Guardar</button>
+            <button class="ml-1 px-3 py-1 bg-primary text-white rounded-soft assign-btn" data-patient-id="{{ u.id }}">Guardar</button>
             {% else %}—{% endif %}
-            <button class="ml-2 px-3 py-1 bg-gray-100 text-charcoal rounded-soft admin-update-btn" data-id="{{ u.id }}">Actualizar</button>
+            <button class="px-3 py-1 bg-gray-100 text-charcoal rounded-soft admin-update-btn" data-id="{{ u.id }}">Actualizar</button>
             {% if u.role != 'admin' %}
-            <button class="ml-2 px-3 py-1 bg-red-600 text-white rounded-soft admin-delete-btn" data-id="{{ u.id }}">Eliminar</button>
+            <button class="px-3 py-1 bg-red-600 text-white rounded-soft admin-delete-btn" data-id="{{ u.id }}">Eliminar</button>
             {% endif %}
           </td>
         </tr>
