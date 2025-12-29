@@ -7,13 +7,13 @@
 </div>
 {% endblock %}
 {% block content %}
-<div class="p-8">
+<div class="p-4 md:p-8">
   <div class="bg-surface rounded-soft shadow-soft p-6 mb-6">
     <h3 class="text-lg font-semibold text-textDark mb-3">Subir Juego</h3>
-    <form id="upload-form" class="flex items-center gap-3">
-      <input id="game-name" class="px-3 py-2 border rounded-soft" placeholder="nombre-del-juego" />
-      <input id="game-file" type="file" accept=".html" class="px-3 py-2 border rounded-soft" />
-      <button class="px-4 py-2 bg-primary text-white rounded-soft">Subir</button>
+    <form id="upload-form" class="flex flex-col md:flex-row items-start md:items-center gap-3">
+      <input id="game-name" class="w-full md:w-auto px-3 py-2 border rounded-soft" placeholder="nombre-del-juego" />
+      <input id="game-file" type="file" accept=".html" class="w-full md:w-auto px-3 py-2 border rounded-soft" />
+      <button class="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-soft">Subir</button>
       <span id="upload-status" class="text-sm text-gray-600 ml-2"></span>
     </form>
   </div>
@@ -21,9 +21,9 @@
     <h3 class="text-lg font-semibold text-textDark mb-3">Lista de juegos</h3>
     <ul class="space-y-2" id="games-list">
       {% for g in games %}
-        <li class="flex items-center justify-between p-2 bg-gray-50 rounded-soft">
-          <span class="text-sm">{{ g }}</span>
-          <div class="flex items-center gap-2">
+        <li class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 bg-gray-50 rounded-soft gap-2">
+          <span class="text-sm break-all">{{ g }}</span>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
             <a class="text-primary text-sm" target="_blank" href="{{ url_for('static', filename='games/' + g) }}">Abrir</a>
             <button class="px-3 py-1 bg-red-500 text-white text-xs rounded-soft" data-del="{{ g }}">Eliminar</button>
           </div>

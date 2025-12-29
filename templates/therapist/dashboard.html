@@ -15,8 +15,8 @@
 {% endblock %}
 
 {% block content %}
-    <div id="dashboard-stats" class="px-8 py-6">
-        <div class="grid grid-cols-4 gap-6">
+    <div id="dashboard-stats" class="px-4 md:px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <!-- Stats Cards -->
             <div class="bg-surface rounded-soft shadow-soft p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -64,24 +64,74 @@
         </div>
     </div>
 
-    <div id="patient-performance-section" class="px-8 pb-8">
-        <div class="bg-surface rounded-soft shadow-soft p-8">
-            <div class="flex items-center justify-between mb-8">
+    <div id="patient-performance-section" class="px-4 md:px-8 pb-8">
+        <div class="bg-surface rounded-soft shadow-soft p-4 md:p-8">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4">
                 <div>
-                    <h3 class="text-2xl font-bold text-textDark mb-2">Rendimiento de Pacientes</h3>
+                    <h3 class="text-xl md:text-2xl font-bold text-textDark mb-2">Rendimiento de Pacientes</h3>
                     <p class="text-sm text-gray-500">Análisis en tiempo real con recomendaciones de IA</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button class="px-5 py-2.5 rounded-full border-2 border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary transition-all">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full border-2 border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary transition-all text-center">
                         <i class="fa-solid fa-filter mr-2"></i>Filtrar
                     </button>
-                    <button class="px-5 py-2.5 rounded-full bg-primary text-white font-semibold shadow-soft hover:shadow-soft-lg transition-all">
+                    <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full bg-primary text-white font-semibold shadow-soft hover:shadow-soft-lg transition-all text-center">
                         <i class="fa-solid fa-download mr-2"></i>Exportar
                     </button>
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <!-- Mobile Cards (Visible on small screens) -->
+            <div class="md:hidden space-y-4">
+                {% for p in patients %}
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                {{ p.name[:2].upper() if p.name else 'US' }}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-textDark">{{ p.name }}</h4>
+                                <p class="text-xs text-gray-500">{{ p.game }}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">Nivel {{ p.level }}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-white p-2 rounded-lg text-center">
+                            <p class="text-xs text-gray-500">Precisión</p>
+                            <p class="font-bold text-textDark">{{ p.accuracy }}%</p>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg text-center">
+                            <p class="text-xs text-gray-500">Tiempo</p>
+                            <p class="font-bold text-textDark">{{ p.avg_time }}s</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-3 rounded-lg mb-3">
+                        <p class="text-xs font-bold text-amber-700 mb-1"><i class="fas fa-robot mr-1"></i> IA Sugiere:</p>
+                        <p class="text-xs text-amber-800">
+                            {% if p.prediction_code == 1 %}
+                                Avanzar al siguiente nivel
+                            {% elif p.prediction_code == 2 %}
+                                Necesita apoyo adicional
+                            {% else %}
+                                Mantener nivel actual
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('patient_detail', patient_id=p.ptid) }}" class="flex-1 py-2 bg-primary text-white text-center rounded-lg text-sm font-medium">Ver Perfil</a>
+                        <button class="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg"><i class="fas fa-ellipsis-v"></i></button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b-2 border-gray-100">
@@ -154,6 +204,69 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4">
+                {% for p in patients %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ p.avatar }}" alt="Patient" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <p class="font-bold text-textDark">{{ p.name }}</p>
+                                <p class="text-xs text-gray-500">ID: {{ p.ptid }}</p>
+                            </div>
+                        </div>
+                        <button class="p-2 rounded-soft hover:bg-primary hover:text-white transition-all text-gray-400">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Juego</p>
+                            <div class="flex items-center gap-1 font-medium text-sm">
+                                <i class="fa-solid fa-gamepad text-primary text-xs"></i>
+                                {{ p.game }}
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Nivel</p>
+                            <span class="text-blue-700 font-bold text-sm">Nivel {{ p.level }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-500">Precisión</span>
+                            <span class="font-bold {% if p.accuracy > 80 %}text-statusGreen{% elif p.accuracy > 50 %}text-statusYellow{% else %}text-statusRed{% endif %}">{{ p.accuracy }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full {% if p.accuracy > 80 %}bg-statusGreen{% elif p.accuracy > 50 %}bg-statusYellow{% else %}bg-statusRed{% endif %} rounded-full" style="width: {{ p.accuracy }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-t border-gray-100 pt-3">
+                        <div class="text-xs text-gray-500">
+                            <span class="font-bold text-textDark">{{ p.sessions }}</span> sesiones • {{ p.avg_time }}s avg
+                        </div>
+                        {% if p.prediction_code == 1 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusGreen bg-opacity-10 text-statusGreen text-xs font-bold">
+                            <i class="fa-solid fa-arrow-up"></i>Avanzar
+                        </span>
+                        {% elif p.prediction_code == 2 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusRed bg-opacity-10 text-statusRed text-xs font-bold">
+                            <i class="fa-solid fa-heart"></i>Apoyo
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusYellow bg-opacity-10 text-statusYellow text-xs font-bold">
+                            <i class="fa-solid fa-minus"></i>Mantener
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>

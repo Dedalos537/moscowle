@@ -8,16 +8,16 @@
 {% endblock %}
 
 {% block header_action %}
-<button class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-    <i class="fas fa-download mr-2"></i>
-    Export Report
+<button class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center">
+    <i class="fas fa-download md:mr-2"></i>
+    <span class="hidden md:inline">Export Report</span>
 </button>
 {% endblock %}
 
 {% block content %}
     <div class="p-8 space-y-6">
         
-        <section id="ai-overview-cards" class="grid grid-cols-4 gap-6">
+        <section id="ai-overview-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="bg-surface p-6 rounded-soft shadow-soft">
                 <div class="flex items-start justify-between">
                     <div>
@@ -83,15 +83,15 @@
             </div>
         </section>
         
-        <div class="grid grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <section id="difficulty-adaptation-chart" class="col-span-2 bg-surface p-6 rounded-soft shadow-soft">
-                <div class="flex items-center justify-between mb-6">
+            <section id="difficulty-adaptation-chart" class="lg:col-span-2 bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-textPrimary">Difficulty Adaptation Over Time</h3>
                         <p class="text-sm text-gray-500 mt-1">AI-driven difficulty adjustments per patient</p>
                     </div>
-                    <select class="px-4 py-2 rounded-soft border border-gray-200 text-sm focus:outline-none focus:border-primary">
+                    <select class="px-4 py-2 rounded-soft border border-gray-200 text-sm focus:outline-none focus:border-primary w-full sm:w-auto">
                         <option>Last 7 Days</option>
                         <option>Last 30 Days</option>
                         <option>Last 90 Days</option>
@@ -127,7 +127,7 @@
             </section>
         </div>
         
-        <div class="grid grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             <section id="patient-progress-chart" class="bg-surface p-6 rounded-soft shadow-soft">
                 <div class="flex items-center justify-between mb-6">
@@ -160,7 +160,8 @@
                     <button class="text-sm text-primary font-medium hover:underline">View All</button>
                 </div>
             </div>
-            <div class="overflow-x-auto">
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50 border-b border-gray-100">
                         <tr>
@@ -199,6 +200,44 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4 p-4">
+                {% for adaptation in recent_adaptations %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ adaptation.patient_avatar }}" alt="Patient" class="w-10 h-10 rounded-full object-cover">
+                            <div>
+                                <p class="font-medium text-textDark">{{ adaptation.patient_name }}</p>
+                                <p class="text-xs text-gray-500">{{ adaptation.timestamp }}</p>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold text-primary">{{ adaptation.confidence }}% Conf.</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Game</p>
+                            <p class="text-sm font-medium">{{ adaptation.game_type }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Change</p>
+                            <div class="flex items-center gap-2 text-sm">
+                                <span class="text-gray-500">L{{ adaptation.prev_level }}</span>
+                                <i class="fas fa-arrow-right text-xs text-gray-400"></i>
+                                <span class="font-bold {% if adaptation.new_level > adaptation.prev_level %}text-green-600{% else %}text-orange-600{% endif %}">L{{ adaptation.new_level }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <p class="text-xs text-blue-600 font-bold mb-1">Reason</p>
+                        <p class="text-sm text-blue-800">{{ adaptation.reason }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </section>
         
     </div>
@@ -212,6 +251,7 @@
     
             var config = {
                 displayModeBar: false, // this is the line that hides the bar.
+                responsive: true
             };
     
             // Difficulty Adaptation Chart

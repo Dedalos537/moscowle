@@ -3,7 +3,7 @@
 {% block title %}Calendario - Moscowle{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-8">
+<div class="max-w-7xl mx-auto px-4 md:px-6 py-8">
     
     <!-- Page Header -->
     <div class="mb-8">
@@ -13,8 +13,8 @@
 
     <!-- Actions Bar -->
     <div class="bg-white rounded-soft shadow-soft p-6 mb-6">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-4 w-full md:w-auto justify-center md:justify-start">
                 <button id="prev-month-btn" class="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors">
                     <i class="fas fa-chevron-left text-gray-600"></i>
                 </button>
@@ -23,7 +23,7 @@
                     <i class="fas fa-chevron-right text-gray-600"></i>
                 </button>
             </div>
-            <button id="new-appointment-btn" class="bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
+            <button id="new-appointment-btn" class="w-full md:w-auto bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
                 <i class="fas fa-plus mr-2"></i>
                 Nueva Cita
             </button>
@@ -31,19 +31,21 @@
     </div>
 
     <!-- Calendar Grid -->
-    <div class="bg-white rounded-soft shadow-soft p-6 mb-6">
-        <div class="grid grid-cols-7 gap-2 mb-4">
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Domingo</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Lunes</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Martes</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Miércoles</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Jueves</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Viernes</div>
-            <div class="text-center py-2 text-sm font-semibold text-gray-600">Sábado</div>
-        </div>
-        
-        <div id="calendar-grid" class="grid grid-cols-7 gap-2">
-            <!-- Calendar days will be generated here -->
+    <div class="bg-white rounded-soft shadow-soft p-6 mb-6 overflow-x-auto">
+        <div class="min-w-[700px]">
+            <div class="grid grid-cols-7 gap-2 mb-4">
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Domingo</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Lunes</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Martes</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Miércoles</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Jueves</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Viernes</div>
+                <div class="text-center py-2 text-sm font-semibold text-gray-600">Sábado</div>
+            </div>
+            
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                <!-- Calendar days will be generated here -->
+            </div>
         </div>
     </div>
 
@@ -65,7 +67,7 @@
 
 <!-- New Appointment Modal -->
 <div id="appointment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white rounded-soft p-8 max-w-2xl w-full mx-4">
+    <div class="bg-white rounded-soft p-6 md:p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-6">
             <h3 class="text-2xl font-bold text-charcoal">Nueva Cita</h3>
             <button id="close-modal-btn" class="text-gray-400 hover:text-charcoal transition-colors">
@@ -86,7 +88,7 @@
                 <input type="text" id="appointment-title" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" placeholder="Ej: Sesión de Evaluación" required>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-charcoal mb-2">Fecha</label>
                     <input type="date" id="appointment-date" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" required>
@@ -107,7 +109,14 @@
                 <textarea id="appointment-notes" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" placeholder="Observaciones o detalles adicionales..."></textarea>
             </div>
 
-            <div class="flex gap-4 pt-4">
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Juego asignado</label>
+                <select id="appointment-game" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
+                    <option value="">(Ninguno)</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 pt-4">
                 <button type="submit" class="flex-1 bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
                     <i class="fas fa-check mr-2"></i>
                     Crear Cita
@@ -130,6 +139,7 @@
     document.getElementById('new-appointment-btn').addEventListener('click', () => {
         modal.classList.remove('hidden');
         loadPatients();
+        loadGames();
         // Set default date to today
         document.getElementById('appointment-date').value = new Date().toISOString().split('T')[0];
     });
@@ -157,6 +167,25 @@
                 });
             })
             .catch(err => console.error('Error loading patients:', err));
+    }
+
+    // Load available games for selection
+    function loadGames() {
+        fetch('/api/games')
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('appointment-game');
+                if (!select) return;
+                select.innerHTML = '<option value="">(Ninguno)</option>';
+                const games = (data && data.games) ? data.games : [];
+                games.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g;
+                    option.textContent = g.replace(/\.html$/i, '');
+                    select.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Error loading games:', err));
     }
 
     // Load appointments
@@ -219,6 +248,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         ${appt.location ? `<span class="text-xs text-gray-500"><i class="fas fa-location-dot mr-1"></i>${appt.location}</span>` : ''}
+                        ${appt.games && appt.games.length ? `<button class="ml-3 px-3 py-1 bg-primary text-white text-xs rounded-soft open-game-btn" data-game="${appt.games[0]}">Abrir Juego</button>` : ''}
                     </div>
                 </div>
             `;
@@ -276,8 +306,9 @@
                     ${dayAppts.map(appt => {
                         const time = new Date(appt.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                         return `
-                            <div class="text-xs bg-blue-100 text-blue-700 rounded px-2 py-1 mb-1 truncate" title="${appt.title || 'Sesión'}">
-                                ${time} ${appt.patient ? appt.patient.name : ''}
+                            <div class="text-xs bg-blue-100 text-blue-700 rounded px-2 py-1 mb-1 truncate flex justify-between items-center" title="${appt.title || 'Sesión'}">
+                                <div>${time} ${appt.patient ? appt.patient.name : ''}</div>
+                                ${appt.games && appt.games.length ? `<button class="ml-2 text-xs bg-white px-2 py-0.5 rounded open-game-btn" data-game="${appt.games[0]}">🎮</button>` : ''}
                             </div>
                         `;
                     }).join('')}
@@ -286,6 +317,13 @@
         }
         
         document.getElementById('calendar-grid').innerHTML = html;
+        // attach open-game handlers for therapist upcoming list and day cells
+        document.querySelectorAll('.open-game-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const g = btn.getAttribute('data-game');
+                if (g) window.open(`/static/games/${g}`, '_blank');
+            });
+        });
     }
 
     document.getElementById('prev-month-btn').addEventListener('click', () => {
@@ -317,7 +355,11 @@
             end_time: end.toISOString().slice(0, 16),
             location: document.getElementById('appointment-location').value,
             notes: document.getElementById('appointment-notes').value,
-            status: 'scheduled'
+            status: 'scheduled',
+            games: (function(){
+                const g = document.getElementById('appointment-game').value;
+                return g ? [g] : [];
+            })()
         };
 
         fetch('/api/sessions', {

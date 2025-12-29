@@ -8,6 +8,10 @@ from schemas import CreateUserSchema, UpdateUserSchema, AssignTherapistSchema, S
 from ai_service import predict_level, get_cluster, train_model
 from datetime import datetime, timedelta
 from sqlalchemy import func, or_
+import json
+import io
+import csv
+from flask import make_response
 from email_validator import validate_email, EmailNotValidError
 import requests
 import json
@@ -210,7 +214,12 @@ with app.app_context():
     train_model()
     
     # Create admin user (real admin)
-    admin_email = os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'
+    admin_email_env = (os.getenv('ADMIN_EMAIL') or '').strip()
+    try:
+        admin_email = validate_email(admin_email_env).email if admin_email_env else 'diegocenteno537@gmail.com'
+    except EmailNotValidError:
+        app.logger.warning(f"Invalid ADMIN_EMAIL '{admin_email_env}' in .env; using default fallback email.")
+        admin_email = 'diegocenteno537@gmail.com'
     admin_password = os.getenv('ADMIN_PASSWORD') or 'Rucula_530'
     admin = User.query.filter_by(email=admin_email).first()
     if not admin:
@@ -376,26 +385,40 @@ def dashboard():
             'sessions_total': sessions_total,
             'avg_accuracy': round(avg_acc, 1)
         }
-        return render_template('admin/dashboard.html', overview=overview, active_page='admin_dashboard')
+        try:
+            return render_template(
+                'admin/dashboard.html',
+                overview=overview,
+                active_page='admin_dashboard',
+            )
+        except Exception as e:
+            app.logger.error(f"Error rendering admin dashboard: {e}")
+            flash('Error cargando el panel de administración. Intenta más tarde.', 'error')
+            return redirect(url_for('dashboard'))
     elif current_user.role == 'terapista':
         # Stats from DB
-        active_patients = User.query.filter_by(role='jugador', is_active=True).count()
+        active_patients = User.query.filter_by(role='jugador', is_active=True, assigned_therapist_id=current_user.id).count()
         total_sessions = Appointment.query.filter_by(therapist_id=current_user.id).count()
 
         # IA precision: average of SessionMetrics.accurracy for therapist's patients
         avg_acc_query = db.session.query(func.avg(SessionMetrics.accurracy))\
             .join(User, SessionMetrics.user_id == User.id)\
-            .filter(User.role == 'jugador').scalar()
+            .filter(User.role == 'jugador', User.assigned_therapist_id == current_user.id).scalar()
         ia_precision = round(avg_acc_query or 0, 1)
 
         # Improvement rate: compare avg accuracy last 30 days vs previous 30 days (simple proxy)
         now = datetime.utcnow()
         last_30 = now - timedelta(days=30)
         prev_60 = now - timedelta(days=60)
+        
         avg_last_30 = db.session.query(func.avg(SessionMetrics.accurracy))\
-            .filter(SessionMetrics.date >= last_30).scalar()
+            .join(User, SessionMetrics.user_id == User.id)\
+            .filter(SessionMetrics.date >= last_30, User.assigned_therapist_id == current_user.id).scalar()
+            
         avg_prev_30 = db.session.query(func.avg(SessionMetrics.accurracy))\
-            .filter(SessionMetrics.date >= prev_60, SessionMetrics.date < last_30).scalar()
+            .join(User, SessionMetrics.user_id == User.id)\
+            .filter(SessionMetrics.date >= prev_60, SessionMetrics.date < last_30, User.assigned_therapist_id == current_user.id).scalar()
+            
         if avg_last_30 and avg_prev_30 and avg_prev_30 != 0:
             improvement_rate = round(((avg_last_30 - avg_prev_30) / avg_prev_30) * 100, 1)
         else:
@@ -409,7 +432,7 @@ def dashboard():
         }
 
         # Patient Performance from DB (show all active patients, even without metrics)
-        patients_query = User.query.filter_by(role='jugador', is_active=True).all()
+        patients_query = User.query.filter_by(role='jugador', is_active=True, assigned_therapist_id=current_user.id).all()
         patients = []
         for p in patients_query:
             metrics = SessionMetrics.query.filter_by(user_id=p.id).order_by(SessionMetrics.date.desc()).limit(10).all()
@@ -420,8 +443,8 @@ def dashboard():
                 avg_time = round(sum(avg_time_list) / len(avg_time_list), 1)
                 sessions_count = SessionMetrics.query.filter_by(user_id=p.id).count()
                 patients.append({
-                    "avatar": f"https://ui-avatars.com/api/?name={p.username.replace(' ', '+')}&background=random",
-                    "name": p.username,
+                    "avatar": f"https://ui-avatars.com/api/?name={(p.username or 'User').replace(' ', '+')}&background=random",
+                    "name": p.username or 'Usuario',
                     "ptid": p.id,
                     "game": metrics[0].game_name if metrics else 'Sin actividad',
                     "level": metrics[0].prediction if metrics else 0,
@@ -433,8 +456,8 @@ def dashboard():
             else:
                 # Include patients without metrics (newly added)
                 patients.append({
-                    "avatar": f"https://ui-avatars.com/api/?name={p.username.replace(' ', '+')}&background=random",
-                    "name": p.username,
+                    "avatar": f"https://ui-avatars.com/api/?name={(p.username or 'User').replace(' ', '+')}&background=random",
+                    "name": p.username or 'Usuario',
                     "ptid": p.id,
                     "game": 'Sin actividad',
                     "level": 0,
@@ -586,7 +609,7 @@ def manage_patients():
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
     
-    patients = User.query.filter_by(role='jugador').all()
+    patients = User.query.filter_by(role='jugador', assigned_therapist_id=current_user.id).all()
     return render_template('therapist/patients.html', patients=patients, active_page='patients')
 
 
@@ -630,7 +653,8 @@ def api_get_sessions():
                 'status': a.status,
                 'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
                 'location': a.location,
-                'notes': a.notes
+                'notes': a.notes,
+                'games': json.loads(a.games) if a.games else []
             })
         return jsonify(results)
 
@@ -655,7 +679,8 @@ def api_get_sessions():
             'status': a.status,
             'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
             'location': a.location,
-            'notes': a.notes
+            'notes': a.notes,
+            'games': json.loads(a.games) if a.games else []
         })
 
     return jsonify(events)
@@ -681,6 +706,7 @@ def api_upcoming_sessions():
             'patient': patient.username or patient.email,
             'start_time': a.start_time.isoformat(),
             'end_time': (a.end_time.isoformat() if a.end_time else None)
+            ,'games': json.loads(a.games) if a.games else []
         })
     return jsonify(results)
 
@@ -725,10 +751,23 @@ def api_get_patient_appointments():
             'status': a.status,
             'therapist': {'id': a.therapist.id, 'name': a.therapist.username} if a.therapist else None,
             'location': a.location,
-            'notes': a.notes
+            'notes': a.notes,
+            'games': json.loads(a.games) if a.games else []
         })
     
     return jsonify(results)
+
+
+@app.route('/api/games', methods=['GET'])
+@login_required
+def api_list_games():
+    # Return list of available custom games (filenames) from static/games
+    games_dir = os.path.join(app.root_path, 'static', 'games')
+    try:
+        files = [f for f in os.listdir(games_dir) if f.lower().endswith('.html')]
+    except Exception:
+        files = []
+    return jsonify({'games': files})
 
 
 @app.route('/api/sessions/day', methods=['GET'])
@@ -800,6 +839,21 @@ def api_create_session():
         location=location,
         status=data.get('status') or 'scheduled'
     )
+    # attach games if provided (list or single value)
+    try:
+        games_payload = data.get('games')
+        if games_payload:
+            # accept comma-separated string or list
+            if isinstance(games_payload, str):
+                games_list = [g.strip() for g in games_payload.split(',') if g.strip()]
+            elif isinstance(games_payload, list):
+                games_list = games_payload
+            else:
+                games_list = []
+            if games_list:
+                appt.games = json.dumps(games_list)
+    except Exception:
+        pass
     db.session.add(appt)
     db.session.commit()
 
@@ -820,6 +874,11 @@ def api_create_session():
         'location': appt.location,
         'notes': appt.notes
     }
+    # include games if any
+    try:
+        created['games'] = json.loads(appt.games) if appt.games else []
+    except Exception:
+        created['games'] = []
     return jsonify(created)
 
 
@@ -1199,88 +1258,134 @@ def analytics():
         flash('Acceso denegado.', 'error')
         return redirect(url_for('dashboard'))
 
-    # Dummy data for now
+    # --- Real Data Calculation ---
+    
+    # 1. AI Overview
+    total_metrics = SessionMetrics.query.count()
+    
+    # Calculate averages
+    avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).scalar() or 0
+    
+    # Success rate: Percentage of "Avanzar Nivel" (1) predictions
+    total_predictions = SessionMetrics.query.filter(SessionMetrics.prediction.isnot(None)).count()
+    advance_predictions = SessionMetrics.query.filter_by(prediction=1).count()
+    success_rate = (advance_predictions / total_predictions * 100) if total_predictions > 0 else 0
+    
+    # Active models (Static for MVP, but could be dynamic if we had multiple model files)
+    active_models_count = 1 
+
     ai_overview = {
-        "total_adaptations": 128,
-        "adaptations_change": 15,
-        "avg_accuracy": 89.2,
-        "accuracy_improvement": 5.4,
-        "success_rate": 94.1,
-        "success_rate_increase": 2.1,
-        "active_models": 3,
-        "insight": "El modelo de 'Reflejos Rápidos' muestra una alta precisión en la predicción de la necesidad de apoyo."
+        "total_adaptations": total_metrics,
+        "adaptations_change": 0, # Placeholder for trend
+        "avg_accuracy": round(avg_acc, 1),
+        "accuracy_improvement": 0, # Placeholder
+        "success_rate": round(success_rate, 1),
+        "success_rate_increase": 0, # Placeholder
+        "active_models": active_models_count,
+        "insight": "El modelo SVM se está adaptando a los patrones de tiempo y precisión de los pacientes."
     }
 
+    # 2. Model Performance (Mocked for MVP as we don't have ground truth labels in DB yet)
+    # In a real system, we'd compare prediction vs therapist feedback
     model_performance = [
         {"name": "Clasificación de Nivel", "accuracy": 92},
-        {"name": "Detección de Frustración", "accuracy": 85},
-        {"name": "Predicción de Abandono", "accuracy": 78},
+        {"name": "Detección de Fatiga", "accuracy": 85}, # Future feature
     ]
 
-    recent_adaptations = [
-        {
-            "patient_name": "Carlos Rodriguez",
-            "patient_avatar": "https://ui-avatars.com/api/?name=Carlos+Rodriguez&background=random",
-            "game_type": "Memoria Visual",
-            "prev_level": 3,
-            "new_level": 4,
-            "reason": "Alta precisión sostenida",
-            "timestamp": "Hace 2 horas",
-            "confidence": 95
-        },
-        {
-            "patient_name": "Ana Martinez",
-            "patient_avatar": "https://ui-avatars.com/api/?name=Ana+Martinez&background=random",
-            "game_type": "Reflejos Rápidos",
-            "prev_level": 5,
-            "new_level": 5,
-            "reason": "Rendimiento inconsistente",
-            "timestamp": "Hace 5 horas",
-            "confidence": 88
-        },
-        {
-            "patient_name": "Luis Garcia",
-            "patient_avatar": "https://ui-avatars.com/api/?name=Luis+Garcia&background=random",
-            "game_type": "Seguimiento de Objetos",
-            "prev_level": 2,
-            "new_level": 1,
-            "reason": "Bajo tiempo de reacción",
-            "timestamp": "Hace 1 día",
-            "confidence": 91
-        }
-    ]
+    # 3. Recent Adaptations (Last 10 metrics)
+    recent_metrics = db.session.query(SessionMetrics, User).join(User, SessionMetrics.user_id == User.id)\
+        .order_by(SessionMetrics.date.desc()).limit(10).all()
+    
+    recent_adaptations = []
+    labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
+    
+    for m, u in recent_metrics:
+        recent_adaptations.append({
+            "patient_name": u.username or u.email,
+            "patient_avatar": f"https://ui-avatars.com/api/?name={(u.username or 'User').replace(' ', '+')}&background=random",
+            "game_type": m.game_name,
+            "prev_level": "?", # We don't track prev level explicitly in metrics yet
+            "new_level": labels.get(m.prediction, "Desconocido"),
+            "reason": f"Precisión: {m.accurracy:.1f}%, Tiempo: {m.avg_time:.2f}s",
+            "timestamp": m.date.strftime("%d/%m %H:%M"),
+            "confidence": 90 # Mock confidence
+        })
 
-    # Chart data
-    # 1. Difficulty Adaptation Over Time
-    df_difficulty = pd.DataFrame({
-        'Date': pd.to_datetime(['2023-05-01', '2023-05-02', '2023-05-03', '2023-05-04', '2023-05-05', '2023-05-06', '2023-05-07']),
-        'Patient A': [3, 3, 4, 4, 4, 5, 5],
-        'Patient B': [2, 3, 3, 3, 4, 4, 4],
-        'Patient C': [5, 5, 5, 4, 4, 4, 3]
-    })
+    # 4. Charts Data
+    
+    # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients)
+    # We'll plot 'prediction' as a proxy for difficulty level/decision
+    last_30_days = datetime.utcnow() - timedelta(days=30)
+    
+    # Get top 5 patients by activity
+    top_patients = db.session.query(SessionMetrics.user_id, func.count(SessionMetrics.id))\
+        .group_by(SessionMetrics.user_id).order_by(func.count(SessionMetrics.id).desc()).limit(5).all()
+    
+    top_patient_ids = [p[0] for p in top_patients]
+    
+    metrics_data = SessionMetrics.query.filter(
+        SessionMetrics.date >= last_30_days,
+        SessionMetrics.user_id.in_(top_patient_ids)
+    ).order_by(SessionMetrics.date).all()
+    
+    # Organize by patient
+    patient_data = {}
+    for m in metrics_data:
+        p_name = User.query.get(m.user_id).username or "User"
+        if p_name not in patient_data:
+            patient_data[p_name] = {'x': [], 'y': []}
+        patient_data[p_name]['x'].append(m.date.isoformat())
+        patient_data[p_name]['y'].append(m.prediction) # 0, 1, 2
+
     fig_difficulty = go.Figure()
-    for col in df_difficulty.columns[1:]:
-        fig_difficulty.add_trace(go.Scatter(x=df_difficulty['Date'], y=df_difficulty[col], name=col, mode='lines+markers'))
-    fig_difficulty.update_layout(title='Difficulty Adaptation', xaxis_title='Date', yaxis_title='Difficulty Level', template='plotly_white', legend_title_text='Patients')
+    for name, data in patient_data.items():
+        fig_difficulty.add_trace(go.Scatter(x=data['x'], y=data['y'], name=name, mode='lines+markers'))
+    
+    fig_difficulty.update_layout(
+        title='Adaptación de Nivel (Últimos 30 días)', 
+        xaxis_title='Fecha', 
+        yaxis_title='Decisión IA (0=Mantener, 1=Avanzar, 2=Apoyo)',
+        template='plotly_white',
+        legend_title_text='Pacientes'
+    )
     difficulty_adaptation_data = json.loads(fig_difficulty.to_json())
 
-
-    # 2. Patient Progress Distribution
+    # Chart 2: Patient Progress Distribution (Latest prediction per patient)
+    # Get latest metric for each patient
+    subq = db.session.query(
+        SessionMetrics.user_id, 
+        func.max(SessionMetrics.date).label('max_date')
+    ).group_by(SessionMetrics.user_id).subquery()
+    
+    latest_metrics = db.session.query(SessionMetrics).join(
+        subq, 
+        (SessionMetrics.user_id == subq.c.user_id) & (SessionMetrics.date == subq.c.max_date)
+    ).all()
+    
+    # Count predictions
+    pred_counts = {0: 0, 1: 0, 2: 0}
+    for m in latest_metrics:
+        if m.prediction in pred_counts:
+            pred_counts[m.prediction] += 1
+            
     df_progress = pd.DataFrame({
-        'Level': [1, 2, 3, 4, 5, 6, 7, 8],
-        'Patients': [5, 8, 12, 7, 4, 2, 1, 0]
+        'Decisión': ['Mantener', 'Avanzar', 'Apoyo'],
+        'Pacientes': [pred_counts[0], pred_counts[1], pred_counts[2]]
     })
-    fig_progress = px.bar(df_progress, x='Level', y='Patients', title='Patient Progress Distribution', template='plotly_white')
+    
+    fig_progress = px.bar(df_progress, x='Decisión', y='Pacientes', title='Estado Actual de Pacientes', template='plotly_white', color='Decisión')
     patient_progress_data = json.loads(fig_progress.to_json())
 
-    # 3. Adaptation Frequency
-    df_adaptation = pd.DataFrame({
-        'Game Type': ['Reflejos', 'Memoria', 'Seguimiento', 'Cálculo'],
-        'Frequency': [25, 18, 30, 12]
-    })
-    fig_adaptation = px.pie(df_adaptation, values='Frequency', names='Game Type', title='Adaptation Frequency by Game', hole=.3, template='plotly_white')
-    adaptation_frequency_data = json.loads(fig_adaptation.to_json())
-
+    # Chart 3: Adaptation Frequency by Game
+    game_counts = db.session.query(SessionMetrics.game_name, func.count(SessionMetrics.id))\
+        .group_by(SessionMetrics.game_name).all()
+    
+    if game_counts:
+        df_adaptation = pd.DataFrame(game_counts, columns=['Juego', 'Frecuencia'])
+        fig_adaptation = px.pie(df_adaptation, values='Frecuencia', names='Juego', title='Juegos Más Jugados', hole=.3, template='plotly_white')
+        adaptation_frequency_data = json.loads(fig_adaptation.to_json())
+    else:
+        adaptation_frequency_data = {}
 
     return render_template('therapist/analytics.html',
                            ai_overview=ai_overview,
@@ -1441,6 +1546,84 @@ def reports():
                            start=start or '', end=end or '',
                            active_page='reports')
 
+@app.route('/therapist/reports')
+@login_required
+def therapist_reports():
+    return redirect(url_for('reports'))
+
+
+@app.route('/reports/export', methods=['GET'])
+@login_required
+def export_reports():
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    start = request.args.get('start')
+    end = request.args.get('end')
+    try:
+        if start:
+            start_dt = _parse_datetime(start)
+        else:
+            start_dt = datetime.utcnow() - timedelta(days=90)
+        if end:
+            end_dt = _parse_datetime(end)
+        else:
+            end_dt = datetime.utcnow()
+    except Exception:
+        return jsonify({'error': 'Fechas inválidas'}), 400
+
+    # Query appointments for this therapist in range
+    appts = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.start_time >= start_dt,
+        Appointment.start_time <= end_dt
+    ).order_by(Appointment.start_time.asc()).all()
+
+    # Prepare CSV in-memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    # header
+    writer.writerow(['appointment_id', 'patient_id', 'patient_name', 'start_time', 'end_time', 'status', 'location', 'notes', 'games', 'patient_total_sessions', 'patient_avg_accuracy', 'patient_avg_time', 'patient_last_session'])
+
+    for a in appts:
+        pid = a.patient_id
+        patient = a.patient
+        # aggregate metrics for patient in the same range
+        total_sessions = SessionMetrics.query.filter(SessionMetrics.user_id == pid, SessionMetrics.date >= start_dt, SessionMetrics.date <= end_dt).count()
+        avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter(SessionMetrics.user_id == pid, SessionMetrics.date >= start_dt, SessionMetrics.date <= end_dt).scalar() or 0
+        avg_time = db.session.query(func.avg(SessionMetrics.avg_time)).filter(SessionMetrics.user_id == pid, SessionMetrics.date >= start_dt, SessionMetrics.date <= end_dt).scalar() or 0
+        last_session = db.session.query(func.max(SessionMetrics.date)).filter(SessionMetrics.user_id == pid).scalar()
+        last_session_str = last_session.isoformat() if last_session else ''
+        try:
+            games_list = json.loads(a.games) if a.games else []
+        except Exception:
+            games_list = []
+
+        writer.writerow([
+            a.id,
+            pid,
+            (patient.username if patient else ''),
+            a.start_time.isoformat() if a.start_time else '',
+            a.end_time.isoformat() if a.end_time else '',
+            a.status,
+            a.location or '',
+            (a.notes or '').replace('\n', ' '),
+            ';'.join(games_list),
+            total_sessions,
+            f"{float(avg_acc):.2f}",
+            f"{float(avg_time):.2f}",
+            last_session_str
+        ])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    filename = f"reports_{current_user.id}_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+    response = make_response(csv_data)
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    response.mimetype = 'text/csv'
+    return response
+
 
 @app.route('/patients/add', methods=['POST'])
 @login_required
@@ -1599,7 +1782,27 @@ def save_game():
                     except Exception:
                         pass
 
+
         db.session.commit()
+
+        # --- AI Retraining Trigger ---
+        # Trigger retraining every 5 games to adapt the model "little by little"
+        # This ensures the model evolves with user data without overloading the server
+        try:
+            total_metrics = SessionMetrics.query.count()
+            if total_metrics > 0 and total_metrics % 5 == 0:
+                # Fetch all metrics for retraining
+                all_metrics = SessionMetrics.query.all()
+                # Prepare data: [accuracy, avg_time_ms]
+                # Note: avg_time in DB is seconds, model expects ms
+                training_data = [[m.accurracy, m.avg_time * 1000] for m in all_metrics]
+                
+                # Run training in background (conceptually, here synchronous for MVP simplicity)
+                app.logger.info(f"Triggering AI retraining with {len(training_data)} samples...")
+                train_model(training_data)
+        except Exception as e:
+            app.logger.error(f"AI Retraining failed: {e}")
+        # -----------------------------
 
         return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
     except Exception as e:
@@ -1925,6 +2128,92 @@ def calendar_therapist():
 @app.route('/progress')
 @login_required
 def progress():
+    # Show personal progress charts for the logged-in patient
+    # Allow only players to view their own progress
+    if current_user.role != 'jugador':
+        flash('Acceso denegado: esta sección es para pacientes.', 'error')
+        return redirect(url_for('dashboard'))
+
+    # Build last 7 days series
+    today = datetime.utcnow().date()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    labels = [d.strftime('%a') for d in days]
+    accuracy_series = []
+    time_series = []
+    sessions_count = 0
+
+    for d in days:
+        start_dt = datetime(d.year, d.month, d.day)
+        end_dt = start_dt + timedelta(days=1)
+        q = SessionMetrics.query.filter(
+            SessionMetrics.user_id == current_user.id,
+            SessionMetrics.date >= start_dt,
+            SessionMetrics.date < end_dt
+        )
+        rows = q.all()
+        if rows:
+            acc_vals = [r.accurracy for r in rows if r.accurracy is not None]
+            time_vals = [r.avg_time for r in rows if r.avg_time is not None]
+            avg_acc = round(sum(acc_vals) / len(acc_vals), 1) if acc_vals else 0
+            avg_time = round(sum(time_vals) / len(time_vals), 2) if time_vals else 0
+            sessions_count += len(rows)
+        else:
+            avg_acc = 0
+            avg_time = 0
+        accuracy_series.append(avg_acc)
+        time_series.append(avg_time)
+
+    # Weekly summary
+    total_sessions = SessionMetrics.query.filter(SessionMetrics.user_id == current_user.id).count()
+    overall_avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter(SessionMetrics.user_id == current_user.id).scalar() or 0
+    overall_avg_time = db.session.query(func.avg(SessionMetrics.avg_time)).filter(SessionMetrics.user_id == current_user.id).scalar() or 0
+
+    # Improvement: compare last 7 days average vs previous 7 days
+    last_7_start = today - timedelta(days=6)
+    prev_7_start = last_7_start - timedelta(days=7)
+    last_7_acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter(
+        SessionMetrics.user_id == current_user.id,
+        SessionMetrics.date >= datetime(last_7_start.year, last_7_start.month, last_7_start.day)
+    ).scalar() or 0
+    prev_7_acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter(
+        SessionMetrics.user_id == current_user.id,
+        SessionMetrics.date >= datetime(prev_7_start.year, prev_7_start.month, prev_7_start.day),
+        SessionMetrics.date < datetime(last_7_start.year, last_7_start.month, last_7_start.day)
+    ).scalar() or 0
+    improvement = 0
+    if prev_7_acc and prev_7_acc != 0:
+        improvement = int(round(((last_7_acc - prev_7_acc) / prev_7_acc) * 100))
+
+    # Achievements (simple heuristics)
+    achievements = {
+        'first_session': total_sessions >= 1,
+        'five_day_streak': False,
+        'ten_sessions': total_sessions >= 10,
+        'expert': total_sessions >= 50,
+    }
+
+    # Compute a simple streak: check last 5 days have at least one session each
+    streak_ok = True
+    for i in range(0, 5):
+        d = today - timedelta(days=i)
+        s = SessionMetrics.query.filter(
+            SessionMetrics.user_id == current_user.id,
+            SessionMetrics.date >= datetime(d.year, d.month, d.day),
+            SessionMetrics.date < datetime(d.year, d.month, d.day) + timedelta(days=1)
+        ).count()
+        if s == 0:
+            streak_ok = False
+            break
+    achievements['five_day_streak'] = streak_ok
+
+    return render_template('patient/progress.html',
+                           labels=labels,
+                           accuracy_data=accuracy_series,
+                           time_data=time_series,
+                           weekly_summary={'sessions': sessions_count, 'avg_accuracy': int(round(overall_avg_acc)), 'avg_time': round(overall_avg_time, 2), 'improvement': f"{improvement}%"},
+                           achievements=achievements,
+                           active_page='progress'
+                           )
     if current_user.role != 'jugador':
         flash('Acceso no autorizado', 'error')
         return redirect(url_for('dashboard'))
@@ -1944,6 +2233,7 @@ def my_therapist():
     if current_user.role != 'jugador':
         flash('Acceso no autorizado', 'error')
         return redirect(url_for('dashboard'))
+
     # Get player stats for sidebar
     total_sessions = SessionMetrics.query.filter_by(user_id=current_user.id).count()
     last_played_date = db.session.query(func.max(SessionMetrics.date)).filter_by(user_id=current_user.id).scalar()
@@ -1952,13 +2242,75 @@ def my_therapist():
         'total_sessions': total_sessions,
         'last_played': last_played
     }
+
     # Resolve assigned therapist for this patient
     therapist = None
     if current_user.assigned_therapist_id:
         therapist = User.query.get(current_user.assigned_therapist_id)
     if not therapist:
         therapist = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).first()
-    return render_template('patient/my_therapist.html', active_page='therapist', player_stats=player_stats, therapist=therapist)
+
+    # Recent messages from admin or assigned therapist
+    recent_messages = []
+    try:
+        recent_q = Message.query.join(User, Message.sender).filter(
+            Message.receiver_id == current_user.id,
+            or_(User.role == 'admin', User.id == current_user.assigned_therapist_id)
+        ).order_by(Message.created_at.desc()).limit(6)
+
+        for m in recent_q:
+            recent_messages.append({
+                'id': m.id,
+                'sender_name': (m.sender.username or m.sender.email) if m.sender else 'Sistema',
+                'sender_role': m.sender.role if m.sender else 'system',
+                'subject': m.subject or '',
+                'body': m.body or '',
+                'created_at': m.created_at.strftime('%d %B, %Y') if m.created_at else ''
+            })
+    except Exception:
+        recent_messages = []
+
+    # Recommended resources for quick access (lightweight placeholders)
+    resources = [
+        {'id': 1, 'title': 'Guía de Ejercicios', 'type': 'pdf', 'meta': 'PDF - 2.5 MB'},
+        {'id': 2, 'title': 'Video Tutorial', 'type': 'video', 'meta': 'MP4 - 15:30'},
+        {'id': 3, 'title': 'Hoja de Práctica', 'type': 'doc', 'meta': 'DOCX - 0.4 MB'}
+    ]
+
+    return render_template('patient/my_therapist.html', active_page='therapist', player_stats=player_stats, therapist=therapist, recent_messages=recent_messages, resources=resources)
+
+
+@app.route('/api/resources/<int:resource_id>')
+@login_required
+def get_resource(resource_id):
+    try:
+        if resource_id == 1:
+            # Guía de Ejercicios: summarize recent performance
+            metrics = SessionMetrics.query.filter_by(user_id=current_user.id).order_by(SessionMetrics.date.desc()).limit(20).all()
+            if metrics:
+                avg_acc = sum((m.accurracy or 0) for m in metrics) / len(metrics)
+                avg_time = sum((m.avg_time or 0) for m in metrics) / len(metrics)
+                perf_summary = f"Tu precisión promedio en las últimas sesiones es {avg_acc:.0f}%. Tiempo medio por ejercicio {avg_time:.1f}s."
+            else:
+                perf_summary = "No hay datos de sesiones suficientes para personalizar esta guía."
+
+            content = f"<h3>Guía de Ejercicios Personalizada</h3><p>{perf_summary}</p>"
+            content += "<ol><li>Ejercicio respiratorio: 5 minutos.</li><li>Ejercicios de atención: 3 bloques de 4 minutos.</li><li>Revisión de estrategias aprendidas en la sesión.</li></ol>"
+            return jsonify({'id': resource_id, 'title': 'Guía de Ejercicios', 'content': content})
+
+        if resource_id == 2:
+            content = "<h3>Video Tutorial: Técnicas básicas</h3><p>Este video explica las técnicas recomendadas y cuándo aplicarlas. Duración: 15:30.</p>"
+            content += "<p>Puntos clave: respiración, pausas activas, seguimiento de progreso.</p>"
+            return jsonify({'id': resource_id, 'title': 'Video Tutorial', 'content': content})
+
+        if resource_id == 3:
+            content = "<h3>Hoja de Práctica</h3><p>Plantilla descargable para llevar un registro de ejercicios diarios.</p>"
+            content += "<ul><li>Día 1: Ejercicio A - 10 repeticiones</li><li>Día 2: Ejercicio B - 8 repeticiones</li></ul>"
+            return jsonify({'id': resource_id, 'title': 'Hoja de Práctica', 'content': content})
+
+        return jsonify({'error': 'Recurso no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'error': 'Error generando recurso', 'detail': str(e)}), 500
 
 @app.route('/logout')
 @login_required
@@ -2283,13 +2635,16 @@ def profile():
         return redirect(url_for('admin_profile'))
     if current_user.role == 'terapista':
         # Get therapist stats
-        patients_count = User.query.filter_by(id=current_user.id, is_active=True).count()
-        sessions_count = SessionMetrics.query.join(User).filter(User.id == current_user.id).count()
+        patients_count = User.query.filter_by(assigned_therapist_id=current_user.id, role='jugador', is_active=True).count()
+        # Number of appointments (sessions) handled by this therapist
+        sessions_count = Appointment.query.filter_by(therapist_id=current_user.id).count()
+        # Upcoming scheduled appointments starting from now
         upcoming_appointments = Appointment.query.filter(
-            Appointment.id == current_user.id,
-            Appointment.status == 'scheduled'
+            Appointment.therapist_id == current_user.id,
+            Appointment.status == 'scheduled',
+            Appointment.start_time >= datetime.utcnow()
         ).count()
-        
+
         return render_template('therapist/profile.html',
                              active_page='profile',
                              patients_count=patients_count,

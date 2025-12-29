@@ -2,12 +2,12 @@
 {% block title %}Sesiones{% endblock %}
 
 {% block content %}
-<div class="p-6">
+<div class="p-4 md:p-6">
   <h2 class="text-2xl font-bold text-textDark mb-4">Sesión y Juegos Asignados</h2>
   <p class="text-sm text-gray-600 mb-4">Ingresa el ID de tu sesión programada para ver y abrir los juegos asignados por tu terapeuta.</p>
 
-  <div class="grid grid-cols-2 gap-6">
-    <div class="bg-surface rounded-soft shadow-soft p-4">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6">
       <label class="text-sm text-gray-700">ID de Sesión</label>
       <div class="flex items-center gap-3 mt-2">
         <input id="session-id-input" type="number" class="flex-1 px-3 py-2 border rounded-soft" placeholder="Ej: 123" />
@@ -19,9 +19,9 @@
       <ul id="assigned-games" class="space-y-2"></ul>
     </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-4">
+    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6">
       <h3 class="text-lg font-semibold text-textDark mb-2">Vista del Juego</h3>
-      <iframe id="patient-game-frame" class="w-full h-[480px] rounded-soft border"></iframe>
+      <iframe id="patient-game-frame" class="w-full h-[300px] md:h-[480px] rounded-soft border"></iframe>
     </div>
   </div>
 

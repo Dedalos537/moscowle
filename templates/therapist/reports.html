@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block header_action %}
-<button class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+<button id="export-btn" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
     <i class="fas fa-download mr-2"></i>
     Exportar Datos
 </button>
@@ -30,7 +30,7 @@
                     <button type="submit" class="px-4 py-2 bg-olive text-white rounded-xl hover:bg-opacity-90 transition-all">
                         <i class="fas fa-filter mr-2"></i>Aplicar filtros
                     </button>
-                    <a href="{{ url_for('therapist_reports') }}" class="px-4 py-2 bg-gray-100 text-charcoal rounded-xl hover:bg-gray-200 transition-all">
+                    <a href="{{ url_for('reports') }}" class="px-4 py-2 bg-gray-100 text-charcoal rounded-xl hover:bg-gray-200 transition-all">
                         Limpiar
                     </a>
                 </div>
@@ -158,7 +158,8 @@
                 </div>
             </div>
             
-            <div class="overflow-x-auto">
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-gray-100">
@@ -206,6 +207,53 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4">
+                {% for report in detailed_reports %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ report.avatar }}" alt="{{ report.name }}" class="w-12 h-12 rounded-xl object-cover">
+                            <div>
+                                <p class="font-semibold text-charcoal">{{ report.name }}</p>
+                                <p class="text-xs text-gray-500">ID: {{ report.id }}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold {{ 'bg-green-100 text-green-800' if report.status == 'Activo' else 'bg-yellow-100 text-yellow-800' }}">
+                            {{ report.status }}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Última Sesión</p>
+                            <p class="text-sm font-medium text-gray-700">{{ report.last_session }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Tiempo Total</p>
+                            <p class="text-sm font-medium text-gray-700">{{ report.total_time }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-500">Progreso</span>
+                            <span class="font-medium text-gray-700">{{ report.progress }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-olive h-2.5 rounded-full" style="width: {{ report.progress }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end border-t border-gray-100 pt-3">
+                        <button class="text-olive hover:text-opacity-80 font-medium text-sm">
+                            <i class="fas fa-eye mr-1"></i> Ver Detalles
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
 
@@ -273,6 +321,22 @@
                 const gamesData = {{ game_performance_chart | tojson }};
                 Plotly.newPlot(gamesChart, gamesData.data, { ...plotlyLayout, ...gamesData.layout, showlegend: true }, {responsive: true, displayModeBar: false});
             }
+
+                // Export button behaviour
+                const exportBtn = document.getElementById('export-btn');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const s = document.getElementById('start') ? document.getElementById('start').value : '';
+                        const en = document.getElementById('end') ? document.getElementById('end').value : '';
+                        let qs = '';
+                        if (s) qs += `start=${encodeURIComponent(s)}`;
+                        if (en) qs += (qs ? '&' : '') + `end=${encodeURIComponent(en)}`;
+                        const url = `/reports/export${qs ? ('?' + qs) : ''}`;
+                        // trigger download
+                        window.location = url;
+                    });
+                }
         });
     </script>
 {% endblock %}

@@ -14,34 +14,38 @@
 </div>
 
 <!-- Progress Charts -->
-<div class="grid grid-cols-2 gap-6 mb-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Accuracy Chart -->
-    <div class="bg-white rounded-soft shadow-soft p-6">
+    <div class="bg-white rounded-soft shadow-soft p-4 md:p-6">
         <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center">
             <i class="fas fa-bullseye text-olive mr-2"></i>
             Evolución de Precisión
         </h3>
-        <canvas id="accuracyChart"></canvas>
+        <div class="relative h-64 w-full">
+            <canvas id="accuracyChart"></canvas>
+        </div>
     </div>
 
     <!-- Time Chart -->
-    <div class="bg-white rounded-soft shadow-soft p-6">
+    <div class="bg-white rounded-soft shadow-soft p-4 md:p-6">
         <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center">
             <i class="fas fa-clock text-blue-600 mr-2"></i>
             Tiempo de Reacción
         </h3>
-        <canvas id="timeChart"></canvas>
+        <div class="relative h-64 w-full">
+            <canvas id="timeChart"></canvas>
+        </div>
     </div>
 </div>
 
 <!-- Achievements -->
-<div class="bg-white rounded-soft shadow-soft p-6 mb-6">
+<div class="bg-white rounded-soft shadow-soft p-4 md:p-6 mb-6">
     <h3 class="text-xl font-semibold text-charcoal mb-6 flex items-center">
         <i class="fas fa-trophy text-yellow-500 mr-3"></i>
         Logros Desbloqueados
     </h3>
     
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="text-center p-4 bg-gradient-to-b from-yellow-50 to-white rounded-xl border-2 border-yellow-200">
             <i class="fas fa-star text-yellow-500 text-3xl mb-2"></i>
             <p class="font-semibold text-charcoal text-sm">Primera Sesión</p>
@@ -66,13 +70,13 @@
 </div>
 
 <!-- Weekly Summary -->
-<div class="bg-white rounded-soft shadow-soft p-6">
+<div class="bg-white rounded-soft shadow-soft p-4 md:p-6">
     <h3 class="text-xl font-semibold text-charcoal mb-6 flex items-center">
         <i class="fas fa-calendar-week text-olive mr-3"></i>
         Resumen Semanal
     </h3>
     
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="text-center p-4 bg-olive bg-opacity-10 rounded-xl">
             <p class="text-3xl font-bold text-olive mb-2">5</p>
             <p class="text-sm text-gray-600">Sesiones</p>
@@ -95,15 +99,28 @@
 
 {% block extra_scripts %}
 <script>
+    // Data injected from server
+    const labels = {{ labels | tojson }};
+    const accuracyData = {{ accuracy_data | tojson }};
+    const timeData = {{ time_data | tojson }};
+    const weekly = {{ weekly_summary | tojson }};
+    const achievements = {{ achievements | tojson }};
+
+    // Update weekly summary numbers in DOM
+    document.querySelectorAll('.bg-olive .text-3xl')[0].textContent = weekly.sessions || 0;
+    document.querySelectorAll('.bg-blue-50 .text-3xl')[0].textContent = (weekly.avg_accuracy || 0) + '%';
+    document.querySelectorAll('.bg-purple-50 .text-3xl')[0].textContent = (weekly.avg_time || 0) + 's';
+    document.querySelectorAll('.bg-green-50 .text-3xl')[0].textContent = (weekly.improvement || '+0%');
+
     // Accuracy Chart
     const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
     new Chart(accuracyCtx, {
         type: 'line',
         data: {
-            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            labels: labels,
             datasets: [{
                 label: 'Precisión (%)',
-                data: [75, 80, 85, 82, 88, 90, 87],
+                data: accuracyData,
                 borderColor: '#75a83a',
                 backgroundColor: 'rgba(117, 168, 58, 0.1)',
                 tension: 0.4,
@@ -112,17 +129,8 @@
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 100 } }
         }
     });
 
@@ -131,10 +139,10 @@
     new Chart(timeCtx, {
         type: 'line',
         data: {
-            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            labels: labels,
             datasets: [{
                 label: 'Tiempo (segundos)',
-                data: [3.2, 2.9, 2.7, 2.5, 2.4, 2.3, 2.4],
+                data: timeData,
                 borderColor: '#3b82f6',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 tension: 0.4,
@@ -143,17 +151,28 @@
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
         }
     });
+
+    // Update achievement UI states
+    if (achievements.first_session) {
+        // ensure first card appears active
+        const firstCard = document.querySelectorAll('.grid .text-center')[0];
+        if (firstCard) firstCard.classList.remove('opacity-50');
+    }
+    if (achievements.five_day_streak) {
+        const secondCard = document.querySelectorAll('.grid .text-center')[1];
+        if (secondCard) secondCard.classList.remove('opacity-50');
+    }
+    if (achievements.ten_sessions) {
+        const thirdCard = document.querySelectorAll('.grid .text-center')[2];
+        if (thirdCard) thirdCard.classList.remove('opacity-50');
+    }
+    if (achievements.expert) {
+        const fourthCard = document.querySelectorAll('.grid .text-center')[3];
+        if (fourthCard) fourthCard.classList.remove('opacity-50');
+    }
 </script>
 {% endblock %}

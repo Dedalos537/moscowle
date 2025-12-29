@@ -11,15 +11,15 @@
 
 <!-- Therapist Profile -->
 {% if therapist %}
-<div class="bg-gradient-to-r from-olive to-green-600 rounded-soft shadow-soft p-8 mb-6 text-white">
-    <div class="flex items-center space-x-6">
-        <div class="w-24 h-24 rounded-full bg-white flex items-center justify-center">
+<div class="bg-gradient-to-r from-olive to-green-600 rounded-soft shadow-soft p-6 md:p-8 mb-6 text-white">
+    <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
+        <div class="w-24 h-24 rounded-full bg-white flex items-center justify-center shrink-0">
             <i class="fas fa-user-doctor text-olive text-4xl"></i>
         </div>
         <div class="flex-1">
             <h3 class="text-2xl font-bold mb-2">{{ therapist.username or 'Tu Terapeuta' }}</h3>
             <p class="text-green-100 mb-4">{{ therapist.email }}</p>
-            <div class="flex items-center space-x-6 text-sm">
+            <div class="flex flex-col md:flex-row items-center justify-center md:justify-start space-y-2 md:space-y-0 md:space-x-6 text-sm">
                 <div class="flex items-center space-x-2">
                     <i class="fas fa-envelope"></i>
                     <span>{{ therapist.email }}</span>
@@ -45,30 +45,30 @@
 {% endif %}
 
 <!-- Contact Options -->
-<div class="grid grid-cols-3 gap-6 mb-6">
-    <div class="bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
+    <a href="{{ url_for('messages_list') }}" class="block bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow">
         <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-envelope text-blue-600 text-2xl"></i>
         </div>
         <h3 class="font-semibold text-charcoal mb-2">Enviar Mensaje</h3>
         <p class="text-sm text-gray-600">Escribe a tu terapeuta</p>
-    </div>
+    </a>
 
-    <div class="bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+    <a href="/calendar/therapist" class="block bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow">
         <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-video text-green-600 text-2xl"></i>
         </div>
         <h3 class="font-semibold text-charcoal mb-2">Videollamada</h3>
         <p class="text-sm text-gray-600">Sesión virtual</p>
-    </div>
+    </a>
 
-    <div class="bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+    <a href="/calendar/patient" class="block bg-white rounded-soft shadow-soft p-6 text-center hover:shadow-lg transition-shadow">
         <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fas fa-calendar-plus text-purple-600 text-2xl"></i>
         </div>
         <h3 class="font-semibold text-charcoal mb-2">Agendar Cita</h3>
         <p class="text-sm text-gray-600">Solicitar sesión</p>
-    </div>
+    </a>
 </div>
 
 <!-- Recent Communications -->
@@ -79,21 +79,27 @@
     </h3>
     
     <div class="space-y-4">
-        <div class="p-4 bg-gray-50 rounded-xl">
-            <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-charcoal">Recordatorio de Sesión</span>
-                <span class="text-xs text-gray-500">Hace 2 días</span>
+        {% if recent_messages and recent_messages|length > 0 %}
+            {% for m in recent_messages %}
+            <div class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer" data-message-id="{{ m.id }}">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <span class="font-semibold text-charcoal">{{ m.subject or 'Sin asunto' }}</span>
+                        <div class="text-xs text-gray-500">De: {{ m.sender_name }} · {{ m.sender_role }}</div>
+                    </div>
+                    <span class="text-xs text-gray-500">{{ m.created_at }}</span>
+                </div>
+                <p class="text-sm text-gray-600 truncate" style="max-width: 80%">{{ m.body }}</p>
             </div>
-            <p class="text-sm text-gray-600">Tienes una sesión programada para el 15 de diciembre a las 10:00 AM.</p>
-        </div>
-
-        <div class="p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-            <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-charcoal">Felicitaciones</span>
-                <span class="text-xs text-gray-500">Hace 1 semana</span>
+            {% endfor %}
+        {% else %}
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <div class="flex items-center mb-2">
+                    <span class="font-semibold text-charcoal">No hay mensajes recientes</span>
+                </div>
+                <p class="text-sm text-gray-600">Cuando recibas mensajes del administrador o tu terapeuta, aparecerán aquí.</p>
             </div>
-            <p class="text-sm text-gray-600">¡Excelente progreso esta semana! Sigue así con los ejercicios.</p>
-        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -105,25 +111,88 @@
     </h3>
     
     <div class="grid grid-cols-2 gap-4">
-        <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+        {% for r in resources %}
+        <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer resource-card" data-resource-id="{{ r.id }}">
             <div class="w-12 h-12 bg-olive bg-opacity-10 rounded-lg flex items-center justify-center">
-                <i class="fas fa-file-pdf text-olive text-xl"></i>
+                {% if r.type == 'pdf' %}
+                    <i class="fas fa-file-pdf text-olive text-xl"></i>
+                {% elif r.type == 'video' %}
+                    <i class="fas fa-video text-blue-600 text-xl"></i>
+                {% else %}
+                    <i class="fas fa-file-alt text-gray-600 text-xl"></i>
+                {% endif %}
             </div>
             <div>
-                <p class="font-semibold text-charcoal text-sm">Guía de Ejercicios</p>
-                <p class="text-xs text-gray-500">PDF - 2.5 MB</p>
+                <p class="font-semibold text-charcoal text-sm">{{ r.title }}</p>
+                <p class="text-xs text-gray-500">{{ r.meta }}</p>
             </div>
         </div>
-
-        <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
-            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-video text-blue-600 text-xl"></i>
-            </div>
-            <div>
-                <p class="font-semibold text-charcoal text-sm">Video Tutorial</p>
-                <p class="text-xs text-gray-500">MP4 - 15:30</p>
-            </div>
-        </div>
+        {% endfor %}
     </div>
 </div>
+<!-- Message modal -->
+<div id="messageModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-11/12 max-w-2xl">
+        <button id="closeMessageModal" class="float-right text-gray-500">Cerrar</button>
+        <h3 id="msgTitle" class="text-xl font-semibold mb-3"></h3>
+        <div id="msgBody" class="prose text-sm"></div>
+    </div>
+</div>
+
+<!-- Resource modal -->
+<div id="resourceModal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-11/12 max-w-3xl">
+        <button id="closeResourceModal" class="float-right text-gray-500">Cerrar</button>
+        <h3 id="resTitle" class="text-xl font-semibold mb-3"></h3>
+        <div id="resContent" class="prose text-sm"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Open message modal when clicking a message
+    document.querySelectorAll('[data-message-id]').forEach(function(el){
+        el.addEventListener('click', function(){
+            const id = this.getAttribute('data-message-id')
+            // Find body from server-provided JS data by searching DOM text, or fetch full message if needed
+            // For simplicity, show subject and body present in DOM
+            const subj = this.querySelector('.font-semibold') ? this.querySelector('.font-semibold').innerText : 'Mensaje';
+            const body = this.querySelector('p') ? this.querySelector('p').innerText : '';
+            document.getElementById('msgTitle').innerText = subj;
+            document.getElementById('msgBody').innerText = body;
+            document.getElementById('messageModal').classList.remove('hidden');
+            document.getElementById('messageModal').classList.add('flex');
+        })
+    })
+
+    document.getElementById('closeMessageModal').addEventListener('click', function(){
+        document.getElementById('messageModal').classList.add('hidden');
+        document.getElementById('messageModal').classList.remove('flex');
+    })
+
+    // Resource cards: fetch generated content
+    document.querySelectorAll('.resource-card').forEach(function(card){
+        card.addEventListener('click', function(){
+            const rid = this.getAttribute('data-resource-id');
+            fetch(`/api/resources/${rid}`)
+                .then(r => r.json())
+                .then(data => {
+                    if(data && !data.error){
+                        document.getElementById('resTitle').innerText = data.title || 'Recurso';
+                        document.getElementById('resContent').innerHTML = data.content || '';
+                        document.getElementById('resourceModal').classList.remove('hidden');
+                        document.getElementById('resourceModal').classList.add('flex');
+                    } else {
+                        alert('No se pudo cargar el recurso');
+                    }
+                }).catch(err=>{ alert('Error al cargar recurso'); console.error(err) })
+        })
+    })
+
+    document.getElementById('closeResourceModal').addEventListener('click', function(){
+        document.getElementById('resourceModal').classList.add('hidden');
+        document.getElementById('resourceModal').classList.remove('flex');
+    })
+})
+</script>
 {% endblock %}

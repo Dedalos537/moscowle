@@ -7,8 +7,8 @@
 </div>
 {% endblock %}
 {% block content %}
-<div class="p-8">
-  <div class="grid grid-cols-4 gap-6">
+<div class="p-4 md:p-8">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
     <div class="bg-surface rounded-soft shadow-soft p-6">
       <p class="text-sm text-gray-500">Terapeutas</p>
       <h3 class="text-3xl font-bold text-textDark">{{ overview.therapists }}</h3>
@@ -26,34 +26,34 @@
       <h3 class="text-3xl font-bold text-textDark">{{ overview.avg_accuracy }}%</h3>
     </div>
   </div>
-  <div class="mt-8 grid grid-cols-2 gap-6">
-    <a href="{{ url_for('admin_users') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
-      <div>
+  <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+    <a href="{{ url_for('admin_users') }}" class="bg-surface rounded-soft shadow-soft p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-lg transition-shadow">
+      <div class="flex-1 min-w-0">
         <h3 class="text-xl font-bold text-textDark">Usuarios</h3>
-        <p class="text-sm text-gray-500">Crear y gestionar terapeutas y pacientes</p>
+        <p class="text-sm text-gray-500 truncate">Crear y gestionar terapeutas y pacientes</p>
       </div>
-      <i class="fas fa-users text-2xl text-primary"></i>
+      <i class="fas fa-users text-2xl text-primary self-end sm:self-center"></i>
     </a>
-    <a href="{{ url_for('admin_games') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
-      <div>
+    <a href="{{ url_for('admin_games') }}" class="bg-surface rounded-soft shadow-soft p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-lg transition-shadow">
+      <div class="flex-1 min-w-0">
         <h3 class="text-xl font-bold text-textDark">Juegos</h3>
-        <p class="text-sm text-gray-500">Crear, eliminar y administrar juegos</p>
+        <p class="text-sm text-gray-500 truncate">Crear, eliminar y administrar juegos</p>
       </div>
-      <i class="fas fa-gamepad text-2xl text-primary"></i>
+      <i class="fas fa-gamepad text-2xl text-primary self-end sm:self-center"></i>
     </a>
-    <a href="{{ url_for('admin_reports') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
-      <div>
+    <a href="{{ url_for('admin_reports') }}" class="bg-surface rounded-soft shadow-soft p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-lg transition-shadow">
+      <div class="flex-1 min-w-0">
         <h3 class="text-xl font-bold text-textDark">Reportes</h3>
-        <p class="text-sm text-gray-500">Ver reportes por terapeuta y paciente</p>
+        <p class="text-sm text-gray-500 truncate">Ver reportes por terapeuta y paciente</p>
       </div>
-      <i class="fas fa-chart-line text-2xl text-primary"></i>
+      <i class="fas fa-chart-line text-2xl text-primary self-end sm:self-center"></i>
     </a>
-    <a href="{{ url_for('admin_messages') }}" class="bg-surface rounded-soft shadow-soft p-6 flex items-center justify-between">
-      <div>
+    <a href="{{ url_for('admin_messages') }}" class="bg-surface rounded-soft shadow-soft p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-lg transition-shadow">
+      <div class="flex-1 min-w-0">
         <h3 class="text-xl font-bold text-textDark">Mensajería</h3>
-        <p class="text-sm text-gray-500">Enviar mensajes a todos los usuarios</p>
+        <p class="text-sm text-gray-500 truncate">Enviar mensajes a todos los usuarios</p>
       </div>
-      <i class="fas fa-envelope text-2xl text-primary"></i>
+      <i class="fas fa-envelope text-2xl text-primary self-end sm:self-center"></i>
     </a>
   </div>
 </div>

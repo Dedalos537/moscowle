@@ -7,48 +7,95 @@
 </div>
 {% endblock %}
 {% block content %}
-<div class="p-8 grid grid-cols-2 gap-6">
-  <div class="bg-surface rounded-soft shadow-soft p-6">
+<div class="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Therapists Section -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
     <h3 class="text-lg font-semibold text-textDark mb-3">Terapeutas</h3>
-    <table class="w-full">
-      <thead class="bg-gray-50"><tr>
-        <th class="px-3 py-2 text-left">Nombre</th>
-        <th class="px-3 py-2 text-left">Email</th>
-        <th class="px-3 py-2 text-left">Sesiones</th>
-        <th class="px-3 py-2 text-left">Precisión</th>
-      </tr></thead>
-      <tbody>
-        {% for t in therapists %}
-        <tr class="border-t">
-          <td class="px-3 py-2">{{ t.name }}</td>
-          <td class="px-3 py-2">{{ t.email }}</td>
-          <td class="px-3 py-2">{{ t.sessions }}</td>
-          <td class="px-3 py-2">{{ t.avg_accuracy }}%</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-3 py-2 text-left">Nombre</th>
+          <th class="px-3 py-2 text-left">Email</th>
+          <th class="px-3 py-2 text-left">Sesiones</th>
+          <th class="px-3 py-2 text-left">Precisión</th>
+        </tr></thead>
+        <tbody>
+          {% for t in therapists %}
+          <tr class="border-t">
+            <td class="px-3 py-2">{{ t.name }}</td>
+            <td class="px-3 py-2">{{ t.email }}</td>
+            <td class="px-3 py-2">{{ t.sessions }}</td>
+            <td class="px-3 py-2">{{ t.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for t in therapists %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-textDark">{{ t.name }}</p>
+            <p class="text-xs text-gray-500">{{ t.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ t.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-gray-600">
+          <span class="font-medium">{{ t.sessions }}</span> sesiones completadas
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
-  <div class="bg-surface rounded-soft shadow-soft p-6">
+
+  <!-- Patients Section -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
     <h3 class="text-lg font-semibold text-textDark mb-3">Pacientes</h3>
-    <table class="w-full">
-      <thead class="bg-gray-50"><tr>
-        <th class="px-3 py-2 text-left">Nombre</th>
-        <th class="px-3 py-2 text-left">Email</th>
-        <th class="px-3 py-2 text-left">Juegos</th>
-        <th class="px-3 py-2 text-left">Precisión</th>
-      </tr></thead>
-      <tbody>
-        {% for p in patients %}
-        <tr class="border-t">
-          <td class="px-3 py-2">{{ p.name }}</td>
-          <td class="px-3 py-2">{{ p.email }}</td>
-          <td class="px-3 py-2">{{ p.plays }}</td>
-          <td class="px-3 py-2">{{ p.avg_accuracy }}%</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-3 py-2 text-left">Nombre</th>
+          <th class="px-3 py-2 text-left">Email</th>
+          <th class="px-3 py-2 text-left">Juegos</th>
+          <th class="px-3 py-2 text-left">Precisión</th>
+        </tr></thead>
+        <tbody>
+          {% for p in patients %}
+          <tr class="border-t">
+            <td class="px-3 py-2">{{ p.name }}</td>
+            <td class="px-3 py-2">{{ p.email }}</td>
+            <td class="px-3 py-2">{{ p.plays }}</td>
+            <td class="px-3 py-2">{{ p.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for p in patients %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-textDark">{{ p.name }}</p>
+            <p class="text-xs text-gray-500">{{ p.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ p.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-gray-600">
+          <span class="font-medium">{{ p.plays }}</span> juegos jugados
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}

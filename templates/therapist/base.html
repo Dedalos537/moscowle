@@ -50,6 +50,36 @@
       display: none;
     }
 
+    /* Skeleton Loading Animation */
+    @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+
+    .skeleton-loader {
+        animation: shimmer 2s infinite linear;
+        background: linear-gradient(to right, #f6f7f8 4%, #edeef1 25%, #f6f7f8 36%);
+        background-size: 1000px 100%;
+    }
+
+    .skeleton-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #f9fcf8;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.4s ease-in-out, visibility 0.4s;
+    }
+
+    .skeleton-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -69,6 +99,49 @@
 </head>
 
 <body class="bg-background font-sans text-textDark">
+    <!-- Skeleton Loader Overlay -->
+    <div id="page-transition-skeleton" class="skeleton-overlay">
+        <!-- Sidebar Skeleton -->
+        <div class="fixed left-0 top-0 h-screen w-72 bg-white shadow-soft-lg flex flex-col z-50 hidden lg:flex p-6 space-y-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 rounded-soft skeleton-loader"></div>
+                <div class="space-y-2">
+                    <div class="h-4 w-32 skeleton-loader rounded"></div>
+                    <div class="h-3 w-24 skeleton-loader rounded"></div>
+                </div>
+            </div>
+            <div class="space-y-3">
+                <div class="h-12 w-full skeleton-loader rounded-xl"></div>
+                <div class="h-12 w-full skeleton-loader rounded-xl"></div>
+                <div class="h-12 w-full skeleton-loader rounded-xl"></div>
+                <div class="h-12 w-full skeleton-loader rounded-xl"></div>
+                <div class="h-12 w-full skeleton-loader rounded-xl"></div>
+            </div>
+        </div>
+
+        <!-- Main Content Skeleton -->
+        <div class="lg:ml-72 min-h-screen flex flex-col">
+            <!-- Header Skeleton -->
+            <div class="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8">
+                <div class="h-8 w-48 skeleton-loader rounded"></div>
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-full skeleton-loader"></div>
+                    <div class="w-10 h-10 rounded-full skeleton-loader"></div>
+                </div>
+            </div>
+            
+            <!-- Content Skeleton -->
+            <div class="p-8 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="h-32 bg-white rounded-soft shadow-soft skeleton-loader"></div>
+                    <div class="h-32 bg-white rounded-soft shadow-soft skeleton-loader"></div>
+                    <div class="h-32 bg-white rounded-soft shadow-soft skeleton-loader"></div>
+                </div>
+                <div class="h-96 bg-white rounded-soft shadow-soft skeleton-loader"></div>
+            </div>
+        </div>
+    </div>
+
   <!-- Toast Utility -->
   <div id="toast-container" class="fixed top-6 right-6 z-50 space-y-3"></div>
   <script>
@@ -86,8 +159,9 @@
       }, 2000);
     }
   </script>
-  <div id="sidebar" class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto">
-    <div id="logo-section" class="px-8 py-8 border-b border-gray-100">
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 hidden lg:hidden transition-opacity duration-300 opacity-0"></div>
+  <div id="sidebar" class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto transition-transform duration-300 z-50 -translate-x-full lg:translate-x-0">
+    <div id="logo-section" class="px-8 py-8 border-b border-gray-100 flex justify-between items-center">
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 bg-primary rounded-soft flex items-center justify-center">
           <i class="fa-solid fa-brain text-white text-xl"></i>
@@ -99,6 +173,9 @@
           <p class="text-xs text-gray-500 font-medium">Juan Pablo II</p>
         </div>
       </div>
+      <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-primary">
+        <i class="fas fa-times text-xl"></i>
+      </button>
     </div>
     {% if current_user.role == 'terapista' %}
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
@@ -132,10 +209,11 @@
         <i class="fa-solid fa-file-alt text-lg"></i>
         <span class="font-medium">Reportes</span>
       </a>
-      <a href="#" id="logout-btn-sidebar"
-        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors">
-        <i class="fa-solid fa-right-from-bracket text-lg"></i>
-        <span class="font-medium">Cerrar Sesión</span>
+      <a href="{{ url_for('messages_list') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
+        <i class="fa-solid fa-envelope text-lg"></i>
+        <span class="font-medium">Mensajes</span>
+        <span id="sidebar-unread-badge" class="hidden absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
       </a>
       
       {% endif %}
@@ -166,33 +244,31 @@
         <i class="fa-solid fa-envelope text-lg"></i>
         <span class="font-medium">Admin Mensajes</span>
       </a>
-      <a href="#" id="logout-btn-sidebar"
-        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors">
-        <i class="fa-solid fa-right-from-bracket text-lg"></i>
-        <span class="font-medium">Cerrar Sesión</span>
-      </a>
        {% endif %}
       
   
         </div>
-        <button id="logout-btn-header"><i
-            class="fa-solid fa-sign-out-alt text-gray-400 text-sm hover:text-primary"></i></button>
       </div>
     </div>
   </div>
 
-  <div id="main-content" class="ml-72 min-h-screen fade-in-content">
-    <header class="bg-surface border-b border-gray-100 px-8 py-5 sticky top-0 z-30">
+  <div id="main-content" class="lg:ml-72 min-h-screen fade-in-content transition-all duration-300">
+    <header class="bg-surface border-b border-gray-100 px-4 md:px-8 py-5 sticky top-0 z-30">
       <div class="flex items-center justify-between">
-        {% block header_content %}
-        <div>
-          <h2 class="text-2xl font-bold text-textDark">Panel de Control</h2>
-          <p class="text-sm text-gray-500">
-            Monitoreo y gestión de pacientes
-          </p>
-        </div>
-        {% endblock %}
         <div class="flex items-center gap-4">
+          <button id="mobile-menu-btn" class="lg:hidden text-gray-600 hover:text-primary focus:outline-none">
+            <i class="fas fa-bars text-2xl"></i>
+          </button>
+          {% block header_content %}
+          <div>
+            <h2 class="text-xl md:text-2xl font-bold text-textDark">Panel de Control</h2>
+            <p class="text-xs md:text-sm text-gray-500 hidden md:block">
+              Monitoreo y gestión de pacientes
+            </p>
+          </div>
+          {% endblock %}
+        </div>
+        <div class="flex items-center gap-2 md:gap-4">
           <div class="relative">
             <button id="notification-bell"
               class="relative p-3 rounded-full bg-lightGreen text-primary hover:bg-primary hover:text-white transition-all">
@@ -202,7 +278,7 @@
             </button>
 
             <div id="notification-popover"
-              class="absolute right-0 mt-3 w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden">
+              class="fixed left-4 right-4 top-20 w-auto md:absolute md:top-auto md:left-auto md:right-0 md:mt-3 md:w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden">
               <div class="p-4 border-b border-gray-100 flex justify-between items-center">
                 <h3 class="text-md font-bold text-textDark">
                   Notificaciones
@@ -218,11 +294,39 @@
 
           {% block header_action %}
           <button
-            class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-            <i class="fas fa-plus mr-2"></i>
-            Nueva Sesión
+            class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium text-sm md:text-base">
+            <i class="fas fa-plus md:mr-2"></i>
+            <span class="hidden md:inline">Nueva Sesión</span>
           </button>
           {% endblock %}
+
+          <!-- User Profile Dropdown -->
+          <div class="relative group">
+              <button id="user-menu-btn" class="flex items-center space-x-3 focus:outline-none">
+                  <div class="w-10 h-10 rounded-full bg-olive text-white flex items-center justify-center text-lg font-bold shadow-md border-2 border-white">
+                      {{ current_user.username[0].upper() if current_user.username else 'U' }}
+                  </div>
+                  <div class="hidden md:block text-left">
+                      <p class="text-sm font-bold text-charcoal leading-tight">{{ current_user.username or current_user.email }}</p>
+                      <p class="text-xs text-gray-500">{{ current_user.role|capitalize }}</p>
+                  </div>
+                  <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block group-hover:text-olive transition-colors"></i>
+              </button>
+              
+              <!-- Dropdown Menu -->
+              <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-right z-50 border border-gray-100">
+                  <div class="px-4 py-2 border-b border-gray-50 md:hidden">
+                      <p class="text-sm font-bold text-charcoal">{{ current_user.username or current_user.email }}</p>
+                      <p class="text-xs text-gray-500">{{ current_user.role|capitalize }}</p>
+                  </div>
+                  <a href="{{ url_for('profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive transition-colors">
+                      <i class="fas fa-user-circle w-5 text-center mr-2"></i> Mi Perfil
+                  </a>
+                  <button onclick="showLogoutModal()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                      <i class="fas fa-sign-out-alt w-5 text-center mr-2"></i> Cerrar Sesión
+                  </button>
+              </div>
+          </div>
         </div>
       </div>
     </header>
@@ -256,6 +360,43 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+      // Sidebar Logic
+      const sidebar = document.getElementById('sidebar');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+
+      function openSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Lock body scroll
+        // small delay to allow display:block to apply before opacity transition
+        setTimeout(() => {
+            sidebarOverlay.classList.remove('opacity-0');
+        }, 10);
+      }
+
+      function closeSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('opacity-0');
+        document.body.style.overflow = ''; // Unlock body scroll
+        setTimeout(() => {
+            sidebarOverlay.classList.add('hidden');
+        }, 300);
+      }
+
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', openSidebar);
+      }
+
+      if (closeSidebarBtn) {
+        closeSidebarBtn.addEventListener('click', closeSidebar);
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+      }
+
       const notificationBell = document.getElementById("notification-bell");
       const notificationPopover = document.getElementById(
         "notification-popover"
@@ -312,6 +453,29 @@
           fetchNotifications();
           // Mark as read when opening
           fetch("/api/notifications/mark-read", { method: "POST" });
+          
+          // Smart Positioning Logic
+          const rect = notificationPopover.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
+          
+          // If right edge overflows, align to right
+          if (rect.right > viewportWidth) {
+              notificationPopover.style.right = '0';
+              notificationPopover.style.left = 'auto';
+          }
+          
+          // If left edge overflows (less likely with right-0 but possible on small screens if width is large)
+          if (rect.left < 0) {
+              notificationPopover.style.left = '0';
+              notificationPopover.style.right = 'auto';
+          }
+          
+          // Mobile override: ensure it stays within bounds
+          if (viewportWidth < 768) {
+              notificationPopover.style.left = '1rem';
+              notificationPopover.style.right = '1rem';
+              notificationPopover.style.width = 'auto';
+          }
         }
       });
 
@@ -384,14 +548,36 @@
       document.body.classList.remove('modal-open');
     }
 
-    logoutBtnHeader.addEventListener('click', showLogoutModal);
+    if (logoutBtnHeader) {
+      logoutBtnHeader.addEventListener('click', showLogoutModal);
+    }
     if (logoutBtnSidebar) {
       logoutBtnSidebar.addEventListener('click', showLogoutModal);
     }
-    logoutCancelBtn.addEventListener('click', closeLogoutModal);
-    logoutConfirmBtn.addEventListener('click', () => {
-      window.location.href = '{{ url_for("logout") }}';
-    });
+    if (logoutCancelBtn) {
+      logoutCancelBtn.addEventListener('click', closeLogoutModal);
+    }
+    if (logoutConfirmBtn) {
+      logoutConfirmBtn.addEventListener('click', () => {
+        window.location.href = '{{ url_for("logout") }}';
+      });
+    }
+
+    // Mobile User Menu Toggle
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    if (userMenuBtn) {
+        userMenuBtn.addEventListener('click', function(e) {
+            // On mobile, we might want to toggle visibility if hover doesn't work well
+            // But since we use group-hover, let's just ensure it works.
+            // Actually, for touch devices, clicking usually triggers hover state.
+            // If we want explicit toggle, we'd need to toggle a class on the parent.
+            const dropdown = this.nextElementSibling;
+            if (window.innerWidth < 768) { // Mobile only check
+                 // Simple toggle logic could go here if needed, but CSS hover often suffices.
+                 // Let's leave it to CSS for now to avoid conflict.
+            }
+        });
+    }
 
     // Close modal on backdrop click
     logoutModal.addEventListener('click', (e) => {
@@ -402,6 +588,35 @@
   </script>
   
   {% block extra_scripts %}{% endblock %}
+  <script>
+    // Skeleton Loader Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const skeleton = document.getElementById('page-transition-skeleton');
+        
+        // Show skeleton on link clicks (internal links only)
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            // Check if it's a valid link, not a hash link, not a download, and internal
+            if (link && link.href && 
+                link.href.startsWith(window.location.origin) && 
+                !link.getAttribute('target') && 
+                !link.getAttribute('download') &&
+                !link.href.includes('#') &&
+                !link.href.includes('javascript:void(0)')) {
+                
+                // Don't show if it's just a modifier key click (new tab)
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+                skeleton.classList.add('active');
+            }
+        });
+
+        // Hide skeleton when page is fully loaded (pageshow event handles back/forward cache)
+        window.addEventListener('pageshow', () => {
+            skeleton.classList.remove('active');
+        });
+    });
+  </script>
 </body>
 
 </html>

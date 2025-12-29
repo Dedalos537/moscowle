@@ -7,37 +7,37 @@
 </div>
 {% endblock %}
 {% block content %}
-<div class="p-8">
+<div class="p-4 md:p-8">
   <div class="bg-surface rounded-soft shadow-soft p-6">
-    <div class="flex space-x-3 mb-4">
+    <div class="flex flex-wrap gap-3 mb-4">
       <button id="tab-therapists" class="px-4 py-2 rounded-soft bg-olive text-white">Terapeutas</button>
       <button id="tab-users" class="px-4 py-2 rounded-soft bg-gray-100">Pacientes</button>
     </div>
-    <div class="grid grid-cols-3 gap-4">
-      <div>
-        <h4 class="text-sm font-semibold mb-2">Destinatarios</h4>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="h-64 lg:h-auto overflow-y-auto border rounded-soft p-2">
+        <h4 class="text-sm font-semibold mb-2 sticky top-0 bg-white pb-2 border-b">Destinatarios</h4>
         <div id="list-therapists" class="space-y-2">
           {% for u in therapists %}
           <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
-            <span class="text-sm">{{ u.username or u.email }}</span>
-            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat" data-id="{{ u.id }}">Seleccionar</button>
+            <span class="text-sm truncate max-w-[150px]">{{ u.username or u.email }}</span>
+            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat shrink-0" data-id="{{ u.id }}">Seleccionar</button>
           </div>
           {% endfor %}
         </div>
         <div id="list-users" class="space-y-2 hidden">
           {% for u in patients %}
           <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
-            <span class="text-sm">{{ u.username or u.email }}</span>
-            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat" data-id="{{ u.id }}">Seleccionar</button>
+            <span class="text-sm truncate max-w-[150px]">{{ u.username or u.email }}</span>
+            <button class="px-2 py-1 text-xs bg-gray-200 rounded-soft start-chat shrink-0" data-id="{{ u.id }}">Seleccionar</button>
           </div>
           {% endfor %}
         </div>
       </div>
-      <div class="col-span-2">
-        <div class="grid grid-cols-3 gap-3">
-          <input id="subject" class="px-3 py-2 border rounded-soft" placeholder="Asunto (opcional)" />
-          <div class="col-span-2 text-right">
-            <button id="send" class="px-4 py-2 bg-primary text-white rounded-soft">Enviar</button>
+      <div class="lg:col-span-2">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input id="subject" class="md:col-span-2 px-3 py-2 border rounded-soft w-full" placeholder="Asunto (opcional)" />
+          <div class="text-right md:text-right">
+            <button id="send" class="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-soft">Enviar</button>
           </div>
         </div>
         <textarea id="body" class="w-full mt-3 px-3 py-2 border rounded-soft" rows="6" placeholder="Escribe tu mensaje..."></textarea>

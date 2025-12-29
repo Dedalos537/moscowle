@@ -32,7 +32,7 @@
   class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-center justify-center"
 >
   <div
-    class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg mx-auto p-8"
+    class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg mx-4 p-6 md:p-8"
   >
     <div class="flex justify-between items-center mb-6">
       <h3 class="text-2xl font-bold text-textDark">Agregar Nuevo Paciente</h3>
@@ -43,7 +43,7 @@
     <form
       method="POST"
       action="{{ url_for('add_patient') }}"
-      class="grid grid-cols-2 gap-6"
+      class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
     >
       <div>
         <label class="block text-sm font-semibold text-gray-700 mb-2"
@@ -69,7 +69,7 @@
           required
         />
       </div>
-      <div class="col-span-2 mt-4">
+      <div class="md:col-span-2 mt-4">
         <button
           type="submit"
           class="w-full bg-primary text-white font-bold py-3 rounded-lg hover:bg-opacity-90 transition-all shadow-soft"
@@ -82,109 +82,104 @@
 </div>
 
 <!-- Patients List -->
-<div class="px-8 py-6">
+<div class="px-4 md:px-8 py-6">
   <div class="bg-surface rounded-soft shadow-soft overflow-hidden">
     <div
-      class="px-8 py-6 border-b border-gray-100 flex justify-between items-center"
+      class="px-6 md:px-8 py-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4"
     >
       <h3 class="text-xl font-bold text-textDark">Lista de Pacientes</h3>
-      <div class="relative">
+      <div class="relative w-full md:w-auto">
         <input
           type="text"
           placeholder="Buscar paciente..."
-          class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary"
+          class="w-full md:w-64 pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary"
         />
         <i
           class="fa-solid fa-search absolute left-3 top-3 text-gray-400 text-xs"
         ></i>
       </div>
     </div>
-    <table class="w-full">
-      <thead class="bg-gray-50">
-        <tr>
-          <th
-            class="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase"
-          >
-            Paciente
-          </th>
-          <th
-            class="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase"
-          >
-            Email
-          </th>
-          <th
-            class="px-8 py-4 text-center text-xs font-bold text-gray-500 uppercase"
-          >
-            Estado
-          </th>
-          <th
-            class="px-8 py-4 text-center text-xs font-bold text-gray-500 uppercase"
-          >
-            Acciones
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {% for patient in patients %}
-        <tr
-          class="hover:bg-lightGreen transition-colors cursor-pointer"
-          onclick="window.location='{{ url_for('patient_detail',patient_id=patient.id) }}';"
-        >
-          <td class="px-8 py-4">
-            <div class="flex items-center gap-3">
-              <img
-                src="https://ui-avatars.com/api/?name={{patient.username}}&background=random"
-                class="w-10 h-10 rounded-full"
-              />
-              <span class="font-semibold text-textDark"
-                >{{ patient.username }}</span
-              >
-            </div>
-          </td>
-          <td class="px-8 py-4 text-gray-600">{{ patient.email }}</td>
-          <td class="px-8 py-4 text-center">
-            <span
-              class="px-3 py-1 rounded-full text-xs font-bold {% if patient.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}"
-            >
-              {{ 'Activo' if patient.is_active else 'Inactivo' }}
-            </span>
-          </td>
-          <td class="px-8 py-4 text-center">
-            <div class="flex items-center justify-center gap-2">
-              <a
-                href="{{ url_for('patient_detail', patient_id=patient.id) }}"
-                class="p-2 text-gray-400 hover:text-primary transition-colors"
-                title="Ver Detalle"
-                onclick="event.stopPropagation()"
-              >
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase">Paciente</th>
+            <th class="px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase">Email</th>
+            <th class="px-8 py-4 text-center text-xs font-bold text-gray-500 uppercase">Estado</th>
+            <th class="px-8 py-4 text-center text-xs font-bold text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for patient in patients %}
+          <tr class="hover:bg-lightGreen transition-colors cursor-pointer" onclick="window.location='{{ url_for('patient_detail',patient_id=patient.id) }}';">
+            <td class="px-8 py-4">
+              <div class="flex items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-10 h-10 rounded-full" />
+                <span class="font-semibold text-textDark">{{ patient.username }}</span>
+              </div>
+            </td>
+            <td class="px-8 py-4 text-gray-600">{{ patient.email }}</td>
+            <td class="px-8 py-4 text-center">
+              <span class="px-3 py-1 rounded-full text-xs font-bold {% if patient.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                {{ 'Activo' if patient.is_active else 'Inactivo' }}
+              </span>
+            </td>
+            <td class="px-8 py-4 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Ver Detalle" onclick="event.stopPropagation()">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+                <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Cambiar Estado">
+                  <i class="fa-solid fa-power-off"></i>
+                </button>
+                <button onclick="event.stopPropagation(); deletePatient({{ patient.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="px-8 py-8 text-center text-gray-500">No hay pacientes registrados.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-4 p-4">
+      {% for patient in patients %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('patient_detail',patient_id=patient.id) }}';">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-12 h-12 rounded-full" />
+          <div>
+            <h4 class="font-bold text-textDark">{{ patient.username }}</h4>
+            <p class="text-sm text-gray-500">{{ patient.email }}</p>
+          </div>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="px-3 py-1 rounded-full text-xs font-bold {% if patient.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+            {{ 'Activo' if patient.is_active else 'Inactivo' }}
+          </span>
+          <div class="flex items-center gap-1">
+             <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" onclick="event.stopPropagation()">
                 <i class="fa-solid fa-eye"></i>
-              </a>
-              <button
-                onclick="event.stopPropagation(); toggleStatus({{ patient.id }})"
-                class="p-2 text-gray-400 hover:text-primary transition-colors"
-                title="Cambiar Estado"
-              >
+             </a>
+             <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors">
                 <i class="fa-solid fa-power-off"></i>
-              </button>
-              <button
-                onclick="event.stopPropagation(); deletePatient({{ patient.id }})"
-                class="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                title="Eliminar"
-              >
+             </button>
+             <button onclick="event.stopPropagation(); deletePatient({{ patient.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                 <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="4" class="px-8 py-8 text-center text-gray-500">
-            No hay pacientes registrados.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+             </button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center p-8 text-gray-500">No hay pacientes registrados.</div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 
