@@ -78,9 +78,8 @@ MICROSOFT_CLIENT_ID=tu_microsoft_client_id
 MICROSOFT_CLIENT_SECRET=tu_microsoft_client_secret
 
 # Admin Configuration
-ADMIN_EMAIL=mamiebamos2@gmail.com
-ADMIN_PASSWORD=@dm1n_123!
-```
+ADMIN_EMAIL=diegocenteno537@gmail.com
+ADMIN_PASSWORD=Rucula_530
 
 ### 📧 Configurar Gmail para envío de emails
 

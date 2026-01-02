@@ -1,0 +1,342 @@
+{% extends "therapist/base.html" %}
+
+{% block header_content %}
+<div>
+    <h2 class="text-2xl font-bold text-textDark">Reportes de Progreso</h2>
+    <p class="text-sm text-gray-500">Análisis detallado del rendimiento de pacientes</p>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<button id="export-btn" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+    <i class="fas fa-download mr-2"></i>
+    Exportar Datos
+</button>
+{% endblock %}
+
+{% block content %}
+    <div id="reports-content" class="p-8">
+        <form id="filters-form" method="get" class="bg-white rounded-soft p-4 shadow-soft mb-6">
+            <div class="flex flex-col md:flex-row md:items-end md:space-x-4 space-y-3 md:space-y-0">
+                <div>
+                    <label for="start" class="block text-sm text-gray-600 mb-1">Desde</label>
+                    <input type="date" id="start" name="start" value="{{ start if start else '' }}" class="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-olive">
+                </div>
+                <div>
+                    <label for="end" class="block text-sm text-gray-600 mb-1">Hasta</label>
+                    <input type="date" id="end" name="end" value="{{ end if end else '' }}" class="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:border-olive">
+                </div>
+                <div class="flex space-x-2">
+                    <button type="submit" class="px-4 py-2 bg-olive text-white rounded-xl hover:bg-opacity-90 transition-all">
+                        <i class="fas fa-filter mr-2"></i>Aplicar filtros
+                    </button>
+                    <a href="{{ url_for('main.reports') }}" class="px-4 py-2 bg-gray-100 text-charcoal rounded-xl hover:bg-gray-200 transition-all">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+        
+        <div id="overview-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                        <i class="text-blue-600 text-xl fas fa-chart-line"></i>
+                    </div>
+                    <span class="text-green-500 text-sm font-medium">+{{ overview_stats.improvement_rate_change }}%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-charcoal">{{ overview_stats.improvement_rate }}%</h3>
+                <p class="text-gray-600 text-sm">Tasa de Mejora General</p>
+            </div>
+
+            <div class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center">
+                        <i class="text-purple-600 text-xl fas fa-clock"></i>
+                    </div>
+                    <span class="text-green-500 text-sm font-medium">+{{ overview_stats.avg_session_time_change }}%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-charcoal">{{ overview_stats.avg_session_time }}min</h3>
+                <p class="text-gray-600 text-sm">Tiempo Promedio de Sesión</p>
+            </div>
+
+            <div class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center">
+                        <i class="text-orange-600 text-xl fas fa-trophy"></i>
+                    </div>
+                    <span class="text-green-500 text-sm font-medium">+{{ overview_stats.completed_objectives_change }}%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-charcoal">{{ overview_stats.completed_objectives }}</h3>
+                <p class="text-gray-600 text-sm">Objetivos Completados</p>
+            </div>
+
+            <div class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center">
+                        <i class="text-green-600 text-xl fas fa-users"></i>
+                    </div>
+                    <span class="text-green-500 text-sm font-medium">+{{ overview_stats.active_patients_change }}%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-charcoal">{{ overview_stats.active_patients }}</h3>
+                <p class="text-gray-600 text-sm">Pacientes Activos</p>
+            </div>
+        </div>
+
+        <div id="charts-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <div id="progress-chart-container" class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-charcoal">Progreso Mensual</h3>
+                    <div class="flex space-x-2">
+                        <button class="w-3 h-3 bg-olive rounded-full"></button>
+                        <button class="w-3 h-3 bg-gray-300 rounded-full"></button>
+                        <button class="w-3 h-3 bg-gray-300 rounded-full"></button>
+                    </div>
+                </div>
+                <div id="progress-chart" style="height: 300px;"></div>
+            </div>
+
+            <div id="sessions-chart-container" class="bg-white rounded-soft p-6 shadow-soft">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-charcoal">Sesiones por Día</h3>
+                    <select class="px-3 py-2 bg-gray-100 rounded-xl text-sm border-0 focus:outline-none appearance-none">
+                        <option>Esta semana</option>
+                        <option>Semana anterior</option>
+                    </select>
+                </div>
+                <div id="sessions-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <div id="performance-section" class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            
+            <div id="games-performance" class="bg-white rounded-soft p-6 shadow-soft">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Rendimiento por Juego</h3>
+                <div id="games-chart" style="height: 250px;"></div>
+            </div>
+
+            <div id="difficulty-analysis" class="bg-white rounded-soft p-6 shadow-soft">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Análisis de Dificultad</h3>
+                <div class="space-y-4">
+                    {% for level in difficulty_analysis %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">{{ level.name }}</span>
+                        <div class="flex-1 mx-3 bg-gray-200 rounded-full h-2">
+                            <div class="{{ level.color }} h-2 rounded-full" style="width: {{ level.percentage }}%"></div>
+                        </div>
+                        <span class="text-sm font-medium">{{ level.percentage }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="patient-insights" class="bg-white rounded-soft p-6 shadow-soft">
+                <h3 class="text-xl font-semibold text-charcoal mb-6">Insights de Pacientes</h3>
+                <div class="space-y-3">
+                    {% for insight in patient_insights %}
+                    <div class="flex items-center space-x-3 p-3 {{ insight.bg_color }} rounded-2xl">
+                        <i class="{{ insight.icon_color }} {{ insight.icon }}"></i>
+                        <div>
+                            <p class="text-sm font-semibold">{{ insight.title }}</p>
+                            <p class="text-xs text-gray-700">{{ insight.description }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div id="detailed-reports" class="bg-white rounded-soft p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-charcoal">Reportes Detallados por Paciente</h3>
+                <div class="flex space-x-3">
+                    <input type="text" placeholder="Buscar paciente..." class="px-4 py-2 border border-gray-200 rounded-2xl focus:outline-none focus:border-olive">
+                    <button class="w-10 h-10 bg-olive text-white rounded-2xl hover:bg-opacity-90 transition-all flex items-center justify-center">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Última Sesión</th>
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Progreso</th>
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Tiempo Total</th>
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="text-left py-4 px-2 text-sm font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        {% for report in detailed_reports %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="py-4 px-2">
+                                <div class="flex items-center space-x-3">
+                                    <img src="{{ report.avatar }}" alt="{{ report.name }}" class="w-10 h-10 rounded-xl object-cover">
+                                    <div>
+                                        <p class="font-semibold text-sm text-charcoal">{{ report.name }}</p>
+                                        <p class="text-xs text-gray-500">ID: {{ report.id }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-2 text-sm text-gray-600">{{ report.last_session }}</td>
+                            <td class="py-4 px-2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-20 bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-olive h-2.5 rounded-full" style="width: {{ report.progress }}%"></div>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700">{{ report.progress }}%</span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-2 text-sm text-gray-600">{{ report.total_time }}</td>
+                            <td class="py-4 px-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold {{ 'bg-green-100 text-green-800' if report.status == 'Activo' else 'bg-yellow-100 text-yellow-800' }}">
+                                    {{ report.status }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-2">
+                                <button class="text-olive hover:text-opacity-80 text-sm font-medium">
+                                    <i class="mr-1 fas fa-eye"></i>Ver Detalles
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4">
+                {% for report in detailed_reports %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ report.avatar }}" alt="{{ report.name }}" class="w-12 h-12 rounded-xl object-cover">
+                            <div>
+                                <p class="font-semibold text-charcoal">{{ report.name }}</p>
+                                <p class="text-xs text-gray-500">ID: {{ report.id }}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold {{ 'bg-green-100 text-green-800' if report.status == 'Activo' else 'bg-yellow-100 text-yellow-800' }}">
+                            {{ report.status }}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Última Sesión</p>
+                            <p class="text-sm font-medium text-gray-700">{{ report.last_session }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Tiempo Total</p>
+                            <p class="text-sm font-medium text-gray-700">{{ report.total_time }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-500">Progreso</span>
+                            <span class="font-medium text-gray-700">{{ report.progress }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-olive h-2.5 rounded-full" style="width: {{ report.progress }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end border-t border-gray-100 pt-3">
+                        <button class="text-olive hover:text-opacity-80 font-medium text-sm">
+                            <i class="fas fa-eye mr-1"></i> Ver Detalles
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-submit on date change for quick filtering
+            const startInput = document.getElementById('start');
+            const endInput = document.getElementById('end');
+            const form = document.getElementById('filters-form');
+            function maybeAutoSubmit() {
+                // Submit when both dates are set
+                if (startInput && endInput && startInput.value && endInput.value) {
+                    form.submit();
+                }
+            }
+            if (startInput) startInput.addEventListener('change', maybeAutoSubmit);
+            if (endInput) endInput.addEventListener('change', maybeAutoSubmit);
+
+            const plotlyLayout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { l: 40, r: 20, b: 40, t: 20 },
+                font: {
+                    family: 'Inter, sans-serif',
+                    size: 12,
+                    color: '#6b7280'
+                },
+                xaxis: {
+                    gridcolor: '#f3f4f6',
+                    linecolor: '#e5e7eb',
+                    zerolinecolor: '#e5e7eb'
+                },
+                yaxis: {
+                    gridcolor: '#f3f4f6',
+                    linecolor: '#e5e7eb',
+                    zerolinecolor: '#e5e7eb'
+                },
+                legend: {
+                    orientation: 'h',
+                    x: 0.5,
+                    xanchor: 'center',
+                    y: -0.3
+                }
+            };
+
+            // Monthly Progress Chart
+            const progressChart = document.getElementById('progress-chart');
+            if (progressChart) {
+                const progressData = {{ monthly_progress_chart | tojson }};
+                Plotly.newPlot(progressChart, progressData.data, { ...plotlyLayout, ...progressData.layout }, {responsive: true, displayModeBar: false});
+            }
+
+            // Sessions per Day Chart
+            const sessionsChart = document.getElementById('sessions-chart');
+            if (sessionsChart) {
+                const sessionsData = {{ sessions_per_day_chart | tojson }};
+                Plotly.newPlot(sessionsChart, sessionsData.data, { ...plotlyLayout, ...sessionsData.layout }, {responsive: true, displayModeBar: false});
+            }
+
+            // Game Performance Chart
+            const gamesChart = document.getElementById('games-chart');
+            if (gamesChart) {
+                const gamesData = {{ game_performance_chart | tojson }};
+                Plotly.newPlot(gamesChart, gamesData.data, { ...plotlyLayout, ...gamesData.layout, showlegend: true }, {responsive: true, displayModeBar: false});
+            }
+
+                // Export button behaviour
+                const exportBtn = document.getElementById('export-btn');
+                if (exportBtn) {
+                    exportBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const s = document.getElementById('start') ? document.getElementById('start').value : '';
+                        const en = document.getElementById('end') ? document.getElementById('end').value : '';
+                        let qs = '';
+                        if (s) qs += `start=${encodeURIComponent(s)}`;
+                        if (en) qs += (qs ? '&' : '') + `end=${encodeURIComponent(en)}`;
+                        const url = `/reports/export${qs ? ('?' + qs) : ''}`;
+                        // trigger download
+                        window.location = url;
+                    });
+                }
+        });
+    </script>
+{% endblock %}

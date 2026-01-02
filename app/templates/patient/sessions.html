@@ -1,0 +1,156 @@
+{% extends 'patient/base.html' %}
+{% block title %}Sesiones{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-6">
+  <h2 class="text-2xl font-bold text-textDark mb-4">Sesión y Juegos Asignados</h2>
+  <p class="text-sm text-gray-600 mb-4">Selecciona una sesión activa para ver y jugar los juegos asignados.</p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Sessions List -->
+    <div class="lg:col-span-1 bg-surface rounded-soft shadow-soft p-4 md:p-6 h-fit">
+      <h3 class="text-lg font-semibold text-textDark mb-4">Mis Sesiones</h3>
+      
+      {% if sessions %}
+      <div class="space-y-3">
+        {% for session in sessions %}
+        <div class="p-4 rounded-xl border-2 transition-all cursor-pointer hover:border-olive {% if session.is_active %}border-olive bg-olive/5{% else %}border-transparent bg-gray-50{% endif %}"
+             data-id="{{ session.id }}"
+             data-games='{{ session.games | tojson | safe }}'
+             data-active="{{ 'true' if session.is_active else 'false' }}"
+             onclick="handleSessionClick(this)">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider {% if session.is_active %}text-olive{% else %}text-gray-500{% endif %}">
+                    {{ session.start_time.strftime('%d %b') }}
+                </span>
+                <span class="text-xs font-medium bg-white px-2 py-1 rounded-full shadow-sm">
+                    {{ session.start_time.strftime('%H:%M') }}
+                </span>
+            </div>
+            <h4 class="font-bold text-charcoal mb-1">{{ session.title or 'Sesión de Terapia' }}</h4>
+            <p class="text-xs text-gray-500 mb-2">con {{ session.therapist_name }}</p>
+            
+            {% if session.is_active %}
+            <div class="flex items-center text-xs text-olive font-medium">
+                <i class="fas fa-circle text-[8px] mr-2 animate-pulse"></i>
+                En curso
+            </div>
+            {% else %}
+            <div class="text-xs text-gray-400">
+                {% if session.status == 'completed' %}
+                <i class="fas fa-check-circle mr-1"></i> Completada
+                {% else %}
+                <i class="fas fa-clock mr-1"></i> Programada
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-gray-500">
+        <i class="fas fa-calendar-times text-3xl mb-2 text-gray-300"></i>
+        <p>No tienes sesiones programadas.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Game Area -->
+    <div class="lg:col-span-2 bg-surface rounded-soft shadow-soft p-4 md:p-6 flex flex-col min-h-[500px]">
+      <div id="game-placeholder" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+          <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              <i class="fas fa-gamepad text-gray-300 text-3xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-charcoal mb-2">Selecciona una sesión</h3>
+          <p class="text-gray-500 max-w-md">Elige una sesión de la lista para ver los juegos disponibles. Solo podrás jugar durante el horario de la sesión.</p>
+      </div>
+
+      <div id="game-container" class="hidden flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+              <h3 class="font-bold text-lg text-charcoal">Juegos Disponibles</h3>
+              <div id="games-list" class="flex gap-2">
+                  <!-- Game buttons injected here -->
+              </div>
+          </div>
+          <div class="flex-1 bg-black rounded-xl overflow-hidden relative">
+              <iframe id="patient-game-frame" class="w-full h-full absolute inset-0 border-0" allow="fullscreen"></iframe>
+              <div id="iframe-placeholder" class="absolute inset-0 flex items-center justify-center text-white/50">
+                  <p>Selecciona un juego arriba para comenzar</p>
+              </div>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function handleSessionClick(element) {
+        const id = element.dataset.id;
+        const games = JSON.parse(element.dataset.games);
+        const isActive = element.dataset.active === 'true';
+        selectSession(id, games, isActive);
+    }
+
+    function selectSession(id, games, isActive) {
+        const placeholder = document.getElementById('game-placeholder');
+        const container = document.getElementById('game-container');
+        const gamesList = document.getElementById('games-list');
+        const frame = document.getElementById('patient-game-frame');
+        const iframePlaceholder = document.getElementById('iframe-placeholder');
+
+        if (!isActive) {
+            alert('Esta sesión no está activa en este momento. Por favor espera al horario programado.');
+            return;
+        }
+
+        if (!games || games.length === 0) {
+            alert('Esta sesión no tiene juegos asignados.');
+            return;
+        }
+
+        // Show container
+        placeholder.classList.add('hidden');
+        container.classList.remove('hidden');
+        
+        // Reset frame
+        frame.src = '';
+        iframePlaceholder.classList.remove('hidden');
+
+        // Render game buttons
+        gamesList.innerHTML = games.map(game => `
+            <button onclick="loadGame('${game}')" 
+                    class="px-4 py-2 bg-gray-100 hover:bg-olive hover:text-white text-charcoal rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <i class="fas fa-play text-xs"></i>
+                ${game.replace('.html', '').replace(/_/g, ' ')}
+            </button>
+        `).join('');
+        
+        // Auto load first game
+        if (games.length > 0) {
+            loadGame(games[0]);
+        }
+    }
+
+    function loadGame(gameFile) {
+        const frame = document.getElementById('patient-game-frame');
+        const iframePlaceholder = document.getElementById('iframe-placeholder');
+        
+        frame.src = `/static/games/${gameFile}`;
+        iframePlaceholder.classList.add('hidden');
+        
+        // Highlight active button
+        const buttons = document.querySelectorAll('#games-list button');
+        buttons.forEach(btn => {
+            if (btn.textContent.includes(gameFile.replace('.html', '').replace(/_/g, ' '))) {
+                btn.classList.add('bg-olive', 'text-white');
+                btn.classList.remove('bg-gray-100', 'text-charcoal');
+            } else {
+                btn.classList.remove('bg-olive', 'text-white');
+                btn.classList.add('bg-gray-100', 'text-charcoal');
+            }
+        });
+    }
+</script>
+{% endblock %}
