@@ -99,7 +99,7 @@ class AppointmentService:
 
         # Notifications
         try:
-            self.notification_service.create_notification(therapist_id, f'Sesión programada: {appt.title} — {start_time.strftime("%d %b %H:%M")}', url_for('main.sessions'))
+            self.notification_service.create_notification(therapist_id, f'Sesión programada: {appt.title} — {start_time.strftime("%d %b %H:%M")}', url_for('therapist.sessions'))
             self.notification_service.create_notification(patient_id, f'Tienes una nueva sesión programada con {therapist_username} el {start_time.strftime("%d %b %H:%M")}', url_for('main.game'))
         except Exception:
             pass
@@ -125,7 +125,7 @@ class AppointmentService:
         db.session.commit()
 
         try:
-            self.notification_service.create_notification(appt.patient_id, f'Se actualizó la sesión: {appt.title}', url_for('main.calendar_patient'))
+            self.notification_service.create_notification(appt.patient_id, f'Se actualizó la sesión: {appt.title}', url_for('patient.calendar'))
         except Exception:
             pass
             
@@ -143,8 +143,8 @@ class AppointmentService:
         db.session.commit()
 
         try:
-            self.notification_service.create_notification(therapist_id, f'Sesión eliminada: {title}', url_for('main.sessions'))
-            self.notification_service.create_notification(patient_id, f'Tu sesión programada ({title}) ha sido cancelada.', url_for('main.calendar_patient'))
+            self.notification_service.create_notification(therapist_id, f'Sesión eliminada: {title}', url_for('therapist.sessions'))
+            self.notification_service.create_notification(patient_id, f'Tu sesión programada ({title}) ha sido cancelada.', url_for('patient.calendar'))
         except Exception:
             pass
             

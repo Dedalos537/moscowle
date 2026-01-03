@@ -42,7 +42,7 @@
     </div>
     <form
       method="POST"
-      action="{{ url_for('main.add_patient') }}"
+      action="{{ url_for('therapist.add_patient') }}"
       class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
     >
       <div>
@@ -112,7 +112,7 @@
         </thead>
         <tbody class="divide-y divide-gray-100">
           {% for patient in patients %}
-          <tr class="hover:bg-lightGreen transition-colors cursor-pointer" onclick="window.location='{{ url_for('main.patient_detail',patient_id=patient.id) }}';">
+          <tr class="hover:bg-lightGreen transition-colors cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=patient.id) }}';">
             <td class="px-8 py-4">
               <div class="flex items-center gap-3">
                 <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-10 h-10 rounded-full" />
@@ -127,7 +127,7 @@
             </td>
             <td class="px-8 py-4 text-center">
               <div class="flex items-center justify-center gap-2">
-                <a href="{{ url_for('main.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Ver Detalle" onclick="event.stopPropagation()">
+                <a href="{{ url_for('therapist.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Ver Detalle" onclick="event.stopPropagation()">
                   <i class="fa-solid fa-eye"></i>
                 </a>
                 <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Cambiar Estado">
@@ -151,7 +151,7 @@
     <!-- Mobile Cards -->
     <div class="md:hidden space-y-4 p-4">
       {% for patient in patients %}
-      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('main.patient_detail',patient_id=patient.id) }}';">
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=patient.id) }}';">
         <div class="flex items-center gap-3 mb-3">
           <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-12 h-12 rounded-full" />
           <div>
@@ -164,7 +164,7 @@
             {{ 'Activo' if patient.is_active else 'Inactivo' }}
           </span>
           <div class="flex items-center gap-1">
-             <a href="{{ url_for('main.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" onclick="event.stopPropagation()">
+             <a href="{{ url_for('therapist.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" onclick="event.stopPropagation()">
                 <i class="fa-solid fa-eye"></i>
              </a>
              <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors">

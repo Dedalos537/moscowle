@@ -38,8 +38,16 @@ def create_app(config_class=Config):
     # Register Blueprints
     from app.routes.auth import auth_bp
     from app.routes.main import main_bp
+    from app.routes.api_routes import api_bp
+    from app.routes.patient_routes import patient_bp
+    from app.routes.therapist_routes import therapist_bp
+    from app.routes.admin_routes import admin_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
+    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(patient_bp)
+    app.register_blueprint(therapist_bp)
+    app.register_blueprint(admin_bp)
 
     @login_manager.user_loader
     def load_user(user_id):

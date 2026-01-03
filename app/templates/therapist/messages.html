@@ -20,7 +20,7 @@
         {% if conversations %}
         <div class="divide-y divide-gray-100">
             {% for conv in conversations %}
-            <a href="{{ url_for('main.messages_conversation', user_id=conv.user_id) }}" 
+            <a href="{{ url_for('therapist.conversation', user_id=conv.user_id) }}" 
                class="flex items-center justify-between p-6 hover:bg-lightGreen transition-colors">
                 <div class="flex items-center space-x-4">
                     <div class="relative">

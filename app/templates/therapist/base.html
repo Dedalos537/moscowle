@@ -179,37 +179,37 @@
     </div>
     {% if current_user.role == 'terapista' %}
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
-      <a href="{{ url_for('main.dashboard') }}"
+      <a href="{{ url_for('therapist.dashboard') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-chart-line text-lg"></i>
         <span class="font-semibold">Dashboard</span>
       </a>
-      <a href="{{ url_for('main.manage_patients') }}"
+      <a href="{{ url_for('therapist.patients') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-users text-lg"></i>
         <span class="font-medium">Pacientes</span>
       </a>
-      <a href="{{ url_for('main.games_list') }}"
+      <a href="{{ url_for('therapist.games') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-gamepad text-lg"></i>
         <span class="font-medium">Ejercicios</span>
       </a>
-      <a href="{{ url_for('main.analytics') }}"
+      <a href="{{ url_for('therapist.analytics') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-chart-line text-lg"></i>
         <span class="font-medium">IA Analytics</span>
       </a>
-      <a href="{{ url_for('main.sessions') }}"
+      <a href="{{ url_for('therapist.sessions') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-calendar-check text-lg"></i>
         <span class="font-medium">Sesiones</span>
       </a>
-      <a href="{{ url_for('main.reports') }}"
+      <a href="{{ url_for('therapist.reports') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-file-alt text-lg"></i>
         <span class="font-medium">Reportes</span>
       </a>
-      <a href="{{ url_for('main.messages_list') }}"
+      <a href="{{ url_for('therapist.messages') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
         <i class="fa-solid fa-envelope text-lg"></i>
         <span class="font-medium">Mensajes</span>
@@ -219,27 +219,27 @@
       {% endif %}
       {% if current_user.role == 'admin' %}
       <div class="pt-2 mt-2 border-t border-gray-100"></div>
-      <a href="{{ url_for('main.admin_dashboard') }}"
+      <a href="{{ url_for('admin.dashboard') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-toolbox text-lg"></i>
         <span class="font-medium">Admin Panel</span>
       </a>
-      <a href="{{ url_for('main.admin_users') }}"
+      <a href="{{ url_for('admin.users') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-user-gear text-lg"></i>
         <span class="font-medium">Admin Usuarios</span>
       </a>
-      <a href="{{ url_for('main.admin_games') }}"
+      <a href="{{ url_for('admin.games') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-gamepad text-lg"></i>
         <span class="font-medium">Admin Juegos</span>
       </a>
-      <a href="{{ url_for('main.admin_reports') }}"
+      <a href="{{ url_for('admin.reports') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-chart-pie text-lg"></i>
         <span class="font-medium">Admin Reportes</span>
       </a>
-      <a href="{{ url_for('main.admin_messages') }}"
+      <a href="{{ url_for('admin.messages') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-envelope text-lg"></i>
         <span class="font-medium">Admin Mensajes</span>
@@ -319,7 +319,7 @@
                       <p class="text-sm font-bold text-charcoal">{{ current_user.username or current_user.email }}</p>
                       <p class="text-xs text-gray-500">{{ current_user.role|capitalize }}</p>
                   </div>
-                  <a href="{{ url_for('main.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive transition-colors">
+                  <a href="{{ url_for('therapist.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive transition-colors">
                       <i class="fas fa-user-circle w-5 text-center mr-2"></i> Mi Perfil
                   </a>
                   <button onclick="showLogoutModal()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">

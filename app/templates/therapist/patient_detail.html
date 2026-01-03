@@ -6,7 +6,7 @@
 <div class="flex items-center justify-between w-full">
     <div>
         <div class="flex items-center space-x-3">
-            <a href="{{ url_for('main.manage_patients') }}" class="text-gray-400 hover:text-primary">
+            <a href="{{ url_for('therapist.patients') }}" class="text-gray-400 hover:text-primary">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h2 class="text-2xl font-bold text-textDark">{{ patient.username or patient.email }}</h2>
