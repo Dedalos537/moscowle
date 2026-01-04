@@ -300,6 +300,12 @@
           </button>
           {% endblock %}
 
+          <!-- Timezone Badge -->
+          <div class="hidden md:flex items-center mr-4 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500" title="Tu zona horaria">
+            <i class="fas fa-globe mr-2"></i>
+            <span id="user-timezone">UTC</span>
+          </div>
+
           <!-- User Profile Dropdown -->
           <div class="relative group">
               <button id="user-menu-btn" class="flex items-center space-x-3 focus:outline-none">
@@ -594,6 +600,21 @@
     logoutModal.addEventListener('click', (e) => {
       if (e.target === logoutModal) {
         closeLogoutModal();
+      }
+    });
+
+    // Detect and display user timezone
+    document.addEventListener('DOMContentLoaded', () => {
+      const tzElement = document.getElementById('user-timezone');
+      if (tzElement) {
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const offset = new Date().toString().match(/GMT([+-]\d{4})/)[1];
+          const offsetFormatted = `GMT${offset.slice(0, 3)}:${offset.slice(3)}`;
+          tzElement.textContent = `${tz} (${offsetFormatted})`;
+        } catch (e) {
+          console.error('Error detecting timezone:', e);
+        }
       }
     });
   </script>

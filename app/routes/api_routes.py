@@ -8,7 +8,7 @@ from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.dashboard_service import DashboardService
 from app.services.ai_service import predict_level, train_model
-from app.utils import get_user_today_utc_range, get_user_now
+from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime_for_storage, localize_datetime_for_display, get_user_timezone
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt
 from app.services.email_service import EmailService
@@ -295,15 +295,40 @@ def api_create_session():
 
     data = request.json or {}
     
-    # Pre-process dates for the service
+    # Get user's timezone for proper normalization
+    user_tz = current_user.timezone or 'UTC'
+    
+    # Pre-process dates - normalize to UTC for storage
     try:
-        data['start_time'] = _parse_datetime(data.get('start_time'))
-        data['end_time'] = _parse_datetime(data.get('end_time'))
-    except Exception:
-        return jsonify({'success': False, 'message': 'Formato de fecha inválido'}), 400
+        if data.get('start_time'):
+            data['start_time'] = normalize_datetime_for_storage(data.get('start_time'), user_tz)
+        if data.get('end_time'):
+            data['end_time'] = normalize_datetime_for_storage(data.get('end_time'), user_tz)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Formato de fecha inválido: {str(e)}'}), 400
 
     if not data.get('patient_id') or not data.get('start_time'):
         return jsonify({'success': False, 'message': 'patient_id and start_time are required'}), 400
+
+    # Set default end_time if not provided (1 hour after start)
+    if not data.get('end_time'):
+        data['end_time'] = data['start_time'] + timedelta(hours=1)
+    
+    # Validate session times
+    validation_errors = appointment_service.validate_session_times(
+        start_time=data['start_time'],
+        end_time=data['end_time'],
+        patient_id=data['patient_id'],
+        therapist_id=current_user.id,
+        session_id=None
+    )
+    
+    if validation_errors:
+        return jsonify({
+            'success': False, 
+            'message': 'Errores de validación',
+            'errors': validation_errors
+        }), 400
 
     try:
         appt = appointment_service.create_session(current_user.id, data, current_user.username)
@@ -337,10 +362,43 @@ def api_update_session(session_id):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
-    if 'start_time' in data:
-        data['start_time'] = _parse_datetime(data.get('start_time'))
-    if 'end_time' in data:
-        data['end_time'] = _parse_datetime(data.get('end_time'))
+    
+    # Get user's timezone for proper normalization
+    user_tz = current_user.timezone or 'UTC'
+    
+    # Normalize datetime fields to UTC
+    try:
+        if 'start_time' in data:
+            data['start_time'] = normalize_datetime_for_storage(data.get('start_time'), user_tz)
+        if 'end_time' in data:
+            data['end_time'] = normalize_datetime_for_storage(data.get('end_time'), user_tz)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Formato de fecha inválido: {str(e)}'}), 400
+    
+    # Get existing appointment for validation
+    existing_appt = Appointment.query.get(session_id)
+    if not existing_appt:
+        return jsonify({'success': False, 'message': 'Sesión no encontrada'}), 404
+    
+    # Validate if times are being updated
+    if 'start_time' in data or 'end_time' in data:
+        start_time = data.get('start_time', existing_appt.start_time)
+        end_time = data.get('end_time', existing_appt.end_time or (existing_appt.start_time + timedelta(hours=1)))
+        
+        validation_errors = appointment_service.validate_session_times(
+            start_time=start_time,
+            end_time=end_time,
+            patient_id=existing_appt.patient_id,
+            therapist_id=current_user.id,
+            session_id=session_id
+        )
+        
+        if validation_errors:
+            return jsonify({
+                'success': False,
+                'message': 'Errores de validación',
+                'errors': validation_errors
+            }), 400
         
     appt = appointment_service.update_session(session_id, data)
     if not appt:
@@ -371,6 +429,77 @@ def api_delete_session(session_id):
         return jsonify({'success': False, 'message': 'Sesión no encontrada'}), 404
 
     return jsonify({'success': True})
+
+@api_bp.route('/sessions/<int:session_id>/complete', methods=['POST'])
+@login_required
+def api_complete_session(session_id):
+    """Mark a session as completed manually"""
+    if current_user.role not in ['terapista', 'admin']:
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    
+    try:
+        appt = appointment_service.transition_status(
+            session_id=session_id,
+            new_status='completed',
+            changed_by_user_id=current_user.id,
+            notify=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sesión marcada como completada',
+            'session': {
+                'id': appt.id,
+                'status': appt.status,
+                'status_changed_at': appt.status_changed_at.isoformat() if appt.status_changed_at else None
+            }
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error completing session {session_id}: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error al completar sesión'}), 500
+
+@api_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
+@login_required
+def api_cancel_session(session_id):
+    """Cancel a session with optional reason"""
+    if current_user.role not in ['terapista', 'admin']:
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    
+    data = request.get_json(silent=True) or {}
+    reason = data.get('reason', '')
+    
+    try:
+        appt = appointment_service.transition_status(
+            session_id=session_id,
+            new_status='cancelled',
+            changed_by_user_id=current_user.id,
+            notify=True
+        )
+        
+        # Optionally store cancellation reason in notes
+        if reason:
+            if appt.notes:
+                appt.notes += f"\n\n[Cancelada] {reason}"
+            else:
+                appt.notes = f"[Cancelada] {reason}"
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sesión cancelada exitosamente',
+            'session': {
+                'id': appt.id,
+                'status': appt.status,
+                'status_changed_at': appt.status_changed_at.isoformat() if appt.status_changed_at else None
+            }
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error cancelling session {session_id}: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error al cancelar sesión'}), 500
 
 @api_bp.route('/admin/assign-therapist', methods=['POST'])
 @login_required
@@ -771,17 +900,39 @@ def generate_game():
 @api_bp.route('/sessions/assign-games', methods=['POST'])
 @login_required
 def assign_games_to_session():
+    """Assign games to a session using the unified AppointmentGame table"""
     if current_user.role not in ('terapista','admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
+    
     data = request.get_json() or {}
     session_id = data.get('session_id')
-    games = data.get('games') or []  # list of {'name': 'file.html', 'url': '/static/games/file.html'}
-    appt = Appointment.query.get(session_id)
-    if not appt:
-        return jsonify({'error': 'Sesión no encontrada'}), 404
-    appt.games = json.dumps(games, ensure_ascii=False)
-    db.session.commit()
-    return jsonify({'status': 'ok', 'assigned': games})
+    games = data.get('games') or []
+    
+    if not session_id:
+        return jsonify({'error': 'session_id requerido'}), 400
+    
+    # Extract filenames from games list
+    # Support both ['game.html'] and [{'name': 'game.html', 'url': '...'}]
+    game_filenames = []
+    for game in games:
+        if isinstance(game, dict):
+            game_filenames.append(game.get('name', ''))
+        else:
+            game_filenames.append(game)
+    
+    # Filter out empty strings
+    game_filenames = [g for g in game_filenames if g]
+    
+    try:
+        validated_games = appointment_service.set_session_games(session_id, game_filenames)
+        return jsonify({
+            'status': 'ok',
+            'assigned': [{'name': g.filename, 'title': g.title} for g in validated_games]
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': f'Error asignando juegos: {str(e)}'}), 500
 
 
 # Check available games for a session (only during time window)

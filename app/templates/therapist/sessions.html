@@ -502,10 +502,29 @@ header_content %}
         const sessionGamesList = document.getElementById("session-games-list");
         const sessionGamesStatus = document.getElementById("session-games-status");
 
-        function showToast(message) {
-          toastMsg.textContent = message;
-          toast.classList.remove("hidden");
-          setTimeout(() => toast.classList.add("hidden"), 3000);
+        function showToast(message, type = 'info', duration = 3000) {
+          const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+          };
+          
+          // Use existing toast element if available
+          if (toastMsg && toast) {
+            toastMsg.textContent = message;
+            toast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+            toast.classList.remove("hidden");
+            setTimeout(() => toast.classList.add("hidden"), duration);
+          } else {
+            // Fallback: create toast dynamically
+            const newToast = document.createElement('div');
+            newToast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+            newToast.style.whiteSpace = 'pre-line';
+            newToast.textContent = message;
+            document.body.appendChild(newToast);
+            setTimeout(() => newToast.remove(), duration);
+          }
         }
 
         function openModal(modal) {
@@ -556,7 +575,8 @@ header_content %}
         }
 
         function formatDateEs(iso) {
-          const d = new Date(iso);
+          // Convert UTC timestamp to local date
+          const d = new Date(iso); // Automatically converts UTC to browser's local time
           const day = String(d.getDate()).padStart(2, "0");
           const months = [
             "Ene",
@@ -578,7 +598,8 @@ header_content %}
         }
 
         function formatTimeEs(iso) {
-          const d = new Date(iso);
+          // Convert UTC timestamp to local time
+          const d = new Date(iso); // Automatically converts UTC to browser's local time
           let hours = d.getHours();
           const minutes = String(d.getMinutes()).padStart(2, "0");
           const ampm = hours >= 12 ? "PM" : "AM";
@@ -645,12 +666,22 @@ header_content %}
                               <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
                                   <i class="fas fa-pen-to-square"></i>
                               </button>
+                              ${s.status === 'scheduled' ? `
+                              <button class="p-2 text-gray-600 hover:text-green-600 transition-colors" title="Marcar como completada" data-action="complete">
+                                  <i class="fas fa-check-circle"></i>
+                              </button>
+                              ` : ''}
+                              ${s.status === 'scheduled' ? `
                               <button class="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Cancelar" data-action="cancel">
                                   <i class="fas fa-circle-xmark"></i>
                               </button>
-                            <button class="p-2 text-gray-600 hover:text-emerald-600 transition-colors" title="Juegos asignados" data-action="games">
-                              <i class="fas fa-gamepad"></i>
-                            </button>
+                              ` : ''}
+                              <button class="p-2 text-gray-600 hover:text-emerald-600 transition-colors" title="Juegos asignados" data-action="games">
+                                  <i class="fas fa-gamepad"></i>
+                              </button>
+                              <button class="p-2 text-gray-600 hover:text-red-600 transition-colors" title="Eliminar" data-action="delete">
+                                  <i class="fas fa-trash"></i>
+                              </button>
                           </div>
                       </td>
                   </tr>`;
@@ -703,11 +734,21 @@ header_content %}
                     <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
                       <i class="fas fa-pen-to-square"></i>
                     </button>
+                    ${s.status === 'scheduled' ? `
+                    <button class="p-2 text-gray-600 hover:text-green-600 transition-colors" title="Marcar como completada" data-action="complete">
+                      <i class="fas fa-check-circle"></i>
+                    </button>
+                    ` : ''}
+                    ${s.status === 'scheduled' ? `
                     <button class="p-2 text-gray-600 hover:text-red-500 transition-colors" title="Cancelar" data-action="cancel">
                       <i class="fas fa-circle-xmark"></i>
                     </button>
+                    ` : ''}
                     <button class="p-2 text-gray-600 hover:text-emerald-600 transition-colors" title="Juegos asignados" data-action="games">
                       <i class="fas fa-gamepad"></i>
+                    </button>
+                    <button class="p-2 text-gray-600 hover:text-red-600 transition-colors" title="Eliminar" data-action="delete">
+                      <i class="fas fa-trash"></i>
                     </button>
                   </div>
                 </div>
@@ -729,18 +770,14 @@ header_content %}
                 } else if (action === "edit") {
                   fillEditForm(session);
                   openModal(editModal);
+                } else if (action === "complete") {
+                  completeSession(session);
                 } else if (action === "cancel") {
-                  if (typeof openConfirm === "function") {
-                    openConfirm("¿Desea cancelar esta sesión?", async () => {
-                      await cancelSession(session);
-                    });
-                  } else {
-                    if (confirm("¿Desea cancelar esta sesión?")) {
-                      cancelSession(session);
-                    }
-                  }
+                  cancelSession(session);
                 } else if (action === "games") {
                   openSessionGamesModal(session.id);
+                } else if (action === "delete") {
+                  deleteSession(session);
                 }
               });
             });
@@ -770,17 +807,12 @@ header_content %}
               } else if (action === "edit") {
                 fillEditForm(session);
                 openModal(editModal);
+              } else if (action === "complete") {
+                completeSession(session);
               } else if (action === "cancel") {
-                // Use patients confirmation modal pattern if available; fallback to window.confirm
-                if (typeof openConfirm === "function") {
-                  openConfirm("¿Desea cancelar esta sesión?", async () => {
-                    await cancelSession(session);
-                  });
-                } else {
-                  if (confirm("¿Desea cancelar esta sesión?")) {
-                    cancelSession(session);
-                  }
-                }
+                else if (action === "delete") {
+                deleteSession(session);
+              } cancelSession(session);
               } else if (action === "games") {
                 openSessionGamesModal(session.id);
               }
@@ -906,9 +938,18 @@ header_content %}
         }
 
         function toLocalInputValue(iso) {
-          const d = new Date(iso);
+          // Convert UTC ISO string to local datetime-local input format
+          const d = new Date(iso); // Browser converts UTC to local automatically
           const pad = (n) => String(n).padStart(2, "0");
           return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        
+        function localInputToISO(inputValue) {
+          // Convert datetime-local input to ISO string
+          // The input value is in local time, so we create a Date object
+          // which will automatically have the browser's timezone
+          const d = new Date(inputValue);
+          return d.toISOString(); // Converts to UTC automatically
         }
 
         function fillEditForm(s) {
@@ -1078,46 +1119,127 @@ header_content %}
             showToast("Fecha de inicio requerida");
             return;
           }
+          
+          // Add loading state
+          const submitBtn = createForm.querySelector('button[type="submit"]');
+          const originalText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
+          
           try {
             const res = await fetch(API_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),
             });
-            if (!res.ok) throw new Error("Error al crear la sesión");
-            const created = await res.json();
+            
+            const result = await res.json();
+            
+            if (!res.ok) {
+              // Handle validation errors
+              if (result.errors && Array.isArray(result.errors)) {
+                const errorList = result.errors.map(e => `• ${e}`).join('\n');
+                showToast(`Error de validación:\n${errorList}`, 'error', 5000);
+              } else {
+                showToast(result.message || "Error al crear la sesión", 'error');
+              }
+              throw new Error(result.message || "Error al crear la sesión");
+            }
+            
+            const created = result;
             allSessions.unshift(created);
             currentPage = 1;
-            showToast("Sesión creada");
+            showToast("Sesión creada exitosamente", 'success');
             refreshNotifications();
             closeModals();
             renderTable();
           } catch (err) {
             console.error(err);
-            showToast(err.message || "Error inesperado");
+            // Error already shown via showToast above
+          } finally {
+            // Restore button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
           }
-        });
-
-        async function cancelSession(s) {
-          if (!confirm("¿Desea cancelar esta sesión?")) return;
+        });deleteSession(s) {
+          if (!confirm(`¿Estás seguro de que deseas eliminar la sesión de ${s.patient?.name || 'paciente'}?\nEsta acción no se puede deshacer.`)) return;
+          
           try {
             const res = await fetch(`${API_URL}/${s.id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "cancelled" }),
+              method: "DELETE",
             });
-            if (!res.ok) throw new Error("No se pudo cancelar la sesión");
-            const updated = await res.json();
-            const idx = allSessions.findIndex(
-              (x) => String(x.id) === String(s.id)
-            );
-            if (idx >= 0) allSessions[idx] = updated;
-            showToast("Sesión cancelada");
+            
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.message || "No se pudo eliminar la sesión");
+            }
+            
+            // Refresh the session list
+            await loadSessions();
+            
+            showToast("Sesión eliminada exitosamente", 'success');
             refreshNotifications();
-            renderTable();
           } catch (err) {
             console.error(err);
-            showToast(err.message || "Error inesperado");
+            showToast(err.message || "Error inesperado", 'error');
+          }
+        }
+
+        async function 
+
+        async function cancelSession(s) {
+          const reason = prompt("Razón de cancelación (opcional):");
+          if (reason === null) return; // User cancelled
+          
+          try {
+            const res = await fetch(`${API_URL}/${s.id}/cancel`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reason }),
+            });
+            
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.message || "No se pudo cancelar la sesión");
+            }
+            
+            const data = await res.json();
+            
+            // Refresh the session list
+            await loadSessions();
+            
+            showToast(data.message || "Sesión cancelada exitosamente", 'success');
+            refreshNotifications();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || "Error inesperado", 'error');
+          }
+        }
+        
+        async function completeSession(s) {
+          if (!confirm("¿Marcar esta sesión como completada?")) return;
+          
+          try {
+            const res = await fetch(`${API_URL}/${s.id}/complete`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            });
+            
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.message || "No se pudo completar la sesión");
+            }
+            
+            const data = await res.json();
+            
+            // Refresh the session list
+            await loadSessions();
+            
+            showToast(data.message || "Sesión marcada como completada", 'success');
+            refreshNotifications();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || "Error inesperado", 'error');
           }
         }
 
@@ -1366,6 +1488,14 @@ header_content %}
                 dot.style.backgroundColor = "#3b82f6";
               else dot.style.backgroundColor = "#f59e0b";
               dots.appendChild(dot);
+          
+          // Show loading state
+          daySessionsContainer.innerHTML = `
+            <div class="flex items-center justify-center py-8 text-gray-500">
+              <i class="fas fa-spinner fa-spin mr-2"></i> Cargando sesiones...
+            </div>
+          `;
+          
             });
             if (list.length > 3) {
               const more = document.createElement("span");

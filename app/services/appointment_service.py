@@ -1,14 +1,75 @@
 from app.models import Appointment, db, User
 from app.services.notification_service import NotificationService
 from app.utils import get_user_today_utc_range
-from flask import url_for
+from flask import url_for, current_app
 import json
+import os
 from datetime import datetime, timedelta
 from sqlalchemy import or_, and_
 
 class AppointmentService:
     def __init__(self):
         self.notification_service = NotificationService()
+
+    def validate_session_times(self, start_time, end_time, patient_id, therapist_id, session_id=None):
+        """
+        Validate session timing and prevent conflicts.
+        Returns a list of error messages (empty if valid).
+        """
+        errors = []
+        
+        # Basic time validation
+        if start_time >= end_time:
+            errors.append("La hora de inicio debe ser anterior a la hora de fin")
+            return errors  # No need to check further if times are invalid
+        
+        # Duration validation
+        duration = (end_time - start_time).total_seconds() / 60
+        if duration < 15:
+            errors.append("La duración mínima de una sesión es 15 minutos")
+        if duration > 240:
+            errors.append("La duración máxima de una sesión es 4 horas")
+        
+        # Past date validation (only for new sessions)
+        if not session_id and start_time < datetime.utcnow():
+            errors.append("No se pueden crear sesiones en el pasado")
+        
+        # Check therapist double-booking
+        therapist_conflict = Appointment.query.filter(
+            Appointment.therapist_id == therapist_id,
+            Appointment.status.in_(['scheduled', 'in_progress']),
+            or_(
+                and_(Appointment.start_time <= start_time, Appointment.end_time > start_time),
+                and_(Appointment.start_time < end_time, Appointment.end_time >= end_time),
+                and_(Appointment.start_time >= start_time, Appointment.end_time <= end_time)
+            )
+        )
+        if session_id:
+            therapist_conflict = therapist_conflict.filter(Appointment.id != session_id)
+        
+        if therapist_conflict.first():
+            errors.append("Ya tienes una sesión programada en ese horario")
+        
+        # Check patient double-booking
+        patient_conflict = Appointment.query.filter(
+            Appointment.patient_id == patient_id,
+            Appointment.status.in_(['scheduled', 'in_progress']),
+            or_(
+                and_(Appointment.start_time <= start_time, Appointment.end_time > start_time),
+                and_(Appointment.start_time < end_time, Appointment.end_time >= end_time),
+                and_(Appointment.start_time >= start_time, Appointment.end_time <= end_time)
+            )
+        )
+        if session_id:
+            patient_conflict = patient_conflict.filter(Appointment.id != session_id)
+        
+        conflicting_patient_appt = patient_conflict.first()
+        if conflicting_patient_appt:
+            patient = User.query.get(patient_id)
+            patient_name = patient.username if patient else "El paciente"
+            errors.append(f"{patient_name} ya tiene una sesión programada en ese horario")
+        
+        return errors
 
     def get_therapist_appointments(self, therapist_id, start_dt, end_dt):
         return Appointment.query.filter(
@@ -87,34 +148,25 @@ class AppointmentService:
             status=data.get('status') or 'scheduled'
         )
         
-        # Handle games
+        db.session.add(appt)
+        db.session.flush() # Get ID for game assignment
+        
+        # Handle games using new unified method
         games_payload = data.get('games')
-        games_list = []
         if games_payload:
+            games_list = []
             if isinstance(games_payload, str):
                 games_list = [g.strip() for g in games_payload.split(',') if g.strip()]
             elif isinstance(games_payload, list):
                 games_list = games_payload
-        
-        # Legacy support: save to JSON column
-        if games_list:
-            appt.games = json.dumps(games_list)
-        
-        db.session.add(appt)
-        db.session.flush() # Get ID
-        
-        # New support: save to AppointmentGame table
-        if games_list:
-            for game_filename in games_list:
-                # Find game by filename
-                game = Game.query.filter_by(filename=game_filename).first()
-                if game:
-                    assoc = AppointmentGame(appointment_id=appt.id, game_id=game.id)
-                    db.session.add(assoc)
-                else:
-                    # Auto-create if missing (fallback for custom/legacy files not in DB yet)
-                    # Ideally we shouldn't do this, but for stability:
-                    pass 
+            
+            if games_list:
+                try:
+                    self.set_session_games(appt.id, games_list)
+                except ValueError as e:
+                    # Rollback if game validation fails
+                    db.session.rollback()
+                    raise e
 
         db.session.commit()
 
@@ -170,3 +222,164 @@ class AppointmentService:
             pass
             
         return True
+
+    def set_session_games(self, session_id, game_filenames):
+        """
+        Set games for a session using the AppointmentGame table.
+        Validates game existence and replaces all previous associations.
+        
+        Args:
+            session_id: ID of the appointment
+            game_filenames: List of game filenames (e.g., ['game1.html', 'game2.html'])
+        
+        Returns:
+            List of validated Game objects
+        
+        Raises:
+            ValueError: If session not found or game doesn't exist
+        """
+        from app.models import Game, AppointmentGame
+        
+        appt = Appointment.query.get(session_id)
+        if not appt:
+            raise ValueError("Sesión no encontrada")
+        
+        # Validate all games exist before making any changes
+        validated_games = []
+        for filename in game_filenames:
+            game = Game.query.filter_by(filename=filename, is_active=True).first()
+            
+            if not game:
+                # Check if file exists physically
+                game_path = os.path.join(current_app.static_folder, 'games', filename)
+                if not os.path.exists(game_path):
+                    raise ValueError(f"Juego no encontrado: {filename}")
+                
+                # Auto-create game entry if file exists
+                game = Game(
+                    title=filename.replace('.html', '').replace('_', ' ').title(),
+                    filename=filename,
+                    is_active=True
+                )
+                db.session.add(game)
+                db.session.flush()  # Get the ID
+            
+            validated_games.append(game)
+        
+        # Remove old associations (transactional)
+        AppointmentGame.query.filter_by(appointment_id=session_id).delete()
+        
+        # Create new associations
+        for game in validated_games:
+            assoc = AppointmentGame(appointment_id=session_id, game_id=game.id)
+            db.session.add(assoc)
+        
+        # Update legacy JSON column for backward compatibility (read-only)
+        appt.games = json.dumps([g.filename for g in validated_games])
+        
+        db.session.commit()
+        return validated_games
+
+    def transition_status(self, session_id, new_status, changed_by_user_id=None, notify=True):
+        """
+        Transition a session to a new status with validation.
+        
+        Args:
+            session_id: ID of the appointment
+            new_status: Target status ('scheduled', 'in_progress', 'completed', 'cancelled')
+            changed_by_user_id: ID of user making the change (None for system changes)
+            notify: Whether to send notifications
+            
+        Returns:
+            Updated appointment object or None if validation fails
+            
+        Raises:
+            ValueError: If transition is invalid
+        """
+        appt = Appointment.query.get(session_id)
+        if not appt:
+            raise ValueError("Sesión no encontrada")
+        
+        # Define valid state transitions
+        valid_transitions = {
+            'scheduled': ['in_progress', 'completed', 'cancelled'],
+            'in_progress': ['completed', 'cancelled'],
+            'completed': [],  # Completed sessions cannot be changed
+            'cancelled': []   # Cancelled sessions cannot be changed
+        }
+        
+        current_status = appt.status
+        
+        # Check if transition is valid
+        if new_status not in valid_transitions.get(current_status, []):
+            if current_status == new_status:
+                return appt  # No change needed
+            raise ValueError(
+                f"Transición inválida: no se puede cambiar de '{current_status}' a '{new_status}'"
+            )
+        
+        # Additional validation for completing/cancelling
+        if new_status == 'completed':
+            # Can only complete past or current sessions
+            if appt.end_time and appt.end_time > datetime.utcnow():
+                # Allow completion if within 15 minutes of end time
+                if appt.end_time > datetime.utcnow() + timedelta(minutes=15):
+                    raise ValueError("No se puede completar una sesión futura")
+        
+        # Update status
+        old_status = appt.status
+        appt.status = new_status
+        appt.status_changed_at = datetime.utcnow()
+        appt.status_changed_by = changed_by_user_id
+        
+        try:
+            db.session.commit()
+            
+            # Send notifications if requested
+            if notify:
+                self._send_status_change_notification(appt, old_status, new_status)
+            
+            # Log the change
+            change_by = "sistema" if not changed_by_user_id else f"usuario {changed_by_user_id}"
+            current_app.logger.info(
+                f"Sesión {session_id}: {old_status} → {new_status} (por {change_by})"
+            )
+            
+            return appt
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error al cambiar estado de sesión {session_id}: {str(e)}")
+            raise
+    
+    def _send_status_change_notification(self, appt, old_status, new_status):
+        """Send notification when session status changes"""
+        try:
+            # Determine message based on transition
+            messages = {
+                'completed': f"Tu sesión '{appt.title}' ha sido marcada como completada",
+                'cancelled': f"Tu sesión '{appt.title}' ha sido cancelada",
+                'in_progress': f"Tu sesión '{appt.title}' está en progreso"
+            }
+            
+            message = messages.get(new_status, f"Estado de sesión actualizado a {new_status}")
+            
+            # Notify patient
+            self.notification_service.create_notification(
+                user_id=appt.patient_id,
+                message=message,
+                type='session_update'
+            )
+            
+            # Notify therapist if status was changed automatically
+            if not appt.status_changed_by:
+                self.notification_service.create_notification(
+                    user_id=appt.therapist_id,
+                    message=f"Sesión con {appt.patient.username} actualizada automáticamente a '{new_status}'",
+                    type='session_update'
+                )
+                
+        except Exception as e:
+            # Don't fail the status change if notification fails
+            current_app.logger.error(f"Error enviando notificación: {str(e)}")
+

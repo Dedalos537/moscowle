@@ -362,6 +362,11 @@
             })()
         };
 
+        const submitBtn = appointmentForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Guardando...';
+
         fetch('/api/sessions', {
             method: 'POST',
             headers: {
@@ -375,16 +380,45 @@
                 modal.classList.add('hidden');
                 appointmentForm.reset();
                 loadAppointments(); // Reload appointments
-                alert('✅ Cita creada exitosamente');
+                showNotification('✅ Cita creada exitosamente', 'success');
+            } else if (data.errors && Array.isArray(data.errors)) {
+                const errorList = data.errors.map(e => `• ${e}`).join('\n');
+                showNotification(`❌ Error de validación:\n${errorList}`, 'error', 5000);
             } else {
-                alert('❌ Error al crear la cita: ' + (data.message || 'Error desconocido'));
+                showNotification('❌ Error al crear la cita: ' + (data.message || 'Error desconocido'), 'error');
             }
         })
         .catch(err => {
             console.error('Error creating appointment:', err);
-            alert('❌ Error al crear la cita');
+            showNotification('❌ Error al crear la cita', 'error');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         });
     });
+
+    // Notification helper
+    function showNotification(message, type = 'info', duration = 3000) {
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+        notification.style.whiteSpace = 'pre-line';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
 
     // Initial load
     loadAppointments();

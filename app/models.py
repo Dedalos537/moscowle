@@ -78,6 +78,9 @@ class Appointment(db.Model):
     games = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Status tracking for audit trail
+    status_changed_at = db.Column(db.DateTime, nullable=True)
+    status_changed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     therapist = db.relationship('User', foreign_keys=[therapist_id], backref=db.backref('appointments_as_therapist', lazy=True))
     patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('appointments_as_patient', lazy=True))
