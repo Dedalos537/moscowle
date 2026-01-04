@@ -101,12 +101,16 @@
     function displayAppointmentsList() {
         const listContainer = document.getElementById('appointments-list');
         
-        if (appointments.length === 0) {
+        // Filter for upcoming appointments only (future start time)
+        const now = new Date();
+        const upcomingAppointments = appointments.filter(appt => new Date(appt.start) > now);
+
+        if (upcomingAppointments.length === 0) {
             listContainer.innerHTML = `
                 <div class="text-center py-12">
                     <i class="fas fa-calendar-plus text-gray-300 text-5xl mb-4"></i>
-                    <p class="text-gray-500 mb-2">No tienes citas programadas</p>
-                    <p class="text-sm text-gray-400">Tu terapeuta programará las sesiones</p>
+                    <p class="text-gray-500 mb-2">No tienes próximas citas</p>
+                    <p class="text-sm text-gray-400">Tus citas pasadas están en el calendario</p>
                 </div>
             `;
             return;
@@ -114,8 +118,8 @@
         
         let html = '';
         // Sort upcoming appointments by date
-        appointments.sort((a,b) => new Date(a.start) - new Date(b.start));
-        appointments.forEach(appt => {
+        upcomingAppointments.sort((a,b) => new Date(a.start) - new Date(b.start));
+        upcomingAppointments.forEach(appt => {
             const startDate = new Date(appt.start);
             const dateStr = startDate.toLocaleDateString('es-ES', { 
                 weekday: 'long', 

@@ -86,10 +86,10 @@
                 </div>
                 {% else %}
                 <div class="w-full bg-gray-100 text-gray-400 py-2 rounded-xl font-medium text-center cursor-not-allowed">
-                    {% if session.start_time > now %}
-                    Programada para {{ session.start_time.strftime('%H:%M') }}
-                    {% else %}
+                    {% if session.status == 'completed' %}
                     Sesión finalizada
+                    {% else %}
+                    Programada para {{ session.start_time.strftime('%H:%M') }}
                     {% endif %}
                 </div>
                 {% endif %}

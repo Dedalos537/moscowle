@@ -4,6 +4,7 @@ from app.utils import get_user_today_utc_range
 from flask import url_for
 import json
 from datetime import datetime, timedelta
+from sqlalchemy import or_, and_
 
 class AppointmentService:
     def __init__(self):
@@ -24,7 +25,28 @@ class AppointmentService:
             Appointment.status == 'scheduled'
         ).order_by(Appointment.start_time.asc()).limit(limit).all()
 
+    def update_expired_appointments(self, patient_id):
+        """Auto-complete past scheduled appointments"""
+        now = datetime.utcnow()
+        # Check explicit end_time or default 1h duration
+        expired = Appointment.query.filter(
+            Appointment.patient_id == patient_id,
+            Appointment.status == 'scheduled',
+            or_(
+                Appointment.end_time < now,
+                and_(Appointment.end_time == None, Appointment.start_time < now - timedelta(hours=1))
+            )
+        ).all()
+        
+        if expired:
+            for appt in expired:
+                appt.status = 'completed'
+            db.session.commit()
+
     def get_patient_appointments(self, patient_id, start_dt=None, end_dt=None, limit=10):
+        # Ensure status is up to date
+        self.update_expired_appointments(patient_id)
+        
         query = Appointment.query.filter(Appointment.patient_id == patient_id)
         if start_dt and end_dt:
             return query.filter(
@@ -41,8 +63,7 @@ class AppointmentService:
                 today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
             return query.filter(
-                Appointment.start_time >= today_start,
-                Appointment.status == 'scheduled'
+                Appointment.start_time >= today_start
             ).order_by(Appointment.start_time.asc()).limit(limit).all()
 
     def create_session(self, therapist_id, data, therapist_username):

@@ -726,7 +726,14 @@ def patient_detail(patient_id):
     recent_sessions = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.desc()).limit(10).all()
     
     # Get all sessions for chart data
-    all_sessions = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.asc()).all()
+    all_sessions_query = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.asc()).all()
+    all_sessions = []
+    for s in all_sessions_query:
+        all_sessions.append({
+            'date': s.date.isoformat(),
+            'accurracy': s.accurracy,
+            'avg_time': s.avg_time
+        })
     
     # Get upcoming appointments
     upcoming_appointments = Appointment.query.filter(

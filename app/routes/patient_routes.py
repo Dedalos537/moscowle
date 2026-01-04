@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.models import SessionMetrics, db, User, Message, Appointment
 from app.services.dashboard_service import DashboardService
 from app.services.appointment_service import AppointmentService
-from app.utils import get_user_today_utc_range, get_user_now
+from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone
 from sqlalchemy import func, or_
 import json
 import pytz
@@ -47,6 +47,7 @@ def dashboard():
         # Check if session is active (within time window)
         is_active = False
         if s.status == 'scheduled':
+            # Strict time window check: start_time <= now <= end_time
             if s_start_aware <= now <= s_end_aware:
                 is_active = True
         
@@ -79,6 +80,7 @@ def sessions():
     # Process for display
     sessions_data = []
     now = datetime.utcnow()
+    user_tz = get_user_timezone(current_user)
     
     for s in sessions:
         games = []
@@ -91,18 +93,18 @@ def sessions():
         is_active = False
         if s.status == 'scheduled':
             end_time = s.end_time or (s.start_time + timedelta(hours=1))
-            # Allow access 15 mins before and until end time
-            # Also allow if it's "today" in a broad sense for testing
-            if (s.start_time - timedelta(minutes=15)) <= now <= end_time:
+            # Strict check: only active if within the scheduled window
+            if s.start_time <= now <= end_time:
                 is_active = True
-            # Fallback for demo: if it's today, just make it active
-            if s.start_time.date() == now.date():
-                 is_active = True
         
+        # Convert to local time for display
+        s_start_utc = s.start_time.replace(tzinfo=pytz.UTC)
+        s_start_local = s_start_utc.astimezone(user_tz)
+
         sessions_data.append({
             'id': s.id,
             'title': s.title,
-            'start_time': s.start_time,
+            'start_time': s_start_local,
             'therapist_name': s.therapist.username if s.therapist else 'Terapeuta',
             'games': games,
             'is_active': is_active,

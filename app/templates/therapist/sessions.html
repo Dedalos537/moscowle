@@ -1457,6 +1457,10 @@ header_content %}
 
         // initial render
         renderMonth();
+
+        // Auto-select today
+        const today = new Date();
+        loadDaySessions(today.getFullYear(), today.getMonth() + 1, today.getDate());
       });
     </script>
   </div>

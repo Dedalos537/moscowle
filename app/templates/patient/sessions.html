@@ -84,12 +84,26 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
     function handleSessionClick(element) {
         const id = element.dataset.id;
-        const games = JSON.parse(element.dataset.games);
+        let games = [];
+        try {
+            games = JSON.parse(element.dataset.games);
+        } catch (e) {
+            console.error('Error parsing games:', e);
+            games = [];
+        }
         const isActive = element.dataset.active === 'true';
+        
+        console.log('Session clicked:', id, 'Games:', games, 'Active:', isActive);
+        
+        if (!isActive) {
+            alert('Solo puedes acceder a los juegos durante el horario programado de la sesión.');
+            return;
+        }
+        
         selectSession(id, games, isActive);
     }
 
@@ -100,16 +114,6 @@
         const frame = document.getElementById('patient-game-frame');
         const iframePlaceholder = document.getElementById('iframe-placeholder');
 
-        if (!isActive) {
-            alert('Esta sesión no está activa en este momento. Por favor espera al horario programado.');
-            return;
-        }
-
-        if (!games || games.length === 0) {
-            alert('Esta sesión no tiene juegos asignados.');
-            return;
-        }
-
         // Show container
         placeholder.classList.add('hidden');
         container.classList.remove('hidden');
@@ -117,6 +121,11 @@
         // Reset frame
         frame.src = '';
         iframePlaceholder.classList.remove('hidden');
+
+        if (!games || games.length === 0) {
+            gamesList.innerHTML = '<span class="text-gray-500 text-sm italic">No hay juegos asignados para esta sesión.</span>';
+            return;
+        }
 
         // Render game buttons
         gamesList.innerHTML = games.map(game => `
