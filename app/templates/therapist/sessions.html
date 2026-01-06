@@ -1,5 +1,11 @@
-{% extends "therapist/base.html" %} {% set active_page = "sessions" %} {% block
-header_content %}
+{% extends "therapist/base.html" %} {% set active_page = "sessions" %} 
+
+{% block header_content %}
+<!-- Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
 <div>
   <h2 class="text-2xl font-bold text-textDark">Sesiones de Terapia</h2>
   <p class="text-sm text-gray-500">
@@ -13,47 +19,6 @@ header_content %}
 </button>
 {% endblock %} {% block content %}
 <div id="content-area" class="p-8">
-  <div id="filters-section" class="bg-surface rounded-soft shadow-soft p-6 mb-6">
-    <div class="flex items-center gap-4 flex-wrap">
-      <div class="flex-1 min-w-[280px]">
-        <div class="relative">
-          <i class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" data-fa-i2svg=""><svg
-              class="svg-inline--fa fa-magnifying-glass" aria-hidden="true" focusable="false" data-prefix="fas"
-              data-icon="magnifying-glass" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-              data-fa-i2svg="">
-              <path fill="currentColor"
-                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z">
-              </path>
-            </svg></i>
-          <input type="text" placeholder="Buscar paciente o sesión..."
-            class="w-full pl-12 pr-4 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20" />
-        </div>
-      </div>
-      <select
-        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
-        <option>Todas las sesiones</option>
-        <option>Programadas</option>
-        <option>Completadas</option>
-        <option>Canceladas</option>
-      </select>
-      <select
-        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
-        <option>Este mes</option>
-        <option>Esta semana</option>
-        <option>Hoy</option>
-        <option>Personalizado</option>
-      </select>
-      <button
-        class="px-5 py-3 rounded-soft border border-gray-200 text-gray-600 hover:bg-lightGreen hover:border-primary transition-all">
-        <i data-fa-i2svg=""><svg class="svg-inline--fa fa-filter" aria-hidden="true" focusable="false" data-prefix="fas"
-            data-icon="filter" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg="">
-            <path fill="currentColor"
-              d="M3.9 54.9C10.5 40.9 24.5 32 40 32H472c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9V448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6V320.9L9 97.3C-.7 85.4-2.8 68.8 3.9 54.9z">
-            </path>
-          </svg></i>
-      </button>
-    </div>
-  </div>
 
   <div id="stats-cards" class="grid grid-cols-4 gap-6 mb-8">
     <div class="bg-surface rounded-soft shadow-soft p-6">
@@ -210,7 +175,47 @@ header_content %}
       </div>
     </div>
   </div>
-
+    <div id="filters-section" class="bg-surface rounded-soft shadow-soft p-6 mb-6">
+    <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex-1 min-w-[280px]">
+        <div class="relative">
+          <i class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" data-fa-i2svg=""><svg
+              class="svg-inline--fa fa-magnifying-glass" aria-hidden="true" focusable="false" data-prefix="fas"
+              data-icon="magnifying-glass" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+              data-fa-i2svg="">
+              <path fill="currentColor"
+                d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z">
+              </path>
+            </svg></i>
+          <input type="text" id="filter-search" placeholder="Buscar paciente o sesión..."
+            class="w-full pl-12 pr-4 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20" />
+        </div>
+      </div>
+      <select id="filter-status"
+        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
+        <option>Todas las sesiones</option>
+        <option>Programadas</option>
+        <option>Completadas</option>
+        <option>Canceladas</option>
+      </select>
+      <select id="filter-time"
+        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
+        <option>Este mes</option>
+        <option>Esta semana</option>
+        <option>Hoy</option>
+        <option>Personalizado</option>
+      </select>
+      <button
+        class="px-5 py-3 rounded-soft border border-gray-200 text-gray-600 hover:bg-lightGreen hover:border-primary transition-all">
+        <i data-fa-i2svg=""><svg class="svg-inline--fa fa-filter" aria-hidden="true" focusable="false" data-prefix="fas"
+            data-icon="filter" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg="">
+            <path fill="currentColor"
+              d="M3.9 54.9C10.5 40.9 24.5 32 40 32H472c15.5 0 29.5 8.9 36.1 22.9s4.6 30.5-5.2 42.5L320 320.9V448c0 12.1-6.8 23.2-17.7 28.6s-23.8 4.3-33.5-3l-64-48c-8.1-6-12.8-15.5-12.8-25.6V320.9L9 97.3C-.7 85.4-2.8 68.8 3.9 54.9z">
+            </path>
+          </svg></i>
+      </button>
+    </div>
+  </div>
   <div id="sessions-list-section" class="bg-surface rounded-soft shadow-soft">
     <div class="p-6 border-b border-gray-100">
       <h3 class="text-xl font-bold text-textDark">Lista de Sesiones</h3>
@@ -390,15 +395,22 @@ header_content %}
                 <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
               </div>
             </div>
+            
+            <div>
+              <label class="text-sm text-gray-600">Fechas (Máximo 3)</label>
+              <input type="text" id="multi-dates" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" placeholder="Seleccionar fechas..." required />
+              <p class="text-xs text-gray-500 mt-1">Mantén presionado Ctrl (o Cmd) para seleccionar varias fechas.</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-sm text-gray-600">Inicio</label>
-                <input type="datetime-local" name="start_time"
+                <label class="text-sm text-gray-600">Hora Inicio</label>
+                <input type="time" name="time_start"
                   class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
               </div>
               <div>
-                <label class="text-sm text-gray-600">Fin</label>
-                <input type="datetime-local" name="end_time"
+                <label class="text-sm text-gray-600">Hora Fin</label>
+                <input type="time" name="time_end"
                   class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
               </div>
             </div>
@@ -501,6 +513,32 @@ header_content %}
         const sessionGamesModal = document.getElementById("session-games-modal");
         const sessionGamesList = document.getElementById("session-games-list");
         const sessionGamesStatus = document.getElementById("session-games-status");
+        
+        // Initialize Flatpickr
+        let datePicker = null;
+        
+        function initDatePicker() {
+            const el = document.getElementById("multi-dates");
+            if (el) {
+                datePicker = flatpickr(el, {
+                    mode: "multiple",
+                    dateFormat: "Y-m-d",
+                    locale: "es",
+                    conjunction: " :: ",
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (selectedDates.length > 3) {
+                            // Remove the last selected date
+                            selectedDates.pop();
+                            instance.setDate(selectedDates);
+                            showToast("Máximo 3 fechas permitidas", "warning");
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Call init on load
+        initDatePicker();
 
         function showToast(message, type = 'info', duration = 3000) {
           const colors = {
@@ -731,6 +769,9 @@ header_content %}
                     <button class="p-2 text-gray-600 hover:text-primary transition-colors" title="Ver detalles" data-action="view">
                       <i class="fas fa-eye"></i>
                     </button>
+                    <a href="/therapist/appointments/${s.id}/review" class="p-2 text-gray-600 hover:text-purple-600 transition-colors" title="Revisar / Imágenes">
+                      <i class="fas fa-camera"></i>
+                    </a>
                     <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
                       <i class="fas fa-pen-to-square"></i>
                     </button>
@@ -810,9 +851,9 @@ header_content %}
               } else if (action === "complete") {
                 completeSession(session);
               } else if (action === "cancel") {
-                else if (action === "delete") {
+                cancelSession(session);
+              } else if (action === "delete") {
                 deleteSession(session);
-              } cancelSession(session);
               } else if (action === "games") {
                 openSessionGamesModal(session.id);
               }
@@ -1010,18 +1051,18 @@ header_content %}
             // reset form defaults
             try {
               createForm.reset();
+              if (datePicker) datePicker.clear();
             } catch (_) { }
             const now = new Date();
             const pad = (n) => String(n).padStart(2, "0");
-            const isoLocal = (d) =>
-              `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-                d.getDate()
-              )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            
+            // Set default times (next hour)
             const start = new Date(now.getTime() + 5 * 60 * 1000);
             const end = new Date(start.getTime() + 60 * 60 * 1000);
-            if (createForm.start_time)
-              createForm.start_time.value = isoLocal(start);
-            if (createForm.end_time) createForm.end_time.value = isoLocal(end);
+            
+            if (createForm.time_start) createForm.time_start.value = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+            if (createForm.time_end) createForm.time_end.value = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+            
             if (createForm.status) createForm.status.value = "scheduled";
             console.log("[DEBUG] About to open modal...");
             // open modal immediately for faster UX
@@ -1082,9 +1123,17 @@ header_content %}
 
           const formData = new FormData(createForm);
           const patientIdRaw = formData.get("patient_id");
-          const startTimeRaw = formData.get("start_time");
-          const endTimeRaw = formData.get("end_time");
+          const timeStart = formData.get("time_start");
+          const timeEnd = formData.get("time_end");
           
+          // Get selected dates from Flatpickr
+          const selectedDates = datePicker ? datePicker.selectedDates : [];
+          
+          if (selectedDates.length === 0) {
+              showToast("Seleccione al menos una fecha");
+              return;
+          }
+
           // Get selected games
           const gamesSelect = document.getElementById("games-select");
           const selectedGames = Array.from(gamesSelect.selectedOptions).map(opt => opt.value);
@@ -1093,75 +1142,103 @@ header_content %}
             showToast("Por favor seleccione un paciente");
             return;
           }
-
-          // Ensure proper datetime string format (append seconds if missing)
-          const formatDt = (val) => {
-            if (!val) return null;
-            // If browser gives YYYY-MM-DDTHH:MM, append :00
-            if (val.length === 16) return val + ":00";
-            return val;
-          };
-
-          const payload = {
-            patient_id: parseInt(patientIdRaw, 10),
-            title: formData.get("title"),
-            start_time: new Date(startTimeRaw).toISOString(),
-            end_time: endTimeRaw ? new Date(endTimeRaw).toISOString() : null,
-            status: formData.get("status"),
-            location: formData.get("location"),
-            notes: formData.get("notes"),
-            games: selectedGames
-          };
-
-          console.log("[DEBUG] Submitting payload via FormData:", payload);
-
-          if (!payload.start_time) {
-            showToast("Fecha de inicio requerida");
-            return;
-          }
           
+          if (!timeStart || !timeEnd) {
+              showToast("Horas de inicio y fin requeridas");
+              return;
+          }
+
           // Add loading state
           const submitBtn = createForm.querySelector('button[type="submit"]');
           const originalText = submitBtn.innerHTML;
           submitBtn.disabled = true;
           submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Guardando...';
           
+          let successCount = 0;
+          let errorCount = 0;
+
           try {
-            const res = await fetch(API_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            
-            const result = await res.json();
-            
-            if (!res.ok) {
-              // Handle validation errors
-              if (result.errors && Array.isArray(result.errors)) {
-                const errorList = result.errors.map(e => `• ${e}`).join('\n');
-                showToast(`Error de validación:\n${errorList}`, 'error', 5000);
-              } else {
-                showToast(result.message || "Error al crear la sesión", 'error');
+              // Loop through each selected date and create a session
+              for (const dateObj of selectedDates) {
+                  // Construct ISO strings
+                  // dateObj is a Date object at 00:00 local time (usually) or UTC depending on Flatpickr config
+                  // We need to combine dateObj YYYY-MM-DD with timeStart HH:MM
+                  
+                  const year = dateObj.getFullYear();
+                  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                  const day = String(dateObj.getDate()).padStart(2, '0');
+                  const dateStr = `${year}-${month}-${day}`;
+                  
+                  const startIso = `${dateStr}T${timeStart}:00`;
+                  const endIso = `${dateStr}T${timeEnd}:00`;
+                  
+                  // Note: The backend expects ISO strings. 
+                  // If we send "2026-01-05T10:00:00", the backend might interpret it as local or UTC depending on implementation.
+                  // The previous implementation used `new Date(startTimeRaw).toISOString()`.
+                  // `startTimeRaw` was from datetime-local input (e.g. "2026-01-05T10:00").
+                  // `new Date("2026-01-05T10:00")` creates a Date object in local time.
+                  // `.toISOString()` converts it to UTC.
+                  // So we should do the same.
+                  
+                  const startDate = new Date(startIso);
+                  const endDate = new Date(endIso);
+
+                  const payload = {
+                    patient_id: parseInt(patientIdRaw, 10),
+                    title: formData.get("title"),
+                    start_time: startDate.toISOString(),
+                    end_time: endDate.toISOString(),
+                    status: formData.get("status"),
+                    location: formData.get("location"),
+                    notes: formData.get("notes"),
+                    games: selectedGames
+                  };
+
+                  console.log("[DEBUG] Submitting payload:", payload);
+                  
+                  const res = await fetch(API_URL, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                  });
+                  
+                  if (!res.ok) {
+                      errorCount++;
+                      const result = await res.json();
+                      console.error("Error creating session for date " + dateStr, result);
+                  } else {
+                      successCount++;
+                      const created = await res.json();
+                      allSessions.unshift(created);
+                  }
               }
-              throw new Error(result.message || "Error al crear la sesión");
+            
+            if (successCount > 0) {
+                currentPage = 1;
+                refreshNotifications();
+                closeModals();
+                renderTable();
+                
+                if (errorCount > 0) {
+                    showToast(`Se crearon ${successCount} sesiones, pero fallaron ${errorCount}.`, 'warning');
+                } else {
+                    showToast(`${successCount} sesión(es) creada(s) exitosamente`, 'success');
+                }
+            } else {
+                showToast("No se pudo crear ninguna sesión. Verifique los datos.", 'error');
             }
             
-            const created = result;
-            allSessions.unshift(created);
-            currentPage = 1;
-            showToast("Sesión creada exitosamente", 'success');
-            refreshNotifications();
-            closeModals();
-            renderTable();
           } catch (err) {
             console.error(err);
-            // Error already shown via showToast above
+            showToast("Error inesperado al procesar las sesiones", 'error');
           } finally {
             // Restore button state
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
           }
-        });deleteSession(s) {
+        });
+
+        async function deleteSession(s) {
           if (!confirm(`¿Estás seguro de que deseas eliminar la sesión de ${s.patient?.name || 'paciente'}?\nEsta acción no se puede deshacer.`)) return;
           
           try {
@@ -1184,8 +1261,6 @@ header_content %}
             showToast(err.message || "Error inesperado", 'error');
           }
         }
-
-        async function 
 
         async function cancelSession(s) {
           const reason = prompt("Razón de cancelación (opcional):");
@@ -1515,6 +1590,11 @@ header_content %}
           // fetch events for range
           const events = await fetchMonthEvents(first, last);
           renderGrid(events);
+          
+          if (isListViewActive) {
+              currentMonthSessions = events;
+              applyFilters();
+          }
         }
 
         async function loadDaySessions(year, month, day) {
@@ -1542,12 +1622,16 @@ header_content %}
           }
           daySessionsContainer.innerHTML = "";
           sessions.forEach((s) => {
-            const statusClass =
-              s.status === "scheduled"
-                ? "border-l-4 border-primary bg-lightGreen bg-opacity-30"
-                : s.status === "completed"
-                  ? "border-l-4 border-blue-300 bg-gray-50"
-                  : "border-l-4 border-orange-300 bg-gray-50";
+            let statusClass;
+            if (s.attendance === 'absent') {
+                statusClass = "border-l-4 border-red-500 bg-red-50";
+            } else if (s.status === "scheduled") {
+                statusClass = "border-l-4 border-primary bg-lightGreen bg-opacity-30";
+            } else if (s.status === "completed") {
+                statusClass = "border-l-4 border-blue-300 bg-gray-50";
+            } else {
+                statusClass = "border-l-4 border-orange-300 bg-gray-50";
+            }
             const start = new Date(s.start).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -1566,15 +1650,177 @@ header_content %}
             el.innerHTML = `
                     <div class="flex items-start justify-between mb-2">
                         <span class="text-xs font-semibold text-primary">${timeRange}</span>
-                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">${s.status
-              }</span>
+                        <span class="text-xs px-2 py-1 rounded-full ${s.attendance === 'absent' ? 'bg-red-100 text-red-700' : s.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${s.attendance === 'absent' ? 'No Asistió' : s.status}</span>
                     </div>
                     <p class="font-semibold text-textDark mb-1">${patientName}</p>
-                    <p class="text-xs text-gray-600">${s.title || ""}</p>
+                    <p class="text-xs text-gray-600 mb-3">${s.title || ""}</p>
+                    <a href="/therapist/appointments/${s.id}/review" class="block w-full text-center py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-colors">
+                        Ver Detalles
+                    </a>
                 `;
             daySessionsContainer.appendChild(el);
           });
         }
+
+        const btnViewAll = document.getElementById("btn-view-all");
+        const sessionsTbody = document.getElementById("sessions-tbody");
+        const sessionsMobileList = document.getElementById("sessions-mobile-list");
+        const sessionsCount = document.getElementById("sessions-count");
+        
+        // Filters
+        const filterSearch = document.getElementById("filter-search");
+        const filterStatus = document.getElementById("filter-status");
+        const filterTime = document.getElementById("filter-time");
+
+        let currentMonthSessions = [];
+        let isListViewActive = false;
+
+        function renderSessionList(sessions) {
+            sessionsTbody.innerHTML = "";
+            sessionsMobileList.innerHTML = "";
+            
+            // Sort by date descending
+            sessions.sort((a, b) => new Date(b.start) - new Date(a.start));
+
+            sessionsCount.textContent = `Mostrando ${sessions.length} sesiones`;
+
+            sessions.forEach(s => {
+                const start = new Date(s.start);
+                const dateStr = start.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+                const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const patientName = s.patient ? s.patient.name : "Paciente";
+                
+                // Desktop Row
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <img class="h-10 w-10 rounded-full" src="https://ui-avatars.com/api/?name=${patientName}&background=random" alt="">
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${patientName}</div>
+                                <div class="text-sm text-gray-500">${s.patient ? s.patient.email || '' : ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${dateStr}</div>
+                        <div class="text-sm text-gray-500">${timeStr}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            ${s.title || 'Terapia General'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${s.duration || '60'} min
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${s.attendance === 'absent' ? 'bg-red-100 text-red-800' : 
+                              s.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                              s.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                            ${s.attendance === 'absent' ? 'No Asistió' : s.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="/therapist/appointments/${s.id}/review" class="text-primary hover:text-primary-dark mr-3">Ver Detalles</a>
+                    </td>
+                `;
+                sessionsTbody.appendChild(tr);
+
+                // Mobile Card
+                const card = document.createElement("div");
+                card.className = "bg-white p-4 rounded-lg shadow-sm border border-gray-200";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-3">
+                            <img class="h-10 w-10 rounded-full" src="https://ui-avatars.com/api/?name=${patientName}&background=random" alt="">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">${patientName}</p>
+                                <p class="text-xs text-gray-500">${dateStr} • ${timeStr}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                            ${s.attendance === 'absent' ? 'bg-red-100 text-red-800' : 
+                              s.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                              s.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                            ${s.attendance === 'absent' ? 'No Asistió' : s.status}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500">${s.title || 'Terapia General'}</span>
+                        <a href="/therapist/appointments/${s.id}/review" class="text-sm font-medium text-primary hover:text-primary-dark">
+                            Ver Detalles
+                        </a>
+                    </div>
+                `;
+                sessionsMobileList.appendChild(card);
+            });
+        }
+
+        function applyFilters() {
+            let filtered = [...currentMonthSessions];
+            
+            // Search
+            const query = filterSearch.value.toLowerCase();
+            if (query) {
+                filtered = filtered.filter(s => 
+                    (s.patient && s.patient.name.toLowerCase().includes(query)) ||
+                    (s.title && s.title.toLowerCase().includes(query))
+                );
+            }
+
+            // Status
+            const status = filterStatus.value;
+            if (status === "Programadas") {
+                filtered = filtered.filter(s => s.status === "scheduled");
+            } else if (status === "Completadas") {
+                filtered = filtered.filter(s => s.status === "completed");
+            } else if (status === "Canceladas") {
+                filtered = filtered.filter(s => s.status === "cancelled");
+            }
+
+            // Time
+            const timeFilter = filterTime.value;
+            if (timeFilter === "Hoy") {
+                const todayStr = new Date().toISOString().split('T')[0];
+                filtered = filtered.filter(s => s.start.startsWith(todayStr));
+            } else if (timeFilter === "Esta semana") {
+                const curr = new Date();
+                const day = curr.getDay();
+                const diff = curr.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+                const monday = new Date(curr.setDate(diff));
+                monday.setHours(0,0,0,0);
+                const sunday = new Date(monday);
+                sunday.setDate(monday.getDate() + 6);
+                sunday.setHours(23,59,59,999);
+                
+                filtered = filtered.filter(s => {
+                    const d = new Date(s.start);
+                    return d >= monday && d <= sunday;
+                });
+            }
+
+            renderSessionList(filtered);
+        }
+
+        btnViewAll.addEventListener("click", async () => {
+            isListViewActive = true;
+            const first = startOfMonth(view);
+            const last = endOfMonth(view);
+            const events = await fetchMonthEvents(first, last);
+            currentMonthSessions = events;
+            applyFilters();
+            // Scroll to list
+            document.getElementById("sessions-list-section").scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        filterSearch.addEventListener("input", applyFilters);
+        filterStatus.addEventListener("change", applyFilters);
+        filterTime.addEventListener("change", applyFilters);
 
         prevBtn.addEventListener("click", () => {
           view = new Date(view.getFullYear(), view.getMonth() - 1, 1);

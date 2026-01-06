@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
-from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics
+from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage
 from app.services.appointment_service import AppointmentService
 from app.services.game_service import GameService
 from app.services.admin_service import AdminService
@@ -15,6 +15,8 @@ from app.services.email_service import EmailService
 from datetime import datetime, timedelta
 import json
 import os
+import uuid
+from werkzeug.utils import secure_filename
 import requests
 from sqlalchemy import or_, func
 
@@ -139,6 +141,7 @@ def api_get_sessions():
             'start': start_iso,
             'end': end_iso,
             'status': a.status,
+            'attendance': a.attendance,
             'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
             'location': a.location,
             'notes': a.notes,
@@ -171,8 +174,10 @@ def api_upcoming_sessions():
             'id': a.id,
             'patient': patient.username or patient.email,
             'start_time': start_iso,
-            'end_time': end_iso
-            ,'games': json.loads(a.games) if a.games else []
+            'end_time': end_iso,
+            'status': a.status,
+            'attendance': a.attendance,
+            'games': json.loads(a.games) if a.games else []
         })
     return jsonify(results)
 
@@ -212,6 +217,7 @@ def api_get_patient_appointments():
             'start': start_iso,
             'end': end_iso,
             'status': a.status,
+            'attendance': a.attendance,
             'therapist': {'id': a.therapist.id, 'name': a.therapist.username} if a.therapist else None,
             'location': a.location,
             'notes': a.notes,
@@ -278,6 +284,7 @@ def api_get_sessions_day():
             'start': start_iso,
             'end': end_iso,
             'status': a.status,
+            'attendance': a.attendance,
             'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
             'notes': a.notes,
             'location': a.location
@@ -412,6 +419,7 @@ def api_update_session(session_id):
         'status': appt.status,
         'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
         'location': appt.location,
+        'attendance': appt.attendance,
         'notes': appt.notes
     }
 
@@ -1112,3 +1120,76 @@ def api_admin_update_profile():
     if changed:
         db.session.commit()
     return jsonify({'success': True})
+
+@api_bp.route('/appointments/<int:appointment_id>/upload_image', methods=['POST'])
+@login_required
+def upload_session_image(appointment_id):
+    """Upload an image for a specific session"""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+        
+    appointment = Appointment.query.get_or_404(appointment_id)
+    
+    # Verify ownership (therapist assigned to appointment)
+    if current_user.role == 'terapista' and appointment.therapist_id != current_user.id:
+        return jsonify({'error': 'No tienes permiso para editar esta sesión'}), 403
+        
+    if 'image' not in request.files:
+        return jsonify({'error': 'No se encontró el archivo de imagen'}), 400
+        
+    file = request.files['image']
+    image_type = request.form.get('image_type', 'session_photo')
+    notes = request.form.get('notes', '')
+    
+    if file.filename == '':
+        return jsonify({'error': 'Nombre de archivo vacío'}), 400
+        
+    if file:
+        # Validate file extension
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'pdf'}
+        if '.' not in file.filename or \
+           file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return jsonify({'error': 'Tipo de archivo no permitido (solo png, jpg, jpeg, pdf)'}), 400
+            
+        # Create secure filename with UUID to prevent collisions
+        original_filename = secure_filename(file.filename)
+        extension = original_filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{extension}"
+        
+        # Create directory structure: static/uploads/session_images/YYYY/MM
+        now = datetime.utcnow()
+        relative_path = os.path.join('uploads', 'session_images', str(now.year), f"{now.month:02d}")
+        upload_folder = os.path.join(current_app.root_path, 'static', relative_path)
+        
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        # Store relative path in DB for serving
+        db_relative_path = os.path.join(relative_path, unique_filename)
+        
+        # Create DB record
+        session_image = SessionImage(
+            appointment_id=appointment.id,
+            image_path=db_relative_path,
+            image_type=image_type,
+            uploaded_by_id=current_user.id,
+            notes=notes
+        )
+        
+        db.session.add(session_image)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'image': {
+                'id': session_image.id,
+                'url': url_for('static', filename=db_relative_path),
+                'type': session_image.image_type,
+                'notes': session_image.notes
+            }
+        })
+        
+    return jsonify({'error': 'Error al subir archivo'}), 500

@@ -86,6 +86,29 @@ def patients():
     patients = patient_service.get_therapist_patients(current_user.id)
     return render_template('therapist/patients.html', patients=patients, active_page='patients')
 
+@therapist_bp.route('/appointments/<int:appointment_id>/review')
+@login_required
+def session_review(appointment_id):
+    """View session details, notes, and images side-by-side"""
+    if current_user.role != 'terapista':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+        
+    appointment = Appointment.query.get_or_404(appointment_id)
+    
+    # Verify ownership
+    if appointment.therapist_id != current_user.id:
+        flash('No tienes permiso para ver esta sesión.', 'error')
+        return redirect(url_for('therapist.sessions'))
+        
+    # Get images
+    images = appointment.session_images
+    
+    return render_template('therapist/session_review.html', 
+                           appointment=appointment, 
+                           images=images,
+                           active_page='sessions')
+
 @therapist_bp.route('/sessions')
 @login_required
 def sessions():
@@ -725,6 +748,11 @@ def patient_detail(patient_id):
     # Get recent sessions (last 10)
     recent_sessions = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.desc()).limit(10).all()
     
+    # Get all appointments for history list (not just metrics)
+    history_appointments = Appointment.query.filter(
+        Appointment.patient_id == patient_id
+    ).order_by(Appointment.start_time.desc()).all()
+
     # Get all sessions for chart data
     all_sessions_query = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.asc()).all()
     all_sessions = []
@@ -754,6 +782,7 @@ def patient_detail(patient_id):
                          avg_accuracy=round(avg_accuracy, 1),
                          avg_time=round(avg_time, 2),
                          recent_sessions=recent_sessions,
+                         history_appointments=history_appointments,
                          all_sessions=all_sessions,
                          upcoming_appointments=upcoming_appointments,
                          completed_appointments=completed_appointments,

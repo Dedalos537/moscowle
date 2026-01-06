@@ -31,8 +31,10 @@ class AppointmentService:
             errors.append("La duración máxima de una sesión es 4 horas")
         
         # Past date validation (only for new sessions)
-        if not session_id and start_time < datetime.utcnow():
-            errors.append("No se pueden crear sesiones en el pasado")
+        # Relaxed validation: Allow sessions up to 24 hours in the past to allow logging recent sessions
+        # and to account for small clock skews.
+        if not session_id and start_time < (datetime.utcnow() - timedelta(hours=24)):
+             errors.append("No se pueden crear sesiones con más de 24 horas de antigüedad")
         
         # Check therapist double-booking
         therapist_conflict = Appointment.query.filter(
@@ -190,6 +192,8 @@ class AppointmentService:
             appt.end_time = data.get('end_time')
         if 'status' in data:
             appt.status = data.get('status')
+        if 'attendance' in data:
+            appt.attendance = data.get('attendance')
         if 'notes' in data:
             appt.notes = data.get('notes')
         if 'title' in data:

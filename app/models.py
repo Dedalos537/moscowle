@@ -45,7 +45,7 @@ class AppointmentGame(db.Model):
     config = db.Column(db.Text, nullable=True) # JSON for specific game config (difficulty, etc)
     status = db.Column(db.String(50), default='pending') # pending, completed
     
-    appointment = db.relationship('Appointment', backref=db.backref('appointment_games', lazy=True))
+    appointment = db.relationship('Appointment', backref=db.backref('appointment_games', lazy=True, cascade="all, delete-orphan"))
     game = db.relationship('Game', backref=db.backref('game_appointments', lazy=True))
 
 class SessionMetrics(db.Model):
@@ -60,6 +60,7 @@ class SessionMetrics(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
     
     game = db.relationship('Game', backref=db.backref('metrics', lazy=True))
+    user = db.relationship('User', backref=db.backref('metrics', lazy=True, cascade="all, delete-orphan"))
 
 
 
@@ -76,14 +77,15 @@ class Appointment(db.Model):
     notes = db.Column(db.Text, nullable=True)
     # JSON string list of assigned games for this session
     games = db.Column(db.Text, nullable=True)
+    attendance = db.Column(db.String(20), default='pending') # pending, present, absent
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Status tracking for audit trail
     status_changed_at = db.Column(db.DateTime, nullable=True)
     status_changed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
-    therapist = db.relationship('User', foreign_keys=[therapist_id], backref=db.backref('appointments_as_therapist', lazy=True))
-    patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('appointments_as_patient', lazy=True))
+    therapist = db.relationship('User', foreign_keys=[therapist_id], backref=db.backref('appointments_as_therapist', lazy=True, cascade="all, delete-orphan"))
+    patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('appointments_as_patient', lazy=True, cascade="all, delete-orphan"))
 
     @property
     def games_list(self):
@@ -99,6 +101,19 @@ class Appointment(db.Model):
                 return []
         return []
 
+class SessionImage(db.Model):
+    __tablename__ = 'session_image'
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=False)
+    image_path = db.Column(db.String(500), nullable=False)
+    image_type = db.Column(db.String(50), default='session_photo') # session_photo, therapy_notes, patient_work
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    
+    appointment = db.relationship('Appointment', backref=db.backref('session_images', lazy=True, cascade="all, delete-orphan"))
+    uploaded_by = db.relationship('User', backref=db.backref('uploaded_images', lazy=True))
+
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -107,7 +122,7 @@ class Notification(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     link = db.Column(db.String(255), nullable=True)
 
-    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True, cascade="all, delete-orphan"))
 
 
 class Message(db.Model):
@@ -121,6 +136,6 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     parent_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # For threading
     
-    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True))
-    receiver = db.relationship('User', foreign_keys=[receiver_id], backref=db.backref('received_messages', lazy=True))
+    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True, cascade="all, delete-orphan"))
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref=db.backref('received_messages', lazy=True, cascade="all, delete-orphan"))
     replies = db.relationship('Message', backref=db.backref('parent', remote_side=[id]), lazy=True)
