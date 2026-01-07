@@ -1,0 +1,300 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_payments' %}
+
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Gestión de Pagos</h2>
+  <p class="text-sm text-gray-500">Control de pagos, vencimientos y desactivación automática</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8">
+  
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-6 space-y-2">
+      {% for category, message in messages %}
+        <div class="px-4 py-3 rounded-soft text-sm font-medium
+          {% if category == 'success' %}bg-green-100 text-green-700
+          {% elif category == 'error' %}bg-red-100 text-red-700
+          {% elif category == 'warning' %}bg-yellow-100 text-yellow-700
+          {% else %}bg-blue-100 text-blue-700{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h3 class="text-lg font-semibold text-textDark">Estado de Pagos de Pacientes</h3>
+        <div class="flex items-center gap-2">
+            <!-- Example of filters could go here -->
+             <span class="text-xs text-gray-400 italic">Los usuarios vencidos se desactivan automáticamente.</span>
+        </div>
+    </div>
+    
+    <!-- Desktop Table View -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-gray-100">
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Paciente</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Plan / Frecuencia</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto Acordado</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Próx. Vencimiento</th>
+            <th class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for p in patients %}
+          <tr class="hover:bg-gray-50/50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                    {{ p.user.username[:2].upper() if p.user.username else 'US' }}
+                </div>
+                <div>
+                    <div class="font-medium text-charcoal">{{ p.user.username }}</div>
+                    <div class="text-xs text-gray-400">{{ p.user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500 capitalize">
+                {{ p.user.payment_plan or 'Mensual' }}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500 font-mono">
+                S/ {{ "%.2f"|format(p.user.payment_amount or 0) }}
+            </td>
+            <td class="px-6 py-4 text-sm {{ 'text-red-500 font-bold' if p.status == 'overdue' else 'text-gray-500' }}">
+                {{ p.user.payment_due_date if p.user.payment_due_date else 'No asignado' }}
+                {% if p.days_overdue > 0 %}
+                    <span class="block text-xs text-red-400">Hace {{ p.days_overdue }} días</span>
+                {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+                <span class="px-2 py-1 rounded-full text-xs font-bold 
+                {% if p.status == 'active' %}bg-green-100 text-green-700
+                {% elif p.status == 'overdue' %}bg-red-100 text-red-700 animate-pulse
+                {% else %}bg-gray-200 text-gray-600{% endif %}">
+                    {{ p.full_status_label }}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-right">
+                <div class="flex items-center justify-end gap-2">
+                    <button onclick="openRegisterPaymentModal('{{ p.user.id }}', '{{ p.user.username }}', '{{ p.user.payment_amount or 0 }}')" 
+                            class="px-3 py-1.5 bg-primary text-white text-xs rounded-soft hover:bg-opacity-90 flex items-center gap-1"
+                            title="Registrar Pago">
+                        <i class="fas fa-dollar-sign"></i> Pagar
+                    </button>
+                    <button onclick="openSettingsModal('{{ p.user.id }}', '{{ p.user.username }}', '{{ p.user.payment_amount or 0 }}', '{{ p.user.payment_due_date or '' }}', '{{ p.user.payment_plan or 'monthly' }}')" 
+                            class="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-soft hover:bg-gray-200 flex items-center gap-1"
+                            title="Configurar Plan">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <a href="{{ url_for('admin.payment_history', patient_id=p.user.id) }}" 
+                       class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs rounded-soft hover:bg-blue-100 flex items-center gap-1"
+                       title="Ver Historial">
+                        <i class="fas fa-history"></i>
+                    </a>
+                </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                <i class="fas fa-users-slash text-2xl mb-2 text-gray-300"></i>
+                <p>No hay pacientes registrados.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Mobile View -->
+    <div class="md:hidden space-y-4">
+        {% for p in patients %}
+        <div class="border border-gray-200 rounded-soft p-4 shadow-sm {{ 'border-l-4 border-l-red-500' if p.status == 'overdue' else '' }}">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                     <div class="font-bold text-charcoal">{{ p.user.username }}</div>
+                     <span class="text-xs text-gray-500">{{ p.user.payment_plan }} · S/ {{ p.user.payment_amount }}</span>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-bold 
+                {% if p.status == 'active' %}bg-green-100 text-green-700
+                {% elif p.status == 'overdue' %}bg-red-100 text-red-700
+                {% else %}bg-gray-200 text-gray-600{% endif %}">
+                    {{ p.full_status_label }}
+                </span>
+            </div>
+            <div class="text-sm mb-3">
+                <p class="text-gray-500 text-xs uppercase">Vence el:</p>
+                <p class="{{ 'text-red-500 font-bold' if p.status == 'overdue' else 'text-gray-800' }}">
+                    {{ p.user.payment_due_date if p.user.payment_due_date else 'No configurado' }}
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openRegisterPaymentModal('{{ p.user.id }}', '{{ p.user.username }}', '{{ p.user.payment_amount or 0 }}')" 
+                        class="flex-1 py-2 bg-primary text-white text-sm rounded-soft text-center">Registrar Pago</button>
+                <button onclick="openSettingsModal('{{ p.user.id }}', '{{ p.user.username }}', '{{ p.user.payment_amount or 0 }}', '{{ p.user.payment_due_date or '' }}', '{{ p.user.payment_plan or 'monthly' }}')" 
+                        class="px-3 py-2 bg-gray-100 text-gray-600 rounded-soft"><i class="fas fa-cog"></i></button>
+                <a href="{{ url_for('admin.payment_history', patient_id=p.user.id) }}" 
+                    class="px-3 py-2 bg-blue-50 text-blue-600 rounded-soft"><i class="fas fa-history"></i></a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Register Payment Modal -->
+<div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-soft shadow-soft w-full max-w-md p-6 relative">
+        <button onclick="closePaymentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-charcoal mb-4">Registrar Pago</h3>
+        <p class="text-sm text-gray-600 mb-4">Para: <span id="payment_patient_name" class="font-bold"></span></p>
+        
+        <form action="{{ url_for('admin.register_payment') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="patient_id" id="payment_patient_id">
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>
+                <div class="flex gap-2">
+                    <input type="number" step="0.01" name="amount" id="payment_amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" required>
+                    <input type="number" step="0.01" name="discount" id="payment_discount" placeholder="Descuento" class="w-1/3 px-3 py-2 border rounded-soft focus:ring-red-500 focus:border-red-500 bg-red-50" title="Descuento o Ajuste">
+                </div>
+                <p id="absences_hint" class="text-xs text-orange-500 mt-1 hidden"></p>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Método de Pago</label>
+                <select name="method" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="transferencia">Transferencia Bancaria</option>
+                    <option value="yape">Yape / Plin</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Referencia (Opcional)</label>
+                <input type="text" name="reference" placeholder="Nro de operación, etc" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Comprobante (Imagen)</label>
+                <input type="file" name="receipt" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-opacity-90">
+                <p class="text-xs text-gray-400 mt-1">Sube una foto del voucher o captura de pantalla.</p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nuevo Vencimiento</label>
+                <p class="text-xs text-gray-400 mb-1">Fecha límite para el siguiente pago</p>
+                <input type="date" name="next_due_date" id="payment_next_date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" required>
+            </div>
+            
+            <button type="submit" class="w-full py-3 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90">Confirmar Pago</button>
+        </form>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-soft shadow-soft w-full max-w-md p-6 relative">
+        <button onclick="closeSettingsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-charcoal mb-4">Configurar Plan</h3>
+        <p class="text-sm text-gray-600 mb-4">Para: <span id="settings_patient_name" class="font-bold"></span></p>
+        
+        <form action="{{ url_for('admin.update_payment_settings') }}" method="POST">
+            <input type="hidden" name="patient_id" id="settings_patient_id">
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia de Pago</label>
+                <select name="payment_plan" id="settings_plan" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="mensual">Mensual</option>
+                    <option value="quincenal">Quincenal</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto Acordado (S/)</label>
+                <input type="number" step="0.01" name="payment_amount" id="settings_amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" required>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Vencimiento Actual</label>
+                <input type="date" name="payment_due_date" id="settings_date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+            </div>
+            
+            <button type="submit" class="w-full py-3 bg-gray-800 text-white font-bold rounded-soft hover:bg-gray-700">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openRegisterPaymentModal(id, name, amount) {
+        document.getElementById('payment_patient_id').value = id;
+        document.getElementById('payment_patient_name').textContent = name;
+        document.getElementById('payment_amount').value = amount;
+        document.getElementById('payment_discount').value = ''; // Reset discount
+        document.getElementById('absences_hint').classList.add('hidden');
+        
+        // Fetch smart billing info
+        fetch(`/admin/api/payment-info/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.suggested_date) {
+                    document.getElementById('payment_next_date').value = data.suggested_date;
+                }
+                
+                if (data.absences > 0) {
+                    const hint = document.getElementById('absences_hint');
+                    hint.textContent = `⚠️ ${data.absences} faltas desde el último pago. Considere un descuento.`;
+                    hint.classList.remove('hidden');
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching billing info", err);
+                // Fallback: Today + 1 month if API fails
+                const today = new Date();
+                today.setMonth(today.getMonth() + 1);
+                document.getElementById('payment_next_date').valueAsDate = today;
+            });
+        
+        document.getElementById('paymentModal').classList.remove('hidden');
+    }
+    
+    function closePaymentModal() {
+        document.getElementById('paymentModal').classList.add('hidden');
+    }
+
+    function openSettingsModal(id, name, amount, date, plan) {
+        document.getElementById('settings_patient_id').value = id;
+        document.getElementById('settings_patient_name').textContent = name;
+        document.getElementById('settings_amount').value = amount;
+        document.getElementById('settings_plan').value = plan.toLowerCase();
+        
+        if (date && date !== 'None') {
+            document.getElementById('settings_date').value = date;
+        } else {
+            document.getElementById('settings_date').value = '';
+        }
+        
+        document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+        document.getElementById('settingsModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

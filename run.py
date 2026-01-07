@@ -34,6 +34,21 @@ def auto_update_session_status():
         except Exception as e:
             app.logger.error(f"Error in auto_update_session_status job: {str(e)}")
 
+def check_payment_reminders():
+    """Background job to send payment reminders"""
+    with app.app_context():
+        try:
+            from app.services.payment_service import PaymentService
+            payment_service = PaymentService()
+            
+            count = payment_service.check_upcoming_due_dates()
+            deactivated = payment_service.check_and_deactivate_overdue()
+            
+            if count > 0 or deactivated > 0:
+                app.logger.info(f"Payment job: Sent {count} reminders, Deactivated {deactivated} users.")
+        except Exception as e:
+            app.logger.error(f"Error in check_payment_reminders job: {str(e)}")
+
 # Initialize background scheduler
 scheduler = BackgroundScheduler()
 scheduler.start()
@@ -47,8 +62,20 @@ scheduler.add_job(
     replace_existing=True
 )
 
+# Schedule payment reminders (Run daily at 9:00 AM in prod, but for MVP we use interval)
+# Using 24h interval
+scheduler.add_job(
+    func=check_payment_reminders,
+    trigger=IntervalTrigger(hours=24),
+    id='payment_reminders',
+    name='Check Payment Reminders',
+    replace_existing=True
+)
+
 # Run once on startup
 auto_update_session_status()
+# Also run payment check once on startup for demo purposes
+check_payment_reminders()
 
 # Shut down the scheduler when exiting the app
 atexit.register(lambda: scheduler.shutdown())

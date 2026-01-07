@@ -59,3 +59,39 @@ class EmailService:
         except Exception as e:
             current_app.logger.error(f"Failed to send password change email to {recipient_email}: {str(e)}")
             return False
+
+    @staticmethod
+    def send_payment_reminder(recipient_email, username, days_until_due, due_date, amount):
+        """Send a payment reminder email."""
+        if not current_app.config.get('MAIL_USERNAME'):
+            current_app.logger.warning("Email not configured. Skipping payment reminder.")
+            # For development without email, we just log it as sent
+            current_app.logger.info(f"[MOCK EMAIL] To: {recipient_email} | Subject: Recordatorio de Pago | Body: Vence en {days_until_due} dias")
+            return True
+            
+        try:
+            if days_until_due == 0:
+                subject = "URGENTE: Tu pago vence hoy - Moscowle"
+                urgency_text = "vence HOY"
+            elif days_until_due < 0:
+                subject = "URGENTE: Tu pago está vencido - Moscowle"
+                urgency_text = f"venció hace {abs(days_until_due)} días"
+            else:
+                subject = f"Recordatorio: Tu pago vence pronto - Moscowle"
+                urgency_text = f"vence en {days_until_due} días"
+
+            body = (
+                f"Hola {username},\n\n"
+                f"Te recordamos que tu próximo pago de S/ {amount:.2f} {urgency_text}.\n"
+                f"Fecha límite: {due_date.strftime('%d/%m/%Y')}\n\n"
+                "Por favor, realiza el pago para evitar la suspensión de tu cuenta.\n"
+                "Si ya realizaste el pago, por favor ignora este mensaje o contacta a administración.\n\n"
+                "Saludos,\nEquipo Moscowle"
+            )
+            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            mail.send(msg)
+            current_app.logger.info(f"Payment reminder email sent to {recipient_email}")
+            return True
+        except Exception as e:
+            current_app.logger.error(f"Failed to send payment reminder to {recipient_email}: {str(e)}")
+            return False

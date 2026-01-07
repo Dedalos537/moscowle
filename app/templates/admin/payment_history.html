@@ -1,0 +1,98 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_payments' %}
+
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Historial de Pagos</h2>
+  <p class="text-sm text-gray-500">Historial detallado para {{ patient.username }}</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8">
+    <div class="mb-6">
+        <a href="{{ url_for('admin.payments') }}" class="text-gray-500 hover:text-primary flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Volver a Gestión de Pagos
+        </a>
+    </div>
+
+    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+        <h3 class="text-lg font-semibold text-textDark mb-6">Transacciones Registradas</h3>
+        
+        {% if payments %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-100">
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Fecha</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Método</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Referencia</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Comprobante</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for p in payments %}
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ p.date.strftime('%d/%m/%Y %H:%M') }}
+                        </td>
+                        <td class="px-6 py-4 text-sm font-bold text-charcoal">
+                            S/ {{ "%.2f"|format(p.amount) }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 capitalize">
+                            {{ p.method }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 font-mono">
+                            {{ p.reference or '-' }}
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            {% if p.receipt_image_path %}
+                            <button onclick="openReceiptModal('{{ p.receipt_image_path }}')" class="text-primary hover:text-green-700 flex items-center gap-1 font-medium">
+                                <i class="fas fa-file-image"></i> Ver Voucher
+                            </button>
+                            {% else %}
+                            <span class="text-gray-300 italic">Sin archivo</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-10 text-gray-400">
+            <i class="fas fa-receipt text-3xl mb-2"></i>
+            <p>No hay pagos registrados para este usuario.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-80 hidden z-50 flex items-center justify-center p-4" onclick="closeReceiptModal()">
+    <div class="relative max-w-4xl max-h-screen">
+        <button onclick="closeReceiptModal()" class="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="receiptImage" src="" alt="Comprobante de Pago" class="max-w-full max-h-[85vh] rounded-soft shadow-2xl">
+    </div>
+</div>
+
+<script>
+    function openReceiptModal(path) {
+        // Path comes as "uploads/receipts/...", we need to prepend /static/ or usage url_for in template
+        // But since JS receives the string, let's construct the URL. 
+        // Flask serves static from /static.
+        // If path is "uploads/...", full path is "/static/uploads/..."
+        
+        const fullPath = "{{ url_for('static', filename='') }}" + path;
+        document.getElementById('receiptImage').src = fullPath;
+        document.getElementById('receiptModal').classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+        document.getElementById('receiptModal').classList.add('hidden');
+    }
+</script>
+{% endblock %}

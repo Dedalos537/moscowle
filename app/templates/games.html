@@ -1,4 +1,4 @@
-{% exetends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 
@@ -20,7 +20,7 @@
         <hr>
         <h4 style="color: var(--color-primary-dark);">Recomendación</h4>
         <h2 id="ai-recommendation">...</h2>
-        <a href="{{url_for('main.dashboard')}}" class="btn btn-secondary">Volver al Dashboard</a>
+        <a href="{{url_for('main.dashboard')}}" class="btn btn-secondary">Volver al Panel</a>
     </div>
 </div>
 <script src="{{ url_for('static', filename='games.js') }}"></script>

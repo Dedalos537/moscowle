@@ -2,12 +2,102 @@
 {% set active_page = 'admin_reports' %}
 {% block header_content %}
 <div>
-  <h2 class="text-2xl font-bold text-textDark">Reportes</h2>
-  <p class="text-sm text-gray-500">Resumen por terapeuta y paciente</p>
+  <h2 class="text-2xl font-bold text-textDark">Reportes y Finanzas</h2>
+  <p class="text-sm text-gray-500">Resumen operativo y financiero</p>
 </div>
 {% endblock %}
 {% block content %}
-<div class="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="p-4 md:p-8 space-y-6">
+
+  <!-- Financial Section (Ticket 5) -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden border-l-4 border-olive">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-textDark">Resumen Financiero (Mes Actual)</h3>
+            <p class="text-gray-500 text-sm">Proyección de caja y ejecución.</p>
+        </div>
+        <a href="{{ url_for('admin.export_payments_csv') }}" class="px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-soft hover:bg-gray-700 transition-colors flex items-center gap-2">
+            <i class="fas fa-file-csv"></i> Exportar CSV
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Real Income -->
+        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+            <span class="text-xs font-bold text-green-600 uppercase tracking-widest">Ingresos Reales</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_real) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Recaudado este mes</p>
+        </div>
+        
+        <!-- Expected Income -->
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Proyección</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_expected) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Si todos pagaran a tiempo</p>
+        </div>
+
+        <!-- Overdue -->
+        <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+            <span class="text-xs font-bold text-red-600 uppercase tracking-widest">Morosidad Acumulada</span>
+            <div class="text-3xl font-bold text-red-600 mt-2">S/ {{ "%.2f"|format(financials.overdue_amount) }}</div>
+            <p class="text-xs text-red-400 mt-1">{{ financials.overdue_users_count }} usuarios con deuda</p>
+        </div>
+        
+        <!-- Completion Rate -->
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-center items-center">
+             <!-- Circular Percent Placeholder or simple text -->
+             {% set percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+             <div class="text-2xl font-bold text-charcoal">{{ "%.1f"|format(percent) }}%</div>
+             <p class="text-xs text-gray-500 font-medium uppercase">Ejecución</p>
+             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                <div class="bg-olive h-1.5 rounded-full" style="width: {{ percent }}%"></div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Charts Area -->
+    <!-- Note: Adding simple CSS bar chart to avoid heavy JS libs if not present, but using Chart.js structure if desired later. 
+         For MVP, clean HTML CSS bars are safer and faster. -->
+    <div class="border-t border-gray-100 pt-6">
+        <h4 class="text-sm font-bold text-gray-500 uppercase mb-4">Comparativa Visual</h4>
+        <div class="space-y-4">
+            <!-- Bar: Expected -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Proyectado (Total)</span>
+                    <span class="font-bold text-gray-800">S/ {{ "%.2f"|format(financials.income_expected) }}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-blue-400 h-full rounded-full" style="width: 100%"></div>
+                </div>
+            </div>
+             <!-- Bar: Real -->
+             <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Recaudado (Real)</span>
+                    <span class="font-bold text-green-700">S/ {{ "%.2f"|format(financials.income_real) }}</span>
+                </div>
+                {% set real_percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-green-500 h-full rounded-full" style="width: {{ real_percent if real_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+            <!-- Bar: Overdue -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Deuda (Morosidad)</span>
+                    <span class="font-bold text-red-600">S/ {{ "%.2f"|format(financials.overdue_amount) }}</span>
+                </div>
+                 {% set overdue_percent = (financials.overdue_amount / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-red-400 h-full rounded-full" style="width: {{ overdue_percent if overdue_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <!-- Therapists Section -->
   <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
     <h3 class="text-lg font-semibold text-textDark mb-3">Terapeutas</h3>
@@ -98,4 +188,6 @@
     </div>
   </div>
 </div>
+</div> <!-- End Wrapper -->
+{% endblock %}
 {% endblock %}

@@ -27,6 +27,26 @@ class User(db.Model, UserMixin):
     # JSON string for AI-generated game profile/config per user
     game_profile = db.Column(db.Text, nullable=True)
 
+    # Payment System Fields
+    payment_plan = db.Column(db.String(50), default='monthly') # monthly, bi-weekly
+    payment_due_date = db.Column(db.Date, nullable=True)
+    payment_amount = db.Column(db.Float, default=0.0)
+    
+    payments = db.relationship('Payment', backref='patient', lazy=True)
+
+class Payment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    method = db.Column(db.String(50), nullable=False) # transfer, yape, cash, card
+    reference = db.Column(db.String(100), nullable=True)
+    receipt_image_path = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(50), default='completed')
+    notes = db.Column(db.Text, nullable=True)
+    discount = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Game(db.Model):
     __tablename__ = 'game'
     id = db.Column(db.Integer, primary_key=True)

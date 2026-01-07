@@ -19,6 +19,10 @@ class UserRepository:
         return User.query.filter_by(role='jugador', is_active=True, assigned_therapist_id=therapist_id).all()
 
     @staticmethod
+    def get_all_patients_by_therapist(therapist_id):
+        return User.query.filter_by(role='jugador', assigned_therapist_id=therapist_id).all()
+
+    @staticmethod
     def count_active_patients_by_therapist(therapist_id):
         return User.query.filter_by(role='jugador', is_active=True, assigned_therapist_id=therapist_id).count()
 

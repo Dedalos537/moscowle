@@ -10,7 +10,7 @@
 </div>
 
 <!-- Stats Grid -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-8">
     <!-- Total Sessions -->
     <div class="bg-white rounded-soft shadow-soft p-6">
         <div class="flex items-center justify-between mb-4">
@@ -45,6 +45,28 @@
         </div>
         <div class="text-3xl font-bold text-charcoal">{{ player_stats.avg_time }}s</div>
         <p class="text-sm text-gray-500 mt-1">Tiempo de reacción</p>
+    </div>
+
+    <!-- Payment Status -->
+    <div class="bg-white rounded-soft shadow-soft p-6 {% if payment_status.is_overdue %}border-l-4 border-red-500{% endif %}">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 {% if payment_status.is_overdue %}bg-red-100{% else %}bg-green-100{% endif %} rounded-xl flex items-center justify-center">
+                <i class="fas fa-credit-card {% if payment_status.is_overdue %}text-red-600{% else %}text-olive{% endif %} text-xl"></i>
+            </div>
+            <span class="text-xs font-medium text-gray-500 uppercase">Próximo Pago</span>
+        </div>
+        {% if payment_status.due_date %}
+            {% if payment_status.is_overdue %}
+                <div class="text-xl font-bold text-red-600">Vencido</div>
+                <p class="text-sm text-red-500 mt-1">Hace {{ payment_status.days_overdue }} días</p>
+            {% else %}
+                <div class="text-xl font-bold text-charcoal">En {{ payment_status.days_until }} días</div>
+                <p class="text-sm text-gray-500 mt-1">Vence: {{ payment_status.due_date.strftime('%d/%m') }}</p>
+            {% endif %}
+            <a href="{{ url_for('patient.payments') }}" class="text-xs text-olive hover:underline mt-2 block">Ver historial</a>
+        {% else %}
+            <div class="text-lg font-bold text-gray-400">Sin asignar</div>
+        {% endif %}
     </div>
 </div>
 

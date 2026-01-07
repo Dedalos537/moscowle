@@ -8,6 +8,10 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///moscowle.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    
+    # Uploads
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'app/static/uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max limit
 
     # Email configuration
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')

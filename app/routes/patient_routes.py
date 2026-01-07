@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
-from app.models import SessionMetrics, db, User, Message, Appointment
+from app.models import SessionMetrics, db, User, Message, Appointment, Payment
 from app.services.dashboard_service import DashboardService
 from app.services.appointment_service import AppointmentService
 from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone
@@ -22,6 +22,24 @@ def dashboard():
     # Player stats
     player_stats = dashboard_service.get_player_stats(current_user.id)
     
+    # Calculate payment status for dashboard widget
+    today = datetime.utcnow().date()
+    payment_status = {
+        'due_date': current_user.payment_due_date,
+        'amount': current_user.payment_amount or 0,
+        'is_overdue': False,
+        'days_overdue': 0,
+        'days_until': 0
+    }
+    
+    if current_user.payment_due_date:
+        delta = (current_user.payment_due_date - today).days
+        if delta < 0:
+            payment_status['is_overdue'] = True
+            payment_status['days_overdue'] = abs(delta)
+        else:
+            payment_status['days_until'] = delta
+
     # Get today's sessions for the dashboard
     today_start, today_end = get_user_today_utc_range(current_user)
     today_sessions = appointment_service.get_patient_appointments(current_user.id, today_start, today_end)
@@ -64,8 +82,38 @@ def dashboard():
     return render_template('patient/dashboard.html', 
                            player_stats=player_stats,
                            today_sessions=sessions_data,
+                           payment_status=payment_status,
                            active_page='dashboard',
                            now=now)
+
+@patient_bp.route('/payments')
+@login_required
+def payments():
+    if current_user.role != 'jugador':
+        return redirect(url_for('main.dashboard'))
+    
+    payments = Payment.query.filter_by(patient_id=current_user.id).order_by(Payment.date.desc()).all()
+    
+    # Calculate overdue days if any
+    today = datetime.utcnow().date()
+    days_overdue = 0
+    days_until = 0
+    is_overdue = False
+    
+    if current_user.payment_due_date:
+        delta = (current_user.payment_due_date - today).days
+        if delta < 0:
+            is_overdue = True
+            days_overdue = abs(delta)
+        else:
+            days_until = delta
+            
+    return render_template('patient/payments.html', 
+                           payments=payments, 
+                           days_overdue=days_overdue, 
+                           days_until=days_until,
+                           is_overdue=is_overdue,
+                           active_page='patient_payments')
 
 @patient_bp.route('/sessions')
 @login_required

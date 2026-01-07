@@ -792,9 +792,9 @@ def gemini_proxy():
             text = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
             return jsonify({'status': 'ok', 'response': text})
         else:
-            return jsonify({'error': 'Gemini API error', 'details': resp.text}), 500
+            return jsonify({'error': 'Error de API Gemini', 'details': resp.text}), 500
     except Exception as e:
-        return jsonify({'error': 'Gemini proxy failed', 'detail': str(e)}), 500
+        return jsonify({'error': 'Fallo el proxy de Gemini', 'detail': str(e)}), 500
 
 @api_bp.route('/ai/generate_game', methods=['POST'])
 @login_required
