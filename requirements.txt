@@ -1,16 +1,50 @@
+# Core Flask Framework
 Flask==2.2.5
-Flask-SQLAlchemy==3.0.3
-Flask-Login==0.6.2
-Flask-Mail==0.9.1
-Flask-Bcrypt==1.0.1
-Authlib==1.2.1
-python-dotenv==1.0.0
-email-validator==2.1.0
-APScheduler==3.10.4
-numpy<2
-pandas
-scikit-learn
-joblib
-marshmallow>=3.21.0
 Werkzeug==2.3.8
-requests
+
+# Database & ORM
+Flask-SQLAlchemy==3.0.3
+SQLAlchemy>=2.0.0
+
+# Authentication & Security
+Flask-Login==0.6.2
+Flask-Bcrypt==1.0.1
+Authlib>=1.6.6
+PyJWT>=2.8.0
+
+# Email Service
+Flask-Mail==0.9.1
+email-validator==2.1.0
+
+# Background Tasks & Scheduling
+APScheduler==3.10.4
+
+# Data Processing & Machine Learning
+numpy<2
+pandas>=1.5.0
+scikit-learn>=1.3.0
+joblib>=1.3.0
+
+# Data Serialization
+marshmallow>=4.1.2
+
+# HTTP Requests
+requests>=2.31.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# Production Server
+gunicorn>=21.0.0
+
+# Security / HTTPS
+Flask-Talisman>=1.1.0
+Flask-WTF>=1.0.0
+Flask-Limiter>=2.0.0
+ntplib>=0.4.0
+python-json-logger>=2.0.2
+
+# Development & Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+flake8>=6.0.0

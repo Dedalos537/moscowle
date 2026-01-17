@@ -156,6 +156,36 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     parent_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)  # For threading
     
+    # Multimedia support
+    attachment_path = db.Column(db.String(500), nullable=True)
+    attachment_type = db.Column(db.String(50), nullable=True) # image, video, audio, file
+    
     sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True, cascade="all, delete-orphan"))
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref=db.backref('received_messages', lazy=True, cascade="all, delete-orphan"))
     replies = db.relationship('Message', backref=db.backref('parent', remote_side=[id]), lazy=True)
+
+
+class CSPReport(db.Model):
+    __tablename__ = 'csp_report'
+    id = db.Column(db.Integer, primary_key=True)
+    received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    document_uri = db.Column(db.String(1000), nullable=True)
+    violated_directive = db.Column(db.String(255), nullable=True)
+    blocked_uri = db.Column(db.String(1000), nullable=True)
+    original_policy = db.Column(db.Text, nullable=True)
+    raw_report = db.Column(db.Text, nullable=True)  # store full JSON payload as text
+    ip_address = db.Column(db.String(100), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    user = db.relationship('User', backref=db.backref('csp_reports', lazy=True, cascade='all, delete-orphan'))
+
+
+class AdminAPIToken(db.Model):
+    __tablename__ = 'admin_api_token'
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    def deactivate(self):
+        self.is_active = False

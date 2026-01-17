@@ -20,16 +20,26 @@
 {% endblock %}
 
 {% block header_action %}
-<div class="flex gap-3">
-    <button onclick="saveNotes()" id="btnSave" class="px-5 py-2 bg-white border border-gray-200 text-textDark rounded-soft hover:bg-gray-50 transition-all shadow-sm font-medium flex items-center gap-2">
+<div class="flex items-center gap-2">
+    <!-- Save (Icon only on mobile, text on desktop) -->
+    <button onclick="saveNotes()" id="btnSave" class="h-10 px-4 bg-white border border-gray-200 text-textDark rounded-full hover:bg-gray-50 transition-all shadow-sm font-medium flex items-center justify-center gap-2" title="Guardar cambios">
         <i class="fas fa-save text-primary"></i> 
-        <span class="hidden sm:inline">Guardar Notas</span>
+        <span class="hidden md:inline">Guardar</span>
     </button>
-    <button onclick="document.getElementById('uploadImageInput').click()" id="btnUpload" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
-        <i class="fas fa-camera"></i> 
-        <span class="hidden sm:inline">Subir Evidencia</span>
-    </button>
+    
+    <!-- File Check Input -->
     <input type="file" id="uploadImageInput" class="hidden" accept="image/*,.pdf" onchange="uploadImage(this)">
+    
+    <!-- Upload File (Round button) -->
+    <button onclick="document.getElementById('uploadImageInput').click()" class="w-10 h-10 bg-white border border-gray-200 text-textDark rounded-full hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center" title="Subir archivo">
+        <i class="fas fa-file-upload text-gray-500 hover:text-primary transition-colors"></i>
+    </button>
+
+    <!-- Camera (Primary Round button) -->
+    <button onclick="openCameraModal()" id="btnCamera" class="h-10 px-4 md:px-5 bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+        <i class="fas fa-camera"></i> 
+        <span class="hidden md:inline">Cámara</span>
+    </button>
 </div>
 {% endblock %}
 
@@ -125,27 +135,34 @@
             </div>
             
             <!-- Main Viewer -->
-            <div class="flex-grow bg-gray-50/30 relative flex items-center justify-center overflow-hidden p-6 group select-none">
+            <div class="flex-grow bg-gray-50 relative flex items-center justify-center overflow-hidden p-6 group select-none rounded-b-lg md:rounded-b-none md:rounded-tr-lg">
                 {% if images %}
                     <div class="relative w-full h-full flex items-center justify-center">
                         <img src="{{ url_for('static', filename=images[0].image_path) }}" 
                              class="max-w-full max-h-full object-contain shadow-lg rounded-lg transition-transform duration-300"
-                             id="currentImage">
+                             id="currentImage"
+                             data-id="{{ images[0].id }}"> <!-- Added data-id for deletion -->
                         
-                        <button onclick="toggleFullscreen()" class="absolute top-0 right-0 m-4 bg-white text-gray-700 p-3 rounded-full shadow-md hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100 transform scale-90 group-hover:scale-100">
-                            <i class="fas fa-expand"></i>
-                        </button>
+                        <!-- Actions Overlay -->
+                        <div class="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0">
+                             <button onclick="toggleFullscreen()" class="w-10 h-10 bg-white/90 backdrop-blur-sm text-gray-700 rounded-full shadow-lg hover:bg-white hover:text-primary transition-all flex items-center justify-center" title="Pantalla completa">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <button onclick="deleteCurrentImage()" class="w-10 h-10 bg-white/90 backdrop-blur-sm text-red-500 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center" title="Eliminar imagen">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 {% else %}
-                    <div class="text-center p-10 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary hover:bg-green-50/30 transition-all cursor-pointer group"
+                    <div class="text-center p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:border-primary hover:bg-green-50/20 transition-all cursor-pointer group flex flex-col items-center justify-center h-64 w-full max-w-md mx-auto"
                          onclick="document.getElementById('uploadImageInput').click()">
-                        <div class="w-20 h-20 bg-white text-gray-300 group-hover:text-primary rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm transition-colors">
-                            <i class="fas fa-cloud-upload-alt text-3xl"></i>
+                        <div class="w-16 h-16 bg-gray-100 group-hover:bg-white text-gray-400 group-hover:text-primary rounded-full flex items-center justify-center mb-4 shadow-sm transition-colors duration-300">
+                            <i class="fas fa-cloud-upload-alt text-2xl"></i>
                         </div>
-                        <h4 class="text-xl font-bold text-gray-700 mb-2">No hay evidencia visual</h4>
-                        <p class="text-gray-500 mb-6 max-w-xs mx-auto">Sube fotos de los ejercicios, dibujos o notas manuscritas para documentar el progreso.</p>
-                        <button class="px-6 py-2 bg-white border border-gray-200 text-primary font-medium rounded-full hover:shadow-md transition-all">
-                            Seleccionar Archivos
+                        <h4 class="text-lg font-bold text-gray-700 mb-1">Sin evidencia visual</h4>
+                        <p class="text-sm text-gray-500 mb-6 px-4">Documenta el progreso subiendo fotos o documentos.</p>
+                        <button class="px-5 py-2 bg-white border border-gray-200 text-sm text-primary font-medium rounded-full hover:shadow-md hover:border-primary transition-all">
+                            Subir Archivos
                         </button>
                     </div>
                 {% endif %}
@@ -153,20 +170,19 @@
 
             <!-- Thumbnails Strip -->
             {% if images %}
-            <div class="h-28 border-t border-gray-100 p-4 bg-white overflow-x-auto flex gap-4 items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+            <div class="h-24 border-t border-gray-100 p-3 bg-white overflow-x-auto flex gap-3 items-center shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.03)] z-10 scrollbar-hide">
                 {% for img in images %}
-                    <div class="relative group cursor-pointer shrink-0 h-20 w-28 rounded-lg overflow-hidden border-2 {% if loop.first %}border-primary ring-2 ring-primary ring-opacity-20{% else %}border-transparent{% endif %} hover:border-primary transition-all thumbnail-item"
-                         onclick="showImage('{{ url_for('static', filename=img.image_path) }}', this)">
+                    <div class="relative group cursor-pointer shrink-0 h-16 w-20 rounded-lg overflow-hidden border-2 {% if loop.first %}border-primary ring-2 ring-primary ring-opacity-20{% else %}border-transparent{% endif %} hover:border-primary transition-all thumbnail-item"
+                         onclick="showImage('{{ url_for('static', filename=img.image_path) }}', {{ img.id }}, this)">
                         <img src="{{ url_for('static', filename=img.image_path) }}" 
-                             class="w-full h-full object-cover transition-opacity duration-200 {% if not loop.first %}opacity-70 group-hover:opacity-100{% endif %}">
+                             class="w-full h-full object-cover transition-opacity duration-200 {% if not loop.first %}opacity-60 group-hover:opacity-100{% endif %}">
                     </div>
                 {% endfor %}
                 
                 <!-- Add button in strip -->
                 <button onclick="document.getElementById('uploadImageInput').click()" 
-                        class="shrink-0 h-20 w-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:text-primary hover:border-primary hover:bg-green-50 transition-all gap-1">
-                    <i class="fas fa-plus text-lg"></i>
-                    <span class="text-[10px] font-medium">Añadir</span>
+                        class="shrink-0 h-16 w-16 rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:text-primary hover:border-primary hover:bg-green-50 transition-all gap-1 group">
+                    <i class="fas fa-plus text-sm group-hover:scale-110 transition-transform"></i>
                 </button>
             </div>
             {% endif %}
@@ -182,52 +198,192 @@
     <img src="" id="fullscreenImage" class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm transform scale-95 transition-transform duration-300">
 </div>
 
+<!-- Camera Modal -->
+<div id="cameraModal" class="fixed inset-0 z-[100] hidden bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300 opacity-0">
+    <div class="relative w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
+        <!-- Video container -->
+        <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center">
+            <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+            <canvas id="cameraCanvas" class="hidden"></canvas>
+            
+            <!-- Guides overlay -->
+            <div class="absolute inset-0 border border-white/20 pointer-events-none m-6 rounded-2xl opacity-50">
+                <!-- Corners -->
+                <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-lg"></div>
+                <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-lg"></div>
+                <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-lg"></div>
+                <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-lg"></div>
+                
+                <!-- Center point -->
+                <div class="absolute top-1/2 left-1/2 w-2 h-2 bg-white/50 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+            </div>
+            
+            <div class="absolute top-4 left-0 right-0 text-center pointer-events-none">
+                 <span class="px-3 py-1 bg-black/50 backdrop-blur-md text-white/90 text-xs font-medium rounded-full border border-white/10">
+                    Alinea el documento
+                 </span>
+            </div>
+        </div>
+
+        <!-- Controls (Dark Theme) -->
+        <div class="py-8 px-8 bg-black/90 backdrop-blur-xl border-t border-white/10 flex justify-between items-center relative shrink-0 z-20">
+            <!-- Cancel Button -->
+            <button onclick="closeCameraModal()" class="w-12 h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <!-- Shutter Button -->
+            <button onclick="takePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-transparent hover:scale-105 active:scale-95 transition-all duration-200 shadow-[0_0_20px_rgba(255,255,255,0.3)] group">
+                 <div class="w-16 h-16 bg-white rounded-full group-active:scale-90 transition-transform duration-150"></div>
+            </button>
+            
+            <!-- Gallery/Spacer (placeholder for future upload from camera roll) -->
+            <div class="w-12 h-12 flex items-center justify-center rounded-full text-white/50">
+                 <!-- Could be switch camera icon later -->
+                  <i class="fas fa-camera-rotate text-xl opacity-0"></i> 
+            </div> 
+        </div>
+    </div>
+</div>
+
 <script>
 const appointmentId = {{ appointment.id }};
+const csrfToken = "{{ csrf_token() }}"; // CSRF Token for security
 let saveTimeout;
+let videoStream = null;
 
-function uploadImage(input) {
-    if (input.files && input.files[0]) {
-        const formData = new FormData();
-        formData.append('image', input.files[0]);
-        formData.append('image_type', 'session_photo');
-
-        // Show loading state
-        const btn = document.getElementById('btnUpload');
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span class="hidden sm:inline">Subiendo...</span>';
-        btn.disabled = true;
-
-        fetch(`/api/appointments/${appointmentId}/upload_image`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload(); // Reload to show new image
-            } else {
-                alert('Error: ' + data.error);
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error al subir la imagen');
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-        });
+// Universal upload handler (File object or Input element)
+function uploadImage(inputOrFile) {
+    if (inputOrFile instanceof File) {
+        performUpload(inputOrFile);
+    } else if (inputOrFile.files && inputOrFile.files[0]) {
+        performUpload(inputOrFile.files[0]);
     }
 }
 
-function showImage(url, element) {
+function performUpload(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('image_type', 'session_photo');
+    // Headers are tricky with FormData in fetch because Content-Type boundary is auto-set
+    // So we usually append to body for FormData or use X-CSRFToken header.
+    // Flask-WTF checks headers for 'X-CSRFToken'.
+
+    // Show loading state on camera button just in case
+    const btn = document.getElementById('btnCamera');
+    const originalContent = btn ? btn.innerHTML : '';
+    
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-primary text-white px-4 py-3 rounded-soft shadow-lg z-50 flex items-center gap-3 animate-fade-in-up';
+    toast.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo imagen...';
+    document.body.appendChild(toast);
+
+    if (btn) btn.disabled = true;
+
+    fetch(`/api/appointments/${appointmentId}/upload_image`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toast.innerHTML = '<i class="fas fa-check"></i> Imagen subida correctamente';
+            toast.classList.replace('bg-primary', 'bg-green-500');
+            setTimeout(() => location.reload(), 1000); 
+        } else {
+            alert('Error: ' + data.error);
+            toast.remove();
+            if(btn) btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al subir la imagen');
+        toast.remove();
+        if(btn) btn.disabled = false;
+    });
+}
+
+async function openCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    const video = document.getElementById('cameraVideo');
+    
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } // Prefer back camera
+        });
+        video.srcObject = videoStream;
+        
+        modal.classList.remove('hidden');
+        // Small delay to allow display:block to apply before opacity transition
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+        });
+    } catch (err) {
+        console.error("Error accessing camera:", err);
+        alert("No se pudo acceder a la cámara. Por favor verifica los permisos en tu navegador.");
+    }
+}
+
+function closeCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    
+    // Animation out
+    modal.classList.add('opacity-0');
+    
+    // Stop stream
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+function takePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    const context = canvas.getContext('2d');
+    
+    // Check if video is playing
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        alert("La cámara aún se está iniciando...");
+        return;
+    }
+
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to blob and upload
+    canvas.toBlob(blob => {
+        if (blob) {
+            // Create a File object
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            closeCameraModal();
+            uploadImage(file);
+        }
+    }, 'image/jpeg', 0.85); // 85% quality
+}
+
+
+function showImage(url, id, element) {
     const img = document.getElementById('currentImage');
     if (img) {
         // Fade out
         img.style.opacity = '0.5';
         setTimeout(() => {
             img.src = url;
+            img.dataset.id = id; // Update the ID for deletion
             img.style.opacity = '1';
         }, 150);
     }
@@ -236,22 +392,61 @@ function showImage(url, element) {
     document.querySelectorAll('.thumbnail-item').forEach(el => {
         el.classList.remove('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
         el.classList.add('border-transparent');
-        el.querySelector('img').classList.add('opacity-70');
+        el.querySelector('img').classList.add('opacity-60');
+        el.querySelector('img').classList.remove('opacity-100');
     });
     
     if (element) {
         element.classList.remove('border-transparent');
         element.classList.add('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
-        element.querySelector('img').classList.remove('opacity-70');
+        element.querySelector('img').classList.remove('opacity-60');
+        element.querySelector('img').classList.add('opacity-100');
     }
+}
+
+function deleteCurrentImage() {
+    const img = document.getElementById('currentImage');
+    if (!img) return;
+    
+    const imageId = img.dataset.id;
+    if (!imageId) return;
+    
+    if (!confirm('¿Estás seguro de eliminar esta imagen? Esta acción no se puede deshacer.')) return;
+    
+    // Show deleting state (optional)
+    img.style.opacity = '0.3';
+    
+    fetch(`/api/appointments/${appointmentId}/images/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+            img.style.opacity = '1';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Error al conectar con el servidor');
+        img.style.opacity = '1';
+    });
 }
 
 function toggleFullscreen() {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('fullscreenImage');
-    const currentSrc = document.getElementById('currentImage').src;
+    const currentImg = document.getElementById('currentImage');
     
-    img.src = currentSrc;
+    // Guard against empty state or null element
+    if (!currentImg) return;
+    
+    img.src = currentImg.src;
     modal.classList.remove('hidden');
     
     // Animation frame for transition
@@ -279,18 +474,16 @@ function closeFullscreen() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeFullscreen();
+        closeCameraModal();
     }
 });
 
 function setAttendance(state) {
-    const btnText = state === 'present' ? 'Asistió' : 'No Asistió';
-    
-    // Optimistic UI update (optional, but reloading page handles it for now)
-    
     fetch(`/api/sessions/${appointmentId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({ attendance: state })
     })
@@ -321,6 +514,7 @@ function saveNotes() {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({ notes: notes })
     })
@@ -346,10 +540,13 @@ function saveNotes() {
 
 // Auto-save functionality
 const notesArea = document.getElementById('sessionNotes');
-notesArea.addEventListener('input', () => {
-    document.getElementById('lastSaved').textContent = 'Escribiendo...';
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveNotes, 2000); // Auto-save after 2 seconds of inactivity
-});
+if (notesArea) {
+    notesArea.addEventListener('input', () => {
+        const lbl = document.getElementById('lastSaved');
+        if(lbl) lbl.textContent = 'Escribiendo...';
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveNotes, 2000); // Auto-save after 2 seconds of inactivity
+    });
+}
 </script>
 {% endblock %}

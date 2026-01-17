@@ -333,7 +333,7 @@ def messages():
             (Message.sender_id == current_user.id) & (Message.receiver_id == therapist.id),
             (Message.sender_id == therapist.id) & (Message.receiver_id == current_user.id)
         )
-    ).order_by(Message.created_at.desc()).all()
+    ).order_by(Message.created_at.asc()).all()
     
     # Mark received messages as read
     Message.query.filter(

@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>{% block title %}Centro de Terapias{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -416,6 +417,9 @@
       const notificationCount = document.getElementById("notification-count");
       const markAllRead = document.getElementById("mark-all-read");
 
+      // Get CSRF Token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
       function fetchNotifications() {
         fetch("/api/notifications")
           .then((response) => response.json())
@@ -474,7 +478,13 @@
         if (!isHidden) {
           fetchNotifications();
           // Mark as read when opening
-          fetch("/api/notifications/mark-read", { method: "POST" });
+          fetch("/api/notifications/mark-read", { 
+              method: "POST",
+              headers: { 
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": csrfToken
+              }
+          });
           
           // Smart Positioning Logic
           const rect = notificationPopover.getBoundingClientRect();
@@ -503,7 +513,13 @@
 
       markAllRead.addEventListener("click", (e) => {
         e.preventDefault();
-        fetch("/api/notifications/mark-read", { method: "POST" })
+        fetch("/api/notifications/mark-read", { 
+            method: "POST",
+            headers: { 
+                  "Content-Type": "application/json",
+                  "X-CSRFToken": csrfToken
+            }
+        })
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {

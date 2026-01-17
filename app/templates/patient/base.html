@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Moscowle{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
@@ -13,19 +14,30 @@
             theme: {
                 extend: {
                     fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
                         'inter': ['Inter', 'sans-serif'],
                     },
                     colors: {
+                        'primary': '#75a83a',
                         'olive': '#75a83a',
+                        'background': '#f9fcf8',
                         'cream': '#f9fcf8',
+                        'surface': '#ffffff',
+                        'textDark': '#374151',
                         'charcoal': '#374151',
-                        'light-green': '#ecfccb',
+                        'lightGreen': '#ecfccb',
+                        'light-green': '#ecfccb', /* Alias for legacy */
+                        'accent': '#3b82f6',
+                        'statusGreen': '#10b981',
+                        'statusYellow': '#f59e0b',
+                        'statusRed': '#ef4444',
                     },
                     borderRadius: {
                         'soft': '1.5rem',
                     },
                     boxShadow: {
                         'soft': '0 10px 30px -5px rgba(117, 168, 58, 0.15)',
+                        'soft-lg': '0 20px 40px -10px rgba(117, 168, 58, 0.2)',
                     }
                 }
             }
@@ -236,6 +248,10 @@
                         <i class="fas fa-user-circle w-5 text-center"></i>
                         <span class="font-medium">Perfil</span>
                     </a>
+                    <button id="logout-btn-sidebar" class="flex-shrink-0 lg:flex-shrink flex items-center space-x-3 px-4 py-3 rounded-xl text-charcoal hover:bg-red-50 hover:text-red-600 transition-all whitespace-nowrap w-full text-left">
+                        <i class="fas fa-sign-out-alt w-5 text-center"></i>
+                        <span class="font-medium">Cerrar Sesión</span>
+                    </button>
                 </nav>
                 
                 <!-- Achievement Widget (Hidden on Mobile to save space) -->
@@ -434,8 +450,18 @@
         // Mark all as read
         document.getElementById('mark-all-read-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            fetch('/api/notifications/mark-read', { method: 'POST' })
-                .then(res => res.json())
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            fetch('/api/notifications/mark-read', { 
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+                .then(res => {
+                     if (!res.ok) throw new Error('Error en la petición');
+                     return res.json();
+                })
                 .then(() => {
                     loadNotifications();
                     showToast('Notificaciones marcadas como leídas');

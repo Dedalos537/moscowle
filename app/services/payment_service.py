@@ -3,6 +3,7 @@ from app.services.email_service import EmailService
 from app.services.notification_service import NotificationService
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from sqlalchemy import func
 
 class PaymentService:
     def __init__(self):

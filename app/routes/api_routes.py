@@ -1056,24 +1056,65 @@ def get_resource(resource_id):
 @api_bp.route('/messages/send', methods=['POST'])
 @login_required
 def send_message():
-    data = request.get_json(silent=True) or {}
-    errors = SendMessageSchema().validate(data)
-    if errors:
-        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
+    # Handle both JSON and Form Data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+
     receiver_id = data.get('receiver_id')
+    body = data.get('body', '')
     subject = data.get('subject')
-    body = data.get('body')
+    
+    if not receiver_id:
+        return jsonify({'success': False, 'message': 'Datos incompletos'}), 400
     
     receiver = User.query.get(receiver_id)
     if not receiver:
         return jsonify({'success': False, 'message': 'Destinatario no encontrado'}), 404
+    
+    # File handling
+    attachment_path = None
+    attachment_type = None
+    
+    if 'file' in request.files:
+        file = request.files['file']
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            
+            # Determine type
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                attachment_type = 'image'
+            elif ext in ['mp4', 'mov', 'webm']:
+                attachment_type = 'video'
+            elif ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                attachment_type = 'audio'
+            else:
+                attachment_type = 'file'
+
+            # Ensure directory
+            upload_folder = os.path.join(current_app.instance_path, 'uploads', 'messages')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            # Save
+            file.save(os.path.join(upload_folder, unique_filename))
+            
+            # Storing filename only, path is managed by frontend/template
+            attachment_path = unique_filename
+
+    if not body and not attachment_path:
+         return jsonify({'success': False, 'message': 'El mensaje no puede estar vacío'}), 400
     
     # Create message
     message = Message(
         sender_id=current_user.id,
         receiver_id=receiver_id,
         subject=subject,
-        body=body
+        body=body,
+        attachment_path=attachment_path,
+        attachment_type=attachment_type
     )
     db.session.add(message)
     db.session.commit()
@@ -1088,7 +1129,9 @@ def send_message():
     return jsonify({
         'success': True,
         'message_id': message.id,
-        'created_at': message.created_at.isoformat()
+        'created_at': message.created_at.isoformat(),
+        'attachment_path': attachment_path,
+        'attachment_type': attachment_type
     })
 
 
@@ -1193,3 +1236,35 @@ def upload_session_image(appointment_id):
         })
         
     return jsonify({'error': 'Error al subir archivo'}), 500
+
+@api_bp.route('/appointments/<int:appointment_id>/images/<int:image_id>', methods=['DELETE'])
+@login_required
+def delete_session_image(appointment_id, image_id):
+    """Delete a session image"""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    image = SessionImage.query.get_or_404(image_id)
+    
+    # Verify it belongs to the appointment
+    if image.appointment_id != appointment_id:
+        return jsonify({'error': 'Imagen no corresponde a la sesión'}), 400
+        
+    # Verify ownership (therapist assigned to appointment)
+    if current_user.role == 'terapista':
+        appointment = Appointment.query.get(appointment_id)
+        if appointment.therapist_id != current_user.id:
+            return jsonify({'error': 'No tienes permiso para editar esta sesión'}), 403
+
+    try:
+        # Delete file from filesystem
+        full_path = os.path.join(current_app.root_path, 'static', image.image_path)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+            
+        # Delete from DB
+        db.session.delete(image)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'Error al eliminar imagen: {str(e)}'}), 500

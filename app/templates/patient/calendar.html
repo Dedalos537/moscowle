@@ -80,6 +80,7 @@
 <script>
     let currentDate = new Date();
     let appointments = [];
+    let selectedDay = null; // Track selected day
     
     function loadAppointments() {
         // Load appointments for the currently displayed month range
@@ -220,12 +221,26 @@
                 html += '<div class="aspect-square p-2 border border-transparent rounded-lg"></div>';
                 continue;
             }
+            // Logic for Today and Selected
             const isToday = dayCounter === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            const isSelected = (dayCounter === selectedDay);
+            
             const dayAppts = apptsByDay[dayCounter] || [];
+            
+            let classes = "aspect-square p-2 border border-gray-200 rounded-lg hover:shadow-md transition-all relative bg-white cursor-pointer";
+            
+            if (isSelected) {
+                // Focus styling for selected day
+                classes += " ring-2 ring-olive bg-green-50 z-10";
+            } else if (isToday) {
+                // Subtle styling for Today if not selected
+                classes += " border-olive font-semibold"; 
+            }
+
             html += `
-                <div class="aspect-square p-2 border border-gray-200 rounded-lg hover:shadow-md transition-all relative bg-white ${isToday ? 'ring-2 ring-olive' : ''}" data-day="${dayCounter}">
+                <div class="${classes}" data-day="${dayCounter}">
                     <div class="flex justify-between items-start">
-                        <div class="text-sm font-medium">${dayCounter}</div>
+                        <div class="text-sm ${isToday ? 'font-bold text-olive' : 'font-medium'}">${dayCounter}</div>
                         ${dayAppts.length ? `<span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">${dayAppts.length}</span>` : ''}
                     </div>
                     ${dayAppts.length ? `<div class="mt-2 text-xs text-gray-600">${dayAppts.slice(0,2).map(a=> a.title || 'Sesión').join(' · ')}</div>` : ''}
@@ -238,6 +253,8 @@
         document.querySelectorAll('#calendar-days > div[data-day]').forEach(cell => {
             cell.addEventListener('click', () => {
                 const day = parseInt(cell.getAttribute('data-day'));
+                selectedDay = day; // Update selection
+                renderCalendar(); // Re-render to update visuals
                 openDayModal(year, month, day, apptsByDay[day] || []);
             });
         });

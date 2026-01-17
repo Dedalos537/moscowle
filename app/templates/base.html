@@ -1,16 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moscowle</title>
+    <title>{% block title %}Centro de Terapias{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <script>window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#75a83a",
+                        olive: "#75a83a",
+                        background: "#f9fcf8",
+                        surface: "#ffffff",
+                        textDark: "#374151",
+                        charcoal: "#374151",
+                        lightGreen: "#ecfccb",
+                        accent: "#3b82f6",
+                        error: "#ef4444",
+                    },
+                    fontFamily: {
+                        sans: ["Poppins", "sans-serif"],
+                    },
+                    borderRadius: {
+                        soft: "1.5rem",
+                    },
+                    boxShadow: {
+                        soft: "0 10px 30px -5px rgba(117, 168, 58, 0.15)",
+                    },
+                },
+            },
+        };
+    </script>
+    
+    <!-- Legacy Style for backward compatibility if needed -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    {% block extra_styles %}{% endblock %}
 </head>
-<body>
-    </nav>
-    <div class="container">
-        {% block content%}{% endblock %}
-    </div>
+<body class="bg-background text-textDark font-sans min-h-screen flex flex-col">
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
 </body>
 </html>

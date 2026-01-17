@@ -94,8 +94,12 @@ class DashboardService:
         from app.models import SessionMetrics, User, db
         from sqlalchemy import func
         
-        # Build last 7 days average accuracy for all active patients
-        # Use user's timezone if provided
+        # Determine patient scope
+        patient_ids = []
+        if user and user.role == 'terapista':
+            patient_ids = [p.id for p in self.user_repo.get_active_patients_by_therapist(user.id)]
+
+        # Build last 7 days average accuracy
         if user:
             today_start, _ = get_user_today_utc_range(user)
             today = today_start.date()
@@ -104,38 +108,55 @@ class DashboardService:
             
         days = [today - timedelta(days=i) for i in range(6, -1, -1)]
         series = []
+        
         for d in days:
-            # Construct day range in UTC that corresponds to this local day
-            # Note: This simple iteration assumes the day boundaries shift uniformly, 
-            # which is close enough for a 7-day chart unless DST change happens exactly then.
-            # For strict correctness we would re-convert each day.
             day_start = datetime(d.year, d.month, d.day)
+            
             if user:
-                # If we have a user, 'd' is in their local time (naive date).
-                # We need to convert (d 00:00 local) -> UTC and (d+1 00:00 local) -> UTC
+                # Handle timezone conversion for query bounds
                 tz = get_user_timezone(user)
-                local_dt = datetime.combine(d, datetime.min.time())
-                local_dt = tz.localize(local_dt)
-                day_start = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+                try:
+                    local_dt = datetime.combine(d, datetime.min.time())
+                    local_dt = tz.localize(local_dt)
+                    day_start = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+                except Exception:
+                    pass # Fallback to UTC naive if localization fails
             
             day_end = day_start + timedelta(days=1)
             
-            avg_acc = db.session.query(func.avg(SessionMetrics.accurracy))\
-                .filter(SessionMetrics.date >= day_start, SessionMetrics.date < day_end).scalar() or 0
+            query = db.session.query(func.avg(SessionMetrics.accurracy))\
+                .filter(SessionMetrics.date >= day_start, SessionMetrics.date < day_end)
+            
+            if patient_ids:
+                 query = query.filter(SessionMetrics.user_id.in_(patient_ids))
+            elif user and user.role == 'terapista':
+                 # If therapist has no patients, accuracy is 0
+                 query = None 
+
+            avg_acc = 0
+            if query:
+                avg_acc = query.scalar() or 0
+                
             series.append({'date': d.strftime('%Y-%m-%d'), 'avg_accuracy': round(avg_acc, 2)})
 
-        # Alerts: recent risky predictions (prediction==2)
+        # Alerts: recent risky predictions (prediction==2) for THESE patients
         seven_days_ago = datetime.utcnow() - timedelta(days=7)
-        risky = SessionMetrics.query.filter(SessionMetrics.date >= seven_days_ago, SessionMetrics.prediction == 2)\
-            .order_by(SessionMetrics.date.desc()).limit(5).all()
+        alerts_query = SessionMetrics.query.filter(SessionMetrics.date >= seven_days_ago, SessionMetrics.prediction == 2)
+        
+        if patient_ids:
+            alerts_query = alerts_query.filter(SessionMetrics.user_id.in_(patient_ids))
+            
+        risky = alerts_query.order_by(SessionMetrics.date.desc()).limit(5).all()
+        
         alerts = []
         for r in risky:
             u = User.query.get(r.user_id)
-            alerts.append({
-                'type': 'red',
-                'patient': (u.username or u.email),
-                'message': f'Baja precisión ({int(r.accurracy)}%) en {r.game_name}. Sugerido apoyo.'
-            })
+            if u:
+                alerts.append({
+                    'type': 'red',
+                    'patient': (u.username or u.email),
+                    'message': f'Baja precisión ({int(r.accurracy)}%) en {r.game_name}. Sugerido apoyo.'
+                })
 
         return {'weekly_progress': series, 'alerts': alerts}
 

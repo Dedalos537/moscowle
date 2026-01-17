@@ -1,27 +1,32 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required
+from app.extensions import limiter
 from app.services.auth_service import AuthService
 from email_validator import validate_email, EmailNotValidError
+from app.schemas.auth_schema import validate_login_input
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per 15 minutes")
 def login():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        
-        # Validate email format
-        try:
-            valid = validate_email(email)
-            email = valid.email
-        except EmailNotValidError as e:
-            flash('Por favor, ingresa un correo electrónico válido.', 'error')
+        form = {
+            'email': request.form.get('email', '').strip().lower(),
+            'password': request.form.get('password', '')
+        }
+        data, errors = validate_login_input(form)
+        if errors:
+            flash('Por favor corrige los errores del formulario.', 'error')
+            current_app.logger.debug(f"Login validation errors: {errors}")
             return render_template('login.html')
-        
+
+        email = data['email']
+        password = data['password']
+
         success, user = auth_service.login(email, password)
-        
+
         if success:
             return redirect(url_for('main.dashboard'))
         else:
@@ -37,6 +42,7 @@ def logout():
     return redirect(url_for('auth.login'))
 
 @auth_bp.route('/api/auth/validate', methods=['POST'])
+@limiter.limit("10 per minute")
 def api_auth_validate():
     try:
         data = request.get_json(silent=True) or {}

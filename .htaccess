@@ -1,0 +1,22 @@
+# cPanel Deployment .htaccess
+# Place this in your application root (usually standard public_html or project root)
+# Note: For Python apps in cPanel, the .htaccess is often auto-generated.
+# Use this ONLY if you need to force HTTPS or override headers manually.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Force HTTPS
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Security Headers (Best Practice)
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# DO NOT REMOVE: cPanel uses specific rules to route to Passenger
+# If your cPanel 'Setup Python App' is correctly configured, it will handle the WSGI handoff.

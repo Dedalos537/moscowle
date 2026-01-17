@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Juego de Reflejos - Moscowle</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -279,11 +280,13 @@
             document.getElementById('final-acc').textContent = accuracy.toFixed(1);
             document.getElementById('final-time').textContent = Math.round(avgTime);
             
-            // Save to backend
+            // Save to backend (include CSRF token header)
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             fetch('/api/save_game', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     game_name: 'Reflejos Rápidos',

@@ -2,148 +2,584 @@
 
 {% block title %}Mensajes - Moscowle{% endblock %}
 
+{% block extra_styles %}
+<style>
+/* Chat specific styles */
+.message-bubble {
+    position: relative;
+    max-width: 85%;
+    border-radius: 1.25rem; /* rounded-xl/2xl feel */
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.message-bubble.sent {
+    background-color: #ecfccb; /* bg-lightGreen */
+    color: #374151; /* text-charcoal */
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+}
+.message-bubble.received {
+    background-color: #ffffff; /* bg-surface */
+    color: #374151; /* text-charcoal */
+    border-bottom-left-radius: 4px;
+    margin-right: auto;
+    border: 1px solid #f3f4f6;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    display: block;
+    text-align: right;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+.sent .message-time {
+    color: #659230; /* primary dark-ish */
+}
+.received .message-time {
+    color: #9ca3af;
+}
+
+/* Attachment styling */
+.attachment-preview {
+    max-width: 100%;
+    margin-top: 8px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.attachment-preview img, .attachment-preview video {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+}
+.file-attachment {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255,255,255,0.5); 
+    border-radius: 12px;
+    margin-top: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+.received .file-attachment {
+    background: #f3f4f6; /* gray for received */
+}
+.file-attachment:hover {
+    background: rgba(0,0,0,0.05); /* darken slightly */
+}
+.file-icon {
+    font-size: 1.5rem;
+    margin-right: 12px;
+}
+
+/* Custom file input & area */
+.chat-input-area {
+    background: #ffffff;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+.chat-input-wrapper {
+    flex: 1;
+    background: #f9fcf8; /* bg-background */
+    border: 1px solid #e5e7eb;
+    border-radius: 1.5rem; /* rounded-soft */
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.chat-input-wrapper:focus-within {
+    border-color: #75a83a; /* primary */
+    box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.1);
+}
+.chat-textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    max-height: 120px;
+    font-size: 0.95rem;
+    padding: 0;
+    line-height: 1.5;
+    color: #374151; /* textDark */
+}
+.action-btn {
+    color: #9ca3af; /* gray-400 */
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+}
+.action-btn:hover {
+    background: #f3f4f6;
+    color: #75a83a;
+}
+.send-btn {
+    background: #75a83a; /* primary */
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(117, 168, 58, 0.3);
+}
+.send-btn:hover {
+    background: #659230;
+    transform: scale(1.05);
+}
+.send-btn i {
+    font-size: 1rem;
+    margin-left: -2px; /* optical adjustment */
+}
+
+/* Preview floating area */
+#attachment-preview-area {
+    display: none;
+    padding: 12px 20px;
+    background: #f9fcf8;
+    border-bottom: 1px solid #e5e7eb;
+}
+.preview-thumb {
+    position: relative;
+    display: inline-block;
+}
+.remove-attachment {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #fee2e2; /* red-100 */
+    color: #ef4444; /* red-500 */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    line-height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+.remove-attachment:hover {
+    background: #ef4444;
+    color: white;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="bg-white rounded-soft shadow-soft overflow-hidden" style="height: calc(100vh - 250px);">
-    
+<div class="h-full flex flex-col bg-background relative" style="height: calc(100vh - 80px);">
+    <!-- Chat Background Pattern Overlay (Subtle) -->
+    <div class="absolute inset-0 opacity-[0.03] pointer-events-none" 
+         style="background-image: radial-gradient(#374151 1px, transparent 1px); background-size: 24px 24px;"></div>
+
     <!-- Header -->
-    <div class="border-b border-gray-200 p-6">
+    <div class="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10 sticky top-0">
         <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span class="text-white text-lg font-bold">{{ therapist.username[0].upper() if therapist.username else 'T' }}</span>
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-lightGreen flex items-center justify-center text-white font-bold text-xl shadow-sm ring-2 ring-white">
+                {{ therapist.username[0].upper() if therapist.username else 'T' }}
             </div>
             <div>
-                <h2 class="text-xl font-bold text-charcoal">{{ therapist.username or 'Tu Terapeuta' }}</h2>
-                <p class="text-sm text-gray-500">{{ therapist.email }}</p>
+                <h2 class="text-charcoal font-bold text-lg leading-tight">{{ therapist.username or 'Terapeuta' }}</h2>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-statusGreen rounded-full animate-pulse"></span>
+                    <span class="text-xs text-gray-500 font-medium">En línea</span>
+                </div>
             </div>
+        </div>
+        <div class="flex items-center space-x-2 text-gray-400">
+            <!-- Optional Actions -->
+            <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 hover:text-primary rounded-full transition"><i class="fas fa-phone"></i></button>
+            <button class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 hover:text-primary rounded-full transition"><i class="fas fa-video"></i></button>
         </div>
     </div>
 
     <!-- Messages Container -->
-    <div id="messages-container" class="overflow-y-auto p-6 space-y-4" style="height: calc(100% - 280px);">
+    <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 z-10 custom-scrollbar relative flex flex-col">
+        <div class="flex-grow"></div> <!-- Push contents down -->
+        
         {% if messages %}
             {% for message in messages %}
-            <div class="flex {% if message.sender_id == current_user.id %}justify-end{% else %}justify-start{% endif %}">
-                <div class="max-w-lg {% if message.sender_id == current_user.id %}bg-olive text-white{% else %}bg-gray-100 text-charcoal{% endif %} rounded-2xl px-5 py-3 shadow-sm">
-                    {% if message.subject %}
-                    <p class="font-semibold text-sm mb-1 {% if message.sender_id == current_user.id %}text-green-100{% else %}text-gray-700{% endif %}">{{ message.subject }}</p>
+            <div class="flex flex-col w-full {% if message.sender_id == current_user.id %}items-end{% else %}items-start{% endif %}">
+                <div class="message-bubble {% if message.sender_id == current_user.id %}sent shadow-soft{% else %}received border border-gray-100{% endif %}">
+                    <!-- Text Content -->
+                    {% if message.body %}
+                        <p>{{ message.body }}</p>
                     {% endif %}
-                    <p class="text-sm leading-relaxed">{{ message.body }}</p>
-                    <p class="text-xs {% if message.sender_id == current_user.id %}text-green-100{% else %}text-gray-500{% endif %} mt-2">
-                        {{ message.created_at.strftime('%d %b, %H:%M') }}
-                    </p>
+
+                    <!-- Attachment Rendering -->
+                    {% if message.attachment_path %}
+                        {% if message.attachment_type == 'image' %}
+                            <div class="attachment-preview">
+                                <a href="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}" target="_blank">
+                                    <img src="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}" alt="Imagen adjunta">
+                                </a>
+                            </div>
+                        {% elif message.attachment_type == 'video' %}
+                            <div class="attachment-preview">
+                                <video controls preload="metadata">
+                                    <source src="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}" type="video/mp4">
+                                    Tu navegador no soporta video.
+                                </video>
+                            </div>
+                        {% elif message.attachment_type == 'audio' %}
+                             <div class="attachment-preview w-full" style="min-width: 220px;">
+                                <audio controls class="w-full h-10 mt-1">
+                                    <source src="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}">
+                                    Tu navegador no soporta audio.
+                                </audio>
+                            </div>
+                        {% else %}
+                            <a href="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}" target="_blank" class="file-attachment">
+                                <i class="fas fa-file-alt file-icon"></i>
+                                <span class="text-sm truncate max-w-xs">{{ message.attachment_path }}</span>
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <span class="message-time">{{ message.created_at.strftime('%H:%M') }}</span>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="flex items-center justify-center h-full">
-                <div class="text-center text-gray-400">
-                    <i class="fas fa-comments text-6xl mb-4"></i>
-                    <p class="text-lg font-medium">No hay mensajes aún</p>
-                    <p class="text-sm mt-1">Inicia la conversación con tu terapeuta</p>
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="bg-white p-6 rounded-full shadow-soft mb-4">
+                    <i class="fas fa-comments text-4xl text-primary/40"></i>
                 </div>
+                <p class="text-textDark font-medium">No hay mensajes aún</p>
+                <p class="text-sm text-gray-400 mt-1">Inicia la conversación con tu terapeuta</p>
             </div>
         {% endif %}
+        <div id="scroll-anchor" class="h-1"></div>
     </div>
 
-    <!-- Message Input -->
-    <div class="border-t border-gray-200 p-4 bg-gray-50">
-        <form id="messageForm" class="space-y-3">
-            <input type="text" id="messageSubject" placeholder="Asunto (opcional)" 
-                   class="w-full px-4 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
-            <div class="flex items-end space-x-3">
-                <textarea id="messageBody" rows="2" placeholder="Escribe tu mensaje..." 
-                          class="flex-1 px-4 py-3 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent resize-none"></textarea>
-                <button type="submit" id="sendBtn" class="bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors shadow-sm">
-                    <span class="btn-label"><i class="fas fa-paper-plane"></i></span>
-                </button>
+    <!-- Attachment Preview Area -->
+    <div id="attachment-preview-area">
+        <div id="preview-content" class="preview-thumb">
+            <!-- Dynamic Preview -->
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area z-20 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.05)]">
+        <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Attachment Button -->
+        <button type="button" class="action-btn" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
+            <i class="fas fa-paperclip text-lg"></i>
+        </button>
+        <input type="file" id="fileInput" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="handleFileSelect(this)">
+
+        <!-- Recording UI (Hidden by default) -->
+        <div id="recording-ui" class="hidden flex items-center flex-1 gap-4 bg-white px-4 py-2 rounded-soft border border-gray-200">
+            <div class="text-statusRed animate-pulse text-sm font-bold flex items-center gap-2">
+                <div class="w-2 h-2 bg-statusRed rounded-full"></div> 
+                <span id="recording-timer" class="tabular-nums">00:00</span>
             </div>
-        </form>
-    </div>
+            <div class="flex-1 text-xs text-gray-400 text-center font-medium tracking-wide uppercase">Grabando...</div>
+            <button type="button" class="text-gray-400 w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition" onclick="cancelRecording()" title="Cancelar">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+            <button type="button" class="bg-primary text-white w-8 h-8 rounded-full hover:bg-opacity-90 flex items-center justify-center transition shadow-soft" onclick="stopRecording()" title="Finalizar">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+        </div>
 
+        <!-- Message Input -->
+        <div class="chat-input-wrapper">
+            <textarea id="messageBody" class="chat-textarea" placeholder="Escribe un mensaje..." rows="1" oninput="autoResize(this)"></textarea>
+        </div>
+
+        <!-- Record/Send Button -->
+        <div id="action-buttons">
+            <button type="button" id="recordBtn" class="action-btn" onclick="toggleRecording()" title="Grabar audio">
+                <i class="fas fa-microphone text-lg"></i>
+            </button>
+            <button type="button" id="sendBtn" class="send-btn hidden" onclick="sendMessage()" title="Enviar">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    const messageForm = document.getElementById('messageForm');
-    const messageSubject = document.getElementById('messageSubject');
-    const messageBody = document.getElementById('messageBody');
     const messagesContainer = document.getElementById('messages-container');
-
-    // Scroll to bottom on load
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
+    const scrollAnchor = document.getElementById('scroll-anchor');
+    const messageBody = document.getElementById('messageBody');
     const sendBtn = document.getElementById('sendBtn');
-    const btnLabel = sendBtn.querySelector('.btn-label');
+    const recordBtn = document.getElementById('recordBtn');
+    const fileInput = document.getElementById('fileInput');
+    const previewArea = document.getElementById('attachment-preview-area');
+    const previewContent = document.getElementById('preview-content');
+    
+    let currentFile = null;
 
-    function setSending(state) {
-        if (state) {
-            sendBtn.disabled = true;
-            btnLabel.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    // Auto-scroll to bottom
+    function scrollToBottom() {
+        scrollAnchor.scrollIntoView({ behavior: "smooth" });
+    }
+    window.onload = () => messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Auto-resize textarea
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+        toggleSendButton();
+    }
+
+    // Toggle send button color and visibility vs Mic
+    function toggleSendButton() {
+        const hasText = messageBody.value.trim().length > 0;
+        const hasFile = currentFile !== null;
+
+        if (hasText || hasFile) {
+            sendBtn.classList.remove('hidden');
+            sendBtn.classList.add('has-content');
+            recordBtn.classList.add('hidden');
         } else {
-            sendBtn.disabled = false;
-            btnLabel.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            sendBtn.classList.add('hidden');
+            sendBtn.classList.remove('has-content');
+            recordBtn.classList.remove('hidden');
         }
     }
 
-    messageForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const body = messageBody.value.trim();
-        if (!body) return;
-        setSending(true);
+    // Handle File Selection
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            currentFile = input.files[0];
+            showPreview(currentFile);
+        }
+    }
 
-        fetch('/api/messages/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                receiver_id: {{ therapist.id }},
-                subject: messageSubject.value.trim(),
-                body: body
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
+    function showPreview(file) {
+        previewArea.style.display = 'block';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            let html = '';
+            if (file.type.startsWith('image/')) {
+                html = `<img src="${e.target.result}" class="rounded-lg shadow-sm border border-gray-200" style="max-height: 100px;">`;
+            } else if (file.type.startsWith('video/')) {
+                html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center justify-center h-20 w-20"><i class="fas fa-video text-2xl text-gray-500"></i></div>`;
+            } else if (file.type.startsWith('audio/')) {
+                 html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center justify-center h-20 w-20"><i class="fas fa-microphone text-2xl text-gray-500"></i></div>`;
+            } else {
+                html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center gap-2 px-3 py-2"><i class="fas fa-file text-gray-500"></i> <span class="text-xs truncate max-w-[100px]">${file.name}</span></div>`;
+            }
+            
+            previewContent.innerHTML = `
+                ${html}
+                <div class="remove-attachment" onclick="clearAttachment()">×</div>
+            `;
+        }
+        reader.readAsDataURL(file);
+        toggleSendButton();
+    }
+
+    function clearAttachment() {
+        currentFile = null;
+        fileInput.value = '';
+        previewArea.style.display = 'none';
+        previewContent.innerHTML = '';
+        toggleSendButton();
+    }
+
+    // --- Audio Recording Logic ---
+    let mediaRecorder;
+    let audioChunks = [];
+    let recordingStartTime;
+    let recordingInterval;
+
+    async function toggleRecording() {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+            startRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                // If we have data and it wasn't cancelled (checked in logic before stop)
+                if (audioChunks.length > 0) {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    // Create a File object
+                    const audioFile = new File([audioBlob], "voice_message.webm", { type: "audio/webm" });
+                    currentFile = audioFile;
+                    showPreview(currentFile);
+                }
+            };
+
+            mediaRecorder.start();
+            
+            // Toggle UI
+            document.getElementById('recording-ui').classList.remove('hidden');
+            document.querySelector('.chat-input-wrapper').classList.add('hidden');
+            document.querySelector('.attach-btn').classList.add('hidden');
+            document.getElementById('action-buttons').classList.add('hidden');
+            
+            // Timer
+            recordingStartTime = Date.now();
+            recordingInterval = setInterval(updateTimer, 1000);
+            
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            showToast("⚠️ No se pudo acceder al micrófono. Verifica los permisos.", "error");
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        resetRecordingUI();
+    }
+
+    function cancelRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop(); 
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            audioChunks = []; // Clear chunks to ignore this recording
+            currentFile = null;
+        }
+        resetRecordingUI();
+    }
+
+    function resetRecordingUI() {
+        clearInterval(recordingInterval);
+        document.getElementById('recording-ui').classList.add('hidden');
+        document.querySelector('.chat-input-wrapper').classList.remove('hidden');
+        document.querySelector('.attach-btn').classList.remove('hidden');
+        document.getElementById('action-buttons').classList.remove('hidden');
+        document.getElementById('recording-timer').innerText = "00:00";
+    }
+
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+        const min = Math.floor(elapsed / 60).toString().padStart(2, '0');
+        const sec = (elapsed % 60).toString().padStart(2, '0');
+        document.getElementById('recording-timer').innerText = `${min}:${sec}`;
+    }
+
+    // --- Sending Logic ---
+    async function sendMessage() {
+        const text = messageBody.value.trim();
+        if (!text && !currentFile) return;
+
+        // Prevent double submit
+        if (sendBtn.disabled) return;
+        sendBtn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append('receiver_id', {{ therapist.id }});
+        formData.append('body', text);
+        if (currentFile) {
+            formData.append('file', currentFile);
+        }
+
+        try {
+            const res = await fetch('/api/messages/send', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.getElementById('csrf_token').value
+                },
+                body: formData
+            });
+            const data = await res.json();
+
             if (data.success) {
-                // Add message to UI
+                // Determine attachment HTML
+                let attachmentHtml = '';
+                // Handle response structure (flat or nested)
+                const attPath = data.attachment_path || (data.message && data.message.attachment_path);
+                const attType = data.attachment_type || (data.message && data.message.attachment_type);
+
+                if (attPath) {
+                    const filePath = `/uploads/messages/${attPath}`; 
+                    // Use protected route for access
+                    const safePath = `{{ url_for('uploads.protected_file', filename='messages/') }}${attPath}`;
+
+                    const type = attType;
+                    
+                    if (type === 'image') {
+                        attachmentHtml = `<div class="attachment-preview"><a href="${safePath}" target="_blank"><img src="${safePath}"></a></div>`;
+                    } else if (type === 'video') {
+                        attachmentHtml = `<div class="attachment-preview"><video controls><source src="${safePath}" type="video/mp4"></video></div>`;
+                    } else if (type === 'audio') {
+                        attachmentHtml = `<div class="attachment-preview w-full"><audio controls class="w-full"><source src="${safePath}"></audio></div>`;
+                    } else {
+                        attachmentHtml = `<a href="${safePath}" target="_blank" class="file-attachment"><i class="fas fa-file-alt file-icon"></i> <span>Archivo adjunto</span></a>`;
+                    }
+                }
+
+                // Add message bubble
                 const messageDiv = document.createElement('div');
-                messageDiv.className = 'flex justify-end';
-                const subjectHtml = messageSubject.value.trim() ? `<p class="font-semibold text-sm mb-1 text-green-100">${messageSubject.value}</p>` : '';
+                messageDiv.className = 'flex flex-col w-full items-end';
                 messageDiv.innerHTML = `
-                    <div class="max-w-lg bg-olive text-white rounded-2xl px-5 py-3 shadow-sm">
-                        ${subjectHtml}
-                        <p class="text-sm leading-relaxed">${body}</p>
-                        <p class="text-xs text-green-100 mt-2">Ahora</p>
+                    <div class="message-bubble sent">
+                        ${text ? `<p>${text}</p>` : ''}
+                        ${attachmentHtml}
+                        <span class="message-time">Ahora</span>
                     </div>
                 `;
-                messagesContainer.appendChild(messageDiv);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 
-                // Clear inputs
-                messageSubject.value = '';
+                // Append
+                messagesContainer.insertBefore(messageDiv, scrollAnchor);
+                scrollToBottom();
+                
+                // Reset UI
                 messageBody.value = '';
+                messageBody.style.height = 'auto'; 
+                clearAttachment();
+                toggleSendButton();
             } else {
-                const msg = (data.errors && JSON.stringify(data.errors)) || data.message || 'Error al enviar mensaje';
-                // highlight invalid inputs
-                messageSubject.classList.remove('border-red-500');
-                messageBody.classList.remove('border-red-500');
-                if (data.errors && data.errors.subject) {
-                    messageSubject.classList.add('border-red-500');
-                }
-                if (data.errors && data.errors.body) {
-                    messageBody.classList.add('border-red-500');
-                }
-                showToast(`❌ ${msg}`, 'error');
+                showToast(`❌ ${data.message || 'Error al enviar'}`, 'error');
             }
-            setSending(false);
-        })
-        .catch(err => {
-            console.error('Error:', err);
-            showToast('❌ Error al enviar mensaje', 'error');
-            setSending(false);
-        });
+        } catch (err) {
+            console.error(err);
+            showToast('❌ Error de conexión o archivo muy grande', 'error');
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    // Enter to send (Shift+Enter for new line)
+    messageBody.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
+
+    // Initial check
+    toggleSendButton();
 </script>
 {% endblock %}
