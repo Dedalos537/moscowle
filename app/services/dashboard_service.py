@@ -1,9 +1,8 @@
 from app.repositories.user_repository import UserRepository
 from app.repositories.metrics_repository import MetricsRepository
 from app.repositories.appointment_repository import AppointmentRepository
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.utils import get_user_today_utc_range, get_user_timezone
-import pytz
 
 class DashboardService:
     def __init__(self):
@@ -117,8 +116,8 @@ class DashboardService:
                 tz = get_user_timezone(user)
                 try:
                     local_dt = datetime.combine(d, datetime.min.time())
-                    local_dt = tz.localize(local_dt)
-                    day_start = local_dt.astimezone(pytz.UTC).replace(tzinfo=None)
+                    local_dt = local_dt.replace(tzinfo=tz)
+                    day_start = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
                 except Exception:
                     pass # Fallback to UTC naive if localization fails
             

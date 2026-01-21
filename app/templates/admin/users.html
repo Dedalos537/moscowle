@@ -139,6 +139,12 @@
             </td>
             <td class="px-6 py-4">
               <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <button class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all admin-reset-pass-btn" 
+                          data-id="{{ u.id }}" 
+                          data-count="{{ u.admin_password_changed_count or 0 }}"
+                          title="Cambiar/Restablecer Contraseña">
+                    <i class="fas fa-key"></i>
+                  </button>
                   <button class="p-2 text-gray-400 hover:text-charcoal hover:bg-gray-100 rounded-lg transition-all admin-update-btn" data-id="{{ u.id }}" title="Actualizar">
                     <i class="fas fa-sync-alt"></i>
                   </button>
@@ -254,6 +260,9 @@
     setTimeout(() => toast.classList.add('hidden'), 2500);
   }
   document.addEventListener('DOMContentLoaded', () => {
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+    
     const emailEl = document.getElementById('new-email');
     const userEl = document.getElementById('new-username');
     const roleEl = document.getElementById('new-role');
@@ -265,11 +274,21 @@
       createBtn.disabled = true;
       createBtn.textContent = 'Creando…';
       try {
-        const res = await fetch('/api/admin/create-user', {
+        const res = await fetch("{{ url_for('api.api_admin_create_user') }}", {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+          },
           body: JSON.stringify({ email: emailEl.value, username: userEl.value, role: roleEl.value })
         });
+        
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+           const text = await res.text();
+           throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+        }
+
         const data = await res.json();
         if (!res.ok || !data.success) {
           const errs = data.errors || {};
@@ -284,7 +303,11 @@
         }
         statusEl.textContent = `Creado. Contraseña temporal: ${data.temp_password}`;
         showToast('Usuario creado', 'success');
-        setTimeout(() => window.location.reload(), 800);
+        // Simple alert to ensure admin sees the password before reload
+        setTimeout(() => {
+            alert(`Usuario creado EXITOSAMENTE.\n\nContraseña temporal: ${data.temp_password}\n\nPor favor copie esta contraseña y envíela al usuario. La página se recargará al cerrar este mensaje.`);
+            window.location.reload();
+        }, 100);
       } catch (e) {
         statusEl.textContent = e.message;
         showToast(e.message, 'error');
@@ -305,10 +328,20 @@
         btn.disabled = true;
         btn.textContent = 'Guardando…';
         try {
-          const res = await fetch('/api/admin/assign-therapist', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("{{ url_for('api.api_admin_assign_therapist') }}", {
+            method: 'POST', headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify({ patient_id: Number(patientId), therapist_id: Number(therapistId) })
           });
+          
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+             const text = await res.text();
+             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+          }
+
           const data = await res.json();
           if (!res.ok || !data.success) {
             const msg = data.message || 'Error al asignar';
@@ -336,10 +369,20 @@
         btn.disabled = true;
         btn.textContent = 'Actualizando…';
         try {
-          const res = await fetch('/api/admin/update-user', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("{{ url_for('api.api_admin_update_user') }}", {
+            method: 'POST', headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify({ id, username: nameEl.value, role: roleEl.value, is_active: activeEl.checked })
           });
+          
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+             const text = await res.text();
+             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+          }
+
           const data = await res.json();
           if (!res.ok || !data.success) {
             const errs = data.errors || {};
@@ -359,6 +402,68 @@
       });
     });
 
+    // Reset Password actions
+    document.querySelectorAll('.admin-reset-pass-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-id'));
+        const count = Number(btn.getAttribute('data-count') || 0);
+        let newPassword = null;
+
+        if (count === 0) {
+            // First time: Manual
+            newPassword = prompt('Ingrese la nueva contraseña para el usuario (Primera vez: Manual):');
+            if (newPassword === null) return; 
+            if (!newPassword.trim()) { alert('La contraseña no puede estar vacía.'); return; }
+        } else {
+            // Subsequent times: Automatic
+            if (!confirm('Este usuario ya ha tenido un cambio de contraseña. ¿Generar una nueva AUTOMÁTICAMENTE y enviarla por correo?')) return;
+        }
+        
+        const prevTxt = btn.innerHTML; // save icon
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+          const payload = { id };
+          if (newPassword) payload.new_password = newPassword;
+
+          const res = await fetch("{{ url_for('api.api_admin_reset_password') }}", {
+            method: 'POST', headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+             const text = await res.text();
+             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+          }
+
+          const data = await res.json();
+          
+          if (!res.ok || !data.success) {
+            const msg = data.message || 'Error al restablecer';
+            showToast(msg, 'error');
+            throw new Error(msg);
+          }
+          
+          if (newPassword) {
+              alert(`Contraseña actualizada EXITOSAMENTE.\n\nContraseña manual: ${newPassword}`);
+          } else {
+              alert(`Contraseña generada EXITOSAMENTE.\n\nNueva contraseña: ${data.temp_password}\n(Se ha enviado por correo al usuario)`);
+          }
+          window.location.reload();
+          
+        } catch (e) {
+          showToast(e.message, 'error');
+          btn.innerHTML = prevTxt;
+          btn.disabled = false;
+        }
+      });
+    });
+
     // Delete user actions
     document.querySelectorAll('.admin-delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -368,10 +473,20 @@
         btn.disabled = true;
         btn.textContent = 'Eliminando…';
         try {
-          const res = await fetch('/api/admin/delete-user', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+          const res = await fetch("{{ url_for('api.api_admin_delete_user') }}", {
+            method: 'POST', headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify({ id })
           });
+          
+          const contentType = res.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+             const text = await res.text();
+             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+          }
+
           const data = await res.json();
           if (!res.ok || !data.success) {
             const msg = data.message || 'Error al eliminar';

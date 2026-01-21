@@ -18,8 +18,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import os
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime, timedelta, timezone
 
 therapist_bp = Blueprint('therapist', __name__, url_prefix='/therapist')
 dashboard_service = DashboardService()
@@ -40,7 +39,7 @@ def _parse_datetime(value):
         dt = datetime.fromisoformat(value)
         # If timezone aware, convert to UTC and make naive
         if dt.tzinfo:
-            dt = dt.astimezone(pytz.UTC).replace(tzinfo=None)
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
         return dt
     except Exception:
         # Try common formats
@@ -606,6 +605,7 @@ def profile():
                          sessions_count=sessions_count,
                          upcoming_appointments=upcoming_appointments)
 
+
 @therapist_bp.route('/patients/add', methods=['POST'])
 @login_required
 def add_patient():
@@ -615,22 +615,43 @@ def add_patient():
     email = request.form.get('email', '').strip().lower()
     username = request.form.get('username', '').strip()
     
-    # Validate email
-    try:
-        valid = validate_email(email)
-        email = valid.email
-    except EmailNotValidError:
-        flash('Por favor, ingresa un correo electrónico válido.', 'error')
-        return redirect(url_for('therapist.patients'))
+    # -----------------------------------------------------------
+    # FEATURE: Permitir crear paciente SIN email (solo nombre)
+    # -----------------------------------------------------------
+    import uuid
     
-    # Check if user already exists
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user:
-        flash('Este correo electrónico ya está registrado.', 'error')
-        return redirect(url_for('therapist.patients'))
+    is_full_account = False
+    password = None
+
+    # Caso 1: No hay email -> Crear usuario "placeholder" (inactivo)
+    if not email:
+        if not username:
+             flash('Debes ingresar al menos el Nombre del paciente si no proporcionas un email.', 'error')
+             return redirect(url_for('therapist.patients'))
+        
+        # Generar email ficticio único para cumplir constraint unique database
+        email = f"noemail_{uuid.uuid4().hex[:8]}@local"
+        password = uuid.uuid4().hex # Contraseña aleatoria desconocida
+        is_full_account = False
     
-    # Generate random password
-    password = EmailService.generate_password()
+    # Caso 2: Sí hay email -> Validar y crear usuario activo
+    else:
+        try:
+            valid = validate_email(email)
+            email = valid.email
+        except EmailNotValidError:
+            flash('Por favor, ingresa un correo electrónico válido.', 'error')
+            return redirect(url_for('therapist.patients'))
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Este correo electrónico ya está registrado.', 'error')
+            return redirect(url_for('therapist.patients'))
+        
+        password = EmailService.generate_password()
+        is_full_account = True
+    
     hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
     
     # Create new patient
@@ -639,33 +660,40 @@ def add_patient():
         email=email,
         password=hashed_pw,
         role='jugador',
-        is_active=True
+        is_active=is_full_account,    # Si no tiene email, no está activo
+        assigned_therapist_id=current_user.id  # Asignar al terapeuta actual
     )
     db.session.add(new_patient)
     db.session.commit()
 
-    # Create a notification for the therapist with credentials
-    notification_service.create_notification(
-        user_id=current_user.id,
-        message=f'Paciente {new_patient.username} agregado. Email: {email} | Contraseña: {password}',
-        link=url_for('therapist.patients')
-    )
+    if is_full_account:
+        # Create a notification for the therapist with credentials
+        notification_service.create_notification(
+            user_id=current_user.id,
+            message=f'Paciente {new_patient.username} agregado. Email: {email} | Contraseña: {password}',
+            link=url_for('therapist.patients')
+        )
 
-    # Send email (include username so message greets them by name)
-    email_sent = EmailService.send_welcome_email(email, password, new_patient.username)
-    
-    # Always show credentials in flash message for easy access
-    if email_sent:
-        flash(f'✅ Paciente {new_patient.username} agregado exitosamente.<br>'
-              f'📧 Email enviado a: <strong>{email}</strong><br>'
-              f'🔑 Contraseña temporal: <strong>{password}</strong><br>'
-              f'<small>El paciente recibirá estas credenciales por correo.</small>', 'success')
+        # Send email (include username so message greets them by name)
+        email_sent = EmailService.send_welcome_email(email, password, new_patient.username)
+        
+        # Always show credentials in flash message for easy access
+        if email_sent:
+            flash(f'✅ Paciente {new_patient.username} agregado exitosamente.<br>'
+                f'📧 Email enviado a: <strong>{email}</strong><br>'
+                f'🔑 Contraseña temporal: <strong>{password}</strong><br>'
+                f'<small>El paciente recibirá estas credenciales por correo.</small>', 'success')
+        else:
+            flash(f'✅ Paciente {new_patient.username} agregado exitosamente.<br>'
+                f'⚠️ No se pudo enviar el correo electrónico.<br>'
+                f'📧 Email: <strong>{email}</strong><br>'
+                f'🔑 Contraseña temporal: <strong>{password}</strong><br>'
+                f'<small>Por favor, comparte estas credenciales manualmente con el paciente.</small>', 'warning')
     else:
-        flash(f'✅ Paciente {new_patient.username} agregado exitosamente.<br>'
-              f'⚠️ No se pudo enviar el correo electrónico.<br>'
-              f'📧 Email: <strong>{email}</strong><br>'
-              f'🔑 Contraseña temporal: <strong>{password}</strong><br>'
-              f'<small>Por favor, comparte estas credenciales manualmente con el paciente.</small>', 'warning')
+        # Mensaje para usuario sin email
+        flash(f'✅ Paciente {new_patient.username} creado (Modo Presencial/Sin Email).<br>'
+              f'<small>Se ha creado el registro para gestionar terapias y pagos.</small><br>'
+              f'<small>⚠️ La cuenta no tiene acceso al sistema. Para activarla, edita el perfil y añade un email válido.</small>', 'success')
     
     return redirect(url_for('therapist.patients'))
 
@@ -816,7 +844,42 @@ def update_patient(patient_id):
         patient.therapy_goals = data['therapy_goals']
     if 'notes' in data:
         patient.notes = data['notes']
-    
+        
+    # Activar cuenta añadiendo email
+    if 'email' in data and data['email']:
+        new_email = data['email'].strip().lower()
+        # Solo procesar si cambia y no estaba ya tomado
+        if new_email != patient.email and new_email:
+            # Check exist
+            exists = User.query.filter_by(email=new_email).first()
+            if exists:
+                return jsonify({'success': False, 'message': 'El correo ya está registrado por otro usuario'}), 400
+            
+            # Detectar si estamos activando una cuenta previamente "sin email"
+            was_placeholder = patient.email.startswith('noemail_') or patient.email.startswith('temp_')
+            
+            patient.email = new_email
+            
+            if was_placeholder:
+                # Generar credenciales reales y activar
+                password = EmailService.generate_password()
+                patient.password = bcrypt.generate_password_hash(password).decode('utf-8')
+                patient.is_active = True
+                
+                # Intentar enviar correo
+                try:
+                    EmailService.send_welcome_email(new_email, password, patient.username)
+                    # Notificar al return para mostrar en UI
+                    db.session.commit()
+                    return jsonify({
+                        'success': True, 
+                        'message': 'Cuenta activada exitosamente. Se han enviado las credenciales por correo.',
+                        'new_credentials': {'email': new_email, 'password': password}
+                    })
+                except Exception:
+                     # Fallback si falla correo
+                    pass
+
     db.session.commit()
     
     return jsonify({'success': True, 'message': 'Paciente actualizado correctamente'})

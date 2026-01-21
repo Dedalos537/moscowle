@@ -281,7 +281,7 @@ function performUpload(file) {
 
     if (btn) btn.disabled = true;
 
-    fetch(`/api/appointments/${appointmentId}/upload_image`, {
+    fetch(`{{ url_for('api.upload_session_image', appointment_id=appointment.id) }}`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken
@@ -416,7 +416,9 @@ function deleteCurrentImage() {
     // Show deleting state (optional)
     img.style.opacity = '0.3';
     
-    fetch(`/api/appointments/${appointmentId}/images/${imageId}`, {
+    const deleteUrl = "{{ url_for('api.delete_session_image', appointment_id=appointment.id, image_id=0) }}".replace('0', imageId);
+    
+    fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
             'X-CSRFToken': csrfToken
@@ -479,7 +481,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 function setAttendance(state) {
-    fetch(`/api/sessions/${appointmentId}`, {
+    fetch("{{ url_for('api.api_update_session', session_id=appointment.id) }}", {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -510,7 +512,7 @@ function saveNotes() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> <span class="hidden sm:inline">Guardando...</span>';
     btn.disabled = true;
 
-    fetch(`/api/sessions/${appointmentId}`, {
+    fetch("{{ url_for('api.api_update_session', session_id=appointment.id) }}", {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

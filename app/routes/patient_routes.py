@@ -6,8 +6,7 @@ from app.services.appointment_service import AppointmentService
 from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone
 from sqlalchemy import func, or_
 import json
-import pytz
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 dashboard_service = DashboardService()
@@ -58,9 +57,9 @@ def dashboard():
         
         # Localize DB times to UTC for comparison with aware 'now'
         # DB stores naive UTC
-        s_start_aware = s.start_time.replace(tzinfo=pytz.UTC)
+        s_start_aware = s.start_time.replace(tzinfo=timezone.utc)
         s_end_val = s.end_time or (s.start_time + timedelta(hours=1))
-        s_end_aware = s_end_val.replace(tzinfo=pytz.UTC)
+        s_end_aware = s_end_val.replace(tzinfo=timezone.utc)
 
         # Check if session is active (within time window)
         is_active = False
@@ -146,7 +145,7 @@ def sessions():
                 is_active = True
         
         # Convert to local time for display
-        s_start_utc = s.start_time.replace(tzinfo=pytz.UTC)
+        s_start_utc = s.start_time.replace(tzinfo=timezone.utc)
         s_start_local = s_start_utc.astimezone(user_tz)
 
         sessions_data.append({
@@ -279,8 +278,7 @@ def my_therapist():
     therapist = None
     if current_user.assigned_therapist_id:
         therapist = User.query.get(current_user.assigned_therapist_id)
-    if not therapist:
-        therapist = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).first()
+    # Fallback removed: Do not show random therapist if none assigned
 
     # Recent messages from admin or assigned therapist
     recent_messages = []
@@ -317,15 +315,14 @@ def messages():
     if current_user.role != 'jugador':
         return redirect(url_for('main.messages_list'))
 
-    # Patient sees assigned therapist; fallback to any active therapist
+    # Patient sees assigned therapist
     therapist = None
     if current_user.assigned_therapist_id:
         therapist = User.query.get(current_user.assigned_therapist_id)
+        
     if not therapist:
-        therapist = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).first()
-    if not therapist:
-        flash('No hay terapeutas disponibles', 'error')
-        return redirect(url_for('patient.dashboard'))
+        flash('No tienes un terapeuta asignado para enviar mensajes.', 'warning')
+        return redirect(url_for('patient.my_therapist'))
     
     # Get messages with this therapist
     messages = Message.query.filter(

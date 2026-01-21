@@ -12,7 +12,7 @@ from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt
 from app.services.email_service import EmailService
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import uuid
@@ -41,8 +41,7 @@ def _parse_datetime(value):
         dt = datetime.fromisoformat(value)
         # If timezone aware, convert to UTC and make naive
         if dt.tzinfo:
-            import pytz
-            dt = dt.astimezone(pytz.UTC).replace(tzinfo=None)
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
         return dt
     except Exception:
         # Try common formats
@@ -528,19 +527,66 @@ def api_admin_assign_therapist():
 @api_bp.route('/admin/create-user', methods=['POST'])
 @login_required
 def api_admin_create_user():
+    try:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+        data = request.get_json(silent=True) or {}
+        
+        # Validation logic updated to allow "Patient without email" (Presencial)
+        role = data.get('role')
+        email = data.get('email', '').strip()
+        username = data.get('username', '').strip()
+
+        if not role:
+            return jsonify({'success': False, 'message': 'El rol es obligatorio'}), 400
+        
+        # If role is NOT patient, email is mandatory
+        if role != 'jugador' and not email:
+            return jsonify({'success': False, 'message': 'El email es obligatorio para administradores y terapeutas'}), 400
+            
+        # If role IS patient, either email OR username is required
+        if role == 'jugador' and not email and not username:
+            return jsonify({'success': False, 'message': 'Debes ingresar al menos el Nombre del paciente'}), 400
+
+        success, result = admin_service.create_user(data)
+        if not success:
+            return jsonify({'success': False, 'message': result}), 400
+            
+        user_obj = result.get('user') if isinstance(result, dict) else None
+        temp_pass = result.get('temp_password') if isinstance(result, dict) else None
+        
+        if not user_obj:
+            # Fallback if service returned weird format
+            return jsonify({'success': True, 'message': 'Usuario creado (sin datos de retorno)'})
+            
+        return jsonify({
+            'success': True, 
+            'message': 'Usuario creado',
+            'temp_password': temp_pass
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error creating user: {str(e)}")
+        return jsonify({'success': False, 'message': f"Server Error: {str(e)}"}), 500
+
+@api_bp.route('/admin/reset-password', methods=['POST'])
+@login_required
+def api_admin_reset_password():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
+    user_id = data.get('id')
+    new_password = data.get('new_password')
     
-    # Basic validation (schema validation could be added here)
-    if not data.get('email') or not data.get('role'):
-        return jsonify({'success': False, 'message': 'Faltan datos requeridos'}), 400
-
-    success, result = admin_service.create_user(data)
+    if not user_id:
+        return jsonify({'success': False, 'message': 'ID de usuario requerido'}), 400
+    
+    # new_password is optional now
+        
+    success, result = admin_service.reset_user_password(user_id, new_password)
     if not success:
         return jsonify({'success': False, 'message': result}), 400
         
-    return jsonify({'success': True, 'user': {'id': result.id, 'username': result.username, 'email': result.email}})
+    return jsonify({'success': True, 'temp_password': result})
 
 @api_bp.route('/admin/games/delete', methods=['POST'])
 @login_required
@@ -594,18 +640,25 @@ def api_admin_list_users():
 @api_bp.route('/admin/update-user', methods=['POST'])
 @login_required
 def api_admin_update_user():
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-    data = request.get_json(silent=True) or {}
-    errors = UpdateUserSchema().validate(data)
-    if errors:
-        return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
+    try:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+            
+        data = request.get_json(silent=True) or {}
         
-    success, result = admin_service.update_user(data)
-    if not success:
-        return jsonify({'success': False, 'message': result}), 400
-        
-    return jsonify({'success': True})
+        # Validate schema
+        errors = UpdateUserSchema().validate(data)
+        if errors:
+            return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
+            
+        success, result = admin_service.update_user(data)
+        if not success:
+            return jsonify({'success': False, 'message': result}), 400
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        current_app.logger.error(f"Error updating user: {str(e)}")
+        return jsonify({'success': False, 'message': f"Server Error: {str(e)}"}), 500
 
 @api_bp.route('/admin/delete-user', methods=['POST'])
 @login_required
@@ -1125,6 +1178,18 @@ def send_message():
         message=f'Nuevo mensaje de {current_user.username}',
         link=url_for('main.messages_list')
     )
+    
+    # Send Email Notification
+    try:
+        email_service = EmailService()
+        email_service.send_new_message_email(
+            receiver.email,
+            receiver.username,
+            current_user.username,
+            (body or "Has recibido un archivo adjunto")[:100] + ('...' if body and len(body) > 100 else '')
+        )
+    except Exception:
+        pass # Non-critical
     
     return jsonify({
         'success': True,

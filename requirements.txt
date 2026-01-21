@@ -5,6 +5,10 @@ Werkzeug==2.3.8
 # Database & ORM
 Flask-SQLAlchemy==3.0.3
 SQLAlchemy>=2.0.0
+Flask-Migrate>=4.0.0
+# Optional: MySQL connector for production
+pymysql>=1.1.0 
+mysql-connector-python>=8.0.0
 
 # Authentication & Security
 Flask-Login==0.6.2
@@ -14,7 +18,7 @@ PyJWT>=2.8.0
 
 # Email Service
 Flask-Mail==0.9.1
-email-validator==2.1.0
+email-validator>=2.1.0
 
 # Background Tasks & Scheduling
 APScheduler==3.10.4
@@ -44,7 +48,5 @@ Flask-Limiter>=2.0.0
 ntplib>=0.4.0
 python-json-logger>=2.0.2
 
-# Development & Testing
-pytest>=7.4.0
-pytest-cov>=4.1.0
-flake8>=6.0.0
+# Visualization & Utils
+plotly>=5.15.0

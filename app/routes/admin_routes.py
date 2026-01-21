@@ -381,14 +381,31 @@ def register_payment():
     if current_user.role != 'admin':
         return redirect(url_for('main.dashboard'))
     # Collect form data and validate
+    discount_input = request.form.get('discount')
+    if not discount_input or discount_input.strip() == '':
+        discount_input = 0.0
+
+    next_date_input = request.form.get('next_due_date')
+    if not next_date_input or next_date_input.strip() == '':
+         next_date_input = None
+         
     form = {
         'patient_id': request.form.get('patient_id'),
         'amount': request.form.get('amount'),
-        'discount': request.form.get('discount'),
+        'discount': discount_input,
         'method': request.form.get('method'),
         'reference': request.form.get('reference'),
-        'next_due_date': request.form.get('next_due_date')
+        'next_due_date': next_date_input
     }
+
+    # Manual payment date extraction
+    payment_date_str = request.form.get('payment_date')
+    payment_date_obj = None
+    if payment_date_str:
+        try:
+             payment_date_obj = datetime.strptime(payment_date_str, '%Y-%m-%d')
+        except ValueError:
+             pass 
 
     data, errors = validate_payment_register(form)
     if errors:
@@ -428,7 +445,7 @@ def register_payment():
     except:
          discount_val = 0.0
 
-    success, msg = payment_service.register_payment(patient_id, float(amount), method, reference, next_due_date, receipt_path, discount_val)
+    success, msg = payment_service.register_payment(patient_id, float(amount), method, reference, next_due_date, receipt_path, discount_val, payment_date=payment_date_obj)
     if success:
         flash(msg, 'success')
     else:

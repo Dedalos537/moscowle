@@ -1,14 +1,21 @@
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime, timedelta, timezone
+try:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+except ImportError:
+    # Fallback minimal implementation if zoneinfo missing (unlikely on Python 3.9+)
+    class ZoneInfo:
+        def __init__(self, key):
+             pass
+    ZoneInfoNotFoundError = Exception
 
 def get_user_timezone(user):
-    """Helper to get a pytz timezone object from user."""
+    """Helper to get a ZoneInfo object from user."""
     if not user or not user.timezone:
-        return pytz.UTC
+        return timezone.utc
     try:
-        return pytz.timezone(user.timezone)
-    except pytz.UnknownTimeZoneError:
-        return pytz.UTC
+        return ZoneInfo(user.timezone)
+    except (ZoneInfoNotFoundError, Exception):
+        return timezone.utc
 
 def get_user_now(user):
     """
@@ -34,8 +41,8 @@ def get_user_today_utc_range(user):
     local_end = local_start + timedelta(days=1)
     
     # Convert to UTC
-    start_utc = local_start.astimezone(pytz.UTC).replace(tzinfo=None)
-    end_utc = local_end.astimezone(pytz.UTC).replace(tzinfo=None)
+    start_utc = local_start.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = local_end.astimezone(timezone.utc).replace(tzinfo=None)
     
     return start_utc, end_utc
 
@@ -63,14 +70,17 @@ def normalize_datetime_for_storage(dt_input, user_timezone_str='UTC'):
     else:
         dt = dt_input
     
-    user_tz = pytz.timezone(user_timezone_str)
+    try:
+        user_tz = ZoneInfo(user_timezone_str)
+    except:
+        user_tz = timezone.utc
     
     # If naive, assume it's in user's local time
     if dt.tzinfo is None:
-        dt = user_tz.localize(dt)
+        dt = dt.replace(tzinfo=user_tz)
     
     # Convert to UTC and make naive
-    return dt.astimezone(pytz.UTC).replace(tzinfo=None)
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 def localize_datetime_for_display(dt_utc_naive, user_timezone_str='UTC'):
     """
@@ -86,10 +96,13 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str='UTC'):
     if dt_utc_naive is None:
         return None
     
-    user_tz = pytz.timezone(user_timezone_str)
+    try:
+        user_tz = ZoneInfo(user_timezone_str)
+    except:
+        user_tz = timezone.utc
     
     # Make it aware as UTC first
-    dt_utc_aware = pytz.UTC.localize(dt_utc_naive)
+    dt_utc_aware = dt_utc_naive.replace(tzinfo=timezone.utc)
     
     # Convert to user's timezone
     return dt_utc_aware.astimezone(user_tz)

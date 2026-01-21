@@ -164,8 +164,8 @@
   <div id="sidebar" class="fixed left-0 top-0 h-screen w-72 bg-surface shadow-soft-lg flex flex-col overflow-y-auto transition-transform duration-300 z-50 -translate-x-full lg:translate-x-0">
     <div id="logo-section" class="px-8 py-8 border-b border-gray-100 flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-primary rounded-soft flex items-center justify-center">
-          <i class="fa-solid fa-brain text-white text-xl"></i>
+        <div class="w-16 h-16">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" class="w-full h-full object-contain">
         </div>
         <div>
           <h1 class="text-lg font-bold text-textDark leading-tight">
@@ -421,7 +421,7 @@
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
       function fetchNotifications() {
-        fetch("/api/notifications")
+        fetch("{{ url_for('api.get_notifications') }}")
           .then((response) => response.json())
           .then((data) => {
             notificationList.innerHTML = "";
@@ -478,7 +478,7 @@
         if (!isHidden) {
           fetchNotifications();
           // Mark as read when opening
-          fetch("/api/notifications/mark-read", { 
+          fetch("{{ url_for('api.mark_notifications_read') }}", { 
               method: "POST",
               headers: { 
                   "Content-Type": "application/json",
@@ -513,7 +513,7 @@
 
       markAllRead.addEventListener("click", (e) => {
         e.preventDefault();
-        fetch("/api/notifications/mark-read", { 
+        fetch("{{ url_for('api.mark_notifications_read') }}", { 
             method: "POST",
             headers: { 
                   "Content-Type": "application/json",
@@ -549,7 +549,7 @@
       function fetchUnreadMessages() {
         const badge = document.getElementById("sidebar-unread-badge");
         if (!badge) return; // Sidebar badge removed in some roles
-        fetch("/api/messages/unread-count")
+        fetch("{{ url_for('api.unread_messages_count') }}")
           .then((res) => res.json())
           .then((data) => {
             if (data.count > 0) {

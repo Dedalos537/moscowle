@@ -222,6 +222,18 @@
         </div>
 
         <form id="editForm" class="space-y-4">
+            <!-- Email Field for Activation -->
+            <div>
+                <label class="block text-sm font-medium text-textDark mb-2">Email (Cuenta de Acceso)</label>
+                <input type="email" id="email" 
+                       value="{{ '' if (patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_'))) else patient.email }}"
+                       placeholder="{{ 'Ingresa un email para activar la cuenta' if (patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_'))) else '' }}"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                {% if patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_')) %}
+                <p class="text-xs text-amber-600 mt-1 font-medium"><i class="fas fa-exclamation-triangle"></i> Cuenta presencial. Agrega un email para generar contraseña y dar acceso.</p>
+                {% endif %}
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-textDark mb-2">Teléfono</label>
@@ -343,6 +355,7 @@
         e.preventDefault();
         
         const formData = {
+            email: document.getElementById('email').value,
             phone: document.getElementById('phone').value,
             date_of_birth: document.getElementById('date_of_birth').value,
             guardian_name: document.getElementById('guardian_name').value,
@@ -351,7 +364,7 @@
             notes: document.getElementById('notes').value
         };
 
-        fetch('/patients/{{ patient.id }}/update', {
+        fetch("{{ url_for('therapist.update_patient', patient_id=patient.id) }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

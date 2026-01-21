@@ -26,6 +26,9 @@ class User(db.Model, UserMixin):
     assigned_therapist = db.relationship('User', remote_side=[id], backref=db.backref('assigned_patients', lazy=True))
     # JSON string for AI-generated game profile/config per user
     game_profile = db.Column(db.Text, nullable=True)
+    
+    # Security/Admin fields
+    admin_password_changed_count = db.Column(db.Integer, default=0)
 
     # Payment System Fields
     payment_plan = db.Column(db.String(50), default='monthly') # monthly, bi-weekly

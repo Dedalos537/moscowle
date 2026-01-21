@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from config import Config
 from app.extensions import db, bcrypt, mail, oauth, login_manager, limiter
 from flask_talisman import Talisman
@@ -34,9 +34,10 @@ def create_app(config_class=Config):
     try:
         csp = {
             'default-src': ["'self'"],
-            'script-src': ["'self'", "'unsafe-inline'"],
-            'style-src': ["'self'", "'unsafe-inline'"],
-            'img-src': ["'self'", 'data:'],
+            'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            'font-src': ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            'img-src': ["'self'", 'data:', 'https://ui-avatars.com'],
             'connect-src': ["'self'"],
             'frame-ancestors': ["'self'"]
         }
@@ -45,7 +46,10 @@ def create_app(config_class=Config):
         report_uri = os.getenv('CSP_REPORT_URI', '/csp-report')
 
         # Force HTTPS only if configured (e.g. in production)
+        # WARNING: Setting this to True behind a proxy without proper headers can cause redirect loops or errors
         force_https = os.getenv('FORCE_HTTPS', 'False') == 'True'
+        
+        from flask_talisman import Talisman
         Talisman(app,
             content_security_policy=csp,
             content_security_policy_report_only=report_only,
@@ -101,11 +105,14 @@ def create_app(config_class=Config):
         app.logger.warning(f"Sentry initialization failed: {e}")
 
     # CSRF protection for forms and session-based requests
+    # CRITICAL: Ensure csrf_token is available in templates even if init fails
     try:
         csrf = CSRFProtect()
         csrf.init_app(app)
     except Exception as e:
         app.logger.warning(f"CSRFProtect not initialized: {e}")
+        # Inject dummy csrf_token to prevent template 500 errors
+        app.jinja_env.globals['csrf_token'] = lambda: ''
 
     # Structured JSON logging setup
     try:
@@ -320,29 +327,29 @@ def create_app(config_class=Config):
             app.logger.warning(f"Schema migration warning: {e}")
         
         # Initial model training behavior is configurable via env vars:
-        # - SKIP_MODEL_TRAIN=1 : skip training entirely at startup
-        # - TRAIN_IN_BACKGROUND=0 : run training synchronously (blocking)
-        # By default training runs in background (daemon thread) to avoid delaying startup.
+        # - SKIP_MODEL_TRAIN=1 : skip training entirely at startup (DEFAULT)
+        # - TRAIN_ON_STARTUP=1 : enable training on startup
         try:
-            if os.getenv('SKIP_MODEL_TRAIN') == '1':
-                app.logger.info('SKIP_MODEL_TRAIN=1 — skipping initial model training.')
-            else:
+            if os.getenv('TRAIN_ON_STARTUP') == '1':
                 if os.getenv('TRAIN_IN_BACKGROUND', '1') == '1':
                     def _bg_train():
                         try:
                             train_model()
                         except Exception as ex:
-                            app.logger.exception(f'Background training failed: {ex}')
+                            # app.logger might not be ready in thread context for exception
+                            print(f'Background training failed: {ex}')
 
                     thr = threading.Thread(target=_bg_train, daemon=True)
                     thr.start()
                     app.logger.info('Started background model training thread')
                 else:
-                    app.logger.info('TRAIN_IN_BACKGROUND=0 — running initial train_model() synchronously')
+                    app.logger.info('TRAIN_ON_STARTUP=1 — running initial train_model() synchronously')
                     try:
                         train_model()
                     except Exception as ex:
                         app.logger.exception(f'Initial training failed: {ex}')
+            else:
+                 app.logger.info('Skipping initial model training (TRAIN_ON_STARTUP not set).')
         except Exception as ex:
             app.logger.exception(f'Error while scheduling initial training: {ex}')
         

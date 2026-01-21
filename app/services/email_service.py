@@ -95,3 +95,87 @@ class EmailService:
         except Exception as e:
             current_app.logger.error(f"Failed to send payment reminder to {recipient_email}: {str(e)}")
             return False
+
+    @staticmethod
+    def send_payment_confirmation(recipient_email, username, amount, date, method):
+        """Send a payment confirmation email."""
+        if not current_app.config.get('MAIL_USERNAME'):
+            current_app.logger.warning("Email not configured. Skipping payment confirmation.")
+            return False
+            
+        try:
+            subject = "Confirmación de Pago - Moscowle"
+            body = (
+                f"Hola {username},\n\n"
+                f"Hemos recibido tu pago exitosamente.\n\n"
+                f"Detalles del pago:\n"
+                f"Monto: S/ {amount:.2f}\n"
+                f"Fecha: {date.strftime('%d/%m/%Y %H:%M')}\n"
+                f"Método: {method}\n\n"
+                "Gracias por mantener tu cuenta al día.\n\n"
+                "Saludos,\nEquipo Moscowle"
+            )
+            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            mail.send(msg)
+            current_app.logger.info(f"Payment confirmation email sent to {recipient_email}")
+            return True
+        except Exception as e:
+            current_app.logger.error(f"Failed to send payment confirmation to {recipient_email}: {str(e)}")
+            return False
+
+    @staticmethod
+    def send_session_notification(recipient_email, username, action, details, user_role='patient'):
+        """
+        Send session notification (created, updated, cancelled).
+        action: 'programada', 'actualizada', 'cancelada'
+        """
+        if not current_app.config.get('MAIL_USERNAME'):
+            return False
+            
+        try:
+            subject = f"Sesión {action} - Moscowle"
+            
+            if action == 'programada':
+                intro = "Se ha programado una nueva sesión."
+            elif action == 'actualizada':
+                intro = "Tu sesión ha sido actualizada."
+            elif action == 'cancelada':
+                intro = "Una sesión ha sido cancelada."
+            else:
+                intro = "Notificación de sesión."
+
+            body = (
+                f"Hola {username},\n\n"
+                f"{intro}\n\n"
+                f"Detalles:\n{details}\n\n"
+                "Ingresa a la plataforma para ver más información.\n\n"
+                "Saludos,\nEquipo Moscowle"
+            )
+            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            mail.send(msg)
+            return True
+        except Exception as e:
+            current_app.logger.error(f"Failed to send session notification to {recipient_email}: {str(e)}")
+            return False
+
+    @staticmethod
+    def send_new_message_email(recipient_email, recipient_name, sender_name, message_snippet=""):
+        """Send a notification about a new private message."""
+        if not current_app.config.get('MAIL_USERNAME'):
+            return False
+            
+        try:
+            subject = f"Nuevo mensaje de {sender_name} - Moscowle"
+            body = (
+                f"Hola {recipient_name},\n\n"
+                f"Has recibido un nuevo mensaje de {sender_name}.\n\n"
+                f"\"{message_snippet}\"\n\n"
+                "Inicia sesión para responder.\n\n"
+                "Saludos,\nEquipo Moscowle"
+            )
+            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            mail.send(msg)
+            return True
+        except Exception as e:
+            current_app.logger.error(f"Failed to send message notification to {recipient_email}: {str(e)}")
+            return False

@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('name', name);
-        const res = await fetch('/api/games/upload', { method: 'POST', body: fd });
+        const res = await fetch('{{ url_for("api.upload_game") }}', { method: 'POST', body: fd });
         const data = await res.json();
         if (data.status === 'ok') {
             const li = document.createElement('li');
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const acc = parseFloat(accInput.value || '0');
         const avg = parseFloat(avgInput.value || '0');
         aiOutput.textContent = 'Consultando IA...';
-        const res = await fetch('/api/ai/gemini', {
+        const res = await fetch('{{ url_for("api.gemini_proxy") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load patients for select
     (async () => {
         try {
-            const res = await fetch('/api/patients');
+            const res = await fetch('{{ url_for("api.api_patients") }}');
             const pts = await res.json();
             patientSelect.innerHTML = pts.map(p => `<option value="${p.id}">${p.username || p.email}</option>`).join('');
         } catch(e) {
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load upcoming sessions
     (async () => {
         try {
-            const res = await fetch('/api/sessions/upcoming');
+            const res = await fetch('{{ url_for("api.api_upcoming_sessions") }}');
             const sessions = await res.json();
             sessionSelect.innerHTML = sessions.map(s => `<option value="${s.id}">${s.patient} — ${new Date(s.start_time).toLocaleString()}</option>`).join('');
         } catch(e) {
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         aiGenStatus.textContent = 'Generando juego con IA...';
         try {
-            const res = await fetch('/api/ai/generate_game', {
+            const res = await fetch('{{ url_for("api.generate_game") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: parseInt(userId, 10), name, prompt })
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const games = checks.map(c => ({ name: c.value, url: `/static/games/${c.value}` }));
         assignStatus.textContent = 'Asignando...';
         try {
-            const res = await fetch('/api/sessions/assign-games', {
+            const res = await fetch('{{ url_for("api.assign_games_to_session") }}', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: parseInt(sid, 10), games })
             });
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sid) { assignStatus.textContent = 'Elige sesión.'; return; }
         assignStatus.textContent = 'Finalizando sesión...';
         try {
-            const res = await fetch(`/api/sessions/${sid}/complete`, { method: 'POST' });
+            const res = await fetch(`{{ url_for('api.api_complete_session', session_id=0) }}`.replace('0', sid), { method: 'POST' });
             const data = await res.json();
             assignStatus.textContent = data.status === 'ok' ? 'Sesión finalizada.' : ('Error: ' + (data.error || ''));
         } catch(e) {

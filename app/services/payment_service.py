@@ -43,7 +43,7 @@ class PaymentService:
             })
         return results
 
-    def register_payment(self, patient_id, amount, method, reference, next_due_date_str, receipt_path=None, discount=0.0):
+    def register_payment(self, patient_id, amount, method, reference, next_due_date_str, receipt_path=None, discount=0.0, payment_date=None):
         """
         Registers a payment and updates user status.
         """
@@ -52,7 +52,9 @@ class PaymentService:
             return False, "Usuario no encontrado"
 
         try:
-            # 1. Create Payment Record
+            # 1. Create Payment Record (use provided date or UTC now)
+            payment_datetime = payment_date if payment_date else datetime.utcnow()
+
             new_payment = Payment(
                 patient_id=patient_id,
                 amount=amount,
@@ -60,7 +62,7 @@ class PaymentService:
                 reference=reference,
                 receipt_image_path=receipt_path,
                 discount=discount,
-                date=datetime.utcnow()
+                date=payment_datetime
             )
             db.session.add(new_payment)
             
@@ -79,6 +81,19 @@ class PaymentService:
                 user.is_active = True
                 
             db.session.commit()
+            
+            # Send Email Confirmation
+            try:
+                self.email_service.send_payment_confirmation(
+                    user.email,
+                    user.username,
+                    amount,
+                    new_payment.date,
+                    method
+                )
+            except Exception:
+                pass # Non-critical
+            
             return True, "Pago registrado exitosamente"
         except Exception as e:
             db.session.rollback()

@@ -5,6 +5,14 @@
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # ----------------------------------------------------------------------
+    # FIX: STATIC FILES REROUTING
+    # This tells Apache to serve files from app/static/ when /static/ is requested
+    # avoiding the need for Python to handle static asset calls.
+    # ----------------------------------------------------------------------
+    RewriteRule ^static/(.*)$ app/static/$1 [L]
+
     # Force HTTPS
     RewriteCond %{HTTPS} !=on
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

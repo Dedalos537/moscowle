@@ -31,27 +31,87 @@ class AdminService:
 
     def create_user(self, data):
         email = data.get('email', '').strip().lower()
-        if User.query.filter_by(email=email).first():
-            return False, "El correo ya está registrado"
+        role = data.get('role')
+        username = data.get('username')
+        
+        # 1. Validation for Duplicate Email (only if email provided)
+        if email:
+            if User.query.filter_by(email=email).first():
+                return False, "El correo ya está registrado"
+        
+        # 2. Handle "No Email" case
+        import uuid # Keep this just in case, but usually better at top. 
+        # Actually I will move it to top in next edit if I care, but just fixing the logic.
+        
+        is_active = True
+        plain_password = None
+        
+        if not email:
+            # Generate fake unique email for DB constraint
+            email = f"noemail_{uuid.uuid4().hex[:8]}@local"
+            # Random password, user can't login anyway
+            plain_password = uuid.uuid4().hex 
+            is_active = False # Inactive until they provide real email
+        else:
+            # Normal flow
+            plain_password = self.email_service.generate_password()
+            is_active = True
             
-        plain_password = self.email_service.generate_password()
         hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
         
         user = User(
-            username=data.get('username'),
+            username=username or email.split('@')[0],
             email=email,
             password=hashed_password,
-            role=data.get('role'),
-            is_active=True
+            role=role,
+            is_active=is_active
         )
         
         db.session.add(user)
         db.session.commit()
         
-        # Send email
-        self.email_service.send_welcome_email(email, plain_password, user.username)
+        # Send email only if real email
+        if is_active and 'noemail_' not in email:
+            try:
+                self.email_service.send_welcome_email(email, plain_password, user.username)
+            except Exception:
+                pass # Don't block creation if email fails
         
-        return True, user
+        # Return object with user and password
+        return True, {'user': user, 'temp_password': plain_password if is_active else 'N/A (Presencial)'}
+
+    def reset_user_password(self, user_id, new_password=None):
+        """
+        Resets user password. 
+        If 1st time (count=0), admin usually sets it manually.
+        Subsequent times, it can be auto-generated.
+        """
+        user = User.query.get(user_id)
+        if not user:
+            return False, "Usuario no encontrado"
+
+        # Limit removed as per user request
+        # if user.admin_password_changed_count >= 1: ...
+
+        plain_password = new_password if new_password else self.email_service.generate_password()
+        hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
+
+        user.password = hashed_password
+        user.admin_password_changed_count += 1
+        db.session.commit()
+        
+        # Notify user via email
+        try:
+            msg_type = "manual" if new_password else "automatico"
+            self.email_service.send_email(
+                user.email,
+                "Tu contraseña ha sido actualizada",
+                f"Hola {user.username},\n\nTu contraseña ha sido actualizada ({msg_type}).\nNueva contraseña: {plain_password}\n\nPor favor, contacta con soporte si no solicitaste esto."
+            )
+        except Exception:
+            pass
+            
+        return True, plain_password
 
     def update_user(self, data):
         user_id = data.get('id')
@@ -101,6 +161,14 @@ class AdminService:
             db.session.add(msg)
             try:
                 self.notification_service.create_notification(u.id, f"Mensaje del administrador: {subject or 'Sin asunto'}", url_for('main.messages_list'))
+                
+                # Send email
+                self.email_service.send_new_message_email(
+                    u.email,
+                    u.username,
+                    "Administrador",
+                    body[:100] + '...' if body and len(body) > 100 else body
+                )
             except Exception:
                 pass
                 

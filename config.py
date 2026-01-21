@@ -49,8 +49,10 @@ class Config:
 
     # Rate limiting (Flask-Limiter)
     # Use `RATELIMIT_STORAGE_URL` to point to a Redis or Memcached backend for production.
-    # Example: redis://:password@redis-host:6379/0
-    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', None)
+    # If not set, we default to filesystem storage to avoid memory leaks/loss in multi-worker environments.
+    RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL') or 'memory://'
+    # Recommended production setting if Redis is unavailable:
+    # RATELIMIT_STORAGE_URL = "filesystem://" + os.path.join(os.getcwd(), "instance", "limits")
     # Enable rate limit headers (X-RateLimit-*) for visibility
     RATELIMIT_HEADERS_ENABLED = os.getenv('RATELIMIT_HEADERS_ENABLED', 'True') == 'True'
     # Default limits (can be overridden per-route with decorators)

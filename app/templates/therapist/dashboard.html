@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentData = { weekly_progress: [], alerts: [] };
 
     // Fetch insights and render chart + refresh alerts
-    fetch('/api/therapist/insights')
+    fetch("{{ url_for('api.therapist_insights') }}")
         .then(r => r.json())
         .then(data => {
             currentData = data;
@@ -720,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function ensureGamesLoaded() {
             try {
-                const res = await fetch("/api/games");
+                const res = await fetch("{{ url_for('api.api_list_games') }}");
                 if (!res.ok) throw new Error("No se pudo cargar juegos");
                 const data = await res.json();
                 const select = document.getElementById("games-select");
@@ -749,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function ensurePatientsLoaded() {
           try {
-            const res = await fetch("/api/patients");
+            const res = await fetch("{{ url_for('api.api_patients') }}");
             if (!res.ok) throw new Error("No se pudo cargar pacientes");
             const patients = await res.json();
             const select = document.getElementById("patient-select");
@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         games: selectedGames
                       };
 
-                      const res = await fetch("/api/sessions", {
+                      const res = await fetch("{{ url_for('api.api_create_session') }}", {
                           method: "POST",
                           headers: { 
                               "Content-Type": "application/json",

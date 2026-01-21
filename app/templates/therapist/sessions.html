@@ -486,10 +486,11 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        const SESSION_REVIEW_URL_TEMPLATE = "{{ url_for('therapist.session_review', appointment_id=999999) }}";
         console.log(
           "[DEBUG] Sessions script started execution (DOMContentLoaded)"
         );
-        const API_URL = "/api/sessions";
+        const API_URL = "{{ url_for('api.api_get_sessions') }}";
         const PAGE_SIZE = 5;
         let allSessions = [];
         let currentPage = 1;
@@ -505,7 +506,7 @@
 
         async function refreshNotifications() {
           try {
-            const res = await fetch("/api/notifications");
+            const res = await fetch("{{ url_for('api.get_notifications') }}");
             if (!res.ok) return;
             const list = await res.json();
             window.dispatchEvent(
@@ -784,7 +785,7 @@
                     <button class="p-2 text-gray-600 hover:text-primary transition-colors" title="Ver detalles" data-action="view">
                       <i class="fas fa-eye"></i>
                     </button>
-                    <a href="/therapist/appointments/${s.id}/review" class="p-2 text-gray-600 hover:text-purple-600 transition-colors" title="Revisar / Imágenes">
+                    <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="p-2 text-gray-600 hover:text-purple-600 transition-colors" title="Revisar / Imágenes">
                       <i class="fas fa-camera"></i>
                     </a>
                     <button class="p-2 text-gray-600 hover:text-blue-500 transition-colors" title="Editar" data-action="edit">
@@ -1104,7 +1105,7 @@
         async function ensureGamesLoaded() {
             if (gamesLoaded) return;
             try {
-                const res = await fetch("/api/games");
+                const res = await fetch("{{ url_for('api.api_list_games') }}");
                 if (!res.ok) throw new Error("No se pudo cargar juegos");
                 const data = await res.json();
                 const select = document.getElementById("games-select");
@@ -1135,7 +1136,7 @@
         async function ensurePatientsLoaded() {
           if (patientsLoaded) return;
           try {
-            const res = await fetch("/api/patients");
+            const res = await fetch("{{ url_for('api.api_patients') }}");
             if (!res.ok) throw new Error("No se pudo cargar pacientes");
             const patients = await res.json();
             const select = document.getElementById("patient-select");
@@ -1457,7 +1458,7 @@
           try {
             sessionGamesStatus.textContent = "Cargando juegos asignados...";
             sessionGamesList.innerHTML = "";
-            const res = await fetch(`/api/sessions/${sessionId}/games`);
+            const res = await fetch(`{{ url_for('api.session_games', session_id=0) }}`.replace('0', sessionId));
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Error al cargar juegos");
             if (!data.enabled) {
@@ -1500,6 +1501,7 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        const SESSION_REVIEW_URL_TEMPLATE = "{{ url_for('therapist.session_review', appointment_id=999999) }}";
         const monthLabelEl = document.getElementById("calendar-month-label");
         const gridEl = document.getElementById("calendar-grid");
         const prevBtn = document.getElementById("cal-prev");
@@ -1544,7 +1546,7 @@
           const e = `${endDate.getFullYear()}-${pad(
             endDate.getMonth() + 1
           )}-${pad(endDate.getDate())}`;
-          const res = await fetch(`/api/sessions?start=${s}&end=${e}`);
+          const res = await fetch(`{{ url_for('api.api_get_sessions') }}?start=${s}&end=${e}`);
           if (!res.ok) return [];
           return await res.json();
         }
@@ -1710,7 +1712,7 @@
           const dateStr = `${year}-${pad(month)}-${pad(day)}`;
           const offset = new Date().getTimezoneOffset();
           try {
-            const res = await fetch(`/api/sessions/day?date=${dateStr}&timezone_offset=${offset}`);
+            const res = await fetch(`{{ url_for('api.api_get_sessions_day') }}?date=${dateStr}&timezone_offset=${offset}`);
             if (!res.ok) throw new Error("Error fetching sessions");
             const data = await res.json();
             renderDaySessions(data);
@@ -1763,7 +1765,7 @@
                     </div>
                     <p class="font-semibold text-textDark mb-1">${patientName}</p>
                     <p class="text-xs text-gray-600 mb-3">${s.title || ""}</p>
-                    <a href="/therapist/appointments/${s.id}/review" class="block w-full text-center py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-colors">
+                    <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block w-full text-center py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-primary hover:text-white hover:border-primary transition-colors">
                         Ver Detalles
                     </a>
                 `;
@@ -1835,7 +1837,7 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <a href="/therapist/appointments/${s.id}/review" class="text-primary hover:text-primary-dark mr-3">Ver Detalles</a>
+                        <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="text-primary hover:text-primary-dark mr-3">Ver Detalles</a>
                     </td>
                 `;
                 sessionsTbody.appendChild(tr);
@@ -1861,7 +1863,7 @@
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-xs text-gray-500">${s.title || 'Terapia General'}</span>
-                        <a href="/therapist/appointments/${s.id}/review" class="text-sm font-medium text-primary hover:text-primary-dark">
+                        <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="text-sm font-medium text-primary hover:text-primary-dark">
                             Ver Detalles
                         </a>
                     </div>

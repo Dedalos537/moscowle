@@ -154,7 +154,7 @@
 
     // Load patients for select
     function loadPatients() {
-        fetch('/api/patients')
+        fetch("{{ url_for('api.api_patients') }}")
             .then(res => res.json())
             .then(patients => {
                 const select = document.getElementById('patient-select');
@@ -171,7 +171,7 @@
 
     // Load available games for selection
     function loadGames() {
-        fetch('/api/games')
+        fetch("{{ url_for('api.api_list_games') }}")
             .then(res => res.json())
             .then(data => {
                 const select = document.getElementById('appointment-game');
@@ -190,7 +190,7 @@
 
     // Load appointments
     function loadAppointments() {
-        fetch('/api/sessions')
+        fetch("{{ url_for('api.api_get_sessions') }}")
             .then(res => res.json())
             .then(data => {
                 appointments = data;
@@ -367,7 +367,7 @@
         submitBtn.disabled = true;
         submitBtn.textContent = 'Guardando...';
 
-        fetch('/api/sessions', {
+        fetch("{{ url_for('api.api_create_session') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
