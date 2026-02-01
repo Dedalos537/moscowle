@@ -13,7 +13,7 @@ class AppointmentService:
         self.notification_service = NotificationService()
         self.email_service = EmailService()
 
-    def validate_session_times(self, start_time, end_time, patient_id, therapist_id, session_id=None):
+    def validate_session_times(self, start_time, end_time, patient_id, therapist_id, session_id=None, ignore_therapist_conflict=False):
         """
         Validate session timing and prevent conflicts.
         Returns a list of error messages (empty if valid).
@@ -39,20 +39,21 @@ class AppointmentService:
              errors.append("No se pueden crear sesiones con más de 24 horas de antigüedad")
         
         # Check therapist double-booking
-        therapist_conflict = Appointment.query.filter(
-            Appointment.therapist_id == therapist_id,
-            Appointment.status.in_(['scheduled', 'in_progress']),
-            or_(
-                and_(Appointment.start_time <= start_time, Appointment.end_time > start_time),
-                and_(Appointment.start_time < end_time, Appointment.end_time >= end_time),
-                and_(Appointment.start_time >= start_time, Appointment.end_time <= end_time)
+        if not ignore_therapist_conflict:
+            therapist_conflict = Appointment.query.filter(
+                Appointment.therapist_id == therapist_id,
+                Appointment.status.in_(['scheduled', 'in_progress']),
+                or_(
+                    and_(Appointment.start_time <= start_time, Appointment.end_time > start_time),
+                    and_(Appointment.start_time < end_time, Appointment.end_time >= end_time),
+                    and_(Appointment.start_time >= start_time, Appointment.end_time <= end_time)
+                )
             )
-        )
-        if session_id:
-            therapist_conflict = therapist_conflict.filter(Appointment.id != session_id)
-        
-        if therapist_conflict.first():
-            errors.append("Ya tienes una sesión programada en ese horario")
+            if session_id:
+                therapist_conflict = therapist_conflict.filter(Appointment.id != session_id)
+            
+            if therapist_conflict.first():
+                errors.append("Ya tienes una sesión programada en ese horario")
         
         # Check patient double-booking
         patient_conflict = Appointment.query.filter(

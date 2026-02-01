@@ -1,4 +1,9 @@
 from datetime import datetime, timedelta, timezone
+from functools import wraps
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
+from app.extensions import db
+
 try:
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 except ImportError:
@@ -7,6 +12,42 @@ except ImportError:
         def __init__(self, key):
              pass
     ZoneInfoNotFoundError = Exception
+
+def handle_db_errors(f):
+    """
+    Decorator para manejar errores de base de datos y liberar conexiones
+    Debe usarse en métodos de servicios que acceden a DB
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            result = f(*args, **kwargs)
+            db.session.commit()
+            return result
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Database error in {f.__name__}",
+                exc_info=True,
+                extra={'function': f.__name__}
+            )
+            # Re-raise to let caller handle if needed, or return None/Error
+            raise
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Unexpected error in {f.__name__}",
+                exc_info=True,
+                extra={'function': f.__name__}
+            )
+            raise
+        finally:
+            # Always close the session to prevent leaks
+            # Note: With SQLALCHEMY_COMMIT_ON_TEARDOWN=True this might be redundant but safe
+            if db.session:    
+                db.session.close() # Only if using scoped_session manually or need instant return to pool
+    
+    return decorated_function
 
 def get_user_timezone(user):
     """Helper to get a ZoneInfo object from user."""
@@ -98,11 +139,8 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str='UTC'):
     
     try:
         user_tz = ZoneInfo(user_timezone_str)
+        if dt_utc_naive.tzinfo is None:
+             dt_utc_naive = dt_utc_naive.replace(tzinfo=timezone.utc)
+        return dt_utc_naive.astimezone(user_tz)
     except:
-        user_tz = timezone.utc
-    
-    # Make it aware as UTC first
-    dt_utc_aware = dt_utc_naive.replace(tzinfo=timezone.utc)
-    
-    # Convert to user's timezone
-    return dt_utc_aware.astimezone(user_tz)
+        return dt_utc_naive

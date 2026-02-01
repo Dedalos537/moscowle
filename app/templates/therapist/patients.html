@@ -110,29 +110,30 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
-          {% for patient in patients %}
-          <tr class="hover:bg-lightGreen transition-colors cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=patient.id) }}';">
+          {% for item in patients %}
+          {% set p = item.user %}
+          <tr class="hover:bg-lightGreen transition-colors cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=p.id) }}';">
             <td class="px-8 py-4">
               <div class="flex items-center gap-3">
-                <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-10 h-10 rounded-full" />
-                <span class="font-semibold text-textDark">{{ patient.username }}</span>
+                <img src="https://ui-avatars.com/api/?name={{p.username}}&background=random" class="w-10 h-10 rounded-full" />
+                <span class="font-semibold text-textDark">{{ p.username }}</span>
               </div>
             </td>
-            <td class="px-8 py-4 text-gray-600">{{ patient.email }}</td>
+            <td class="px-8 py-4 text-gray-600">{{ p.email }}</td>
             <td class="px-8 py-4 text-center">
-              <span class="px-3 py-1 rounded-full text-xs font-bold {% if patient.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
-                {{ 'Activo' if patient.is_active else 'Inactivo' }}
+              <span class="px-3 py-1 rounded-full text-xs font-bold {{ item.status_color }}">
+                {{ item.status_label }}
               </span>
             </td>
             <td class="px-8 py-4 text-center">
               <div class="flex items-center justify-center gap-2">
-                <a href="{{ url_for('therapist.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Ver Detalle" onclick="event.stopPropagation()">
+                <a href="{{ url_for('therapist.patient_detail', patient_id=p.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Ver Detalle" onclick="event.stopPropagation()">
                   <i class="fa-solid fa-eye"></i>
                 </a>
-                <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Cambiar Estado">
+                <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors" title="Cambiar Estado">
                   <i class="fa-solid fa-power-off"></i>
                 </button>
-                <button onclick="event.stopPropagation(); deletePatient({{ patient.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar">
+                <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Eliminar">
                   <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
@@ -149,27 +150,28 @@
 
     <!-- Mobile Cards -->
     <div class="md:hidden space-y-4 p-4">
-      {% for patient in patients %}
-      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=patient.id) }}';">
+      {% for item in patients %}
+      {% set p = item.user %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=p.id) }}';">
         <div class="flex items-center gap-3 mb-3">
-          <img src="https://ui-avatars.com/api/?name={{patient.username}}&background=random" class="w-12 h-12 rounded-full" />
+          <img src="https://ui-avatars.com/api/?name={{p.username}}&background=random" class="w-12 h-12 rounded-full" />
           <div>
-            <h4 class="font-bold text-textDark">{{ patient.username }}</h4>
-            <p class="text-sm text-gray-500">{{ patient.email }}</p>
+            <h4 class="font-bold text-textDark">{{ p.username }}</h4>
+            <p class="text-sm text-gray-500">{{ p.email }}</p>
           </div>
         </div>
         <div class="flex justify-between items-center">
-          <span class="px-3 py-1 rounded-full text-xs font-bold {% if patient.is_active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
-            {{ 'Activo' if patient.is_active else 'Inactivo' }}
+          <span class="px-3 py-1 rounded-full text-xs font-bold {{ item.status_color }}">
+            {{ item.status_label }}
           </span>
           <div class="flex items-center gap-1">
-             <a href="{{ url_for('therapist.patient_detail', patient_id=patient.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" onclick="event.stopPropagation()">
+             <a href="{{ url_for('therapist.patient_detail', patient_id=p.id) }}" class="p-2 text-gray-400 hover:text-primary transition-colors" onclick="event.stopPropagation()">
                 <i class="fa-solid fa-eye"></i>
              </a>
-             <button onclick="event.stopPropagation(); toggleStatus({{ patient.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors">
+             <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-gray-400 hover:text-primary transition-colors">
                 <i class="fa-solid fa-power-off"></i>
              </button>
-             <button onclick="event.stopPropagation(); deletePatient({{ patient.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
+             <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-gray-400 hover:text-red-500 transition-colors">
                 <i class="fa-solid fa-trash"></i>
              </button>
           </div>

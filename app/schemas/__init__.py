@@ -13,7 +13,8 @@ class UpdateUserSchema(Schema):
 
 class AssignTherapistSchema(Schema):
     patient_id = fields.Int(required=True)
-    therapist_id = fields.Int(required=True)
+    therapist_id = fields.Int(required=False, allow_none=True)
+    therapist_ids = fields.List(fields.Int(), required=False, allow_none=True)
 
 class SendMessageSchema(Schema):
     receiver_id = fields.Int(required=True)

@@ -568,11 +568,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <form id="create-form" class="p-4 space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-sm text-gray-600">Paciente</label>
-                <select name="patient_id" id="patient-select"
+                <label class="text-sm text-gray-600">Pacientes (Máx 5)</label>
+                <select name="patient_id" id="patient-select" multiple
                   class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required>
                   <option value="" disabled selected>
-                    Seleccione un paciente
+                    Seleccione pacientes...
                   </option>
                 </select>
               </div>
@@ -763,8 +763,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!patientsTomSelect) {
                 patientsTomSelect = new TomSelect(select, {
                     create: false,
+                    maxItems: 5,
+                    plugins: ['remove_button'],
                     sortField: { field: "text", direction: "asc" },
-                    placeholder: 'Buscar paciente...'
+                    placeholder: 'Buscar pacientes...'
                 });
             } else {
                 patientsTomSelect.sync();
@@ -818,7 +820,17 @@ document.addEventListener('DOMContentLoaded', () => {
             createForm.addEventListener("submit", async (e) => {
               e.preventDefault();
               const formData = new FormData(createForm);
-              const patientIdRaw = formData.get("patient_id");
+              
+              // NEW: Get multiple patient IDs
+              let patientIds = [];
+              if (patientsTomSelect) {
+                  const val = patientsTomSelect.getValue();
+                  patientIds = Array.isArray(val) ? val : (val ? [val] : []);
+              } else {
+                  const sel = document.getElementById("patient-select");
+                  patientIds = Array.from(sel.selectedOptions).map(o => o.value);
+              }
+              
               const timeStart = formData.get("time_start");
               const timeEnd = formData.get("time_end");
               const selectedDates = datePicker ? datePicker.selectedDates : [];
@@ -827,8 +839,8 @@ document.addEventListener('DOMContentLoaded', () => {
                   showToast("Seleccione al menos una fecha");
                   return;
               }
-              if (!patientIdRaw) {
-                showToast("Por favor seleccione un paciente");
+              if (!patientIds || patientIds.length === 0) {
+                showToast("Por favor seleccione al menos un paciente");
                 return;
               }
               if (!timeStart || !timeEnd) {
@@ -851,8 +863,12 @@ document.addEventListener('DOMContentLoaded', () => {
               
               let successCount = 0;
               let errorCount = 0;
+              let lastError = "";
 
               try {
+                  submitBtn.disabled = true;
+                  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                  
                   for (const dateObj of selectedDates) {
                       const year = dateObj.getFullYear();
                       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -863,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       const endDate = new Date(`${dateStr}T${timeEnd}:00`);
 
                       const payload = {
-                        patient_id: parseInt(patientIdRaw, 10),
+                        patient_id: patientIds, // Send ARRAY
                         title: formData.get("title"),
                         start_time: startDate.toISOString(),
                         end_time: endDate.toISOString(),
@@ -882,8 +898,11 @@ document.addEventListener('DOMContentLoaded', () => {
                           body: JSON.stringify(payload),
                       });
                       
-                      if (!res.ok) {
+                      const data = await res.json();
+                      
+                      if (!res.ok || !data.success) {
                           errorCount++;
+                          lastError = data.message || "Error desconocido";
                       } else {
                           successCount++;
                       }
@@ -894,7 +913,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     showToast(`${successCount} sesión(es) creada(s) exitosamente`, 'success');
                     setTimeout(() => window.location.reload(), 1500);
                   } else {
-                    showToast("No se pudo crear la sesión.", 'error');
+                    showToast(lastError || "No se pudo crear la sesión.", 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
                   }
               } catch (err) {
                 console.error(err);

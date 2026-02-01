@@ -1,95 +1,155 @@
 from app import create_app
+from app.extensions import db
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import atexit
 import logging
 import os
+import time
+from sqlalchemy.exc import SQLAlchemyError
 
 app = create_app()
 
-# Configure logging for scheduler
-logging.basicConfig()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logging.getLogger('apscheduler').setLevel(logging.INFO)
 
 def auto_update_session_status():
-    """Background job to auto-update session statuses"""
+    """
+    Background job to auto-update session statuses
+    OPTIMIZED: Process in batches, handle errors gracefully
+    """
+    job_id = f"auto_update_{int(time.time())}"
+    
     with app.app_context():
         try:
             from app.models import User
             from app.services.appointment_service import AppointmentService
             
+            BATCH_SIZE = 100
             service = AppointmentService()
             
             # Get all patients
             patients = User.query.filter_by(role='jugador').all()
+            total = len(patients)
             
-            updated_count = 0
-            for patient in patients:
-                # This will auto-complete expired sessions
-                service.update_expired_appointments(patient.id)
-                updated_count += 1
+            app.logger.info(f"[{job_id}] Starting auto-update for {total} patients")
             
-            app.logger.info(f"Auto-update job completed: checked {updated_count} patients")
+            # Process in batches
+            for idx in range(0, total, BATCH_SIZE):
+                batch = patients[idx:idx + BATCH_SIZE]
+                
+                for patient in batch:
+                    try:
+                        service.update_expired_appointments(patient.id)
+                    except SQLAlchemyError as e:
+                        app.logger.warning(f"DB error for patient {patient.id}: {e}")
+                        db.session.rollback()
+                        continue
+                    except Exception as e:
+                        app.logger.error(f"Error processing patient {patient.id}: {e}", exc_info=True)
+                        continue
+                    
+                    # Small delay to prevent CPU overload
+                    time.sleep(0.01)
+                
+                # Commit batch and cleanup
+                try:
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+                finally:
+                    # Clean session properly
+                    pass
+                
+                batch_num = (idx // BATCH_SIZE) + 1
+                app.logger.info(f"[{job_id}] Processed batch {batch_num}/{(total // BATCH_SIZE) + 1}")
+                
+                # Pause between batches
+                time.sleep(0.5)
             
+            app.logger.info(f"[{job_id}] Completed successfully")
+            
+        except SQLAlchemyError as e:
+            app.logger.error(f"[{job_id}] Database error: {str(e)}", exc_info=True)
+            db.session.rollback()
         except Exception as e:
-            app.logger.error(f"Error in auto_update_session_status job: {str(e)}")
+            app.logger.error(f"[{job_id}] Unexpected error: {str(e)}", exc_info=True)
+
 
 def check_payment_reminders():
-    """Background job to send payment reminders"""
+    """
+    Background job to send payment reminders
+    OPTIMIZED: Error handling and logging
+    """
+    job_id = f"payment_check_{int(time.time())}"
+    
     with app.app_context():
         try:
             from app.services.payment_service import PaymentService
+            
+            app.logger.info(f"[{job_id}] Starting payment reminder check")
+            
             payment_service = PaymentService()
             
-            count = payment_service.check_upcoming_due_dates()
-            deactivated = payment_service.check_and_deactivate_overdue()
-            
-            if count > 0 or deactivated > 0:
-                app.logger.info(f"Payment job: Sent {count} reminders, Deactivated {deactivated} users.")
+            try:
+                count = payment_service.check_upcoming_due_dates()
+                deactivated = payment_service.check_and_deactivate_overdue()
+                
+                if count > 0 or deactivated > 0:
+                    app.logger.info(
+                        f"[{job_id}] Sent {count} reminders, Deactivated {deactivated} users"
+                    )
+            except SQLAlchemyError as e:
+                app.logger.error(f"[{job_id}] DB error: {e}")
+                db.session.rollback()
+            finally:
+                pass
+                
         except Exception as e:
-            app.logger.error(f"Error in check_payment_reminders job: {str(e)}")
+            app.logger.error(f"[{job_id}] Unexpected error: {str(e)}", exc_info=True)
 
-# Initialize background scheduler
-scheduler = BackgroundScheduler()
-scheduler.start()
 
-# Schedule the auto-update job to run every 5 minutes
+# ========== SCHEDULER CONFIGURATION ==========
+scheduler = BackgroundScheduler(daemon=True)
+
+# Add jobs with proper configuration
 scheduler.add_job(
     func=auto_update_session_status,
-    trigger=IntervalTrigger(minutes=5),
+    trigger=IntervalTrigger(minutes=5),  # Every 5 minutes (not every 1)
+    max_instances=1,  # Only one instance at a time
     id='auto_update_sessions',
-    name='Auto-update session statuses',
-    replace_existing=True
+    name='Auto-update expired appointments',
+    coalesce=True,  # Skip missed runs if delayed
+    misfire_grace_time=60  # 60 second grace period
 )
 
-# Schedule payment reminders (Run daily at 9:00 AM in prod, but for MVP we use interval)
-# Using 24h interval
 scheduler.add_job(
     func=check_payment_reminders,
-    trigger=IntervalTrigger(hours=24),
+    trigger=IntervalTrigger(hours=1),  # Every hour
+    max_instances=1,
     id='payment_reminders',
-    name='Check Payment Reminders',
-    replace_existing=True
+    name='Check payment reminders',
+    coalesce=True,
+    misfire_grace_time=60
 )
 
-# Run once on startup
-auto_update_session_status()
-# Also run payment check once on startup for demo purposes
-check_payment_reminders()
+# Start scheduler
+if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':  # Prevent double run in debug mode
+    try:
+        scheduler.start()
+        app.logger.info("Scheduler started successfully")
+    except Exception as e:
+        app.logger.error(f"Failed to start scheduler: {e}")
 
-# Shut down the scheduler when exiting the app
+# Ensure scheduler shuts down gracefully
 atexit.register(lambda: scheduler.shutdown())
 
+
 if __name__ == '__main__':
-    import sys
-    
-    # Get port from environment or command line argument
-    port = int(os.getenv('FLASK_PORT', 5001))
-    
-    # Check command line args for --port
-    for i, arg in enumerate(sys.argv):
-        if arg == '--port' and i + 1 < len(sys.argv):
-            port = int(sys.argv[i + 1])
-            break
-    
-    app.run(debug=True, port=port)
+    # Development server
+    app.run(
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        debug=os.getenv('FLASK_ENV', 'development') == 'development'
+    )

@@ -79,6 +79,32 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Custom Games Loop -->
+                {% for g_file in custom_games or [] %}
+                <div class="bg-surface rounded-soft shadow-soft overflow-hidden group hover:shadow-soft-lg transition-all">
+                    <div class="h-48 bg-gray-100 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-secondary opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i class="fa-solid fa-gamepad text-6xl text-gray-300 group-hover:text-secondary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-textDark capitalize">{{ g_file.replace('.html', '').replace('_', ' ') }}</h3>
+                            <span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">Personalizado</span>
+                        </div>
+                        <p class="text-gray-500 text-sm mb-4">Ejercicio cargado desde el repositorio de juegos.</p>
+                        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                            <span class="text-sm text-gray-500"><i class="fa-solid fa-code mr-2"></i>HTML5</span>
+                            <a href="{{ url_for('static', filename='games/' + g_file) }}" target="_blank" class="text-primary font-medium hover:underline">
+                                <i class="fa-solid fa-play mr-1"></i> Jugar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
             </div>
 
                         <!-- Modal: Nuevo Ejercicio with tabs -->

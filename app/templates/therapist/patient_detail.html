@@ -119,6 +119,13 @@
                                     <h4 class="font-bold text-textDark">{{ session.title or 'Sesión de Terapia' }}</h4>
                                     <p class="text-sm text-gray-500">
                                         {{ session.start_time.strftime('%d %b %Y, %H:%M') }}
+                                        
+                                        {% if session.therapist_id != current_user.id %}
+                                        <span class="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200" title="Terapeuta asignado">
+                                            <i class="fas fa-user-md mr-1"></i>{{ session.therapist.username if session.therapist else 'Otro' }}
+                                        </span>
+                                        {% endif %}
+
                                         {% if session.session_images %}
                                             <span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                                                 <i class="fas fa-camera mr-1"></i>{{ session.session_images|length }} fotos

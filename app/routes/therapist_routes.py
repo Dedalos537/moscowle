@@ -14,11 +14,20 @@ import json
 import io
 import csv
 from email_validator import validate_email, EmailNotValidError
-import plotly.graph_objects as go
-import plotly.express as px
-import pandas as pd
 import os
 from datetime import datetime, timedelta, timezone
+
+# Lazy imports for heavy analytics libraries
+pd = None
+go = None
+px = None
+
+def _import_analytics_libs():
+    global pd, go, px
+    if pd is None:
+        import pandas as pd
+        import plotly.graph_objects as go
+        import plotly.express as px
 
 therapist_bp = Blueprint('therapist', __name__, url_prefix='/therapist')
 dashboard_service = DashboardService()
@@ -62,12 +71,15 @@ def dashboard():
 
     # Alerts: simple heuristics
     alerts = []
-    low_accuracy_users = db.session.query(User.username)\
-        .join(SessionMetrics, SessionMetrics.user_id == User.id)\
-        .filter(User.role == 'jugador', SessionMetrics.accurracy < 60)\
-        .limit(2).all()
-    for name_tuple in low_accuracy_users:
-        alerts.append({"patient": name_tuple[0], "message": "Rendimiento bajo detectado", "type": "red"})
+    # Filter by my patients only
+    my_patient_ids = [p.id for p in current_user.associated_patients]
+    if my_patient_ids:
+        low_accuracy_users = db.session.query(User.username)\
+            .join(SessionMetrics, SessionMetrics.user_id == User.id)\
+            .filter(User.id.in_(my_patient_ids), SessionMetrics.accurracy < 60)\
+            .limit(5).all()
+        for name_tuple in low_accuracy_users:
+            alerts.append({"patient": name_tuple[0], "message": "Rendimiento bajo detectado", "type": "red"})
 
     return render_template('therapist/dashboard.html',
                            stats=stats,
@@ -82,8 +94,50 @@ def patients():
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
-    patients = patient_service.get_therapist_patients(current_user.id)
-    return render_template('therapist/patients.html', patients=patients, active_page='patients')
+    patients_list = patient_service.get_therapist_patients(current_user.id)
+    patients_data = []
+
+    now = datetime.utcnow()
+
+    for p in patients_list:
+        # Default Active Status
+        status_label = 'Activo'
+        status_color = 'bg-green-100 text-green-700'
+        
+        # If Inactive (is_active=False)
+        if not p.is_active:
+            # Check last activity (SessionMetrics or Appointment)
+            last_metric = SessionMetrics.query.filter_by(user_id=p.id).order_by(SessionMetrics.date.desc()).first()
+            last_appt = Appointment.query.filter_by(patient_id=p.id, status='completed').order_by(Appointment.start_time.desc()).first()
+            
+            last_date = None
+            if last_metric and last_appt:
+                last_date = max(last_metric.date, last_appt.start_time)
+            elif last_metric:
+                last_date = last_metric.date
+            elif last_appt:
+                last_date = last_appt.start_time
+            
+            if last_date:
+                days_inactive = (now - last_date).days
+                if days_inactive > 30:
+                    status_label = 'Retirado'
+                    status_color = 'bg-gray-100 text-gray-700' # Gray implies retired/gone
+                else:
+                    status_label = 'Deudor'
+                    status_color = 'bg-red-100 text-red-700' # Red implies debt/action needed
+            else:
+                # No history, but inactive -> Likely just created or Deudor
+                status_label = 'Deudor'
+                status_color = 'bg-red-100 text-red-700'
+        
+        patients_data.append({
+            'user': p,
+            'status_label': status_label,
+            'status_color': status_color
+        })
+
+    return render_template('therapist/patients.html', patients=patients_data, active_page='patients')
 
 @therapist_bp.route('/appointments/<int:appointment_id>/review')
 @login_required
@@ -95,8 +149,13 @@ def session_review(appointment_id):
         
     appointment = Appointment.query.get_or_404(appointment_id)
     
-    # Verify ownership
-    if appointment.therapist_id != current_user.id:
+    # Verify ownership or assignment
+    # Allows viewing if current_user conducted the session OR is one of the patient's assigned therapists
+    is_assigned = False
+    if appointment.patient:
+        is_assigned = current_user in appointment.patient.therapists
+        
+    if appointment.therapist_id != current_user.id and not is_assigned:
         flash('No tienes permiso para ver esta sesión.', 'error')
         return redirect(url_for('therapist.sessions'))
         
@@ -156,25 +215,47 @@ def games():
 @therapist_bp.route('/analytics')
 @login_required
 def analytics():
+    _import_analytics_libs()
     if current_user.role != 'terapista':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
 
+    # Get my patients
+    my_patient_ids = [p.id for p in current_user.associated_patients]
+    
     # --- Real Data Calculation ---
     
     # 1. AI Overview
-    total_metrics = SessionMetrics.query.count()
-    
-    # Calculate averages
-    avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).scalar() or 0
-    
-    # Success rate: Percentage of "Avanzar Nivel" (1) predictions
-    total_predictions = SessionMetrics.query.filter(SessionMetrics.prediction.isnot(None)).count()
-    advance_predictions = SessionMetrics.query.filter_by(prediction=1).count()
-    success_rate = (advance_predictions / total_predictions * 100) if total_predictions > 0 else 0
-    
-    # Active models (Static for MVP, but could be dynamic if we had multiple model files)
-    active_models_count = 1 
+    if not my_patient_ids:
+        # Default empty state
+        total_metrics = 0
+        avg_acc = 0
+        success_rate = 0
+        active_models_count = 1
+        recent_adaptations = []
+        difficulty_adaptation_data = {}
+        patient_progress_data = {}
+        adaptation_frequency_data = {}
+    else:
+        total_metrics = SessionMetrics.query.filter(SessionMetrics.user_id.in_(my_patient_ids)).count()
+        
+        # Calculate averages
+        avg_acc = db.session.query(func.avg(SessionMetrics.accurracy))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids)).scalar() or 0
+        
+        # Success rate
+        total_predictions = SessionMetrics.query.filter(
+            SessionMetrics.user_id.in_(my_patient_ids),
+            SessionMetrics.prediction.isnot(None)
+        ).count()
+        
+        advance_predictions = SessionMetrics.query.filter(
+            SessionMetrics.user_id.in_(my_patient_ids), 
+            SessionMetrics.prediction == 1
+        ).count()
+        success_rate = (advance_predictions / total_predictions * 100) if total_predictions > 0 else 0
+        
+        active_models_count = 1
 
     ai_overview = {
         "total_adaptations": total_metrics,
@@ -188,106 +269,119 @@ def analytics():
     }
 
     # 2. Model Performance (Mocked for MVP as we don't have ground truth labels in DB yet)
-    # In a real system, we'd compare prediction vs therapist feedback
     model_performance = [
         {"name": "Clasificación de Nivel", "accuracy": 92},
         {"name": "Detección de Fatiga", "accuracy": 85}, # Future feature
     ]
 
-    # 3. Recent Adaptations (Last 10 metrics)
-    recent_metrics = db.session.query(SessionMetrics, User).join(User, SessionMetrics.user_id == User.id)\
-        .order_by(SessionMetrics.date.desc()).limit(10).all()
-    
+    # 3. Recent Adaptations (Last 10 metrics for my patients)
     recent_adaptations = []
-    labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
-    
-    for m, u in recent_metrics:
-        recent_adaptations.append({
-            "patient_name": u.username or u.email,
-            "patient_avatar": f"https://ui-avatars.com/api/?name={(u.username or 'User').replace(' ', '+')}&background=random",
-            "game_type": m.game_name,
-            "prev_level": "?", # We don't track prev level explicitly in metrics yet
-            "new_level": labels.get(m.prediction, "Desconocido"),
-            "reason": f"Precisión: {m.accurracy:.1f}%, Tiempo: {m.avg_time:.2f}s",
-            "timestamp": m.date.strftime("%d/%m %H:%M"),
-            "confidence": 90 # Mock confidence
-        })
+    if my_patient_ids:
+        recent_metrics = db.session.query(SessionMetrics, User)\
+            .join(User, SessionMetrics.user_id == User.id)\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids))\
+            .order_by(SessionMetrics.date.desc()).limit(10).all()
+        
+        labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
+        
+        for m, u in recent_metrics:
+            recent_adaptations.append({
+                "patient_name": u.username or u.email,
+                "patient_avatar": f"https://ui-avatars.com/api/?name={(u.username or 'User').replace(' ', '+')}&background=random",
+                "game_type": m.game_name,
+                "prev_level": "?", 
+                "new_level": labels.get(m.prediction, "Desconocido"),
+                "reason": f"Precisión: {m.accurracy:.1f}%, Tiempo: {m.avg_time:.2f}s",
+                "timestamp": m.date.strftime("%d/%m %H:%M"),
+                "confidence": 90 
+            })
 
     # 4. Charts Data
     
-    # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients)
-    # We'll plot 'prediction' as a proxy for difficulty level/decision
+    # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients of MINE)
     last_30_days = datetime.utcnow() - timedelta(days=30)
+    difficulty_adaptation_data = {}
     
-    # Get top 5 patients by activity
-    top_patients = db.session.query(SessionMetrics.user_id, func.count(SessionMetrics.id))\
-        .group_by(SessionMetrics.user_id).order_by(func.count(SessionMetrics.id).desc()).limit(5).all()
-    
-    top_patient_ids = [p[0] for p in top_patients]
-    
-    metrics_data = SessionMetrics.query.filter(
-        SessionMetrics.date >= last_30_days,
-        SessionMetrics.user_id.in_(top_patient_ids)
-    ).order_by(SessionMetrics.date).all()
-    
-    # Organize by patient
-    patient_data = {}
-    for m in metrics_data:
-        p_name = User.query.get(m.user_id).username or "User"
-        if p_name not in patient_data:
-            patient_data[p_name] = {'x': [], 'y': []}
-        patient_data[p_name]['x'].append(m.date.isoformat())
-        patient_data[p_name]['y'].append(m.prediction) # 0, 1, 2
+    if my_patient_ids:
+        # Get top 5 patients by activity FROM mY LIST
+        top_patients = db.session.query(SessionMetrics.user_id, func.count(SessionMetrics.id))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids))\
+            .group_by(SessionMetrics.user_id).order_by(func.count(SessionMetrics.id).desc()).limit(5).all()
+        
+        top_patient_ids = [p[0] for p in top_patients]
+        
+        if top_patient_ids:
+            metrics_data = SessionMetrics.query.filter(
+                SessionMetrics.date >= last_30_days,
+                SessionMetrics.user_id.in_(top_patient_ids)
+            ).order_by(SessionMetrics.date).all()
+            
+            # Organize by patient
+            patient_data = {}
 
-    fig_difficulty = go.Figure()
-    for name, data in patient_data.items():
-        fig_difficulty.add_trace(go.Scatter(x=data['x'], y=data['y'], name=name, mode='lines+markers'))
-    
-    fig_difficulty.update_layout(
-        title='Adaptación de Nivel (Últimos 30 días)', 
-        xaxis_title='Fecha', 
-        yaxis_title='Decisión IA (0=Mantener, 1=Avanzar, 2=Apoyo)',
-        template='plotly_white',
-        legend_title_text='Pacientes'
-    )
-    difficulty_adaptation_data = json.loads(fig_difficulty.to_json())
+            # Re-query users to get names map
+            names_map = {u.id: u.username for u in User.query.filter(User.id.in_(top_patient_ids)).all()}
+
+            for m in metrics_data:
+                p_name = names_map.get(m.user_id, "User")
+                if p_name not in patient_data:
+                    patient_data[p_name] = {'x': [], 'y': []}
+                patient_data[p_name]['x'].append(m.date.isoformat())
+                patient_data[p_name]['y'].append(m.prediction) # 0, 1, 2
+
+            fig_difficulty = go.Figure()
+            for name, data in patient_data.items():
+                fig_difficulty.add_trace(go.Scatter(x=data['x'], y=data['y'], name=name, mode='lines+markers'))
+            
+            fig_difficulty.update_layout(
+                title='Adaptación de Nivel (Últimos 30 días)', 
+                xaxis_title='Fecha', 
+                yaxis_title='Decisión IA (0=Mantener, 1=Avanzar, 2=Apoyo)',
+                template='plotly_white',
+                legend_title_text='Pacientes'
+            )
+            difficulty_adaptation_data = json.loads(fig_difficulty.to_json())
 
     # Chart 2: Patient Progress Distribution (Latest prediction per patient)
     # Get latest metric for each patient
-    subq = db.session.query(
-        SessionMetrics.user_id, 
-        func.max(SessionMetrics.date).label('max_date')
-    ).group_by(SessionMetrics.user_id).subquery()
-    
-    latest_metrics = db.session.query(SessionMetrics).join(
-        subq, 
-        (SessionMetrics.user_id == subq.c.user_id) & (SessionMetrics.date == subq.c.max_date)
-    ).all()
-    
-    # Count predictions
-    pred_counts = {0: 0, 1: 0, 2: 0}
-    for m in latest_metrics:
-        if m.prediction in pred_counts:
-            pred_counts[m.prediction] += 1
-            
-    df_progress = pd.DataFrame({
-        'Decisión': ['Mantener', 'Avanzar', 'Apoyo'],
-        'Pacientes': [pred_counts[0], pred_counts[1], pred_counts[2]]
-    })
-    
-    fig_progress = px.bar(df_progress, x='Decisión', y='Pacientes', title='Estado Actual de Pacientes', template='plotly_white', color='Decisión')
-    patient_progress_data = json.loads(fig_progress.to_json())
+    patient_progress_data = {}
+    if my_patient_ids:
+        subq = db.session.query(
+            SessionMetrics.user_id, 
+            func.max(SessionMetrics.date).label('max_date')
+        ).filter(SessionMetrics.user_id.in_(my_patient_ids))\
+        .group_by(SessionMetrics.user_id).subquery()
+        
+        latest_metrics = db.session.query(SessionMetrics).join(
+            subq, 
+            (SessionMetrics.user_id == subq.c.user_id) & (SessionMetrics.date == subq.c.max_date)
+        ).all()
+        
+        # Count predictions
+        pred_counts = {0: 0, 1: 0, 2: 0}
+        for m in latest_metrics:
+            if m.prediction in pred_counts:
+                pred_counts[m.prediction] += 1
+                
+        df_progress = pd.DataFrame({
+            'Decisión': ['Mantener', 'Avanzar', 'Apoyo'],
+            'Pacientes': [pred_counts[0], pred_counts[1], pred_counts[2]]
+        })
+        
+        fig_progress = px.bar(df_progress, x='Decisión', y='Pacientes', title='Estado Actual de Pacientes', template='plotly_white', color='Decisión')
+        patient_progress_data = json.loads(fig_progress.to_json())
 
     # Chart 3: Adaptation Frequency by Game
-    game_counts = db.session.query(SessionMetrics.game_name, func.count(SessionMetrics.id))\
-        .group_by(SessionMetrics.game_name).all()
-    
-    if game_counts:
-        df_adaptation = pd.DataFrame(game_counts, columns=['Juego', 'Frecuencia'])
-        fig_adaptation = px.pie(df_adaptation, values='Frecuencia', names='Juego', title='Juegos Más Jugados', hole=.3, template='plotly_white')
-        adaptation_frequency_data = json.loads(fig_adaptation.to_json())
-    else:
-        adaptation_frequency_data = {}
+    adaptation_frequency_data = {}
+    if my_patient_ids:
+        game_counts = db.session.query(SessionMetrics.game_name, func.count(SessionMetrics.id))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids))\
+            .group_by(SessionMetrics.game_name).all()
+        
+        if game_counts:
+            df_adaptation = pd.DataFrame(game_counts, columns=['Juego', 'Frecuencia'])
+            fig_adaptation = px.pie(df_adaptation, values='Frecuencia', names='Juego', title='Juegos Más Jugados', hole=.3, template='plotly_white')
+            adaptation_frequency_data = json.loads(fig_adaptation.to_json())
 
     return render_template('therapist/analytics.html',
                            ai_overview=ai_overview,
@@ -301,36 +395,131 @@ def analytics():
 @therapist_bp.route('/reports')
 @login_required
 def reports():
+    _import_analytics_libs()
     if current_user.role != 'terapista':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
+    
     # Filters
     start = request.args.get('start')
     end = request.args.get('end')
     start_dt = _parse_datetime(start) if start else None
     end_dt = _parse_datetime(end) if end else None
+
+    # Filter stats by MY patients
+    my_patient_ids = [p.id for p in current_user.associated_patients]
+    
     # Overview stats from DB
-    # Improvement rate similar to dashboard
     now = datetime.utcnow()
     last_30 = now - timedelta(days=30)
     prev_60 = now - timedelta(days=60)
-    avg_last_30 = db.session.query(func.avg(SessionMetrics.accurracy)).filter(SessionMetrics.date >= last_30).scalar() or 0
-    avg_prev_30 = db.session.query(func.avg(SessionMetrics.accurracy)).filter(SessionMetrics.date >= prev_60, SessionMetrics.date < last_30).scalar() or 0
+    
     improvement_rate = 0
     improvement_rate_change = 0
-    if avg_prev_30:
-        improvement_rate = round(avg_last_30, 1)
-        improvement_rate_change = round(((avg_last_30 - avg_prev_30) / avg_prev_30) * 100, 1)
-
-    # Average session time proxy: avg of SessionMetrics.avg_time
-    avg_session_time = db.session.query(func.avg(SessionMetrics.avg_time)).scalar() or 0
+    avg_session_time = 0
     avg_session_time_change = 0
-
-    completed_objectives = SessionMetrics.query.filter(SessionMetrics.accurracy >= 80).count()
+    completed_objectives = 0
     completed_objectives_change = 0
+    active_patients = 0
+    active_patients_change = 0 # Placeholder as we don't track historical patient count easily
 
-    active_patients = User.query.filter_by(role='jugador', is_active=True).count()
-    active_patients_change = 0
+    monthly_progress_chart = {}
+    sessions_per_day_chart = {}
+    game_performance_chart = {}
+    
+    if my_patient_ids:
+        # 1. Improvement Rate
+        avg_last_30 = db.session.query(func.avg(SessionMetrics.accurracy))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids), SessionMetrics.date >= last_30).scalar() or 0
+        avg_prev_30 = db.session.query(func.avg(SessionMetrics.accurracy))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids), SessionMetrics.date >= prev_60, SessionMetrics.date < last_30).scalar() or 0
+        
+        if avg_prev_30:
+            improvement_rate = round(avg_last_30, 1)
+            improvement_rate_change = round(((avg_last_30 - avg_prev_30) / avg_prev_30) * 100, 1)
+        else:
+            improvement_rate = round(avg_last_30, 1)
+
+        # 2. Avg Session Time
+        avg_session_time = db.session.query(func.avg(SessionMetrics.avg_time))\
+            .filter(SessionMetrics.user_id.in_(my_patient_ids)).scalar() or 0
+
+        # 3. Completed Objectives (Accuracy >= 80)
+        completed_objectives = SessionMetrics.query.filter(
+            SessionMetrics.user_id.in_(my_patient_ids),
+            SessionMetrics.accurracy >= 80
+        ).count()
+
+        # 4. Active Patients
+        active_patients = len([p for p in current_user.associated_patients if p.is_active])
+
+
+        # Chart 1: Monthly Progress
+        q_monthly = db.session.query(
+            func.strftime('%Y-%m', SessionMetrics.date).label('Mes'),
+            func.avg(SessionMetrics.accurracy).label('Progreso')
+        ).filter(SessionMetrics.user_id.in_(my_patient_ids))
+
+        if start_dt:
+            q_monthly = q_monthly.filter(SessionMetrics.date >= start_dt)
+        if end_dt:
+            q_monthly = q_monthly.filter(SessionMetrics.date <= end_dt)
+        
+        q_monthly = q_monthly.group_by(func.strftime('%Y-%m', SessionMetrics.date))
+        df_monthly = pd.read_sql(q_monthly.statement, db.engine)
+        
+        if df_monthly.empty:
+            df_monthly = pd.DataFrame({'Mes': [], 'Progreso': []})
+        
+        fig_monthly = go.Figure()
+        fig_monthly.add_trace(go.Scatter(x=df_monthly['Mes'], y=df_monthly['Progreso'], mode='lines',
+                                         line=dict(color='#75a83a', width=3), fill='tozeroy', fillcolor='rgba(117, 168, 58, 0.1)'))
+        monthly_progress_chart = json.loads(fig_monthly.to_json())
+
+        # Chart 2: Sessions per Day (Therapist's appointments) - this was ALREADY correct in original code (filtered by therapist_id)
+        q_sessions = db.session.query(
+            func.strftime('%w', Appointment.start_time).label('weekday'),
+            func.count(Appointment.id).label('count')
+        ).filter(Appointment.therapist_id == current_user.id).group_by(
+            func.strftime('%w', Appointment.start_time)
+        )
+        if start_dt:
+            q_sessions = q_sessions.filter(Appointment.start_time >= start_dt)
+        if end_dt:
+            q_sessions = q_sessions.filter(Appointment.start_time <= end_dt)
+        df_sessions = pd.read_sql(q_sessions.statement, db.engine)
+        
+        weekday_map = {'1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'}
+        if not df_sessions.empty:
+            df_sessions['Día'] = df_sessions['weekday'].map(weekday_map)
+            df_sessions['Sesiones'] = df_sessions['count']
+            fig_sessions = go.Figure()
+            fig_sessions.add_trace(go.Bar(x=df_sessions['Día'], y=df_sessions['Sesiones'], marker_color='#75a83a', marker_line_width=0, width=0.6))
+            fig_sessions.update_traces(marker_cornerradius=8)
+            sessions_per_day_chart = json.loads(fig_sessions.to_json())
+        else:
+            sessions_per_day_chart = {}
+
+        # Chart 3: Game Performance
+        q_games = db.session.query(
+            SessionMetrics.game_name.label('Juego'),
+            func.count(SessionMetrics.id).label('Rendimiento')
+        ).filter(SessionMetrics.user_id.in_(my_patient_ids))
+
+        if start_dt:
+            q_games = q_games.filter(SessionMetrics.date >= start_dt)
+        if end_dt:
+            q_games = q_games.filter(SessionMetrics.date <= end_dt)
+        
+        q_games = q_games.group_by(SessionMetrics.game_name)
+        df_games = pd.read_sql(q_games.statement, db.engine)
+        
+        if not df_games.empty:
+            colors = ['#75a83a', '#3b82f6', '#8b5cf6', '#f59e0b']
+            fig_games = go.Figure(data=[go.Pie(labels=df_games['Juego'], values=df_games['Rendimiento'], hole=.4, marker_colors=colors)])
+            game_performance_chart = json.loads(fig_games.to_json())
+        else:
+             game_performance_chart = {}
 
     overview_stats = {
         'improvement_rate': improvement_rate,
@@ -343,81 +532,32 @@ def reports():
         'active_patients_change': active_patients_change
     }
 
-    # Chart 1: Monthly Progress (avg accuracy per month)
-    q_monthly = db.session.query(
-        func.strftime('%Y-%m', SessionMetrics.date).label('Mes'),
-        func.avg(SessionMetrics.accurracy).label('Progreso')
-    )
-    if start_dt:
-        q_monthly = q_monthly.filter(SessionMetrics.date >= start_dt)
-    if end_dt:
-        q_monthly = q_monthly.filter(SessionMetrics.date <= end_dt)
-    q_monthly = q_monthly.group_by(func.strftime('%Y-%m', SessionMetrics.date))
-    df_monthly = pd.read_sql(q_monthly.statement, db.engine)
-    if df_monthly.empty:
-        df_monthly = pd.DataFrame({'Mes': [], 'Progreso': []})
-    fig_monthly = go.Figure()
-    fig_monthly.add_trace(go.Scatter(x=df_monthly['Mes'], y=df_monthly['Progreso'], mode='lines',
-                                     line=dict(color='#75a83a', width=3), fill='tozeroy', fillcolor='rgba(117, 168, 58, 0.1)'))
-    monthly_progress_chart = json.loads(fig_monthly.to_json())
-
-    # Chart 2: Sessions per Day (appointments per weekday)
-    q_sessions = db.session.query(
-        func.strftime('%w', Appointment.start_time).label('weekday'),
-        func.count(Appointment.id).label('count')
-    ).filter(Appointment.therapist_id == current_user.id).group_by(
-        func.strftime('%w', Appointment.start_time)
-    )
-    if start_dt:
-        q_sessions = q_sessions.filter(Appointment.start_time >= start_dt)
-    if end_dt:
-        q_sessions = q_sessions.filter(Appointment.start_time <= end_dt)
-    df_sessions = pd.read_sql(q_sessions.statement, db.engine)
-    # Map weekdays to labels
-    weekday_map = {'1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'}
-    df_sessions['Día'] = df_sessions['weekday'].map(weekday_map)
-    df_sessions['Sesiones'] = df_sessions['count']
-    fig_sessions = go.Figure()
-    fig_sessions.add_trace(go.Bar(x=df_sessions['Día'], y=df_sessions['Sesiones'], marker_color='#75a83a', marker_line_width=0, width=0.6))
-    fig_sessions.update_traces(marker_cornerradius=8)
-    sessions_per_day_chart = json.loads(fig_sessions.to_json())
-
-    # Chart 3: Game Performance (distribution of metrics by game)
-    q_games = db.session.query(
-        SessionMetrics.game_name.label('Juego'),
-        func.count(SessionMetrics.id).label('Rendimiento')
-    )
-    if start_dt:
-        q_games = q_games.filter(SessionMetrics.date >= start_dt)
-    if end_dt:
-        q_games = q_games.filter(SessionMetrics.date <= end_dt)
-    q_games = q_games.group_by(SessionMetrics.game_name)
-    df_games = pd.read_sql(q_games.statement, db.engine)
-    colors = ['#75a83a', '#3b82f6', '#8b5cf6', '#f59e0b']
-    fig_games = go.Figure(data=[go.Pie(labels=df_games['Juego'], values=df_games['Rendimiento'], hole=.4, marker_colors=colors)])
-    game_performance_chart = json.loads(fig_games.to_json())
-
     # Difficulty analysis buckets based on prediction
     q_pred = db.session.query(
         SessionMetrics.prediction,
         func.count(SessionMetrics.id).label('cnt')
     )
+    if my_patient_ids:
+        q_pred = q_pred.filter(SessionMetrics.user_id.in_(my_patient_ids))
+
     if start_dt:
         q_pred = q_pred.filter(SessionMetrics.date >= start_dt)
     if end_dt:
         q_pred = q_pred.filter(SessionMetrics.date <= end_dt)
     q_pred = q_pred.group_by(SessionMetrics.prediction)
     df_pred = pd.read_sql(q_pred.statement, db.engine)
+    
+    # Placeholder buckets since we don't have 'cnt' per level defined well yet
     difficulty_analysis = [
-        {'name': 'Fácil', 'percentage': int(df_pred['cnt'].sum()), 'color': 'bg-green-500'}
+        {'name': 'Fácil', 'percentage': int(df_pred['cnt'].sum()) if not df_pred.empty else 0, 'color': 'bg-green-500'}
     ]
-    # Keep layout by providing static labels; replace with refined bucketing later
 
     # Patient insights: top 3 by recent avg accuracy
     q_insights = db.session.query(
         SessionMetrics.user_id.label('uid'),
         func.avg(SessionMetrics.accurracy).label('acc')
-    )
+    ).filter(SessionMetrics.user_id.in_(my_patient_ids))
+    
     if start_dt:
         q_insights = q_insights.filter(SessionMetrics.date >= start_dt)
     if end_dt:
@@ -425,13 +565,17 @@ def reports():
     q_insights = q_insights.group_by(SessionMetrics.user_id)
     df_insights = pd.read_sql(q_insights.statement, db.engine)
     patient_insights = []
+    
     for _, row in df_insights.iterrows():
         user = User.query.get(row['uid'])
-        patient_insights.append({'title': 'Mejor Rendimiento', 'description': f"{user.username if user else 'Paciente'} - Acc: {round(row['acc'],1)}%", 'icon': 'fas fa-star', 'icon_color': 'text-olive', 'bg_color': 'bg-green-50'})
+        if user:
+            patient_insights.append({'title': 'Mejor Rendimiento', 'description': f"{user.username} - Acc: {round(row['acc'],1)}%", 'icon': 'fas fa-star', 'icon_color': 'text-olive', 'bg_color': 'bg-green-50'})
 
     # Detailed reports: latest metrics per patient
     detailed_reports = []
-    users = User.query.filter_by(role='jugador').all()
+    # Use associated_patients
+    users = current_user.associated_patients.filter_by(role='jugador').all()
+    
     for u in users:
         latest = SessionMetrics.query.filter_by(user_id=u.id).order_by(SessionMetrics.date.desc()).first()
         if latest:
@@ -661,8 +805,11 @@ def add_patient():
         password=hashed_pw,
         role='jugador',
         is_active=is_full_account,    # Si no tiene email, no está activo
-        assigned_therapist_id=current_user.id  # Asignar al terapeuta actual
+        assigned_therapist_id=current_user.id  # Asignar al terapeuta actual (Legacy primary)
     )
+    # Add to new Many-to-Many relationship
+    new_patient.therapists.append(current_user)
+    
     db.session.add(new_patient)
     db.session.commit()
 

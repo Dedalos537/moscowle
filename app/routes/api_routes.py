@@ -7,6 +7,7 @@ from app.services.admin_service import AdminService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.dashboard_service import DashboardService
+from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, train_model
 from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime_for_storage, localize_datetime_for_display, get_user_timezone
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
@@ -28,6 +29,7 @@ admin_service = AdminService()
 notification_service = NotificationService()
 patient_service = PatientService()
 dashboard_service = DashboardService()
+drive_service = GoogleDriveService()
 
 def _parse_datetime(value):
     """Robust datetime parser for ISO and naive strings"""
@@ -320,44 +322,85 @@ def api_create_session():
     if not data.get('end_time'):
         data['end_time'] = data['start_time'] + timedelta(hours=1)
     
-    # Validate session times
-    validation_errors = appointment_service.validate_session_times(
-        start_time=data['start_time'],
-        end_time=data['end_time'],
-        patient_id=data['patient_id'],
-        therapist_id=current_user.id,
-        session_id=None
-    )
+    # Handle multiple patients (Group Session)
+    patient_ids = data.get('patient_id')
+    if not isinstance(patient_ids, list):
+        patient_ids = [patient_ids]
+        
+    if len(patient_ids) > 5:
+        return jsonify({'success': False, 'message': 'Máximo 5 pacientes por sesión'}), 400
+
+    created_sessions = []
+    all_validation_errors = []
     
-    if validation_errors:
+    # 1. Validate all first
+    ignore_therapist_conflict = len(patient_ids) > 1
+    
+    for pid in patient_ids:
+        validation_errors = appointment_service.validate_session_times(
+            start_time=data['start_time'],
+            end_time=data['end_time'],
+            patient_id=pid,
+            therapist_id=current_user.id,
+            session_id=None,
+            ignore_therapist_conflict=ignore_therapist_conflict
+        )
+        if validation_errors:
+            # Fetch patient name for better error message
+            p_user = User.query.get(pid)
+            p_name = p_user.username if p_user else f"ID {pid}"
+            for err in validation_errors:
+                all_validation_errors.append(f"{p_name}: {err}")
+
+    if all_validation_errors:
         return jsonify({
             'success': False, 
             'message': 'Errores de validación',
-            'errors': validation_errors
+            'errors': all_validation_errors
         }), 400
 
+    # 2. Create if valid
     try:
-        appt = appointment_service.create_session(current_user.id, data, current_user.username)
+        results = []
+        for pid in patient_ids:
+            session_data = data.copy()
+            session_data['patient_id'] = pid
+            
+            # If explicit title not provided, let create_session generate default per patient
+            # But if provided, it's shared.
+            
+            appt = appointment_service.create_session(current_user.id, session_data, current_user.username)
+            created_sessions.append(appt)
+            
+            # Prepare response object for this session
+            created = {
+                'id': appt.id,
+                'title': appt.title,
+                'start_time': appt.start_time.isoformat() if appt.start_time else None,
+                'end_time': appt.end_time.isoformat() if appt.end_time else None,
+                'status': appt.status,
+                'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+                'location': appt.location,
+                'notes': appt.notes
+            }
+            try:
+                created['games'] = json.loads(appt.games) if appt.games else []
+            except Exception:
+                created['games'] = []
+            results.append(created)
+
+        # Return the first one as 'created' for backward compatibility or list
+        return jsonify({
+            'success': True, 
+            'message': 'Sesión creada correctamente', 
+            'session': results[0] if results else {},
+            'sessions': results
+        }), 201
+
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-
-    created = {
-        'id': appt.id,
-        'title': appt.title,
-        'start_time': appt.start_time.isoformat() if appt.start_time else None,
-        'end_time': appt.end_time.isoformat() if appt.end_time else None,
-        'status': appt.status,
-        'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
-        'location': appt.location,
-        'notes': appt.notes
-    }
-    # include games if any
-    try:
-        created['games'] = json.loads(appt.games) if appt.games else []
-    except Exception:
-        created['games'] = []
     return jsonify(created)
 
 
@@ -518,7 +561,15 @@ def api_admin_assign_therapist():
     if errors:
         return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
     
-    success, message = admin_service.assign_therapist(data['patient_id'], data['therapist_id'])
+    # Support multiple therapists
+    success, message = False, "Error desconocido"
+    
+    if 'therapist_ids' in data:
+        success, message = admin_service.assign_therapist(data['patient_id'], therapist_ids=data['therapist_ids'])
+    else:
+        # Legacy fallback
+        success, message = admin_service.assign_therapist(data['patient_id'], therapist_id=data.get('therapist_id'))
+
     if not success:
         return jsonify({'success': False, 'message': message}), 400
         
@@ -660,6 +711,8 @@ def api_admin_update_user():
         current_app.logger.error(f"Error updating user: {str(e)}")
         return jsonify({'success': False, 'message': f"Server Error: {str(e)}"}), 500
 
+from app.models import User, Message, Appointment, SessionMetrics, Payment
+
 @api_bp.route('/admin/delete-user', methods=['POST'])
 @login_required
 def api_admin_delete_user():
@@ -675,10 +728,12 @@ def api_admin_delete_user():
     if u.email == (os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'):
         return jsonify({'success': False, 'message': 'No se puede eliminar el admin principal'}), 400
     try:
-        # Cascade delete messages and appointments
+        # Cascade delete dependencies first (Explicit for safety)
         Message.query.filter((Message.sender_id==u.id)|(Message.receiver_id==u.id)).delete()
         Appointment.query.filter((Appointment.therapist_id==u.id)|(Appointment.patient_id==u.id)).delete()
         SessionMetrics.query.filter(SessionMetrics.user_id==u.id).delete()
+        Payment.query.filter(Payment.patient_id==u.id).delete()
+        
         db.session.delete(u)
         db.session.commit()
         return jsonify({'success': True})
@@ -1274,6 +1329,23 @@ def upload_session_image(appointment_id):
         # Save file
         file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
+
+        # Upload to Google Drive (Background/Sync)
+        try:
+            # Pass the file PATH instead of opening it, to avoid stream issues
+            patient_name = appointment.patient.username if appointment.patient else 'Paciente_Desconocido'
+            session_date = appointment.start_time.strftime('%Y-%m-%d')
+            
+            print(f"Subiendo a Drive: {patient_name} / {session_date} / {unique_filename}")
+            drive_service.upload_file(
+                file_path,  # Path string 
+                unique_filename,
+                file.mimetype,
+                patient_name,
+                session_date
+            )
+        except Exception as e:
+            print(f"Error subiendo a Google Drive: {str(e)}")
         
         # Store relative path in DB for serving
         db_relative_path = os.path.join(relative_path, unique_filename)

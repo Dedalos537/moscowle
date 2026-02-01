@@ -8,17 +8,62 @@ class AdminService:
         self.notification_service = NotificationService()
         self.email_service = EmailService()
 
-    def assign_therapist(self, patient_id, therapist_id):
+    def assign_therapist(self, patient_id, therapist_id=None, therapist_ids=None):
         patient = User.query.get(patient_id)
-        therapist = User.query.get(therapist_id)
         
-        if not patient or not therapist:
+        if not patient:
             return False, "Usuario no encontrado"
             
-        if patient.role != 'jugador' or therapist.role != 'terapista':
+        if patient.role != 'jugador':
             return False, "Roles inválidos"
+
+        # Handle list of therapists (New System)
+        if therapist_ids is not None:
+            if not isinstance(therapist_ids, list):
+                return False, "Formato inválido"
             
+            if len(therapist_ids) > 3:
+                return False, "Máximo 3 terapeutas permitidos por paciente"
+            
+            # Resolve users
+            new_therapists = []
+            for tid in therapist_ids:
+                t = User.query.get(tid)
+                if t and t.role == 'terapista':
+                    new_therapists.append(t)
+            
+            # Update relationship
+            # SQLAlchemy handles the association table updates automatically
+            patient.therapists = new_therapists 
+            
+            # Maintain backward compatibility for legacy code that reads assigned_therapist_id
+            if new_therapists:
+                patient.assigned_therapist_id = new_therapists[0].id
+            else:
+                patient.assigned_therapist_id = None
+            
+            db.session.commit()
+            
+            # Notifications
+            try:
+                self.notification_service.create_notification(patient.id, "Terapeutas actualizados")
+                for t in new_therapists:
+                     self.notification_service.create_notification(t.id, f"Nuevo paciente asignado: {patient.username}")
+            except Exception:
+                pass
+                
+            return True, "Asignación actualizada correctamente"
+
+        # Legacy Single Assignment Fallback
+        therapist = User.query.get(therapist_id)
+        if not therapist or therapist.role != 'terapista':
+            return False, "Terapeuta inválido"
+            
+        # Update both
         patient.assigned_therapist_id = therapist.id
+        if therapist not in patient.therapists:
+             patient.therapists.append(therapist)
+             
         db.session.commit()
         
         try:

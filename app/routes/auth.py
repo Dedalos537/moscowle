@@ -9,7 +9,7 @@ auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("50 per hour")
 def login():
     if request.method == 'POST':
         form = {
@@ -42,7 +42,7 @@ def logout():
     return redirect(url_for('auth.login'))
 
 @auth_bp.route('/api/auth/validate', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("60 per minute")
 def api_auth_validate():
     try:
         data = request.get_json(silent=True) or {}

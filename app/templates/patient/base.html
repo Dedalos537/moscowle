@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                    init = init || {};
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-CSRFToken')) init.headers.append('X-CSRFToken', csrfToken);
+                    } else {
+                        if (!init.headers['X-CSRFToken']) init.headers['X-CSRFToken'] = csrfToken;
+                    }
+                    return originalFetch(input, init);
+                };
+            }
+        })();
+    </script>
     <title>{% block title %}Moscowle{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>

@@ -394,11 +394,11 @@
           <form id="create-form" class="p-4 space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-sm text-gray-600">Paciente</label>
-                <select name="patient_id" id="patient-select"
+                <label class="text-sm text-gray-600">Pacientes (Máx 5)</label>
+                <select name="patient_id" id="patient-select" multiple
                   class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required>
                   <option value="" disabled selected>
-                    Seleccione un paciente
+                    Seleccione pacientes...
                   </option>
                 </select>
               </div>
@@ -1153,8 +1153,10 @@
             if (!patientsTomSelect) {
                 patientsTomSelect = new TomSelect(select, {
                     create: false,
+                    maxItems: 5,
+                    plugins: ['remove_button'],
                     sortField: { field: "text", direction: "asc" },
-                    placeholder: 'Buscar paciente...'
+                    placeholder: 'Buscar pacientes...'
                 });
             } else {
                 patientsTomSelect.sync();
@@ -1186,7 +1188,17 @@
           e.preventDefault();
 
           const formData = new FormData(createForm);
-          const patientIdRaw = formData.get("patient_id");
+          
+          // NEW: Get multiple patient IDs
+          let patientIds = [];
+          if (patientsTomSelect) {
+              const val = patientsTomSelect.getValue();
+              patientIds = Array.isArray(val) ? val : (val ? [val] : []);
+          } else {
+              const sel = document.getElementById("patient-select");
+              patientIds = Array.from(sel.selectedOptions).map(o => o.value);
+          }
+          
           const timeStart = formData.get("time_start");
           const timeEnd = formData.get("time_end");
           
@@ -1210,8 +1222,8 @@
               }
           }
 
-          if (!patientIdRaw) {
-            showToast("Por favor seleccione un paciente");
+          if (!patientIds || patientIds.length === 0) {
+            showToast("Por favor seleccione al menos un paciente");
             return;
           }
           
@@ -1233,9 +1245,6 @@
               // Loop through each selected date and create a session
               for (const dateObj of selectedDates) {
                   // Construct ISO strings
-                  // dateObj is a Date object at 00:00 local time (usually) or UTC depending on Flatpickr config
-                  // We need to combine dateObj YYYY-MM-DD with timeStart HH:MM
-                  
                   const year = dateObj.getFullYear();
                   const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                   const day = String(dateObj.getDate()).padStart(2, '0');
@@ -1244,19 +1253,11 @@
                   const startIso = `${dateStr}T${timeStart}:00`;
                   const endIso = `${dateStr}T${timeEnd}:00`;
                   
-                  // Note: The backend expects ISO strings. 
-                  // If we send "2026-01-05T10:00:00", the backend might interpret it as local or UTC depending on implementation.
-                  // The previous implementation used `new Date(startTimeRaw).toISOString()`.
-                  // `startTimeRaw` was from datetime-local input (e.g. "2026-01-05T10:00").
-                  // `new Date("2026-01-05T10:00")` creates a Date object in local time.
-                  // `.toISOString()` converts it to UTC.
-                  // So we should do the same.
-                  
                   const startDate = new Date(startIso);
                   const endDate = new Date(endIso);
 
                   const payload = {
-                    patient_id: parseInt(patientIdRaw, 10),
+                    patient_id: patientIds, // Send ARRAY
                     title: formData.get("title"),
                     start_time: startDate.toISOString(),
                     end_time: endDate.toISOString(),
@@ -1277,14 +1278,20 @@
                       body: JSON.stringify(payload),
                   });
                   
-                  if (!res.ok) {
+                  const result = await res.json();
+
+                  if (!res.ok || !result.success) {
                       errorCount++;
-                      const result = await res.json();
                       console.error("Error creating session for date " + dateStr, result);
                   } else {
                       successCount++;
-                      const created = await res.json();
-                      allSessions.unshift(created);
+                       if (result.sessions) {
+                          // Add all created sessions at top
+                          // We use unshift spreading or concat
+                          allSessions = [...result.sessions, ...allSessions];
+                      } else if (result.session) {
+                          allSessions.unshift(result.session);
+                      }
                   }
               }
             

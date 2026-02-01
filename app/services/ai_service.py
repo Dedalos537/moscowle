@@ -3,34 +3,66 @@ import threading
 import time
 import logging
 from logging.handlers import RotatingFileHandler
-import numpy as np
-import pandas as pd
-from sklearn.cluster import KMeans
-from joblib import load, dump
-from sklearn.svm import SVC
 
-MODEL_PATH= 'ai_models/svm_model.pkl'
+# Lazy imports for heavy AI libraries
+np = None
+pd = None
+KMeans = None
+load = None
+dump = None
+SVC = None
+
+def _import_dependencies():
+    global np, pd, KMeans, load, dump, SVC
+    if np is None:
+        import numpy as np
+        import pandas as pd
+        from sklearn.cluster import KMeans
+        from joblib import load, dump
+        from sklearn.svm import SVC
+
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'ai_models', 'svm_model.pkl')
+
 
 # internal guard to avoid spawning multiple training threads
 _train_thread = None
 _train_lock = threading.Lock()
 
 # configure module logger to write training progress to a rotating file
-_log_dir = os.getenv('AI_LOG_DIR', 'logs')
-os.makedirs(_log_dir, exist_ok=True)
-_logger = logging.getLogger('app.ai_service')
-# Use RotatingFileHandler to limit log file size and keep backups
-if not any(isinstance(h, RotatingFileHandler) and getattr(h, 'baseFilename', '').endswith('ai_training.log') for h in _logger.handlers):
-    fh = RotatingFileHandler(
-        os.path.join(_log_dir, 'ai_training.log'),
-        maxBytes=5 * 1024 * 1024,
-        backupCount=5
-    )
-    fh.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    fh.setFormatter(formatter)
-    _logger.addHandler(fh)
-_logger.setLevel(logging.INFO)
+# Use absolute path for logs
+try:
+    _base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    _log_dir = os.path.join(_base_dir, 'logs')
+    os.makedirs(_log_dir, exist_ok=True)
+    _log_file_path = os.path.join(_log_dir, 'ai_training.log')
+    
+    _logger = logging.getLogger('app.ai_service')
+    
+    # Check if handler already exists
+    has_handler = False
+    for h in _logger.handlers:
+        if isinstance(h, RotatingFileHandler) and getattr(h, 'baseFilename', '') == _log_file_path:
+            has_handler = True
+            break
+            
+    if not has_handler:
+        fh = RotatingFileHandler(
+            _log_file_path,
+            maxBytes=5 * 1024 * 1024, # 5 MB
+            backupCount=5
+        )
+        fh.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        fh.setFormatter(formatter)
+        _logger.addHandler(fh)
+        _logger.setLevel(logging.INFO)
+
+except Exception as e:
+    # Fallback to null handler or print if filesystem is read-only or path invalid
+    print(f"Warning: Could not setup AI logging: {e}")
+    _logger = logging.getLogger('app.ai_service')
+    _logger.addHandler(logging.NullHandler())
+
 
 def get_expert_label(accuracy, avg_time_ms):
     """
@@ -52,6 +84,7 @@ def train_model(real_data=None):
     Train the SVM model.
     real_data: List of [accuracy, avg_time_ms] from actual user sessions.
     """
+    _import_dependencies()
     start_ts = time.time()
     _logger.info('Training started; real_data_count=%s', len(real_data) if real_data else 0)
     X = []
@@ -93,16 +126,14 @@ def train_model(real_data=None):
     model_dir = os.path.dirname(MODEL_PATH)
     if model_dir and not os.path.exists(model_dir):
         os.makedirs(model_dir, exist_ok=True)
-    # ensure the directory for the model exists
-    model_dir = os.path.dirname(MODEL_PATH)
-    if model_dir and not os.path.exists(model_dir):
-        os.makedirs(model_dir, exist_ok=True)
+
     dump(model, MODEL_PATH)
     elapsed = time.time() - start_ts
     _logger.info('Modelo re-entrenado y guardado exitosamente; path=%s elapsed_seconds=%.2f', MODEL_PATH, elapsed)
     print("Modelo re-entrenado y guardado exitosamente.")
 
 def predict_level(accuracy, avg_time):
+    _import_dependencies()
     if not os.path.exists(MODEL_PATH):
         # Allow skipping model training (useful for fast startup/dev).
         # Set SKIP_MODEL_TRAIN=1 in the environment to avoid triggering train_model().

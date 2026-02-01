@@ -1,4 +1,4 @@
-from app.models import User, Payment, db
+from app.models import User, Payment, db, Appointment
 from app.services.email_service import EmailService
 from app.services.notification_service import NotificationService
 from datetime import datetime, timedelta
@@ -72,7 +72,10 @@ class PaymentService:
             # But the requirement says "assign a payment date".
             
             if next_due_date_str:
-                user.payment_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
+                if isinstance(next_due_date_str, str):
+                    user.payment_due_date = datetime.strptime(next_due_date_str, '%Y-%m-%d').date()
+                else:
+                    user.payment_due_date = next_due_date_str
             
             # Reactivate if they were inactive due to non-payment
             if not user.is_active:
@@ -238,22 +241,25 @@ class PaymentService:
         today = datetime.utcnow().date()
         
         # 1. Monthly Income (Real) - Current Month
-        start_date = today.replace(day=1)
+        start_date = datetime(today.year, today.month, 1)
+        # Import calendar locally if not at top, but easier to just use relaitvedelta or calendar logic
         import calendar
         last_day = calendar.monthrange(today.year, today.month)[1]
-        end_date = today.replace(day=last_day)
+        end_date = datetime(today.year, today.month, last_day, 23, 59, 59)
         
         income_query = db.session.query(func.sum(Payment.amount)).filter(
             Payment.date >= start_date,
-            Payment.date <= end_date.strftime('%Y-%m-%d 23:59:59')
+            Payment.date <= end_date
         ).scalar()
         
         monthly_income_real = income_query or 0.0
         
         # 2. Monthly Expected Income (Estimated)
-        # Sum of all active players' payment_amount
-        # This is a rough estimate assuming everyone pays once a month or according to their plan in this month
-        # For 'quincenal', multiple by 2? Let's keep it simple sum for now or refine.
+        # Proyección = Sum of (User.payment_amount) for all active players
+        # Calculation:
+        # - Iterate all active players
+        # - If plan is 'quincenal', amount * 2
+        # - If plan is 'monthly', amount * 1
         active_players = User.query.filter_by(role='jugador', is_active=True).all()
         monthly_income_expected = 0.0
         for p in active_players:

@@ -119,17 +119,13 @@
               {% if u.role == 'jugador' %}
                 <div class="flex items-center gap-2">
                     <div class="relative w-full max-w-[200px]">
-                        <select class="w-full appearance-none bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-8 assign-select" data-patient-id="{{ u.id }}">
-                          <option value="">Sin asignar</option>
+                        <select multiple class="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-2 h-20 assign-select" data-patient-id="{{ u.id }}">
                           {% for t in therapists %}
-                            <option value="{{ t.id }}" {{ 'selected' if u.assigned_therapist_id == t.id else '' }}>{{ t.username or t.email }}</option>
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }}>{{ t.username or t.email }}</option>
                           {% endfor %}
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                            <i class="fas fa-chevron-down text-[10px]"></i>
-                        </div>
                     </div>
-                    <button class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors assign-btn" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                    <button class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors assign-btn self-start mt-1" data-patient-id="{{ u.id }}" title="Guardar Asignación">
                         <i class="fas fa-check text-xs"></i>
                     </button>
                 </div>
@@ -207,21 +203,17 @@
             {% if u.role == 'jugador' %}
             <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
                 <label class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-2 flex items-center gap-2">
-                    <i class="fas fa-user-md"></i> Terapeuta Asignado
+                    <i class="fas fa-user-md"></i> Terapeutas Asignados (Máx 3)
                 </label>
                 <div class="flex gap-2">
                     <div class="relative flex-1">
-                        <select class="w-full appearance-none bg-white border border-blue-200 text-charcoal text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 pr-8 assign-select" data-patient-id="{{ u.id }}">
-                          <option value="">Sin asignar</option>
+                        <select multiple class="w-full bg-white border border-blue-200 text-charcoal text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 h-24 assign-select" data-patient-id="{{ u.id }}">
                           {% for t in therapists %}
-                            <option value="{{ t.id }}" {{ 'selected' if u.assigned_therapist_id == t.id else '' }}>{{ t.username or t.email }}</option>
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }}>{{ t.username or t.email }}</option>
                           {% endfor %}
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
                     </div>
-                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors shadow-sm assign-btn flex items-center justify-center" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors shadow-sm assign-btn self-start" data-patient-id="{{ u.id }}" title="Guardar Asignación">
                         <i class="fas fa-check"></i>
                     </button>
                 </div>
@@ -321,19 +313,33 @@
     document.querySelectorAll('.assign-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const patientId = btn.getAttribute('data-patient-id');
-        const select = document.querySelector(`.assign-select[data-patient-id="${patientId}"]`);
-        const therapistId = select ? select.value : '';
-        if (!therapistId) { alert('Selecciona un terapeuta'); return; }
-        const prevTxt = btn.textContent;
+        // Handle desktop/mobile duplicates by finding the visible one or just the closest one if structure allows, 
+        // but checking all with selector is safer if IDs are unique or shared classes.
+        // Actually, IDs in HTML must be unique. Here we use classes.
+        // There are two selects for same patient (desktop table and mobile card).
+        // We generally want the one closest to the button clicked.
+        const container = btn.closest('td') || btn.closest('.bg-blue-50/50'); 
+        const select = container.querySelector('.assign-select');
+        
+        // Collect selected options
+        const therapistIds = Array.from(select.selectedOptions).map(opt => Number(opt.value));
+        
+        if (therapistIds.length > 3) {
+            alert('Solo se permite asignar un máximo de 3 terapeutas.');
+            return;
+        }
+
+        const prevTxt = btn.innerHTML;
         btn.disabled = true;
-        btn.textContent = 'Guardando…';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
         try {
           const res = await fetch("{{ url_for('api.api_admin_assign_therapist') }}", {
             method: 'POST', headers: { 
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
             },
-            body: JSON.stringify({ patient_id: Number(patientId), therapist_id: Number(therapistId) })
+            body: JSON.stringify({ patient_id: Number(patientId), therapist_ids: therapistIds })
           });
           
           const contentType = res.headers.get("content-type");
@@ -345,15 +351,16 @@
           const data = await res.json();
           if (!res.ok || !data.success) {
             const msg = data.message || 'Error al asignar';
-            showToast(`${msg}${data.errors ? ': ' + JSON.stringify(data.errors) : ''}`, 'error');
+            showToast(msg, 'error');
             throw new Error(msg);
           }
-          showToast('Terapeuta asignado', 'success');
+          showToast('Terapeutas asignados correctamente', 'success');
+          // Reload to reflect changes in other view (mobile/desktop)
+          setTimeout(() => window.location.reload(), 1000);
         } catch (e) {
           showToast(e.message, 'error');
-        } finally {
           btn.disabled = false;
-          btn.textContent = prevTxt;
+          btn.innerHTML = prevTxt;
         }
       });
     });

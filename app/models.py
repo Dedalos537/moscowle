@@ -2,6 +2,12 @@ from flask_login import UserMixin
 from datetime import datetime
 from app.extensions import db
 
+# Association table for Patient <-> Therapist (Many-to-Many)
+patient_therapist = db.Table('patient_therapist',
+    db.Column('patient_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+)
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
@@ -24,6 +30,17 @@ class User(db.Model, UserMixin):
     # Assigned therapist relationship (optional for patients)
     assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     assigned_therapist = db.relationship('User', remote_side=[id], backref=db.backref('assigned_patients', lazy=True))
+    
+    # NEW: Many-to-Many Relationship for multiple therapists (Max 3)
+    therapists = db.relationship(
+        'User',
+        secondary='patient_therapist',
+        primaryjoin="User.id==patient_therapist.c.patient_id",
+        secondaryjoin="User.id==patient_therapist.c.therapist_id",
+        backref=db.backref('associated_patients', lazy='dynamic'),
+        lazy='dynamic'
+    )
+    
     # JSON string for AI-generated game profile/config per user
     game_profile = db.Column(db.Text, nullable=True)
     
@@ -98,6 +115,11 @@ class Appointment(db.Model):
     status = db.Column(db.String(50), default='scheduled')  # scheduled, completed, cancelled
     location = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    
+    # Fields from deployed DB
+    therapy_type = db.Column(db.String(120), nullable=True)
+    duration_minutes = db.Column(db.Integer, nullable=True)
+
     # JSON string list of assigned games for this session
     games = db.Column(db.Text, nullable=True)
     attendance = db.Column(db.String(20), default='pending') # pending, present, absent

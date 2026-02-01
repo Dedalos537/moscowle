@@ -37,8 +37,17 @@ def users():
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     users = User.query.order_by(User.created_at.desc()).all()
+    
+    # Pre-fetch therapist assignments for template
+    patient_therapist_map = {}
+    for u in users:
+        if u.role == 'jugador':
+            # Use the dynamic relationship to fetch IDs
+            # u.therapists is a query object
+            patient_therapist_map[u.id] = [t.id for t in u.therapists]
+            
     therapists = User.query.filter_by(role='terapista').order_by(User.username.asc()).all()
-    return render_template('admin/users.html', users=users, therapists=therapists, active_page='admin_users')
+    return render_template('admin/users.html', users=users, therapists=therapists, patient_therapist_map=patient_therapist_map, active_page='admin_users')
 
 @admin_bp.route('/games')
 @login_required

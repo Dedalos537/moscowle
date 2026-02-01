@@ -44,12 +44,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="p-6 md:p-8 h-[calc(100vh-140px)] flex flex-col">
+<div class="p-6 md:p-8 h-auto lg:h-[calc(100vh-140px)] flex flex-col">
     
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-full">
         
         <!-- Left Column: Context & Notes (4 cols) -->
-        <div class="lg:col-span-4 flex flex-col gap-6 h-full overflow-hidden">
+        <div class="lg:col-span-4 flex flex-col gap-6 h-auto lg:h-full overflow-visible lg:overflow-hidden">
             
             <!-- Session Info Card -->
             <div class="bg-white rounded-soft shadow-soft p-5 shrink-0 border border-gray-100">
@@ -104,7 +104,7 @@
             </div>
 
             <!-- Notes Editor -->
-            <div class="bg-white rounded-soft shadow-soft flex flex-col flex-grow overflow-hidden border border-gray-100">
+            <div class="bg-white rounded-soft shadow-soft flex flex-col flex-grow overflow-hidden border border-gray-100 min-h-[300px] lg:min-h-0">
                 <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h3 class="font-bold text-textDark flex items-center gap-2 text-sm uppercase tracking-wide">
                         <i class="fas fa-sticky-note text-yellow-500"></i> Notas Clínicas
@@ -126,7 +126,7 @@
         </div>
 
         <!-- Right Column: Visual Evidence (8 cols) -->
-        <div class="lg:col-span-8 flex flex-col h-full overflow-hidden bg-white rounded-soft shadow-soft border border-gray-100">
+        <div class="lg:col-span-8 flex flex-col h-auto lg:h-full overflow-hidden bg-white rounded-soft shadow-soft border border-gray-100 min-h-[400px] lg:min-h-0">
             <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-white z-10">
                 <h3 class="font-bold text-textDark flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i class="fas fa-images text-purple-500"></i> Evidencia Visual
