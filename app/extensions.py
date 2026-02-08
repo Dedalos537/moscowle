@@ -36,3 +36,7 @@ csrf = CSRFProtect()
 
 # Caching (optional, for future use)
 cache = Cache(config={'CACHE_TYPE': 'simple'})
+
+# Scheduler
+from apscheduler.schedulers.background import BackgroundScheduler
+scheduler = BackgroundScheduler()

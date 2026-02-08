@@ -8,6 +8,7 @@ import secrets
 from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
+from app.services.finance_service import FinanceService
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 import os
@@ -19,6 +20,7 @@ from app.schemas.payment_schema import validate_payment_register
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 dashboard_service = DashboardService()
 payment_service = PaymentService()
+finance_service = FinanceService()
 
 @admin_bp.route('/dashboard')
 @login_required
@@ -148,6 +150,61 @@ def export_payments_csv():
     output.headers["Content-Disposition"] = f"attachment; filename=pagos_{today.strftime('%Y_%m')}.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+@admin_bp.route('/expenses')
+@login_required
+def expenses():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Financial data
+    financials = finance_service.get_therapist_financials()
+    recent = finance_service.get_expenses() 
+    
+    return render_template('admin/expenses.html', 
+                            therapist_financials=financials,
+                            recent_expenses=recent,
+                            current_date=datetime.now().strftime('%Y-%m-%d'),
+                            active_page='admin_expenses')
+
+@admin_bp.route('/expenses/create', methods=['POST'])
+@login_required
+def create_expense_route():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    data = request.form.to_dict()
+    # Normalize therapist_id - if empty string, remove it so it's None or handle in service
+    if not data.get('therapist_id'):
+        data['therapist_id'] = None
+    elif data.get('therapist_id') == '':
+         data['therapist_id'] = None
+
+    # Handle File Upload for Receipt
+    if 'receipt' in request.files:
+        file = request.files['receipt']
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            unique_name = f"{uuid.uuid4().hex}{ext}"
+            
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+                
+            file.save(os.path.join(upload_dir, unique_name))
+            data['receipt_image_path'] = f"receipts/{unique_name}"
+
+    success, res = finance_service.create_expense(data)
+    
+    if success:
+        flash('Gasto/Pago registrado correctamente.', 'success')
+    else:
+        flash(f'Error al registrar: {res}', 'error')
+        
+    return redirect(url_for('admin.expenses'))
 
 @admin_bp.route('/messages')
 @login_required
@@ -370,7 +427,8 @@ def payments():
         flash(f'{deactivated} usuarios han sido desactivados por falta de pago.', 'warning')
 
     patients_status = payment_service.get_patients_payment_status()
-    return render_template('admin/payments.html', patients=patients_status, active_page='admin_payments')
+    therapists = User.query.filter_by(role='terapista').all()
+    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, active_page='admin_payments')
 
 @admin_bp.route('/api/payment-info/<int:patient_id>')
 @login_required
@@ -447,7 +505,9 @@ def register_payment():
             file.save(os.path.join(upload_dir, unique_name))
             
             # Store relative path for template usage
-            receipt_path = f"uploads/receipts/{unique_name}"
+            # Fix: Previously it was storing "uploads/receipts/...", but base UPLOAD_FOLDER is already instance/uploads
+            # So the relative path from UPLOAD_FOLDER should be just "receipts/..."
+            receipt_path = f"receipts/{unique_name}"
 
     try:
          discount_val = float(discount) if discount else 0.0

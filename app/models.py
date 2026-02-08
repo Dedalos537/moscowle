@@ -52,6 +52,30 @@ class User(db.Model, UserMixin):
     payment_due_date = db.Column(db.Date, nullable=True)
     payment_amount = db.Column(db.Float, default=0.0)
     
+    # New Fields for Session Management
+    sessions_total = db.Column(db.Integer, default=0) # Total allocated sessions for current payment cycle
+    sessions_attended = db.Column(db.Integer, default=0) # Sessions consumed
+    session_cost = db.Column(db.Float, default=0.0) # Calculated cost per session
+    plan_type = db.Column(db.String(50), default='individual') # individual, group
+
+    # Secondary Shift Fields
+    has_second_shift = db.Column(db.Boolean, default=False)
+    modality_2 = db.Column(db.Integer, default=0)
+    payment_amount_2 = db.Column(db.Float, default=0.0)
+    sessions_total_2 = db.Column(db.Integer, default=0)
+    sessions_attended_2 = db.Column(db.Integer, default=0)
+    session_cost_2 = db.Column(db.Float, default=0.0)
+    plan_type_2 = db.Column(db.String(50), default='individual')
+    
+    # Therapist Financials
+    salary_base = db.Column(db.Float, default=0.0)
+    contract_hours = db.Column(db.Integer, default=0)
+    
+    # Therapist Schedule (for auto-calc)
+    work_start_time = db.Column(db.String(5), nullable=True) # HH:MM
+    work_end_time = db.Column(db.String(5), nullable=True) # HH:MM
+    work_days = db.Column(db.String(20), nullable=True) # "0,1,2,3,4" (Mon-Fri)
+    
     payments = db.relationship('Payment', backref='patient', lazy=True)
 
 class Payment(db.Model):
@@ -66,6 +90,23 @@ class Payment(db.Model):
     notes = db.Column(db.Text, nullable=True)
     discount = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Expense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False) # 'therapist_payment', 'operational', 'other'
+    amount = db.Column(db.Float, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    description = db.Column(db.Text, nullable=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # New fields for payment tracking
+    method = db.Column(db.String(50), nullable=True) # transfer, cash, yape_plin
+    receipt_image_path = db.Column(db.String(255), nullable=True)
+
+    therapist = db.relationship('User', backref=db.backref('expenses', lazy=True))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 
 class Game(db.Model):
     __tablename__ = 'game'

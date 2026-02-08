@@ -146,7 +146,8 @@ def api_get_sessions():
             'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
             'location': a.location,
             'notes': a.notes,
-            'games': json.loads(a.games) if a.games else []
+            'games': json.loads(a.games) if a.games else [],
+            'is_holiday': True if a.notes and "Scheduled on Holiday" in a.notes else False
         })
 
     return jsonify(results)

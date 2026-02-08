@@ -56,21 +56,156 @@
   </div>
   <div class="bg-surface rounded-soft shadow-soft p-6 mb-6">
     <h3 class="text-lg font-semibold text-textDark mb-3">Crear Usuario</h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <input id="new-email" class="px-3 py-2 border rounded-soft w-full" placeholder="email@ejemplo.com" />
-      <input id="new-username" class="px-3 py-2 border rounded-soft w-full" placeholder="Nombre" />
-      <select id="new-role" class="px-3 py-2 border rounded-soft w-full">
-        <option value="terapista">Terapeuta</option>
-        <option value="jugador">Paciente</option>
-      </select>
+    
+    <!-- Basic Info -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+        <input id="new-email" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary" placeholder="email@ejemplo.com" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
+        <input id="new-username" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary" placeholder="Nombre completo" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
+        <select id="new-role" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary" onchange="toggleRoleFields()">
+          <option value="terapista">Terapeuta</option>
+          <option value="jugador">Paciente</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
     </div>
+
+    <!-- Therapist Specific Fields (Hidden by default) -->
+    <div id="therapist-fields" class="hidden border-t border-gray-100 pt-4 mt-4 animate-fade-in-down">
+         <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Configuración de Contrato</h4>
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Base Salarial / Monto Total (S/)</label>
+                <input type="number" step="0.01" id="new-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="0.00">
+            </div>
+             <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Contratadas (Mensual)</label>
+                <input type="number" id="new-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="e.g. 160">
+            </div>
+         </div>
+         <p class="text-xs text-gray-400">El pago por hora se calculará: Base / Horas.</p>
+    </div>
+
+    <!-- Patient Specific Fields (Hidden by default) -->
+    <div id="patient-fields" class="hidden border-t border-gray-100 pt-4 mt-4 animate-fade-in-down">
+        <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración del Plan</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad (Sesiones)</label>
+                <select id="new-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="1">1x Semana (4 Sesiones/Pago)</option>
+                    <option value="2">2x Semana (8 Sesiones/Pago)</option>
+                    <option value="3">3x Semana (12 Sesiones/Pago)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia de Pago</label>
+                <select id="new-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="monthly">Mensual</option>
+                    <option value="biweekly">Quincenal</option>
+                    <option value="weekly">Semanal</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
+                <select id="new-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="individual">Individual</option>
+                    <option value="group">Grupal / Fijo</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto a Pagar (S/)</label>
+                <input type="number" step="0.01" id="new-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="0.00">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" onchange="toggleScheduleFields()" checked>
+                <span class="text-sm font-bold text-gray-700">Generar Horario Automático</span>
+            </label>
+        </div>
+
+        <div id="schedule-fields" class="bg-gray-50 p-4 rounded-soft border border-gray-100">
+            <h4 class="text-sm font-bold text-gray-600 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
+                    <input type="date" id="start-date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary"> 
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
+                    <input type="time" id="start-time" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta Asignado</label>
+                    <select id="schedule-therapist" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                        <option value="">-- Seleccionar --</option>
+                        {% for t in therapists %}
+                        <option value="{{ t.id }}">{{ t.username }} ({{ t.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1 mb-2">Días de Sesión (Seleccionar según modalidad)</label>
+                <div class="flex gap-4 flex-wrap">
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="0" class="text-primary rounded"> Lun</label>
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="1" class="text-primary rounded"> Mar</label>
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="2" class="text-primary rounded"> Mié</label>
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="3" class="text-primary rounded"> Jue</label>
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="4" class="text-primary rounded"> Vie</label>
+                    <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="5" class="text-primary rounded"> Sáb</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-3">
-      <button id="create-user" class="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-soft">Crear</button>
-      <span id="create-status" class="text-sm text-gray-600 ml-2 block md:inline mt-2 md:mt-0"></span>
+      <button id="create-user" class="w-full md:w-auto px-6 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90 transition-all shadow-soft">Crear Usuario</button>
+      <span id="create-status" class="text-sm text-gray-600 ml-2 block md:inline mt-2 md:mt-0 font-medium"></span>
     </div>
   </div>
   <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
-    <h3 class="text-lg font-semibold text-textDark mb-3">Listado</h3>
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
+        <h3 class="text-lg font-semibold text-textDark">Listado</h3>
+        
+        <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
+             <!-- Therapist Filter -->
+             <div class="relative w-full md:w-48">
+                <select id="therapistFilter" onchange="applyFilters()" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
+                    <option value="all">Filtro Terapista</option>
+                    <!-- Populated by JS -->
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-[10px]"></i>
+                </div>
+             </div>
+
+             <!-- Search Bar -->
+             <div class="relative w-full md:w-64">
+                <input type="text" id="userHelperSearch" placeholder="Buscar usuario o email..." class="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-gray-50 focus:bg-white">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 text-xs"></i>
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
+                <button onclick="filterUsers('all')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-primary text-white font-medium filter-btn active" data-filter="all">Todos</button>
+                <button onclick="filterUsers('jugador')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="jugador">Pacientes</button>
+                <button onclick="filterUsers('terapista')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="terapista">Terapeutas</button>
+                <button onclick="filterUsers('admin')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="admin">Admin</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Desktop Table View -->
     <div class="hidden md:block overflow-x-auto">
@@ -87,7 +222,7 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for u in users %}
-          <tr class="hover:bg-gray-50/50 transition-colors group">
+          <tr class="hover:bg-gray-50/50 transition-colors group user-row" data-role="{{ u.role }}">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -141,8 +276,31 @@
                           title="Cambiar/Restablecer Contraseña">
                     <i class="fas fa-key"></i>
                   </button>
-                  <button class="p-2 text-gray-400 hover:text-charcoal hover:bg-gray-100 rounded-lg transition-all admin-update-btn" data-id="{{ u.id }}" title="Actualizar">
-                    <i class="fas fa-sync-alt"></i>
+                  <button class="p-2 text-gray-400 hover:text-charcoal hover:bg-gray-100 rounded-lg transition-all admin-update-btn" 
+                          data-id="{{ u.id }}" 
+                          data-username="{{ u.username }}"
+                          data-email="{{ u.email }}"
+                          data-role="{{ u.role }}"
+                          data-active="{{ 'true' if u.is_active else 'false' }}"
+                          data-payment-plan="{{ u.payment_plan or 'monthly' }}"
+                          data-payment-amount="{{ u.payment_amount or 0 }}"
+                          data-sessions-total="{{ u.sessions_total or 0 }}"
+                          data-sessions-attended="{{ u.sessions_attended or 0 }}"
+                          data-plan-type="{{ u.plan_type or 'individual' }}"
+                          
+                          data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}"
+                          data-amount-2="{{ u.payment_amount_2 or 0 }}"
+                          data-sessions-total-2="{{ u.sessions_total_2 or 0 }}"
+                          data-sessions-attended-2="{{ u.sessions_attended_2 or 0 }}"
+                          data-plan-type-2="{{ u.plan_type_2 or 'individual' }}"
+
+                          data-salary="{{ u.salary_base or 0 }}"
+                          data-hours="{{ u.contract_hours or 0 }}"
+                          data-start-time="{{ u.work_start_time or '' }}"
+                          data-end-time="{{ u.work_end_time or '' }}"
+                          data-days="{{ u.work_days or '' }}"
+                          title="Editar / Configurar">
+                    <i class="fas fa-edit"></i>
                   </button>
                   {% if u.role != 'admin' %}
                   <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all admin-delete-btn" data-id="{{ u.id }}" title="Eliminar">
@@ -160,7 +318,7 @@
     <!-- Mobile Card View -->
     <div class="md:hidden space-y-4">
       {% for u in users %}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md user-card" data-role="{{ u.role }}">
         <!-- Header: User Info & Status -->
         <div class="p-5 border-b border-gray-50 bg-gray-50/30">
           <div class="flex justify-between items-start gap-4">
@@ -231,8 +389,29 @@
             <div></div>
             {% endif %}
             
-            <button class="px-5 py-2.5 bg-charcoal text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2 admin-update-btn ml-auto" data-id="{{ u.id }}">
-                <i class="fas fa-sync-alt text-xs"></i> Actualizar Datos
+            <button class="px-5 py-2.5 bg-charcoal text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2 admin-update-btn ml-auto" 
+                    data-id="{{ u.id }}" 
+                    data-username="{{ u.username }}"
+                    data-email="{{ u.email }}"
+                    data-role="{{ u.role }}"
+                    data-active="{{ 'true' if u.is_active else 'false' }}"
+                    data-payment-plan="{{ u.payment_plan or 'monthly' }}"
+                    data-payment-amount="{{ u.payment_amount or 0 }}"
+                    data-sessions-total="{{ u.sessions_total or 0 }}"
+                    data-sessions-attended="{{ u.sessions_attended or 0 }}"
+                    data-plan-type="{{ u.plan_type or 'individual' }}"
+
+                    data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}"
+                    data-amount-2="{{ u.payment_amount_2 or 0 }}"
+                    data-sessions-total-2="{{ u.sessions_total_2 or 0 }}"
+                    data-sessions-attended-2="{{ u.sessions_attended_2 or 0 }}"
+                    data-plan-type-2="{{ u.plan_type_2 or 'individual' }}"
+
+                    data-salary="{{ u.salary_base or 0 }}"
+                    data-hours="{{ u.contract_hours or 0 }}"
+                    title="Actualizar Datos">
+
+                <i class="fas fa-edit text-xs"></i> Actualizar
             </button>
         </div>
       </div>
@@ -240,9 +419,201 @@
     </div>
   </div>
 </div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-soft shadow-soft w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+        <button onclick="closeEditUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-charcoal mb-4">Editar Usuario</h3>
+        
+        <form id="editUserForm">
+            <input type="hidden" id="edit-id">
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
+                    <input type="text" id="edit-username" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
+                    <input type="text" id="edit-email" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" readonly disabled>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
+                <select id="edit-role" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" onchange="toggleEditPatientFields()">
+                    <option value="terapista">Terapeuta</option>
+                    <option value="jugador">Paciente</option>
+                    <option value="admin">Administrador</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="edit-active" class="rounded text-primary focus:ring-primary">
+                    <span class="text-sm text-gray-700">Cuenta Activa</span>
+                </label>
+            </div>
+            
+            <!-- Therapist Specific Edit Fields -->
+            <div id="edit-therapist-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Contrato</h4>
+                
+                <!-- Schedule Configuration -->
+                <div class="mb-4 bg-white p-3 rounded border border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Horario Regular (Auto-calculo)</label>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <span class="text-xs text-gray-400 block mb-1">Hora Entrada</span>
+                            <input type="time" id="edit-start-time" class="w-full px-2 py-1 text-sm border rounded focus:ring-primary focus:border-primary schedule-calc-trigger">
+                        </div>
+                        <div>
+                             <span class="text-xs text-gray-400 block mb-1">Hora Salida</span>
+                            <input type="time" id="edit-end-time" class="w-full px-2 py-1 text-sm border rounded focus:ring-primary focus:border-primary schedule-calc-trigger">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-1">Días Laborales</span>
+                        <div class="flex flex-wrap gap-2">
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="0" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> L
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="1" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> M
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="2" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> X
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="3" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> J
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="4" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> V
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="5" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> S
+                             </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Base Salarial (S/)</label>
+                        <input type="number" step="0.01" id="edit-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Mensuales</label>
+                        <div class="relative">
+                            <input type="number" id="edit-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <span class="absolute right-2 top-2 text-xs text-gray-400 pointer-events-none">hrs</span>
+                        </div>
+                         <p class="text-[10px] text-gray-400 mt-1">* Se actualiza auto. al cambiar horario</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="edit-patient-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración de Plan</h4>
+                
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad</label>
+                        <select id="edit-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="0">Sin paquete</option>
+                            <option value="1">1x Semana (4 Sesiones)</option>
+                            <option value="2">2x Semana (8 Sesiones)</option>
+                            <option value="3">3x Semana (12 Sesiones)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
+                        <select id="edit-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="individual">Individual (Pago por Sesión)</option>
+                            <option value="group">Grupal / Fijo Mensual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia Pago</label>
+                        <select id="edit-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="monthly">Mensual</option>
+                            <option value="biweekly">Quincenal</option>
+                            <option value="weekly">Semanal</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>
+                        <input type="number" step="0.01" id="edit-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sesiones Asistidas</label>
+                        <input type="number" id="edit-attended" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+                
+                <!-- SECOND SHIFT TOGGLE -->
+                <div class="mt-4 border-t border-gray-200 pt-3">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="edit-has-shift2" class="sr-only peer" onchange="toggleShift2()">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary relative"></div>
+                        <span class="ml-3 text-sm font-medium text-gray-700">Habilitar 2do Turno / Plan Diferenciado</span>
+                    </label>
+                </div>
+
+                <!-- SECOND SHIFT FIELDS -->
+                <div id="shift2-fields" class="hidden mt-3 bg-white p-3 rounded border border-gray-200">
+                     <h5 class="text-xs font-bold text-gray-500 uppercase mb-2">Turno 2 (Monto Adicional)</h5>
+                     <div class="grid grid-cols-3 gap-3 mb-2">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Modalidad</label>
+                            <select id="edit-modality-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                                <option value="0">Sin paquete</option>
+                                <option value="1">1x Semana (4)</option>
+                                <option value="2">2x Semana (8)</option>
+                                <option value="3">3x Semana (12)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Tipo Plan</label>
+                            <select id="edit-plan-type-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                                <option value="individual">Individual</option>
+                                <option value="group">Grupal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Monto (S/)</label>
+                            <input type="number" step="0.01" id="edit-amount-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                        </div>
+                     </div>
+                     <div>
+                         <label class="block text-[10px] text-gray-400 uppercase">Sesiones Asistidas (Turno 2)</label>
+                         <input type="number" id="edit-attended-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                     </div>
+                </div>
+
+                <p class="text-xs text-gray-400 mt-2">
+                    <i class="fas fa-info-circle"></i> Al cambiar la modalidad, se actualizará el total de sesiones permitidas por pago.
+                </p>
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+                <button type="button" onclick="closeEditUserModal()" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-soft hover:bg-gray-200">Cancelar</button>
+                <button type="submit" class="flex-1 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 {% block extra_scripts %}
 <script>
+  
   function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     const inner = document.getElementById('toast-inner');
@@ -251,6 +622,136 @@
     toast.classList.remove('hidden');
     setTimeout(() => toast.classList.add('hidden'), 2500);
   }
+
+  // Filter Users Function
+  
+  let currentFilter = 'all';
+
+  window.filterUsers = function(role) {
+      currentFilter = role;
+      
+      // Update buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+          if (btn.dataset.filter === role) {
+              btn.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+              btn.classList.add('bg-primary', 'text-white');
+          } else {
+              btn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
+              btn.classList.remove('bg-primary', 'text-white');
+          }
+      });
+      
+      applyFilters();
+  };
+
+  function applyFilters() {
+      const searchTerm = document.getElementById('userHelperSearch').value.toLowerCase();
+      
+      const therapistSelect = document.getElementById('therapistFilter');
+      const filterTherapist = therapistSelect.value;
+      
+      const filterItem = (el) => {
+          // Get Data
+          const role = el.dataset.role;
+          const nameInput = el.querySelector('.admin-edit-name');
+          const name = nameInput ? nameInput.value.toLowerCase() : '';
+          
+          // Email
+          let email = '';
+          const emailElTable = el.querySelector('td:nth-child(2)');
+          const emailElCard = el.querySelector('p.text-gray-500'); 
+          if (emailElTable) email = emailElTable.textContent.toLowerCase();
+          else if (emailElCard) email = emailElCard.textContent.toLowerCase();
+
+          // Therapist Data - Need to extract selected options from select
+          let assignedTherapists = [];
+          const select = el.querySelector('.assign-select'); // This exists in both desktop and mobile views
+          if (select) {
+             assignedTherapists = Array.from(select.selectedOptions).map(opt => opt.text.trim());
+          }
+          
+          // Logic
+          const matchesRole = (currentFilter === 'all' || role === currentFilter);
+          const matchesSearch = (name.includes(searchTerm) || email.includes(searchTerm));
+          
+          let matchesTherapist = true;
+          if (filterTherapist !== 'all') {
+              // Check if any of the assigned therapists matches the filter
+              // The select option text is "Username" (e.g. "Juan Perez")
+              matchesTherapist = assignedTherapists.includes(filterTherapist);
+              
+              // If user is not a patient (no select), they don't match therapist filter unless they ARE that therapist?
+              // Requirements usually mean "Show patients of this therapist". 
+              // If the row doesn't have an assign-select (e.g. it's an admin or therapist), hide it when filtering by therapist?
+              if (!select) matchesTherapist = false; 
+          }
+          
+          if (matchesRole && matchesSearch && matchesTherapist) {
+              el.style.display = '';
+          } else {
+              el.style.display = 'none';
+          }
+      };
+
+      document.querySelectorAll('.user-row').forEach(filterItem);
+      document.querySelectorAll('.user-card').forEach(filterItem);
+  }
+
+  // Populate Therapist Filter
+  document.addEventListener('DOMContentLoaded', () => {
+        const therapists = new Set();
+        // We can source the therapists from any .assign-select options (all rows have same options)
+        const sampleSelect = document.querySelector('.assign-select');
+        if (sampleSelect) {
+            Array.from(sampleSelect.options).forEach(opt => {
+                if (opt.value) therapists.add(opt.text.trim());
+            });
+        }
+        
+        const select = document.getElementById('therapistFilter');
+        const sortedTherapists = Array.from(therapists).sort();
+        
+        sortedTherapists.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t;
+            option.textContent = t;
+            select.appendChild(option);
+        });
+  });
+
+  // Search Listener
+  document.getElementById('userHelperSearch').addEventListener('keyup', applyFilters);
+  document.getElementById('userHelperSearch').addEventListener('change', applyFilters);
+
+    // Toggle Visibility Functions exposed globally
+    window.toggleRoleFields = function() {
+        const role = document.getElementById('new-role').value;
+        const patientFields = document.getElementById('patient-fields');
+        const therapistFields = document.getElementById('therapist-fields');
+        
+        if (role === 'jugador') {
+            patientFields.classList.remove('hidden');
+            therapistFields.classList.add('hidden');
+        } else if (role === 'terapista') {
+            patientFields.classList.add('hidden');
+            therapistFields.classList.remove('hidden');
+        } else {
+            patientFields.classList.add('hidden');
+            therapistFields.classList.add('hidden');
+        }
+    };
+    window.togglePatientFields = window.toggleRoleFields; // Compat
+    
+    window.toggleScheduleFields = function() {
+        const checked = document.getElementById('check-generate').checked;
+        const fields = document.getElementById('schedule-fields');
+        if (checked) {
+            fields.classList.remove('hidden');
+        } else {
+            fields.classList.add('hidden');
+        }
+    };
+
   document.addEventListener('DOMContentLoaded', () => {
     // Get CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
@@ -260,19 +761,63 @@
     const roleEl = document.getElementById('new-role');
     const statusEl = document.getElementById('create-status');
     const createBtn = document.getElementById('create-user');
+
+    // New Patient Elements
+    const modalityEl = document.getElementById('new-modality');
+    const freqEl = document.getElementById('new-frequency');
+    const amountEl = document.getElementById('new-amount');
+    const generateEl = document.getElementById('check-generate');
+    const startDateEl = document.getElementById('start-date');
+    const startTimeEl = document.getElementById('start-time');
+    const therapistEl = document.getElementById('schedule-therapist');
+
     document.getElementById('create-user').addEventListener('click', async () => {
       statusEl.textContent = 'Creando...';
       const prevTxt = createBtn.textContent;
       createBtn.disabled = true;
       createBtn.textContent = 'Creando…';
       try {
+        const payload = { 
+            email: emailEl.value, 
+            username: userEl.value, 
+            role: roleEl.value 
+        };
+
+        // Add Patient specific data
+        if (roleEl.value === 'jugador') {
+            payload.modality = modalityEl.value;
+            payload.payment_frequency = freqEl.value;
+            payload.payment_amount = amountEl.value;
+            payload.plan_type = document.getElementById('new-plan-type').value;
+            payload.generate_schedule = generateEl.checked;
+            
+            if (generateEl.checked) {
+                payload.start_date = startDateEl.value;
+                payload.start_time = startTimeEl.value;
+                payload.therapist_id = therapistEl.value;
+                
+                // Collect days
+                const days = [];
+                document.querySelectorAll('input[name="days"]:checked').forEach(cb => {
+                    days.push(cb.value);
+                });
+                payload.days_of_week = days;
+            }
+        }
+        
+        // Add Therapist specific data
+        if (roleEl.value === 'terapista') {
+             payload.salary_base = document.getElementById('new-salary').value;
+             payload.contract_hours = document.getElementById('new-hours').value;
+        }
+
         const res = await fetch("{{ url_for('api.api_admin_create_user') }}", {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken
           },
-          body: JSON.stringify({ email: emailEl.value, username: userEl.value, role: roleEl.value })
+          body: JSON.stringify(payload)
         });
         
         const contentType = res.headers.get("content-type");
@@ -365,48 +910,255 @@
       });
     });
 
-    // Update user actions
+
+    // Exposed Modal Functions
+    window.toggleEditRoleFields = function() {
+        const role = document.getElementById('edit-role').value;
+        const patientFields = document.getElementById('edit-patient-fields');
+        const therapistFields = document.getElementById('edit-therapist-fields');
+        
+        if (role === 'jugador') {
+            patientFields.classList.remove('hidden');
+            therapistFields.classList.add('hidden');
+        } else if (role === 'terapista') {
+            patientFields.classList.add('hidden');
+            therapistFields.classList.remove('hidden');
+        } else {
+            patientFields.classList.add('hidden');
+            therapistFields.classList.add('hidden');
+        }
+    };
+    
+    window.toggleShift2 = function() {
+        const checked = document.getElementById('edit-has-shift2').checked;
+        const fields = document.getElementById('shift2-fields');
+        if (checked) {
+            fields.classList.remove('hidden');
+        } else {
+            fields.classList.add('hidden');
+        }
+    };
+    
+    window.toggleEditPatientFields = window.toggleEditRoleFields;
+    
+    window.openEditUserModal = function(btn) {
+        const id = btn.getAttribute('data-id');
+        const username = btn.getAttribute('data-username');
+        const email = btn.getAttribute('data-email');
+        const role = btn.getAttribute('data-role');
+        const active = btn.getAttribute('data-active') === 'true';
+        
+        // Populate basic
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-username').value = username;
+        document.getElementById('edit-email').value = email;
+        document.getElementById('edit-role').value = role;
+        document.getElementById('edit-active').checked = active;
+        
+        // Populate patient specifics
+        if (role === 'jugador') {
+            // Get data attributes directly from button or use passed data
+            const plan = btn.getAttribute('data-payment-plan');
+            const amount = btn.getAttribute('data-payment-amount');
+            const total = parseInt(btn.getAttribute('data-sessions-total') || 0);
+            const attended = btn.getAttribute('data-sessions-attended');
+            
+            // Infer Modality
+            let modality = 0;
+            if (total === 4) modality = 1;
+            else if (total === 8) modality = 2;
+            else if (total === 12) modality = 3;
+            else if (total > 0) modality = 3; // Fallback or custom
+
+            // Patient Fields (Shift 1)
+            document.getElementById('edit-modality').value = modality;
+            document.getElementById('edit-frequency').value = plan;
+            document.getElementById('edit-amount').value = amount;
+            document.getElementById('edit-attended').value = attended;
+            document.getElementById('edit-plan-type').value = btn.getAttribute('data-plan-type') || 'individual';
+            
+            // Patient Fields (Shift 2)
+            const hasShift2 = btn.getAttribute('data-has-shift2') === 'true';
+            document.getElementById('edit-has-shift2').checked = hasShift2;
+            window.toggleShift2(); // Refresh visibility
+            
+            if (hasShift2) {
+                const amount2 = btn.getAttribute('data-amount-2');
+                const total2 = parseInt(btn.getAttribute('data-sessions-total-2') || 0);
+                const attended2 = btn.getAttribute('data-sessions-attended-2');
+                
+                let modality2 = 0;
+                if (total2 === 4) modality2 = 1;
+                else if (total2 === 8) modality2 = 2;
+                else if (total2 === 12) modality2 = 3;
+                else if (total2 > 0) modality2 = 3;
+
+                document.getElementById('edit-modality-2').value = modality2;
+                document.getElementById('edit-amount-2').value = amount2;
+                document.getElementById('edit-plan-type-2').value = btn.getAttribute('data-plan-type-2') || 'individual';
+            } else {
+                 // Reset fields if disabled
+                 document.getElementById('edit-modality-2').value = 0;
+                 document.getElementById('edit-amount-2').value = 0;
+                 document.getElementById('edit-attended-2').value = 0;
+                 document.getElementById('edit-plan-type-2').value = 'individual'
+                 document.getElementById('edit-attended-2').value = 0;
+            }
+
+        } else if (role === 'terapista') {
+             const salary = btn.getAttribute('data-salary');
+             const hours = btn.getAttribute('data-hours');
+             const startTime = btn.getAttribute('data-start-time');
+             const endTime = btn.getAttribute('data-end-time');
+             const workDays = btn.getAttribute('data-days') || ''; // e.g. "0,2,4" or JSON
+             
+             document.getElementById('edit-salary').value = salary || 0;
+             document.getElementById('edit-hours').value = hours || 0;
+             document.getElementById('edit-start-time').value = startTime || '';
+             document.getElementById('edit-end-time').value = endTime || '';
+             
+             // Uncheck all first
+             document.querySelectorAll('input[name="edit_days"]').forEach(cb => cb.checked = false);
+             
+             // Check saved days
+             if (workDays) {
+                 // Try parsing if array or just split comma
+                 let daysArr = [];
+                 if (workDays.startsWith('[')) {
+                    try { daysArr = JSON.parse(workDays).map(String); } catch(e){}
+                 } else {
+                    daysArr = workDays.split(',').map(s => s.trim());
+                 }
+                 
+                 daysArr.forEach(d => {
+                     const cb = document.querySelector(`input[name="edit_days"][value="${d}"]`);
+                     if(cb) cb.checked = true;
+                 });
+             }
+        }
+        
+        toggleEditRoleFields();
+        document.getElementById('editUserModal').classList.remove('hidden');
+    };
+    
+    window.closeEditUserModal = function() {
+        document.getElementById('editUserModal').classList.add('hidden');
+    };
+
+    // Auto-Calculate Hours Logic
+    window.calculateContractHours = function() {
+        const startVal = document.getElementById('edit-start-time').value;
+        const endVal = document.getElementById('edit-end-time').value;
+        const daysChecked = document.querySelectorAll('input[name="edit_days"]:checked').length;
+        
+        if (startVal && endVal && daysChecked > 0) {
+            // Helper to parse "HH:MM"
+            const [h1, m1] = startVal.split(':').map(Number);
+            const [h2, m2] = endVal.split(':').map(Number);
+            
+            const startMin = h1 * 60 + m1;
+            const endMin = h2 * 60 + m2;
+            
+            let diffMin = endMin - startMin;
+            if (diffMin < 0) diffMin = 0; // Simple validation
+            
+            const diffHours = diffMin / 60;
+            
+            // Formula: Hours/Day * Days/Week * 4 Weeks
+            const totalMonthly = (diffHours * daysChecked * 4).toFixed(0); 
+            // toFixed(0) usually preferred for contract hours, or (2) if precise
+            
+            document.getElementById('edit-hours').value = totalMonthly;
+        }
+    };
+
+    // Attach listeners for schedule calculation
+    document.querySelectorAll('.schedule-calc-trigger').forEach(el => {
+        el.addEventListener('change', calculateContractHours);
+        if(el.type === 'time') el.addEventListener('input', calculateContractHours); 
+    });
+
+    // Update user actions (Old listener replaced by new Modal logic)
     document.querySelectorAll('.admin-update-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = Number(btn.getAttribute('data-id'));
-        const nameEl = document.querySelector(`.admin-edit-name[data-id="${id}"]`);
-        const roleEl = document.querySelector(`.admin-edit-role[data-id="${id}"]`);
-        const activeEl = document.querySelector(`.admin-edit-active[data-id="${id}"]`);
+      btn.addEventListener('click', () => {
+          openEditUserModal(btn);
+      });
+    });
+    
+    // Handle Edit Form Submit
+    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
         const prevTxt = btn.textContent;
         btn.disabled = true;
-        btn.textContent = 'Actualizando…';
+        btn.textContent = 'Guardando...';
+        
+        const id = document.getElementById('edit-id').value;
+        const username = document.getElementById('edit-username').value;
+        const role = document.getElementById('edit-role').value;
+        const isActive = document.getElementById('edit-active').checked;
+        
+        const payload = { 
+            id: id, 
+            username: username, 
+            role: role, 
+            is_active: isActive 
+        };
+        
+        if (role === 'jugador') {
+            payload.modality = document.getElementById('edit-modality').value;
+            payload.payment_plan = document.getElementById('edit-frequency').value;
+            payload.payment_amount = document.getElementById('edit-amount').value;
+            payload.sessions_attended = document.getElementById('edit-attended').value;
+            payload.plan_type = document.getElementById('edit-plan-type').value;
+            
+            // Secondary Plan (Turno 2)
+            const hasShift2 = document.getElementById('edit-has-shift2').checked;
+            payload.has_second_shift = hasShift2;
+            if (hasShift2) {
+                payload.modality_2 = document.getElementById('edit-modality-2').value;
+                payload.payment_amount_2 = document.getElementById('edit-amount-2').value;
+                payload.sessions_attended_2 = document.getElementById('edit-attended-2').value;
+                payload.plan_type_2 = document.getElementById('edit-plan-type-2').value;
+            }
+            
+        } else if (role === 'terapista') {
+            payload.salary_base = document.getElementById('edit-salary').value;
+            payload.contract_hours = document.getElementById('edit-hours').value;
+            
+            // New Schedule Fields
+            payload.work_start_time = document.getElementById('edit-start-time').value;
+            payload.work_end_time = document.getElementById('edit-end-time').value;
+            
+            const selectedDays = [];
+            document.querySelectorAll('input[name="edit_days"]:checked').forEach(cb => {
+                selectedDays.push(cb.value);
+            });
+            payload.work_days = selectedDays.join(','); // Send as comma-separated string or array
+        }
+        
         try {
           const res = await fetch("{{ url_for('api.api_admin_update_user') }}", {
             method: 'POST', headers: { 
                 'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken
             },
-            body: JSON.stringify({ id, username: nameEl.value, role: roleEl.value, is_active: activeEl.checked })
+            body: JSON.stringify(payload)
           });
           
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-             const text = await res.text();
-             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
-          }
-
           const data = await res.json();
           if (!res.ok || !data.success) {
-            const errs = data.errors || {};
-            [nameEl, roleEl].forEach(el => el && el.classList.remove('border-red-500'));
-            if (errs.username && nameEl) nameEl.classList.add('border-red-500');
-            if (errs.role && roleEl) roleEl.classList.add('border-red-500');
-            const msg = data.message || 'Error al actualizar';
-            showToast(`${msg}${Object.keys(errs).length ? ': ' + JSON.stringify(errs) : ''}`, 'error');
-            throw new Error(msg);
+            throw new Error(data.message || 'Error al actualizar');
           }
-          showToast('Usuario actualizado', 'success');
-        } catch (e) { showToast(e.message, 'error'); }
-        finally {
-          btn.disabled = false;
-          btn.textContent = prevTxt;
+          
+          showToast('Usuario actualizado correctamente', 'success');
+          setTimeout(() => window.location.reload(), 800);
+          
+        } catch (e) { 
+            showToast(e.message, 'error'); 
+            btn.disabled = false;
+            btn.textContent = prevTxt;
         }
-      });
     });
 
     // Reset Password actions

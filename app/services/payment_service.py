@@ -1,4 +1,4 @@
-from app.models import User, Payment, db, Appointment
+from app.models import User, Payment, db, Appointment, Expense
 from app.services.email_service import EmailService
 from app.services.notification_service import NotificationService
 from datetime import datetime, timedelta
@@ -33,13 +33,56 @@ class PaymentService:
             
             latest_payment = Payment.query.filter_by(patient_id=p.id).order_by(Payment.date.desc()).first()
             
+            # Calculate Debt: (Attended * Cost) - Total Paid
+            # Logic Update for Secondary Plan & Group Plan
+            
+            attended_1 = p.sessions_attended or 0
+            attended_2 = p.sessions_attended_2 or 0
+            consumed_1 = 0
+            consumed_2 = 0
+            
+            # Plan 1 Debt
+            if p.plan_type == 'group':
+                # Group Plan: Fixed monthly cost regardless of attendance
+                # However, for debt calc, we assume the full amount is "consumed" for the current period
+                # A better approach for Debt = Expected - Paid
+                consumed_1 = p.payment_amount or 0
+            else:
+                # Individual Plan: Pay per session
+                cost_1 = p.session_cost or 0
+                consumed_1 = attended_1 * cost_1
+            
+            # Plan 2 Debt (if active)
+            if p.has_second_shift:
+                if p.plan_type_2 == 'group':
+                    consumed_2 = p.payment_amount_2 or 0
+                else:
+                    cost_2 = p.session_cost_2 or 0
+                    consumed_2 = attended_2 * cost_2
+            
+            total_consumed = consumed_1 + consumed_2
+            
+            total_paid = db.session.query(func.sum(Payment.amount)).filter(Payment.patient_id == p.id).scalar() or 0
+            
+            # If total_paid is greater than consumed, they have credit. Use debt logic (positive = owes)
+            debt = total_consumed - total_paid
+            
+            # Format label if multiple plans
+            plan_label = p.payment_plan or 'Mensual'
+            if p.has_second_shift:
+                plan_label += " (+2do Turno)"
+            
             results.append({
                 'user': p,
                 'status': status, # active, inactive, overdue
                 'full_status_label': 'Al día' if status == 'active' else 'Vencido' if status == 'overdue' else 'Inactivo',
                 'days_overdue': days_overdue,
                 'last_payment_date': latest_payment.date if latest_payment else None,
-                'last_payment_amount': latest_payment.amount if latest_payment else None
+                'last_payment_amount': latest_payment.amount if latest_payment else None,
+                'debt': debt,
+                'sessions_attended': attended_1 + attended_2,
+                'sessions_total': (p.sessions_total or 0) + (p.sessions_total_2 or 0),
+                'session_cost': cost_1 # Show primary cost or avg? MVP: primary.
             })
         return results
 
@@ -278,10 +321,19 @@ class PaymentService:
         
         overdue_amount = sum([u.payment_amount or 0 for u in overdue_users])
         
+        # 4. Expenses (Current Month)
+        expenses_query = db.session.query(func.sum(Expense.amount)).filter(
+            Expense.date >= start_date,
+            Expense.date <= end_date
+        ).scalar()
+        monthly_expenses = expenses_query or 0.0
+
         return {
             'month_name': start_date.strftime('%B'),
             'income_real': monthly_income_real,
             'income_expected': monthly_income_expected,
             'overdue_amount': overdue_amount,
-            'overdue_users_count': len(overdue_users)
+            'overdue_users_count': len(overdue_users),
+            'expenses': monthly_expenses,
+            'net_profit': monthly_income_real - monthly_expenses
         }

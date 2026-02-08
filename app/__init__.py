@@ -281,5 +281,13 @@ def create_app(config_class=Config):
 
     # Add other routes here...
     
+    # ========== BACKGROUND TASKS ==========
+    try:
+        from app.tasks import init_scheduler
+        init_scheduler(app)
+        app.logger.info("Scheduler initialized")
+    except Exception as e:
+        app.logger.error(f"Scheduler initialization failed: {e}")
+    
     app.logger.info("Application initialization complete")
     return app

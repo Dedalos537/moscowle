@@ -179,3 +179,42 @@ class EmailService:
         except Exception as e:
             current_app.logger.error(f"Failed to send message notification to {recipient_email}: {str(e)}")
             return False
+
+    @staticmethod
+    def send_admin_payment_report(admin_email, overdue_list, upcoming_list):
+        """Send a weekly report of payments to admin."""
+        if not current_app.config.get('MAIL_USERNAME'):
+            current_app.logger.info(f"[MOCK EMAIL] To Admin: {admin_email} | Payment Report Generated")
+            return False
+            
+        try:
+            subject = f"Reporte Semanal de Pagos - {len(upcoming_list)} Por Vencer"
+            
+            body = "Hola Admin,\n\nEste es el reporte de pagos para la semana.\n\n"
+            
+            if overdue_list:
+                body += "🔴 PAGOS VENCIDOS:\n"
+                for i in overdue_list:
+                    body += f"- {i['name']} ({i['email']}): S/ {i['amount']} (Hace {i['days']} días) - Vence: {i['due_date']}\n"
+                body += "\n"
+                
+            if upcoming_list:
+                body += "🟡 PAGOS POR VENCER (Próx. 7 días):\n"
+                for i in upcoming_list:
+                    days_txt = "HOY" if i['days'] == 0 else f"en {i['days']} días"
+                    body += f"- {i['name']} ({i['email']}): S/ {i['amount']} ({days_txt}) - Vence: {i['due_date']}\n"
+                body += "\n"
+            
+            if not overdue_list and not upcoming_list:
+                body += "No hay pagos pendientes para esta semana.\n"
+                
+            body += "\nPor favor, contacta a los usuarios correspondientes.\n"
+            body += "Saludos,\nSistema Moscowle"
+            
+            msg = MailMessage(subject=subject, recipients=[admin_email], body=body)
+            mail.send(msg)
+            current_app.logger.info(f"Admin payment report sent to {admin_email}")
+            return True
+        except Exception as e:
+            current_app.logger.error(f"Failed to send admin payment report: {str(e)}")
+            return False

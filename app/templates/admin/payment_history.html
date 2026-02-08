@@ -81,12 +81,18 @@
 
 <script>
     function openReceiptModal(path) {
-        // Path comes as "uploads/receipts/...", we need to prepend /static/ or usage url_for in template
-        // But since JS receives the string, let's construct the URL. 
-        // Flask serves static from /static.
-        // If path is "uploads/...", full path is "/static/uploads/..."
+        // Path comes as "receipts/..." or legacy "uploads/receipts/..."
+        // Files are served via the 'uploads.protected_file' route.
         
-        const fullPath = "{{ url_for('static', filename='') }}" + path;
+        // Fix for legacy paths: remove leading 'uploads/' if present
+        if (path.startsWith('uploads/')) {
+            path = path.substring(8); // Remove "uploads/"
+        }
+        
+        // We generate a dummy URL to get the base path and then replace the placeholder
+        const baseUrl = "{{ url_for('uploads.protected_file', filename='__PLACEHOLDER__') }}".replace('__PLACEHOLDER__', '');
+        const fullPath = baseUrl + path;
+        
         document.getElementById('receiptImage').src = fullPath;
         document.getElementById('receiptModal').classList.remove('hidden');
     }

@@ -253,6 +253,11 @@
         <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
         <span class="font-medium">Pagos y Membrecías</span>
       </a>
+      <a href="{{ url_for('admin.expenses') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_expenses' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-money-bill-wave text-lg"></i>
+        <span class="font-medium">Gastos y Terapeutas</span>
+      </a>
       <a href="{{ url_for('admin.games') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-gamepad text-lg"></i>

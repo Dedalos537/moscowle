@@ -688,14 +688,20 @@
               const dateStr = formatDateEs(s.start_time);
               const timeStr = formatTimeEs(s.start_time);
               const dur = durationMinutes(s.start_time, s.end_time);
+              
+              const rowClass = s.is_holiday 
+                ? "bg-yellow-50 hover:bg-yellow-100 transition-colors border-l-4 border-yellow-400" 
+                : "hover:bg-gray-50 transition-colors";
+                
               return `
-                  <tr class="hover:bg-gray-50 transition-colors" data-id="${s.id}">
+                  <tr class="${rowClass}" data-id="${s.id}">
                       <td class="px-6 py-4">
                           <div class="flex items-center gap-3">
                               <img src="${avatar}" alt="${s.patient?.name || ""}" class="w-10 h-10 rounded-full object-cover">
                               <div>
                                   <p class="font-semibold text-textDark">${s.patient?.name || "-"}</p>
                                   <p class="text-xs text-gray-500">ID: ${s.patient?.id || ""}</p>
+                                  ${s.is_holiday ? '<span class="text-xs text-yellow-600 font-bold"><i class="fas fa-exclamation-triangle"></i> Feriado</span>' : ''}
                               </div>
                           </div>
                       </td>
@@ -751,8 +757,12 @@
               const timeStr = formatTimeEs(s.start_time);
               const dur = durationMinutes(s.start_time, s.end_time);
               
+              const cardClass = s.is_holiday
+                ? "bg-yellow-50 border border-yellow-200 rounded-soft p-4 shadow-sm border-l-4 border-l-yellow-400"
+                : "bg-white border border-gray-100 rounded-soft p-4 shadow-sm";
+
               return `
-                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm" data-id="${s.id}">
+                <div class="${cardClass}" data-id="${s.id}">
                   <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center gap-3">
                       <img src="${avatar}" alt="${s.patient?.name || ""}" class="w-12 h-12 rounded-full object-cover">

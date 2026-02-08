@@ -195,6 +195,8 @@ class AppointmentService:
         if not appt:
             return None
             
+        old_attendance = appt.attendance
+
         if 'start_time' in data:
             appt.start_time = data.get('start_time')
         if 'end_time' in data:
@@ -207,6 +209,21 @@ class AppointmentService:
             appt.notes = data.get('notes')
         if 'title' in data:
             appt.title = data.get('title')
+            
+        # === NEW LOGIC: Attendance Tracking ===
+        if 'attendance' in data:
+             patient = User.query.get(appt.patient_id)
+             if patient:
+                if patient.sessions_attended is None: patient.sessions_attended = 0
+                
+                # Mark as present
+                if appt.attendance == 'present' and old_attendance != 'present':
+                    patient.sessions_attended += 1
+                
+                # Unmark
+                elif appt.attendance != 'present' and old_attendance == 'present':
+                    if patient.sessions_attended > 0:
+                        patient.sessions_attended -= 1
             
         db.session.commit()
 

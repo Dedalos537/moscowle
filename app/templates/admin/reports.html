@@ -55,6 +55,20 @@
         </div>
     </div>
 
+    <!-- Expenses and Net Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <span class="text-xs font-bold text-gray-600 uppercase tracking-widest">Gastos Totales</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.expenses or 0) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Nómina + Operativos</p>
+        </div>
+        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Utilidad Neta (Caja)</span>
+            <div class="text-3xl font-bold text-indigo-700 mt-2">S/ {{ "%.2f"|format(financials.net_profit or 0) }}</div>
+            <p class="text-xs text-indigo-400 mt-1">Ingresos Reales - Gastos</p>
+        </div>
+    </div>
+
     <!-- Charts Area -->
     <!-- Note: Adding simple CSS bar chart to avoid heavy JS libs if not present, but using Chart.js structure if desired later. 
          For MVP, clean HTML CSS bars are safer and faster. -->
