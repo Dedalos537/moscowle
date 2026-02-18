@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate, ValidationError
+from marshmallow import Schema, fields, validate, ValidationError, INCLUDE
 
 class CreateUserSchema(Schema):
     email = fields.Email(required=True)
@@ -23,7 +23,7 @@ class UpdateUserSchema(Schema):
     contract_hours = fields.Int(required=False)
 
     class Meta:
-        unknown = 'INCLUDE' # Allow extra fields to pass through
+        unknown = INCLUDE # Allow extra fields to pass through
 
 
 class AssignTherapistSchema(Schema):

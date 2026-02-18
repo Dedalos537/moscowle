@@ -85,17 +85,33 @@
                 </div>
               </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-500 therapist-cell">
+            <td class="px-6 py-4 text-sm text-gray-500 therapist-cell align-top">
                 {% set assigned = p.user.therapists.all() %}
                 {% if assigned %}
-                    {% for t in assigned %}
-                    <span class="px-2 py-1 rounded bg-gray-50 text-gray-600 border border-gray-100 text-xs inline-block mb-1">
-                        <i class="fas fa-user-md mr-1 text-primary"></i>
-                        {{ t.username }}
-                    </span>
-                    {% endfor %}
+                    {% if assigned|length == 1 %}
+                        <span class="px-2 py-1 rounded bg-gray-50 text-gray-600 border border-gray-100 text-xs inline-flex items-center">
+                            <i class="fas fa-user-md mr-1 text-primary"></i>
+                            <span class="therapist-name-text">{{ assigned[0].username }}</span>
+                        </span>
+                    {% else %}
+                        <details class="group">
+                            <summary class="list-none cursor-pointer px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 text-xs inline-flex items-center gap-1 select-none font-medium transition-colors hover:bg-blue-100">
+                                <i class="fas fa-users text-blue-500"></i>
+                                <span>{{ assigned|length }} Asignados</span>
+                                <i class="fas fa-chevron-down text-[10px] ml-1 transition-transform duration-200 group-open:rotate-180"></i>
+                            </summary>
+                            <div class="mt-2 flex flex-col gap-1 pl-2 border-l-2 border-blue-100 animate-fade-in">
+                                {% for t in assigned %}
+                                <span class="px-2 py-1 rounded bg-gray-50 text-gray-600 border border-gray-100 text-xs inline-flex items-center w-max">
+                                    <i class="fas fa-user-md mr-1 text-primary opacity-50"></i>
+                                    <span class="therapist-name-text">{{ t.username }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% endif %}
                 {% else %}
-                    <span class="px-2 py-1 rounded bg-gray-50 text-gray-400 border border-gray-100 text-xs italic">
+                    <span class="px-2 py-1 rounded bg-gray-50 text-gray-400 border border-gray-100 text-xs italic inline-block">
                         Sin Asignar
                     </span>
                 {% endif %}
@@ -173,11 +189,25 @@
                      <div class="therapist-name">
                         {% set assigned = p.user.therapists.all() %}
                         {% if assigned %}
-                            {% for t in assigned %}
-                             <span class="text-xs bg-gray-50 px-2 py-0.5 rounded text-gray-500 border border-gray-100 inline-block mr-1">
-                                <i class="fas fa-user-md text-primary mr-1"></i> {{ t.username }}
-                             </span>
-                            {% endfor %}
+                            {% if assigned|length == 1 %}
+                                <span class="text-xs bg-gray-50 px-2 py-0.5 rounded text-gray-500 border border-gray-100 inline-flex items-center">
+                                    <i class="fas fa-user-md text-primary mr-1"></i> {{ assigned[0].username }}
+                                </span>
+                            {% else %}
+                                <details class="group inline-block w-full">
+                                    <summary class="list-none cursor-pointer text-xs text-blue-600 font-medium inline-flex items-center gap-1 select-none py-1">
+                                        <i class="fas fa-users text-blue-500"></i> {{ assigned|length }} Asignados 
+                                        <i class="fas fa-chevron-down text-[10px] ml-1 transition-transform duration-200 group-open:rotate-180"></i>
+                                    </summary>
+                                    <div class="mt-1 flex flex-wrap gap-1 pl-2">
+                                        {% for t in assigned %}
+                                        <span class="text-xs bg-gray-50 px-2 py-0.5 rounded text-gray-500 border border-gray-100 inline-block">
+                                            <i class="fas fa-user-md text-primary mr-1 opacity-50"></i> {{ t.username }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            {% endif %}
                         {% else %}
                              <span class="text-xs text-gray-400 italic">Sin Asignar</span>
                         {% endif %}
@@ -341,10 +371,12 @@
             });
         
         document.getElementById('paymentModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
     }
     
     function closePaymentModal() {
         document.getElementById('paymentModal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
     }
 
     function openSettingsModal(id, name, amount, date, plan) {
@@ -360,10 +392,12 @@
         }
         
         document.getElementById('settingsModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
     }
 
     function closeSettingsModal() {
         document.getElementById('settingsModal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
     }
 
     function filterPayments() {
@@ -381,11 +415,11 @@
             
             if (userNameCell && therapistCell) {
                 const userName = (userNameCell.textContent || userNameCell.innerText).toLowerCase();
-                // Get all text content from the cell, which will include all therapist names
-                const therapistName = (therapistCell.textContent || therapistCell.innerText).trim();
+                // Get textContent to ensure hidden details are included
+                const therapistName = (therapistCell.textContent).trim(); 
                 
                 const matchName = userName.indexOf(filterName) > -1;
-                // Check if the selected therapist name appears in the cell text
+                // Check inclusion
                 const matchTherapist = (filterTherapist === 'all') || (therapistName.includes(filterTherapist));
 
                 if (matchName && matchTherapist) {
@@ -404,7 +438,8 @@
             
             if (userNameDiv) {
                 const userName = (userNameDiv.textContent || userNameDiv.innerText).toLowerCase();
-                const therapistName = therapistDiv ? (therapistDiv.textContent || therapistDiv.innerText).trim() : '';
+                // Get textContent to ensure hidden details are included
+                const therapistName = therapistDiv ? (therapistDiv.textContent).trim() : '';
                 
                 const matchName = userName.indexOf(filterName) > -1;
                 const matchTherapist = (filterTherapist === 'all') || (therapistName.includes(filterTherapist));

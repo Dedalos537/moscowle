@@ -213,8 +213,16 @@ document.addEventListener('DOMContentLoaded', () => {
         playground: document.getElementById('tab-playground'),
         ai: document.getElementById('tab-ai')
     };
-    const showModal = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); };
-    const hideModal = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+    const showModal = () => { 
+        modal.classList.remove('hidden'); 
+        modal.classList.add('flex'); 
+        document.body.classList.add('overflow-hidden');
+    };
+    const closeModal = () => { 
+        modal.classList.add('hidden'); 
+        modal.classList.remove('flex'); 
+        document.body.classList.remove('overflow-hidden');
+    };
     openBtn.addEventListener('click', showModal);
     closeBtn.addEventListener('click', hideModal);
     modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });

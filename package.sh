@@ -36,9 +36,7 @@ zip -r "$OUTPUT" \
     -x "**/__pycache__/*" \
     -x "instance/*.db" \
     -x "instance/test_*" \
-    -x "instance/uploads/*" \
-    -x "app/app.py.backup" \
-    -x "app/app_legacy.py"
+    -x "instance/uploads/*"
 
 # Clean up placeholder if we don't want it locally? No, it's fine.
 

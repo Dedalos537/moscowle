@@ -248,6 +248,11 @@
         <i class="fa-solid fa-user-gear text-lg"></i>
         <span class="font-medium">Admin Usuarios</span>
       </a>
+      <a href="{{ url_for('admin.sedes_page') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_sedes' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-map-location-dot text-lg"></i>
+        <span class="font-medium">Sedes</span>
+      </a>
       <a href="{{ url_for('admin.payments') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_payments' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-file-invoice-dollar text-lg"></i>

@@ -87,7 +87,10 @@ def register_error_handlers(app):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         app.logger.warning(f"429 Rate Limited: {e}")
-        return jsonify({'error': 'Rate limit exceeded', 'description': str(e.description)}), 429
+        # Return JSON for API calls, HTML for browser
+        if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
+             return jsonify({'error': 'Rate limit exceeded', 'description': str(e.description)}), 429
+        return render_template('errors/429.html', error=e), 429
     
     @app.errorhandler(500)
     def internal_error(error):
@@ -278,6 +281,10 @@ def create_app(config_class=Config):
         
     from app.routes.admin_routes import admin_bp
     app.register_blueprint(admin_bp)
+
+    # Register Async DAO API Blueprint (V2)
+    from app.routes.async_api_routes import async_api_bp
+    app.register_blueprint(async_api_bp)
 
     # Add other routes here...
     

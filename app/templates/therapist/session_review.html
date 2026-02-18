@@ -319,6 +319,7 @@ async function openCameraModal() {
         video.srcObject = videoStream;
         
         modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
         // Small delay to allow display:block to apply before opacity transition
         requestAnimationFrame(() => {
             modal.classList.remove('opacity-0');
@@ -343,6 +344,7 @@ function closeCameraModal() {
     
     setTimeout(() => {
         modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
     }, 300);
 }
 

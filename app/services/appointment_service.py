@@ -1,7 +1,7 @@
 from app.models import Appointment, db, User
 from app.services.notification_service import NotificationService
 from app.services.email_service import EmailService
-from app.utils import get_user_today_utc_range
+from app.utils import get_user_today_utc_range, localize_datetime_for_display
 from flask import url_for, current_app
 import json
 import os
@@ -12,6 +12,7 @@ class AppointmentService:
     def __init__(self):
         self.notification_service = NotificationService()
         self.email_service = EmailService()
+        self.display_timezone = 'America/Lima' # Enforce fixed timezone for notifications
 
     def validate_session_times(self, start_time, end_time, patient_id, therapist_id, session_id=None, ignore_therapist_conflict=False):
         """
@@ -177,15 +178,30 @@ class AppointmentService:
 
         # Notifications
         try:
-            msg_details = f"Título: {appt.title}\nFecha: {start_time.strftime('%d/%m/%Y %H:%M')}\nTerapeuta: {therapist_username}"
-            self.notification_service.create_notification(therapist_id, f'Sesión programada: {appt.title} — {start_time.strftime("%d %b %H:%M")}', url_for('therapist.sessions'))
-            self.notification_service.create_notification(patient_id, f'Tienes una nueva sesión programada con {therapist_username} el {start_time.strftime("%d %b %H:%M")}', url_for('main.game'))
+            # Convert naive UTC start_time to Peru time for display
+            display_time = localize_datetime_for_display(start_time, self.display_timezone)
+            fmt_date_time = display_time.strftime('%d/%m/%Y %H:%M')
+            fmt_short = display_time.strftime("%d %b %H:%M")
+
+            msg_details = f"Título: {appt.title}\nFecha: {fmt_date_time}\nTerapeuta: {therapist_username}"
+            
+            self.notification_service.create_notification(
+                therapist_id, 
+                f'Sesión programada: {appt.title} — {fmt_short}', 
+                url_for('therapist.sessions')
+            )
+            self.notification_service.create_notification(
+                patient_id, 
+                f'Tienes una nueva sesión programada con {therapist_username} el {fmt_short}', 
+                url_for('main.game')
+            )
             
             # Send emails
             therapist = User.query.get(therapist_id)
             self.email_service.send_session_notification(patient.email, patient.username, "programada", msg_details, 'patient')
-            self.email_service.send_session_notification(therapist.email, therapist.username, "programada", f"Paciente: {patient.username}\nFecha: {start_time.strftime('%d/%m/%Y %H:%M')}", 'therapist')
-        except Exception:
+            self.email_service.send_session_notification(therapist.email, therapist.username, "programada", f"Paciente: {patient.username}\nFecha: {fmt_date_time}", 'therapist')
+        except Exception as e:
+            current_app.logger.error(f"Error sending notifications: {e}")
             pass
             
         return appt

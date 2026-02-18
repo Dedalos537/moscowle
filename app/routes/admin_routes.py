@@ -5,7 +5,7 @@ import os
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken
 import secrets
-from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport
+from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
 from app.services.finance_service import FinanceService
@@ -49,7 +49,9 @@ def users():
             patient_therapist_map[u.id] = [t.id for t in u.therapists]
             
     therapists = User.query.filter_by(role='terapista').order_by(User.username.asc()).all()
-    return render_template('admin/users.html', users=users, therapists=therapists, patient_therapist_map=patient_therapist_map, active_page='admin_users')
+    sedes = Sede.query.filter_by(active=True).order_by(Sede.name.asc()).all()
+    
+    return render_template('admin/users.html', users=users, therapists=therapists, patient_therapist_map=patient_therapist_map, sedes=sedes, active_page='admin_users')
 
 @admin_bp.route('/games')
 @login_required
@@ -150,6 +152,16 @@ def export_payments_csv():
     output.headers["Content-Disposition"] = f"attachment; filename=pagos_{today.strftime('%Y_%m')}.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+
+@admin_bp.route('/sedes')
+@login_required
+def sedes_page():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+    return render_template('admin/sedes.html', active_page='admin_sedes')
+
 
 @admin_bp.route('/expenses')
 @login_required

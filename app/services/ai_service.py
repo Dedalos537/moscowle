@@ -79,89 +79,97 @@ def get_expert_label(accuracy, avg_time_ms):
     else:
         return 0
 
-def train_model(real_data=None):
+def start_async_training(real_data=None):
     """
-    Train the SVM model.
-    real_data: List of [accuracy, avg_time_ms] from actual user sessions.
+    Starts the model training in a background thread if not already running.
+    Non-blocking.
     """
-    _import_dependencies()
-    start_ts = time.time()
-    _logger.info('Training started; real_data_count=%s', len(real_data) if real_data else 0)
-    X = []
-    Y = []
-    
-    # 1. Generate Synthetic Data (Base Knowledge) to ensure model stability
-    # We use 300 points to maintain a solid baseline
-    for _ in range(300):
-        acc = np.random.uniform(0, 100)
-        t_ms = np.random.uniform(500, 3000)
-        label = get_expert_label(acc, t_ms)
-        X.append([acc, t_ms])
-        Y.append(label)
+    global _train_thread
+    with _train_lock:
+        if _train_thread is None or not _train_thread.is_alive():
+            _logger.info("Spawning background training thread.")
+            _train_thread = threading.Thread(target=train_model_task, args=(real_data,), daemon=True)
+            _train_thread.start()
+            return True
+        else:
+            _logger.info("Training already in progress. Skipping request.")
+            return False
 
-    # 2. Incorporate Real Data (Retraining/Adaptation)
-    if real_data and len(real_data) > 0:
-        _logger.info('Retraining with %d real data points', len(real_data))
-        for data_point in real_data:
-            acc = data_point[0]
-            t_ms = data_point[1]
-            # In a future version, this label could come from therapist feedback
-            # For now, we auto-label to adapt the decision boundaries to the user's data distribution
-            label = get_expert_label(acc, t_ms)
-
-            # We add the real data multiple times (oversampling) to give it more weight
-            # This ensures the model adapts to the specific user patterns
-            for _ in range(3):
-                X.append([acc, t_ms])
-                Y.append(label)
-
+def train_model_task(real_data=None):
+    """
+    Actual heavy lifting training task. Should be run in a separate thread.
+    """
     try:
+        _import_dependencies()
+        start_ts = time.time()
+        _logger.info('Training task started; real_data_count=%s', len(real_data) if real_data else 0)
+        X = []
+        Y = []
+        
+        # 1. Generate Synthetic Data (Base Knowledge)
+        for _ in range(300):
+            acc = np.random.uniform(0, 100)
+            t_ms = np.random.uniform(500, 3000)
+            label = get_expert_label(acc, t_ms)
+            X.append([acc, t_ms])
+            Y.append(label)
+
+        # 2. Incorporate Real Data (Retraining/Adaptation)
+        if real_data and len(real_data) > 0:
+            for data_point in real_data:
+                acc = data_point[0]
+                t_ms = data_point[1]
+                label = get_expert_label(acc, t_ms)
+                # Oversample real data
+                for _ in range(3):
+                    X.append([acc, t_ms])
+                    Y.append(label)
+
         model = SVC(kernel='rbf', probability=True)
         model.fit(X, Y)
+        
+        # Ensure directory exists
+        model_dir = os.path.dirname(MODEL_PATH)
+        if model_dir and not os.path.exists(model_dir):
+            os.makedirs(model_dir, exist_ok=True)
+
+        dump(model, MODEL_PATH)
+        elapsed = time.time() - start_ts
+        _logger.info('Model training completed: path=%s elapsed=%.2fs', MODEL_PATH, elapsed)
+        
     except Exception as e:
         _logger.exception('Model training failed: %s', e)
-        raise
-    
-    # ensure the directory for the model exists
-    model_dir = os.path.dirname(MODEL_PATH)
-    if model_dir and not os.path.exists(model_dir):
-        os.makedirs(model_dir, exist_ok=True)
 
-    dump(model, MODEL_PATH)
-    elapsed = time.time() - start_ts
-    _logger.info('Modelo re-entrenado y guardado exitosamente; path=%s elapsed_seconds=%.2f', MODEL_PATH, elapsed)
-    print("Modelo re-entrenado y guardado exitosamente.")
+def train_model(real_data=None):
+    """Deprecated: Use start_async_training for non-blocking behavior."""
+    _logger.warning("Synchronous train_model called. Prefer start_async_training.")
+    # For backward compatibility, we can run it synchronously or async. 
+    # Logic suggests keep it sync if called by legacy code, but we want to break dependency.
+    train_model_task(real_data)
 
 def predict_level(accuracy, avg_time):
     _import_dependencies()
     if not os.path.exists(MODEL_PATH):
-        # Allow skipping model training (useful for fast startup/dev).
-        # Set SKIP_MODEL_TRAIN=1 in the environment to avoid triggering train_model().
+        # Allow skipping model training
         if os.getenv('SKIP_MODEL_TRAIN'):
-            print('SKIP_MODEL_TRAIN set: skipping model training and returning default prediction.')
             labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
             return 0, labels[0]
 
-        # If model missing, start training in background (daemon) and return default immediately.
-        global _train_thread
-        with _train_lock:
-            if _train_thread is None or not _train_thread.is_alive():
-                print('Model file missing: starting background training thread.')
-                _train_thread = threading.Thread(target=train_model, daemon=True)
-                _train_thread.start()
-            else:
-                print('Background training already in progress; returning default prediction.')
+        # Use the new async starter
+        start_async_training(real_data=None)
 
         labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
         return 0, labels[0]
     
-    model = load(MODEL_PATH)
-    # predict returns an array; take the first (and only) element
-    pred = model.predict([[accuracy, avg_time]])[0]
-
-    labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
-    
-    return int(pred), labels[int(pred)]
+    try:
+        model = load(MODEL_PATH)
+        # predict returns an array; take the first (and only) element
+        pred = model.predict([[accuracy, avg_time]])[0]
+        labels = {0: "Mantener Nivel", 1: "Avanzar Nivel", 2: "Retroceder/Apoyo"}
+        return int(pred), labels[int(pred)]
+    except Exception:
+        # Fallback if model load fails
+        return 0, "Mantener Nivel"
 
 def get_cluster(metrics_data):
     if len(metrics_data) < 3: return []

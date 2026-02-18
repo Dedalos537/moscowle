@@ -1,4 +1,4 @@
-from app.models import User, db, Appointment
+from app.models import User, db, Appointment, Sede
 from app.services.notification_service import NotificationService
 from app.services.email_service import EmailService
 from app.extensions import bcrypt
@@ -120,6 +120,30 @@ class AdminService:
         # Basic fields
         if data.get('phone'): user.phone = data.get('phone')
         if data.get('guardian'): user.guardian_name = data.get('guardian')
+        
+        # === NEW LOGIC: Sede/Branch Assignment ===
+        try:
+            # For patients (single sede)
+            sede_id = data.get('sede_id')
+            if role == 'jugador' and sede_id:
+                sede = Sede.query.get(sede_id)
+                if sede and sede.active:
+                    user.sede_id = sede.id
+            
+            # For therapists (multiple sedes)
+            if role == 'terapista':
+                sede_ids = data.get('sede_ids', [])
+                 # If it comes as a comma separated string
+                if isinstance(sede_ids, str):
+                     sede_ids = [int(x) for x in sede_ids.split(',')]
+                
+                if sede_ids and isinstance(sede_ids, list):
+                    for sid in sede_ids:
+                        s = Sede.query.get(sid)
+                        if s and s.active:
+                            user.assigned_sedes.append(s)
+        except Exception as e:
+            print(f"Error assigning sede: {e}")
 
         # === NEW LOGIC: Plan & Billing ===
         if role == 'jugador':
@@ -297,6 +321,45 @@ class AdminService:
         if 'is_active' in data:
             user.is_active = bool(data['is_active'])
             
+        # === NEW LOGIC: Update assigned Sede ===
+        if 'sede_id' in data and user.role == 'jugador':
+            try:
+                sid = int(data['sede_id']) if data['sede_id'] else 0
+                if sid:
+                    s = Sede.query.get(sid)
+                    if s and s.active:
+                        user.sede_id = s.id
+                else:
+                    user.sede_id = None
+            except:
+                pass
+
+        # === NEW LOGIC: Update Therapist Sedes ===
+        if 'sede_ids' in data and user.role == 'terapista':
+            try:
+                sids = data.get('sede_ids')
+                # Determine format
+                if isinstance(sids, str):
+                   import json
+                   try:
+                       sids = json.loads(sids)
+                   except:
+                       sids = [int(x) for x in sids.split(',') if x.strip()]
+                
+                if isinstance(sids, list):
+                    # Clear first
+                    current_sedes = list(user.assigned_sedes)
+                    for s in current_sedes:
+                        user.assigned_sedes.remove(s)
+                    
+                    # Add new
+                    for sid in sids:
+                        s = Sede.query.get(sid)
+                        if s and s.active:
+                            user.assigned_sedes.append(s)
+            except Exception as e:
+                print(f"Error updating sedes: {e}")
+
         # === NEW LOGIC: Update Plan for Patients ===
         if user.role == 'jugador':
             try:

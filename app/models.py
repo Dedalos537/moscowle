@@ -8,6 +8,20 @@ patient_therapist = db.Table('patient_therapist',
     db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
 
+# Association table for Therapist <-> Sede (Many-to-Many)
+therapist_sede = db.Table('therapist_sede',
+    db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('sede_id', db.Integer, db.ForeignKey('sede.id'), primary_key=True)
+)
+
+class Sede(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    address = db.Column(db.String(255), nullable=True)
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
@@ -71,11 +85,26 @@ class User(db.Model, UserMixin):
     salary_base = db.Column(db.Float, default=0.0)
     contract_hours = db.Column(db.Integer, default=0)
     
+
     # Therapist Schedule (for auto-calc)
     work_start_time = db.Column(db.String(5), nullable=True) # HH:MM
     work_end_time = db.Column(db.String(5), nullable=True) # HH:MM
     work_days = db.Column(db.String(20), nullable=True) # "0,1,2,3,4" (Mon-Fri)
     
+    # Sede/Branch Relationship
+    sede_id = db.Column(db.Integer, db.ForeignKey('sede.id'), nullable=True)
+    # Use string 'Sede' if class not fully defined, or properties. 
+    # Since Sede is defined before, we can use it, but to be safe and consistent with previous patterns:
+    sede_item = db.relationship('Sede', foreign_keys=[sede_id], backref=db.backref('patients_assigned', lazy='dynamic'))
+
+    # Therapist Sedes (Many-to-Many)
+    assigned_sedes = db.relationship(
+        'Sede',
+        secondary='therapist_sede',
+        backref=db.backref('therapists_assigned', lazy='dynamic'),
+        lazy='dynamic'
+    )
+
     payments = db.relationship('Payment', backref='patient', lazy=True)
 
 class Payment(db.Model):

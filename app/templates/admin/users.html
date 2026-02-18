@@ -76,6 +76,27 @@
         </select>
       </div>
     </div>
+    
+    <!-- Sede Selection -->
+    <div class="mb-4">
+         <div id="patient-sede-div">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
+            <select id="new-sede" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary">
+                <option value="">-- Sin asignar --</option>
+                {% for s in sedes %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+         </div>
+         <div id="therapist-sede-div" class="hidden">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sedes Asignadas (Ctrl+Click para múltiples)</label>
+            <select id="new-sedes-multi" multiple class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary h-24">
+                {% for s in sedes %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+         </div>
+    </div>
 
     <!-- Therapist Specific Fields (Hidden by default) -->
     <div id="therapist-fields" class="hidden border-t border-gray-100 pt-4 mt-4 animate-fade-in-down">
@@ -215,6 +236,7 @@
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Usuario</th>
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rol</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Sede</th>
             <th class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Estado</th>
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Terapeuta</th>
             <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
@@ -243,6 +265,23 @@
                     <i class="fas fa-chevron-down text-[10px]"></i>
                   </div>
               </div>
+            </td>
+            <td class="px-6 py-4">
+                {% if u.role == 'jugador' %}
+                    <span class="text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700">
+                        {{ u.sede_item.name if u.sede_item else 'Sin Sede' }}
+                    </span>
+                {% elif u.role == 'terapista' %}
+                    <div class="flex flex-col gap-1">
+                    {% for s in u.assigned_sedes %}
+                        <span class="text-xs font-semibold px-2 py-1 rounded bg-purple-50 text-purple-700">
+                        {{ s.name }}
+                        </span>
+                    {% else %}
+                        <span class="text-xs text-gray-400">Sin Asignar</span>
+                    {% endfor %}
+                    </div>
+                {% endif %}
             </td>
             <td class="px-6 py-4 text-center">
               <label class="relative inline-flex items-center cursor-pointer justify-center">
@@ -299,6 +338,12 @@
                           data-start-time="{{ u.work_start_time or '' }}"
                           data-end-time="{{ u.work_end_time or '' }}"
                           data-days="{{ u.work_days or '' }}"
+                          data-sede-id="{{ u.sede_id or '' }}"
+                          {% if u.role == 'terapista' %}
+                             data-sede-ids="{{ u.assigned_sedes.all() | map(attribute='id') | list | tojson }}"
+                          {% else %}
+                             data-sede-ids="[]"
+                          {% endif %}
                           title="Editar / Configurar">
                     <i class="fas fa-edit"></i>
                   </button>
@@ -409,6 +454,14 @@
 
                     data-salary="{{ u.salary_base or 0 }}"
                     data-hours="{{ u.contract_hours or 0 }}"
+                    
+                    data-sede-id="{{ u.sede_id or '' }}"
+                    {% if u.role == 'terapista' %}
+                        data-sede-ids="{{ u.assigned_sedes.all() | map(attribute='id') | list | tojson }}"
+                    {% else %}
+                        data-sede-ids="[]"
+                    {% endif %}
+                    
                     title="Actualizar Datos">
 
                 <i class="fas fa-edit text-xs"></i> Actualizar
@@ -462,6 +515,17 @@
             <div id="edit-therapist-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
                 <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Contrato</h4>
                 
+                <!-- Sedes -->
+                <div class="mb-4 bg-white p-3 rounded border border-gray-100">
+                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sedes Asignadas</label>
+                     <p class="text-[10px] text-gray-400 mb-1">Ctrl + Click para seleccionar múltiples</p>
+                     <select id="edit-sedes-multi" multiple class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary h-24">
+                        {% for s in sedes %}
+                            <option value="{{ s.id }}">{{ s.name }}</option>
+                        {% endfor %}
+                     </select>
+                </div>
+
                 <!-- Schedule Configuration -->
                 <div class="mb-4 bg-white p-3 rounded border border-gray-100">
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Horario Regular (Auto-calculo)</label>
@@ -518,6 +582,16 @@
             
             <div id="edit-patient-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
                 <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración de Plan</h4>
+                
+                <div class="mb-3 bg-white p-3 rounded border border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
+                    <select id="edit-sede" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                        <option value="">-- Sin asignar --</option>
+                        {% for s in sedes %}
+                        <option value="{{ s.id }}">{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 
                 <div class="grid grid-cols-2 gap-4 mb-3">
                      <div>
@@ -729,15 +803,24 @@
         const patientFields = document.getElementById('patient-fields');
         const therapistFields = document.getElementById('therapist-fields');
         
+        const pSede = document.getElementById('patient-sede-div');
+        const tSede = document.getElementById('therapist-sede-div');
+
         if (role === 'jugador') {
             patientFields.classList.remove('hidden');
             therapistFields.classList.add('hidden');
+            if(pSede) pSede.classList.remove('hidden');
+            if(tSede) tSede.classList.add('hidden');
         } else if (role === 'terapista') {
             patientFields.classList.add('hidden');
             therapistFields.classList.remove('hidden');
+            if(pSede) pSede.classList.add('hidden');
+            if(tSede) tSede.classList.remove('hidden');
         } else {
             patientFields.classList.add('hidden');
             therapistFields.classList.add('hidden');
+            if(pSede) pSede.classList.add('hidden');
+            if(tSede) tSede.classList.add('hidden');
         }
     };
     window.togglePatientFields = window.toggleRoleFields; // Compat
@@ -782,6 +865,19 @@
             username: userEl.value, 
             role: roleEl.value 
         };
+
+        // Sede Data
+        if (roleEl.value === 'jugador') {
+            payload.sede_id = document.getElementById('new-sede').value;
+        }
+        if (roleEl.value === 'terapista') {
+             const selected = [];
+             const opts = document.getElementById('new-sedes-multi').options;
+             for (let i=0; i < opts.length; i++) {
+                 if (opts[i].selected) selected.push(opts[i].value);
+             }
+             payload.sede_ids = selected;
+        }
 
         // Add Patient specific data
         if (roleEl.value === 'jugador') {
@@ -957,6 +1053,9 @@
         
         // Populate patient specifics
         if (role === 'jugador') {
+            // Sede
+            document.getElementById('edit-sede').value = btn.getAttribute('data-sede-id') || '';
+
             // Get data attributes directly from button or use passed data
             const plan = btn.getAttribute('data-payment-plan');
             const amount = btn.getAttribute('data-payment-amount');
@@ -1012,6 +1111,17 @@
              const endTime = btn.getAttribute('data-end-time');
              const workDays = btn.getAttribute('data-days') || ''; // e.g. "0,2,4" or JSON
              
+             // Populate Sedes
+             const sedeIdsRaw = btn.getAttribute('data-sede-ids') || '[]';
+             let assignedSedes = [];
+             try { assignedSedes = JSON.parse(sedeIdsRaw).map(Number); } catch(e){}
+             const sedeSelect = document.getElementById('edit-sedes-multi');
+             if(sedeSelect){
+                 for (let i = 0; i < sedeSelect.options.length; i++) {
+                     sedeSelect.options[i].selected = assignedSedes.includes(parseInt(sedeSelect.options[i].value));
+                 }
+             }
+
              document.getElementById('edit-salary').value = salary || 0;
              document.getElementById('edit-hours').value = hours || 0;
              document.getElementById('edit-start-time').value = startTime || '';
@@ -1039,10 +1149,14 @@
         
         toggleEditRoleFields();
         document.getElementById('editUserModal').classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
     };
     
     window.closeEditUserModal = function() {
         document.getElementById('editUserModal').classList.add('hidden');
+        document.body.classList.remove('overflow-
+        document.getElementById('editUserModal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
     };
 
     // Auto-Calculate Hours Logic
@@ -1106,6 +1220,7 @@
         };
         
         if (role === 'jugador') {
+            payload.sede_id = document.getElementById('edit-sede').value;
             payload.modality = document.getElementById('edit-modality').value;
             payload.payment_plan = document.getElementById('edit-frequency').value;
             payload.payment_amount = document.getElementById('edit-amount').value;
@@ -1123,6 +1238,13 @@
             }
             
         } else if (role === 'terapista') {
+            const selectedSedes = [];
+            const ms = document.getElementById('edit-sedes-multi');
+            for(let i=0; i<ms.options.length; i++) {
+                if(ms.options[i].selected) selectedSedes.push(ms.options[i].value);
+            }
+            payload.sede_ids = selectedSedes;
+
             payload.salary_base = document.getElementById('edit-salary').value;
             payload.contract_hours = document.getElementById('edit-hours').value;
             

@@ -13,19 +13,33 @@ class Config:
     # ========== DATABASE OPTIMIZATION ==========
     # Ensure absolute path for SQLite to avoid cwd issues in production
     basedir = os.path.abspath(os.path.dirname(__file__))
-    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///' + os.path.join(basedir, 'instance', 'moscowle.db'))
+    
+    # Priority: Environment Variable (MySQL) > Local SQLite fallback
+    # Example MySQL URI: mysql+pymysql://user:password@localhost/db_name
+    SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+    
+    if not SQLALCHEMY_DATABASE_URI:
+        # Fallback to SQLite for local development only
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'instance', 'moscowle.db')
+        
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     
-    # CRITICAL: Connection pool optimization to prevent leaks
+    # CRITICAL: Connection pool optimization for MySQL
+    # Prevent "MySQL server has gone away" during idle periods
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,              # Minimum persistent connections
-        'max_overflow': 20,            # Additional connections under load
-        'pool_timeout': 30,            # Seconds to wait for connection
-        'pool_recycle': 3600,          # Recycle connections every 1 hour
-        'pool_pre_ping': True,         # Test connection before using
-        'echo': False                  # Disable SQL logging in production
+        'pool_size': 10,              # Maintain 10 connections
+        'max_overflow': 20,           # Allow up to 20 bursts
+        'pool_recycle': 1800,         # Recycle connections every 30 mins (MySQL default timeout is often 8hrs, but strict firewalls cut sooner)
+        'pool_pre_ping': True,        # Vital: Check connection aliveness before query
+        'pool_timeout': 30            # Fail fast if pool is exhausted
     }
+    
+    # ========== SECURITY - RATE LIMITING ==========
+    RATELIMIT_ENABLED = True
+    RATELIMIT_DEFAULT = "200 per day;50 per hour"
+    RATELIMIT_STORAGE_URL = "memory://"
+    RATELIMIT_STRATEGY = "fixed-window"
     
     # ========== GEMINI API_KEY ==========
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')

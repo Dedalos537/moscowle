@@ -16,20 +16,34 @@ def get_app():
         return application
     except Exception as e:
         # FATAL ERROR TRAP
-        # If the app fails to load, create a fallback WSGI app that displays the error
         import traceback
         trace = traceback.format_exc()
         
         def error_app(environ, start_response):
-            status = '500 Internal Server Error'
-            response_headers = [('Content-type', 'text/plain; charset=utf-8')]
+            # Use 200 OK so browsers don't hide the error
+            status = '200 OK'
+            output = f"Critical Startup Error:\n\n{trace}".encode('utf-8')
+            response_headers = [
+                ('Content-type', 'text/plain; charset=utf-8'),
+                ('Content-Length', str(len(output)))
+            ]
             start_response(status, response_headers)
-            return [f"Critical Startup Error:\n\n{trace}".encode('utf-8')]
+            return [output]
         
         return error_app
 
-# 3. INITIALIZE APP
-app = get_app()
+# 3. INITIALIZE APP with Global Try-Catch
+try:
+    app = get_app()
+except Exception as e:
+    import traceback
+    trace = traceback.format_exc()
+    def app(environ, start_response):
+        status = '200 OK'
+        output = f"Global Initialization Error:\n\n{trace}".encode('utf-8')
+        response_headers = [('Content-type', 'text/plain'), ('Content-Length', str(len(output)))]
+        start_response(status, response_headers)
+        return [output]
 
 # 4. PASSENGER WSGI ENTRY POINT
 def application(environ, start_response):

@@ -8,10 +8,10 @@ from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.dashboard_service import DashboardService
 from app.services.google_drive_service import GoogleDriveService
-from app.services.ai_service import predict_level, train_model
+from app.services.ai_service import predict_level, start_async_training
 from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime_for_storage, localize_datetime_for_display, get_user_timezone
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
-from app.extensions import bcrypt
+from app.extensions import bcrypt, limiter
 from app.services.email_service import EmailService
 from datetime import datetime, timedelta, timezone
 import json
@@ -21,7 +21,7 @@ from werkzeug.utils import secure_filename
 import requests
 from sqlalchemy import or_, func
 
-api_bp = Blueprint('api', __name__)
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 appointment_service = AppointmentService()
 game_service = GameService()
@@ -744,6 +744,7 @@ def api_admin_delete_user():
 
 @api_bp.route('/save_game', methods=['POST'])
 @login_required
+@limiter.limit("20 per minute")
 def save_game():
     try:
         data = request.get_json() or {}
@@ -838,11 +839,11 @@ def save_game():
                 # Note: avg_time in DB is seconds, model expects ms
                 training_data = [[m.accurracy, m.avg_time * 1000] for m in all_metrics]
                 
-                # Run training in background (conceptually, here synchronous for MVP simplicity)
-                current_app.logger.info(f"Triggering AI retraining with {len(training_data)} samples...")
-                train_model(training_data)
+                # Run training in background (Now purely async and non-blocking)
+                current_app.logger.info(f"Triggering AI async retraining with {len(training_data)} samples...")
+                start_async_training(training_data)
         except Exception as e:
-            current_app.logger.error(f"AI Retraining failed: {e}")
+            current_app.logger.error(f"AI Retraining trigger failed: {e}")
         # -----------------------------
 
         return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
@@ -851,6 +852,7 @@ def save_game():
 
 
 @api_bp.route('/games/upload', methods=['POST'])
+@limiter.limit("5 per hour")
 @login_required
 def upload_game():
     if current_user.role != 'terapista':
@@ -869,6 +871,7 @@ def upload_game():
 
 
 @api_bp.route('/ai/gemini', methods=['POST'])
+@limiter.limit("10 per minute")
 @login_required
 def gemini_proxy():
     if current_user.role not in ('terapista','admin'):
@@ -1406,3 +1409,61 @@ def delete_session_image(appointment_id, image_id):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'Error al eliminar imagen: {str(e)}'}), 500
+
+# --- SEDES MANAGEMENT ---
+from app.models import Sede
+
+@api_bp.route('/admin/sedes', methods=['GET', 'POST'])
+@login_required
+def admin_sedes():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+
+    if request.method == 'GET':
+        sedes = Sede.query.order_by(Sede.created_at.desc()).all()
+        return jsonify([{
+            'id': s.id,
+            'name': s.name,
+            'address': s.address,
+            'active': s.active,
+            'created_at': s.created_at.isoformat() if s.created_at else None
+        } for s in sedes])
+
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'success': False, 'message': 'Nombre es obligatorio'}), 400
+        
+        existing = Sede.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({'success': False, 'message': 'Sede ya existe'}), 400
+
+        address = data.get('address')
+        s = Sede(name=name, address=address)
+        db.session.add(s)
+        db.session.commit()
+        return jsonify({'success': True, 'id': s.id})
+
+@api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT'])
+@login_required
+def admin_sedes_detail(sede_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+        
+    s = Sede.query.get(sede_id)
+    if not s:
+        return jsonify({'success': False, 'message': 'No encontrado'}), 404
+
+    if request.method == 'PUT':
+        data = request.get_json() or {}
+        if 'active' in data:
+            s.active = bool(data['active'])
+        if 'name' in data and data['name']:
+            s.name = data['name']
+        if 'address' in data:
+            s.address = data['address']
+        
+        db.session.commit()
+        return jsonify({'success': True})
+
