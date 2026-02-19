@@ -34,21 +34,43 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script>
+    // 1. Detección y Aplicación Inmediata de Tema (Anti-FOUC)
+    (function() {
+      try {
+        const localTheme = localStorage.getItem('theme');
+        const sysTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (localTheme === 'dark' || (!localTheme && sysTheme)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {}
+    })();
+
     tailwind.config = {
+      darkMode: 'class', // Habilitar modo estrategia 'class'
       theme: {
         extend: {
           colors: {
-            primary: "#75a83a",
-            olive: "#75a83a",
-            background: "#f9fcf8",
-            surface: "#ffffff",
-            textDark: "#374151",
-            charcoal: "#374151",
-            lightGreen: "#ecfccb",
+            // Colores Semánticos con Variables CSS para cambio automático
+            primary: "var(--color-primary)",
+            olive: "var(--color-primary)", // Alias
+            background: "var(--color-background)",
+            surface: "var(--color-surface)",
+            textDark: "var(--color-text-main)",
+            charcoal: "var(--color-text-muted)",
+            
+            // Colores de estado (suelen mantenerse constantes o con ligero ajuste)
+            lightGreen: "#ecfccb", 
             accent: "#3b82f6",
             statusGreen: "#10b981",
             statusYellow: "#f59e0b",
             statusRed: "#ef4444",
+            
+            // Colores específicos para dark mode si se necesitan directos
+            darkSurface: "#1F2937",
+            darkBg: "#111827",
           },
           fontFamily: {
             sans: ["Inter", "sans-serif"],
@@ -57,14 +79,129 @@
             soft: "1.5rem",
           },
           boxShadow: {
-            soft: "0 10px 30px -5px rgba(117, 168, 58, 0.15)",
-            "soft-lg": "0 20px 40px -10px rgba(117, 168, 58, 0.2)",
+            soft: "var(--shadow-soft)",
+            "soft-lg": "var(--shadow-soft-lg)",
           },
         },
       },
     };
   </script>
   <style>
+    /* 2. Definición de Diseño con Variables CSS (Design Tokens) */
+    :root {
+      /* Palette Light (Original) */
+      --color-primary: #75a83a;
+      --color-background: #f9fcf8;
+      --color-surface: #ffffff;
+      --color-text-main: #374151; /* Gray 700 */
+      --color-text-muted: #6b7280; /* Gray 500 */
+      --color-border: #e5e7eb; /* Gray 200 */
+      
+      --shadow-soft: 0 10px 30px -5px rgba(117, 168, 58, 0.15);
+      --shadow-soft-lg: 0 20px 40px -10px rgba(117, 168, 58, 0.2);
+    }
+
+    /* Palette Dark (Nueva) */
+    .dark {
+      --color-primary: #86c246; /* Un poco más brillante para contraste oscuro */
+      --color-background: #0f172a; /* Slate 900 */
+      --color-surface: #1e293b; /* Slate 800 */
+      --color-text-main: #f3f4f6; /* Gray 100 */
+      --color-text-muted: #9ca3af; /* Gray 400 */
+      --color-border: #374151; /* Gray 700 */
+      
+      --shadow-soft: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+      --shadow-soft-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Global Dark Mode Overrides for Hardcoded Utility Classes */
+    /* Esto es un truco CSS avanzado para evitar reescribir millones de clases bg-white */
+    .dark .bg-white { background-color: var(--color-surface) !important; color: var(--color-text-main); }
+    .dark .bg-gray-50 { background-color: var(--color-background) !important; }
+    .dark .bg-gray-100 { background-color: #334155 !important; } /* Slate 700 */
+    .dark .bg-gray-200 { background-color: #475569 !important; } /* Slate 600 - para toggles */
+    .dark .bg-indigo-50 { background-color: rgba(67, 56, 202, 0.2) !important; color: #c7d2fe !important; } /* Indigo Tint */
+    .dark .bg-purple-50 { background-color: rgba(88, 28, 135, 0.2) !important; color: #e9d5ff !important; } /* Purple Tint */
+    .dark .bg-blue-50 { background-color: rgba(30, 64, 175, 0.2) !important; color: #bfdbfe !important; } /* Blue Tint */
+    .dark .bg-lightGreen { background-color: rgba(134, 194, 70, 0.15) !important; color: #bef264 !important; } /* Green Tint for Dark Mode */
+    
+    /* Fix hover states for lightGreen in dark mode (Tables, Sidebar, etc.) */
+    .dark .hover\:bg-lightGreen:hover {
+        background-color: rgba(134, 194, 70, 0.15) !important;
+    }
+    
+    /* Ensure text inside hovered rows remains readable (optional but good practice) */
+    .dark .hover\:bg-lightGreen:hover .text-gray-500,
+    .dark .hover\:bg-lightGreen:hover .text-gray-600 {
+        color: #e5e7eb !important; /* Make gray text lighter on hover to ensure contrast */
+    }
+
+    /* Fix other common hover classes */
+    .dark .hover\:bg-white:hover { background-color: var(--color-surface) !important; }
+    .dark .hover\:bg-gray-50:hover { background-color: rgba(255, 255, 255, 0.05) !important; }
+    .dark .hover\:bg-gray-100:hover { background-color: #334155 !important; } /* Slate 700 */
+    .dark .hover\:bg-gray-200:hover { background-color: #475569 !important; } /* Slate 600 */
+
+
+    .dark .text-gray-500 { color: #9ca3af !important; } /* Gray 400 */
+    .dark .text-gray-600 { color: #d1d5db !important; } /* Gray 300 */
+    .dark .text-gray-700 { color: #f3f4f6 !important; } /* Gray 100 */
+    .dark .text-gray-400 { color: #6b7280 !important; } /* Gray 500 */
+    .dark .border-gray-100 { border-color: #374151 !important; }
+    .dark .border-gray-200 { border-color: #4b5563 !important; }
+    
+    /* Input Elements in Dark Mode */
+    .dark input, .dark select, .dark textarea {
+        background-color: var(--color-surface) !important;
+        color: var(--color-text-main) !important;
+        border-color: var(--color-border) !important;
+    }
+    
+    .dark input:focus, .dark select:focus, .dark textarea:focus {
+        border-color: var(--color-primary) !important;
+        background-color: #0f172a !important; /* Visual feedback: Slightly darker on focus */
+    }
+
+    .dark input:disabled, .dark select:disabled {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    /* Input Placeholders */
+    .dark input::placeholder {
+        color: #6b7280;
+    }
+
+    /* Skeleton Overrides */
+    .dark .skeleton-loader {
+        background: linear-gradient(to right, #1e293b 4%, #334155 25%, #1e293b 36%);
+    }
+
+    /* Table & Row Hover */
+    .dark tr.hover\:bg-gray-50\/50:hover,
+    .dark .hover\:bg-gray-50:hover {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    .dark .bg-gray-50\/30 {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    /* Fix table striped rows if any, and bottom borders */
+    .dark td, .dark th {
+        border-color: var(--color-border) !important;
+    }
+    
+    /* Fix bright white selects in tables */
+    .dark .bg-transparent {
+        background-color: transparent !important;
+        color: var(--color-text-main) !important;
+    }
+
+    /* Transiciones suaves de color */
+    body, div, nav, a, button, input, select, textarea, span, p, h1, h2, h3, h4, h5, h6 {
+       transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
     ::-webkit-scrollbar {
       display: none;
     }
@@ -77,8 +214,16 @@
 
     .skeleton-loader {
         animation: shimmer 2s infinite linear;
+        /* Default Light */
         background: linear-gradient(to right, #f6f7f8 4%, #edeef1 25%, #f6f7f8 36%);
         background-size: 1000px 100%;
+    }
+
+    .dark .skeleton-loader {
+        /* Gradiente oscuro sutil para skeletons */
+        background: linear-gradient(to right, #1e293b 4%, #334155 25%, #1e293b 36%);
+        background-size: 1000px 100%;
+        animation: shimmer 2s infinite linear; /* Ensure animation persists */
     }
 
     .skeleton-overlay {
@@ -87,7 +232,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #f9fcf8;
+        background-color: var(--color-background); /* Usar variable para adaptarse */
         z-index: 9999;
         opacity: 0;
         visibility: hidden;
@@ -196,8 +341,8 @@
         <i class="fas fa-times text-xl"></i>
       </button>
     </div>
-    {% if current_user.role == 'terapista' %}
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
+    {% if current_user.role == 'terapista' %}
       <a href="{{ url_for('therapist.dashboard') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-chart-line text-lg"></i>
@@ -279,9 +424,49 @@
         <span class="font-medium">Admin Mensajes</span>
       </a>
        {% endif %}
+
+      <!-- Dark Mode Toggle Button (Universal) -->
+      <div class="mt-4 pt-4 border-t border-gray-100/50">
+        <button id="theme-toggle" class="flex items-center gap-4 px-6 py-3 rounded-soft text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-charcoal transition-all w-full text-left group">
+            <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
+                <i id="theme-icon" class="fa-solid fa-moon text-sm"></i>
+            </div>
+            <span id="theme-text" class="font-medium text-sm">Modo Oscuro</span>
+        </button>
+      </div>
       
-  
-        </div>
+  </nav>
+
+  <script>
+    // Theme Toggle Logic
+    const themeBtn = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeText = document.getElementById('theme-text');
+    
+    function updateThemeUI() {
+        const isDark = document.documentElement.classList.contains('dark');
+        if (themeIcon) themeIcon.className = isDark ? 'fa-solid fa-sun text-lg' : 'fa-solid fa-moon text-lg';
+        if (themeText) themeText.textContent = isDark ? 'Modo Claro' : 'Modo Oscuro';
+    }
+    
+    // Initial UI Update
+    updateThemeUI();
+    
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            updateThemeUI();
+        });
+    }
+  </script>
+
       </div>
     </div>
   </div>

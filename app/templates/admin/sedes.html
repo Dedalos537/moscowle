@@ -67,11 +67,52 @@
     }
 
     async function loadSedes() {
+        const tbody = document.getElementById('sedes-tbody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                    <svg class="animate-spin h-5 w-5 mx-auto text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="mt-2 block text-sm">Cargando sedes...</span>
+                </td>
+            </tr>
+        `;
+
         try {
             const res = await fetch('/api/admin/sedes');
+            
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.message || `Error ${res.status}: ${res.statusText}`);
+            }
+
             const sedes = await res.json();
-            const tbody = document.getElementById('sedes-tbody');
+            
+            if (!Array.isArray(sedes)) {
+                console.error('Expected array of sedes, got:', sedes);
+                throw new Error('Formato de respuesta inválido');
+            }
+
             tbody.innerHTML = '';
+            
+            if (sedes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                <p class="text-base font-medium text-gray-900">No hay sedes registradas</p>
+                                <p class="text-sm text-gray-500 mt-1">Utiliza el formulario de arriba para crear una nueva sede.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
             
             sedes.forEach(s => {
                 const tr = document.createElement('tr');
@@ -99,8 +140,27 @@
             
             attachListeners();
         } catch (e) {
-            console.error(e);
-            showToast('Error cargando sedes', 'error');
+            console.error('API Error:', e);
+            showToast(e.message || 'Error cargando sedes', 'error');
+            const tbody = document.getElementById('sedes-tbody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center">
+                            <div class="flex flex-col items-center text-statusRed">
+                                <svg class="w-8 h-8 mb-2 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="font-medium">Error al cargar datos</span>
+                                <span class="text-sm opacity-75 mt-1">${e.message}</span>
+                                <button onclick="loadSedes()" class="mt-4 px-4 py-2 bg-white border border-gray-200 rounded text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                    Intentar de nuevo
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
 

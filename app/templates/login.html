@@ -1,9 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    /* Force specific overrides for login card to ensure dark mode works */
+    .dark .login-card {
+        background-color: #1e293b !important;
+        color: #f3f4f6 !important;
+    }
+    .dark .login-input {
+        background-color: #0f172a !important;
+        border-color: #374151 !important;
+        color: #f3f4f6 !important;
+    }
+    .dark .login-input:focus {
+        border-color: var(--color-primary) !important;
+        background-color: #1e293b !important;
+    }
+</style>
 <div class="flex min-h-screen items-center justify-center p-4 bg-background">
-    <div class="w-full max-w-md bg-white rounded-soft shadow-soft p-8 relative overflow-hidden">
+    <div class="login-card w-full max-w-md bg-surface rounded-soft shadow-soft p-8 relative overflow-hidden transition-colors duration-300">
         <!-- Decorational -->
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-lightGreen"></div>
+
 
         <!-- Logo Section -->
         <div class="text-center mb-8">
@@ -43,7 +60,7 @@
                         <i class="far fa-envelope text-lg"></i>
                     </span>
                     <input type="email" id="email" name="email" 
-                        class="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
+                        class="login-input w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-transparent dark:border-gray-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
                         placeholder="usuario@ejemplo.com" required>
                 </div>
             </div>
@@ -55,7 +72,7 @@
                         <i class="fas fa-lock text-lg"></i>
                     </span>
                     <input type="password" id="password" name="password" 
-                        class="w-full pl-12 pr-12 py-3 bg-gray-50 border-2 border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
+                        class="login-input w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-transparent dark:border-gray-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
                         placeholder="Ingresa tu contraseña" required>
                     <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-textDark focus:outline-none transition-colors">
                         <i class="far fa-eye" id="eyeIcon"></i>

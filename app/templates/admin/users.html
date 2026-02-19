@@ -340,9 +340,9 @@
                           data-days="{{ u.work_days or '' }}"
                           data-sede-id="{{ u.sede_id or '' }}"
                           {% if u.role == 'terapista' %}
-                             data-sede-ids="{{ u.assigned_sedes.all() | map(attribute='id') | list | tojson }}"
+                             data-sede-ids='{{ u.assigned_sedes.all() | map(attribute="id") | list | tojson }}'
                           {% else %}
-                             data-sede-ids="[]"
+                             data-sede-ids='[]'
                           {% endif %}
                           title="Editar / Configurar">
                     <i class="fas fa-edit"></i>
@@ -476,10 +476,17 @@
 <!-- Edit User Modal -->
 <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-soft shadow-soft w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-        <button onclick="closeEditUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <button type="button" onclick="closeEditUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <i class="fas fa-times"></i>
         </button>
-        <h3 class="text-xl font-bold text-charcoal mb-4">Editar Usuario</h3>
+        <div class="flex justify-between items-center mb-6 pr-8">
+            <h3 class="text-xl font-bold text-charcoal m-0">Editar Usuario 
+                <span id="role-badge" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500 font-normal align-middle"></span>
+            </h3>
+            <a id="view-details-btn" href="#" class="hidden px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors flex items-center shadow-sm border border-blue-100 whitespace-nowrap">
+                <i class="fas fa-external-link-alt mr-2"></i> Ver Detalles
+            </a>
+        </div>
         
         <form id="editUserForm">
             <input type="hidden" id="edit-id">
@@ -1050,6 +1057,24 @@
         document.getElementById('edit-email').value = email;
         document.getElementById('edit-role').value = role;
         document.getElementById('edit-active').checked = active;
+
+        // Show View Details Button
+        const viewBtn = document.getElementById('view-details-btn');
+        viewBtn.classList.add('hidden'); // Default hide
+        
+        // Update Role Badge
+        const badge = document.getElementById('role-badge');
+        badge.textContent = role === 'jugador' ? 'Paciente' : (role === 'terapista' ? 'Terapeuta' : 'Admin');
+        badge.className = 'ml-2 px-2 py-0.5 text-xs rounded-full font-normal align-middle ' + 
+            (role === 'jugador' ? 'bg-indigo-50 text-indigo-700' : 
+             role === 'terapista' ? 'bg-purple-50 text-purple-700' : 
+             'bg-gray-100 text-gray-500');
+
+        if (role === 'jugador') {
+            viewBtn.classList.remove('hidden');
+            viewBtn.href = `/therapist/patients/${id}`;
+            viewBtn.innerHTML = '<i class="fas fa-chart-line mr-2"></i> Ver Métricas';
+        } 
         
         // Populate patient specifics
         if (role === 'jugador') {
@@ -1149,14 +1174,12 @@
         
         toggleEditRoleFields();
         document.getElementById('editUserModal').classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
+        document.body.style.overflow = 'hidden'; 
     };
     
     window.closeEditUserModal = function() {
         document.getElementById('editUserModal').classList.add('hidden');
-        document.body.classList.remove('overflow-
-        document.getElementById('editUserModal').classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
+        document.body.style.overflow = '';
     };
 
     // Auto-Calculate Hours Logic

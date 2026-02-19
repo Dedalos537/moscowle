@@ -906,7 +906,7 @@ def calendar():
 @therapist_bp.route('/patients/<int:patient_id>')
 @login_required
 def patient_detail(patient_id):
-    if current_user.role != 'terapista':
+    if current_user.role not in ['terapista', 'admin']:
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     

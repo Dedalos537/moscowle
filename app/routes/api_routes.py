@@ -1421,13 +1421,23 @@ def admin_sedes():
 
     if request.method == 'GET':
         sedes = Sede.query.order_by(Sede.created_at.desc()).all()
-        return jsonify([{
-            'id': s.id,
-            'name': s.name,
-            'address': s.address,
-            'active': s.active,
-            'created_at': s.created_at.isoformat() if s.created_at else None
-        } for s in sedes])
+        result = []
+        for s in sedes:
+            created_at_iso = None
+            if s.created_at:
+                try:
+                    created_at_iso = s.created_at.isoformat()
+                except AttributeError:
+                    created_at_iso = str(s.created_at)
+            
+            result.append({
+                'id': s.id,
+                'name': s.name,
+                'address': s.address,
+                'active': s.active,
+                'created_at': created_at_iso
+            })
+        return jsonify(result)
 
     if request.method == 'POST':
         data = request.get_json() or {}
