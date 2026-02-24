@@ -455,8 +455,16 @@ def reports():
 
 
         # Chart 1: Monthly Progress
+        
+        # Check dialect for date formatting
+        if db.engine.dialect.name == 'sqlite':
+            month_col = func.strftime('%Y-%m', SessionMetrics.date).label('Mes')
+        else:
+            # MySQL / PostgreSQL (assuming MySQL as standard on cPanel)
+            month_col = func.date_format(SessionMetrics.date, '%Y-%m').label('Mes')
+
         q_monthly = db.session.query(
-            func.strftime('%Y-%m', SessionMetrics.date).label('Mes'),
+            month_col,
             func.avg(SessionMetrics.accurracy).label('Progreso')
         ).filter(SessionMetrics.user_id.in_(my_patient_ids))
 
@@ -465,7 +473,7 @@ def reports():
         if end_dt:
             q_monthly = q_monthly.filter(SessionMetrics.date <= end_dt)
         
-        q_monthly = q_monthly.group_by(func.strftime('%Y-%m', SessionMetrics.date))
+        q_monthly = q_monthly.group_by(month_col)
         df_monthly = pd.read_sql(q_monthly.statement, db.engine)
         
         if df_monthly.empty:
@@ -476,12 +484,25 @@ def reports():
                                          line=dict(color='#75a83a', width=3), fill='tozeroy', fillcolor='rgba(117, 168, 58, 0.1)'))
         monthly_progress_chart = json.loads(fig_monthly.to_json())
 
-        # Chart 2: Sessions per Day (Therapist's appointments) - this was ALREADY correct in original code (filtered by therapist_id)
+        # Chart 2: Sessions per Day
+        
+        # Dialect check for weekday extraction
+        if db.engine.dialect.name == 'sqlite':
+            weekday_col = func.strftime('%w', Appointment.start_time).label('weekday')
+        else:
+            # MySQL: DAYOFWEEK() returns 1=Sun, 2=Mon...7=Sat. SQLite %w returns 0=Sun, 1=Mon...6=Sat.
+            # We need to standardize. Let's stick to 0=Sun..6=Sat logic if possible, or just build separate maps.
+            # But wait, let's just use Python for weekday processing if possible. Or handle mapping carefully.
+            # MySQL: DAYOFWEEK(date) -> 1=Sunday, 2=Monday.
+            # SQLite: strftime('%w', date) -> 0=Sunday, 1=Monday.
+            # To normalize to 0=Sun, 1=Mon...: MySQL DAYOFWEEK(date) - 1
+            weekday_col = (func.dayofweek(Appointment.start_time) - 1).label('weekday')
+
         q_sessions = db.session.query(
-            func.strftime('%w', Appointment.start_time).label('weekday'),
+            weekday_col,
             func.count(Appointment.id).label('count')
         ).filter(Appointment.therapist_id == current_user.id).group_by(
-            func.strftime('%w', Appointment.start_time)
+            weekday_col
         )
         if start_dt:
             q_sessions = q_sessions.filter(Appointment.start_time >= start_dt)

@@ -227,8 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('overflow-hidden');
     };
     openBtn.addEventListener('click', showModal);
-    closeBtn.addEventListener('click', hideModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     tabBtns.forEach(btn => btn.addEventListener('click', () => {
         tabBtns.forEach(b => b.classList.remove('bg-gray-100'));
         btn.classList.add('bg-gray-100');
