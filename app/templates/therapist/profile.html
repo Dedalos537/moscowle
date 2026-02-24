@@ -2,23 +2,23 @@
 
 {% block header_content %}
 <div>
-    <h2 class="text-2xl font-bold text-textDark">Mi Perfil</h2>
-    <p class="text-sm text-gray-500">Administra tu información profesional</p>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Mi Perfil</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Administra tu información profesional</p>
 </div>
 {% endblock %}
 
 {% block content %}
 
 <div class="p-4">
-    <div class="grid grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         <!-- Profile Info -->
-        <div class="col-span-2 space-y-6">
+        <div class="md:col-span-2 space-y-6">
 
             <!-- Personal Information -->
             <div class="bg-white rounded-soft shadow-soft p-6">
                 <h3 class="text-xl font-semibold text-charcoal mb-6">Información Personal</h3>
                 <form id="profileForm" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-charcoal mb-2">Nombre Completo</label>
                             <input type="text" id="username" value="{{ current_user.username or '' }}"
@@ -31,7 +31,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-charcoal mb-2">Teléfono</label>
                             <input type="tel" id="phone" value="{{ current_user.phone or '' }}"

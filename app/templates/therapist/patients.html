@@ -1,15 +1,15 @@
 {% extends "therapist/base.html" %} {% block header_content %}
 <div>
-  <h2 class="text-2xl font-bold text-textDark">Gestión de Pacientes</h2>
-  <p class="text-sm text-gray-500">Administra los usuarios de la plataforma</p>
+  <h2 class="text-xl md:text-2xl font-bold text-textDark truncate leading-tight">Pacientes</h2>
+  <p class="text-xs md:text-sm text-gray-500 hidden md:block truncate">Administra los usuarios de la plataforma</p>
 </div>
 {% endblock %} {% block header_action %}
 <button
   id="add-patient-btn"
-  class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium"
+  class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2"
 >
-  <i class="fas fa-plus mr-2"></i>
-  Nuevo Paciente
+  <i class="fas fa-plus"></i>
+  <span class="hidden md:inline">Nuevo Paciente</span>
 </button>
 {% endblock %} {% block content %}
 <!-- Flash Messages -->

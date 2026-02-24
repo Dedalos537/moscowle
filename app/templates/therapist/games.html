@@ -2,21 +2,24 @@
 
 {% block header_content %}
 <div>
-    <h2 class="text-2xl font-bold text-textDark">Catálogo de Ejercicios</h2>
-    <p class="text-sm text-gray-500">Gestiona y asigna ejercicios terapéuticos</p>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate leading-tight">
+        <span class="md:hidden">Ejercicios</span>
+        <span class="hidden md:inline">Catálogo de Ejercicios</span>
+    </h2>
+    <p class="text-sm text-gray-500 hidden md:block">Gestiona y asigna ejercicios terapéuticos</p>
 </div>
 {% endblock %}
 
 {% block header_action %}
-<button id="open-new-exercise" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-    <i class="fas fa-plus mr-2"></i>
-    Nuevo Ejercicio
+<button id="open-new-exercise" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+    <i class="fas fa-plus md:mr-2"></i>
+    <span class="hidden md:inline">Nuevo Ejercicio</span>
 </button>
 {% endblock %}
 
 {% block content %}
-        <div id="content-area" class="p-8">
-            <div class="grid grid-cols-3 gap-6">
+        <div id="content-area" class="p-4 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <!-- Game Card 1 -->
                 <div class="bg-surface rounded-soft shadow-soft overflow-hidden group hover:shadow-soft-lg transition-all">
                     <div class="h-48 bg-gray-100 relative overflow-hidden">

@@ -2,15 +2,15 @@
 
 {% block header_content %}
 <div>
-    <h2 class="text-2xl font-bold text-textDark">Reportes de Progreso</h2>
-    <p class="text-sm text-gray-500">Análisis detallado del rendimiento de pacientes</p>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Reportes de Progreso</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Análisis detallado del rendimiento de pacientes</p>
 </div>
 {% endblock %}
 
 {% block header_action %}
-<button id="export-btn" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-    <i class="fas fa-download mr-2"></i>
-    Exportar Datos
+<button id="export-btn" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+    <i class="fas fa-download md:mr-2"></i>
+    <span class="hidden md:inline">Exportar Datos</span>
 </button>
 {% endblock %}
 

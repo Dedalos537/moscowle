@@ -3,9 +3,16 @@
 
 {% block header_content %}
 <div>
-  <h2 class="text-2xl font-bold text-textDark">Gestión de Sedes</h2>
-  <p class="text-sm text-gray-500">Administrar sucursales y ubicaciones</p>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Gestión de Sedes</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Administrar sucursales y ubicaciones</p>
 </div>
+{% endblock %}
+
+{% block header_action %}
+<button onclick="openCreateSedeModal()" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+    <i class="fas fa-plus md:mr-2"></i>
+    <span class="hidden md:inline">Nueva Sede</span>
+</button>
 {% endblock %}
 
 {% block content %}
@@ -14,21 +21,35 @@
         <div id="toast-inner" class="px-4 py-3 rounded-soft shadow-soft text-white"></div>
     </div>
 
-    <!-- Create Sede -->
-    <div class="bg-surface rounded-soft shadow-soft p-6 mb-6">
-        <h3 class="text-lg font-semibold text-textDark mb-3">Nueva Sede</h3>
-        <div class="flex flex-col md:flex-row gap-4 items-end">
-            <div class="flex-1 w-full">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
-                <input id="new-sede-name" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="Ej. Piura Centro">
-            </div>
-            <div class="flex-1 w-full">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Dirección (Opcional)</label>
-                <input id="new-sede-address" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="Av. Grau 123">
-            </div>
-            <button id="create-sede-btn" class="w-full md:w-auto px-6 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90 transition-all shadow-soft h-[42px]">
-                Crear Sede
+    <!-- Create Sede Modal -->
+    <div id="createSedeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-surface rounded-soft shadow-soft p-6 w-full max-w-lg relative animate-fadeIn">
+            <button onclick="closeCreateSedeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-textDark">
+                <i class="fas fa-times text-xl"></i>
             </button>
+            
+            <h3 class="text-xl font-bold text-textDark mb-6">Crear Nueva Sede</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Sede</label>
+                    <input id="new-sede-name" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Ej. Piura Centro">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dirección (Opcional)</label>
+                    <input id="new-sede-address" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Av. Grau 123">
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4">
+                    <button onclick="closeCreateSedeModal()" class="px-6 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors font-medium">
+                        Cancelar
+                    </button>
+                    <button id="create-sede-btn" class="px-6 py-2.5 rounded-lg bg-primary text-white hover:bg-opacity-90 transition-colors font-medium shadow-soft flex items-center gap-2">
+                        <i class="fas fa-save"></i>
+                        <span>Guardar Sede</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -66,6 +87,33 @@
         setTimeout(() => toast.classList.add('hidden'), 2500);
     }
 
+    const SEDES_API_URL = "{{ url_for('api.admin_sedes') }}";
+    
+    // Modal Functions
+    function openCreateSedeModal() {
+        const modal = document.getElementById('createSedeModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Focus first input
+        setTimeout(() => document.getElementById('new-sede-name').focus(), 100);
+    }
+    
+    function closeCreateSedeModal() {
+        const modal = document.getElementById('createSedeModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Clear inputs
+        document.getElementById('new-sede-name').value = '';
+        document.getElementById('new-sede-address').value = '';
+    }
+    
+    // Close modal on outside click
+    document.getElementById('createSedeModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeCreateSedeModal();
+    });
+
     async function loadSedes() {
         const tbody = document.getElementById('sedes-tbody');
         tbody.innerHTML = `
@@ -81,7 +129,7 @@
         `;
 
         try {
-            const res = await fetch('/api/admin/sedes');
+            const res = await fetch(SEDES_API_URL);
             
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
@@ -200,7 +248,7 @@
     async function updateSede(id, data) {
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
-            const res = await fetch(`/api/admin/sedes/${id}`, {
+            const res = await fetch(`${SEDES_API_URL}/${id}`, {
                 method: 'PUT',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -232,7 +280,7 @@
         
         const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
         try {
-            const res = await fetch('/api/admin/sedes', {
+            const res = await fetch(SEDES_API_URL, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -243,8 +291,7 @@
             const json = await res.json();
             if(json.success) {
                 showToast('Sede creada');
-                nameInput.value = '';
-                addrInput.value = '';
+                closeCreateSedeModal();
                 loadSedes();
             } else {
                 showToast(json.message || 'Error', 'error');

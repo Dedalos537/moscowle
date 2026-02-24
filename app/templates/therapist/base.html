@@ -472,82 +472,93 @@
   </div>
 
   <div id="main-content" class="lg:ml-72 min-h-screen fade-in-content transition-all duration-300">
-    <header class="bg-surface border-b border-gray-100 px-4 md:px-8 py-5 sticky top-0 z-30">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <button id="mobile-menu-btn" class="lg:hidden text-gray-600 hover:text-primary focus:outline-none">
-            <i class="fas fa-bars text-2xl"></i>
+    <header class="bg-surface border-b border-gray-100 flex-none px-3 py-2 md:px-8 md:py-5 sticky top-0 z-30 transition-all duration-300">
+      <div class="flex items-center justify-between gap-2 md:gap-4">
+        <!-- Left Side: Menu + Title -->
+        <div class="flex items-center gap-2 md:gap-3 min-w-0 flex-1 overflow-hidden">
+          <button id="mobile-menu-btn" class="lg:hidden text-gray-600 hover:text-primary focus:outline-none flex-shrink-0 p-1">
+            <i class="fas fa-bars text-xl md:text-2xl"></i>
           </button>
-          {% block header_content %}
-          <div>
-            <h2 class="text-xl md:text-2xl font-bold text-textDark">Panel de Control</h2>
-            <p class="text-xs md:text-sm text-gray-500 hidden md:block">
-              Monitoreo y gestión de pacientes
-            </p>
+          
+          <div class="min-w-0 flex-1 truncate">
+            {% block header_content %}
+            <div>
+              <h2 class="text-base md:text-2xl font-bold text-textDark truncate leading-tight">Panel</h2>
+              <p class="text-xs md:text-sm text-gray-500 hidden md:block truncate">
+                Monitoreo y gestión de pacientes
+              </p>
+            </div>
+            {% endblock %}
           </div>
-          {% endblock %}
         </div>
-        <div class="flex items-center gap-2 md:gap-4">
+
+        <!-- Right Side: Actions + Notification + Profile -->
+        <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          
+          <!-- Notifications -->
           <div class="relative">
             <button id="notification-bell"
-              class="relative p-3 rounded-full bg-lightGreen text-primary hover:bg-primary hover:text-white transition-all">
-              <i class="fa-solid fa-bell text-lg"></i>
+              class="relative p-2 md:p-3 rounded-full bg-lightGreen text-primary hover:bg-primary hover:text-white transition-all flex-shrink-0">
+              <i class="fa-solid fa-bell text-base md:text-lg"></i>
               <span id="notification-count"
-                class="absolute -top-1 -right-1 w-5 h-5 bg-statusRed rounded-full text-white text-xs flex items-center justify-center font-bold hidden"></span>
+                class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-statusRed rounded-full text-white text-[10px] md:text-xs flex items-center justify-center font-bold hidden border-2 border-white"></span>
             </button>
-
+            <!-- Popover (Fixed positioning for mobile to avoid overflow) -->
             <div id="notification-popover"
-              class="fixed left-4 right-4 top-20 w-auto md:absolute md:top-auto md:left-auto md:right-0 md:mt-3 md:w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden">
-              <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 class="text-md font-bold text-textDark">
+              class="fixed left-4 right-4 top-16 md:absolute md:top-auto md:left-auto md:right-0 md:mt-3 w-auto md:w-80 bg-white rounded-soft shadow-soft-lg border border-gray-100 z-50 hidden max-h-[80vh] flex flex-col">
+              <div class="p-3 md:p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-soft">
+                <h3 class="text-sm md:text-md font-bold text-textDark">
                   Notificaciones
                 </h3>
+                <button onclick="document.getElementById('notification-popover').classList.add('hidden')" class="md:hidden text-gray-400">
+                  <i class="fas fa-times"></i>
+                </button>
               </div>
-              <div id="notification-list" class="p-2 max-h-96 overflow-y-auto"></div>
-              <div class="p-2 bg-gray-50 text-center rounded-b-soft">
-                <a href="#" id="mark-all-read" class="text-sm text-primary font-medium hover:underline">Marcar todas
-                  como leídas</a>
+              <div id="notification-list" class="p-2 overflow-y-auto flex-1"></div>
+              <div class="p-2 border-t border-gray-100 text-center rounded-b-soft bg-white">
+                <a href="#" id="mark-all-read" class="text-xs md:text-sm text-primary font-medium hover:underline">Marcar todas leídas</a>
               </div>
             </div>
           </div>
 
+          <!-- Custom Page Action -->
           {% block header_action %}
           <button
-            class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium text-sm md:text-base">
-            <i class="fas fa-plus md:mr-2"></i>
+            class="h-9 px-3 md:h-10 md:px-5 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium text-sm flex items-center gap-2">
+            <i class="fas fa-plus"></i>
             <span class="hidden md:inline">Nueva Sesión</span>
           </button>
           {% endblock %}
 
           <!-- Timezone Badge -->
-          <div class="hidden md:flex items-center mr-4 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500" title="Tu zona horaria">
+          <div class="hidden lg:flex items-center px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-500" title="Tu zona horaria">
             <i class="fas fa-globe mr-2"></i>
             <span id="user-timezone">UTC</span>
           </div>
 
           <!-- User Profile Dropdown -->
           <div class="relative group">
-              <button id="user-menu-btn" class="flex items-center space-x-3 focus:outline-none">
-                  <div class="w-10 h-10 rounded-full bg-olive text-white flex items-center justify-center text-lg font-bold shadow-md border-2 border-white">
+              <button id="user-menu-btn" class="flex items-center gap-2 md:gap-3 focus:outline-none">
+                  <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-olive text-white flex items-center justify-center text-sm md:text-lg font-bold shadow-md border-2 border-white flex-shrink-0">
                       {{ current_user.username[0].upper() if current_user.username else 'U' }}
                   </div>
-                  <div class="hidden md:block text-left">
-                      <p class="text-sm font-bold text-charcoal leading-tight">{{ current_user.username or current_user.email }}</p>
-                      <p class="text-xs text-gray-500">{{ current_user.role|capitalize }}</p>
+                  <div class="hidden md:block text-left min-w-[80px]">
+                      <p class="text-sm font-bold text-charcoal leading-tight truncate max-w-[120px]">{{ current_user.username or current_user.email }}</p>
+                      <p class="text-xs text-gray-500 truncate">{{ current_user.role|capitalize }}</p>
                   </div>
                   <i class="fas fa-chevron-down text-gray-400 text-xs hidden md:block group-hover:text-olive transition-colors"></i>
               </button>
               
               <!-- Dropdown Menu -->
-              <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-right z-50 border border-gray-100">
-                  <div class="px-4 py-2 border-b border-gray-50 md:hidden">
-                      <p class="text-sm font-bold text-charcoal">{{ current_user.username or current_user.email }}</p>
+              <div class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 transform origin-top-right z-50 border border-gray-100">
+                  <div class="px-4 py-3 border-b border-gray-50 md:hidden bg-gray-50">
+                      <p class="text-sm font-bold text-charcoal truncate">{{ current_user.username or current_user.email }}</p>
                       <p class="text-xs text-gray-500">{{ current_user.role|capitalize }}</p>
                   </div>
-                  <a href="{{ url_for('therapist.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive transition-colors">
-                      <i class="fas fa-user-circle w-5 text-center mr-2"></i> Mi Perfil
+                  <a href="{{ url_for('therapist.profile') }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive transition-colors">
+                      <i class="fas fa-user-circle w-5 text-center mr-2 text-gray-400"></i> Mi Perfil
                   </a>
-                  <button onclick="showLogoutModal()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                  <button onclick="showLogoutModal()" class="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                       <i class="fas fa-sign-out-alt w-5 text-center mr-2"></i> Cerrar Sesión
                   </button>
               </div>

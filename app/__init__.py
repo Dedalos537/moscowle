@@ -203,9 +203,9 @@ def create_app(config_class=Config):
     try:
         csp = {
             'default-src': ["'self'"],
-            'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
-            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            'font-src': ["'self'", "https://fonts.gstatic.com"],
+            'script-src': ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://npmcdn.com"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            'font-src': ["'self'", "data:", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
             'img-src': ["'self'", 'data:', 'https://ui-avatars.com'],
             'connect-src': ["'self'"],
             'frame-ancestors': ["'self'"]
@@ -213,7 +213,7 @@ def create_app(config_class=Config):
         
         Talisman(app,
             content_security_policy=csp,
-            content_security_policy_report_only=app.config.get('CSP_REPORT_ONLY', True), # Report only initially
+            content_security_policy_report_only=False, # Enforce policy instead of report-only without URI
             force_https=app.config['ENV'] == 'production',
             strict_transport_security=app.config['ENV'] == 'production',
             strict_transport_security_max_age=app.config['HSTS_SECONDS'],

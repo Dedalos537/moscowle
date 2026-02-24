@@ -9,7 +9,7 @@ from app.services.game_service import GameService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.utils import get_user_today_utc_range
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, case
 import json
 import io
 import csv
@@ -672,10 +672,16 @@ def messages():
         return redirect(url_for('main.dashboard'))
         
     # Therapist sees all patients they've messaged
+    # Use SUM(CASE...) for cross-DB compatibility (MySQL 5.7/MariaDB don't support FILTER)
+    unread_expr = func.sum(case(
+        ( (Message.is_read == False) & (Message.receiver_id == current_user.id), 1 ),
+        else_=0
+    ))
+
     conversations_query = db.session.query(
         User.id, User.username, User.email,
         func.max(Message.created_at).label('last_message'),
-        func.count(Message.id).filter(Message.is_read == False, Message.receiver_id == current_user.id).label('unread_count')
+        unread_expr.label('unread_count')
     ).join(
         Message, 
         or_(
@@ -966,7 +972,7 @@ def patient_detail(patient_id):
 @therapist_bp.route('/patients/<int:patient_id>/update', methods=['POST'])
 @login_required
 def update_patient(patient_id):
-    if current_user.role != 'terapista':
+    if current_user.role not in ['terapista', 'admin']:
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     
     patient = User.query.get_or_404(patient_id)

@@ -9,9 +9,9 @@
             <a href="{{ url_for('therapist.patients') }}" class="text-gray-400 hover:text-primary">
                 <i class="fas fa-arrow-left"></i>
             </a>
-            <h2 class="text-2xl font-bold text-textDark">{{ patient.username or patient.email }}</h2>
+            <h2 class="text-2xl font-bold text-textDark truncate max-w-[200px] md:max-w-none">{{ patient.username or patient.email }}</h2>
         </div>
-        <p class="text-sm text-gray-500">Historial completo del paciente</p>
+        <p class="text-sm text-gray-500 hidden md:block">Historial completo del paciente</p>
     </div>
 </div>
 {% endblock %}

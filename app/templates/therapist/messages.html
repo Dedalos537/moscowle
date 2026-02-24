@@ -5,11 +5,11 @@
 {% block header_content %}
 <div class="flex justify-between items-end">
     <div>
-        <h2 class="text-2xl font-bold text-textDark">Mensajes</h2>
-        <p class="text-sm text-gray-500">Comunícate de forma segura con tus pacientes</p>
+        <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Mensajes</h2>
+        <p class="text-sm text-gray-500 hidden md:block">Comunícate de forma segura con tus pacientes</p>
     </div>
-    <a href="{{ url_for('therapist.patients') }}" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
-        <i class="fas fa-plus"></i> Nueva Conversación
+    <a href="{{ url_for('therapist.patients') }}" class="bg-primary hover:bg-opacity-90 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
+        <i class="fas fa-plus"></i> <span class="hidden md:inline">Nueva Conversación</span>
     </a>
 </div>
 {% endblock %}

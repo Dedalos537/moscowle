@@ -41,15 +41,15 @@
   }
 </style>
 <div>
-    <h2 class="text-2xl font-bold text-textDark">Panel de Control</h2>
-    <p class="text-sm text-gray-500">Monitoreo y gestión de pacientes</p>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Panel de Control</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Monitoreo y gestión de pacientes</p>
 </div>
 {% endblock %}
 
 {% block header_action %}
-<button id="btn-new-session" class="px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
-    <i class="fas fa-plus mr-2"></i>
-    Nueva Sesión
+<button id="btn-new-session" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+    <i class="fas fa-plus md:mr-2"></i>
+    <span class="hidden md:inline">Nueva Sesión</span>
 </button>
 {% endblock %}
 

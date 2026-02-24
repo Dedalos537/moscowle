@@ -215,8 +215,8 @@
         <i class="fas fa-arrow-left"></i>
     </a>
     <div>
-        <h2 class="text-2xl font-bold text-textDark">{{ other_user.username or other_user.email }}</h2>
-        <p class="text-sm text-gray-500">Conversación</p>
+        <h2 class="text-2xl font-bold text-textDark truncate max-w-[200px] md:max-w-none">{{ other_user.username or other_user.email }}</h2>
+        <p class="text-sm text-gray-500 hidden md:block">Conversación</p>
     </div>
 </div>
 {% endblock %}
