@@ -151,14 +151,17 @@ def register_request_handlers(app):
     @app.after_request
     def after_request(response):
         # Calculate request duration
-        duration = (datetime.utcnow() - g.request_start_time).total_seconds()
+        start_time = getattr(g, 'request_start_time', None)
+        duration = (datetime.utcnow() - start_time).total_seconds() if start_time else 0
         
         # Log response
+        request_id = getattr(g, 'request_id', 'unknown')
+        
         if response.status_code >= 400:
             app.logger.warning(
                 f"Request completed with error",
                 extra={
-                    'request_id': g.request_id,
+                    'request_id': request_id,
                     'status_code': response.status_code,
                     'duration_ms': duration * 1000,
                     'method': request.method,
@@ -169,7 +172,7 @@ def register_request_handlers(app):
             app.logger.debug(
                 f"Request completed",
                 extra={
-                    'request_id': g.request_id,
+                    'request_id': request_id,
                     'status_code': response.status_code,
                     'duration_ms': duration * 1000
                 }

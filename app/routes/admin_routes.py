@@ -440,7 +440,8 @@ def payments():
 
     patients_status = payment_service.get_patients_payment_status()
     therapists = User.query.filter_by(role='terapista').all()
-    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, active_page='admin_payments')
+    sedes = Sede.query.all()
+    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, sedes=sedes, active_page='admin_payments')
 
 @admin_bp.route('/api/payment-info/<int:patient_id>')
 @login_required
@@ -564,3 +565,113 @@ def update_payment_settings():
         flash(msg, 'error')
     
     return redirect(url_for('admin.payments'))
+
+@admin_bp.route('/payments/delete/<int:payment_id>', methods=['POST'])
+@login_required
+def delete_payment(payment_id):
+    if current_user.role != 'admin':
+        return redirect(url_for('main.dashboard'))
+    
+    try:
+        payment = Payment.query.get_or_404(payment_id)
+        
+        # Optional: Delete file if exists
+        if payment.receipt_image_path:
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], payment.receipt_image_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        db.session.delete(payment)
+        db.session.commit()
+        flash('Pago eliminado correctamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar el pago: {str(e)}', 'error')
+        
+    return redirect(request.referrer or url_for('admin.payments'))
+
+@admin_bp.route('/analyze-receipt', methods=['POST'])
+@login_required
+def analyze_receipt():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if 'receipt' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+
+    file = request.files['receipt']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+
+    try:
+        import google.generativeai as genai
+        import json
+        
+        api_key = os.environ.get('GEMINI_API_KEY') or current_app.config.get('GEMINI_API_KEY')
+        if not api_key:
+             return jsonify({'error': 'Gemini API Key not configured'}), 500
+             
+        genai.configure(api_key=api_key)
+        
+        # Read file content directly into memory
+        image_data = file.read()
+        
+        # Vision Model
+        # Falling back to the generic 'gemini-1.5-flash' which should be free tier compatible.
+        # Dynamically find a working model to avoid 404s
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Priority list (free/fast models first)
+        priorities = [
+            'models/gemini-2.0-flash-lite',
+            'models/gemini-flash-latest', 
+            'models/gemini-1.5-flash',
+            'models/gemini-pro-vision',
+            'models/gemini-2.0-flash' 
+        ]
+        
+        selected_model_name = None
+        
+        # Try to find a priority model in available list
+        for priority in priorities:
+            if priority in available_models:
+                selected_model_name = priority
+                break
+        
+        # If no priority model found, pick the first available one that is likely a vision model
+        if not selected_model_name:
+             for m in available_models:
+                 if 'flash' in m or 'vision' in m:
+                     selected_model_name = m
+                     break
+        
+        # Last resort: just take the first one
+        if not selected_model_name and available_models:
+            selected_model_name = available_models[0]
+            
+        print(f"DEBUG: Selected Gemini Model: {selected_model_name}") 
+        
+        if not selected_model_name:
+            return jsonify({'error': 'No available Gemini models found for this API Key'}), 500
+
+        model = genai.GenerativeModel(selected_model_name)
+        
+        prompt = "Analyze this payment receipt. Extract in JSON: amount (number), date (YYYY-MM-DD), reference (string), method (transferencia/yape/efectivo/tarjeta). If field is missing return null."
+        
+        response = model.generate_content([
+            {'mime_type': file.content_type or 'image/jpeg', 'data': image_data},
+            prompt
+        ])
+        
+        text = response.text
+        if '```json' in text:
+            text = text.split('```json')[1].split('```')[0]
+        elif '```' in text:
+             text = text.split('```')[1].split('```')[0]
+             
+        data = json.loads(text.strip())
+        return jsonify(data)
+        
+    except Exception as e:
+        print(f"ERROR in analyze_receipt: {str(e)}") # Log to server console
+        return jsonify({'error': str(e)}), 500

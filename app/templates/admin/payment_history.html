@@ -29,11 +29,12 @@
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Método</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Referencia</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Comprobante</th>
+                        <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for p in payments %}
-                    <tr class="hover:bg-gray-50/50 transition-colors">
+                    <tr class="hover:bg-gray-50/50 transition-colors group">
                         <td class="px-6 py-4 text-sm text-gray-600">
                             {{ p.date.strftime('%d/%m/%Y %H:%M') }}
                         </td>
@@ -54,6 +55,14 @@
                             {% else %}
                             <span class="text-gray-300 italic">Sin archivo</span>
                             {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <form action="{{ url_for('admin.delete_payment', payment_id=p.id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar este pago?');" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50" title="Eliminar Pago">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

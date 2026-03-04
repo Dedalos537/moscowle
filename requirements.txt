@@ -21,3 +21,5 @@ pandas
 numpy
 joblib
 pytz
+google-generativeai
+

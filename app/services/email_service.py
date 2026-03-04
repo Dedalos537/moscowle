@@ -181,40 +181,82 @@ class EmailService:
             return False
 
     @staticmethod
-    def send_admin_payment_report(admin_email, overdue_list, upcoming_list):
-        """Send a weekly report of payments to admin."""
+    def send_admin_payment_report_v2(admin_email, report_data):
+        """
+        Send an enhanced weekly report grouped by Sede.
+        report_data format: { 'Sede Name': { 'overdue': [], 'upcoming': [], 'uptodate': [] } }
+        """
         if not current_app.config.get('MAIL_USERNAME'):
-            current_app.logger.info(f"[MOCK EMAIL] To Admin: {admin_email} | Payment Report Generated")
+            current_app.logger.info(f"[MOCK EMAIL] Enhanced Report generated for {admin_email}")
             return False
             
         try:
-            subject = f"Reporte Semanal de Pagos - {len(upcoming_list)} Por Vencer"
-            
-            body = "Hola Admin,\n\nEste es el reporte de pagos para la semana.\n\n"
-            
-            if overdue_list:
-                body += "🔴 PAGOS VENCIDOS:\n"
-                for i in overdue_list:
-                    body += f"- {i['name']} ({i['email']}): S/ {i['amount']} (Hace {i['days']} días) - Vence: {i['due_date']}\n"
-                body += "\n"
+            total_alerts = 0
+            for s in report_data.values():
+                total_alerts += len(s['overdue']) + len(s['upcoming'])
                 
-            if upcoming_list:
-                body += "🟡 PAGOS POR VENCER (Próx. 7 días):\n"
-                for i in upcoming_list:
-                    days_txt = "HOY" if i['days'] == 0 else f"en {i['days']} días"
-                    body += f"- {i['name']} ({i['email']}): S/ {i['amount']} ({days_txt}) - Vence: {i['due_date']}\n"
-                body += "\n"
+            subject = f"🔔 Reporte de Pagos Moscowle - {total_alerts} Alertas"
             
-            if not overdue_list and not upcoming_list:
-                body += "No hay pagos pendientes para esta semana.\n"
+            # Build HTML Body
+            html_body = f"""
+            <div style="font-family: sans-serif; color: #333;">
+                <h2 style="color: #2c3e50;">Resumen Semanal de Pagos por Sede</h2>
+                <p>Hola Admin, aquí tienes el estado de cuentas actualizado.</p>
+            """
+            
+            for sede_name, categories in report_data.items():
+                if not categories['overdue'] and not categories['upcoming']:
+                    continue # Skip sedes with no alerts? Or show everything? User wants "filtrarlos". Let's show all sedes but maybe collapse 'uptodate'.
+                    
+                html_body += f"<div style='margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 8px;'>"
+                html_body += f"<h3 style='margin-top: 0; color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 5px;'>🏢 {sede_name}</h3>"
                 
-            body += "\nPor favor, contacta a los usuarios correspondientes.\n"
-            body += "Saludos,\nSistema Moscowle"
+                # Overdue
+                if categories['overdue']:
+                    html_body += "<h4 style='color: #e74c3c; margin-bottom: 5px;'>🔴 Vencidos (Atención Inmediata)</h4>"
+                    html_body += "<ul style='padding-left: 20px;'>"
+                    for p in categories['overdue']:
+                         html_body += f"""
+                         <li style='margin-bottom: 8px;'>
+                            <strong>{p['name']}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p['phone'] or 'Sin Tlf'})</span><br>
+                            Deuda: <strong>S/ {p['amount']}</strong> • Vencido hace: {p['days_diff']} días<br>
+                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p['last_payment'] or 'N/A'}</span>
+                         </li>
+                         """
+                    html_body += "</ul>"
+                
+                # Upcoming
+                if categories['upcoming']:
+                    html_body += "<h4 style='color: #f39c12; margin-bottom: 5px;'>🟡 Por Vencer (Próximos 7 días)</h4>"
+                    html_body += "<ul style='padding-left: 20px;'>"
+                    for p in categories['upcoming']:
+                         days_txt = "¡HOY!" if p['days_diff'] == 0 else f"en {p['days_diff']} días"
+                         html_body += f"""
+                         <li style='margin-bottom: 8px;'>
+                            <strong>{p['name']}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p['phone'] or 'Sin Tlf'})</span><br>
+                            Monto: <strong>S/ {p['amount']}</strong> • Vence: {days_txt} ({p['due_date']})<br>
+                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p['last_payment'] or 'N/A'}</span>
+                         </li>
+                         """
+                    html_body += "</ul>"
+                
+                # Up to Date (Optional summary)
+                # html_body += f"<p style='font-size: 0.9em; color: #27ae60;'>✅ {len(categories['uptodate'])} pacientes al día.</p>"
+                
+                html_body += "</div>"
+
+            html_body += """
+                <p style='font-size: 0.8em; color: #7f8c8d; margin-top: 30px;'>
+                    Este reporte fue generado automáticamente por Moscowle AI Agent.
+                </p>
+            </div>
+            """
             
-            msg = MailMessage(subject=subject, recipients=[admin_email], body=body)
+            msg = MailMessage(subject=subject, recipients=[admin_email], html=html_body, body="Por favor habilita HTML para ver este reporte.")
             mail.send(msg)
-            current_app.logger.info(f"Admin payment report sent to {admin_email}")
+            current_app.logger.info(f"Enhanced admin report sent to {admin_email}")
             return True
+            
         except Exception as e:
-            current_app.logger.error(f"Failed to send admin payment report: {str(e)}")
+            current_app.logger.error(f"Failed to send enhanced admin report: {str(e)}")
             return False

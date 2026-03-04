@@ -510,6 +510,10 @@ def reports():
             q_sessions = q_sessions.filter(Appointment.start_time <= end_dt)
         df_sessions = pd.read_sql(q_sessions.statement, db.engine)
         
+        # Normalize weekday column to string to handle both SQLite (str) and MySQL (int)
+        if not df_sessions.empty:
+            df_sessions['weekday'] = df_sessions['weekday'].astype(str).str.split('.').str[0] # Handle potential float conversion
+            
         weekday_map = {'1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'}
         if not df_sessions.empty:
             df_sessions['Día'] = df_sessions['weekday'].map(weekday_map)

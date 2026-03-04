@@ -3,13 +3,15 @@
 
 {% block header_content %}
 <div>
-  <h2 class="text-xl md:text-2xl font-bold text-textDark truncate leading-tight">Pagos</h2>
-  <p class="text-xs md:text-sm text-gray-500 hidden md:block truncate">Control de pagos y vencimientos</p>
+  <h2 class="text-xl md:text-2xl font-bold text-textDark truncate leading-tight">Pagos y Finanzas</h2>
+  <p class="text-xs md:text-sm text-gray-500 hidden md:block truncate">Control de ingresos, deudores y estadísticas</p>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="p-4 md:p-8">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="p-4 md:p-8 space-y-6">
   
   <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -28,14 +30,89 @@
     {% endif %}
   {% endwith %}
 
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
+          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Total Recaudado (Mes)</div>
+          <div class="text-2xl font-bold text-gray-800" id="kpi_total_revenue">S/ 0.00</div>
+          <div class="text-xs text-green-500 mt-1"><i class="fas fa-arrow-up"></i> Estimado vs Real</div>
+      </div>
+      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
+          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Deuda Total Acumulada</div>
+          <div class="text-2xl font-bold text-red-500" id="kpi_total_debt">S/ 0.00</div>
+          <div class="text-xs text-red-300 mt-1">Requiere gestión inmediata</div>
+      </div>
+      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
+          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Pacientes Activos</div>
+          <div class="text-2xl font-bold text-blue-600" id="kpi_active_users">0</div>
+          <div class="text-xs text-gray-400 mt-1">En terapia actualmente</div>
+      </div>
+      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
+          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Morosidad / Inactivos</div>
+          <div class="text-2xl font-bold text-gray-500" id="kpi_overdue_users">0</div>
+          <div class="text-xs text-gray-400 mt-1">Usuarios con pagos pendientes</div>
+      </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Chart 1: Status Distribution -->
+      <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+          <h4 class="text-sm font-bold text-gray-700 mb-4">Estado de Pagos</h4>
+          <div class="relative h-48">
+              <canvas id="chartStatus"></canvas>
+          </div>
+      </div>
+      
+      <!-- Chart 2: Debt by Sede -->
+      <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+          <h4 class="text-sm font-bold text-gray-700 mb-4">Deuda por Sede</h4>
+          <div class="relative h-48">
+              <canvas id="chartDebtSede"></canvas>
+          </div>
+      </div>
+
+       <!-- Chart 3: Last Payment Analysis -->
+       <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+          <h4 class="text-sm font-bold text-gray-700 mb-4">Antigüedad del Último Pago</h4>
+          <div class="relative h-48">
+              <canvas id="chartLastPayment"></canvas>
+          </div>
+      </div>
+  </div>
+
   <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    
+    <!-- Active Age Filter Badge (Injected below) -->
+    <div id="filter-feedback-container" class="hidden text-center m-4 animate-fade-in z-10 flex justify-center">
+         <div class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-900 cursor-pointer border border-blue-200 shadow-sm hover:bg-blue-200 transition-colors gap-2" onclick="clearAgeFilter()">
+            <i class="fas fa-filter text-blue-500"></i>
+            <span>Antigüedad: <span id="active-age-filter-text" class="font-bold underline ml-1"></span></span>
+            <i class="fas fa-times-circle text-blue-400 text-sm hover:text-blue-600"></i>
+         </div>
+    </div>
+    
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h3 class="text-lg font-semibold text-textDark">Estado de Pagos de Pacientes</h3>
-        <div class="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto">
+        <div class="flex flex-col md:flex-row flex-wrap items-center gap-2 w-full md:w-auto">
+             
+             <!-- Sede Filter -->
+             <div class="relative w-full md:w-40">
+                <select id="sedeFilter" onchange="filterPayments()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-soft text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white">
+                    <option value="all">Todas las Sedes</option>
+                    {% for s in sedes %}
+                    <option value="{{ s.name }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+             </div>
+
              <!-- Therapist Filter -->
-             <div class="relative w-full md:w-48">
+             <div class="relative w-full md:w-40">
                 <select id="therapistFilter" onchange="filterPayments()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-soft text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white">
-                    <option value="all">Todos los Terapistas</option>
+                    <option value="all">Todos Terapistas</option>
                     {% for t in therapists %}
                     <option value="{{ t.username }}">{{ t.username }}</option>
                     {% endfor %}
@@ -45,8 +122,34 @@
                 </div>
              </div>
 
+             <!-- Status Filter -->
+             <div class="relative w-full md:w-32">
+                <select id="statusFilter" onchange="filterPayments()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-soft text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white">
+                    <option value="all">Estado: Todos</option>
+                    <option value="debt">Deudores</option>
+                    <option value="paid">Al día</option>
+                    <option value="inactive">Inactivos</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+             </div>
+
+             <!-- Sort Filter -->
+             <div class="relative w-full md:w-36">
+                <select id="sortFilter" onchange="sortPayments()" class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-soft text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white">
+                    <option value="name">Sorteo: Nombre</option>
+                    <option value="date_asc">Vencimiento (Cercano)</option>
+                    <option value="date_desc">Vencimiento (Lejano)</option>
+                    <option value="debt_desc">Mayor Deuda</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+             </div>
+
             <!-- Search Bar -->
-             <div class="relative w-full md:w-64">
+             <div class="relative w-full md:w-48">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="fas fa-search text-gray-400"></i>
                 </span>
@@ -73,7 +176,13 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           {% for p in patients %}
-          <tr class="hover:bg-gray-50/50 transition-colors">
+          <tr class="hover:bg-gray-50/50 transition-colors payment-row"
+              data-name="{{ p.user.username|lower }}"
+              data-sede="{{ p.user.sede_item.name if p.user.sede_item else 'none' }}"
+              data-status="{{ p.status }}"
+              data-debt="{{ p.debt }}"
+              data-due-date="{{ p.user.payment_due_date.isoformat() if p.user.payment_due_date else '9999-12-31' }}"
+              data-last-payment="{{ p.last_payment_date.isoformat() if p.last_payment_date else 'None' }}">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -181,7 +290,13 @@
     <!-- Mobile View -->
     <div class="md:hidden space-y-4">
         {% for p in patients %}
-        <div class="border border-gray-200 rounded-soft p-4 shadow-sm {{ 'border-l-4 border-l-red-500' if p.status == 'overdue' else '' }}">
+        <div class="border border-gray-200 rounded-soft p-4 shadow-sm {{ 'border-l-4 border-l-red-500' if p.status == 'overdue' else '' }} payment-card"
+             data-name="{{ p.user.username|lower }}"
+             data-sede="{{ p.user.sede_item.name if p.user.sede_item else 'none' }}"
+             data-status="{{ p.status }}"
+             data-debt="{{ p.debt }}"
+             data-due-date="{{ p.user.payment_due_date.isoformat() if p.user.payment_due_date else '9999-12-31' }}"
+             data-last-payment="{{ p.last_payment_date.isoformat() if p.last_payment_date else 'None' }}">
             <div class="flex justify-between items-start mb-2">
                 <div>
                      <div class="font-bold text-charcoal">{{ p.user.username }}</div>
@@ -284,10 +399,13 @@
                 <p class="text-xs text-gray-400 mt-1">Dejar en blanco para asignar fecha de hoy.</p>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-4 relative">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Comprobante (Imagen)</label>
-                <input type="file" name="receipt" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-opacity-90">
-                <p class="text-xs text-gray-400 mt-1">Sube una foto del voucher o captura de pantalla.</p>
+                <div id="scan_spinner" class="hidden absolute right-0 top-0 text-xs text-primary font-bold animate-pulse">
+                    <i class="fas fa-magic"></i> Analizando...
+                </div>
+                <input type="file" name="receipt" id="receipt_input" accept="image/*" onchange="analyzeReceipt(this)" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-opacity-90">
+                <p class="text-xs text-gray-400 mt-1">Sube una foto del voucher para auto-detectar datos.</p>
             </div>
 
             <div class="mb-6">
@@ -308,9 +426,6 @@
             <i class="fas fa-times"></i>
         </button>
         <h3 class="text-xl font-bold text-charcoal mb-4">Configurar Plan</h3>
-        <p class="text-sm text-gray-600 mb-4">Para: <span id="settings_patient_name" class="font-bold"></span></p>
-        
-        <h3 class="text-xl font-bold text-charcoal mb-4">Configuración de Cobro</h3>
         <p class="text-sm text-gray-600 mb-4">Para: <span id="settings_patient_name" class="font-bold"></span></p>
         
         <form action="{{ url_for('admin.update_payment_settings') }}" method="POST">
@@ -340,121 +455,23 @@
     </div>
 </div>
 
+
+<script src="{{ url_for('static', filename='js/admin_payments.js') }}"></script>
 <script>
-    function openRegisterPaymentModal(id, name, amount) {
-        document.getElementById('payment_patient_id').value = id;
-        document.getElementById('payment_patient_name').textContent = name;
-        document.getElementById('payment_amount').value = amount;
-        document.getElementById('payment_discount').value = ''; // Reset discount
-        document.getElementById('absences_hint').classList.add('hidden');
-        
-        // Fetch smart billing info
-        fetch(`/admin/api/payment-info/${id}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.suggested_date) {
-                    document.getElementById('payment_next_date').value = data.suggested_date;
-                }
-                
-                if (data.absences > 0) {
-                    const hint = document.getElementById('absences_hint');
-                    hint.textContent = `⚠️ ${data.absences} faltas desde el último pago. Considere un descuento.`;
-                    hint.classList.remove('hidden');
-                }
-            })
-            .catch(err => {
-                console.error("Error fetching billing info", err);
-                // Fallback: Today + 1 month if API fails
-                const today = new Date();
-                today.setMonth(today.getMonth() + 1);
-                document.getElementById('payment_next_date').valueAsDate = today;
-            });
-        
-        document.getElementById('paymentModal').classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-    }
-    
-    function closePaymentModal() {
-        document.getElementById('paymentModal').classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    }
-
-    function openSettingsModal(id, name, amount, date, plan) {
-        document.getElementById('settings_patient_id').value = id;
-        document.getElementById('settings_patient_name').textContent = name;
-        document.getElementById('settings_amount').value = amount;
-        document.getElementById('settings_plan').value = plan.toLowerCase();
-        
-        if (date && date !== 'None') {
-            document.getElementById('settings_date').value = date;
-        } else {
-            document.getElementById('settings_date').value = '';
-        }
-        
-        document.getElementById('settingsModal').classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-    }
-
-    function closeSettingsModal() {
-        document.getElementById('settingsModal').classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    }
-
-    function filterPayments() {
-        const input = document.getElementById('searchInput');
-        const filterName = input.value.toLowerCase();
-        
-        const therapistSelect = document.getElementById('therapistFilter');
-        const filterTherapist = therapistSelect.value;
-        
-        // Filter Desktop Table
-        const tableRows = document.querySelectorAll('tbody tr');
-        tableRows.forEach(row => {
-            const userNameCell = row.querySelector('td:first-child .font-medium');
-            const therapistCell = row.querySelector('.therapist-cell');
-            
-            if (userNameCell && therapistCell) {
-                const userName = (userNameCell.textContent || userNameCell.innerText).toLowerCase();
-                // Get textContent to ensure hidden details are included
-                const therapistName = (therapistCell.textContent).trim(); 
-                
-                const matchName = userName.indexOf(filterName) > -1;
-                // Check inclusion
-                const matchTherapist = (filterTherapist === 'all') || (therapistName.includes(filterTherapist));
-
-                if (matchName && matchTherapist) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            }
-        });
-
-        // Filter Mobile Cards
-        const mobileCards = document.querySelectorAll('.md\\:hidden > div.border');
-        mobileCards.forEach(card => {
-            const userNameDiv = card.querySelector('.font-bold.text-charcoal');
-            const therapistDiv = card.querySelector('.therapist-name');
-            
-            if (userNameDiv) {
-                const userName = (userNameDiv.textContent || userNameDiv.innerText).toLowerCase();
-                // Get textContent to ensure hidden details are included
-                const therapistName = therapistDiv ? (therapistDiv.textContent).trim() : '';
-                
-                const matchName = userName.indexOf(filterName) > -1;
-                const matchTherapist = (filterTherapist === 'all') || (therapistName.includes(filterTherapist));
-
-                if (matchName && matchTherapist) {
-                    card.style.display = "";
-                } else {
-                    card.style.display = "none";
-                }
-            }
-        });
-    }
-
-    // Populate Therapist Filter on Load (Removed - now handled by Jinja)
     document.addEventListener('DOMContentLoaded', () => {
+        const patientsData = [
+          {% for p in patients %}
+          {
+            "status": "{{ p.status }}",
+            "debt": {{ p.debt }},
+            "sede": "{{ p.user.sede_item.name if p.user.sede_item else 'Sin Sede' }}",
+            "lastVal": "{{ p.last_payment_date.isoformat() if p.last_payment_date else 'None' }}",
+            "paid": {{ p.user.payment_amount or 0 }} 
+          }{{ "," if not loop.last }}
+          {% endfor %}
+        ];
+        
+        initDashboard(patientsData);
     });
 </script>
 {% endblock %}
