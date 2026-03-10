@@ -260,6 +260,20 @@ class Message(db.Model):
     replies = db.relationship('Message', backref=db.backref('parent', remote_side=[id]), lazy=True)
 
 
+class ContactMessage(db.Model):
+    __tablename__ = 'contact_message'
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(150), nullable=False)
+    phone = db.Column(db.String(50), nullable=True)
+    subject = db.Column(db.String(200), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    service_interest = db.Column(db.String(100), nullable=True)
+    urgency = db.Column(db.String(50), default='medium')
+    status = db.Column(db.String(50), default='unread') # unread, read, replied, archived
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class CSPReport(db.Model):
     __tablename__ = 'csp_report'
     id = db.Column(db.Integer, primary_key=True)

@@ -337,3 +337,9 @@ class PaymentService:
             'expenses': monthly_expenses,
             'net_profit': monthly_income_real - monthly_expenses
         }
+
+    def get_payment_history(self, limit=1000):
+        """
+        Returns a list of all payment transactions, ordered by date.
+        """
+        return Payment.query.order_by(Payment.date.desc()).limit(limit).all()

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from app.models import User, db, payment_therapist, therapist_sede
+from app.models import User, db, patient_therapist, therapist_sede
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 

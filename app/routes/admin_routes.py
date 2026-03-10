@@ -5,7 +5,7 @@ import os
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken
 import secrets
-from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede
+from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
 from app.services.finance_service import FinanceService
@@ -226,7 +226,10 @@ def messages():
         return redirect(url_for('main.dashboard'))
     therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
     patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
-    return render_template('admin/messages.html', therapists=therapists, patients=patients, active_page='admin_messages')
+    
+    # NEW: Fetch contact messages
+    contact_messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    return render_template('admin/messages.html', therapists=therapists, patients=patients, active_page='admin_messages', contact_messages=contact_messages)
 
 
 @admin_bp.route('/csp-reports')
@@ -441,7 +444,8 @@ def payments():
     patients_status = payment_service.get_patients_payment_status()
     therapists = User.query.filter_by(role='terapista').all()
     sedes = Sede.query.all()
-    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, sedes=sedes, active_page='admin_payments')
+    payment_history = payment_service.get_payment_history()
+    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, sedes=sedes, payment_history=payment_history, active_page='admin_payments')
 
 @admin_bp.route('/api/payment-info/<int:patient_id>')
 @login_required

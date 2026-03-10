@@ -75,7 +75,7 @@ function filterPayments() {
         let matchStatus = true;
         const debtNum = parseFloat(debt);
         if (statusFilter === 'debt') {
-            matchStatus = (status === 'overdue' || debtNum > 0.5);
+            matchStatus = (status === 'overdue' || (debtNum > 0.5 && status === 'active') || status === 'debt');
         } else if (statusFilter === 'paid') {
             matchStatus = (status === 'active' && debtNum <= 0.5);
         } else if (statusFilter === 'inactive') {
@@ -84,11 +84,15 @@ function filterPayments() {
         
         let matchAge = true;
         if (activeAgeFilter) {
-            const today = new Date();
             let diffDays = 9999;
             if (lastPayment && lastPayment !== 'None') {
-                const diffTime = Math.abs(today - new Date(lastPayment));
-                diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const pDate = new Date(lastPayment);
+                const today = new Date();
+                // Normalize both to start of day to avoid timezone offsets causing 1-day diffs
+                const utc1 = Date.UTC(pDate.getFullYear(), pDate.getMonth(), pDate.getDate());
+                const utc2 = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+                const diffTime = Math.abs(utc2 - utc1);
+                diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             }
             if (activeAgeFilter === '0-30') matchAge = diffDays <= 30;
             else if (activeAgeFilter === '30-60') matchAge = diffDays > 30 && diffDays <= 60;
@@ -447,4 +451,42 @@ function initDashboard(patientsFromJinja) {
         });
     }
     filterPayments();
+    filterHistory(); // Initial filter for history too
+}
+
+function filterHistory() {
+    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const monthFilter = document.getElementById('monthFilter').value;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+
+    document.querySelectorAll('.history-row').forEach(row => {
+        const text = (row.dataset.text || '').toLowerCase();
+        const rowMonth = parseInt(row.dataset.month || '0');
+        const rowYear = parseInt(row.dataset.year || '0');
+        
+        const matchSearch = text.includes(searchInput);
+        
+        let matchMonth = true;
+        if (monthFilter !== 'all') {
+            if (monthFilter === 'current') {
+                matchMonth = (rowMonth === currentMonth && rowYear === currentYear);
+            } else if (monthFilter === 'last') {
+                let targetMonth = currentMonth - 1;
+                let targetYear = currentYear;
+                if (targetMonth === 0) {
+                    targetMonth = 12;
+                    targetYear = currentYear - 1;
+                }
+                matchMonth = (rowMonth === targetMonth && rowYear === targetYear);
+            } else {
+                // Specific month (01-12) - restricting to current year for clarity
+                // Unless user wants all history? Let's stick to current year for specific months to be safe on "12 this year" issue.
+                matchMonth = (parseInt(monthFilter) === rowMonth && rowYear === currentYear);
+            }
+        }
+        
+        row.style.display = (matchSearch && matchMonth) ? '' : 'none';
+    });
 }

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
-from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage
+from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage
 from app.services.appointment_service import AppointmentService
 from app.services.game_service import GameService
 from app.services.admin_service import AdminService
@@ -11,7 +11,7 @@ from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, start_async_training
 from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime_for_storage, localize_datetime_for_display, get_user_timezone
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
-from app.extensions import bcrypt, limiter
+from app.extensions import bcrypt, limiter, csrf
 from app.services.email_service import EmailService
 from datetime import datetime, timedelta, timezone
 import json
@@ -1476,4 +1476,34 @@ def admin_sedes_detail(sede_id):
         
         db.session.commit()
         return jsonify({'success': True})
+
+@api_bp.route('/public/contact', methods=['POST'])
+@csrf.exempt
+def contact_message():
+    data = request.get_json() or {}
+    # Validation
+    required_fields = ['first_name', 'last_name', 'email', 'message']
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({'error': f'Field {field} is required'}), 400
+
+    new_msg = ContactMessage(
+        first_name=data.get('first_name'),
+        last_name=data.get('last_name'),
+        email=data.get('email'),
+        phone=data.get('phone'),
+        subject=data.get('subject', 'Consulta Web'),
+        message=data.get('message'),
+        service_interest=data.get('service_interest'),
+        urgency=data.get('urgency', 'medium'),
+        status='unread'
+    )
+    
+    try:
+        db.session.add(new_msg)
+        db.session.commit()
+        return jsonify({'message': '¡Mensaje recibido! Nos pondremos en contacto pronto.'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 

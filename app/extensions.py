@@ -7,9 +7,13 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
+from flask_cors import CORS
 
 # Database
 db = SQLAlchemy()
+
+# CORS
+cors = CORS()
 
 # Password hashing
 bcrypt = Bcrypt()
