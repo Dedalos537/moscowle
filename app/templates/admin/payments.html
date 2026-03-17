@@ -32,22 +32,22 @@
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
-          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Total Recaudado (Mes)</div>
-          <div class="text-2xl font-bold text-gray-800" id="kpi_total_revenue">S/ 0.00</div>
+      <div class="bg-surface p-4 rounded-soft shadow-sm border border-gray-100 dark:border-gray-700">
+          <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">Total Recaudado (Mes)</div>
+          <div class="text-2xl font-bold text-textDark" id="kpi_total_revenue">S/ 0.00</div>
           <div class="text-xs text-green-500 mt-1"><i class="fas fa-arrow-up"></i> Estimado vs Real</div>
       </div>
-      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
-          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Deuda Total Acumulada</div>
+      <div class="bg-surface p-4 rounded-soft shadow-sm border border-gray-100 dark:border-gray-700">
+          <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">Deuda Total Acumulada</div>
           <div class="text-2xl font-bold text-red-500" id="kpi_total_debt">S/ 0.00</div>
           <div class="text-xs text-red-300 mt-1">Requiere gestión inmediata</div>
       </div>
-      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
-          <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Pacientes Activos</div>
+      <div class="bg-surface p-4 rounded-soft shadow-sm border border-gray-100 dark:border-gray-700">
+          <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">Pacientes Activos</div>
           <div class="text-2xl font-bold text-blue-600" id="kpi_active_users">0</div>
-          <div class="text-xs text-gray-400 mt-1">En terapia actualmente</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">En terapia actualmente</div>
       </div>
-      <div class="bg-white p-4 rounded-soft shadow-sm border border-gray-100">
+      <div class="bg-surface p-4 rounded-soft shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="text-xs text-gray-400 uppercase font-bold tracking-wider mb-1">Morosidad / Inactivos</div>
           <div class="text-2xl font-bold text-gray-500" id="kpi_overdue_users">0</div>
           <div class="text-xs text-gray-400 mt-1">Usuarios con pagos pendientes</div>
@@ -55,29 +55,73 @@
   </div>
 
   <!-- Charts Section -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Chart 1: Status Distribution -->
-      <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
-          <h4 class="text-sm font-bold text-gray-700 mb-4">Estado de Pagos</h4>
-          <div class="relative h-48">
-              <canvas id="chartStatus"></canvas>
+  <div class="space-y-6">
+      <!-- Row 1: Status & Debt (Existing) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+              <h4 class="text-sm font-bold text-gray-700 mb-4">Estado de Pagos</h4>
+              <div class="relative h-48">
+                  <canvas id="chartStatus"></canvas>
+              </div>
           </div>
-      </div>
-      
-      <!-- Chart 2: Debt by Sede -->
-      <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
-          <h4 class="text-sm font-bold text-gray-700 mb-4">Deuda por Sede</h4>
-          <div class="relative h-48">
-              <canvas id="chartDebtSede"></canvas>
+          
+          <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+              <h4 class="text-sm font-bold text-gray-700 mb-4">Deuda por Sede</h4>
+              <div class="relative h-48">
+                  <canvas id="chartDebtSede"></canvas>
+              </div>
+          </div>
+
+           <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
+              <h4 class="text-sm font-bold text-gray-700 mb-4">Antigüedad del Último Pago</h4>
+              <div class="relative h-48">
+                  <canvas id="chartLastPayment"></canvas>
+              </div>
           </div>
       </div>
 
-       <!-- Chart 3: Last Payment Analysis -->
-       <div class="bg-white p-4 rounded-soft shadow-md border border-gray-100">
-          <h4 class="text-sm font-bold text-gray-700 mb-4">Antigüedad del Último Pago</h4>
-          <div class="relative h-48">
-              <canvas id="chartLastPayment"></canvas>
-          </div>
+      <!-- Row 2: Analytics & Projections (New) -->
+      <div class="bg-white p-6 rounded-soft shadow-md border border-gray-100">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-charcoal">Análisis Financiero & Proyecciones</h3>
+            <div class="text-xs text-gray-400">Datos históricos y estimados mensuales</div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Revenue History -->
+            <div class="lg:col-span-2">
+                <h4 class="text-sm font-bold text-gray-600 mb-2">Historial de Ingresos (6 Meses)</h4>
+                <div class="relative h-64">
+                    <canvas id="chartRevenueHistory"></canvas>
+                </div>
+            </div>
+            
+            <!-- Revenue by Plan -->
+            <div>
+                 <h4 class="text-sm font-bold text-gray-600 mb-2">Ingresos por Modalidad (Est.)</h4>
+                 <div class="relative h-64">
+                    <canvas id="chartRevenueByPlan"></canvas>
+                 </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+             <!-- Projected vs Real -->
+             <div>
+                <h4 class="text-sm font-bold text-gray-600 mb-2">Proyección Mensual (Actual)</h4>
+                <div class="relative h-48">
+                    <canvas id="chartProjection"></canvas>
+                </div>
+             </div>
+             
+             <!-- Revenue by Sede -->
+             <div>
+                <h4 class="text-sm font-bold text-gray-600 mb-2">Distribución de Ingresos por Sede</h4>
+                <div class="relative h-48">
+                    <canvas id="chartRevenueBySede"></canvas>
+                </div>
+             </div>
+        </div>
       </div>
   </div>
 
@@ -592,23 +636,71 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        // ... (Chart data injection) ...
         const patientsData = [
           {% for p in patients %}
           {
             "status": "{{ p.status }}",
             "debt": {{ p.debt if p.debt is not none else 0 }},
+            "paid": {{ p.user.payment_amount if p.user.payment_amount is not none else 0 }},
             "sede": "{{ p.user.sede_item.name if p.user.sede_item else 'Sin Sede' }}",
-            "lastVal": "{{ p.last_payment_date.isoformat() if p.last_payment_date else 'None' }}",
-            "paid": {{ p.user.payment_amount if p.user.payment_amount is not none else 0 }} 
+            "plan": "{{ p.user.payment_plan if p.user.payment_plan else 'Mensual' }}",
+            "lastVal": "{{ p.last_payment_date.isoformat() if p.last_payment_date else 'None' }}"
           }{{ "," if not loop.last }}
           {% endfor %}
         ];
         
+        const historyData = [
+            {% for pay in payment_history %}
+            {
+                "date": "{{ pay.date.isoformat() }}",
+                "amount": {{ pay.amount }},
+                "sede": "{{ pay.patient.sede_item.name if pay.patient and pay.patient.sede_item else 'Sin Sede' }}"
+            }{{ "," if not loop.last }}
+            {% endfor %}
+        ];
+        
         // Ensure functions are available
         if (typeof initDashboard === 'function') {
-            initDashboard(patientsData);
+            initDashboard(patientsData, historyData);
         } else {
             console.error('initDashboard not found. Checking script loading.');
+        }
+
+        // --- DASHBOARD DEEP LINK LOGIC ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchUser = urlParams.get('search_patient');
+        const action = urlParams.get('action');
+
+        if (searchUser) {
+            const searchInput = document.getElementById('searchInput');
+            if(searchInput) {
+                searchInput.value = searchUser;
+                // Trigger filter manually after a short delay to ensure DOM is ready
+                setTimeout(() => {
+                    if(typeof filterPayments === 'function') filterPayments();
+                    
+                    // If action is register, try to find the button and click it
+                    if (action === 'register') {
+                        // Find visible rows (payment-row that doesn't have style display:none)
+                        const rows = Array.from(document.querySelectorAll('.payment-row')).filter(row => row.style.display !== 'none');
+                        
+                        if (rows.length === 1) {
+                            const btn = rows[0].querySelector('button[onclick^="openRegisterPaymentModal"]');
+                            if (btn) btn.click();
+                        } else if (rows.length > 1) {
+                            // Try exact match on name
+                            for(let row of rows) {
+                                const name = row.getAttribute('data-name');
+                                if (name && name.toLowerCase() === searchUser.toLowerCase()) {
+                                    const btn = row.querySelector('button[onclick^="openRegisterPaymentModal"]');
+                                    if (btn) { btn.click(); break; }
+                                }
+                            }
+                        }
+                    }
+                }, 300);
+            }
         }
     });
 </script>

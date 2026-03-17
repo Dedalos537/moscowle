@@ -645,19 +645,21 @@
                 </div>
             </div>
             
+            <!-- Sede / Location (Decoupled) -->
+            <div id="edit-patient-location" class="hidden mb-4 p-3 bg-white rounded border border-gray-100">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
+                <select id="edit-sede" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="">-- Sin asignar --</option>
+                    {% for s in sedes %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-[10px] text-gray-400 mt-1">Ubicación principal de atención.</p>
+            </div>
+
             <div id="edit-patient-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
                 <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración de Plan</h4>
-                
-                <div class="mb-3 bg-white p-3 rounded border border-gray-100">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
-                    <select id="edit-sede" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
-                        <option value="">-- Sin asignar --</option>
-                        {% for s in sedes %}
-                        <option value="{{ s.id }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
+
                 <div class="grid grid-cols-2 gap-4 mb-3">
                      <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad</label>
@@ -1130,15 +1132,19 @@
         const role = document.getElementById('edit-role').value;
         const patientFields = document.getElementById('edit-patient-fields');
         const therapistFields = document.getElementById('edit-therapist-fields');
+        const patientLocation = document.getElementById('edit-patient-location');
         
         if (role === 'jugador') {
             patientFields.classList.remove('hidden');
+            if(patientLocation) patientLocation.classList.remove('hidden');
             therapistFields.classList.add('hidden');
         } else if (role === 'terapista') {
             patientFields.classList.add('hidden');
+            if(patientLocation) patientLocation.classList.add('hidden');
             therapistFields.classList.remove('hidden');
         } else {
             patientFields.classList.add('hidden');
+            if(patientLocation) patientLocation.classList.add('hidden');
             therapistFields.classList.add('hidden');
         }
     };

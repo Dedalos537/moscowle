@@ -51,23 +51,30 @@ def application(environ, start_response):
     # CRITICAL FIX FOR CPANEL / SUBDIRECTORY DEPLOYMENT
     # ----------------------------------------------------------
     
-    # 1. Try to get script_name from Passenger (standard way)
-    script_name = environ.get('PASSENGER_BASE_URI', '')
+    script_name = environ.get('SCRIPT_NAME', '')
     
-    # 2. If missing, manually check if we are being accessed via /moscowle
+    # 1. Detect if we are in a subdirectory (e.g. /moscowle)
+    # Check REQUEST_URI or SCRIPT_NAME provided by Passenger
     if not script_name:
         request_uri = environ.get('REQUEST_URI', '')
-        if request_uri.startswith('/moscowle'):
+        # Hardcode detection for '/moscowle' if missing
+        if request_uri and request_uri.startswith('/moscowle'):
             script_name = '/moscowle'
-
-    # 3. Apply the fix
+            
+    # 2. Apply SCRIPT_NAME if detected
     if script_name:
         environ['SCRIPT_NAME'] = script_name
         
-        # Ensure PATH_INFO is stripped of the prefix so Flask routes match correctly
+        # 3. Strip prefix from PATH_INFO (Flask needs clean path)
         path_info = environ.get('PATH_INFO', '')
         if path_info.startswith(script_name):
             environ['PATH_INFO'] = path_info[len(script_name):]
+            
+    # 4. HTTPS Fix (ProxyFix fallback)
+    if environ.get('HTTPS') == 'on':
+        environ['wsgi.url_scheme'] = 'https'
+            
+    return app(environ, start_response)
             
     # 4. HTTPS Fix (ProxyFix fallback)
     if environ.get('HTTPS') == 'on':

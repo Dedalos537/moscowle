@@ -388,6 +388,11 @@
         <i class="fa-solid fa-toolbox text-lg"></i>
         <span class="font-medium">Panel Admin</span>
       </a>
+      <a href="{{ url_for('admin.sessions_calendar') }}"
+        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-calendar-alt text-lg"></i>
+        <span class="font-medium">Sesiones Globales</span>
+      </a>
       <a href="{{ url_for('admin.users') }}"
         class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
         <i class="fa-solid fa-user-gear text-lg"></i>

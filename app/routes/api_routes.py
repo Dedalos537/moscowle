@@ -80,10 +80,29 @@ def api_patients():
     if current_user.role not in ('terapista', 'admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
     
+    therapist_id = request.args.get('therapist_id')
+    
     if current_user.role == 'terapista':
         patients = patient_service.get_therapist_patients(current_user.id)
+    elif therapist_id and current_user.role == 'admin':
+        # Admin requesting specific therapist's patients
+        try:
+            from app.models import User
+            # We can use the service method directly but need to inject the int ID
+            # First check if ID is valid
+            t_user = User.query.get(int(therapist_id))
+            if t_user and t_user.role == 'terapista':
+                 # Use the repository logic via service
+                 # The service method `get_therapist_patients` expects an ID, not user object
+                 patients = patient_service.user_repo.get_all_patients_by_therapist(int(therapist_id))
+            else:
+                 patients = []
+        except:
+            patients = []
     else:
-        patients = patient_service.get_all_active_patients()
+        # Admin: All active patients
+        from app.models import User
+        patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
         
     return jsonify([{'id': p.id, 'username': p.username, 'email': p.email} for p in patients])
 

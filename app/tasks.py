@@ -59,17 +59,19 @@ from app.services.automation.renewal_service import auto_generate_billing_remind
 from app.models import Payment, Sede, User
 from sqlalchemy import func
 
-def check_upcoming_payments(app):
+def check_upcoming_payments(app, force=False):
     """
     Check for payments due in the next 7 days or overdue.
     Sends a detailed summary email to the admin grouped by Sede.
     """
     # 1. Trigger specialized client renewal emails (Frontend 2.0 Logic)
-    try:
-        auto_generate_billing_reminder(app)
-        print("Detailed renewal emails processed.")
-    except Exception as e:
-        print(f"Error in auto_generate_billing_reminder: {e}")
+    # Only run auto-reminders if NOT forced (to avoid spamming clients on admin tests)
+    if not force:
+        try:
+            auto_generate_billing_reminder(app)
+            print("Detailed renewal emails processed.")
+        except Exception as e:
+            print(f"Error in auto_generate_billing_reminder: {e}")
 
     # 2. Generate Admin Report
     with app.app_context():
@@ -151,9 +153,9 @@ def check_upcoming_payments(app):
                 return
 
             # Send Enhanced Email
-            if has_alerts:
+            if has_alerts or force:
                 EmailService.send_admin_payment_report_v2(admin.email, report_data)
-                print(f"Enhanced payment report sent to {admin.email}")
+                print(f"Enhanced payment report sent to {admin.email} (Force={force})")
             
         except Exception as e:
             print(f"Error in check_upcoming_payments: {e}")

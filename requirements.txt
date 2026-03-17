@@ -24,3 +24,4 @@ pytz
 google-generativeai
 
 Flask-Cors
+APScheduler>=3.10.0

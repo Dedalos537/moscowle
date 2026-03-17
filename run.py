@@ -2,11 +2,17 @@ from app import create_app
 from app.extensions import db
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 import atexit
 import logging
 import os
 import time
 from sqlalchemy.exc import SQLAlchemyError
+# Import task explicitly
+try:
+    from app.tasks import check_upcoming_payments
+except ImportError:
+    check_upcoming_payments = None
 
 app = create_app()
 
@@ -133,6 +139,17 @@ scheduler.add_job(
     coalesce=True,
     misfire_grace_time=60
 )
+
+# 3. Weekly Report (Debtors) - Mondays at 9 AM
+if check_upcoming_payments:
+    scheduler.add_job(
+        func=check_upcoming_payments,
+        trigger=CronTrigger(day_of_week='mon', hour=9, minute=0),
+        args=[app],
+        id='weekly_debtor_report',
+        name='Weekly Debtor Summary',
+        replace_existing=True
+    )
 
 # Start scheduler
 if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':  # Prevent double run in debug mode

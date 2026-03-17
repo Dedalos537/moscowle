@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, current_
 from flask_login import login_required, current_user
 from functools import wraps
 import os
+from datetime import timedelta
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken
 import secrets
@@ -30,7 +31,30 @@ def dashboard():
         return redirect(url_for('main.dashboard'))
     
     overview = dashboard_service.get_admin_overview()
-    return render_template('admin/dashboard.html', overview=overview, active_page='admin_dashboard')
+    
+    # NEW: Financial Summary
+    try:
+        financials = payment_service.get_financial_summary()
+    except Exception:
+        financials = {'income_real': 0, 'income_expected': 0}
+        
+    # NEW: Sedes Breakdown
+    sedes = Sede.query.filter_by(active=True).order_by(Sede.name.asc()).all()
+    sedes_stats = []
+    for s in sedes:
+        # Count active players in this Sede
+        count = User.query.filter_by(sede_id=s.id, role='jugador', is_active=True).count()
+        sedes_stats.append({'id': s.id, 'name': s.name, 'count': count})
+        
+    # All active patients for the "Quick Pay" dropdown
+    all_patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
+    
+    return render_template('admin/dashboard.html', 
+                           overview=overview, 
+                           financials=financials,
+                           sedes_stats=sedes_stats,
+                           all_patients=all_patients,
+                           active_page='admin_dashboard')
 
 @admin_bp.route('/users')
 @login_required
@@ -38,7 +62,15 @@ def users():
     if current_user.role != 'admin':
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
-    users = User.query.order_by(User.created_at.desc()).all()
+    
+    # Filtering
+    sede_filter = request.args.get('sede_id')
+    query = User.query
+    
+    if sede_filter and sede_filter.isdigit():
+        query = query.filter(User.sede_id == int(sede_filter))
+        
+    users = query.order_by(User.created_at.desc()).all()
     
     # Pre-fetch therapist assignments for template
     patient_therapist_map = {}
@@ -100,7 +132,18 @@ def reports():
             p_rows.append({'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc,1)})
         
         # Financial Stats (Ticket 5)
-        financials = payment_service.get_financial_summary()
+        try:
+            financials = payment_service.get_financial_summary()
+        except Exception as e:
+            current_app.logger.warning(f"Failed to load financials: {e}")
+            financials = {
+                'income_real': 0.0,
+                'income_expected': 0.0, 
+                'overdue_amount': 0.0,
+                'overdue_users_count': 0,
+                'expenses': 0.0,
+                'net_profit': 0.0
+            }
         
         return render_template('admin/reports.html', 
                                therapists=t_rows, 
@@ -113,6 +156,26 @@ def reports():
         traceback.print_exc()
         flash(f"Error generando reportes: {str(e)}", 'error')
         return render_template('admin/reports.html', therapists=[], patients=[], financials={'income_real':0,'income_expected':0,'overdue_amount':0,'overdue_users_count':0}, active_page='admin_reports')
+
+@admin_bp.route('/reports/send-weekly-summary', methods=['POST'])
+@login_required
+def send_weekly_summary_manual():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        from app.tasks import check_upcoming_payments
+        # Use underlying app object
+        app = current_app._get_current_object()
+        
+        # Run synchronous and FORCE send even if no alerts
+        check_upcoming_payments(app, force=True)
+        
+        return jsonify({'success': True, 'message': 'Reporte semanal enviado al correo del administrador.'})
+    except Exception as e:
+        current_app.logger.error(f"Manual report error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 @admin_bp.route('/reports/export-payments')
 @login_required
@@ -678,4 +741,229 @@ def analyze_receipt():
         
     except Exception as e:
         print(f"ERROR in analyze_receipt: {str(e)}") # Log to server console
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/sessions')
+@login_required
+def sessions_calendar():
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
+    # Fetch all active patients
+    patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
+    
+    return render_template('admin/sessions.html', 
+                           therapists=therapists, 
+                           patients=patients, 
+                           active_page='admin_sessions')
+
+@admin_bp.route('/api/sessions')
+@login_required
+def get_sessions_api():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        start_str = request.args.get('start') 
+        end_str = request.args.get('end')
+        therapist_id = request.args.get('therapist_id')
+        
+        query = Appointment.query
+        
+        if start_str and len(start_str) > 5:
+            try:
+                # Handle ISO format including Z or offset
+                simple_start = start_str.split('T')[0]
+                start_dt = datetime.strptime(simple_start, '%Y-%m-%d')
+                query = query.filter(Appointment.start_time >= start_dt)
+            except Exception:
+                pass # Fallback to no filter
+
+        if end_str and len(end_str) > 5:
+            try:
+                simple_end = end_str.split('T')[0]
+                end_dt = datetime.strptime(simple_end, '%Y-%m-%d') + timedelta(days=1)
+                query = query.filter(Appointment.start_time <= end_dt)
+            except Exception:
+                pass
+
+        if therapist_id and therapist_id != 'all' and therapist_id != 'undefined':
+            try:
+                tid = int(therapist_id)
+                query = query.filter(Appointment.therapist_id == tid)
+            except ValueError:
+                pass
+            
+        appointments = query.all()
+        
+        events = []
+        for app in appointments:
+            try:
+                color = '#3788d8' # Default Blue
+                if app.status == 'completed': color = '#10b981' # Green
+                elif app.status == 'cancelled': color = '#ef4444' # Red
+                elif app.status == 'scheduled': color = '#3b82f6' # Blue
+                
+                p_name = '???'
+                # Use getattr to prevent crash if relationship is broken
+                if getattr(app, 'patient', None):
+                    p_name = app.patient.username
+                
+                t_name = '???'
+                if getattr(app, 'therapist', None):
+                    t_name = app.therapist.username
+                
+                # Check times
+                if not app.start_time:
+                    continue
+
+                evt = {
+                    'id': app.id,
+                    'title': app.title if app.title else f"{p_name} ({t_name})",
+                    'start': app.start_time.isoformat(),
+                    'end': app.end_time.isoformat() if app.end_time else None,
+                    'backgroundColor': color,
+                    'borderColor': color,
+                    'extendedProps': {
+                        'therapist_id': app.therapist_id,
+                        'patient_id': app.patient_id,
+                        'therapist': t_name,
+                        'patient': p_name,
+                        'status': app.status,
+                        'notes': app.notes
+                    }
+                }
+                events.append(evt)
+            except Exception as e_inner:
+                current_app.logger.error(f"Error packing event {app.id}: {e_inner}")
+                continue
+            
+        return jsonify(events)
+    except Exception as e:
+        current_app.logger.error(f"API Sessions Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/api/sessions/batch', methods=['POST'])
+@login_required
+def batch_create_sessions():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    data = request.json
+    therapist_id = data.get('therapist_id')
+    patient_id = data.get('patient_id')
+    start_date_str = data.get('start_date') # YYYY-MM-DD
+    start_time_str = data.get('start_time') # HH:MM
+    end_time_str = data.get('end_time') # HH:MM
+    days_of_week = data.get('days') # list of ints [0, 2, 4] (Mon, Wed, Fri)
+    title_prefix = data.get('title_prefix')
+    # "se hace por cada 4 semanas": Duration of the cycle
+    cycle_weeks = int(data.get('weeks', 4)) 
+    
+    if not all([therapist_id, patient_id, start_date_str, start_time_str, end_time_str, days_of_week]):
+        return jsonify({'error': 'Faltan datos requeridos'}), 400
+        
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        start_h, start_m = map(int, start_time_str.split(':'))
+        end_h, end_m = map(int, end_time_str.split(':'))
+        
+        created_count = 0
+        current_date_iter = start_date
+        end_date_iter = start_date + timedelta(weeks=cycle_weeks)
+        
+        # Determine total sessions to happen in this block for numbering
+        # e.g. "Sesión 1/12"
+        # First pass: Count total sessions
+        total_sessions = 0
+        temp_date = start_date
+        while temp_date < end_date_iter:
+            if temp_date.weekday() in days_of_week:
+                total_sessions += 1
+            temp_date += timedelta(days=1)
+            
+        session_counter = 1
+        
+        while current_date_iter < end_date_iter:
+            if current_date_iter.weekday() in days_of_week:
+                # Set time
+                session_start = current_date_iter.replace(hour=start_h, minute=start_m)
+                session_end = current_date_iter.replace(hour=end_h, minute=end_m)
+                
+                # If end time < start time, assume it ends next day (rare but possible)
+                if session_end < session_start:
+                    session_end += timedelta(days=1)
+                
+                if title_prefix and title_prefix.strip():
+                     title = f"{title_prefix} ({session_counter}/{total_sessions})"
+                else:
+                     title = f"Sesión {session_counter}/{total_sessions}"
+                
+                appt = Appointment(
+                    therapist_id=therapist_id,
+                    patient_id=patient_id,
+                    title=title,
+                    start_time=session_start,
+                    end_time=session_end,
+                    status='scheduled',
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(appt)
+                created_count += 1
+                session_counter += 1
+            
+            current_date_iter += timedelta(days=1)
+            
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Se crearon {created_count} sesiones exitosamente.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/api/sessions/<int:session_id>', methods=['PUT'])
+@login_required
+def update_session(session_id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    data = request.json
+    appt = Appointment.query.get(session_id)
+    if not appt:
+        return jsonify({'error': 'Session not found'}), 404
+        
+    try:
+        if 'title' in data:
+            appt.title = data['title']
+        
+        # Only parse dates if provided
+        if 'start_date' in data and 'start_time' in data:
+            # Combine
+            start_dt = datetime.strptime(f"{data['start_date']} {data['start_time']}", "%Y-%m-%d %H:%M")
+            appt.start_time = start_dt
+            
+        if 'end_time' in data and data.get('start_date'):
+            # Reconstruct end timestamp
+            end_dt = datetime.strptime(f"{data['start_date']} {data['end_time']}", "%Y-%m-%d %H:%M")
+            # Handle next day case for end time (though rare in simple edit)
+            if end_dt < appt.start_time:
+                end_dt += timedelta(days=1)
+            appt.end_time = end_dt
+            
+        if 'notes' in data:
+            appt.notes = data['notes']
+            
+        if 'status' in data:
+            appt.status = data['status']
+            
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Sesión actualizada'})
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

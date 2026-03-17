@@ -297,8 +297,9 @@ function clearAgeFilter() {
     filterPayments();
 }
 
-function initDashboard(patientsFromJinja) {
+function initDashboard(patientsFromJinja, historyFromJinja) {
     const patients = patientsFromJinja;
+    const history = historyFromJinja || [];
 
     // Cache Data & Load State
     cacheData(patients);
@@ -312,9 +313,14 @@ function initDashboard(patientsFromJinja) {
     
     const statusCounts = { active: 0, overdue: 0, inactive: 0 };
     const debtBySede = {};
+    const revenueBySede = {}; // New
+    const revenueByPlan = {}; // New
     const lastPaymentMonths = { '0-30 días': 0, '30-60 días': 0, '60-90 días': 0, '+90 días': 0 };
     const today = new Date();
+    const currentMonthKey = today.toISOString().slice(0, 7); // YYYY-MM
+    let currentRealRevenue = 0;
 
+    // --- 1. Process Patient Data (Projections) ---
     patients.forEach(p => {
          if (p.status === 'active') countActive++;
          if (p.status === 'overdue') countOverdue++;
@@ -323,10 +329,19 @@ function initDashboard(patientsFromJinja) {
          const sKey = (p.status === 'active' || p.status === 'overdue' || p.status === 'inactive') ? p.status : 'inactive';
          statusCounts[sKey] = (statusCounts[sKey] || 0) + 1;
          totalDebt += (p.debt > 0 ? p.debt : 0);
-         if (p.status === 'active') totalRevenueExpected += (p.paid || 0);
+         
+         // New ERP Metrics
+         const amount = parseFloat(p.paid || 0);
+         const sedeName = p.sede || 'Sin Sede';
+         const planName = p.plan || 'No definido';
+         
+         if (p.status === 'active') {
+             totalRevenueExpected += amount;
+             revenueBySede[sedeName] = (revenueBySede[sedeName] || 0) + amount;
+             revenueByPlan[planName] = (revenueByPlan[planName] || 0) + amount;
+         }
 
          if (p.debt > 0.5) {
-             const sedeName = p.sede || 'Sin Sede';
              debtBySede[sedeName] = (debtBySede[sedeName] || 0) + p.debt;
          }
          
@@ -341,12 +356,36 @@ function initDashboard(patientsFromJinja) {
              lastPaymentMonths['+90 días']++;
          }
     });
+
+    // --- 2. Process History Data (Past Trends & Real Revenue) ---
+    const historyByMonth = {}; 
+    const historySedes = {}; // Just for interest?
     
+    history.forEach(pay => {
+        // pay.date is ISO format
+        const d = new Date(pay.date);
+        const key = pay.date.slice(0, 7); // YYYY-MM
+        const amt = parseFloat(pay.amount || 0);
+        
+        historyByMonth[key] = (historyByMonth[key] || 0) + amt;
+        
+        if (key === currentMonthKey) {
+            currentRealRevenue += amt;
+        }
+    });
+    
+    // Sort months strictly
+    const sortedMonths = Object.keys(historyByMonth).sort().slice(-6); // Last 6 months
+    const historyDataPoints = sortedMonths.map(m => historyByMonth[m]);
+    
+    // Update KPIs
     document.getElementById('kpi_total_debt').textContent = `S/ ${totalDebt.toFixed(2)}`;
     document.getElementById('kpi_active_users').textContent = countActive;
     document.getElementById('kpi_overdue_users').textContent = countOverdue + countInactive;
-    document.getElementById('kpi_total_revenue').textContent = `S/ ${totalRevenueExpected.toFixed(2)}`;
-    
+    document.getElementById('kpi_total_revenue').textContent = `S/ ${currentRealRevenue.toFixed(2)}`; // Show REAL revenue for KPI
+
+    // --- Render Charts ---
+
     if (document.getElementById('chartStatus')) {
         new Chart(document.getElementById('chartStatus'), {
             type: 'doughnut',
@@ -450,6 +489,93 @@ function initDashboard(patientsFromJinja) {
             }
         });
     }
+
+    // --- NEW ERP CHARTS ---
+    
+    if (document.getElementById('chartRevenueHistory')) {
+        new Chart(document.getElementById('chartRevenueHistory'), {
+            type: 'line',
+            data: {
+                labels: sortedMonths,
+                datasets: [{
+                    label: 'Ingresos Reales (S/)',
+                    data: historyDataPoints,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    if (document.getElementById('chartRevenueByPlan')) {
+        const planLabels = Object.keys(revenueByPlan);
+        const planData = Object.values(revenueByPlan);
+        
+        new Chart(document.getElementById('chartRevenueByPlan'), {
+            type: 'doughnut',
+            data: {
+                labels: planLabels.length ? planLabels : ['Sin Datos'],
+                datasets: [{
+                    data: planData.length ? planData : [1],
+                    backgroundColor: ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    if (document.getElementById('chartRevenueBySede')) {
+        const sedeLabels = Object.keys(revenueBySede);
+        const sedeData = Object.values(revenueBySede);
+        
+        new Chart(document.getElementById('chartRevenueBySede'), {
+            type: 'bar',
+            data: {
+                labels: sedeLabels.length ? sedeLabels : ['Sin Datos'],
+                datasets: [{
+                    label: 'Proyección Mensual (S/)',
+                    data: sedeData.length ? sedeData : [0],
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
+    if (document.getElementById('chartProjection')) {
+        new Chart(document.getElementById('chartProjection'), {
+            type: 'bar',
+            data: {
+                labels: ['Ingresos del Mes'],
+                datasets: [
+                    {
+                        label: 'Recaudado (Real)',
+                        data: [currentRealRevenue],
+                        backgroundColor: '#10B981',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Proyectado (Total Contratos)',
+                        data: [totalRevenueExpected],
+                        backgroundColor: '#E5E7EB', // Gray for expected total
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: { 
+                indexAxis: 'y', 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: { x: { beginAtZero: true } } 
+            }
+        });
+    }
+
     filterPayments();
     filterHistory(); // Initial filter for history too
 }

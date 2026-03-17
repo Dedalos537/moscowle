@@ -16,9 +16,14 @@
             <h3 class="text-lg font-semibold text-textDark">Resumen Financiero (Mes Actual)</h3>
             <p class="text-gray-500 text-sm">Proyección de caja y ejecución.</p>
         </div>
-        <a href="{{ url_for('admin.export_payments_csv') }}" class="px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-soft hover:bg-gray-700 transition-colors flex items-center gap-2">
-            <i class="fas fa-file-csv"></i> Exportar CSV
-        </a>
+        <div class="flex gap-2">
+            <button onclick="sendWeeklyReport(this)" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-soft hover:bg-blue-700 transition-colors flex items-center gap-2" title="Enviar ahora el resumen de deudores">
+                <i class="fas fa-envelope"></i> Reporte Semanal
+            </button>
+            <a href="{{ url_for('admin.export_payments_csv') }}" class="px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-soft hover:bg-gray-700 transition-colors flex items-center gap-2">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </a>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -200,6 +205,53 @@
       </div>
       {% endfor %}
     </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function sendWeeklyReport(btn) {
+        if (!confirm('¿Desea generar y enviar el reporte de deudores ahora mismo al administrador?')) {
+            return;
+        }
+        
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        
+        try {
+            const res = await fetch("{{ url_for('admin.send_weekly_summary_manual') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({})
+            });
+            
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server error: ${text}`);
+            }
+
+            const data = await res.json();
+            
+            if (data.success) {
+                alert('Reporte enviado correctamente. Revise su bandeja de entrada (y spam).');
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+            
+        } catch (e) {
+            console.error(e);
+            alert('Error al enviar reporte: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
   </div>
 </div>
 </div> <!-- End Wrapper -->
