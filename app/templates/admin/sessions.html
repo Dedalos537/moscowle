@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block header_action %}
-  <button onclick="openModal()" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+  <button onclick="openModal('batch')" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
     <i class="fas fa-plus md:mr-2"></i> <span class="hidden md:inline">Nueva Programación en Bloque</span>
   </button>
 {% endblock %}
@@ -37,7 +37,10 @@
     </div>
 
     <!-- Calendario -->
-    <div class="bg-surface p-4 md:p-6 rounded-soft shadow-soft border border-gray-100 min-h-[600px]">
+    <div class="bg-surface p-4 md:p-6 rounded-soft shadow-soft border border-gray-100 min-h-[600px] relative">
+        <div id="calendar-loader" class="hidden absolute inset-0 bg-white/75 flex items-center justify-center rounded-soft z-10 transition-opacity">
+            <i class="fas fa-spinner fa-spin text-primary text-4xl"></i>
+        </div>
         <div id="calendar"></div>
     </div>
 </div>
@@ -50,12 +53,12 @@
 <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
 
 <!-- Modal Creating Batch Sessions -->
-<div id="batchModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
+<div id="batchModal" role="dialog" aria-modal="true" aria-labelledby="modal-title" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
     <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
-            <h3 class="text-lg font-bold text-textDark">Programar Sesiones</h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+            <h3 id="modal-title" class="text-lg font-bold text-textDark">Programar Sesiones</h3>
+            <button onclick="closeModal()" aria-label="Cerrar modal" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -86,10 +89,14 @@
 
                 <!-- Paciente (Dynamic) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
-                    <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
-                        <option value="">Seleccionar Paciente...</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select disabled:bg-gray-100 disabled:text-gray-400" disabled aria-busy="false">
+                            <option value="">Seleccionar Paciente...</option>
+                        </select>
+                        <i class="fas fa-spinner fa-spin absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hidden patient-loader"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 patient-hint">Primero selecciona un terapeuta.</p>
                 </div>
 
                 <!-- Título -->
@@ -158,10 +165,14 @@
 
                 <!-- Paciente -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
-                    <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
-                        <option value="">Seleccionar Paciente...</option>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select disabled:bg-gray-100 disabled:text-gray-400" disabled aria-busy="false">
+                            <option value="">Seleccionar Paciente...</option>
+                        </select>
+                        <i class="fas fa-spinner fa-spin absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hidden patient-loader"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 patient-hint">Primero selecciona un terapeuta.</p>
                 </div>
 
                 <!-- Título (Opcional) -->
@@ -203,26 +214,45 @@
 
                 <!-- Días de la semana -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Días de la semana</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Días de la semana <span class="text-red-500">*</span></label>
                     <div class="flex flex-wrap gap-2">
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="0" class="rounded text-primary focus:ring-primary mr-2"> Lun
-                        </label>
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="1" class="rounded text-primary focus:ring-primary mr-2"> Mar
-                        </label>
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="2" class="rounded text-primary focus:ring-primary mr-2"> Mié
-                        </label>
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="3" class="rounded text-primary focus:ring-primary mr-2"> Jue
-                        </label>
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="4" class="rounded text-primary focus:ring-primary mr-2"> Vie
-                        </label>
-                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
-                            <input type="checkbox" name="days" value="5" class="rounded text-primary focus:ring-primary mr-2"> Sáb
-                        </label>
+                        <!-- Tailwind 'peer' to do pure CSS styled checkbox. Note: we need explicit unique ids and for= if we don't nest but nesting with standard CSS usually requires native CSS :has or peer to work seamlessly -->
+                        <div class="relative">
+                            <input type="checkbox" id="day-0" name="days" value="0" class="peer sr-only">
+                            <label for="day-0" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Lun
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="day-1" name="days" value="1" class="peer sr-only">
+                            <label for="day-1" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Mar
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="day-2" name="days" value="2" class="peer sr-only">
+                            <label for="day-2" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Mié
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="day-3" name="days" value="3" class="peer sr-only">
+                            <label for="day-3" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Jue
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="day-4" name="days" value="4" class="peer sr-only">
+                            <label for="day-4" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Vie
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="day-5" name="days" value="5" class="peer sr-only">
+                            <label for="day-5" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:peer-checked:bg-primary dark:peer-checked:text-white dark:peer-checked:border-primary">
+                                Sáb
+                            </label>
+                        </div>
                     </div>
                 </div>
 
@@ -240,11 +270,11 @@
 </div>
 
 <!-- Edit/Update Session Modal -->
-<div id="editSessionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+<div id="editSessionModal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
     <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg overflow-hidden transform transition-all">
         <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <h3 class="text-lg font-bold text-textDark">Editar Sesión</h3>
-            <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+            <h3 id="edit-modal-title" class="text-lg font-bold text-textDark">Editar Sesión</h3>
+            <button onclick="closeEditModal()" aria-label="Cerrar modal" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -259,7 +289,7 @@
                 
                 <div>
                      <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                     <input type="text" id="edit-title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm font-bold">
+                     <input type="text" id="edit-title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                 </div>
 
                 <div>
@@ -289,12 +319,16 @@
             </form>
         </div>
         
-        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-             <!-- Delete Button (Optional improvement) -->
-            <button onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancelar</button>
-            <button onclick="submitEdit()" id="btnEditSave" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 font-medium shadow-sm">
-                Guardar Cambios
-            </button>
+        <div class="px-6 py-4 bg-gray-50 flex justify-between gap-3">
+             <button onclick="deleteSession()" class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium flex items-center gap-2 mr-auto" type="button">
+                 <i class="fas fa-trash-alt"></i> Eliminar
+             </button>
+             <div class="flex gap-3">
+                 <button onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium" type="button">Cancelar</button>
+                 <button onclick="submitEdit()" id="btnEditSave" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 font-medium shadow-sm" type="button">
+                     Guardar Cambios
+                 </button>
+             </div>
         </div>
     </div>
 </div>
@@ -361,6 +395,18 @@
                   };
                 }
             },
+            loading: function(isLoading) {
+                const loader = document.getElementById('calendar-loader');
+                if (loader) {
+                    if (isLoading) {
+                        loader.classList.remove('hidden');
+                        setTimeout(() => loader.classList.remove('opacity-0'), 10);
+                    } else {
+                        loader.classList.add('opacity-0');
+                        setTimeout(() => loader.classList.add('hidden'), 300);
+                    }
+                }
+            },
             eventClick: function(info) {
                 openEditModal(info.event);
             },
@@ -386,12 +432,17 @@
 
             const tSelect = form.querySelector('select[name="therapist_id"]');
             const pSelect = form.querySelector('select[name="patient_id"]');
+            const pLoader = form.querySelector('.patient-loader');
+            const pHint = form.querySelector('.patient-hint');
             
             if (tSelect && pSelect) {
                 tSelect.addEventListener('change', async function() {
                     const tId = this.value;
                     pSelect.innerHTML = '<option>Cargando...</option>';
                     pSelect.disabled = true;
+                    if (pLoader) pLoader.classList.remove('hidden');
+                    if (pHint) pHint.classList.add('hidden');
+                    pSelect.setAttribute('aria-busy', 'true');
                     
                     try {
                         let url = "{{ url_for('api.api_patients') }}";
@@ -421,15 +472,19 @@
                         pSelect.innerHTML = '<option value="">Error de carga</option>';
                     } finally {
                         pSelect.disabled = false;
+                        if (pLoader) pLoader.classList.add('hidden');
+                        pSelect.setAttribute('aria-busy', 'false');
                     }
                 });
             }
         });
     });
 
-    function openModal() {
+    function openModal(defaultTab = 'batch') {
+        switchTab(defaultTab);
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden'; // Block scroll
+        document.addEventListener('keydown', handleEscape);
     }
 
     function closeModal() {
@@ -437,6 +492,14 @@
         document.getElementById('batchForm').reset();
         document.getElementById('singleForm').reset();
         document.body.style.overflow = ''; // Restore scroll
+        document.removeEventListener('keydown', handleEscape);
+    }
+    
+    function handleEscape(e) {
+        if (e.key === 'Escape') {
+            closeModal();
+            closeEditModal();
+        }
     }
     
     // --- Session Type & Submission ---
@@ -457,7 +520,7 @@
         // Validation
         const dates = formData.get('dates');
         if (!dates) {
-            alert('Selecciona al menos una fecha.');
+            showToast('Selecciona al menos una fecha.', 'error');
             return;
         }
 
@@ -474,7 +537,7 @@
         
         // Basic validation
         if(!formData.get('therapist_id') || !formData.get('patient_id') || !formData.get('start_time') || !formData.get('end_time')) {
-            alert('Por favor completa todos los campos requeridos.');
+            showToast('Falta información: completa todos los campos requeridos.', 'error');
             return;
         }
 
@@ -537,17 +600,20 @@
             }
 
             if (successCount > 0) {
-                showToast(`${successCount} sesiones creadas exitosamente.`, 'success');
-                if(errors.length > 0) alert('Error en fechas: ' + errors.join(', '));
+                if (errors.length > 0) {
+                    showToast(`${successCount} creadas. Error en fechas: ${errors.join(', ')}`, 'warning');
+                } else {
+                    showToast(`${successCount} sesiones creadas exitosamente.`, 'success');
+                }
                 closeModal();
                 calendar.refetchEvents();
             } else {
-                alert('No se pudieron crear las sesiones. verifica los datos.');
+                showToast('No se pudieron crear las sesiones. verifica los datos.', 'error');
             }
 
         } catch (e) {
             console.error(e);
-            alert('Error al procesar: ' + e.message);
+            showToast('Error al procesar: ' + e.message, 'error');
         } finally {
              btn.disabled = false;
              btn.innerHTML = 'Crear Sesiones';
@@ -561,6 +627,7 @@
         document.getElementById('edit-id').value = event.id;
         document.getElementById('edit-title').value = event.title;
         document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', handleEscape);
         
         // Parse dates for input
         // Note: Fullcalendar dates are Date objects
@@ -587,6 +654,7 @@
         editModal.classList.add('hidden');
         document.getElementById('editSessionForm').reset();
         document.body.style.overflow = '';
+        document.removeEventListener('keydown', handleEscape);
     }
     
     async function submitEdit() {
@@ -624,11 +692,11 @@
                 closeEditModal();
                 calendar.refetchEvents();
             } else {
-                alert('Error: ' + (result.error || 'Ocurrió un error desconocido'));
+                showToast('Error: ' + (result.error || 'Ocurrió un error desconocido'), 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error de conexión.');
+            showToast('Error de conexión.', 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Guardar Cambios';
@@ -638,6 +706,30 @@
     editModal.addEventListener('click', function(e) {
         if (e.target === editModal) closeEditModal();
     });
+
+    async function deleteSession() {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta sesión? Esta acción no se puede deshacer.')) return;
+        
+        const id = document.getElementById('edit-id').value;
+        try {
+            const response = await fetch(`{{ url_for('admin.get_sessions_api') }}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            if (response.ok) {
+                showToast('Sesión eliminada', 'success');
+                closeEditModal();
+                calendar.refetchEvents();
+            } else {
+                showToast('Error al eliminar la sesión', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Error de conexión', 'error');
+        }
+    }
 
     // Close on click outside
     modal.addEventListener('click', function(e) {
@@ -654,7 +746,7 @@
         form.querySelectorAll('input[name="days"]:checked').forEach(cb => days.push(parseInt(cb.value)));
         
         if (days.length === 0) {
-            alert('Selecciona al menos un día de la semana.');
+            showToast('Selecciona al menos un día de la semana.', 'error');
             return;
         }
 
@@ -671,7 +763,13 @@
         
         // Basic validation
         if(!payload.therapist_id || !payload.patient_id || !payload.start_date || !payload.start_time || !payload.end_time) {
-            alert('Por favor completa todos los campos requeridos.');
+            showToast('Falta información: completa todos los campos requeridos.', 'error');
+            return;
+        }
+        
+        const weeks = parseInt(payload.weeks) || 1;
+        const totalSessions = days.length * weeks;
+        if (!confirm(`Estás a punto de crear ${totalSessions} sesiones en bloque. ¿Confirmar creación?`)) {
             return;
         }
         
@@ -696,11 +794,11 @@
                 closeModal();
                 calendar.refetchEvents();
             } else {
-                alert('Error: ' + (result.error || 'Ocurrió un error desconocido'));
+                showToast('Error: ' + (result.error || 'Ocurrió un error desconocido'), 'error');
             }
         } catch (error) {
             console.error(error);
-            alert('Error de conexión.');
+            showToast('Error de conexión.', 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Crear Sesiones';
@@ -739,6 +837,17 @@
         border-color: var(--color-primary) !important;
         font-weight: 500;
         transition: all 0.2s;
+        border-radius: 1.5rem !important; /* Radio estilo píldora/sidebar */
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    .fc-direction-ltr .fc-button-group > .fc-button:not(:first-child) {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+    }
+    .fc-direction-ltr .fc-button-group > .fc-button:not(:last-child) {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
     }
     .fc-button-primary:hover {
         background-color: #659032 !important; /* darker shade */

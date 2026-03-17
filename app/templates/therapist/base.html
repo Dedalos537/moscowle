@@ -259,6 +259,46 @@
     .fade-in-content {
       animation: fadeIn 0.5s ease-in-out;
     }
+
+    /* Dinamismo del Sidebar para auto-ajustar pestañas y evitar desbordes */
+    #main-navigation {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(0.125rem, 0.8vh, 0.5rem);
+    }
+    #main-navigation > * + * {
+      margin-top: 0 !important; /* Anula el space-y-2 de tailwind */
+    }
+    #main-navigation a, #theme-toggle {
+      padding-top: clamp(0.35rem, 1.4vh, 1rem) !important;
+      padding-bottom: clamp(0.35rem, 1.4vh, 1rem) !important;
+      min-height: 2.5rem; /* Asegura un mínimo táctil */
+    }
+    /* Separador entre terapista y admin */
+    #main-navigation > .border-t.pt-2.mt-2 {
+      padding-top: clamp(0.25rem, 1vh, 0.5rem) !important;
+      margin-top: clamp(0.25rem, 1vh, 0.5rem) !important;
+    }
+    /* Contenedor del dark mode (empujarlo al fondo suavemente) */
+    #main-navigation > div:last-child {
+      margin-top: auto !important;
+      padding-top: clamp(0.5rem, 1vh, 1rem) !important;
+    }
+    /* Achicar el sector del logo en pantallas muy bajas */
+    @media (max-height: 700px) {
+      #logo-section {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+      }
+      #logo-section img {
+        width: 3rem !important;
+        height: 3rem !important;
+      }
+      #main-navigation {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+      }
+    }
   </style>
 </head>
 
