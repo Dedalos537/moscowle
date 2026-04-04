@@ -1,0 +1,779 @@
+{% extends "therapist/base.html" %}
+{% set active_page = "admin_sessions" %}
+
+{% block header_content %}
+  <!-- FullCalendar CSS -->
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+  
+  <div>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate leading-tight">
+      <span class="md:hidden">Calendario</span>
+      <span class="hidden md:inline">Calendario Global de Sesiones</span>
+    </h2>
+    <p class="text-sm text-gray-500 hidden md:block">
+      Gestiona las sesiones de todos los terapeutas
+    </p>
+  </div>
+{% endblock %}
+
+{% block header_action %}
+  <button onclick="openModal()" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+    <i class="fas fa-plus md:mr-2"></i> <span class="hidden md:inline">Nueva Programación en Bloque</span>
+  </button>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8 space-y-6">
+    
+    <!-- Filtros -->
+    <div class="bg-surface p-4 rounded-soft shadow-soft border border-gray-100 flex flex-wrap gap-4 items-center">
+        <label for="therapistFilter" class="text-sm font-medium text-gray-700">Filtrar por Terapeuta:</label>
+        <select id="therapistFilter" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
+            <option value="all">Todos los Terapeutas</option>
+            {% for t in therapists %}
+                <option value="{{ t.id }}">{{ t.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Calendario -->
+    <div class="bg-surface p-4 md:p-6 rounded-soft shadow-soft border border-gray-100 min-h-[600px]">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+
+<!-- Flatpickr (Optional if reused from therapist template, but safer to include here too if not globally loaded) -->
+<!-- Assuming flatpickr not loaded in admin base yet -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
+<!-- Modal Creating Batch Sessions -->
+<div id="batchModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+            <h3 class="text-lg font-bold text-textDark">Programar Sesiones</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="px-6 pt-4 border-b border-gray-100 flex gap-4 bg-white shrink-0">
+             <button id="tab-single" onclick="switchTab('single')" class="pb-2 text-sm font-medium border-b-2 border-primary text-primary transition-colors">Sesión Individual</button>
+             <button id="tab-batch" onclick="switchTab('batch')" class="pb-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors">Programación en Bloque</button>
+        </div>
+        
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto grow">
+            
+            <!-- SINGLE SESSION FORM -->
+            <form id="singleForm" class="space-y-4">
+                <input type="hidden" name="type" value="single">
+                
+                <!-- Terapeuta -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
+                    <select name="therapist_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
+                        <option value="">Seleccionar Terapeuta...</option>
+                        {% for t in therapists %}
+                            <option value="{{ t.id }}">{{ t.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Paciente (Dynamic) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
+                    <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
+                        <option value="">Seleccionar Paciente...</option>
+                    </select>
+                </div>
+
+                <!-- Título -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                    <input type="text" name="title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                </div>
+
+                <!-- Fechas (Multi-select via Flatpickr) -->
+                 <div>
+                    <label class="text-sm font-medium text-gray-700 mb-1">Fechas</label>
+                    <input type="text" name="dates" id="single-dates" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Seleccionar fechas..." required>
+                    <p class="text-xs text-gray-500 mt-1">Puedes seleccionar múltiples días puntuales.</p>
+                </div>
+
+                <!-- Hora -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" name="start_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" name="end_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                </div>
+                
+                 <!-- Estado & Lugar -->
+                 <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <select name="status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                            <option value="scheduled">Programada</option>
+                            <option value="completed">Completada</option>
+                            <option value="cancelled">Cancelada</option>
+                        </select>
+                    </div>
+                    <div>
+                         <label class="block text-sm font-medium text-gray-700 mb-1">Lugar</label>
+                         <input type="text" name="location" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Consultorio 1">
+                    </div>
+                 </div>
+
+                 <!-- Notas -->
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                    <textarea name="notes" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" rows="2"></textarea>
+                 </div>
+
+            </form>
+
+            <!-- BATCH SESSION FORM (Hidden initially) -->
+            <form id="batchForm" class="space-y-4 hidden">
+                <input type="hidden" name="type" value="batch">
+                
+                <!-- Terapeuta -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
+                    <select name="therapist_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
+                        <option value="">Seleccionar Terapeuta...</option>
+                        {% for t in therapists %}
+                            <option value="{{ t.id }}">{{ t.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Paciente -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
+                    <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
+                        <option value="">Seleccionar Paciente...</option>
+                    </select>
+                </div>
+
+                <!-- Título (Opcional) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Título de la Sesión (Opcional)</label>
+                    <input type="text" name="title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Si se deja vacío, se generará como "Sesión X/Y".</p>
+                </div>
+
+                <!-- Fecha Inicio y Horarios -->
+                <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+                     <input type="date" name="start_date" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" name="start_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" name="end_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                </div>
+
+                <!-- Duración del Bloque -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Duración / Recurrencia</label>
+                    <select name="weeks" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <option value="1">1 Semana (Semanal / Puntual)</option>
+                        <option value="2">2 Semanas</option>
+                        <option value="4" selected>4 Semanas (1 Mes)</option>
+                        <option value="8">8 Semanas (2 Meses)</option>
+                        <option value="12">12 Semanas (3 Meses)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Selecciona por cuánto tiempo se repetirán las sesiones.</p>
+                </div>
+
+                <!-- Días de la semana -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Días de la semana</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="0" class="rounded text-primary focus:ring-primary mr-2"> Lun
+                        </label>
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="1" class="rounded text-primary focus:ring-primary mr-2"> Mar
+                        </label>
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="2" class="rounded text-primary focus:ring-primary mr-2"> Mié
+                        </label>
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="3" class="rounded text-primary focus:ring-primary mr-2"> Jue
+                        </label>
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="4" class="rounded text-primary focus:ring-primary mr-2"> Vie
+                        </label>
+                        <label class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="5" class="rounded text-primary focus:ring-primary mr-2"> Sáb
+                        </label>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 shrink-0">
+            <button onclick="closeModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancelar</button>
+            <button onclick="submitSessionType()" id="btnSave" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 font-medium shadow-sm flex items-center gap-2">
+                <span>Crear Sesiones</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit/Update Session Modal -->
+<div id="editSessionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-lg overflow-hidden transform transition-all">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-textDark">Editar Sesión</h3>
+            <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 space-y-4">
+            <form id="editSessionForm" class="space-y-4">
+                <input type="hidden" id="edit-id">
+                
+                <div class="bg-blue-50 p-3 rounded text-sm text-blue-700 mb-2">
+                    <i class="fas fa-info-circle mr-1"></i> <span id="edit-info">Cargando...</span>
+                </div>
+                
+                <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                     <input type="text" id="edit-title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm font-bold">
+                </div>
+
+                <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                     <input type="date" id="edit-date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" id="edit-start-time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" id="edit-end-time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select id="edit-status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <option value="scheduled">Programada</option>
+                        <option value="completed">Completada</option>
+                        <option value="cancelled">Cancelada</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        
+        <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+             <!-- Delete Button (Optional improvement) -->
+            <button onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancelar</button>
+            <button onclick="submitEdit()" id="btnEditSave" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 font-medium shadow-sm">
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
+
+<script>
+    let calendar;
+    const modal = document.getElementById('batchModal');
+    let activeTab = 'single';
+
+    function switchTab(tab) {
+        activeTab = tab;
+        const btnSingle = document.getElementById('tab-single');
+        const btnBatch = document.getElementById('tab-batch');
+        const formSingle = document.getElementById('singleForm');
+        const formBatch = document.getElementById('batchForm');
+
+        if (tab === 'single') {
+            btnSingle.classList.add('border-primary', 'text-primary');
+            btnSingle.classList.remove('border-transparent', 'text-gray-500');
+            btnBatch.classList.remove('border-primary', 'text-primary');
+            btnBatch.classList.add('border-transparent', 'text-gray-500');
+            formSingle.classList.remove('hidden');
+            formBatch.classList.add('hidden');
+        } else {
+            btnBatch.classList.add('border-primary', 'text-primary');
+            btnBatch.classList.remove('border-transparent', 'text-gray-500');
+            btnSingle.classList.remove('border-primary', 'text-primary');
+            btnSingle.classList.add('border-transparent', 'text-gray-500');
+            formBatch.classList.remove('hidden');
+            formSingle.classList.add('hidden');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Flatpickr for multiple dates
+        flatpickr("#single-dates", {
+            mode: "multiple",
+            dateFormat: "Y-m-d",
+            locale: "es",
+            minDate: "today"
+        });
+
+        const calendarEl = document.getElementById('calendar');
+        const therapistFilter = document.getElementById('therapistFilter');
+
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            navLinks: true, // permite hacer clic en día/semana para navegar
+            events: {
+                url: "{{ url_for('admin.get_sessions_api') }}",
+                extraParams: function() {
+                  return {
+                    therapist_id: therapistFilter.value
+                  };
+                }
+            },
+            eventClick: function(info) {
+                openEditModal(info.event);
+            },
+            height: 'auto',
+            themeSystem: 'standard'
+        });
+
+        calendar.render();
+
+        // Refetch on filter change
+        therapistFilter.addEventListener('change', function() {
+            calendar.refetchEvents();
+        });
+
+        // Dynamic Patient Loading Implementation (Applied to BOTH forms)
+        // We use class .therapist-select and .patient-select to handle this generically or 
+        // separately for each form ID.
+        // Let's attach logic to both forms.
+
+        ['singleForm', 'batchForm'].forEach(formId => {
+            const form = document.getElementById(formId);
+            if (!form) return;
+
+            const tSelect = form.querySelector('select[name="therapist_id"]');
+            const pSelect = form.querySelector('select[name="patient_id"]');
+            
+            if (tSelect && pSelect) {
+                tSelect.addEventListener('change', async function() {
+                    const tId = this.value;
+                    pSelect.innerHTML = '<option>Cargando...</option>';
+                    pSelect.disabled = true;
+                    
+                    try {
+                        let url = "{{ url_for('api.api_patients') }}";
+                        // Fix URL concatenation
+                        if (url.includes('?')) url += `&therapist_id=${tId}`;
+                        else url += `?therapist_id=${tId}`;
+                        
+                        const res = await fetch(url);
+                        if (!res.ok) {
+                           const text = await res.text();
+                           throw new Error(`Server error (${res.status}): ${text.substring(0, 100)}`);
+                        }
+                        const patients = await res.json();
+                        
+                        let html = '<option value="">Seleccionar Paciente...</option>';
+                        if (patients.length === 0) {
+                            html += '<option value="" disabled>No hay pacientes asignados/activos</option>';
+                        } else {
+                            patients.forEach(p => {
+                                html += `<option value="${p.id}">${p.username}</option>`;
+                            });
+                        }
+                        pSelect.innerHTML = html;
+                        
+                    } catch (e) {
+                        console.error("Patient dynamic load error:", e);
+                        pSelect.innerHTML = '<option value="">Error de carga</option>';
+                    } finally {
+                        pSelect.disabled = false;
+                    }
+                });
+            }
+        });
+    });
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Block scroll
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.getElementById('batchForm').reset();
+        document.getElementById('singleForm').reset();
+        document.body.style.overflow = ''; // Restore scroll
+    }
+    
+    // --- Session Type & Submission ---
+    
+    async function submitSessionType() {
+        if (activeTab === 'single') {
+            await submitSingleSession();
+        } else {
+            await submitBatch();
+        }
+    }
+
+    async function submitSingleSession() {
+        const form = document.getElementById('singleForm');
+        const formData = new FormData(form);
+        const btn = document.getElementById('btnSave');
+        
+        // Validation
+        const dates = formData.get('dates');
+        if (!dates) {
+            alert('Selecciona al menos una fecha.');
+            return;
+        }
+
+        // We can reuse the batch API or create a new one. 
+        // Or simpler: Make specific calls for each date selected.
+        // Actually, let's create a loop here or send a list to backend.
+        // Since we don't have a "multi-date single session" endpoint, let's construct explicit calls or use batch with trick?
+        // Better: Use batch API with a new "type=explicit_dates" logic OR loop here.
+        // Let's modify the payload to fit batch endpoint but simply pass days as the specific dates.
+        // BUT standard batch logic is "weekly on monday".
+        // Let's create a client-side loop for now, it's safer for MVP without changing backend logic extensively.
+        
+        const dateList = dates.split(', ');
+        
+        // Basic validation
+        if(!formData.get('therapist_id') || !formData.get('patient_id') || !formData.get('start_time') || !formData.get('end_time')) {
+            alert('Por favor completa todos los campos requeridos.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+
+        let successCount = 0;
+        let errors = [];
+
+        try {
+            // We use the existing create_session endpoint or batch?
+            // Actually, we need to create sessions individually.
+            // There isn't a "create single admin session" endpoint exposed yet except maybe hijacking therapist one?
+            // BUT therapist endpoint assumes current_user is therapist. 
+            // Admin needs to override therapist_id.
+            // We can use the existing `batch_create_sessions` but add support for "explicit_dates"?
+            // Or just loop `batch_create_sessions` with weeks=1? No that's inefficient.
+            
+            // Let's use a new endpoint or modify batch. Since we can't easily modify python right now without risky logic change...
+            // Wait, I can call the "batch" endpoint with weeks=1 and specific start_date for each date selected?
+            // Yes, calling batch for each selected date (acting as a 1-session block) is a valid hack.
+            
+            for (const dateStr of dateList) {
+                // Ensure correct day index is passed? 
+                // Batch endpoint requires 'days' (list of ints).
+                const d = new Date(dateStr);
+                // Fix timezone offset issue - simple string parsing is safer
+                // "2026-03-24" -> getDay() depends on local time.
+                // safer: new Date(dateStr + "T00:00:00")
+                const dObj = new Date(dateStr + "T00:00:00");
+                const dayIndex = dObj.getDay() === 0 ? 6 : dObj.getDay() - 1; // 0-6 (Mon-Sun)?
+                // Python datetime.weekday(): Mon=0, Sun=6. JS: Sun=0, Mon=1.
+                // JS: 0=Sun, 1=Mon...6=Sat. 
+                // Python: 0=Mon...6=Sun.
+                // Conversion: (jsDay + 6) % 7
+                const pyDay = (dObj.getDay() + 6) % 7; 
+                
+                const payload = {
+                    therapist_id: formData.get('therapist_id'),
+                    patient_id: formData.get('patient_id'),
+                    title_prefix: formData.get('title'),
+                    start_date: dateStr, // Specific date
+                    start_time: formData.get('start_time'),
+                    end_time: formData.get('end_time'),
+                    weeks: 1, // Just this week
+                    days: [pyDay] // Only this day
+                };
+
+                const res = await fetch("{{ url_for('admin.batch_create_sessions') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) { 
+                    successCount++; 
+                } else {
+                    const errorData = await res.json();
+                    errors.push(`${dateStr} (${errorData.error || errorData.message || "Cruce de horario o Invalida"})`);
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`${successCount} sesiones creadas exitosamente.`, 'success');
+                if(errors.length > 0) alert('No se pudieron agendar las siguientes fechas:\n' + errors.join('\n'));
+                closeModal();
+                calendar.refetchEvents();
+            } else {
+                alert('No se pudieron crear las sesiones. verifica los datos.');
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error al procesar: ' + e.message);
+        } finally {
+             btn.disabled = false;
+             btn.innerHTML = 'Crear Sesiones';
+        }
+    }
+
+    // --- Edit Modal Logic ---
+    const editModal = document.getElementById('editSessionModal');
+    
+    function openEditModal(event) {
+        document.getElementById('edit-id').value = event.id;
+        document.getElementById('edit-title').value = event.title;
+        document.body.style.overflow = 'hidden';
+        
+        // Parse dates for input
+        // Note: Fullcalendar dates are Date objects
+        const start = event.start;
+        const end = event.end || event.start; // Fallback
+        
+        const dateStr = start.toISOString().split('T')[0];
+        const timeStartStr = start.toTimeString().substring(0,5);
+        const timeEndStr = end.toTimeString().substring(0,5);
+        
+        document.getElementById('edit-date').value = dateStr;
+        document.getElementById('edit-start-time').value = timeStartStr;
+        document.getElementById('edit-end-time').value = timeEndStr;
+        document.getElementById('edit-status').value = event.extendedProps.status;
+        
+        // Populate info text
+        document.getElementById('edit-info').innerText = 
+            `Terapeuta: ${event.extendedProps.therapist} | Paciente: ${event.extendedProps.patient}`;
+            
+        editModal.classList.remove('hidden');
+    }
+    
+    function closeEditModal() {
+        editModal.classList.add('hidden');
+        document.getElementById('editSessionForm').reset();
+        document.body.style.overflow = '';
+    }
+    
+    async function submitEdit() {
+        const id = document.getElementById('edit-id').value;
+        const btn = document.getElementById('btnEditSave');
+        
+        const payload = {
+            title: document.getElementById('edit-title').value,
+            start_date: document.getElementById('edit-date').value,
+            start_time: document.getElementById('edit-start-time').value,
+            end_time: document.getElementById('edit-end-time').value,
+            status: document.getElementById('edit-status').value
+        };
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Generate dynamic URL
+            const url = "{{ url_for('admin.get_sessions_api') }}/" + id;
+            
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(result.message || 'Sesión actualizada', 'success');
+                closeEditModal();
+                calendar.refetchEvents();
+            } else {
+                alert('Error: ' + (result.error || 'Ocurrió un error desconocido'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar Cambios';
+        }
+    }
+    
+    editModal.addEventListener('click', function(e) {
+        if (e.target === editModal) closeEditModal();
+    });
+
+    // Close on click outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    async function submitBatch() {
+        const form = document.getElementById('batchForm');
+        const formData = new FormData(form);
+        const btn = document.getElementById('btnSave');
+        
+        // Validation
+        const days = [];
+        form.querySelectorAll('input[name="days"]:checked').forEach(cb => days.push(parseInt(cb.value)));
+        
+        if (days.length === 0) {
+            alert('Selecciona al menos un día de la semana.');
+            return;
+        }
+
+        const payload = {
+            therapist_id: formData.get('therapist_id'),
+            patient_id: formData.get('patient_id'),
+            title_prefix: formData.get('title'),
+            start_date: formData.get('start_date'),
+            start_time: formData.get('start_time'),
+            end_time: formData.get('end_time'),
+            weeks: formData.get('weeks'),
+            days: days
+        };
+        
+        // Basic validation
+        if(!payload.therapist_id || !payload.patient_id || !payload.start_date || !payload.start_time || !payload.end_time) {
+            alert('Por favor completa todos los campos requeridos.');
+            return;
+        }
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            
+            const response = await fetch("{{ url_for('admin.batch_create_sessions') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Success
+                showToast(result.message || 'Sesiones creadas correctamente', 'success');
+                closeModal();
+                calendar.refetchEvents();
+            } else {
+                alert('Error: ' + (result.error || 'Ocurrió un error desconocido'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Crear Sesiones';
+        }
+    }
+</script>
+
+<style>
+    /* FullCalendar Customization to match theme */
+    .fc-theme-standard .fc-scrollgrid {
+        border-color: #f3f4f6; /* gray-100 */
+    }
+    .fc th {
+        padding: 10px;
+        background-color: #f9fafb; /* gray-50 */
+        border-color: #f3f4f6;
+        font-weight: 600;
+        color: #4b5563; /* gray-600 */
+    }
+    .fc-day-today {
+        background-color: #f0fdf4 !important; /* green-50 */
+    }
+    .fc-event {
+        border-radius: 4px;
+        padding: 2px 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .fc-toolbar-title {
+        font-size: 1.25rem !important;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .fc-button-primary {
+        background-color: var(--color-primary) !important;
+        border-color: var(--color-primary) !important;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .fc-button-primary:hover {
+        background-color: #659032 !important; /* darker shade */
+        border-color: #659032 !important;
+    }
+    .fc-button-primary:disabled {
+        opacity: 0.6;
+    }
+    
+    /* Dark Mode Overrides */
+    .dark .fc-button-primary {
+         background-color: var(--color-primary) !important;
+         border-color: var(--color-primary) !important;
+         color: #fff !important;
+    }
+    .dark .fc-toolbar-title {
+        color: #f3f4f6;
+    }
+    .dark .fc th {
+        background-color: #1e293b; 
+        color: #d1d5db;
+        border-color: #374151;
+    }
+    .dark .fc-day-today {
+        background-color: rgba(134, 194, 70, 0.1) !important;
+    }
+    .dark .fc td, .dark .fc th {
+        border-color: #374151;
+    }
+    .dark .fc-theme-standard .fc-scrollgrid {
+        border-color: #374151;
+    }
+</style>
+{% endblock %}

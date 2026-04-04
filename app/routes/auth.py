@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
-from flask_login import login_required
-from app.extensions import limiter
+from flask_login import login_required, current_user
+from app.extensions import limiter, csrf
 from app.services.auth_service import AuthService
 from email_validator import validate_email, EmailNotValidError
 from app.schemas.auth_schema import validate_login_input
@@ -11,6 +11,13 @@ auth_service = AuthService()
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("50 per hour")
 def login():
+    # Redirect authenticated users away from the login page to avoid loops
+    try:
+        if current_user and current_user.is_authenticated:
+            return redirect(url_for('main.dashboard'))
+    except Exception:
+        # If current_user access fails (e.g. user_loader not ready), continue to show login
+        pass
     if request.method == 'POST':
         form = {
             'email': request.form.get('email', '').strip().lower(),
@@ -43,6 +50,7 @@ def logout():
 
 @auth_bp.route('/api/auth/validate', methods=['POST'])
 @limiter.limit("60 per minute")
+@csrf.exempt
 def api_auth_validate():
     try:
         data = request.get_json(silent=True) or {}

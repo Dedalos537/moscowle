@@ -27,7 +27,9 @@ oauth = OAuth()
 # Login management
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
-login_manager.session_protection = 'strong'
+# Lower session protection in development to avoid fingerprint invalidation on localhost.
+# Use 'basic' during development; consider restoring to 'strong' in production.
+login_manager.session_protection = 'basic'
 
 # Rate limiting
 limiter = Limiter(

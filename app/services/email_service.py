@@ -16,7 +16,7 @@ class EmailService:
     def send_welcome_email(recipient_email: str, plain_password: str, username: str):
         """Send a welcome email with credentials."""
         if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
-            current_app.logger.warning("Email not configured. Skipping welcome email.")
+            current_app.logger.warning("Email not configured in MAIL_USERNAME/MAIL_PASSWORD. Skipping welcome email.")
             return False
         try:
             subject = "Bienvenido a Moscowle"
@@ -29,7 +29,8 @@ class EmailService:
                 f"Inicia sesión y cambia tu contraseña temporal por una más segura desde tu perfil.\n\n"
                 "Saludos,\nEquipo Moscowle"
             )
-            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
+            sender = current_app.config.get('MAIL_DEFAULT_SENDER') or current_app.config.get('MAIL_USERNAME')
+            msg = MailMessage(subject=subject, recipients=[recipient_email], body=body, sender=sender)
             mail.send(msg)
             current_app.logger.info(f"Welcome email sent successfully to {recipient_email}")
             return True
@@ -205,37 +206,42 @@ class EmailService:
             """
             
             for sede_name, categories in report_data.items():
-                if not categories['overdue'] and not categories['upcoming']:
-                    continue # Skip sedes with no alerts? Or show everything? User wants "filtrarlos". Let's show all sedes but maybe collapse 'uptodate'.
+                # Correct filtering: check if the categories keys exist
+                overdue_list = categories.get('overdue', [])
+                upcoming_list = categories.get('upcoming', [])
+                
+                if not overdue_list and not upcoming_list:
+                    continue # Skip sedes with no alerts
                     
                 html_body += f"<div style='margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 8px;'>"
                 html_body += f"<h3 style='margin-top: 0; color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 5px;'>🏢 {sede_name}</h3>"
                 
                 # Overdue
-                if categories['overdue']:
+                if overdue_list:
                     html_body += "<h4 style='color: #e74c3c; margin-bottom: 5px;'>🔴 Vencidos (Atención Inmediata)</h4>"
                     html_body += "<ul style='padding-left: 20px;'>"
-                    for p in categories['overdue']:
+                    for p in overdue_list:
                          html_body += f"""
                          <li style='margin-bottom: 8px;'>
-                            <strong>{p['name']}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p['phone'] or 'Sin Tlf'})</span><br>
-                            Deuda: <strong>S/ {p['amount']}</strong> • Vencido hace: {p['days_diff']} días<br>
-                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p['last_payment'] or 'N/A'}</span>
+                            <strong>{p.get('name', 'N/A')}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p.get('phone') or 'Sin Tlf'})</span><br>
+                            Deuda: <strong>S/ {p.get('amount', 0)}</strong> • Vencido hace: {p.get('days_diff', 0)} días<br>
+                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p.get('last_payment') or 'N/A'}</span>
                          </li>
                          """
                     html_body += "</ul>"
                 
                 # Upcoming
-                if categories['upcoming']:
+                if upcoming_list:
                     html_body += "<h4 style='color: #f39c12; margin-bottom: 5px;'>🟡 Por Vencer (Próximos 7 días)</h4>"
                     html_body += "<ul style='padding-left: 20px;'>"
-                    for p in categories['upcoming']:
-                         days_txt = "¡HOY!" if p['days_diff'] == 0 else f"en {p['days_diff']} días"
+                    for p in upcoming_list:
+                         days_diff = p.get('days_diff', 0)
+                         days_txt = "¡HOY!" if days_diff == 0 else f"en {days_diff} días"
                          html_body += f"""
                          <li style='margin-bottom: 8px;'>
-                            <strong>{p['name']}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p['phone'] or 'Sin Tlf'})</span><br>
-                            Monto: <strong>S/ {p['amount']}</strong> • Vence: {days_txt} ({p['due_date']})<br>
-                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p['last_payment'] or 'N/A'}</span>
+                            <strong>{p.get('name', 'N/A')}</strong> <span style='color: #7f8c8d; font-size: 0.9em;'>({p.get('phone') or 'Sin Tlf'})</span><br>
+                            Monto: <strong>S/ {p.get('amount', 0)}</strong> • Vence: {days_txt} ({p.get('due_date', 'N/A')})<br>
+                            <span style='font-size: 0.85em; color: #95a5a6;'>Último pago: {p.get('last_payment') or 'N/A'}</span>
                          </li>
                          """
                     html_body += "</ul>"

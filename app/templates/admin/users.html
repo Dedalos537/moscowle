@@ -50,7 +50,7 @@
 </div>
 {% endblock %}
 {% block header_action %}
-<button onclick="toggleUserModal()" class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+<button data-action="open-create" class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
     <i class="fas fa-user-plus"></i>
     <span class="hidden md:inline">Nuevo Usuario</span>
 </button>
@@ -63,9 +63,9 @@
   </div>
 
   <!-- Create User Modal (Hidden) -->
-  <div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm transition-opacity opacity-0 flex">
-      <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto relative p-6">
-          <button onclick="toggleUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-textDark transition-colors">
+  <div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
+      <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto relative p-6 pointer-events-auto">
+          <button data-action="close-create" class="absolute top-4 right-4 text-gray-400 hover:text-textDark transition-colors">
               <i class="fas fa-times text-xl"></i>
           </button>
           
@@ -88,7 +88,7 @@
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
-                <select id="new-role" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" onchange="toggleRoleFields()">
+                <select id="new-role" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
                   <option value="terapista">Terapeuta</option>
                   <option value="jugador">Paciente</option>
                   <option value="admin">Administrador</option>
@@ -118,6 +118,94 @@
             </div>
 
             <!-- Therapist Specific Fields (Hidden by default) -->
+            <div id="therapist-fields" class="hidden space-y-4 mb-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sueldo Base (S/)</label>
+                        <input type="number" step="0.01" id="new-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Mensuales</label>
+                        <input type="number" id="new-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Specific Fields (Default) -->
+            <div id="patient-fields" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad (Sesiones)</label>
+                        <select id="new-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                            <option value="0">Sesión Libre / Sin Paquete</option>
+                            <option value="1">1x Semana (4 sesiones)</option>
+                            <option value="2">2x Semana (8 sesiones)</option>
+                            <option value="3">3x Semana (12 sesiones)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia Pago</label>
+                        <select id="new-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                            <option value="monthly">Mensual</option>
+                            <option value="biweekly">Quincenal</option>
+                            <option value="weekly">Semanal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
+                        <select id="new-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                            <option value="individual">Individual</option>
+                            <option value="group">Grupal / Fijo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto a Pagar (S/)</label>
+                        <input type="number" step="0.01" id="new-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" checked>
+                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Generar Horario Automático</span>
+                    </label>
+                </div>
+
+                <div id="schedule-fields" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-soft border border-gray-100 dark:border-gray-700">
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
+                            <input type="date" id="start-date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600"> 
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
+                            <input type="time" id="start-time" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta Asignado</label>
+                            <select id="schedule-therapist" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
+                                <option value="">-- Seleccionar --</option>
+                                {% for t in therapists %}
+                                <option value="{{ t.id }}">{{ t.username }} ({{ t.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 mb-2">Días de Sesión (Seleccionar según modalidad)</label>
+                        <div class="flex gap-4 flex-wrap">
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="0" class="text-primary rounded"> Lun</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="1" class="text-primary rounded"> Mar</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="2" class="text-primary rounded"> Mié</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="3" class="text-primary rounded"> Jue</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="4" class="text-primary rounded"> Vie</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="5" class="text-primary rounded"> Sáb</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="therapist-fields" class="hidden border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 animate-fade-in-down">
                  <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Configuración de Contrato</h4>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -168,7 +256,7 @@
 
                 <div class="mb-4">
                     <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" onchange="toggleScheduleFields()" checked>
+                        <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" checked>
                         <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Generar Horario Automático</span>
                     </label>
                 </div>
@@ -210,7 +298,7 @@
 
             <!-- Footer Actions -->
             <div class="mt-8 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
-              <button onclick="toggleUserModal()" class="px-5 py-2 text-gray-600 dark:text-gray-300 font-medium hover:text-textDark transition-colors">Cancelar</button>
+              <button data-action="close-create" class="px-5 py-2 text-gray-600 dark:text-gray-300 font-medium hover:text-textDark transition-colors">Cancelar</button>
               <button id="create-user" class="px-6 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90 transition-all shadow-soft flex items-center gap-2">
                   <i class="fas fa-save"></i>
                   Crear Usuario
@@ -223,14 +311,14 @@
       </div>
   </div>
 
-  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-visible">
     <div class="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
         <h3 class="text-lg font-semibold text-textDark">Listado</h3>
         
         <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
              <!-- Sede Filter -->
              <div class="relative w-full md:w-48">
-                <select id="sedeFilter" onchange="applyFilters()" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
+                <select id="sedeFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
                     <option value="all">Todas las Sedes</option>
                     {% for s in sedes %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
@@ -243,7 +331,7 @@
 
              <!-- Therapist Filter -->
              <div class="relative w-full md:w-48">
-                <select id="therapistFilter" onchange="applyFilters()" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
+                <select id="therapistFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
                     <option value="all">Filtro Terapista</option>
                     <!-- Populated by JS -->
                 </select>
@@ -262,16 +350,54 @@
             
             <!-- Filters -->
             <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
-                <button onclick="filterUsers('all')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-primary text-white font-medium filter-btn active" data-filter="all">Todos</button>
-                <button onclick="filterUsers('jugador')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="jugador">Pacientes</button>
-                <button onclick="filterUsers('terapista')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="terapista">Terapeutas</button>
-                <button onclick="filterUsers('admin')" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn" data-filter="admin">Admin</button>
+                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-primary text-white font-medium filter-btn active">Todos</button>
+                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Pacientes</button>
+                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-red-100 text-red-600 hover:bg-red-200 font-medium filter-btn">Deudores</button>
+                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium filter-btn">Retirados</button>
+                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Terapeutas</button>
+                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Admin</button>
             </div>
         </div>
     </div>
     
-    <!-- Desktop Table View -->
-    <div class="hidden md:block overflow-x-auto">
+                <!-- Stat Cards -->
+                <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
+                        <div class="text-sm text-gray-500">Total Usuarios</div>
+                        <div id="total_users" class="text-2xl font-bold">0</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
+                        <div class="text-sm text-gray-500">Activos</div>
+                        <div id="active_users" class="text-2xl font-bold text-green-600">0</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
+                        <div class="text-sm text-gray-500">Pacientes</div>
+                        <div id="total_patients" class="text-2xl font-bold">0</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
+                        <div class="text-sm text-gray-500">Terapeutas</div>
+                        <div id="total_therapists" class="text-2xl font-bold">0</div>
+                    </div>
+                </div>
+
+                <!-- Dashboard: Charts -->
+                <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
+                        <h4 class="text-sm font-bold text-gray-600 mb-2">Usuarios por Sede</h4>
+                        <div style="max-height:210px;"><canvas id="users_sede_chart" aria-label="Usuarios por Sede" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
+                        <h4 class="text-sm font-bold text-gray-600 mb-2">Activo vs Inactivo</h4>
+                        <div style="max-height:210px;"><canvas id="active_status_chart" aria-label="Activo vs Inactivo" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
+                        <h4 class="text-sm font-bold text-gray-600 mb-2">Roles (Pacientes/Terapeutas)</h4>
+                        <div style="max-height:210px;"><canvas id="user_role_chart" aria-label="Roles de Usuario" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
       <table class="w-full min-w-[900px]">
         <thead>
           <tr class="border-b border-gray-100">
@@ -294,7 +420,12 @@
                 {% set _ = sede_ids.append(s.id) %}
              {% endfor %}
           {% endif %}
-          <tr class="hover:bg-gray-50/50 transition-colors group user-row" data-role="{{ u.role }}" data-sede-ids='{{ sede_ids | tojson }}'>
+          <tr class="divide-y divide-gray-50 border-b border-gray-100 hover:bg-gray-50/50 transition-colors group user-row" 
+              data-role="{{ u.role }}" 
+              data-sede-ids='{{ sede_ids | tojson }}'
+              data-active="{{ 'true' if u.is_active else 'false' }}"
+              data-is-debtor="{{ 'true' if (u.role == 'jugador' and u.has_pending_payment) else 'false' }}"
+              data-is-retired="{{ 'true' if (u.role == 'jugador' and u.status == 'retirado') else 'false' }}">
             <td class="px-6 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -357,52 +488,59 @@
                 <span class="text-gray-300 text-sm">—</span>
               {% endif %}
             </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                  <button class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all admin-reset-pass-btn" 
-                          data-id="{{ u.id }}" 
-                          data-count="{{ u.admin_password_changed_count or 0 }}"
-                          title="Cambiar/Restablecer Contraseña">
-                    <i class="fas fa-key"></i>
-                  </button>
-                  <button class="p-2 text-gray-400 hover:text-charcoal hover:bg-gray-100 rounded-lg transition-all admin-update-btn" 
-                          data-id="{{ u.id }}" 
-                          data-username="{{ u.username }}"
-                          data-email="{{ u.email }}"
-                          data-role="{{ u.role }}"
-                          data-active="{{ 'true' if u.is_active else 'false' }}"
-                          data-payment-plan="{{ u.payment_plan or 'monthly' }}"
-                          data-payment-amount="{{ u.payment_amount or 0 }}"
-                          data-sessions-total="{{ u.sessions_total or 0 }}"
-                          data-sessions-attended="{{ u.sessions_attended or 0 }}"
-                          data-plan-type="{{ u.plan_type or 'individual' }}"
-                          
-                          data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}"
-                          data-amount-2="{{ u.payment_amount_2 or 0 }}"
-                          data-sessions-total-2="{{ u.sessions_total_2 or 0 }}"
-                          data-sessions-attended-2="{{ u.sessions_attended_2 or 0 }}"
-                          data-plan-type-2="{{ u.plan_type_2 or 'individual' }}"
+            <td class="px-6 py-4 relative overflow-visible">
+            <div class="flex justify-end">
+              <div class="relative">
+                <button data-action="toggle-user-menu" class="p-2 text-gray-400 hover:text-charcoal rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
+                  <i class="fas fa-ellipsis-v pointer-events-none"></i>
+                </button>
+                <div id="dropdown-{{ u.id }}" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1 user-action-menu text-left ring-1 ring-black ring-opacity-5 focus:outline-none overflow-visible" role="menu">
 
-                          data-salary="{{ u.salary_base or 0 }}"
-                          data-hours="{{ u.contract_hours or 0 }}"
-                          data-start-time="{{ u.work_start_time or '' }}"
-                          data-end-time="{{ u.work_end_time or '' }}"
-                          data-days="{{ u.work_days or '' }}"
-                          data-sede-id="{{ u.sede_id or '' }}"
-                          {% if u.role == 'terapista' %}
-                             data-sede-ids='{{ u.assigned_sedes.all() | map(attribute="id") | list | tojson }}'
-                          {% else %}
-                             data-sede-ids='[]'
-                          {% endif %}
-                          title="Editar / Configurar">
-                    <i class="fas fa-edit"></i>
+                  <!-- View Profile -->
+                  <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <i class="fas fa-user-circle mr-3 text-gray-400 group-hover:text-indigo-500 w-5 text-center"></i>
+                      Ver Perfil
+                  </a>
+
+                  <!-- Edit User Button -->
+                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors admin-update-btn"
+                      data-id="{{ u.id }}"
+                      data-username="{{ u.username|e }}"
+                      data-email="{{ u.email|e }}"
+                      data-role="{{ u.role }}"
+                      data-active="{{ 'true' if u.is_active else 'false' }}"
+                      data-sede-id="{{ u.sede_id or '' }}"
+                      data-sede-ids='{{ sede_ids | tojson | safe }}'
+                      data-payment-plan="{{ u.payment_plan or '' }}"
+                      data-payment-amount="{{ u.payment_amount or 0 }}"
+                      data-plan-type="{{ u.plan_type or '' }}"
+                      data-sessions-attended="{{ u.sessions_attended or 0 }}"
+                      data-salary="{{ u.salary_base or 0 }}"
+                      data-hours="{{ u.contract_hours or 0 }}"
+                      data-start-time="{{ u.work_start_time or '' }}"
+                      data-end-time="{{ u.work_end_time or '' }}"
+                      data-days='{{ u.work_days or "" }}'
+                      data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}">
+                      <i class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500 w-5 text-center"></i>
+                      Editar Usuario
                   </button>
+
+                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <i class="fas fa-key mr-3 text-gray-400 group-hover:text-amber-500 w-5 text-center"></i>
+                      Reset Password
+                  </button>
+
+                  <div class="h-px bg-gray-100 my-1"></div>
+
                   {% if u.role != 'admin' %}
-                  <button class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all admin-delete-btn" data-id="{{ u.id }}" title="Eliminar">
-                    <i class="far fa-trash-alt"></i>
+                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-statusRed hover:bg-red-50 transition-colors">
+                      <i class="fas fa-trash-alt mr-3 opacity-50 group-hover:opacity-100 w-5 text-center"></i>
+                      Eliminar
                   </button>
                   {% endif %}
+                </div>
               </div>
+            </div>
             </td>
           </tr>
           {% endfor %}
@@ -514,11 +652,7 @@
                     data-hours="{{ u.contract_hours or 0 }}"
                     
                     data-sede-id="{{ u.sede_id or '' }}"
-                    {% if u.role == 'terapista' %}
-                        data-sede-ids="{{ u.assigned_sedes.all() | map(attribute='id') | list | tojson }}"
-                    {% else %}
-                        data-sede-ids="[]"
-                    {% endif %}
+                    data-sede-ids='{% if u.role == "terapista" %}{{ u.assigned_sedes.all() | map(attribute="id") | list | tojson }}{% else %}[]{% endif %}'
                     
                     title="Actualizar Datos">
 
@@ -534,7 +668,7 @@
 <!-- Edit User Modal -->
 <div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-soft shadow-soft w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-        <button type="button" onclick="closeEditUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <button type="button" data-action="close-edit" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
             <i class="fas fa-times"></i>
         </button>
         <div class="flex justify-between items-center mb-6 pr-8">
@@ -562,7 +696,7 @@
             
             <div class="mb-4">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
-                <select id="edit-role" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" onchange="toggleEditPatientFields()">
+                <select id="edit-role" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
                     <option value="terapista">Terapeuta</option>
                     <option value="jugador">Paciente</option>
                     <option value="admin">Administrador</option>
@@ -701,7 +835,7 @@
                 <!-- SECOND SHIFT TOGGLE -->
                 <div class="mt-4 border-t border-gray-200 pt-3">
                     <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="edit-has-shift2" class="sr-only peer" onchange="toggleShift2()">
+                        <input type="checkbox" id="edit-has-shift2" class="sr-only peer">
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary relative"></div>
                         <span class="ml-3 text-sm font-medium text-gray-700">Habilitar 2do Turno / Plan Diferenciado</span>
                     </label>
@@ -744,7 +878,7 @@
             </div>
             
             <div class="mt-6 flex gap-3">
-                <button type="button" onclick="closeEditUserModal()" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-soft hover:bg-gray-200">Cancelar</button>
+                <button type="button" data-action="close-edit-modal" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-soft hover:bg-gray-200">Cancelar</button>
                 <button type="submit" class="flex-1 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90">Guardar Cambios</button>
             </div>
         </form>
@@ -752,779 +886,589 @@
 </div>
 
 {% endblock %}
+
 {% block extra_scripts %}
-<script>
-  
-  function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    const inner = document.getElementById('toast-inner');
-    inner.textContent = message;
-    inner.className = 'px-4 py-3 rounded-soft shadow-soft text-white ' + (type === 'success' ? 'bg-olive' : type === 'error' ? 'bg-statusRed' : 'bg-accent');
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 2500);
-  }
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module">
+import { apiFetch } from "{{ url_for('static', filename='js/api.js') }}";
 
-  // Filter Users Function
-  
-  let currentFilter = 'all';
+const UsersModule = (function(){
+    const urls = {
+        create: "{{ url_for('api.api_admin_create_user') }}",
+        assign: "{{ url_for('api.api_admin_assign_therapist') }}",
+        update: "{{ url_for('api.api_admin_update_user') }}",
+        reset_pass: "{{ url_for('api.api_admin_reset_password') }}",
+        delete: "{{ url_for('api.api_admin_delete_user') }}"
+    };
 
-  window.filterUsers = function(role) {
-      currentFilter = role;
-      
-      // Update buttons
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-          if (btn.dataset.filter === role) {
-              btn.classList.remove('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
-              btn.classList.add('bg-primary', 'text-white');
-          } else {
-              btn.classList.add('bg-gray-100', 'text-gray-600', 'hover:bg-gray-200');
-              btn.classList.remove('bg-primary', 'text-white');
-          }
-      });
-      
-      applyFilters();
-  };
+    const sel = {
+        toast: '#toast', toastInner: '#toast-inner',
+        createModal: '#createUserModal', createBtn: '#create-user', createStatus: '#create-status',
+        newEmail: '#new-email', newUsername: '#new-username', newRole: '#new-role', newSede: '#new-sede', newSedesMulti: '#new-sedes-multi',
+        newModality: '#new-modality', newFrequency: '#new-frequency', newAmount: '#new-amount', newPlanType: '#new-plan-type',
+        generateSchedule: '#check-generate', startDate: '#start-date', startTime: '#start-time', scheduleTherapist: '#schedule-therapist',
+        filterSede: '#sedeFilter', filterTherapist: '#therapistFilter', searchInput: '#userHelperSearch', filterButtons: '.filter-btn',
+        userRows: '.user-row', userCards: '.user-card', assignBtn: '.assign-btn', assignSelect: '.assign-select',
+        adminUpdateBtn: '.admin-update-btn', resetPassBtn: '.admin-reset-pass-btn', deleteBtn: '.admin-delete-btn',
+        editModal: '#editUserModal', editForm: '#editUserForm'
+    };
 
-  function applyFilters() {
-      const searchTerm = document.getElementById('userHelperSearch').value.toLowerCase();
-      
-      const therapistSelect = document.getElementById('therapistFilter');
-      const filterTherapist = therapistSelect.value;
-      
-      const sedeSelect = document.getElementById('sedeFilter');
-      const filterSede = sedeSelect ? sedeSelect.value : 'all';
+    const isDesktop = window.innerWidth >= 768;
 
-      const filterItem = (el) => {
-          // Get Data
-          const role = el.dataset.role;
-          const nameInput = el.querySelector('.admin-edit-name');
-          const name = nameInput ? nameInput.value.toLowerCase() : '';
-          
-          // Get Sede IDs
-          let rowSedeIds = [];
-          try {
-              if (el.dataset.sedeIds) {
-                 rowSedeIds = JSON.parse(el.dataset.sedeIds);
-              }
-          } catch(e) { console.error('Error parsing sedes', e); }
+    function $ (q){ return document.querySelector(q); }
+    function $$ (q){ return Array.from(document.querySelectorAll(q)); }
 
-          // Email
-          let email = '';
-          const emailElTable = el.querySelector('td:nth-child(2)');
-          const emailElCard = el.querySelector('p.text-gray-500'); 
-          if (emailElTable) email = emailElTable.textContent.toLowerCase();
-          else if (emailElCard) email = emailElCard.textContent.toLowerCase();
+    function showToast(msg, type='success'){
+        const t = $(sel.toast); const inner = $(sel.toastInner); if(!t||!inner) return; inner.textContent = msg; inner.className = 'px-4 py-3 rounded-soft shadow-soft text-white ' + (type==='success'?'bg-olive': type==='error'?'bg-statusRed':'bg-accent'); t.classList.remove('hidden'); setTimeout(()=> t.classList.add('hidden'), 3000);
+    }
 
-          // Therapist Data - Need to extract selected options from select
-          let assignedTherapists = [];
-          const select = el.querySelector('.assign-select'); // This exists in both desktop and mobile views
-          if (select) {
-             assignedTherapists = Array.from(select.selectedOptions).map(opt => opt.text.trim());
-          }
-          
-          // Logic
-          const matchesRole = (currentFilter === 'all' || role === currentFilter);
-          const matchesSearch = (name.includes(searchTerm) || email.includes(searchTerm));
-          
-          let matchesTherapist = true;
-          if (filterTherapist !== 'all') {
-              matchesTherapist = assignedTherapists.includes(filterTherapist);
-              if (!select) matchesTherapist = false; 
-          }
-          
-          let matchesSede = true;
-          if (filterSede !== 'all') {
-              // Check if the selected sede ID (string) is in the row's sede IDs (numbers)
-              // Convert row IDs to strings for comparison
-              matchesSede = rowSedeIds.map(String).includes(filterSede);
-          }
+    // Filters & search
+    let currentFilter = 'all';
 
-          if (matchesRole && matchesSearch && matchesTherapist && matchesSede) {
-              el.style.display = '';
-          } else {
-              el.style.display = 'none';
-          }
-      };
+    // Lookup for sede names
+    const sedeLookup = {
+        {% for s in sedes %}
+        "{{ s.id }}": "{{ s.name|e }}",
+        {% endfor %}
+    };
 
-      document.querySelectorAll('.user-row').forEach(filterItem);
-      document.querySelectorAll('.user-card').forEach(filterItem);
-  }
+    // Chart instances
+    let usersSedeChart = null;
+    let activeStatusChart = null;
+    let userRoleChart = null;
 
-  // Populate Therapist Filter
-  document.addEventListener('DOMContentLoaded', () => {
-        const therapists = new Set();
-        // We can source the therapists from any .assign-select options (all rows have same options)
-        const sampleSelect = document.querySelector('.assign-select');
-        if (sampleSelect) {
-            Array.from(sampleSelect.options).forEach(opt => {
-                if (opt.value) therapists.add(opt.text.trim());
+    function updateCharts(filteredData){
+        try{
+            // Guard: if no chart canvases exist, bail out early
+            const hasSede = !!document.getElementById('users_sede_chart');
+            const hasActive = !!document.getElementById('active_status_chart');
+            const hasRole = !!document.getElementById('user_role_chart');
+            if(!hasSede && !hasActive && !hasRole) return;
+
+            const total = Array.isArray(filteredData) ? filteredData.length : 0;
+            const active = Array.isArray(filteredData) ? filteredData.filter(u=>u.isActive).length : 0;
+            const inactive = total - active;
+            const patients = Array.isArray(filteredData) ? filteredData.filter(u=>u.role==='jugador').length : 0;
+            const therapists = Array.isArray(filteredData) ? filteredData.filter(u=>u.role==='terapista').length : 0;
+
+            // Update stat cards (safe updates)
+            try{ const el = document.getElementById('total_users'); if(el) el.textContent = total; }catch(e){}
+            try{ const el = document.getElementById('active_users'); if(el) el.textContent = active; }catch(e){}
+            try{ const el = document.getElementById('total_patients'); if(el) el.textContent = patients; }catch(e){}
+            try{ const el = document.getElementById('total_therapists'); if(el) el.textContent = therapists; }catch(e){}
+
+            // Users by sede aggregation (sede names expected in filteredData as sedeNames[])
+            const sedeCounts = {};
+            (Array.isArray(filteredData) ? filteredData : []).forEach(u=>{
+                try{
+                    const names = (u.sedeNames && u.sedeNames.length) ? u.sedeNames : (u.sedeName ? [u.sedeName] : ['Sin Sede']);
+                    names.forEach(n=>{ const key = (n||'Sin Sede').trim(); sedeCounts[key] = (sedeCounts[key]||0) + 1; });
+                }catch(e){}
             });
-        }
-        
-        const select = document.getElementById('therapistFilter');
-        const sortedTherapists = Array.from(therapists).sort();
-        
-        sortedTherapists.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t;
-            option.textContent = t;
-            select.appendChild(option);
-        });
-  });
+            const sedeLabels = Object.keys(sedeCounts);
+            const sedeData = sedeLabels.map(l=>sedeCounts[l]);
 
-  // Search Listener
-  document.getElementById('userHelperSearch').addEventListener('keyup', applyFilters);
-  document.getElementById('userHelperSearch').addEventListener('change', applyFilters);
+            // USERS SEDE CHART (bar)
+            if(hasSede){
+                try{
+                    const cSede = document.getElementById('users_sede_chart');
+                    const ctxS = cSede && cSede.getContext && cSede.getContext('2d');
+                    if(ctxS){
+                        if(usersSedeChart){
+                            usersSedeChart.data.labels = sedeLabels;
+                            usersSedeChart.data.datasets[0].data = sedeData;
+                            usersSedeChart.update();
+                        } else {
+                            usersSedeChart = new Chart(ctxS, {
+                                type:'bar',
+                                data:{
+                                    labels: sedeLabels,
+                                    datasets:[{
+                                        label:'Usuarios',
+                                        data: sedeData,
+                                        backgroundColor:'rgba(59,130,246,0.85)'
+                                    }]
+                                },
+                                options:{
+                                    responsive:true,
+                                    maintainAspectRatio:false,
+                                    plugins:{ legend:{ display:false } },
+                                    onClick: (e, elements) => {
+                                        if (elements.length > 0) {
+                                            const index = elements[0].index;
+                                            const label = sedeLabels[index];
+                                            const filterSede = $ (sel.filterSede);
+                                            if (filterSede) {
+                                                const sedeId = Object.keys(sedeLookup).find(key => sedeLookup[key] === label);
+                                                if (sedeId) {
+                                                    filterSede.value = sedeId;
+                                                    applyFilters();
+                                                } else if (label === "Sin Sede") {
+                                                    filterSede.value = "all";
+                                                    applyFilters();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }catch(e){ console.error('usersSedeChart error', e); }
+            }
 
-    // Toggle Visibility Functions exposed globally
-    window.toggleUserModal = function() {
-        const modal = document.getElementById('createUserModal');
-        // Check if currently visible (not checking hidden class alone due to transition)
-        const isHidden = modal.classList.contains('hidden');
-        
-        if (isHidden) {
-            modal.classList.remove('hidden');
-            // Trigger reflow
-            void modal.offsetWidth;
-            modal.classList.remove('opacity-0');
-            if(window.toggleRoleFields) window.toggleRoleFields();
-        } else {
-            modal.classList.add('opacity-0');
-            setTimeout(() => {
-                // Only hide if we haven't started showing it again (though simple toggle implies sequential clicks)
-                if (modal.classList.contains('opacity-0')) {
-                    modal.classList.add('hidden');
-                }
-            }, 300);
-        }
-    };
+            // ACTIVE / INACTIVE (doughnut)
+            if(hasActive){ 
+                try{ 
+                    const cActive = document.getElementById('active_status_chart'); 
+                    const ctxA = cActive && cActive.getContext && cActive.getContext('2d'); 
+                    if(ctxA){ 
+                        if(activeStatusChart){ 
+                            activeStatusChart.data.datasets[0].data = [active, inactive]; 
+                            activeStatusChart.update(); 
+                        } else { 
+                            activeStatusChart = new Chart(ctxA, { 
+                                type:'doughnut', 
+                                data:{ 
+                                    labels:['Activos','Inactivos'], 
+                                    datasets:[{ data:[active, inactive], backgroundColor:['#10B981','#EF4444'] }] 
+                                }, 
+                                options:{ 
+                                    responsive:true, 
+                                    maintainAspectRatio:false, 
+                                    onClick: (e, elements) => { 
+                                        if (elements.length > 0) { 
+                                            const index = elements[0].index; 
+                                            const status = index === 0; // True for Activos
+                                            const rows = $$(sel.userRows).concat($$(sel.userCards));
+                                            rows.forEach(el => {
+                                                const isActiveEl = el.querySelector('.admin-edit-active');
+                                                if (isActiveEl && isActiveEl.checked !== status) {
+                                                    el.style.display = 'none';
+                                                }
+                                            });
+                                        } 
+                                    } 
+                                } 
+                            }); 
+                        } 
+                    } 
+                }catch(e){ console.error('activeStatusChart error', e); } 
+            }
 
-    window.toggleRoleFields = function() {
-        const role = document.getElementById('new-role').value;
-        const patientFields = document.getElementById('patient-fields');
-        const therapistFields = document.getElementById('therapist-fields');
-        
-        const pSede = document.getElementById('patient-sede-div');
-        const tSede = document.getElementById('therapist-sede-div');
+            // ROLE (Pacientes vs Terapeutas)
+            if(hasRole){
+                try{
+                    const cRole = document.getElementById('user_role_chart');
+                    const ctxR = cRole && cRole.getContext && cRole.getContext('2d');
+                    if(ctxR){
+                        if(userRoleChart){
+                            userRoleChart.data.datasets[0].data = [patients, therapists];
+                            userRoleChart.update();
+                        } else {
+                            userRoleChart = new Chart(ctxR, {
+                                type:'doughnut',
+                                data:{
+                                    labels:['Pacientes','Terapeutas'],
+                                    datasets:[{
+                                        data:[patients, therapists],
+                                        backgroundColor:['#8B5CF6','#FB923C']
+                                    }]
+                                },
+                                options:{
+                                    responsive:true,
+                                    maintainAspectRatio:false,
+                                    onClick: (e, elements) => {
+                                        if (elements.length > 0) {
+                                            const index = elements[0].index;
+                                            const role = index === 0 ? 'jugador' : 'terapista';
+                                            setFilterButtonActive(role);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }catch(e){ console.error('userRoleChart error', e); }
+            }
+        }catch(err){ console.error('updateCharts failed', err); }
+    }
 
-        if (role === 'jugador') {
-            patientFields.classList.remove('hidden');
-            therapistFields.classList.add('hidden');
-            if(pSede) pSede.classList.remove('hidden');
-            if(tSede) tSede.classList.add('hidden');
-        } else if (role === 'terapista') {
-            patientFields.classList.add('hidden');
-            therapistFields.classList.remove('hidden');
-            if(pSede) pSede.classList.add('hidden');
-            if(tSede) tSede.classList.remove('hidden');
-        } else {
-            patientFields.classList.add('hidden');
-            therapistFields.classList.add('hidden');
-            if(pSede) pSede.classList.add('hidden');
-            if(tSede) tSede.classList.add('hidden');
-        }
-    };
-    window.togglePatientFields = window.toggleRoleFields; // Compat
-    
-    window.toggleScheduleFields = function() {
-        const checked = document.getElementById('check-generate').checked;
-        const fields = document.getElementById('schedule-fields');
-        if (checked) {
-            fields.classList.remove('hidden');
-        } else {
-            fields.classList.add('hidden');
-        }
-    };
+    function applyFilters(){
+        try{
+        const searchTerm = ($(sel.searchInput)?.value || '').toLowerCase();
+        const filterTherapist = $ (sel.filterTherapist)?.value || 'all';
+        const filterSede = $ (sel.filterSede)?.value || 'all';
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
-    
-    const emailEl = document.getElementById('new-email');
-    const userEl = document.getElementById('new-username');
-    const roleEl = document.getElementById('new-role');
-    const statusEl = document.getElementById('create-status');
-    const createBtn = document.getElementById('create-user');
+        const visible = [];
 
-    // New Patient Elements
-    const modalityEl = document.getElementById('new-modality');
-    const freqEl = document.getElementById('new-frequency');
-    const amountEl = document.getElementById('new-amount');
-    const generateEl = document.getElementById('check-generate');
-    const startDateEl = document.getElementById('start-date');
-    const startTimeEl = document.getElementById('start-time');
-    const therapistEl = document.getElementById('schedule-therapist');
+        const check = (el) => {
+            const role = el.dataset.role || '';
+            const name = (el.querySelector('.admin-edit-name')?.value || '').toLowerCase();
+            let rowSedeIds = [];
+            try { if (el.dataset.sedeIds) rowSedeIds = JSON.parse(el.dataset.sedeIds); } catch(e){}
+            // extract sede names from the 4th td (desktop) or from inline spans
+            let sedeNames = [];
+            try{
+                const sedeCell = el.querySelector('td:nth-child(4)');
+                if(sedeCell){ const raw = sedeCell.innerText || sedeCell.textContent || ''; sedeNames = raw.split('\n').map(s=>s.trim()).filter(Boolean); }
+            }catch(e){}
 
-    document.getElementById('create-user').addEventListener('click', async () => {
-      statusEl.textContent = 'Creando...';
-      const prevTxt = createBtn.textContent;
-      createBtn.disabled = true;
-      createBtn.textContent = 'Creando…';
-      try {
-        const payload = { 
-            email: emailEl.value, 
-            username: userEl.value, 
-            role: roleEl.value 
+            let email = (el.querySelector('td:nth-child(2)')?.textContent || el.querySelector('p.text-gray-500')?.textContent || '').toLowerCase();
+            const select = el.querySelector(sel.assignSelect);
+            const assignedTherapists = select ? Array.from(select.selectedOptions).map(o=>o.text.trim()) : [];
+
+            const isDebtor = el.dataset.isDebtor === 'true';
+            const isRetired = el.dataset.isRetired === 'true';
+            const isActiveUser = el.dataset.active === 'true';
+
+            // Apply conditional colors to the row
+            if (isDesktop && el.classList.contains('user-row')) {
+                el.classList.remove('bg-red-50/50', 'bg-gray-100/50', 'bg-orange-50/50');
+                if (isRetired) el.classList.add('bg-gray-100/50');
+                else if (isDebtor) el.classList.add('bg-red-50/50');
+                else if (!isActiveUser) el.classList.add('bg-orange-50/50');
+            }
+
+            let matchesRole = false;
+            if (currentFilter === 'all') matchesRole = true;
+            else if (currentFilter === 'deudores') matchesRole = isDebtor;
+            else if (currentFilter === 'retirados') matchesRole = isRetired;
+            else matchesRole = (role === currentFilter);
+
+            const matchesSearch = (name.includes(searchTerm) || email.includes(searchTerm));
+            let matchesTherapist = true; if (filterTherapist !== 'all') { matchesTherapist = assignedTherapists.includes(filterTherapist); if (!select) matchesTherapist = false; }
+            let matchesSede = true; if (filterSede !== 'all') matchesSede = (rowSedeIds.map(String).includes(filterSede));
+            const visibleNow = (matchesRole && matchesSearch && matchesTherapist && matchesSede);
+
+            // Deduplicate: If we are in desktop view, only process .user-row. 
+            // If we are in mobile view, only process .user-card.
+            const isCorrectElement = isDesktop ? el.classList.contains('user-row') : el.classList.contains('user-card');
+            
+            if (!isCorrectElement) {
+                el.style.display = 'none';
+                return;
+            }
+
+            el.style.display = visibleNow ? '' : 'none';
+
+            if(visibleNow){ const isActiveEl = el.querySelector('.admin-edit-active'); const isActive = isActiveEl ? !!isActiveEl.checked : true; visible.push({ role, sedeNames: sedeNames, isActive }); }
         };
 
-        // Sede Data
-        if (roleEl.value === 'jugador') {
-            payload.sede_id = document.getElementById('new-sede').value;
-        }
-        if (roleEl.value === 'terapista') {
-             const selected = [];
-             const opts = document.getElementById('new-sedes-multi').options;
-             for (let i=0; i < opts.length; i++) {
-                 if (opts[i].selected) selected.push(opts[i].value);
-             }
-             payload.sede_ids = selected;
-        }
+        $$(sel.userRows).forEach(check); $$(sel.userCards).forEach(check);
 
-        // Add Patient specific data
-        if (roleEl.value === 'jugador') {
-            payload.modality = modalityEl.value;
-            payload.payment_frequency = freqEl.value;
-            payload.payment_amount = amountEl.value;
-            payload.plan_type = document.getElementById('new-plan-type').value;
-            payload.generate_schedule = generateEl.checked;
-            
-            if (generateEl.checked) {
-                payload.start_date = startDateEl.value;
-                payload.start_time = startTimeEl.value;
-                payload.therapist_id = therapistEl.value;
-                
-                // Collect days
-                const days = [];
-                document.querySelectorAll('input[name="days"]:checked').forEach(cb => {
-                    days.push(cb.value);
-                });
-                payload.days_of_week = days;
-            }
+        // update charts with aggregated visible items
+        try{ updateCharts(visible); } catch(e){ console.error('Chart update failed', e); }
+        }catch(err){ console.error('applyFilters failed', err); }
+    }
+
+    function setFilterButtonActive(filter){ currentFilter = filter; $$(sel.filterButtons).forEach(btn=>{ if(btn.dataset.filter===filter){ btn.classList.remove('bg-gray-100','text-gray-600','hover:bg-gray-200'); btn.classList.add('bg-primary','text-white'); } else { btn.classList.add('bg-gray-100','text-gray-600','hover:bg-gray-200'); btn.classList.remove('bg-primary','text-white'); } }); applyFilters(); }
+
+    // Dropdown logic (user action menus)
+    function toggleDropdown(targetId){ $$('.user-action-menu').forEach(d=>{ if(d.id!==targetId) d.classList.add('hidden'); }); const el = document.getElementById(targetId); if(el) el.classList.toggle('hidden'); }
+
+    // Modal helpers
+    function openModal(selector){ const m=$(selector); if(!m) return; m.classList.remove('hidden'); document.body.style.overflow='hidden'; }
+    function closeModal(selector){ const m=$(selector); if(!m) return; m.classList.add('hidden'); document.body.style.overflow=''; }
+    function closeEditUserModal(){ closeModal(sel.editModal); }
+
+    // Create user
+    async function handleCreateUser(){
+        const btn = $ (sel.createBtn); const status = $ (sel.createStatus); const prev = btn?.textContent; if(status) status.textContent = 'Creando...'; if(btn){ btn.disabled=true; btn.textContent='Creando…'; }
+        try{
+            const payload = { email: $ (sel.newEmail)?.value, username: $ (sel.newUsername)?.value, role: $ (sel.newRole)?.value };
+            const role = payload.role;
+            if(role==='jugador'){ payload.sede_id = $ (sel.newSede)?.value; payload.modality = $ (sel.newModality)?.value; payload.payment_frequency = $ (sel.newFrequency)?.value; payload.payment_amount = $ (sel.newAmount)?.value; payload.plan_type = $ (sel.newPlanType)?.value; payload.generate_schedule = $ (sel.generateSchedule)?.checked; if(payload.generate_schedule){ payload.start_date = $ (sel.startDate)?.value; payload.start_time = $ (sel.startTime)?.value; payload.therapist_id = $ (sel.scheduleTherapist)?.value; payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb=>cb.value); } }
+            if(role==='terapista'){ const opts = $ (sel.newSedesMulti); if(opts){ const selected = Array.from(opts.selectedOptions).map(o=>o.value); payload.sede_ids = selected; } payload.salary_base = $ ('#new-salary')?.value; payload.contract_hours = $ ('#new-hours')?.value; }
+
+            const data = await apiFetch(urls.create, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+            if(!data || !data.success) throw new Error(data?.message || 'Error al crear');
+            showToast('Usuario creado','success');
+            setTimeout(()=> window.location.reload(), 300);
+        } catch(err){ if(status) status.textContent = err.message; showToast(err.message || 'Error', 'error'); }
+        finally{ if(btn){ btn.disabled=false; btn.textContent = prev; } }
+    }
+
+    // Assign therapists
+    async function handleAssign(btn){ const container = btn.closest('td') || btn.closest('.bg-blue-50/50'); const select = container?.querySelector(sel.assignSelect); const patientId = btn.dataset.patientId; if(!select) return; const therapistIds = Array.from(select.selectedOptions).map(o=>Number(o.value)); if(therapistIds.length>3){ showToast('Máx 3 terapeutas','error'); return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; try{ const data = await apiFetch(urls.assign, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ patient_id: Number(patientId), therapist_ids: therapistIds }) }); if(!data || !data.success) throw new Error(data?.message || 'Error al asignar'); showToast('Asignación guardada','success'); setTimeout(()=> window.location.reload(), 400); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
+
+    // Open edit modal: populate fields from button dataset
+    function openEdit(btn){ const id = btn.dataset.id; const modal = $ (sel.editModal); if(!modal) return; // populate
+        $ ('#edit-id').value = id; $ ('#edit-username').value = btn.dataset.username || ''; $ ('#edit-email').value = btn.dataset.email || ''; $ ('#edit-role').value = btn.dataset.role || 'jugador'; $ ('#edit-active').checked = btn.dataset.active === 'true';
+        // View details link
+        const viewBtn = $ ('#view-details-btn'); if(viewBtn){ viewBtn.classList.remove('hidden'); const dummy = "{{ url_for('admin.user_details', user_id=0) }}"; viewBtn.href = dummy.replace('/0','/'+id); }
+        // Populate patient/therapist specific fields
+        if(btn.dataset.role==='jugador'){
+            $ ('#edit-sede').value = btn.dataset.sedeId || '';
+            $ ('#edit-modality').value = btn.dataset.paymentPlan || 0; $ ('#edit-frequency').value = btn.dataset.paymentPlan || 'monthly'; $ ('#edit-amount').value = btn.dataset.paymentAmount || 0; $ ('#edit-attended').value = btn.dataset.sessionsAttended || 0; $ ('#edit-plan-type').value = btn.dataset.planType || 'individual'; const has2 = btn.dataset.hasShift2 === 'true'; $ ('#edit-has-shift2').checked = has2; if(has2){ $ ('#shift2-fields').classList.remove('hidden'); } else { $ ('#shift2-fields').classList.add('hidden'); }
         }
-        
-        // Add Therapist specific data
-        if (roleEl.value === 'terapista') {
-             payload.salary_base = document.getElementById('new-salary').value;
-             payload.contract_hours = document.getElementById('new-hours').value;
+        if(btn.dataset.role==='terapista'){
+            // Sedes
+            try{ const sedeIds = JSON.parse(btn.getAttribute('data-sede-ids') || '[]'); const ms = $ ('#edit-sedes-multi'); if(ms){ for(let i=0;i<ms.options.length;i++){ ms.options[i].selected = sedeIds.includes(Number(ms.options[i].value)); } } }catch(e){}
+            $ ('#edit-salary').value = btn.dataset.salary || 0; $ ('#edit-hours').value = btn.dataset.hours || 0; $ ('#edit-start-time').value = btn.dataset.startTime || ''; $ ('#edit-end-time').value = btn.dataset.endTime || '';
+            // days
+            document.querySelectorAll('input[name="edit_days"]').forEach(cb=>cb.checked=false);
+            const workDays = btn.dataset.days || '';
+            if(workDays){ let arr = []; if(workDays.startsWith('[')){ try{ arr=JSON.parse(workDays).map(String);}catch(e){} } else { arr = workDays.split(',').map(s=>s.trim()); } arr.forEach(d=>{ const cb = document.querySelector(`input[name="edit_days"][value="${d}"]`); if(cb) cb.checked=true; }); }
         }
+        // Toggle visibility
+        toggleEditFields();
+        openModal(sel.editModal);
+    }
 
-        const res = await fetch("{{ url_for('api.api_admin_create_user') }}", {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-           const text = await res.text();
-           throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
+    function toggleEditFields(){ const role = $ ('#edit-role')?.value || 'jugador'; const patientFields = $ ('#edit-patient-fields'); const therapistFields = $ ('#edit-therapist-fields'); const patientLocation = $ ('#edit-patient-location'); if(role==='jugador'){ patientFields?.classList.remove('hidden'); patientLocation?.classList.remove('hidden'); therapistFields?.classList.add('hidden'); } else if(role==='terapista'){ patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.remove('hidden'); } else { patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.add('hidden'); } }
+
+    async function submitEditForm(e){ e.preventDefault(); const btn = e.target.querySelector('button[type=submit]'); const prev = btn?.textContent; if(btn){ btn.disabled=true; btn.textContent='Guardando...'; } const id = $ ('#edit-id').value; const username = $ ('#edit-username').value; const role = $ ('#edit-role').value; const isActive = $ ('#edit-active').checked; 
+        const payload = { 
+            id: parseInt(id), 
+            username, 
+            role, 
+            is_active: isActive,
+            sede_id: $ ('#edit-sede')?.value || null
+        };
+        if(role==='jugador'){ 
+            payload.modality = $ ('#edit-modality')?.value; 
+            payload.payment_plan = $ ('#edit-frequency')?.value; 
+            payload.payment_amount = $ ('#edit-amount')?.value; 
+            payload.sessions_attended = $ ('#edit-attended')?.value; 
+            payload.plan_type = $ ('#edit-plan-type')?.value; 
+            const has2 = $ ('#edit-has-shift2')?.checked; 
+            payload.has_second_shift = !!has2; 
+            if(has2){ 
+                payload.modality_2 = $ ('#edit-modality-2')?.value; 
+                payload.payment_amount_2 = $ ('#edit-amount-2')?.value; 
+                payload.sessions_attended_2 = $ ('#edit-attended-2')?.value; 
+                payload.plan_type_2 = $ ('#edit-plan-type-2')?.value; 
+            } 
         }
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          const errs = data.errors || {};
-          // Clear previous errors
-          [emailEl, userEl, roleEl].forEach(el => el.classList.remove('border-red-500'));
-          if (errs.email) emailEl.classList.add('border-red-500');
-          if (errs.username) userEl.classList.add('border-red-500');
-          if (errs.role) roleEl.classList.add('border-red-500');
-          const msg = data.message || 'Error al crear';
-          showToast(`${msg}${Object.keys(errs).length ? ': ' + JSON.stringify(errs) : ''}`, 'error');
-          throw new Error(msg);
+        if(role==='terapista'){ 
+            const ms = $ ('#edit-sedes-multi'); 
+            const selected = []; 
+            if(ms){ for(let i=0;i<ms.options.length;i++){ if(ms.options[i].selected) selected.push(ms.options[i].value); } } 
+            payload.sede_ids = selected; 
+            payload.salary_base = $ ('#edit-salary')?.value; 
+            payload.contract_hours = $ ('#edit-hours')?.value; 
+            payload.work_start_time = $ ('#edit-start-time')?.value; 
+            payload.work_end_time = $ ('#edit-end-time')?.value; 
+            payload.work_days = Array.from(document.querySelectorAll('input[name="edit_days"]:checked')).map(cb=>cb.value).join(','); 
         }
-        statusEl.textContent = `Creado. Contraseña temporal: ${data.temp_password}`;
-        showToast('Usuario creado', 'success');
-        // Simple alert to ensure admin sees the password before reload
-        setTimeout(() => {
-            alert(`Usuario creado EXITOSAMENTE.\n\nContraseña temporal: ${data.temp_password}\n\nPor favor copie esta contraseña y envíela al usuario. La página se recargará al cerrar este mensaje.`);
-            window.location.reload();
-        }, 100);
-      } catch (e) {
-        statusEl.textContent = e.message;
-        showToast(e.message, 'error');
-      } finally {
-        createBtn.disabled = false;
-        createBtn.textContent = prevTxt;
-      }
-    });
-
-    // Assign therapist actions
-    document.querySelectorAll('.assign-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const patientId = btn.getAttribute('data-patient-id');
-        // Handle desktop/mobile duplicates by finding the visible one or just the closest one if structure allows, 
-        // but checking all with selector is safer if IDs are unique or shared classes.
-        // Actually, IDs in HTML must be unique. Here we use classes.
-        // There are two selects for same patient (desktop table and mobile card).
-        // We generally want the one closest to the button clicked.
-        const container = btn.closest('td') || btn.closest('.bg-blue-50/50'); 
-        const select = container.querySelector('.assign-select');
-        
-        // Collect selected options
-        const therapistIds = Array.from(select.selectedOptions).map(opt => Number(opt.value));
-        
-        if (therapistIds.length > 3) {
-            alert('Solo se permite asignar un máximo de 3 terapeutas.');
-            return;
-        }
-
-        const prevTxt = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        
-        try {
-          const res = await fetch("{{ url_for('api.api_admin_assign_therapist') }}", {
-            method: 'POST', headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ patient_id: Number(patientId), therapist_ids: therapistIds })
-          });
-          
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-             const text = await res.text();
-             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
-          }
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            const msg = data.message || 'Error al asignar';
-            showToast(msg, 'error');
-            throw new Error(msg);
-          }
-          showToast('Terapeutas asignados correctamente', 'success');
-          // Reload to reflect changes in other view (mobile/desktop)
-          setTimeout(() => window.location.reload(), 1000);
-        } catch (e) {
-          showToast(e.message, 'error');
-          btn.disabled = false;
-          btn.innerHTML = prevTxt;
-        }
-      });
-    });
-
-
-    // Exposed Modal Functions
-    window.toggleUserModal = function() {
-        const modal = document.getElementById('createUserModal');
-        const isActive = !modal.classList.contains('hidden');
-        
-        if (isActive) {
-            modal.classList.add('opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }, 300);
-        } else {
-            modal.classList.remove('hidden');
-            // Trigger reflow
-            void modal.offsetWidth;
-            modal.classList.remove('opacity-0');
-            document.body.style.overflow = 'hidden';
-        }
-    };
-
-    window.toggleEditRoleFields = function() {
-        const role = document.getElementById('edit-role').value;
-        const patientFields = document.getElementById('edit-patient-fields');
-        const therapistFields = document.getElementById('edit-therapist-fields');
-        const patientLocation = document.getElementById('edit-patient-location');
-        
-        if (role === 'jugador') {
-            patientFields.classList.remove('hidden');
-            if(patientLocation) patientLocation.classList.remove('hidden');
-            therapistFields.classList.add('hidden');
-        } else if (role === 'terapista') {
-            patientFields.classList.add('hidden');
-            if(patientLocation) patientLocation.classList.add('hidden');
-            therapistFields.classList.remove('hidden');
-        } else {
-            patientFields.classList.add('hidden');
-            if(patientLocation) patientLocation.classList.add('hidden');
-            therapistFields.classList.add('hidden');
-        }
-    };
-    
-    window.toggleShift2 = function() {
-        const checked = document.getElementById('edit-has-shift2').checked;
-        const fields = document.getElementById('shift2-fields');
-        if (checked) {
-            fields.classList.remove('hidden');
-        } else {
-            fields.classList.add('hidden');
-        }
-    };
-    
-    window.toggleEditPatientFields = window.toggleEditRoleFields;
-    
-    window.openEditUserModal = function(btn) {
-        const id = btn.getAttribute('data-id');
-        const username = btn.getAttribute('data-username');
-        const email = btn.getAttribute('data-email');
-        const role = btn.getAttribute('data-role');
-        const active = btn.getAttribute('data-active') === 'true';
-        
-        // Populate basic
-        document.getElementById('edit-id').value = id;
-        document.getElementById('edit-username').value = username;
-        document.getElementById('edit-email').value = email;
-        document.getElementById('edit-role').value = role;
-        document.getElementById('edit-active').checked = active;
-
-        // Show View Details Button
-        const viewBtn = document.getElementById('view-details-btn');
-        viewBtn.classList.add('hidden'); // Default hide
-        
-        // Update Role Badge
-        const badge = document.getElementById('role-badge');
-        badge.textContent = role === 'jugador' ? 'Paciente' : (role === 'terapista' ? 'Terapeuta' : 'Admin');
-        badge.className = 'ml-2 px-2 py-0.5 text-xs rounded-full font-normal align-middle ' + 
-            (role === 'jugador' ? 'bg-indigo-50 text-indigo-700' : 
-             role === 'terapista' ? 'bg-purple-50 text-purple-700' : 
-             'bg-gray-100 text-gray-500');
-
-        if (role === 'jugador') {
-            viewBtn.classList.remove('hidden');
-            // Use Flask url_for to respect application root/prefix
-            const baseUrl = "{{ url_for('therapist.patients') }}";
-            viewBtn.href = `${baseUrl}/${id}`;
-            viewBtn.innerHTML = '<i class="fas fa-chart-line mr-2"></i> Ver Métricas';
+        try{ 
+            console.log('Enviando actualización:', payload);
+            const data = await apiFetch(urls.update, { 
+                method:'POST', 
+                headers:{ 'Content-Type':'application/json' }, 
+                body: JSON.stringify(payload) 
+            }); 
+            if(!data || !data.success) throw new Error(data?.message || 'Error al actualizar'); 
+            showToast('Usuario actualizado','success'); 
+            setTimeout(()=> window.location.reload(), 400); 
+        } catch(err){ 
+            console.error('Error update:', err);
+            showToast(err.message||'Error','error'); 
+            btn.disabled=false; 
+            btn.textContent = prev; 
         } 
-        
-        // Populate patient specifics
-        if (role === 'jugador') {
-            // Sede
-            document.getElementById('edit-sede').value = btn.getAttribute('data-sede-id') || '';
+    }
 
-            // Get data attributes directly from button or use passed data
-            const plan = btn.getAttribute('data-payment-plan');
-            const amount = btn.getAttribute('data-payment-amount');
-            const total = parseInt(btn.getAttribute('data-sessions-total') || 0);
-            const attended = btn.getAttribute('data-sessions-attended');
-            
-            // Infer Modality
-            let modality = 0;
-            if (total === 4) modality = 1;
-            else if (total === 8) modality = 2;
-            else if (total === 12) modality = 3;
-            else if (total > 0) modality = 3; // Fallback or custom
+    async function handleResetPassword(btn){ const id = Number(btn.dataset.id); const count = Number(btn.dataset.count||0); let manual = null; if(count===0){ manual = prompt('Ingrese nueva contraseña (manual):'); if(manual===null) return; if(!manual.trim()){ alert('La contraseña no puede estar vacía'); return;} } else { if(!confirm('Generar nueva contraseña automáticamente y enviarla por correo?')) return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; try{ const payload = { id }; if(manual) payload.new_password = manual; const data = await apiFetch(urls.reset_pass, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) }); if(!data || !data.success) throw new Error(data?.message||'Error'); if(manual) alert('Contraseña actualizada: ' + manual); else alert('Contraseña generada: ' + (data.temp_password||' (enviada por correo)')); window.location.reload(); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
 
-            // Patient Fields (Shift 1)
-            document.getElementById('edit-modality').value = modality;
-            document.getElementById('edit-frequency').value = plan;
-            document.getElementById('edit-amount').value = amount;
-            document.getElementById('edit-attended').value = attended;
-            document.getElementById('edit-plan-type').value = btn.getAttribute('data-plan-type') || 'individual';
-            
-            // Patient Fields (Shift 2)
-            const hasShift2 = btn.getAttribute('data-has-shift2') === 'true';
-            document.getElementById('edit-has-shift2').checked = hasShift2;
-            window.toggleShift2(); // Refresh visibility
-            
-            if (hasShift2) {
-                const amount2 = btn.getAttribute('data-amount-2');
-                const total2 = parseInt(btn.getAttribute('data-sessions-total-2') || 0);
-                const attended2 = btn.getAttribute('data-sessions-attended-2');
-                
-                let modality2 = 0;
-                if (total2 === 4) modality2 = 1;
-                else if (total2 === 8) modality2 = 2;
-                else if (total2 === 12) modality2 = 3;
-                else if (total2 > 0) modality2 = 3;
-
-                document.getElementById('edit-modality-2').value = modality2;
-                document.getElementById('edit-amount-2').value = amount2;
-                document.getElementById('edit-plan-type-2').value = btn.getAttribute('data-plan-type-2') || 'individual';
-            } else {
-                 // Reset fields if disabled
-                 document.getElementById('edit-modality-2').value = 0;
-                 document.getElementById('edit-amount-2').value = 0;
-                 document.getElementById('edit-attended-2').value = 0;
-                 document.getElementById('edit-plan-type-2').value = 'individual'
-                 document.getElementById('edit-attended-2').value = 0;
-            }
-
-        } else if (role === 'terapista') {
-             const salary = btn.getAttribute('data-salary');
-             const hours = btn.getAttribute('data-hours');
-             const startTime = btn.getAttribute('data-start-time');
-             const endTime = btn.getAttribute('data-end-time');
-             const workDays = btn.getAttribute('data-days') || ''; // e.g. "0,2,4" or JSON
-             
-             // Populate Sedes
-             const sedeIdsRaw = btn.getAttribute('data-sede-ids') || '[]';
-             let assignedSedes = [];
-             try { assignedSedes = JSON.parse(sedeIdsRaw).map(Number); } catch(e){}
-             const sedeSelect = document.getElementById('edit-sedes-multi');
-             if(sedeSelect){
-                 for (let i = 0; i < sedeSelect.options.length; i++) {
-                     sedeSelect.options[i].selected = assignedSedes.includes(parseInt(sedeSelect.options[i].value));
-                 }
-             }
-
-             document.getElementById('edit-salary').value = salary || 0;
-             document.getElementById('edit-hours').value = hours || 0;
-             document.getElementById('edit-start-time').value = startTime || '';
-             document.getElementById('edit-end-time').value = endTime || '';
-             
-             // Uncheck all first
-             document.querySelectorAll('input[name="edit_days"]').forEach(cb => cb.checked = false);
-             
-             // Check saved days
-             if (workDays) {
-                 // Try parsing if array or just split comma
-                 let daysArr = [];
-                 if (workDays.startsWith('[')) {
-                    try { daysArr = JSON.parse(workDays).map(String); } catch(e){}
-                 } else {
-                    daysArr = workDays.split(',').map(s => s.trim());
-                 }
-                 
-                 daysArr.forEach(d => {
-                     const cb = document.querySelector(`input[name="edit_days"][value="${d}"]`);
-                     if(cb) cb.checked = true;
-                 });
-             }
+    async function handleDelete(btn){
+        const id = Number(btn.dataset.id);
+        if(!confirm('¿Eliminar usuario? Esta acción es permanente.')) return;
+        const prev = btn.textContent;
+        btn.disabled=true;
+        btn.textContent='Eliminando...';
+        try{
+            const data = await apiFetch(urls.delete, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ id }) });
+            if(!data || !data.success) throw new Error(data?.message||'Error al eliminar');
+            showToast('Usuario eliminado','success');
+            window.location.reload();
+        } catch(err){
+            showToast(err.message||'Error','error');
+            btn.disabled=false;
+            btn.textContent = prev;
         }
-        
-        toggleEditRoleFields();
-        document.getElementById('editUserModal').classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; 
-    };
-    
-    window.closeEditUserModal = function() {
-        document.getElementById('editUserModal').classList.add('hidden');
-        document.body.style.overflow = '';
-    };
+    }
 
-    // Auto-Calculate Hours Logic
-    window.calculateContractHours = function() {
-        const startVal = document.getElementById('edit-start-time').value;
-        const endVal = document.getElementById('edit-end-time').value;
-        const daysChecked = document.querySelectorAll('input[name="edit_days"]:checked').length;
-        
-        if (startVal && endVal && daysChecked > 0) {
-            // Helper to parse "HH:MM"
-            const [h1, m1] = startVal.split(':').map(Number);
-            const [h2, m2] = endVal.split(':').map(Number);
-            
-            const startMin = h1 * 60 + m1;
-            const endMin = h2 * 60 + m2;
-            
-            let diffMin = endMin - startMin;
-            if (diffMin < 0) diffMin = 0; // Simple validation
-            
-            const diffHours = diffMin / 60;
-            
-            // Formula: Hours/Day * Days/Week * 4 Weeks
-            const totalMonthly = (diffHours * daysChecked * 4).toFixed(0); 
-            // toFixed(0) usually preferred for contract hours, or (2) if precise
-            
-            document.getElementById('edit-hours').value = totalMonthly;
+    function applyAutoEdit(){
+        const params = new URLSearchParams(window.location.search);
+        const autoEditId = params.get('auto_edit');
+        if (autoEditId) {
+            console.log('Auto-edit detectado para ID:', autoEditId);
+            setTimeout(() => {
+                const editBtn = document.querySelector(`button[data-id="${autoEditId}"][onclick*="openEdit"]`);
+                if (editBtn) {
+                    openEdit(editBtn);
+                    editBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 750);
         }
-    };
+    }
 
-    // Attach listeners for schedule calculation
-    document.querySelectorAll('.schedule-calc-trigger').forEach(el => {
-        el.addEventListener('change', calculateContractHours);
-        if(el.type === 'time') el.addEventListener('input', calculateContractHours); 
-    });
-
-    // Update user actions (Old listener replaced by new Modal logic)
-    document.querySelectorAll('.admin-update-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-          openEditUserModal(btn);
-      });
-    });
-    
-    // Handle Edit Form Submit
-    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        const prevTxt = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Guardando...';
-        
-        const id = document.getElementById('edit-id').value;
-        const username = document.getElementById('edit-username').value;
-        const role = document.getElementById('edit-role').value;
-        const isActive = document.getElementById('edit-active').checked;
-        
-        const payload = { 
-            id: id, 
-            username: username, 
-            role: role, 
-            is_active: isActive 
-        };
-        
-        if (role === 'jugador') {
-            payload.sede_id = document.getElementById('edit-sede').value;
-            payload.modality = document.getElementById('edit-modality').value;
-            payload.payment_plan = document.getElementById('edit-frequency').value;
-            payload.payment_amount = document.getElementById('edit-amount').value;
-            payload.sessions_attended = document.getElementById('edit-attended').value;
-            payload.plan_type = document.getElementById('edit-plan-type').value;
+    function bind(){
+        // Click delegation for ALL actions
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
             
-            // Secondary Plan (Turno 2)
-            const hasShift2 = document.getElementById('edit-has-shift2').checked;
-            payload.has_second_shift = hasShift2;
-            if (hasShift2) {
-                payload.modality_2 = document.getElementById('edit-modality-2').value;
-                payload.payment_amount_2 = document.getElementById('edit-amount-2').value;
-                payload.sessions_attended_2 = document.getElementById('edit-attended-2').value;
-                payload.plan_type_2 = document.getElementById('edit-plan-type-2').value;
+            if (!btn || btn.dataset.action !== 'toggle-user-menu') {
+                if (!e.target.closest('.user-action-menu')) {
+                    document.querySelectorAll('.user-action-menu').forEach(m => m.classList.add('hidden'));
+                }
             }
-            
-        } else if (role === 'terapista') {
-            const selectedSedes = [];
-            const ms = document.getElementById('edit-sedes-multi');
-            for(let i=0; i<ms.options.length; i++) {
-                if(ms.options[i].selected) selectedSedes.push(ms.options[i].value);
-            }
-            payload.sede_ids = selectedSedes;
 
-            payload.salary_base = document.getElementById('edit-salary').value;
-            payload.contract_hours = document.getElementById('edit-hours').value;
-            
-            // New Schedule Fields
-            payload.work_start_time = document.getElementById('edit-start-time').value;
-            payload.work_end_time = document.getElementById('edit-end-time').value;
-            
-            const selectedDays = [];
-            document.querySelectorAll('input[name="edit_days"]:checked').forEach(cb => {
-                selectedDays.push(cb.value);
+            if (!btn) return;
+            const action = btn.dataset.action;
+
+            if (action === 'open-create') {
+                e.preventDefault();
+                console.log('Intento de apertura Modal Create');
+                const modal = document.getElementById('createUserModal');
+                if (modal) {
+                    modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+                    modal.classList.add('flex', 'opacity-100');
+                    document.body.style.overflow = 'hidden';
+                    
+                    // Reset create form specific visibility
+                    const createRole = document.querySelector('#new-role');
+                    if (createRole) {
+                        createRole.value = 'jugador';
+                        createRole.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    console.error('No se encontró #createUserModal');
+                }
+            }
+            if (action === 'close-create') {
+                e.preventDefault();
+                const modal = document.getElementById('createUserModal');
+                if (modal) {
+                    modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                    modal.classList.remove('flex', 'opacity-100');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            if (action === 'toggle-user-menu') {
+                e.preventDefault(); e.stopPropagation();
+                const menu = btn.closest('.relative').querySelector('.user-action-menu');
+                if (menu) {
+                    const isHidden = menu.classList.contains('hidden');
+                    document.querySelectorAll('.user-action-menu').forEach(m => m.classList.add('hidden'));
+                    if (isHidden) menu.classList.remove('hidden');
+                }
+            }
+
+            if (action === 'edit-user') {
+                e.preventDefault();
+                openEdit(btn);
+            }
+            if (action === 'close-edit-modal') {
+                e.preventDefault();
+                closeEditUserModal();
+            }
+            if (action === 'reset-pass') {
+                e.preventDefault();
+                handleResetPassword(btn);
+            }
+            if (action === 'delete-user') {
+                e.preventDefault();
+                handleDelete(btn);
+            }
+        });
+
+        // filter buttons
+        document.querySelectorAll(sel.filterButtons).forEach(btn=> {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setFilterButtonActive(btn.dataset.filter);
             });
-            payload.work_days = selectedDays.join(','); // Send as comma-separated string or array
-        }
+        });
+
+        // search and selects
+        const searchInput = document.querySelector(sel.searchInput);
+        if(searchInput) searchInput.addEventListener('input', applyFilters);
         
-        try {
-          const res = await fetch("{{ url_for('api.api_admin_update_user') }}", {
-            method: 'POST', headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify(payload)
-          });
-          
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            throw new Error(data.message || 'Error al actualizar');
-          }
-          
-          showToast('Usuario actualizado correctamente', 'success');
-          setTimeout(() => window.location.reload(), 800);
-          
-        } catch (e) { 
-            showToast(e.message, 'error'); 
-            btn.disabled = false;
-            btn.textContent = prevTxt;
-        }
-    });
-
-    // Reset Password actions
-    document.querySelectorAll('.admin-reset-pass-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = Number(btn.getAttribute('data-id'));
-        const count = Number(btn.getAttribute('data-count') || 0);
-        let newPassword = null;
-
-        if (count === 0) {
-            // First time: Manual
-            newPassword = prompt('Ingrese la nueva contraseña para el usuario (Primera vez: Manual):');
-            if (newPassword === null) return; 
-            if (!newPassword.trim()) { alert('La contraseña no puede estar vacía.'); return; }
-        } else {
-            // Subsequent times: Automatic
-            if (!confirm('Este usuario ya ha tenido un cambio de contraseña. ¿Generar una nueva AUTOMÁTICAMENTE y enviarla por correo?')) return;
-        }
+        const filterSede = document.querySelector(sel.filterSede);
+        if(filterSede) filterSede.addEventListener('change', applyFilters);
         
-        const prevTxt = btn.innerHTML; // save icon
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const filterTherapist = document.querySelector(sel.filterTherapist);
+        if(filterTherapist) filterTherapist.addEventListener('change', applyFilters);
+
+        // create user button in modal
+        const confirmCreateBtn = document.querySelector(sel.createBtn);
+        if(confirmCreateBtn) {
+            confirmCreateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleCreateUser();
+            });
+        }
+
+        // edit modal listeners
+        const editForm = document.querySelector(sel.editForm);
+        if(editForm) editForm.addEventListener('submit', submitEditForm);
         
-        try {
-          const payload = { id };
-          if (newPassword) payload.new_password = newPassword;
+        const editRole = document.querySelector('#edit-role');
+        if(editRole) editRole.addEventListener('change', toggleEditFields);
 
-          const res = await fetch("{{ url_for('api.api_admin_reset_password') }}", {
-            method: 'POST', headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify(payload)
-          });
-          
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-             const text = await res.text();
-             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
-          }
-
-          const data = await res.json();
-          
-          if (!res.ok || !data.success) {
-            const msg = data.message || 'Error al restablecer';
-            showToast(msg, 'error');
-            throw new Error(msg);
-          }
-          
-          if (newPassword) {
-              alert(`Contraseña actualizada EXITOSAMENTE.\n\nContraseña manual: ${newPassword}`);
-          } else {
-              alert(`Contraseña generada EXITOSAMENTE.\n\nNueva contraseña: ${data.temp_password}\n(Se ha enviado por correo al usuario)`);
-          }
-          window.location.reload();
-          
-        } catch (e) {
-          showToast(e.message, 'error');
-          btn.innerHTML = prevTxt;
-          btn.disabled = false;
+        // create user role switch
+        const createRole = document.querySelector('#new-role');
+        if(createRole) {
+            createRole.addEventListener('change', () => {
+                const role = createRole.value;
+                const patientFields = document.querySelector('#patient-fields');
+                const therapistFields = document.querySelector('#therapist-fields');
+                const patientSede = document.querySelector('#patient-sede-div');
+                const therapistSede = document.querySelector('#therapist-sede-div');
+                
+                if(role === 'jugador') {
+                    patientFields?.classList.remove('hidden');
+                    patientSede?.classList.remove('hidden');
+                    therapistFields?.classList.add('hidden');
+                    therapistSede?.classList.add('hidden');
+                } else if(role === 'terapista') {
+                    patientFields?.classList.add('hidden');
+                    patientSede?.classList.add('hidden');
+                    therapistFields?.classList.remove('hidden');
+                    therapistSede?.classList.remove('hidden');
+                } else {
+                    patientFields?.classList.add('hidden');
+                    patientSede?.classList.add('hidden');
+                    therapistFields?.classList.add('hidden');
+                    therapistSede?.classList.add('hidden');
+                }
+            });
         }
-      });
-    });
 
-    // Delete user actions
-    document.querySelectorAll('.admin-delete-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = Number(btn.getAttribute('data-id'));
-        if (!confirm('¿Eliminar usuario? Esta acción es permanente.')) return;
-        const prevTxt = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Eliminando…';
-        try {
-          const res = await fetch("{{ url_for('api.api_admin_delete_user') }}", {
-            method: 'POST', headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            body: JSON.stringify({ id })
-          });
-          
-          const contentType = res.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-             const text = await res.text();
-             throw new Error(`Server returned non-JSON response (${res.status}): ${text.substring(0, 100)}...`);
-          }
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            const msg = data.message || 'Error al eliminar';
-            showToast(msg, 'error');
-            throw new Error(msg);
-          }
-          showToast('Usuario eliminado', 'success');
-          window.location.reload();
-        } catch (e) { showToast(e.message, 'error'); }
-        finally {
-          btn.disabled = false;
-          btn.textContent = prevTxt;
+        const editShift2 = document.querySelector('#edit-has-shift2');
+        if(editShift2) {
+            editShift2.addEventListener('change', () => {
+                const shift2Fields = document.querySelector('#shift2-fields');
+                if(editShift2.checked) shift2Fields?.classList.remove('hidden');
+                else shift2Fields?.classList.add('hidden');
+            });
         }
-      });
-    });
-  });
+
+        // schedule calc triggers
+        document.querySelectorAll('.schedule-calc-trigger').forEach(el=>{ 
+            el.addEventListener('change', calculateContractHours); 
+            if(el.type==='time') el.addEventListener('input', calculateContractHours); 
+        });
+
+        // initial deep link from dashboard (URL query params)
+        const urlParams = new URLSearchParams(window.location.search);
+        const dashSearch = urlParams.get('search');
+        if(dashSearch && searchInput) {
+            searchInput.value = dashSearch;
+            applyFilters();
+        }
+    }
+
+    function calculateContractHours(){ const startVal = $ ('#edit-start-time')?.value; const endVal = $ ('#edit-end-time')?.value; const daysChecked = document.querySelectorAll('input[name="edit_days"]:checked').length; if(startVal && endVal && daysChecked>0){ const [h1,m1]=startVal.split(':').map(Number); const [h2,m2]=endVal.split(':').map(Number); let diff = (h2*60+m2)-(h1*60+m1); if(diff<0) diff=0; const hours = diff/60; const totalMonthly = Math.round(hours * daysChecked * 4); $ ('#edit-hours').value = totalMonthly; } }
+
+    return { init: function(){ bind(); applyFilters(); applyAutoEdit(); } };
+})();
+
+document.addEventListener('DOMContentLoaded', ()=> UsersModule.init());
 </script>
 {% endblock %}

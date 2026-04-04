@@ -32,20 +32,58 @@
             <p class="text-sm text-gray-400 mt-2">Acceso a Plataforma Digital</p>
         </div>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages - Interactive with Animations -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="space-y-3 mb-6">
                 {% for category, message in messages %}
-                    <div class="p-3 rounded-xl text-sm font-medium flex items-center gap-3
-                        {% if category == 'error' %}bg-red-50 text-red-600 border border-red-100
-                        {% elif category == 'success' %}bg-green-50 text-green-600 border border-green-100
-                        {% else %}bg-yellow-50 text-yellow-600 border border-yellow-100{% endif %}">
-                        <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
-                        {{ message }}
+                    {% if category == 'success' %}
+                      {% set bg_color = 'bg-gradient-to-r from-green-50 to-emerald-50' %}
+                      {% set border_color = 'border-l-4 border-green-500' %}
+                      {% set text_color = 'text-green-700' %}
+                      {% set icon = 'fa-check-circle' %}
+                      {% set icon_color = 'text-green-500' %}
+                    {% elif category == 'error' %}
+                      {% set bg_color = 'bg-gradient-to-r from-red-50 to-rose-50' %}
+                      {% set border_color = 'border-l-4 border-red-500' %}
+                      {% set text_color = 'text-red-700' %}
+                      {% set icon = 'fa-exclamation-circle' %}
+                      {% set icon_color = 'text-red-500' %}
+                    {% else %}
+                      {% set bg_color = 'bg-gradient-to-r from-amber-50 to-yellow-50' %}
+                      {% set border_color = 'border-l-4 border-amber-500' %}
+                      {% set text_color = 'text-amber-700' %}
+                      {% set icon = 'fa-exclamation-triangle' %}
+                      {% set icon_color = 'text-amber-500' %}
+                    {% endif %}
+                    
+                    <div class="notification-alert {{ bg_color }} {{ border_color }} px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 transform transition-all duration-300 hover:shadow-lg animate-slideInDown group cursor-pointer"
+                         onclick="this.classList.add('scale-95', 'opacity-0'); setTimeout(() => this.remove(), 300)">
+                        <i class="fas {{ icon }} {{ icon_color }} text-lg animate-pulse flex-shrink-0"></i>
+                        <span class="{{ text_color }} flex-1">{{ message }}</span>
+                        <button type="button" class="{{ text_color }} hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100 flex-shrink-0"
+                                onclick="event.stopPropagation(); this.closest('.notification-alert').classList.add('scale-95', 'opacity-0'); setTimeout(() => this.closest('.notification-alert').remove(), 300)">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
                 {% endfor %}
                 </div>
+                <style>
+                    @keyframes slideInDown {
+                        from {
+                            opacity: 0;
+                            transform: translateY(-20px);
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateY(0);
+                        }
+                    }
+                    
+                    .animate-slideInDown {
+                        animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    }
+                </style>
             {% endif %}
         {% endwith %}
 

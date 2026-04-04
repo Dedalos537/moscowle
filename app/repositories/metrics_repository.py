@@ -9,21 +9,39 @@ class MetricsRepository:
     @staticmethod
     def get_avg_accuracy_by_therapist(therapist_id):
         from app.models import User
-        return db.session.query(func.avg(SessionMetrics.accurracy))\
-            .join(User, SessionMetrics.user_id == User.id)\
-            .filter(User.role == 'jugador', User.assigned_therapist_id == therapist_id).scalar() or 0
+        # Use existing relationships or explicit filters to avoid missing column errors
+        try:
+            res = db.session.query(func.avg(SessionMetrics.accurracy))\
+                .join(User, SessionMetrics.user_id == User.id)\
+                .filter(User.role == 'jugador', User.therapists.any(User.id == therapist_id)).scalar()
+            return res or 0
+        except Exception:
+            # Fallback for older schema if necessary
+            return db.session.query(func.avg(SessionMetrics.accurracy))\
+                .join(User, SessionMetrics.user_id == User.id)\
+                .filter(User.role == 'jugador', User.assigned_therapist_id == therapist_id).scalar() or 0
 
     @staticmethod
     def get_avg_accuracy_by_therapist_date_range(therapist_id, start_date, end_date=None):
         from app.models import User
-        query = db.session.query(func.avg(SessionMetrics.accurracy))\
-            .join(User, SessionMetrics.user_id == User.id)\
-            .filter(SessionMetrics.date >= start_date, User.assigned_therapist_id == therapist_id)
-        
-        if end_date:
-            query = query.filter(SessionMetrics.date < end_date)
+        try:
+            query = db.session.query(func.avg(SessionMetrics.accurracy))\
+                .join(User, SessionMetrics.user_id == User.id)\
+                .filter(SessionMetrics.date >= start_date, User.therapists.any(User.id == therapist_id))
             
-        return query.scalar()
+            if end_date:
+                query = query.filter(SessionMetrics.date < end_date)
+                
+            return query.scalar() or 0
+        except Exception:
+            query = db.session.query(func.avg(SessionMetrics.accurracy))\
+                .join(User, SessionMetrics.user_id == User.id)\
+                .filter(SessionMetrics.date >= start_date, User.assigned_therapist_id == therapist_id)
+            
+            if end_date:
+                query = query.filter(SessionMetrics.date < end_date)
+                
+            return query.scalar() or 0
 
     @staticmethod
     def get_recent_metrics_by_user(user_id, limit=10):

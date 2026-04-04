@@ -384,38 +384,38 @@
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
     {% if current_user.role == 'terapista' %}
       <a href="{{ url_for('therapist.dashboard') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-chart-line text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-chart-line text-base"></i>
         <span class="font-semibold">Panel</span>
       </a>
       <a href="{{ url_for('therapist.patients') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-users text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-users text-base"></i>
         <span class="font-medium">Pacientes</span>
       </a>
       <a href="{{ url_for('therapist.games') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-gamepad text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-gamepad text-base"></i>
         <span class="font-medium">Ejercicios</span>
       </a>
       <a href="{{ url_for('therapist.analytics') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-chart-line text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-chart-line text-base"></i>
         <span class="font-medium">IA Analytics</span>
       </a>
       <a href="{{ url_for('therapist.sessions') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-calendar-check text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-calendar-check text-base"></i>
         <span class="font-medium">Sesiones</span>
       </a>
       <a href="{{ url_for('therapist.reports') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-file-alt text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-file-alt text-base"></i>
         <span class="font-medium">Reportes</span>
       </a>
       <a href="{{ url_for('therapist.messages') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
-        <i class="fa-solid fa-envelope text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
+        <i class="fa-solid fa-envelope text-base"></i>
         <span class="font-medium">Mensajes</span>
         <span id="sidebar-unread-badge" class="hidden absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
       </a>
@@ -424,48 +424,58 @@
       {% if current_user.role == 'admin' %}
       <div class="pt-2 mt-2 border-t border-gray-100"></div>
       <a href="{{ url_for('admin.dashboard') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-toolbox text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-toolbox text-base"></i>
         <span class="font-medium">Panel Admin</span>
       </a>
       <a href="{{ url_for('admin.sessions_calendar') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-calendar-alt text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-calendar-alt text-base"></i>
         <span class="font-medium">Sesiones Globales</span>
       </a>
       <a href="{{ url_for('admin.users') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-user-gear text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-user-gear text-base"></i>
         <span class="font-medium">Admin Usuarios</span>
       </a>
       <a href="{{ url_for('admin.sedes_page') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_sedes' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-map-location-dot text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sedes' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-map-location-dot text-base"></i>
         <span class="font-medium">Sedes</span>
       </a>
+      <a href="{{ url_for('admin.deudores_page') }}"
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_deudores' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-credit-card text-base"></i>
+        <span class="font-medium">Deudores</span>
+      </a>
       <a href="{{ url_for('admin.payments') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_payments' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_payments' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-file-invoice-dollar text-base"></i>
         <span class="font-medium">Pagos y Membrecías</span>
       </a>
       <a href="{{ url_for('admin.expenses') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_expenses' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-money-bill-wave text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_expenses' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-money-bill-wave text-base"></i>
         <span class="font-medium">Gastos y Terapeutas</span>
       </a>
+      <a href="{{ url_for('yape.import_transactions') }}"
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_yape' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-file-import text-base"></i>
+        <span class="font-medium">Importar Yape</span>
+      </a>
       <a href="{{ url_for('admin.games') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-gamepad text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-gamepad text-base"></i>
         <span class="font-medium">Admin Juegos</span>
       </a>
       <a href="{{ url_for('admin.reports') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-chart-pie text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-chart-pie text-base"></i>
         <span class="font-medium">Admin Reportes</span>
       </a>
       <a href="{{ url_for('admin.messages') }}"
-        class="flex items-center gap-4 px-6 py-4 rounded-soft {% if active_page == 'admin_messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-envelope text-lg"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        <i class="fa-solid fa-envelope text-base"></i>
         <span class="font-medium">Admin Mensajes</span>
       </a>
        {% endif %}
@@ -939,6 +949,338 @@
         });
     });
   </script>
+
+<!-- Global Search Modal (Cmd/Ctrl + K) -->
+<div id="globalSearchModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-gray-900/50 backdrop-blur-sm transition-opacity">
+    <div class="flex items-start justify-center min-h-screen pt-24 px-4 pb-20 text-center sm:p-0">
+        <div class="relative bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full shadow-2xl text-left overflow-hidden transform transition-all border border-gray-100 dark:border-gray-700 animate-fadeInUp" onclick="event.stopPropagation()">
+            
+            <!-- Search Header -->
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+                <i class="fas fa-search text-gray-400"></i>
+                <input type="text" id="globalSearchInput" autocomplete="off" placeholder="Buscar pacientes (Cmd/Ctrl + K)..." 
+                       class="w-full bg-transparent border-0 focus:ring-0 text-gray-800 dark:text-gray-100 text-lg placeholder-gray-400 outline-none">
+                <button onclick="closeGlobalSearch()" class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1 rounded transition-colors focus:outline-none">ESC</button>
+            </div>
+            
+            <!-- Default / Helper Text -->
+            <div id="globalSearchPlaceholder" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                <i class="fas fa-keyboard text-3xl mb-3 opacity-50 block"></i>
+                Escribe al menos 2 letras para buscar.<br>Puedes buscar por nombre o correo.
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="globalSearchLoader" class="hidden px-6 py-8 text-center text-gray-500">
+                <i class="fas fa-spinner fa-spin text-2xl text-primary mb-2"></i>
+                <p>Buscando...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="globalSearchResults" class="hidden max-h-[60vh] overflow-y-auto p-2">
+                <!-- Results injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global Search Shortcut (Cmd+K or Ctrl+K)
+    const globalSearchModal = document.getElementById('globalSearchModal');
+    const globalSearchInput = document.getElementById('globalSearchInput');
+    
+    document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            globalSearchModal.classList.remove('hidden');
+            globalSearchInput.focus();
+        }
+        if (e.key === 'Escape' && !globalSearchModal.classList.contains('hidden')) {
+            closeGlobalSearch();
+        }
+    });
+
+    // Close when clicking outside of modal content
+    globalSearchModal.addEventListener('click', (e) => {
+        if (e.target === globalSearchModal || e.target.closest('.flex') === e.target) {
+            closeGlobalSearch();
+        }
+    });
+
+    function closeGlobalSearch() {
+        globalSearchModal.classList.add('hidden');
+        globalSearchInput.value = '';
+        document.getElementById('globalSearchResults').classList.add('hidden');
+        document.getElementById('globalSearchResults').innerHTML = '';
+        document.getElementById('globalSearchPlaceholder').classList.remove('hidden');
+    }
+
+    let searchTimeout;
+    globalSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            document.getElementById('globalSearchResults').classList.add('hidden');
+            document.getElementById('globalSearchPlaceholder').classList.remove('hidden');
+            document.getElementById('globalSearchLoader').classList.add('hidden');
+            return;
+        }
+
+        document.getElementById('globalSearchPlaceholder').classList.add('hidden');
+        document.getElementById('globalSearchLoader').classList.remove('hidden');
+        document.getElementById('globalSearchResults').classList.add('hidden');
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/v1/search/patients?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                document.getElementById('globalSearchLoader').classList.add('hidden');
+                const resultsContainer = document.getElementById('globalSearchResults');
+                
+                if (data.patients && data.patients.length > 0) {
+                    let html = '';
+                    data.patients.forEach(p => {
+                        html += `
+                            <a href="/admin/user/${p.id}" class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors group">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                    ${p.username ? p.username.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary transition-colors">${p.username}</h4>
+                                    <p class="text-xs text-gray-500">${p.email}</p>
+                                </div>
+                                <i class="fas fa-external-link-alt ml-auto text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                            </a>
+                        `;
+                    });
+                    resultsContainer.innerHTML = html;
+                    resultsContainer.classList.remove('hidden');
+                } else {
+                    resultsContainer.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No se encontraron pacientes.</div>';
+                    resultsContainer.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error searching", error);
+                document.getElementById('globalSearchLoader').classList.add('hidden');
+            }
+        }, 400);
+    });
+</script>
+
+<!-- Global Llama Chatbot (Sticky across all pages) -->
+{% if current_user.is_authenticated and current_user.role == 'admin' %}
+<div id="llamaChatbotGlobal" class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 pointer-events-none">
+    <div id="chatWindow" class="hidden pointer-events-auto w-[380px] md:w-[420px] h-[550px] bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-200 flex flex-col overflow-hidden animate-slide-up">
+        <div class="bg-slate-900 p-5 flex items-center justify-between text-white border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                  <i class="fas fa-robot text-lg"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-black uppercase tracking-widest text-white">Compañero Llama</p>
+                  <div class="flex items-center gap-1.5">
+                      <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter italic">Tu mano derecha en el ERP</p>
+                  </div>
+                </div>
+            </div>
+            <button onclick="toggleGlobalChat()" class="w-10 h-10 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center text-gray-400 hover:text-white">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 shadow-sm border border-slate-300">
+                    <i class="fas fa-robot text-xs"></i>
+                </div>
+                <div class="max-w-[85%] bg-white p-4 rounded-2xl rounded-tl-none shadow-md border border-gray-200">
+                    <p class="text-[13px] text-slate-800 font-bold leading-relaxed">¡Hola Admin! Soy Llama. 😊</p>
+                    <p class="text-[12px] text-slate-600 font-medium mt-1">¿Qué quieres hacer hoy? Puedo registrar pagos, marcar asistencias o guiarte a cualquier sección del Centro.</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-5 bg-white border-t border-gray-200">
+            <div class="flex gap-2 mb-3 hidden" id="chatActionContainer">
+                <!-- Botones de acción contextual se inyectan aquí -->
+            </div>
+            <div class="relative flex gap-2">
+                <div class="relative flex-1">
+                    <input type="text" id="chatInputGlobal" placeholder="Dime qué quieres hacer..." class="w-full pl-5 pr-14 py-4 bg-gray-100 border-2 border-transparent rounded-2xl text-[14px] font-bold text-slate-800 placeholder:text-gray-400 focus:bg-white focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all shadow-inner">
+                    <label class="absolute right-2 top-2 w-11 h-11 bg-slate-100 text-slate-500 rounded-xl shadow-sm flex items-center justify-center hover:bg-slate-200 cursor-pointer transition-all">
+                        <i class="fas fa-paperclip text-sm"></i>
+                        <input type="file" id="chatFileGlobal" class="hidden" accept="image/*" onchange="uploadVoucherChat()">
+                    </label>
+                </div>
+                <button onclick="sendGlobalChatMessage()" class="w-14 h-14 bg-primary text-white rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
+                    <i class="fas fa-paper-plane text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <button id="toggleChatBtn" onclick="toggleGlobalChat()" class="pointer-events-auto w-16 h-16 bg-slate-900 text-white rounded-2xl shadow-2xl shadow-black/30 flex items-center justify-center hover:bg-primary hover:scale-105 active:scale-95 transition-all group border-4 border-white/10">
+        <i class="fas fa-comment-dots text-2xl group-hover:hidden"></i>
+        <i class="fas fa-robot text-2xl hidden group-hover:block animate-bounce"></i>
+    </button>
+</div>
+
+<script>
+function toggleGlobalChat() {
+    const win = document.getElementById('chatWindow');
+    win.classList.toggle('hidden');
+    if (!win.classList.contains('hidden')) {
+        document.getElementById('chatInputGlobal').focus();
+    }
+}
+
+async function uploadVoucherChat() {
+    const fileInput = document.getElementById('chatFileGlobal');
+    const container = document.getElementById('chatMessages');
+    if (!fileInput.files[0]) return;
+
+    // Loader
+    appendBotMessage("Subiendo voucher...", true);
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+        const response = await fetch('/admin/ai-chat-process', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            },
+            body: formData
+        });
+        const data = await response.json();
+        removeLoader();
+        appendBotMessage(data.response, false, data.status);
+
+        if (data.action === 'confirm_payment') {
+            const actions = document.getElementById('chatActionContainer');
+            actions.classList.remove('hidden');
+            actions.innerHTML = `
+                <button onclick="confirmChatPayment(${data.params.patient_id}, ${data.params.amount})" class="flex-1 py-3 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all">
+                    Confirmar Pago ✅
+                </button>
+                <button onclick="clearChatActions()" class="px-4 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200">
+                    Cancelar
+                </button>
+            `;
+        }
+    } catch (e) {
+        removeLoader();
+        appendBotMessage("Error al subir el voucher.", false, 'error');
+    }
+}
+
+async function confirmChatPayment(id, amount) {
+    appendUserMessage("¡Confirmado! Regístralo.");
+    clearChatActions();
+    const cmd = `Registrar pago de ${amount} para el paciente ID ${id}`;
+    // Re-usamos la lógica de envío pero forzando el comando estructurado
+    sendGlobalChatMessage(cmd);
+}
+
+function clearChatActions() {
+    const actions = document.getElementById('chatActionContainer');
+    actions.classList.add('hidden');
+    actions.innerHTML = '';
+}
+
+function appendUserMessage(msg) {
+    const container = document.getElementById('chatMessages');
+    const userRow = document.createElement('div');
+    userRow.className = 'flex flex-row-reverse items-start gap-3';
+    userRow.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm border border-primary">
+            <i class="fas fa-user-circle text-xs"></i>
+        </div>
+        <div class="max-w-[85%] bg-primary text-white p-4 rounded-2xl rounded-tr-none shadow-md text-[13px] font-bold leading-relaxed">
+            ${msg}
+        </div>
+    `;
+    container.appendChild(userRow);
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendBotMessage(msg, isLoader = false, status = 'info') {
+    const container = document.getElementById('chatMessages');
+    const aiRow = document.createElement('div');
+    aiRow.id = isLoader ? 'chat-loader' : '';
+    aiRow.className = 'flex items-start gap-3';
+    
+    let colorClass = 'bg-white border-gray-200';
+    if (status === 'success') colorClass = 'bg-green-50 border-green-200';
+    if (status === 'warning') colorClass = 'bg-amber-50 border-amber-200';
+    if (status === 'error') colorClass = 'bg-red-50 border-red-200';
+
+    aiRow.innerHTML = `
+        <div class="w-8 h-8 rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 shadow-sm border border-slate-300">
+            <i class="fas fa-robot text-xs ${isLoader ? 'animate-pulse' : ''}"></i>
+        </div>
+        <div class="max-w-[85%] ${colorClass} p-4 rounded-2xl rounded-tl-none shadow-md border text-[13px] text-slate-800 font-bold leading-relaxed">
+            ${isLoader ? `
+                <div class="flex gap-1 py-1">
+                    <span class="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span class="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                </div>
+            ` : msg}
+        </div>
+    `;
+    container.appendChild(aiRow);
+    container.scrollTop = container.scrollHeight;
+
+    // Actualizar campanita de notificaciones si la IA hizo algo exitoso
+    if (!isLoader && status === 'success' && typeof fetchNotifications === 'function') {
+        fetchNotifications();
+    }
+}
+
+function removeLoader() {
+    const loader = document.getElementById('chat-loader');
+    if (loader) loader.remove();
+}
+
+async function sendGlobalChatMessage(forcedMsg = null) {
+    const input = document.getElementById('chatInputGlobal');
+    const msg = forcedMsg || input.value.trim();
+    if (!msg) return;
+
+    if (!forcedMsg) appendUserMessage(msg);
+    input.value = '';
+    appendBotMessage("", true);
+
+    try {
+        const response = await fetch('/admin/ai-chat-process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            },
+            body: JSON.stringify({ message: msg })
+        });
+        const data = await response.json();
+        removeLoader();
+        appendBotMessage(data.response, false, data.status);
+
+        if (data.redirect) {
+            setTimeout(() => { window.location.href = data.redirect; }, 2000);
+        }
+    } catch (e) {
+        removeLoader();
+        appendBotMessage("Ups, tuve un hipo tecnológico. ¿Me repites?", false, 'error');
+    }
+}
+
+document.getElementById('chatInputGlobal')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendGlobalChatMessage();
+});
+</script>
+{% endif %}
+
 </body>
 
 </html>

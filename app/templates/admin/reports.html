@@ -6,6 +6,7 @@
   <p class="text-sm text-gray-500">Resumen operativo y financiero</p>
 </div>
 {% endblock %}
+{% block header_action %}{% endblock %}
 {% block content %}
 <div class="p-4 md:p-8 space-y-6">
 
@@ -17,6 +18,9 @@
             <p class="text-gray-500 text-sm">Proyección de caja y ejecución.</p>
         </div>
         <div class="flex gap-2">
+            <button onclick="generateIAReport(this)" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-soft hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Generar análisis estratégico con Llama 3.1">
+                <i class="fas fa-brain"></i> Análisis Llama AI
+            </button>
             <button onclick="sendWeeklyReport(this)" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-soft hover:bg-blue-700 transition-colors flex items-center gap-2" title="Enviar ahora el resumen de deudores">
                 <i class="fas fa-envelope"></i> Reporte Semanal
             </button>
@@ -211,6 +215,36 @@
 
 {% block extra_scripts %}
 <script>
+    async function generateIAReport(btn) {
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Llama analizando...';
+        
+        try {
+            const res = await fetch('/admin/generate-ia-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Inyectar el reporte en un modal o área nueva
+                alert('Reporte Estratégico Generado:\n\n' + data.report.substring(0, 500) + '...');
+                console.log(data.report);
+                // Aquí podrías abrir un modal con Markdown renderizado
+            } else {
+                alert('Error IA: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (e) {
+            alert('Error al conectar con Llama: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
     async function sendWeeklyReport(btn) {
         if (!confirm('¿Desea generar y enviar el reporte de deudores ahora mismo al administrador?')) {
             return;

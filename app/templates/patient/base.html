@@ -315,21 +315,60 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
+    <!-- Flash Messages - Interactive with Animations -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         <div class="fixed top-6 right-6 z-50 space-y-3">
             {% for category, message in messages %}
-            <div class="bg-white border-l-4 {% if category == 'error' %}border-red-500{% else %}border-olive{% endif %} rounded-lg shadow-lg p-4 max-w-sm animate-fade-in">
-                <div class="flex items-center">
-                    <i class="fas {% if category == 'error' %}fa-exclamation-circle text-red-500{% else %}fa-check-circle text-olive{% endif %} text-xl mr-3"></i>
-                    <p class="text-charcoal">{{ message | safe }}</p>
+                {% if category == 'success' %}
+                  {% set bg_color = 'from-green-50 to-emerald-50' %}
+                  {% set border_color = 'border-l-4 border-green-500' %}
+                  {% set text_color = 'text-green-800' %}
+                  {% set icon = 'fas fa-check-circle text-green-500' %}
+                {% elif category == 'error' %}
+                  {% set bg_color = 'from-red-50 to-rose-50' %}
+                  {% set border_color = 'border-l-4 border-red-500' %}
+                  {% set text_color = 'text-red-800' %}
+                  {% set icon = 'fas fa-exclamation-circle text-red-500' %}
+                {% else %}
+                  {% set bg_color = 'from-amber-50 to-yellow-50' %}
+                  {% set border_color = 'border-l-4 border-amber-500' %}
+                  {% set text_color = 'text-amber-800' %}
+                  {% set icon = 'fas fa-info-circle text-amber-500' %}
+                {% endif %}
+                
+            <div class="notification-alert bg-gradient-to-r {{ bg_color }} {{ border_color }} rounded-lg shadow-lg p-4 max-w-sm transform transition-all duration-300 hover:shadow-xl animate-slideInRight group cursor-pointer"
+                 onclick="this.classList.add('scale-95', 'opacity-0'); setTimeout(() => this.remove(), 300)">
+                <div class="flex items-start gap-3">
+                    <i class="{{ icon }} text-lg flex-shrink-0 animate-pulse mt-0.5"></i>
+                    <p class="{{ text_color }} font-medium flex-1">{{ message | safe }}</p>
+                    <button type="button" class="{{ text_color }} hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100 flex-shrink-0"
+                            onclick="event.stopPropagation(); this.closest('.notification-alert').classList.add('scale-95', 'opacity-0'); setTimeout(() => this.closest('.notification-alert').remove(), 300)">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% endif %}
     {% endwith %}
+    
+    <style>
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-slideInRight {
+            animation: slideInRight 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+    </style>
 
     <!-- Notifications Script -->
         <!-- Toast Utility -->

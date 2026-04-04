@@ -62,13 +62,17 @@ class User(db.Model, UserMixin):
     admin_password_changed_count = db.Column(db.Integer, default=0)
 
     # Payment System Fields
-    payment_plan = db.Column(db.String(50), default='monthly') # monthly, bi-weekly
+    payment_plan = db.Column(db.String(50), default='monthly') # monthly, quincenal, weekly
     payment_due_date = db.Column(db.Date, nullable=True)
     payment_amount = db.Column(db.Float, default=0.0)
     
+    # NEW: Specific payment day (E.g. 5 for every 5th of the month)
+    payment_day = db.Column(db.Integer, nullable=True)
+    
     # New Fields for Session Management
-    sessions_total = db.Column(db.Integer, default=0) # Total allocated sessions for current payment cycle
+    sessions_total = db.Column(db.Integer, default=0) # Total allocated sessions for current payment cycle (4, 8, 12)
     sessions_attended = db.Column(db.Integer, default=0) # Sessions consumed
+    sessions_remaining = db.Column(db.Integer, default=0) # Sessions left from last cycle to recover
     session_cost = db.Column(db.Float, default=0.0) # Calculated cost per session
     plan_type = db.Column(db.String(50), default='individual') # individual, group
 
@@ -135,6 +139,46 @@ class Expense(db.Model):
     therapist = db.relationship('User', backref=db.backref('expenses', lazy=True))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
+
+class YapeTransaction(db.Model):
+    """
+    Transacciones importadas desde Yape/Plin.
+    Usar UPSERT pattern para evitar duplicados.
+    operation_number es la clave única que garantiza idempotencia.
+    """
+    __tablename__ = 'yape_transaction'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # UNIQUE constraint en operation_number para idempotencia
+    operation_number = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    
+    # Datos clave del reporte Yape
+    transaction_date = db.Column(db.DateTime, nullable=False)
+    sender_name = db.Column(db.String(255), nullable=True)  # Razón Social / Nombre
+    amount = db.Column(db.Float, nullable=False)
+    message = db.Column(db.Text, nullable=True)  # Campo de descripción/nota
+    
+    # Clasificación y enlace
+    category = db.Column(db.String(50), default='unclassified')  # deposit, expense, transfer, etc.
+    is_expense = db.Column(db.Boolean, default=False)  # ¿Es un gasto importante?
+    
+    # Enlace a registro de Expense si se procesa
+    expense_id = db.Column(db.Integer, db.ForeignKey('expense.id'), nullable=True)
+    expense = db.relationship('Expense', backref='yape_transaction')
+    
+    # Comprobante/Foto
+    receipt_image_path = db.Column(db.String(255), nullable=True)
+    
+    # Auditoría
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    processed_at = db.Column(db.DateTime, nullable=True)
+    import_batch_id = db.Column(db.String(100), nullable=True)  # Para agrupar importes
+    
+    def __repr__(self):
+        return f'<YapeTransaction {self.operation_number} - {self.amount}>'
 
 
 class Game(db.Model):
@@ -273,6 +317,35 @@ class ContactMessage(db.Model):
     urgency = db.Column(db.String(50), default='medium')
     status = db.Column(db.String(50), default='unread') # unread, read, replied, archived
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SmartAction(db.Model):
+    """
+    Motor de Automatización Progresiva (ERP Moscowle)
+    Mantiene las tareas pendientes detectadas por el WorkflowEngine.
+    """
+    __tablename__ = 'smart_action'
+    id = db.Column(db.Integer, primary_key=True)
+    module = db.Column(db.String(50), nullable=False, index=True) # 'pagos', 'sesiones', 'usuarios', 'yape', 'sede'
+    description = db.Column(db.String(255), nullable=False)
+    
+    # Datos JSON para ejecutar la acción (patient_id, amount, date, etc)
+    suggested_payload = db.Column(db.Text, nullable=True) 
+    
+    # Nivel de intervención: 'manual', 'requires_confirmation', 'auto'
+    automation_level = db.Column(db.String(30), default='manual')
+    
+    # Estado del ciclo de vida: 'pending', 'resolved', 'ignored'
+    status = db.Column(db.String(20), default='pending', index=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    
+    def get_payload(self):
+        import json
+        try:
+            return json.loads(self.suggested_payload) if self.suggested_payload else {}
+        except:
+            return {}
 
 class CSPReport(db.Model):
     __tablename__ = 'csp_report'

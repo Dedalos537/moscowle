@@ -12,15 +12,23 @@ function openRegisterPaymentModal(id, name, amount) {
     document.getElementById('absences_hint').classList.add('hidden');
     
     // Fetch smart billing info
+    const recalcAlert = document.getElementById('recalc_alert');
+    const recalcMsg = document.getElementById('recalc_msg');
+
     fetch(`/admin/api/payment-info/${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.suggested_date) {
                 document.getElementById('payment_next_date').value = data.suggested_date;
             }
+            if (data.suggested_sessions) {
+                recalcAlert.classList.remove('hidden');
+                recalcMsg.innerHTML = `Basado en la modalidad, se asignarán <strong>${data.suggested_sessions} sesiones</strong> para este ciclo.`;
+                if(data.recovery_msg) recalcMsg.innerHTML += ` <br><span class="text-[10px] text-blue-600 italic">(${data.recovery_msg})</span>`;
+            }
             if (data.absences > 0) {
                 const hint = document.getElementById('absences_hint');
-                hint.textContent = `⚠️ ${data.absences} faltas desde el último pago. Considere un descuento.`;
+                hint.textContent = `⚠️ El periodo anterior terminó con ${data.absences} sesiones no asistidas.`;
                 hint.classList.remove('hidden');
             }
         })
@@ -250,7 +258,17 @@ function analyzeReceipt(input) {
     .then(response => response.json())
     .then(data => {
         spinner.classList.add('hidden');
-        if (data.error) { console.warn("Scan Error:", data.error); return; }
+        if (data.error || data.warning) { 
+            console.warn("Scan Alert:", data.error || data.warning);
+            // Mostrar un aviso amable si es error de cuota
+            if(data.warning || (data.error && data.error.includes('429'))) {
+                const hint = document.getElementById('absences_hint');
+                hint.textContent = "ℹ️ IA ocupada. Por favor, completa el monto y fecha manualmente.";
+                hint.classList.remove('hidden', 'text-orange-500');
+                hint.classList.add('text-blue-500');
+            }
+            return; 
+        }
         
         if (data.amount) {
             const el = document.getElementById('payment_amount');
@@ -298,6 +316,15 @@ function clearAgeFilter() {
 }
 
 function initDashboard(patientsFromJinja, historyFromJinja) {
+    // Check for incomplete profiles to show guidance
+    const incomplete = patientsFromJinja.filter(p => !p.plan || p.plan === 'Sin Asignar' || p.plan === 'None');
+    const guidanceContainer = document.getElementById('setup-guidance-container');
+    if (guidanceContainer && incomplete.length > 0) {
+        guidanceContainer.classList.remove('hidden');
+        document.getElementById('incomplete-users-count').textContent = incomplete.length;
+    }
+    window._incomplete_patients = incomplete;
+
     const patients = patientsFromJinja;
     const history = historyFromJinja || [];
 

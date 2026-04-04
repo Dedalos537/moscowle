@@ -16,11 +16,8 @@ class Config:
     
     # Priority: Environment Variable (MySQL) > Local SQLite fallback
     # Example MySQL URI: mysql+pymysql://user:password@localhost/db_name
+    # Read DB URI from environment; do NOT fallback to SQLite here.
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
-    
-    if not SQLALCHEMY_DATABASE_URI:
-        # Fallback to SQLite for local development only
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'instance', 'moscowle.db')
         
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
@@ -75,6 +72,8 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax' # Changed to Lax for compatibility
     SESSION_COOKIE_NAME = 'moscowle_session'
+    # Ensure cookie domain is not set for local development (accept localhost/127.0.0.1)
+    SESSION_COOKIE_DOMAIN = None
     
     # Remember cookie settings
     REMEMBER_COOKIE_SECURE = os.getenv('REMEMBER_COOKIE_SECURE', 'False') == 'True'
@@ -91,6 +90,8 @@ class Config:
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
     HSTS_SECONDS = int(os.getenv('HSTS_SECONDS', 31536000))
     HSTS_INCLUDE_SUBDOMAINS = os.getenv('HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
+    # Allow explicit control to force HTTPS in production via env var.
+    FORCE_HTTPS = os.getenv('FORCE_HTTPS', 'False') == 'True'
     
     # ========== RATE LIMITING - OPTIMIZED ==========
     # Use Redis in production: redis://localhost:6379
@@ -113,6 +114,11 @@ class DevelopmentConfig(Config):
     ENV = 'development'
     DEBUG = True
     TESTING = False
+    # Development-specific relaxation for local HTTP testing
+    SESSION_COOKIE_SECURE = False
+    REMEMBER_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    FORCE_HTTPS = False
 
 class ProductionConfig(Config):
     ENV = 'production'

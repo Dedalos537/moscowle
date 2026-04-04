@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, url_for
 from flask_login import login_required, current_user
-from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage
+from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage, Sede, Payment
 from app.services.appointment_service import AppointmentService
 from app.services.game_service import GameService
 from app.services.admin_service import AdminService
@@ -13,6 +13,9 @@ from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt, limiter, csrf
 from app.services.email_service import EmailService
+from app.services.financial_service import FinancialService
+from app.utils.api_helpers import api_response
+from app.services.availability_service import AvailabilityService
 from datetime import datetime, timedelta, timezone
 import json
 import os
@@ -30,6 +33,7 @@ notification_service = NotificationService()
 patient_service = PatientService()
 dashboard_service = DashboardService()
 drive_service = GoogleDriveService()
+fs = FinancialService()
 
 def _parse_datetime(value):
     """Robust datetime parser for ISO and naive strings"""
@@ -60,8 +64,12 @@ def therapist_insights():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Acceso denegado'}), 403
 
-    data = dashboard_service.get_therapist_insights(current_user)
-    return jsonify(data)
+    try:
+        data = dashboard_service.get_therapist_insights(current_user)
+        return jsonify(data)
+    except Exception as e:
+        current_app.logger.error(f"Error in therapist_insights: {str(e)}")
+        return jsonify({"error": str(e), "data": []}), 500
 
 @api_bp.route('/notifications')
 @login_required
@@ -119,17 +127,13 @@ def mark_notifications_read():
 @login_required
 def api_get_sessions():
     """Return appointments between start and end (ISO dates) for calendar display."""
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'error': 'Acceso denegado'}), 403
 
     start = request.args.get('start')
     end = request.args.get('end')
     
-    if not start and not end:
-        # List view
-        # We can use a service method for this too if we want strict separation
-        # For now, let's use the service for the filtered query
-        pass
+    # ... rest of the logic ...
 
     try:
         start_dt = _parse_datetime(start)
@@ -139,11 +143,17 @@ def api_get_sessions():
         end_dt = None
 
     if start_dt and end_dt:
-        appts = appointment_service.get_therapist_appointments(current_user.id, start_dt, end_dt)
+        if current_user.role == 'terapista':
+            appts = appointment_service.get_therapist_appointments(current_user.id, start_dt, end_dt)
+        else:
+            appts = appointment_service.get_all_appointments(start_dt, end_dt)
     else:
         # Fallback or list view logic
-        appts = Appointment.query.filter(Appointment.therapist_id == current_user.id)\
-            .order_by(Appointment.start_time.desc()).limit(200).all()
+        q = Appointment.query
+        if current_user.role == 'terapista':
+            q = q.filter(Appointment.therapist_id == current_user.id)
+        
+        appts = q.order_by(Appointment.start_time.desc()).limit(200).all()
 
     results = []
     for a in appts:
@@ -259,7 +269,7 @@ def api_list_games():
 @login_required
 def api_get_sessions_day():
     """Return sessions for a particular date (YYYY-MM-DD)."""
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     date_str = request.args.get('date')
@@ -283,9 +293,13 @@ def api_get_sessions_day():
     except Exception:
         return jsonify({'success': False, 'message': 'Formato de fecha inválido'}), 400
 
-    query = Appointment.query.filter(Appointment.therapist_id == current_user.id,
-                                     Appointment.start_time >= query_start,
-                                     Appointment.start_time < query_end).order_by(Appointment.start_time.asc()).all()
+    # Filter for therapist or admin
+    base_query = Appointment.query
+    if current_user.role == 'terapista':
+        base_query = base_query.filter(Appointment.therapist_id == current_user.id)
+    
+    query = base_query.filter(Appointment.start_time >= query_start,
+                              Appointment.start_time < query_end).order_by(Appointment.start_time.asc()).all()
 
     results = []
     for a in query:
@@ -341,6 +355,26 @@ def api_create_session():
     # Set default end_time if not provided (1 hour after start)
     if not data.get('end_time'):
         data['end_time'] = data['start_time'] + timedelta(hours=1)
+        
+    # --- ADDED AVALIABILITY CHECK (Poka-Yoke) ---
+    therapist_id = current_user.id
+    if current_user.role == 'admin':
+        # En la vista admin, mandan listado de therapist_ids para sesiones grupales
+        # Por simplicidad del MVP validamos el primero si es que viene
+        if 'therapist_ids' in data:
+            therapist_id = data['therapist_ids'][0]
+        elif 'therapist_id' in data:
+            therapist_id = data['therapist_id']
+            
+    if therapist_id:
+        is_available, error_msg = AvailabilityService.check_availability(
+            therapist_id=therapist_id,
+            start_time=data['start_time'],
+            end_time=data['end_time']
+        )
+        if not is_available:
+            return jsonify({'success': False, 'message': error_msg}), 409
+    # ---------------------------------------------
     
     # Handle multiple patients (Group Session)
     patient_ids = data.get('patient_id')
@@ -1438,63 +1472,405 @@ def admin_sedes():
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
 
-    if request.method == 'GET':
-        sedes = Sede.query.order_by(Sede.created_at.desc()).all()
-        result = []
-        for s in sedes:
-            created_at_iso = None
-            if s.created_at:
-                try:
-                    created_at_iso = s.created_at.isoformat()
-                except AttributeError:
-                    created_at_iso = str(s.created_at)
+    try:
+        if request.method == 'GET':
+            sedes = Sede.query.order_by(Sede.created_at.desc()).all()
+            result = []
+            for s in sedes:
+                created_at_iso = None
+                if s.created_at:
+                    try:
+                        created_at_iso = s.created_at.isoformat()
+                    except AttributeError:
+                        created_at_iso = str(s.created_at)
+                
+                result.append({
+                    'id': s.id,
+                    'name': s.name,
+                    'address': s.address,
+                    'active': s.active,
+                    'created_at': created_at_iso
+                })
+            return jsonify(result)
+
+        if request.method == 'POST':
+            data = request.get_json() or {}
+            name = data.get('name')
+            if not name:
+                return jsonify({'success': False, 'message': 'Nombre es obligatorio'}), 400
             
-            result.append({
-                'id': s.id,
-                'name': s.name,
-                'address': s.address,
-                'active': s.active,
-                'created_at': created_at_iso
-            })
-        return jsonify(result)
+            existing = Sede.query.filter_by(name=name).first()
+            if existing:
+                return jsonify({'success': False, 'message': 'Sede ya existe'}), 400
 
-    if request.method == 'POST':
-        data = request.get_json() or {}
-        name = data.get('name')
-        if not name:
-            return jsonify({'success': False, 'message': 'Nombre es obligatorio'}), 400
-        
-        existing = Sede.query.filter_by(name=name).first()
-        if existing:
-            return jsonify({'success': False, 'message': 'Sede ya existe'}), 400
+            address = data.get('address')
+            s = Sede(name=name, address=address)
+            db.session.add(s)
+            db.session.commit()
+            return jsonify({'success': True, 'id': s.id})
+    except Exception as e:
+        current_app.logger.error(f"Error in admin_sedes: {str(e)}")
+        return jsonify({"error": str(e), "data": []}), 500
 
-        address = data.get('address')
-        s = Sede(name=name, address=address)
-        db.session.add(s)
-        db.session.commit()
-        return jsonify({'success': True, 'id': s.id})
-
-@api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT'])
+@api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
 @login_required
 def admin_sedes_detail(sede_id):
     if current_user.role != 'admin':
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
         
-    s = Sede.query.get(sede_id)
-    if not s:
-        return jsonify({'success': False, 'message': 'No encontrado'}), 404
+    try:
+        s = Sede.query.get(sede_id)
+        if not s:
+            return jsonify({'success': False, 'message': 'No encontrado'}), 404
 
-    if request.method == 'PUT':
-        data = request.get_json() or {}
-        if 'active' in data:
-            s.active = bool(data['active'])
-        if 'name' in data and data['name']:
-            s.name = data['name']
-        if 'address' in data:
-            s.address = data['address']
+        if request.method == 'PUT':
+            data = request.get_json() or {}
+            if 'active' in data:
+                s.active = bool(data['active'])
+            if 'name' in data and data['name']:
+                s.name = data['name']
+            if 'address' in data:
+                s.address = data['address']
+            
+            db.session.commit()
+            return jsonify({'success': True})
         
-        db.session.commit()
-        return jsonify({'success': True})
+        # Adding GET just in case it's needed for specific detail fetch
+        return jsonify({
+            'id': s.id,
+            'name': s.name,
+            'address': s.address,
+            'active': s.active
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in admin_sedes_detail: {str(e)}")
+        return jsonify({"error": str(e), "data": []}), 500
+
+@api_bp.route('/admin/sedes/<int:sede_id>/analytics', methods=['GET'])
+@login_required
+def admin_sedes_analytics(sede_id):
+    """Get analytics for a specific sede: alumni, payments, sessions"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    
+    try:
+        sede = Sede.query.get(sede_id)
+        if not sede:
+            return jsonify({'success': False, 'message': 'Sede not found'}), 404
+        
+        from datetime import datetime
+        # Fix division by zero or empty list issues in statistics
+        # Get therapists assigned to this sede
+        therapists = User.query.filter(
+            User.assigned_sedes.any(Sede.id == sede_id),
+            User.role == 'terapista'
+        ).all()
+        therapist_ids = [t.id for t in therapists]
+        
+        # Get all patients (jugador role) who have appointments with these therapists
+        appointments_at_sede = Appointment.query.filter(
+            Appointment.therapist_id.in_(therapist_ids)
+        ).all() if therapist_ids else []
+        
+        patient_ids = list(set([a.patient_id for a in appointments_at_sede if a.patient_id]))
+        
+        # Payments for patients at this sede
+        payments = Payment.query.filter(
+            Payment.patient_id.in_(patient_ids)
+        ).all() if patient_ids else []
+        
+        # Statistics
+        total_patients = len(patient_ids)
+        active_patients = len([pid for pid in patient_ids if User.query.get(pid) and User.query.get(pid).is_active])
+        
+        total_revenue = sum([p.amount for p in payments if p.status == 'completed']) if payments else 0
+        total_sessions = len([a for a in appointments_at_sede if a.status == 'completed'])
+        pending_sessions = len([a for a in appointments_at_sede if a.status == 'scheduled'])
+        
+        # This month
+        today = datetime.utcnow()
+        month_start = datetime(today.year, today.month, 1)
+        sessions_this_month = len([a for a in appointments_at_sede if a.status == 'completed' and a.start_time and a.start_time >= month_start])
+        payments_this_month = sum([p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start]) if payments else 0
+        
+        # Therapists assigned to this sede (already fetched as therapists)
+        
+        return jsonify({
+            'success': True,
+            'sede': {
+                'id': sede.id,
+                'name': sede.name,
+                'address': sede.address,
+            },
+            'analytics': {
+                'patients': {
+                    'total': total_patients,
+                    'active': active_patients,
+                },
+                'payments': {
+                    'total_revenue': round(total_revenue, 2),
+                    'this_month': round(payments_this_month, 2),
+                    'transactions': len(payments),
+                },
+                'sessions': {
+                    'total_completed': total_sessions,
+                    'pending': pending_sessions,
+                    'this_month': sessions_this_month,
+                    'total': len(appointments_at_sede),
+                },
+                'therapists': {
+                    'count': len(therapists),
+                    'names': [t.email for t in therapists],
+                }
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in admin_sedes_analytics: {str(e)}")
+        return jsonify({"error": str(e), "data": []}), 500
+    payments = Payment.query.filter(
+        Payment.patient_id.in_(patient_ids)
+    ).all() if patient_ids else []
+    
+    # Statistics
+    total_patients = len(patient_ids)
+    active_patients = len([pid for pid in patient_ids if User.query.get(pid) and User.query.get(pid).is_active])
+    
+    total_revenue = sum([p.amount for p in payments if p.status == 'completed']) if payments else 0
+    total_sessions = len([a for a in appointments_at_sede if a.status == 'completed'])
+    pending_sessions = len([a for a in appointments_at_sede if a.status == 'scheduled'])
+    
+    # This month
+    today = datetime.utcnow()
+    month_start = datetime(today.year, today.month, 1)
+    sessions_this_month = len([a for a in appointments_at_sede if a.status == 'completed' and a.start_time and a.start_time >= month_start])
+    payments_this_month = sum([p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start]) if payments else 0
+    
+    # Therapists assigned to this sede
+    therapists_assigned = User.query.filter(
+        User.assigned_sedes.any(Sede.id == sede_id),
+        User.role == 'terapista'
+    ).all()
+    
+    return jsonify({
+        'success': True,
+        'sede': {
+            'id': sede.id,
+            'name': sede.name,
+            'address': sede.address,
+        },
+        'analytics': {
+            'patients': {
+                'total': total_patients,
+                'active': active_patients,
+            },
+            'payments': {
+                'total_revenue': round(total_revenue, 2),
+                'this_month': round(payments_this_month, 2),
+                'transactions': len(payments),
+            },
+            'sessions': {
+                'total_completed': total_sessions,
+                'pending': pending_sessions,
+                'this_month': sessions_this_month,
+                'total': len(appointments_at_sede),
+            },
+            'therapists': {
+                'count': len(therapists_assigned),
+                'names': [t.email for t in therapists_assigned],
+            }
+        }
+    })
+
+@api_bp.route('/admin/deudores', methods=['GET'])
+@login_required
+def admin_deudores_por_sede():
+    """Controller: delegate debt report building to FinancialService."""
+    if current_user.role != 'admin':
+        return jsonify({"error": "Forbidden", "data": []}), 403
+
+    month = request.args.get('month', 'all')
+    if month == 'curr':
+        month = 'current'
+    try:
+        data = fs.build_debt_report(days_ahead=7, month=month)
+        # Ensure 'por_sede' exists even if empty
+        if not data or 'por_sede' not in data:
+            data = {"por_sede": {}, "summary": {}}
+        return api_response(success=True, data=data)
+    except Exception as e:
+        current_app.logger.error(f"Financial report failed: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        return api_response(success=False, error=str(e), data={"por_sede": {}}, status=500)
+
+@api_bp.route('/v1/payments/<int:payment_id>/mark-paid', methods=['POST'])
+@login_required
+def mark_payment_paid(payment_id):
+    """Marca un pago pendiente como completado via API y reactiva al paciente"""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized', 'message': 'Solo admins pueden realizar esta acción.'}), 403
+        
+    payment = Payment.query.get_or_404(payment_id)
+    
+    # Optional method update
+    data = request.get_json() or {}
+    method = data.get('method', payment.method or 'transfer')
+    
+    payment.status = 'completed'
+    payment.method = method
+    payment.date = datetime.utcnow()
+    
+    # También activar al usuario si estaba inactivo por falta de pago
+    if payment.patient_id:
+        user = User.query.get(payment.patient_id)
+        if user and not user.is_active:
+            user.is_active = True
+            
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f'Pago de {payment.amount} registrado exitosamente.',
+        'payment_id': payment.id
+    })
+
+@api_bp.route('/admin/send-payment-reminder', methods=['POST'])
+@login_required
+def send_payment_reminder():
+    """
+    Sends payment reminder to a patient via email, SMS, or WhatsApp
+    """
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
+    try:
+        data = request.get_json() or {}
+        patient_id = data.get('patient_id')
+        patient_email = data.get('patient_email')
+        channel = data.get('channel', 'email')  # email, sms, or whatsapp
+        
+        if not patient_id or not patient_email:
+            return jsonify({'success': False, 'error': 'patient_id and patient_email required'}), 400
+        
+        # Get patient data (delegated)
+        from app.services.financial_service import FinancialService
+        fs = FinancialService()
+        info = fs.get_patient_overdue_info(patient_id)
+        if not info:
+            return api_response(success=False, error={'message': 'Patient not found'}, status=404)
+
+        due_date = info.get('due_date')
+        amount = info.get('amount', 0)
+        days_overdue = info.get('days_overdue', 0)
+        patient_name = info.get('name')
+        
+        # Determine channel and send
+        if channel == 'email':
+            from app.services.email_service import EmailService
+            
+            subject = f"Recordatorio: Deuda pendiente de pago - Centro de Terapias"
+            body = f"""
+Hola {patient_name},
+
+Esperamos te encuentres bien. Te contactamos para recordarte que tienes una deuda pendiente de pago.
+
+Detalles de tu deuda:
+- Monto adeudado: S/ {amount:.2f}
+- Fecha de vencimiento: {due_date.strftime('%d/%m/%Y') if due_date else 'N/A'}
+- Días de atraso: {days_overdue}
+
+Por favor, realiza el pago lo antes posible para evitar acciones adicionales.
+
+Si ya realizaste el pago, por favor ignora este mensaje.
+
+Gracias,
+Centro de Terapias
+"""
+            try:
+                EmailService.send_email(patient_email, subject, body)
+                return api_response(success=True, data={'message': f'Recordatorio enviado a {patient_email}', 'channel': 'email'})
+            except Exception as e:
+                current_app.logger.error(f"Error sending email reminder: {e}")
+                return api_response(success=False, error={'message': f'Error al enviar recordatorio por email: {str(e)}'}, status=500)
+        
+        elif channel in ['sms', 'whatsapp']:
+            # Try SMS/WhatsApp via Twilio
+            from app.services.sms_whatsapp_service import SMSWhatsAppService
+            
+            sms_service = SMSWhatsAppService()
+            
+            if not sms_service.is_available():
+                return jsonify({
+                    'success': False,
+                    'error': 'Servicio SMS/WhatsApp no disponible. Configure Twilio credentials.'
+                }), 501
+            
+            # Use data.get('phone') or fetch it from User model if missing
+            from app.models import User
+            patient_record = User.query.get(patient_id)
+            phone_number = (patient_record.phone if patient_record else None) or data.get('phone')
+            if not phone_number:
+                return jsonify({
+                    'success': False,
+                    'error': 'No phone number available for this patient'
+                }), 400
+            
+            # Send via SMS or WhatsApp
+            if channel == 'sms':
+                success = sms_service.send_payment_reminder_sms(
+                    phone_number, patient_name, amount, due_date, days_overdue
+                )
+            else:  # whatsapp
+                success = sms_service.send_payment_reminder_whatsapp(
+                    phone_number, patient_name, amount, due_date, days_overdue
+                )
+            
+                if success:
+                    return api_response(success=True, data={'message': f'Recordatorio enviado por {channel} a {phone_number}', 'channel': channel})
+                else:
+                    return api_response(success=False, error={'message': f'Error al enviar recordatorio por {channel}'}, status=500)
+        
+        else:
+            return api_response(success=False, error={'message': f'Canal no soportado: {channel}. Use email, sms, o whatsapp.'}, status=400)
+        
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error in send_payment_reminder: {e}")
+        import traceback
+        traceback.print_exc()
+        return api_response(success=False, error={'message': str(e)}, status=500)
+
+@api_bp.route('/v1/search/patients', methods=['GET'])
+@login_required
+def search_patients():
+    """Búsqueda global de pacientes para el Command+K Modal"""
+    if current_user.role not in ['admin', 'therapist']:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    query = request.args.get('q', '').strip()
+    if len(query) < 2:
+        return jsonify({'patients': []})
+        
+    # Search by username, email, phone...
+    search_term = f"%{query}%"
+    patients = User.query.filter(
+        db.or_(
+            User.username.ilike(search_term),
+            User.email.ilike(search_term),
+            User.phone.ilike(search_term) if hasattr(User, 'phone') else db.false()
+        ),
+        User.role == 'jugador'
+    ).limit(10).all()
+    
+    result = []
+    for p in patients:
+        result.append({
+            'id': p.id,
+            'username': p.username,
+            'email': p.email,
+            'phone': getattr(p, 'phone', '')
+        })
+        
+    return jsonify({'patients': result})
 
 @api_bp.route('/public/contact', methods=['POST'])
 @csrf.exempt
@@ -1526,3 +1902,28 @@ def contact_message():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@api_bp.route('/admin/metrics/capacity', methods=['GET'])
+@login_required
+def get_capacity_metrics():
+    """
+    Ticket 1: Endpoint for Capacity Planning Dashboard
+    Returns global capacity, sedes breakdown, and therapist load stats.
+    """
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    try:
+        capacity_data = admin_metrics_service.get_capacity_metrics()
+        therapist_load = admin_metrics_service.get_therapist_load()
+        user_health = admin_metrics_service.get_user_health_kpi()
+        
+        return jsonify({
+            'success': True,
+            'capacity': capacity_data,
+            'therapist_load': therapist_load,
+            'user_health': user_health
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching capacity metrics: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500

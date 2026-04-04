@@ -17,18 +17,70 @@
 {% endblock %}
 
 {% block header_action %}
+<<<<<<< HEAD
   <button onclick="openModal('batch')" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+=======
+  <button onclick="openModal()" class="px-3 md:px-5 py-2 bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+>>>>>>> 580bab1 (llama uwu)
     <i class="fas fa-plus md:mr-2"></i> <span class="hidden md:inline">Nueva Programación en Bloque</span>
   </button>
 {% endblock %}
 
 {% block content %}
+
+<style>
+/* Botones redondeados tipo sidebar - Refined for continuity */
+.fc .fc-button {
+    border-radius: 9999px !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    margin: 0 2px !important; /* Spacing between buttons to prevent "cutting" effect */
+}
+.fc .fc-button-primary {
+    background-color: var(--color-primary, #75a83a) !important;
+    border: none !important;
+    text-transform: capitalize;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+.fc .fc-button-primary:hover {
+    background-color: var(--color-primary-hover, #628f2e) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+.fc .fc-button-primary:not(:disabled):active,
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--color-primary-hover, #628f2e) !important;
+    transform: translateY(0);
+}
+
+/* Fix button groups showing discontinuous borders */
+.fc-button-group {
+    background: transparent !important;
+    border: none !important;
+}
+.fc-direction-ltr .fc-button-group > .fc-button:not(:first-child),
+.fc-direction-ltr .fc-button-group > .fc-button:not(:last-child) {
+    border-radius: 9999px !important;
+    margin-left: 4px !important;
+}
+
+/* Spinner animado Tailwind */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin 1s linear infinite;
+}
+</style>
+
 <div class="p-4 md:p-8 space-y-6">
     
     <!-- Filtros -->
     <div class="bg-surface p-4 rounded-soft shadow-soft border border-gray-100 flex flex-wrap gap-4 items-center">
         <label for="therapistFilter" class="text-sm font-medium text-gray-700">Filtrar por Terapeuta:</label>
-        <select id="therapistFilter" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
+        <select id="therapistFilter" name="therapistFilter" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
             <option value="all">Todos los Terapeutas</option>
             {% for t in therapists %}
                 <option value="{{ t.id }}">{{ t.username }}</option>
@@ -38,8 +90,15 @@
 
     <!-- Calendario -->
     <div class="bg-surface p-4 md:p-6 rounded-soft shadow-soft border border-gray-100 min-h-[600px] relative">
+<<<<<<< HEAD
         <div id="calendar-loader" class="hidden absolute inset-0 bg-white/75 flex items-center justify-center rounded-soft z-10 transition-opacity">
             <i class="fas fa-spinner fa-spin text-primary text-4xl"></i>
+=======
+        <!-- Overlay Cargando -->
+        <div id="calendar-loading" class="absolute inset-0 bg-white/70 z-50 flex flex-col items-center justify-center rounded-soft backdrop-blur-sm" style="display: none;">
+            <i class="fa-solid fa-spinner animate-spin-slow text-4xl text-primary mb-3"></i>
+            <span class="text-gray-600 font-medium animate-pulse">Cargando calendario...</span>
+>>>>>>> 580bab1 (llama uwu)
         </div>
         <div id="calendar"></div>
     </div>
@@ -78,8 +137,8 @@
                 
                 <!-- Terapeuta -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
-                    <select name="therapist_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
+                    <label for="single-therapist" class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
+                    <select name="therapist_id" id="single-therapist" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
                         <option value="">Seleccionar Terapeuta...</option>
                         {% for t in therapists %}
                             <option value="{{ t.id }}">{{ t.username }}</option>
@@ -89,6 +148,7 @@
 
                 <!-- Paciente (Dynamic) -->
                 <div>
+<<<<<<< HEAD
                     <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select disabled:bg-gray-100 disabled:text-gray-400" disabled aria-busy="false">
@@ -97,53 +157,65 @@
                         <i class="fas fa-spinner fa-spin absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hidden patient-loader"></i>
                     </div>
                     <p class="text-xs text-gray-500 mt-1 patient-hint">Primero selecciona un terapeuta.</p>
+=======
+                    <label for="single-patient" class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
+                    <select name="patient_id" id="single-patient" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
+                        <option value="">Seleccionar Paciente...</option>
+                    </select>
+>>>>>>> 580bab1 (llama uwu)
                 </div>
 
                 <!-- Título -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                    <input type="text" name="title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    <label for="single-title" class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                    <input type="text" name="title" id="single-title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                 </div>
 
                 <!-- Fechas (Multi-select via Flatpickr) -->
                  <div>
-                    <label class="text-sm font-medium text-gray-700 mb-1">Fechas</label>
+                    <label for="single-dates" class="text-sm font-medium text-gray-700 mb-1">Fechas</label>
                     <input type="text" name="dates" id="single-dates" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Seleccionar fechas..." required>
                     <p class="text-xs text-gray-500 mt-1">Puedes seleccionar múltiples días puntuales.</p>
+                </div>
+
+                <!-- Allow past session checkbox -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="is_past_session" name="is_past_session" class="rounded text-primary focus:ring-primary" />
+                    <label for="is_past_session" class="text-sm text-gray-700">Registrar sesión en el pasado (ya terminada)</label>
                 </div>
 
                 <!-- Hora -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-                        <input type="time" name="start_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="single-start" class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" name="start_time" id="single-start" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-                        <input type="time" name="end_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="single-end" class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" name="end_time" id="single-end" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                 </div>
                 
                  <!-- Estado & Lugar -->
                  <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                        <select name="status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="single-status" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <select name="status" id="single-status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                             <option value="scheduled">Programada</option>
                             <option value="completed">Completada</option>
                             <option value="cancelled">Cancelada</option>
                         </select>
                     </div>
                     <div>
-                         <label class="block text-sm font-medium text-gray-700 mb-1">Lugar</label>
-                         <input type="text" name="location" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Consultorio 1">
+                         <label for="single-location" class="block text-sm font-medium text-gray-700 mb-1">Lugar</label>
+                         <input type="text" name="location" id="single-location" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Consultorio 1">
                     </div>
                  </div>
 
                  <!-- Notas -->
                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                    <textarea name="notes" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" rows="2"></textarea>
+                    <label for="single-notes" class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                    <textarea name="notes" id="single-notes" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" rows="2"></textarea>
                  </div>
 
             </form>
@@ -154,8 +226,8 @@
                 
                 <!-- Terapeuta -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
-                    <select name="therapist_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
+                    <label for="batch-therapist" class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
+                    <select name="therapist_id" id="batch-therapist" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm therapist-select">
                         <option value="">Seleccionar Terapeuta...</option>
                         {% for t in therapists %}
                             <option value="{{ t.id }}">{{ t.username }}</option>
@@ -165,6 +237,7 @@
 
                 <!-- Paciente -->
                 <div>
+<<<<<<< HEAD
                     <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <select name="patient_id" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select disabled:bg-gray-100 disabled:text-gray-400" disabled aria-busy="false">
@@ -173,36 +246,47 @@
                         <i class="fas fa-spinner fa-spin absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hidden patient-loader"></i>
                     </div>
                     <p class="text-xs text-gray-500 mt-1 patient-hint">Primero selecciona un terapeuta.</p>
+=======
+                    <label for="batch-patient" class="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
+                    <select name="patient_id" id="batch-patient" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm patient-select" disabled>
+                        <option value="">Seleccionar Paciente...</option>
+                    </select>
+>>>>>>> 580bab1 (llama uwu)
                 </div>
 
                 <!-- Título (Opcional) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Título de la Sesión (Opcional)</label>
-                    <input type="text" name="title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    <label for="batch-title" class="block text-sm font-medium text-gray-700 mb-1">Título de la Sesión (Opcional)</label>
+                    <input type="text" name="title" id="batch-title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     <p class="text-xs text-gray-500 mt-1">Si se deja vacío, se generará como "Sesión X/Y".</p>
                 </div>
 
                 <!-- Fecha Inicio y Horarios -->
                 <div>
-                     <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
-                     <input type="date" name="start_date" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                     <label for="batch-start-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+                     <input type="date" name="start_date" id="batch-start-date" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                </div>
+                <!-- Allow past sessions for batch start date -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="is_past_session_batch" name="is_past_session_batch" class="rounded text-primary focus:ring-primary" />
+                    <label for="is_past_session_batch" class="text-sm text-gray-700">Registrar sesión en el pasado (ya terminada)</label>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-                        <input type="time" name="start_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="batch-start-time" class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" name="start_time" id="batch-start-time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-                        <input type="time" name="end_time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="batch-end-time" class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" name="end_time" id="batch-end-time" required class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                 </div>
 
                 <!-- Duración del Bloque -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Duración / Recurrencia</label>
-                    <select name="weeks" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    <label for="batch-weeks" class="block text-sm font-medium text-gray-700 mb-1">Duración / Recurrencia</label>
+                    <select name="weeks" id="batch-weeks" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                         <option value="1">1 Semana (Semanal / Puntual)</option>
                         <option value="2">2 Semanas</option>
                         <option value="4" selected>4 Semanas (1 Mes)</option>
@@ -214,6 +298,7 @@
 
                 <!-- Días de la semana -->
                 <div>
+<<<<<<< HEAD
                     <label class="block text-sm font-medium text-gray-700 mb-2">Días de la semana <span class="text-red-500">*</span></label>
                     <div class="flex flex-wrap gap-2">
                         <!-- Tailwind 'peer' to do pure CSS styled checkbox. Note: we need explicit unique ids and for= if we don't nest but nesting with standard CSS usually requires native CSS :has or peer to work seamlessly -->
@@ -253,6 +338,28 @@
                                 Sáb
                             </label>
                         </div>
+=======
+                    <h4 class="block text-sm font-medium text-gray-700 mb-2">Días de la semana</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <label for="day-0" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="0" id="day-0" class="rounded text-primary focus:ring-primary mr-2"> Lun
+                        </label>
+                        <label for="day-1" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="1" id="day-1" class="rounded text-primary focus:ring-primary mr-2"> Mar
+                        </label>
+                        <label for="day-2" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="2" id="day-2" class="rounded text-primary focus:ring-primary mr-2"> Mié
+                        </label>
+                        <label for="day-3" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="3" id="day-3" class="rounded text-primary focus:ring-primary mr-2"> Jue
+                        </label>
+                        <label for="day-4" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="4" id="day-4" class="rounded text-primary focus:ring-primary mr-2"> Vie
+                        </label>
+                        <label for="day-5" class="inline-flex items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" name="days" value="5" id="day-5" class="rounded text-primary focus:ring-primary mr-2"> Sáb
+                        </label>
+>>>>>>> 580bab1 (llama uwu)
                     </div>
                 </div>
 
@@ -281,36 +388,41 @@
         
         <div class="p-6 space-y-4">
             <form id="editSessionForm" class="space-y-4">
-                <input type="hidden" id="edit-id">
+                <input type="hidden" id="edit-id" name="session_id">
                 
                 <div class="bg-blue-50 p-3 rounded text-sm text-blue-700 mb-2">
                     <i class="fas fa-info-circle mr-1"></i> <span id="edit-info">Cargando...</span>
                 </div>
                 
                 <div>
+<<<<<<< HEAD
                      <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
                      <input type="text" id="edit-title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+=======
+                     <label for="edit-title" class="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                     <input type="text" id="edit-title" name="title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm font-bold">
+>>>>>>> 580bab1 (llama uwu)
                 </div>
 
                 <div>
-                     <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                     <input type="date" id="edit-date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                     <label for="edit-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                     <input type="date" id="edit-date" name="date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-                        <input type="time" id="edit-start-time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="edit-start-time" class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                        <input type="time" id="edit-start-time" name="start_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-                        <input type="time" id="edit-end-time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                        <label for="edit-end-time" class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                        <input type="time" id="edit-end-time" name="end_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                     </div>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                    <select id="edit-status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+                    <label for="edit-status" class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select id="edit-status" name="status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
                         <option value="scheduled">Programada</option>
                         <option value="completed">Completada</option>
                         <option value="cancelled">Cancelada</option>
@@ -368,12 +480,36 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Flatpickr for multiple dates
-        flatpickr("#single-dates", {
+        const singleDatesPicker = flatpickr("#single-dates", {
             mode: "multiple",
             dateFormat: "Y-m-d",
             locale: "es",
             minDate: "today"
         });
+
+        // Initialize flatpickr for batch start_date (to allow toggling minDate)
+        const batchStartPicker = flatpickr("input[name='start_date']", {
+            dateFormat: "Y-m-d",
+            locale: "es",
+            minDate: "today"
+        });
+
+        // Toggle allowing past dates based on checkbox
+        const pastCheck = document.getElementById('is_past_session');
+        if(pastCheck){
+            pastCheck.addEventListener('change', (e)=>{
+                if(e.target.checked) singleDatesPicker.set('minDate', null);
+                else singleDatesPicker.set('minDate', 'today');
+            });
+        }
+
+        const pastCheckBatch = document.getElementById('is_past_session_batch');
+        if(pastCheckBatch){
+            pastCheckBatch.addEventListener('change', (e)=>{
+                if(e.target.checked) batchStartPicker.set('minDate', null);
+                else batchStartPicker.set('minDate', 'today');
+            });
+        }
 
         const calendarEl = document.getElementById('calendar');
         const therapistFilter = document.getElementById('therapistFilter');
@@ -387,6 +523,12 @@
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
             },
             navLinks: true, // permite hacer clic en día/semana para navegar
+            loading: function(isLoading) {
+                const spinner = document.getElementById('calendar-loading');
+                if (spinner) {
+                    spinner.style.display = isLoading ? 'flex' : 'none';
+                }
+            },
             events: {
                 url: "{{ url_for('admin.get_sessions_api') }}",
                 extraParams: function() {
@@ -575,6 +717,7 @@
                 // Conversion: (jsDay + 6) % 7
                 const pyDay = (dObj.getDay() + 6) % 7; 
                 
+                const isPast = document.getElementById('is_past_session')?.checked;
                 const payload = {
                     therapist_id: formData.get('therapist_id'),
                     patient_id: formData.get('patient_id'),
@@ -585,6 +728,8 @@
                     weeks: 1, // Just this week
                     days: [pyDay] // Only this day
                 };
+                // If the user explicitly marked this as a past (completed) session, set status accordingly
+                if (isPast) payload.status = 'completed';
 
                 const res = await fetch("{{ url_for('admin.batch_create_sessions') }}", {
                     method: 'POST',
@@ -595,16 +740,25 @@
                     body: JSON.stringify(payload)
                 });
                 
-                if (res.ok) successCount++;
-                else errors.push(dateStr);
+                if (res.ok) { 
+                    successCount++; 
+                } else {
+                    const errorData = await res.json();
+                    errors.push(`${dateStr} (${errorData.error || errorData.message || "Cruce de horario o Invalida"})`);
+                }
             }
 
             if (successCount > 0) {
+<<<<<<< HEAD
                 if (errors.length > 0) {
                     showToast(`${successCount} creadas. Error en fechas: ${errors.join(', ')}`, 'warning');
                 } else {
                     showToast(`${successCount} sesiones creadas exitosamente.`, 'success');
                 }
+=======
+                showToast(`${successCount} sesiones creadas exitosamente.`, 'success');
+                if(errors.length > 0) alert('No se pudieron agendar las siguientes fechas:\n' + errors.join('\n'));
+>>>>>>> 580bab1 (llama uwu)
                 closeModal();
                 calendar.refetchEvents();
             } else {
@@ -750,6 +904,7 @@
             return;
         }
 
+        const isPastBatch = document.getElementById('is_past_session_batch')?.checked;
         const payload = {
             therapist_id: formData.get('therapist_id'),
             patient_id: formData.get('patient_id'),
@@ -760,6 +915,7 @@
             weeks: formData.get('weeks'),
             days: days
         };
+        if (isPastBatch) payload.status = 'completed';
         
         // Basic validation
         if(!payload.therapist_id || !payload.patient_id || !payload.start_date || !payload.start_time || !payload.end_time) {

@@ -25,7 +25,9 @@ def auto_generate_billing_reminder(app):
             today = datetime.now()
             
             # Find Active Patients (excluding dropped out/inactive)
-            patients = User.query.filter_by(role='jugador', is_active=True).all()
+            from app.repositories.patient_repository import PatientRepository
+            repo = PatientRepository()
+            patients = repo.get_active_patients()
             
             for p in patients:
                 # 0. Skip if email missing

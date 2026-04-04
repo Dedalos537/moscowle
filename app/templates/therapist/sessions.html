@@ -400,538 +400,218 @@
     </div>
 
     <!-- Scripts -->
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        // --- CONSTANTS & VARS ---
-        const SESSION_REVIEW_URL_TEMPLATE = "{{ url_for('therapist.session_review', appointment_id=999999) }}";
-        const API_URL = "{{ url_for('api.api_get_sessions') }}";
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    <script type="module">
+    import { apiFetch } from "{{ url_for('static', filename='js/api.js') }}";
+
+    const SessionsModule = (function(){
+      const SESSION_REVIEW_URL_TEMPLATE = "{{ url_for('therapist.session_review', appointment_id=999999) }}";
+      const SESSIONS_API = "{{ url_for('api.api_get_sessions') }}";
+      const SESSIONS_DAY_API = "{{ url_for('api.api_get_sessions_day') }}";
+      const PATIENTS_API = "{{ url_for('api.api_patients') }}";
+      const GAMES_API = "{{ url_for('api.api_list_games') }}";
+
+      const sel = {
+        grid: '#calendar-grid', monthLabel: '#calendar-month-label', dayContainer: '#day-sessions', dayTitle: '#day-sessions-title', daySubtitle: '#day-sessions-subtitle',
+        filterSearch: '#filter-search', filterStatus: '#filter-status', filterTime: '#filter-time',
+        mobilePrev: '#mobile-cal-prev', mobileNext: '#mobile-cal-next', mobileDateLabel: '#mobile-date-label', mobileFullDate: '#mobile-full-date',
+        listSection: '#sessions-list-section', filtersSection: '#filters-section', btnViewAll: '#btn-view-all', sessionsTbody: '#sessions-tbody', sessionsMobileList: '#sessions-mobile-list', sessionsCount: '#sessions-count',
+        modalBackdrop: '#modal-backdrop', detailsModal: '#details-modal', editModal: '#edit-modal', createModal: '#create-modal', gamesModal: '#session-games-modal', newBtn: '#btn-new-session',
+        createForm: '#create-form', editForm: '#edit-form', patientSelect:'#patient-select', gamesSelect:'#games-select', multiDates:'#multi-dates', toast:'#toast', toastMsg:'#toast-message'
+      };
+
+      const state = { viewDate: new Date(), selectedDate: new Date(), currentMonthSessions: [], allSessions: [], filteredSessions: [], loading: false };
+      let patientsTomSelect, gamesTomSelect, datePicker;
+      let toastTimer = null;
+
+      function $ (s){ return document.querySelector(s); }
+      function $$ (s){ return document.querySelectorAll(s); }
+
+      function filterSessions() {
+        const query = $(sel.filterSearch)?.value.toLowerCase() || '';
+        const status = $(sel.filterStatus)?.value || 'Todas las sesiones';
         
-        // --- ELEMENTS ---
-        const gridEl = document.getElementById("calendar-grid");
-        const monthLabelEl = document.getElementById("calendar-month-label");
-        const daySessionsContainer = document.getElementById("day-sessions");
-        const dayTitle = document.getElementById("day-sessions-title");
-        const daySubtitle = document.getElementById("day-sessions-subtitle");
+        state.filteredSessions = state.currentMonthSessions.filter(s => {
+          const nameMatch = s.patient?.name?.toLowerCase().includes(query) || s.title?.toLowerCase().includes(query);
+          const statusMatch = status === 'Todas las sesiones' || 
+                             (status === 'Programadas' && s.status === 'scheduled') ||
+                             (status === 'Completadas' && s.status === 'completed') ||
+                             (status === 'Canceladas' && s.status === 'cancelled');
+          return nameMatch && statusMatch;
+        });
         
-        // Mobile UI Elements
-        const mobileCalPrev = document.getElementById("mobile-cal-prev");
-        const mobileCalNext = document.getElementById("mobile-cal-next");
-        const mobileDateLabel = document.getElementById("mobile-date-label");
-        const mobileFullDate = document.getElementById("mobile-full-date");
+        renderList(state.filteredSessions);
+      }
 
-        // List / Filters
-        const listSection = document.getElementById("sessions-list-section");
-        const filtersSection = document.getElementById("filters-section");
-        const btnViewAll = document.getElementById("btn-view-all");
-        const sessionsTbody = document.getElementById("sessions-tbody");
-        const sessionsMobileList = document.getElementById("sessions-mobile-list");
-        const sessionsCount = document.getElementById("sessions-count");
-        
-        // Modals
-        const modalBackdrop = document.getElementById("modal-backdrop");
-        const detailsModal = document.getElementById("details-modal");
-        const editModal = document.getElementById("edit-modal");
-        const createModal = document.getElementById("create-modal");
-        const gamesModal = document.getElementById("session-games-modal");
-        const newBtn = document.getElementById("btn-new-session");
+      function bindFilters() {
+        $(sel.filterSearch)?.addEventListener('input', filterSessions);
+        $(sel.filterStatus)?.addEventListener('change', filterSessions);
+      }
 
-        // Forms
-        const createForm = document.getElementById("create-form");
-        const editForm = document.getElementById("edit-form");
+      function showToast(msg, type='info'){
+        const t = $(sel.toast); const tm = $(sel.toastMsg); if(!t||!tm) return;
+        tm.textContent = msg;
+        t.classList.remove('hidden');
+        if(toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(()=> t.classList.add('hidden'), 3000);
+      }
 
-        // State
-        let viewDate = new Date(); // Month view
-        let selectedDate = new Date(); // Currently selected day
-        let currentMonthSessions = [];
-        let allSessions = [];
-        
-        // Libraries
-        let patientsTomSelect, gamesTomSelect, datePicker;
+      function pad(n){ return String(n).padStart(2,'0'); }
+      function isoDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+      function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+      function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+      const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-        // --- CALENDAR LOGIC ---
+      async function fetchMonthEvents(start,end){
+        const s = isoDate(start); const e = isoDate(end);
+        try{ return await apiFetch(`${SESSIONS_API}?start=${s}&end=${e}`, { method: 'GET' }); }catch(err){ console.error(err); return []; }
+      }
 
-        function pad(n) { return n.toString().padStart(2, "0"); }
-        function isoDate(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
-        function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-        function endOfMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
-        
-        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      function renderGrid(events){
+        const grid = $(sel.grid); if(!grid) return; grid.innerHTML='';
+        const first = startOfMonth(state.viewDate); const last = endOfMonth(state.viewDate); const startDay = (first.getDay()+6)%7; const totalCells=42;
+        const toDateMap = {};
+        (events||[]).forEach(ev=>{ const k = (ev.start||ev.start_time||'').split('T')[0]; if(!toDateMap[k]) toDateMap[k]=[]; toDateMap[k].push(ev); });
 
-        async function fetchMonthEvents(start, end) {
-             const s = isoDate(start);
-             const e = isoDate(end);
-             try {
-                const res = await fetch(`{{ url_for('api.api_get_sessions') }}?start=${s}&end=${e}`);
-                if(res.ok) return await res.json();
-             } catch(e) { console.error(e); }
-             return [];
+        for(let i=0;i<totalCells;i++){
+          const dayOffset = i - startDay + 1; const cellDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth(), dayOffset); const iso=isoDate(cellDate);
+          const isCurrentMonth = cellDate.getMonth()===state.viewDate.getMonth(); const isSelected = iso===isoDate(state.selectedDate); const isToday = iso===isoDate(new Date());
+          const el = document.createElement('div');
+          el.className = `aspect-square rounded-soft border p-1 text-center cursor-pointer relative transition-all ${isCurrentMonth?'border-gray-200 text-textDark':'border-transparent text-gray-300'} ${isSelected?'!bg-primary !text-white !border-primary shadow-md':'hover:bg-gray-50'} ${isToday && !isSelected? 'border-primary border-2 font-bold text-primary':''}`;
+          const span = document.createElement('span'); span.className='text-xs md:text-sm z-10 relative font-medium'; span.textContent = cellDate.getDate(); el.appendChild(span);
+          if(toDateMap[iso]){ const dots = document.createElement('div'); dots.className='absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5'; toDateMap[iso].slice(0,3).forEach(ev=>{ const d=document.createElement('div'); d.className=`w-1.5 h-1.5 rounded-full ${ev.status==='scheduled'?'bg-primary': ev.status==='completed'?'bg-blue-400':'bg-orange-400'}`; if(isSelected) d.className += ' bg-white'; dots.appendChild(d); }); el.appendChild(dots);} 
+          el.addEventListener('click', ()=>{ state.selectedDate = cellDate; renderMonth(); loadDaySessions(cellDate); });
+          grid.appendChild(el);
         }
+      }
 
-        function renderGrid(events) {
-            gridEl.innerHTML = "";
-            const first = startOfMonth(viewDate);
-            const last = endOfMonth(viewDate);
-            const startDay = (first.getDay() + 6) % 7; // Monday based
-            const daysInMonth = last.getDate();
-            const totalCells = 42;
-            
-            const toDateMap = {};
-            events.forEach(e => {
-                const k = e.start.split("T")[0];
-                if(!toDateMap[k]) toDateMap[k] = [];
-                toDateMap[k].push(e);
+      async function renderMonth(){
+        const monthLabel = $(sel.monthLabel); if(monthLabel) monthLabel.textContent = `${monthNames[state.viewDate.getMonth()]} ${state.viewDate.getFullYear()}`;
+        const events = await fetchMonthEvents(startOfMonth(state.viewDate), endOfMonth(state.viewDate)); 
+        state.currentMonthSessions = events; 
+        state.filteredSessions = events;
+        renderGrid(events);
+      }
+
+      async function loadDaySessions(date){
+        const iso = isoDate(date); const mobileLabel = $(sel.mobileDateLabel); const mobileFull = $(sel.mobileFullDate);
+        if(mobileLabel){ const t=new Date(); mobileLabel.textContent = (iso===isoDate(t))? 'Hoy' : dayOfWeek(date); if(mobileFull) mobileFull.textContent = date.toLocaleDateString('es-ES',{day:'numeric', month:'long', year:'numeric'}); }
+        const container = $(sel.dayContainer); if(!container) return; container.innerHTML = '<div class="py-4 text-center"><i class="fas fa-spinner fa-spin text-primary"></i></div>';
+        try{
+          const offset = new Date().getTimezoneOffset();
+          const data = await apiFetch(`${SESSIONS_DAY_API}?date=${iso}&timezone_offset=${offset}`, { method: 'GET' });
+          const sessions = data.sessions || [];
+          $(sel.dayTitle).textContent = `Sesiones — ${iso}`;
+          if(sessions.length===0){ container.innerHTML = '<p class="text-sm text-center text-gray-500 py-4">No hay sesiones para este día.</p>'; }
+          else{
+            container.innerHTML = '';
+            sessions.forEach(s=>{
+              const time = new Date(s.start||s.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+              const div = document.createElement('div'); div.className='bg-white border border-gray-100 rounded-soft p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+              const statusColor = s.status==='scheduled'?'text-blue-600 bg-blue-50': s.status==='completed'?'text-green-600 bg-green-50':'text-gray-600 bg-gray-50';
+              div.innerHTML = `
+                <div class="flex justify-between items-start mb-2"><span class="font-bold text-gray-800">${time}</span><span class="text-xs px-2 py-1 rounded-full ${statusColor}">${s.status}</span></div>
+                <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">${s.patient?.name?.charAt(0)||'?'}</div><div class="truncate"><p class="text-sm font-semibold truncate leading-tight">${s.patient?.name||'Paciente'}</p><p class="text-xs text-gray-500 truncate">${s.title||'Terapia'}</p></div></div>
+                <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors"><i class="fas fa-camera mr-1"></i> Revisar / Imágenes</a>
+              `;
+              div.addEventListener('click', (e)=>{ if(e.target.closest('a')) return; renderDetails(s); openModal($(sel.detailsModal)); });
+              container.appendChild(div);
             });
+          }
+          $(sel.daySubtitle).textContent = `${sessions.length} sesión(es)`;
+        }catch(err){ console.error(err); container.innerHTML = '<p class="text-red-500 text-sm">Error cargando sesiones.</p>'; }
+      }
 
-            for(let i = 0; i < totalCells; i++) {
-                const dayOffset = i - startDay + 1;
-                const cellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), dayOffset);
-                const iso = isoDate(cellDate);
-                const isCurrentMonth = cellDate.getMonth() === viewDate.getMonth();
-                const isSelected = iso === isoDate(selectedDate);
-                const isToday = iso === isoDate(new Date());
+      function dayOfWeek(d){ const days=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"]; return days[d.getDay()]; }
 
-                const el = document.createElement("div");
-                el.className = `aspect-square rounded-soft border p-1 text-center cursor-pointer relative transition-all 
-                    ${isCurrentMonth ? 'border-gray-200 text-textDark' : 'border-transparent text-gray-300'}
-                    ${isSelected ? '!bg-primary !text-white !border-primary shadow-md' : 'hover:bg-gray-50'}
-                    ${isToday && !isSelected ? 'border-primary border-2 font-bold text-primary' : ''}
-                `;
-                
-                // Day Number
-                const span = document.createElement("span");
-                span.className = "text-xs md:text-sm z-10 relative font-medium";
-                span.textContent = cellDate.getDate();
-                el.appendChild(span);
+      // Delegated UI actions
+      function onClick(e){
+        const a = e.target.closest('[data-action]');
+        if(a){ const action = a.dataset.action; if(action==='open-create') return openCreate(); if(action==='view-all') return viewAll(); if(action==='close-modal') return closeModals(); if(action==='edit' || action==='delete') return handleListAction(action, a.dataset.id); }
+        // close buttons
+        if(e.target.closest('[data-close-modal]')) return closeModals();
+      }
 
-                // Dots
-                if(toDateMap[iso]) {
-                    const dots = document.createElement("div");
-                    dots.className = "absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5";
-                    toDateMap[iso].slice(0, 3).forEach(ev => {
-                         const d = document.createElement("div");
-                         d.className = `w-1.5 h-1.5 rounded-full ${ev.status === 'scheduled' ? 'bg-primary' : ev.status === 'completed' ? 'bg-blue-400' : 'bg-orange-400'}`;
-                         if(isSelected) d.className += " bg-white"; 
-                         dots.appendChild(d);
-                    });
-                    el.appendChild(dots);
-                }
+      function bindNavButtons(){
+        const prev = $(sel.monthLabel) && document.getElementById('cal-prev'); const next = document.getElementById('cal-next');
+        if(prev) prev.addEventListener('click', ()=>{ state.viewDate.setMonth(state.viewDate.getMonth()-1); renderMonth(); });
+        if(next) next.addEventListener('click', ()=>{ state.viewDate.setMonth(state.viewDate.getMonth()+1); renderMonth(); });
+        const mPrev = $(sel.mobilePrev); const mNext = $(sel.mobileNext);
+        if(mPrev) mPrev.addEventListener('click', ()=>{ state.selectedDate.setDate(state.selectedDate.getDate()-1); if(state.selectedDate.getMonth()!==state.viewDate.getMonth()){ state.viewDate = new Date(state.selectedDate); renderMonth(); } else renderMonth(); loadDaySessions(state.selectedDate); });
+        if(mNext) mNext.addEventListener('click', ()=>{ state.selectedDate.setDate(state.selectedDate.getDate()+1); if(state.selectedDate.getMonth()!==state.viewDate.getMonth()){ state.viewDate = new Date(state.selectedDate); renderMonth(); } else renderMonth(); loadDaySessions(state.selectedDate); });
+      }
 
-                el.addEventListener("click", () => {
-                   selectedDate = cellDate;
-                   renderMonth(); // Refresh grid highlight
-                   loadDaySessions(cellDate);
-                });
-                gridEl.appendChild(el);
-            }
-        }
+      function viewAll(){ 
+        const ls=$(sel.listSection), fs=$(sel.filtersSection); 
+        if(ls) ls.classList.remove('hidden'); 
+        if(fs) fs.classList.remove('hidden'); 
+        filterSessions();
+      }
 
-        async function renderMonth() {
-            monthLabelEl.textContent = `${monthNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
-            const events = await fetchMonthEvents(startOfMonth(viewDate), endOfMonth(viewDate));
-            currentMonthSessions = events;
-            renderGrid(events);
-        }
+      function renderList(list){ const tbody=$(sel.sessionsTbody), mlist=$(sel.sessionsMobileList), sc=$(sel.sessionsCount); if(!tbody||!mlist) return; tbody.innerHTML=''; mlist.innerHTML=''; if(sc) sc.textContent = `Mostrando ${list.length} sesiones`; (list||[]).sort((a,b)=> new Date(b.start)-new Date(a.start)).forEach(s=>{ const d=new Date(s.start); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); const tr=document.createElement('tr'); tr.className='hover:bg-gray-50 transition-colors'; tr.innerHTML = `<td class="px-6 py-4"><div class="text-sm font-medium text-gray-900">${s.patient?.name||'-'}</div></td><td class="px-6 py-4 text-sm text-gray-500">${dateStr} ${timeStr}</td><td class="px-6 py-4 text-sm">${s.title||'-'}</td><td class="px-6 py-4 text-sm">${s.duration||60} min</td><td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 font-medium">${s.status}</span></td><td class="px-6 py-4 text-sm font-medium flex gap-2"><button data-action="edit" data-id="${s.id}" class="text-blue-600 hover:text-blue-900">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 hover:text-red-900">Borrar</button></td>`; tbody.appendChild(tr); const card = document.createElement('div'); card.className='bg-white p-4 mb-3 rounded-lg shadow-sm border border-gray-200'; card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="font-bold text-textDark">${s.patient?.name}</span><span class="text-xs bg-gray-100 px-2 py-1 rounded font-medium">${s.status}</span></div><div class="text-sm text-gray-500 mb-2">${dateStr} - ${timeStr}</div><div class="flex justify-end gap-3 pt-2 border-t border-gray-50"><button data-action="edit" data-id="${s.id}" class="text-blue-600 text-sm font-medium">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 text-sm font-medium">Borrar</button></div>`; mlist.appendChild(card); });
+      }
 
-        // --- DAY SESSIONS ---
-        async function loadDaySessions(date) {
-             const iso = isoDate(date);
-             // Update Mobile Header
-             if(mobileDateLabel) {
-                 const t = new Date();
-                 const isToday = iso === isoDate(t);
-                 mobileDateLabel.textContent = isToday ? "Hoy" : dayOfWeek(date);
-                 mobileFullDate.textContent = date.toLocaleDateString("es-ES", { day: 'numeric', month: 'long', year: 'numeric'});
-             }
+      async function handleListAction(action,id){ if(action==='edit') return editSession(id); if(action==='delete') return deleteSession(id); }
 
-             daySessionsContainer.innerHTML = '<div class="py-4 text-center"><i class="fas fa-spinner fa-spin text-primary"></i></div>';
-             
-             try {
-                 const offset = new Date().getTimezoneOffset();
-                 const res = await fetch(`{{ url_for('api.api_get_sessions_day') }}?date=${iso}&timezone_offset=${offset}`);
-                 const data = await res.json();
-                 
-                 dayTitle.textContent = `Sesiones — ${iso}`;
-                 if(!data.sessions || data.sessions.length === 0) {
-                     daySessionsContainer.innerHTML = '<p class="text-sm text-center text-gray-500 py-4">No hay sesiones para este día.</p>';
-                 } else {
-                     daySessionsContainer.innerHTML = "";
-                     data.sessions.forEach(s => {
-                         const time = new Date(s.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                         const div = document.createElement("div");
-                         div.className = "bg-white border border-gray-100 rounded-soft p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer";
-                         div.onclick = (e) => {
-                             if(e.target.closest("a")) return;
-                             // open details
-                             renderDetails(s);
-                             openModal(detailsModal);
-                         };
-                         
-                         const statusColor = s.status === 'scheduled' ? 'text-blue-600 bg-blue-50' : 
-                                           s.status === 'completed' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50';
-                         
-                         div.innerHTML = `
-                            <div class="flex justify-between items-start mb-2">
-                                <span class="font-bold text-gray-800">${time}</span>
-                                <span class="text-xs px-2 py-1 rounded-full ${statusColor}">${s.status}</span>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">
-                                    ${s.patient?.name?.charAt(0) || '?'}
-                                </div>
-                                <div class="truncate">
-                                    <p class="text-sm font-semibold truncate leading-tight">${s.patient?.name || 'Paciente'}</p>
-                                    <p class="text-xs text-gray-500 truncate">${s.title || 'Terapia'}</p>
-                                </div>
-                            </div>
-                            <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors">
-                                <i class="fas fa-camera mr-1"></i> Revisar / Imágenes
-                            </a>
-                         `;
-                         daySessionsContainer.appendChild(div);
-                     });
-                 }
-                 daySubtitle.textContent = `${data.sessions.length} sesión(es)`;
-             } catch(e) {
-                 daySessionsContainer.innerHTML = '<p class="text-red-500 text-sm">Error cargando sesiones.</p>';
-             }
-        }
-        
-        function dayOfWeek(d) {
-            const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            return days[d.getDay()];
-        }
-        
-        // --- NAVIGATION LISTENERS ---
-        document.getElementById("cal-prev").onclick = () => {
-            viewDate.setMonth(viewDate.getMonth() - 1);
-            renderMonth();
-        };
-        document.getElementById("cal-next").onclick = () => {
-            viewDate.setMonth(viewDate.getMonth() + 1);
-            renderMonth();
-        };
-        
-        // Mobile Nav Logic (Day by Day)
-        if(mobileCalPrev) {
-            mobileCalPrev.onclick = () => {
-                selectedDate.setDate(selectedDate.getDate() - 1);
-                // Sync month view if dragging across months
-                if(selectedDate.getMonth() !== viewDate.getMonth()) {
-                    viewDate = new Date(selectedDate);
-                    renderMonth();
-                } else {
-                     // Just update grid highlight (by reusing renderMonth logic for ease, or optimising)
-                     renderMonth(); 
-                }
-                loadDaySessions(selectedDate);
-            };
-        }
-        if(mobileCalNext) {
-            mobileCalNext.onclick = () => {
-                selectedDate.setDate(selectedDate.getDate() + 1);
-                if(selectedDate.getMonth() !== viewDate.getMonth()) {
-                    viewDate = new Date(selectedDate);
-                    renderMonth();
-                } else {
-                    renderMonth();
-                }
-                loadDaySessions(selectedDate);
-            };
-        }
+      async function editSession(id){
+        let s = state.allSessions.find(x=>x.id==id) || state.currentMonthSessions.find(x=>x.id==id);
+        if(!s){ try{ s = await apiFetch(`${SESSIONS_API}/${id}`, { method: 'GET' }); }catch(err){ showToast('Error fetching session','error'); return; } }
+        const form = $(sel.editForm); if(!form) return; form.querySelector('[name=id]').value = s.id; form.querySelector('[name=title]').value = s.title || '';
+        const toLocal = iso=>{ const d=new Date(iso); const pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+        form.querySelector('[name=start_time]').value = toLocal(s.start_time||s.start||s.start_at||s.startDate||new Date()); form.querySelector('[name=end_time]').value = toLocal(s.end_time||s.end||new Date()); form.querySelector('[name=status]').value = s.status || 'scheduled'; form.querySelector('[name=notes]').value = s.notes || '';
+        openModal($(sel.editModal));
+      }
 
-        // --- VIEW ALL / LIST LOGIC ---
-        btnViewAll.onclick = () => {
-             listSection.classList.remove("hidden");
-             filtersSection.classList.remove("hidden");
-             listSection.scrollIntoView({behavior: "smooth"});
-             renderList(currentMonthSessions); // Default to current month
-        };
+      async function deleteSession(id){ if(!confirm('¿Eliminar sesión?')) return; try{ await apiFetch(`${SESSIONS_API}/${id}`, { method: 'DELETE' }); await renderMonth(); await loadDaySessions(state.selectedDate); showToast('Sesión eliminada','success'); }catch(err){ showToast(err.message||'Error eliminando','error'); }}
 
-        function renderList(list) {
-            sessionsTbody.innerHTML = "";
-            sessionsMobileList.innerHTML = "";
-            sessionsCount.textContent = `Mostrando ${list.length} sesiones`;
-            
-            list.sort((a,b) => new Date(b.start) - new Date(a.start)); // Descending
+      function openModal(m){ const mb=$(sel.modalBackdrop); if(mb) mb.classList.remove('hidden'); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex'); }
+      function closeModals(){ const mb=$(sel.modalBackdrop); if(mb) mb.classList.add('hidden'); [sel.detailsModal, sel.editModal, sel.createModal, sel.gamesModal].forEach(s=>{ const m=$(s); if(m){ m.classList.add('hidden'); m.classList.remove('flex'); }}); }
 
-            list.forEach(s => {
-                const date = new Date(s.start);
-                const dateStr = date.toLocaleDateString();
-                const timeStr = date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                
-                // Desktop
-                const tr = document.createElement("tr");
-                tr.className = "hover:bg-gray-50 transition-colors";
-                tr.innerHTML = `
-                 <td class="px-6 py-4">
-                    <div class="text-sm font-medium text-gray-900">${s.patient?.name || '-'}</div>
-                 </td>
-                 <td class="px-6 py-4 text-sm text-gray-500">${dateStr} ${timeStr}</td>
-                 <td class="px-6 py-4 text-sm">${s.title || '-'}</td>
-                 <td class="px-6 py-4 text-sm">${s.duration || 60} min</td>
-                 <td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 font-medium">${s.status}</span></td>
-                 <td class="px-6 py-4 text-sm font-medium flex gap-2">
-                    <button class="text-blue-600 hover:text-blue-900" data-action="edit" data-id="${s.id}">Editar</button>
-                    <button class="text-red-600 hover:text-red-900" data-action="delete" data-id="${s.id}">Borrar</button>
-                 </td>
-                `;
-                sessionsTbody.appendChild(tr);
-                
-                // Mobile
-                const card = document.createElement("div");
-                card.className = "bg-white p-4 mb-3 rounded-lg shadow-sm border border-gray-200";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-bold text-textDark">${s.patient?.name}</span>
-                        <span class="text-xs bg-gray-100 px-2 py-1 rounded font-medium">${s.status}</span>
-                    </div>
-                    <div class="text-sm text-gray-500 mb-2">${dateStr} - ${timeStr}</div>
-                    <div class="flex justify-end gap-3 pt-2 border-t border-gray-50">
-                        <button class="text-blue-600 text-sm font-medium" data-action="edit" data-id="${s.id}">Editar</button>
-                        <button class="text-red-600 text-sm font-medium" data-action="delete" data-id="${s.id}">Borrar</button>
-                    </div>
-                `;
-                sessionsMobileList.appendChild(card);
-            });
-        }
+      function openCreate(){ const f=$(sel.createForm); if(f) f.reset(); if(patientsTomSelect) patientsTomSelect.clear(); openModal($(sel.createModal)); loadFormDependencies(); }
 
-        // --- GLOBAL ACTIONS ---
-        function handleActionClick(e) {
-             const btn = e.target.closest("button");
-             if(!btn) return;
-             const action = btn.dataset.action;
-             const id = btn.dataset.id;
-             if(action === "edit") editSession(id);
-             if(action === "delete") deleteSession(id);
-        }
-        sessionsTbody.addEventListener("click", handleActionClick);
-        sessionsMobileList.addEventListener("click", handleActionClick);
+      async function loadFormDependencies(){ if(patientsTomSelect) return; try{ const patients = await apiFetch(PATIENTS_API, { method: 'GET' }); const pSel=$(sel.patientSelect); if(pSel){ pSel.innerHTML=''; (patients||[]).forEach(p=>{ const opt=document.createElement('option'); opt.value=p.id; opt.text = p.name||p.username; pSel.appendChild(opt); }); patientsTomSelect = new TomSelect(pSel, { plugins:['remove_button'], maxItems:5 }); }
+          const gData = await apiFetch(GAMES_API, { method: 'GET' }); const gSel=$(sel.gamesSelect); if(gSel && gData.games){ gSel.innerHTML=''; gData.games.forEach(g=>{ const opt=document.createElement('option'); opt.value=g; opt.text = g.replace('.html','').replace(/_/g,' '); gSel.appendChild(opt); }); gamesTomSelect = new TomSelect(gSel, { plugins:['remove_button'] }); }
+        }catch(err){ console.error('Error dependencies',err); }
+        if(!datePicker){ datePicker = flatpickr(sel.multiDates, { mode: 'multiple', dateFormat: 'Y-m-d' }); }
+      }
 
-        async function editSession(id) {
-             // Find session data
-             // Simple way: re-fetch or find in current list
-             let s = allSessions.find(x => x.id == id) || currentMonthSessions.find(x => x.id == id);
-             if(!s) {
-                 // Fetch lazy
-                 try {
-                     const r = await fetch(API_URL + "/" + id);
-                     s = await r.json();
-                 } catch(e) { return alert("Error fetching session"); }
-             }
-             
-             // Fill form
-             editForm.querySelector("[name=id]").value = s.id;
-             editForm.querySelector("[name=title]").value = s.title;
-             
-             // Time inputs need correct format
-             // s.start_time comes as ISO. datetime-local needs YYYY-MM-DDTHH:mm
-             const toLocal = (iso) => {
-                 const d = new Date(iso);
-                 const pad = n => n.toString().padStart(2,"0");
-                 return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-             };
-             
-             editForm.querySelector("[name=start_time]").value = toLocal(s.start_time || s.start);
-             editForm.querySelector("[name=end_time]").value = toLocal(s.end_time || s.end);
-             editForm.querySelector("[name=status]").value = s.status;
-             editForm.querySelector("[name=notes]").value = s.notes || "";
-             
-             openModal(editModal);
-        }
-        
-        async function deleteSession(id) {
-            if(!confirm("¿Eliminar sesión?")) return;
-            try {
-                await fetch(API_URL + "/" + id, {
-                    method: "DELETE",
-                    headers: {"X-CSRFToken": csrfToken}
-                });
-                renderMonth();
-                loadDaySessions(selectedDate);
-                // Also remove manually from list if open
-                // renderList(...)
-            } catch(e) { alert("Error deleting"); }
-        }
-        
-        // --- MODAL & FORM LOGIC ---
-        function openModal(m) {
-            modalBackdrop.classList.remove("hidden");
-            m.classList.remove("hidden");
-            m.classList.add("flex");
-        }
-        function closeModals() {
-            modalBackdrop.classList.add("hidden");
-            [detailsModal, editModal, createModal, gamesModal].forEach(m => {
-                m.classList.add("hidden");
-                m.classList.remove("flex");
-            });
-        }
-        
-        document.querySelectorAll("[data-close-modal]").forEach(b => b.onclick = closeModals);
-        modalBackdrop.onclick = closeModals;
+      // forms
+      async function submitEditForm(e){ e.preventDefault(); const form=$(sel.editForm); if(!form) return; const fd=new FormData(form); const id = fd.get('id'); const payload = { title: fd.get('title'), start_time: new Date(fd.get('start_time')).toISOString(), end_time: new Date(fd.get('end_time')).toISOString(), status: fd.get('status'), notes: fd.get('notes') };
+        const btn = form.querySelector('button[type=submit]'); const prev = btn ? btn.innerHTML : null; if(btn){ btn.disabled=true; btn.innerHTML='Guardando...'; }
+        try{ await apiFetch(`${SESSIONS_API}/${id}`, { method: 'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) }); closeModals(); await renderMonth(); await loadDaySessions(state.selectedDate); showToast('Sesión actualizada','success'); }catch(err){ showToast(err.message||'Error actualizando','error'); }finally{ if(btn){ btn.disabled=false; btn.innerHTML = prev; } }
+      }
 
-        // New Session
-        if(newBtn) {
-            newBtn.onclick = () => {
-                createForm.reset();
-                if(patientsTomSelect) patientsTomSelect.clear();
-                openModal(createModal);
-                loadFormDependencies();
-            };
-        }
+      async function submitCreateForm(e){ e.preventDefault(); const form=$(sel.createForm); if(!form) return; const fd=new FormData(form); const dates = datePicker ? datePicker.selectedDates : [new Date()]; if(dates.length===0){ showToast('Selecciona fecha','error'); return; } const patientIds = patientsTomSelect ? patientsTomSelect.getValue() : []; const timeStart = fd.get('time_start'); const timeEnd = fd.get('time_end'); const btn = form.querySelector('button[type=submit]'); const prev = btn?btn.innerHTML:null; if(btn){ btn.disabled=true; btn.innerHTML='Guardando...'; }
+        try{ for(const d of dates){ const iso = isoDate(d); const payload = { patient_id: Array.isArray(patientIds)?patientIds:[patientIds], title: fd.get('title'), start_time: `${iso}T${timeStart}:00`, end_time: `${iso}T${timeEnd}:00`, status: fd.get('status'), notes: fd.get('notes'), location: fd.get('location'), games: gamesTomSelect?gamesTomSelect.getValue():[] }; await apiFetch(SESSIONS_API, { method: 'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) }); }
+          closeModals(); await renderMonth(); await loadDaySessions(state.selectedDate); showToast('Sesiones creadas exitosamente','success');
+        }catch(err){ showToast(err.message||'Error creando sesión','error'); console.error(err); }
+        finally{ if(btn){ btn.disabled=false; btn.innerHTML=prev; } }
+      }
 
-        async function loadFormDependencies() {
-            if(patientsTomSelect) return; // already loaded
-            try {
-                // Patients
-                const pRes = await fetch("{{ url_for('api.api_patients') }}");
-                const patients = await pRes.json();
-                const pSel = document.getElementById("patient-select");
-                pSel.innerHTML = "";
-                patients.forEach(p => {
-                    const opt = document.createElement("option");
-                    opt.value = p.id;
-                    opt.text = p.name || p.username;
-                    pSel.appendChild(opt);
-                });
-                patientsTomSelect = new TomSelect(pSel, { plugins: ['remove_button'], maxItems: 5 });
+      function renderDetails(s){ const c = document.getElementById('details-content'); if(!c) return; const date = new Date(s.start||s.start_time); c.innerHTML = `<div class="space-y-3"><div class="flex justify-between border-b pb-2"><span class="text-gray-500">Paciente</span><span class="font-medium">${s.patient?.name||'Unknown'}</span></div><div class="flex justify-between border-b pb-2"><span class="text-gray-500">Fecha</span><span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span></div><div><span class="block text-gray-500 text-sm mb-1">Notas</span><p class="bg-gray-50 p-3 rounded text-sm">${s.notes||'Sin notas'}</p></div><div class="pt-2"><a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-soft font-medium block text-center hover:bg-opacity-90 transition shadow-sm"><i class="fas fa-camera mr-2"></i> Ir a Revisión / Juegos</a></div></div>`; }
 
-                // Games
-                const gRes = await fetch("{{ url_for('api.api_list_games') }}");
-                const gData = await gRes.json();
-                const gSel = document.getElementById("games-select");
-                if(gData.games) {
-                    gData.games.forEach(g => {
-                        const opt = document.createElement("option");
-                        opt.value = g;
-                        opt.text = g.replace(".html","").replace(/_/g, " ");
-                        gSel.appendChild(opt);
-                    });
-                     gamesTomSelect = new TomSelect(gSel, { plugins: ['remove_button'] });
-                }
-            } catch(e) { console.error("Error dependencies", e); }
-            
-            // Flatpickr
-            if(!datePicker) {
-                datePicker = flatpickr("#multi-dates", { mode: "multiple", dateFormat: "Y-m-d" });
-            }
-        }
+      function attach(){ 
+        document.addEventListener('click', onClick); 
+        bindNavButtons(); 
+        bindFilters();
+        const tb=$(sel.sessionsTbody); 
+        const ml=$(sel.sessionsMobileList); 
+        if(tb) tb.addEventListener('click', (e)=>{ const btn=e.target.closest('button'); if(btn && btn.dataset.action) handleListAction(btn.dataset.action, btn.dataset.id); }); 
+        if(ml) ml.addEventListener('click', (e)=>{ const btn=e.target.closest('button'); if(btn && btn.dataset.action) handleListAction(btn.dataset.action, btn.dataset.id); }); 
+        const editF=$(sel.editForm); 
+        const createF=$(sel.createForm); 
+        if(editF) editF.addEventListener('submit', submitEditForm); 
+        if(createF) createF.addEventListener('submit', submitCreateForm); 
+        const newB=$(sel.newBtn); 
+        if(newB) newB.addEventListener('click', ()=>{ if($(sel.createForm)) $(sel.createForm).reset(); if(patientsTomSelect) patientsTomSelect.clear(); openModal($(sel.createModal)); loadFormDependencies(); }); 
+        const modalB=$(sel.modalBackdrop); 
+        if(modalB) modalB.addEventListener('click', (e)=>{ if(e.target===modalB) closeModals(); });
+        $(sel.btnViewAll)?.addEventListener('click', viewAll);
+      }
 
-        editForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const fd = new FormData(editForm);
-            const id = fd.get("id");
-            const payload = {
-                title: fd.get("title"),
-                start_time: new Date(fd.get("start_time")).toISOString(),
-                end_time: new Date(fd.get("end_time")).toISOString(),
-                status: fd.get("status"),
-                notes: fd.get("notes")
-            };
-            
-            await fetch(API_URL + "/" + id, {
-                method: "PUT",
-                 headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken },
-                 body: JSON.stringify(payload)
-            });
-            closeModals();
-            renderMonth();
-            loadDaySessions(selectedDate);
-            alert("Sesión actualizada");
-        }
+      return { init: async function(){ attach(); await renderMonth(); await loadDaySessions(state.selectedDate); } };
+    })();
 
-        // Create Submit
-        createForm.onsubmit = async (e) => {
-             e.preventDefault();
-             const fd = new FormData(createForm);
-             
-             // If flatpickr initialized, use it, else fallback
-             let dates = datePicker ? datePicker.selectedDates : [new Date()];
-             if(dates.length === 0) return alert("Selecciona fecha");
-             
-             const patientIds = patientsTomSelect ? patientsTomSelect.getValue() : [];
-             const timeStart = fd.get("time_start");
-             const timeEnd = fd.get("time_end");
-             
-             // Loading state
-             const btn = createForm.querySelector("button[type=submit]");
-             btn.disabled = true; btn.textContent = "Guardando...";
-
-             try {
-                 for(let d of dates) {
-                     const iso = isoDate(d);
-                     const payload = {
-                         patient_id: Array.isArray(patientIds) ? patientIds : [patientIds],
-                         title: fd.get("title"),
-                         start_time: `${iso}T${timeStart}:00`,
-                         end_time: `${iso}T${timeEnd}:00`,
-                         status: fd.get("status"),
-                         notes: fd.get("notes"),
-                         location: fd.get("location"),
-                         games: gamesTomSelect ? gamesTomSelect.getValue() : []
-                     };
-                     
-                     await fetch(API_URL, {
-                         method: "POST",
-                         headers: {"Content-Type":"application/json", "X-CSRFToken": csrfToken },
-                         body: JSON.stringify(payload)
-                     });
-                 }
-                 closeModals();
-                 renderMonth();
-                 loadDaySessions(selectedDate);
-                 alert("Sesiones creadas exitosamente");
-             } catch(e) {
-                 alert("Error creando sesión");
-                 console.error(e);
-             } finally {
-                 btn.disabled = false; btn.textContent = "Crear Sesión";
-             }
-        };
-        
-        // --- TOAST ---
-        function showToast(msg) {
-            const t = document.getElementById("toast");
-            const tm = document.getElementById("toast-message");
-            tm.textContent = msg;
-            t.classList.remove("hidden");
-            setTimeout(() => t.classList.add("hidden"), 3000);
-        }
-
-        // --- INIT ---
-        renderMonth();
-        loadDaySessions(selectedDate);
-        
-        // Helper
-        function renderDetails(s) {
-            const c = document.getElementById("details-content");
-            const date = new Date(s.start || s.start_time);
-            
-            c.innerHTML = `
-                <div class="space-y-3">
-                    <div class="flex justify-between border-b pb-2">
-                         <span class="text-gray-500">Paciente</span>
-                         <span class="font-medium">${s.patient?.name || 'Unknown'}</span>
-                    </div>
-                    <div class="flex justify-between border-b pb-2">
-                         <span class="text-gray-500">Fecha</span>
-                         <span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span>
-                    </div>
-                     <div>
-                         <span class="block text-gray-500 text-sm mb-1">Notas</span>
-                         <p class="bg-gray-50 p-3 rounded text-sm">${s.notes || 'Sin notas'}</p>
-                    </div>
-                    <div class="pt-2">
-                        <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-soft font-medium block text-center hover:bg-opacity-90 transition shadow-sm">
-                           <i class="fas fa-camera mr-2"></i> Ir a Revisión / Juegos
-                        </a>
-                    </div>
-                </div>
-            `;
-        }
-
-      });
+    document.addEventListener('DOMContentLoaded', ()=> SessionsModule.init());
     </script>
     
     <!-- Toast helper styles -->

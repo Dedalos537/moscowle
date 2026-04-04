@@ -109,10 +109,11 @@ class PaymentService:
             )
             db.session.add(new_payment)
             
-            # 2. Update User
-            user.payment_amount = amount # Update current plan amount if needed, or just track history? 
-            # Assuming payment_amount on user is the 'agreed monthly amount', let's not overwrite it with this transaction unless intent is to update plan.
-            # But the requirement says "assign a payment date".
+            # 2. Update User session tracking based on billing info
+            billing_info = self.get_billing_info(patient_id)
+            if billing_info:
+                user.sessions_total = billing_info.get('suggested_sessions', 4)
+                user.sessions_attended = 0 # Reset consumed sessions for new period
             
             if next_due_date_str:
                 if isinstance(next_due_date_str, str):
@@ -227,6 +228,7 @@ class PaymentService:
     def get_billing_info(self, patient_id):
         """
         Calculates suggested next billing date and checks for unbilled absences.
+        Uses the new logic: 4, 8, 12 sessions.
         """
         user = User.query.get(patient_id)
         if not user:
@@ -234,47 +236,56 @@ class PaymentService:
 
         # 1. Calculate Suggested Next Due Date
         today = datetime.utcnow().date()
+        # Si el usuario ya tiene un vencimiento, usamos ese como base para el siguiente
+        # Si no, usamos hoy como fecha de inicio.
         base_date = user.payment_due_date if user.payment_due_date else today
         
-        # If the due date is in the past, maybe we should start from today? 
-        # Usually we want to extend from the previous expiration to keep the cycle.
-        # But if it's way in the past, maybe reset to today + cycle.
-        # For now, let's just add to base_date to be consistent with subscription logic.
+        # Calcular el día de pago preferido
+        pay_day = user.payment_day or base_date.day
         
-        suggested_date = None
+        # Lógica para avanzar exactamente 1 mes o 15 días según el plan
+        import calendar
         if user.payment_plan == 'quincenal':
             suggested_date = base_date + timedelta(days=15)
-        else: # default monthly
-            # Add month logic handling end of month
-            month = base_date.month % 12 + 1
-            year = base_date.year + (base_date.month // 12)
-            try:
-                suggested_date = base_date.replace(year=year, month=month)
-            except ValueError:
-                # Handle cases like Jan 31 -> Feb 28
-                import calendar
-                last_day = calendar.monthrange(year, month)[1]
-                suggested_date = base_date.replace(year=year, month=month, day=last_day)
+        else:
+            # Mensual o por defecto: avanzar al mismo día del mes siguiente
+            next_month = base_date.month % 12 + 1
+            next_year = base_date.year + (base_date.month // 12)
+            last_day = calendar.monthrange(next_year, next_month)[1]
+            target_day = min(pay_day, last_day)
+            suggested_date = base_date.replace(year=next_year, month=next_month, day=target_day)
 
-        # 2. Count Absences since last payment
-        # Find last payment date
-        last_payment = Payment.query.filter_by(patient_id=patient_id).order_by(Payment.date.desc()).first()
-        last_payment_date = last_payment.date if last_payment else datetime.min
+        # 2. Sesiones sugeridas según la modalidad (1, 2, 3 veces por semana)
+        # El campo payment_plan puede guardar '1', '2', '3' para las veces por semana
+        # o 'mensual', 'quincenal' para la frecuencia de pago.
         
-        # Query absences
-        # We need to filter appointments where status='completed' (or scheduled/past?) AND attendance='absent'
-        # And date > last_payment_date
-        absences_count = Appointment.query.filter(
-            Appointment.patient_id == patient_id,
-            Appointment.attendance == 'absent',
-            Appointment.start_time > last_payment_date
-        ).count()
+        suggested_sessions = 4 # Default 1 vez por semana
+        
+        # Normalizar el plan para la comparación
+        plan = str(user.payment_plan).lower()
+        if '2' in plan:
+            suggested_sessions = 8
+        elif '3' in plan or 'tres' in plan:
+            suggested_sessions = 12
+        elif 'quincenal' in plan:
+            suggested_sessions = 4 # 2 semanas x 2 veces? Depende de la lógica de negocio, 
+                                   # lo dejamos en 4 por ahora o según modalidad_2
+
+        # Lógica de recuperación: si sobraron sesiones del ciclo anterior
+        # (Solo aplica si el plan es individual)
+        remaining = (user.sessions_total or 0) - (user.sessions_attended or 0)
+        to_recover = 0
+        if remaining != 0 and user.plan_type == 'individual':
+             # Máximo recuperamos/ajustamos 2 sesiones para no descuadrar demasiado
+             to_recover = max(-2, min(2, remaining))
 
         return {
             'suggested_date': suggested_date.strftime('%Y-%m-%d'),
-            'absences': absences_count,
+            'suggested_sessions': max(1, suggested_sessions + to_recover),
+            'recovery_msg': f"Ajuste de {to_recover} sesiones (pendientes: {remaining})" if to_recover != 0 else None,
             'current_plan': user.payment_plan,
-            'current_amount': user.payment_amount
+            'current_amount': user.payment_amount or 0.0,
+            'absences': user.sessions_total - user.sessions_attended if user.sessions_total > user.sessions_attended else 0
         }
     
     def get_financial_summary(self):

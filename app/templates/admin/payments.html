@@ -8,30 +8,96 @@
 </div>
 {% endblock %}
 
+{% block header_action %}{% endblock %}
+
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="p-4 md:p-8 space-y-6">
   
-  <!-- Flash Messages -->
+  <!-- Flash Messages - Interactive with Animations -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="mb-6 space-y-2">
+      <div class="mb-6 space-y-3">
       {% for category, message in messages %}
-        <div class="px-4 py-3 rounded-soft text-sm font-medium
-          {% if category == 'success' %}bg-green-100 text-green-700
-          {% elif category == 'error' %}bg-red-100 text-red-700
-          {% elif category == 'warning' %}bg-yellow-100 text-yellow-700
-          {% else %}bg-blue-100 text-blue-700{% endif %}">
-          {{ message }}
+        {% if category == 'success' %}
+          {% set bg_color = 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' %}
+          {% set border_color = 'border-l-4 border-green-500' %}
+          {% set text_color = 'text-green-800 dark:text-green-200' %}
+          {% set icon = 'fa-check-circle' %}
+          {% set icon_color = 'text-green-600 dark:text-green-400' %}
+        {% elif category == 'error' %}
+          {% set bg_color = 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20' %}
+          {% set border_color = 'border-l-4 border-red-500' %}
+          {% set text_color = 'text-red-800 dark:text-red-200' %}
+          {% set icon = 'fa-exclamation-circle' %}
+          {% set icon_color = 'text-red-600 dark:text-red-400' %}
+        {% elif category == 'warning' %}
+          {% set bg_color = 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' %}
+          {% set border_color = 'border-l-4 border-amber-500' %}
+          {% set text_color = 'text-amber-800 dark:text-amber-200' %}
+          {% set icon = 'fa-exclamation-triangle' %}
+          {% set icon_color = 'text-amber-600 dark:text-amber-400' %}
+        {% else %}
+          {% set bg_color = 'bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20' %}
+          {% set border_color = 'border-l-4 border-blue-500' %}
+          {% set text_color = 'text-blue-800 dark:text-blue-200' %}
+          {% set icon = 'fa-info-circle' %}
+          {% set icon_color = 'text-blue-600 dark:text-blue-400' %}
+        {% endif %}
+        
+        <div class="notification-alert {{ bg_color }} {{ border_color }} px-4 py-4 rounded-lg shadow-md font-medium text-sm flex items-start gap-3 transform transition-all duration-300 hover:shadow-lg hover:-translate-x-1 animate-slideInDown group cursor-pointer"
+             onclick="this.classList.add('scale-95', 'opacity-0'); setTimeout(() => this.remove(), 300)">
+          <div class="flex-shrink-0 mt-0.5">
+            <i class="fas {{ icon }} {{ icon_color }} text-lg animate-pulse"></i>
+          </div>
+          <div class="flex-1">
+            <p class="{{ text_color }}">{{ message }}</p>
+          </div>
+          <button type="button" class="flex-shrink-0 {{ text_color }} hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100"
+                  onclick="event.stopPropagation(); this.closest('.notification-alert').classList.add('scale-95', 'opacity-0'); setTimeout(() => this.closest('.notification-alert').remove(), 300)">
+            <i class="fas fa-times text-lg"></i>
+          </button>
         </div>
       {% endfor %}
       </div>
+      <style>
+        @keyframes slideInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slideInDown {
+          animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+      </style>
     {% endif %}
   {% endwith %}
 
   <!-- KPI Cards -->
   <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- Ruta Guiada / Alertas de Configuración -->
+      <div id="setup-guidance-container" class="hidden md:col-span-4 bg-orange-50 border-l-4 border-orange-400 p-4 rounded-soft shadow-sm animate-pulse">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                <div>
+                    <h4 class="text-sm font-bold text-orange-800">Acción Requerida: Pacientes sin Configuración</h4>
+                    <p class="text-xs text-orange-700">Hay <span id="incomplete-users-count" class="font-bold">0</span> pacientes sin modalidad o día de pago establecido.</p>
+                </div>
+            </div>
+            <button onclick="startSetupGuia()" class="px-4 py-2 bg-orange-600 text-white text-xs font-bold rounded-soft hover:bg-orange-700 transition-colors shadow-sm">
+                Configurar Ahora <i class="fas fa-chevron-right ml-1"></i>
+            </button>
+        </div>
+      </div>
+
       <div class="bg-surface p-4 rounded-soft shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider mb-1">Total Recaudado (Mes)</div>
           <div class="text-2xl font-bold text-textDark" id="kpi_total_revenue">S/ 0.00</div>
@@ -508,8 +574,17 @@
             <i class="fas fa-times"></i>
         </button>
         <h3 class="text-xl font-bold text-charcoal mb-4">Registrar Pago</h3>
-        <p class="text-sm text-gray-600 mb-4">Para: <span id="payment_patient_name" class="font-bold"></span></p>
+        <p class="text-sm text-gray-600 mb-2">Para: <span id="payment_patient_name" class="font-bold"></span></p>
         
+        <!-- Recalculation Alert / Guidance -->
+        <div id="recalc_alert" class="hidden mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800 flex items-start gap-2 animate-fade-in">
+            <i class="fas fa-calculator mt-0.5"></i>
+            <div>
+                <span class="font-bold">Cálculo Automático:</span>
+                <p id="recalc_msg">Ajustando sesiones por modalidad...</p>
+            </div>
+        </div>
+
         <form action="{{ url_for('admin.register_payment') }}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="patient_id" id="payment_patient_id">

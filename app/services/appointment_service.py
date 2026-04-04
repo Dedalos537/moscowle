@@ -84,6 +84,12 @@ class AppointmentService:
             Appointment.start_time <= end_dt
         ).all()
 
+    def get_all_appointments(self, start_dt, end_dt):
+        return Appointment.query.filter(
+            Appointment.start_time >= start_dt,
+            Appointment.start_time <= end_dt
+        ).all()
+
     def get_upcoming_sessions(self, therapist_id, limit=20):
         now = datetime.utcnow()
         return Appointment.query.filter(

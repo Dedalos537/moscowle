@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from app.models import User, db, patient_therapist, therapist_sede
+from app.models import db, patient_therapist, therapist_sede
 from sqlalchemy.exc import SQLAlchemyError
+from app.repositories.patient_repository import PatientRepository
 import logging
 
 class PatientBlockManager:
@@ -10,7 +11,8 @@ class PatientBlockManager:
     - Tracks unlocked sessions based on payment.
     """
     def __init__(self, patient_id):
-        self.patient = User.query.get(patient_id)
+        self.repo = PatientRepository()
+        self.patient = self.repo.get_patient(patient_id)
         self.logger = logging.getLogger('automation.block_manager')
 
     def calculate_sessions(self, frequency):
@@ -78,8 +80,12 @@ class PatientBlockManager:
         
         If Attended >= Max Allowed, block scheduling new ones?
         """
-        total_paid = 0 # Query sum(payments)
-        rate = self.patient.session_cost
+        total_paid = 0
+        try:
+            total_paid = self.repo.get_total_paid(self.patient.id) if self.patient else 0
+        except Exception:
+            total_paid = 0
+        rate = getattr(self.patient, 'session_cost', 0)
         if rate == 0: return 9999
         
         return int(total_paid / rate)

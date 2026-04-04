@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
-from app.models import User, Payment, Appointment, db
+from app.models import Payment, Appointment, db
 from flask import current_app
 from sqlalchemy import func
+from app.repositories.patient_repository import PatientRepository
 import logging
+
 
 class PatientFinancialStatus:
     def __init__(self, patient_id):
-        self.patient = User.query.get(patient_id)
+        self.repo = PatientRepository()
+        self.patient = self.repo.get_patient(patient_id)
         self.logger = logging.getLogger('automation.financial')
 
     def calculate_balance(self):
@@ -17,17 +20,19 @@ class PatientFinancialStatus:
         if not self.patient:
             return 0.0
 
-        # 1. Total Payments
-        total_paid = db.session.query(func.sum(Payment.amount)).filter(
-            Payment.patient_id == self.patient.id,
-            Payment.status == 'completed'
-        ).scalar() or 0.0
+        # 1. Total Payments (use repository helper)
+        total_paid = 0.0
+        try:
+            total_paid = float(self.repo.get_total_paid(self.patient.id)) if self.patient else 0.0
+        except Exception:
+            total_paid = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+                Payment.patient_id == getattr(self.patient, 'id', None),
+                Payment.status == 'completed'
+            ).scalar() or 0.0
 
         # 2. Total Cost Incurred (Sessions Attended * Rate)
-        # We use the current session_cost. 
-        # Ideally, we should track cost at the time of session, but for MVP we use current rate.
-        sessions_attended = self.patient.sessions_attended or 0
-        current_rate = self.patient.session_cost or 0.0
+        sessions_attended = getattr(self.patient, 'sessions_attended', 0) or 0
+        current_rate = getattr(self.patient, 'session_cost', 0.0) or 0.0
         
         # Consider block history if complex? 
         # For now, simplistic approach:

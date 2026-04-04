@@ -1,0 +1,4 @@
+User: Administrador
+Email: diegocenteno537@gmail.com
+Role: admin
+Active: True
