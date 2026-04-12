@@ -1,0 +1,25 @@
+{% extends "patient/base.html" %}
+
+{% block title %}Mi Calendario - Moscowle{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-charcoal mb-2">Mi Calendario</h2>
+    <p class="text-gray-600">Gestiona tus citas y sesiones de terapia</p>
+</div>
+
+<!-- Upcoming Appointments -->
+{% include "patient/components/_calendar_appointments.html" %}
+
+<!-- Calendar View -->
+{% include "patient/components/_calendar_view.html" %}
+
+<!-- Day details modal -->
+{% include "patient/components/_day_modal.html" %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/patient/calendar.js') }}"></script>
+{% endblock %}

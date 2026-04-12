@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html class="fontawesome-i2svg-active fontawesome-i2svg-complete">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Game Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        body { font-family: 'Inter', sans-serif; }
+        .soft-shadow { box-shadow: 0 10px 30px -5px rgba(117, 168, 58, 0.15); }
+        .game-button { transition: all 0.3s ease; transform: scale(1); }
+        .game-button:hover { transform: scale(1.05); box-shadow: 0 15px 40px -5px rgba(117, 168, 58, 0.25); }
+        .game-button.active { background: #75a83a !important; transform: scale(0.95); }
+        .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .modal-backdrop { backdrop-filter: blur(8px); background: rgba(117, 168, 58, 0.1); }
+    </style>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { 'olive': '#75a83a','cream': '#f9fcf8','charcoal': '#374151','light-green': '#ecfccb' }, borderRadius: { 'soft': '1.5rem' } } } }
+    </script>
+</head>
+<body class="bg-light-green min-h-screen font-inter">
+    <div id="game-interface" class="relative w-full h-screen overflow-hidden">
+        <div id="game-header" class="absolute top-0 left-0 right-0 z-10 p-8">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-16 h-16 bg-white rounded-soft soft-shadow flex items-center justify-center">
+                        <i class="fa-solid fa-brain text-olive text-2xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-semibold text-charcoal">Moscowle</h1>
+                        <p class="text-charcoal/70">Ejercicio de Reflejos</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="bg-white rounded-soft soft-shadow px-6 py-3">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-stopwatch text-olive"></i>
+                            <span id="timer" class="font-semibold text-charcoal text-lg">01:47</span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-soft soft-shadow px-6 py-3">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-star text-amber-400"></i>
+                            <span id="score" class="font-semibold text-charcoal text-lg">0</span>
+                        </div>
+                    </div>
+                    <button class="w-14 h-14 bg-white rounded-soft soft-shadow flex items-center justify-center hover:bg-gray-50 transition-colors">
+                        <i class="fa-solid fa-pause text-charcoal text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="game-area" class="absolute inset-0 pt-32 pb-16 px-8">
+            <div class="w-full h-full relative">
+                <div id="instruction-panel" class="absolute top-8 left-1/2 transform -translate-x-1/2 bg-white rounded-soft soft-shadow px-8 py-4">
+                    <p class="text-charcoal text-lg font-medium text-center">Toca los círculos verdes tan rápido como puedas</p>
+                </div>
+                <div id="game-grid" class="w-full h-full flex items-center justify-center">
+                    <div class="grid grid-cols-4 gap-8 max-w-4xl">
+                        <!-- 12 buttons grid -->
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-olive rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center pulse-animation"><div class="w-4 h-4 bg-white rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-olive rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center pulse-animation"><div class="w-4 h-4 bg-white rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                        <div class="w-32 h-32 bg-white rounded-full soft-shadow game-button cursor-pointer flex items-center justify-center hover:bg-gray-50"><div class="w-4 h-4 bg-gray-200 rounded-full"></div></div>
+                    </div>
+                </div>
+                <div id="progress-panel" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-soft soft-shadow px-8 py-4">
+                    <div class="flex items-center space-x-6">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-charcoal font-medium">Progreso:</span>
+                            <div class="w-48 h-3 bg-gray-200 rounded-full overflow-hidden"><div class="w-1/3 h-full bg-olive transition-all duration-500"></div></div>
+                            <span class="text-olive font-semibold">33%</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-bullseye text-olive"></i>
+                            <span class="text-charcoal font-medium">Aciertos: <span class="text-olive font-semibold">12/15</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="completion-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50">
+        <div class="bg-white rounded-soft soft-shadow p-12 max-w-md w-full mx-4 text-center transform scale-95 transition-transform duration-300">
+            <div class="w-24 h-24 bg-olive rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fa-solid fa-check text-white text-3xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-charcoal mb-4">¡Excelente trabajo!</h2>
+            <p class="text-charcoal/70 text-lg mb-8 leading-relaxed">Has completado el ejercicio con gran precisión. Tu tiempo de reacción ha mejorado significativamente.</p>
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-cream rounded-soft p-4"><div class="text-2xl font-bold text-olive">15</div><div class="text-sm text-charcoal/70">Aciertos</div></div>
+                <div class="bg-cream rounded-soft p-4"><div class="text-2xl font-bold text-olive">0.8s</div><div class="text-sm text-charcoal/70">Tiempo Promedio</div></div>
+                <div class="bg-cream rounded-soft p-4"><div class="text-2xl font-bold text-olive">98%</div><div class="text-sm text-charcoal/70">Precisión</div></div>
+            </div>
+            <div class="flex space-x-4">
+                <button class="flex-1 bg-olive text-white font-semibold py-4 px-6 rounded-soft hover:bg-olive/90 transition-colors">Continuar</button>
+                <button class="flex-1 bg-cream text-charcoal font-semibold py-4 px-6 rounded-soft hover:bg-gray-100 transition-colors">Ver Resultados</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let score = 0; let timeLeft = 150; let gameActive = true;
+        function updateTimer() {
+            if (timeLeft > 0 && gameActive) {
+                timeLeft--; const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+                document.getElementById('timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                setTimeout(updateTimer, 1000);
+            } else if (timeLeft === 0) { endGame(); }
+        }
+        function updateScore() { document.getElementById('score').textContent = score; }
+        function endGame() {
+            gameActive = false; const modal = document.getElementById('completion-modal');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { const box = document.querySelector('#completion-modal > div'); box.classList.remove('scale-95'); box.classList.add('scale-100'); }, 100);
+        }
+        document.querySelectorAll('.game-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.classList.contains('bg-olive')) {
+                    score++; updateScore(); this.classList.remove('bg-olive','pulse-animation'); this.classList.add('bg-white','hover:bg-gray-50');
+                    const dot = this.querySelector('div'); dot.classList.remove('bg-white'); dot.classList.add('bg-gray-200');
+                    setTimeout(() => {
+                        const buttons = document.querySelectorAll('.game-button'); const randomButton = buttons[Math.floor(Math.random()*buttons.length)];
+                        if (!randomButton.classList.contains('bg-olive')) {
+                            randomButton.classList.remove('bg-white','hover:bg-gray-50'); randomButton.classList.add('bg-olive','pulse-animation');
+                            const d = randomButton.querySelector('div'); d.classList.remove('bg-gray-200'); d.classList.add('bg-white');
+                        }
+                    }, 1000 + Math.random() * 2000);
+                }
+            });
+        });
+        document.getElementById('completion-modal').addEventListener('click', function(e) { if (e.target === this) { this.classList.add('hidden'); this.classList.remove('flex'); } });
+        updateTimer();
+    </script>
+</body>
+</html>

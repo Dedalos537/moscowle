@@ -1,0 +1,556 @@
+{% extends "therapist/base.html" %}
+{% set active_page = "sessions" %}
+
+{% block title %}Revisión de Sesión - {{ appointment.title }}{% endblock %}
+
+{% block header_content %}
+<div>
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
+        <a href="{{ url_for('therapist.sessions') }}" class="hover:text-primary transition-colors">
+            <i class="fas fa-arrow-left mr-1"></i> <span class="hidden md:inline">Volver a Sesiones</span>
+        </a>
+        <span class="text-gray-300 hidden md:inline">/</span>
+        <span class="hidden md:inline">Revisión</span>
+    </div>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Revisión de Sesión</h2>
+    <p class="text-xs md:text-sm text-gray-500">
+        {{ appointment.start_time.strftime('%d %b %Y, %H:%M') }} • <span class="hidden md:inline">Paciente: </span><span class="font-medium text-primary">{{ appointment.patient.username }}</span>
+    </p>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<div class="flex items-center gap-2">
+    <!-- Save (Icon only on mobile, text on desktop) -->
+    <button onclick="saveNotes()" id="btnSave" class="h-10 px-4 bg-white border border-gray-200 text-textDark rounded-full hover:bg-gray-50 transition-all shadow-sm font-medium flex items-center justify-center gap-2" title="Guardar cambios">
+        <i class="fas fa-save text-primary"></i> 
+        <span class="hidden md:inline">Guardar</span>
+    </button>
+    
+    <!-- File Check Input -->
+    <input type="file" id="uploadImageInput" class="hidden" accept="image/*,.pdf" onchange="uploadImage(this)">
+    
+    <!-- Upload File (Round button) -->
+    <button onclick="document.getElementById('uploadImageInput').click()" class="w-10 h-10 bg-white border border-gray-200 text-textDark rounded-full hover:bg-gray-50 transition-all shadow-sm flex items-center justify-center" title="Subir archivo">
+        <i class="fas fa-file-upload text-gray-500 hover:text-primary transition-colors"></i>
+    </button>
+
+    <!-- Camera (Primary Round button) -->
+    <button onclick="openCameraModal()" id="btnCamera" class="h-10 px-4 md:px-5 bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+        <i class="fas fa-camera"></i> 
+        <span class="hidden md:inline">Cámara</span>
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p-6 md:p-8 h-auto lg:h-[calc(100vh-140px)] flex flex-col">
+    
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-full">
+        
+        <!-- Left Column: Context & Notes (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-6 h-auto lg:h-full overflow-visible lg:overflow-hidden">
+            
+            <!-- Session Info Card -->
+            <div class="bg-white rounded-soft shadow-soft p-5 shrink-0 border border-gray-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="font-bold text-textDark text-lg">{{ appointment.title or 'Sesión de Terapia' }}</h3>
+                        <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                            {% if appointment.attendance == 'absent' %}bg-red-100 text-red-700
+                            {% elif appointment.status == 'completed' %}bg-green-100 text-green-700
+                            {% elif appointment.status == 'scheduled' %}bg-blue-100 text-blue-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ appointment.status }}
+                        </span>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                </div>
+                
+                <div class="space-y-3 pt-3 border-t border-gray-50">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-2">Juegos Asignados</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for game in appointment.games_list %}
+                                <span class="px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-xs font-medium text-gray-600 flex items-center gap-2">
+                                    <i class="fas fa-gamepad text-primary opacity-70"></i> {{ game }}
+                                </span>
+                            {% else %}
+                                <span class="text-sm text-gray-400 italic">Sin juegos asignados</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-gray-50">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-2">Asistencia</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="setAttendance('present')" 
+                                class="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 hover:shadow-sm
+                                {% if appointment.attendance == 'present' %}bg-green-100 text-green-700 border-green-200 ring-2 ring-green-500 ring-opacity-20 border
+                                {% else %}bg-gray-50 text-gray-600 hover:bg-green-50 border border-gray-200{% endif %}">
+                                <i class="fas fa-check-circle"></i> Asistió
+                            </button>
+                            <button onclick="setAttendance('absent')" 
+                                class="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 hover:shadow-sm
+                                {% if appointment.attendance == 'absent' %}bg-red-100 text-red-700 border-red-200 ring-2 ring-red-500 ring-opacity-20 border
+                                {% else %}bg-gray-50 text-gray-600 hover:bg-red-50 border border-gray-200{% endif %}">
+                                <i class="fas fa-times-circle"></i> No Asistió
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes Editor -->
+            <div class="bg-white rounded-soft shadow-soft flex flex-col flex-grow overflow-hidden border border-gray-100 min-h-[300px] lg:min-h-0">
+                <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-bold text-textDark flex items-center gap-2 text-sm uppercase tracking-wide">
+                        <i class="fas fa-sticky-note text-yellow-500"></i> Notas Clínicas
+                    </h3>
+                    <span class="text-xs text-gray-400 italic" id="lastSaved">Sin cambios pendientes</span>
+                </div>
+                <div class="flex-grow relative group">
+                    <textarea id="sessionNotes" 
+                        class="w-full h-full p-5 resize-none focus:outline-none text-textDark leading-relaxed bg-transparent"
+                        style="font-size: 0.95rem;"
+                        placeholder="Escribe aquí las observaciones detalladas de la sesión, progreso del paciente, y recomendaciones...">{{ appointment.notes or '' }}</textarea>
+                    
+                    <!-- Save hint -->
+                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <span class="text-xs text-gray-300 bg-white px-2 py-1 rounded shadow-sm border border-gray-100">Auto-guardado habilitado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Visual Evidence (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col h-auto lg:h-full overflow-hidden bg-white rounded-soft shadow-soft border border-gray-100 w-full max-w-full">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-white z-10 sticky top-0 md:static">
+                <h3 class="font-bold text-textDark flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <i class="fas fa-images text-purple-500"></i> Evidencia Visual
+                </h3>
+                <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md">{{ images|length }} archivos</span>
+            </div>
+            
+            <!-- Main Viewer -->
+            <div class="flex-grow bg-gray-50 relative flex items-center justify-center overflow-hidden p-2 md:p-6 group select-none rounded-b-lg md:rounded-b-none md:rounded-tr-lg min-h-[300px] md:min-h-0 w-full">
+                {% if images %}
+                    <div class="relative w-full h-full flex items-center justify-center">
+                        <img src="{{ url_for('static', filename=images[0].image_path) }}" 
+                             class="max-w-full max-h-full object-contain shadow-lg rounded-lg transition-transform duration-300"
+                             id="currentImage"
+                             data-id="{{ images[0].id }}"> <!-- Added data-id for deletion -->
+                        
+                        <!-- Actions Overlay -->
+                        <div class="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0">
+                             <button onclick="toggleFullscreen()" class="w-10 h-10 bg-white/90 backdrop-blur-sm text-gray-700 rounded-full shadow-lg hover:bg-white hover:text-primary transition-all flex items-center justify-center" title="Pantalla completa">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <button onclick="deleteCurrentImage()" class="w-10 h-10 bg-white/90 backdrop-blur-sm text-red-500 rounded-full shadow-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center" title="Eliminar imagen">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center p-8 border-2 border-dashed border-gray-300 rounded-2xl hover:border-primary hover:bg-green-50/20 transition-all cursor-pointer group flex flex-col items-center justify-center h-64 w-full max-w-md mx-auto"
+                         onclick="document.getElementById('uploadImageInput').click()">
+                        <div class="w-16 h-16 bg-gray-100 group-hover:bg-white text-gray-400 group-hover:text-primary rounded-full flex items-center justify-center mb-4 shadow-sm transition-colors duration-300">
+                            <i class="fas fa-cloud-upload-alt text-2xl"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-gray-700 mb-1">Sin evidencia visual</h4>
+                        <p class="text-sm text-gray-500 mb-6 px-4">Documenta el progreso subiendo fotos o documentos.</p>
+                        <button class="px-5 py-2 bg-white border border-gray-200 text-sm text-primary font-medium rounded-full hover:shadow-md hover:border-primary transition-all">
+                            Subir Archivos
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Thumbnails Strip -->
+            {% if images %}
+            <div class="h-24 border-t border-gray-100 p-3 bg-white overflow-x-auto flex gap-3 items-center shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.03)] z-10 scrollbar-hide">
+                {% for img in images %}
+                    <div class="relative group cursor-pointer shrink-0 h-16 w-20 rounded-lg overflow-hidden border-2 {% if loop.first %}border-primary ring-2 ring-primary ring-opacity-20{% else %}border-transparent{% endif %} hover:border-primary transition-all thumbnail-item"
+                         onclick="showImage('{{ url_for('static', filename=img.image_path) }}', {{ img.id }}, this)">
+                        <img src="{{ url_for('static', filename=img.image_path) }}" 
+                             class="w-full h-full object-cover transition-opacity duration-200 {% if not loop.first %}opacity-60 group-hover:opacity-100{% endif %}">
+                    </div>
+                {% endfor %}
+                
+                <!-- Add button in strip -->
+                <button onclick="document.getElementById('uploadImageInput').click()" 
+                        class="shrink-0 h-16 w-16 rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:text-primary hover:border-primary hover:bg-green-50 transition-all gap-1 group">
+                    <i class="fas fa-plus text-sm group-hover:scale-110 transition-transform"></i>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Modal -->
+<div id="imageModal" class="fixed inset-0 z-[100] hidden bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 opacity-0">
+    <button onclick="closeFullscreen()" class="absolute top-6 right-6 text-white/70 hover:text-white text-3xl transition-colors z-50">
+        <i class="fas fa-times"></i>
+    </button>
+    <img src="" id="fullscreenImage" class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm transform scale-95 transition-transform duration-300">
+</div>
+
+<!-- Camera Modal -->
+<div id="cameraModal" class="fixed inset-0 z-[100] hidden bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300 opacity-0">
+    <div class="relative w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
+        <!-- Video container -->
+        <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center">
+            <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+            <canvas id="cameraCanvas" class="hidden"></canvas>
+            
+            <!-- Guides overlay -->
+            <div class="absolute inset-0 border border-white/20 pointer-events-none m-6 rounded-2xl opacity-50">
+                <!-- Corners -->
+                <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-lg"></div>
+                <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-lg"></div>
+                <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-lg"></div>
+                <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-lg"></div>
+                
+                <!-- Center point -->
+                <div class="absolute top-1/2 left-1/2 w-2 h-2 bg-white/50 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+            </div>
+            
+            <div class="absolute top-4 left-0 right-0 text-center pointer-events-none">
+                 <span class="px-3 py-1 bg-black/50 backdrop-blur-md text-white/90 text-xs font-medium rounded-full border border-white/10">
+                    Alinea el documento
+                 </span>
+            </div>
+        </div>
+
+        <!-- Controls (Dark Theme) -->
+        <div class="py-8 px-8 bg-black/90 backdrop-blur-xl border-t border-white/10 flex justify-between items-center relative shrink-0 z-20">
+            <!-- Cancel Button -->
+            <button onclick="closeCameraModal()" class="w-12 h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <!-- Shutter Button -->
+            <button onclick="takePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-transparent hover:scale-105 active:scale-95 transition-all duration-200 shadow-[0_0_20px_rgba(255,255,255,0.3)] group">
+                 <div class="w-16 h-16 bg-white rounded-full group-active:scale-90 transition-transform duration-150"></div>
+            </button>
+            
+            <!-- Gallery/Spacer (placeholder for future upload from camera roll) -->
+            <div class="w-12 h-12 flex items-center justify-center rounded-full text-white/50">
+                 <!-- Could be switch camera icon later -->
+                  <i class="fas fa-camera-rotate text-xl opacity-0"></i> 
+            </div> 
+        </div>
+    </div>
+</div>
+
+<script>
+const appointmentId = {{ appointment.id }};
+const csrfToken = "{{ csrf_token() }}"; // CSRF Token for security
+let saveTimeout;
+let videoStream = null;
+
+// Universal upload handler (File object or Input element)
+function uploadImage(inputOrFile) {
+    if (inputOrFile instanceof File) {
+        performUpload(inputOrFile);
+    } else if (inputOrFile.files && inputOrFile.files[0]) {
+        performUpload(inputOrFile.files[0]);
+    }
+}
+
+function performUpload(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('image_type', 'session_photo');
+    // Headers are tricky with FormData in fetch because Content-Type boundary is auto-set
+    // So we usually append to body for FormData or use X-CSRFToken header.
+    // Flask-WTF checks headers for 'X-CSRFToken'.
+
+    // Show loading state on camera button just in case
+    const btn = document.getElementById('btnCamera');
+    const originalContent = btn ? btn.innerHTML : '';
+    
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-primary text-white px-4 py-3 rounded-soft shadow-lg z-50 flex items-center gap-3 animate-fade-in-up';
+    toast.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo imagen...';
+    document.body.appendChild(toast);
+
+    if (btn) btn.disabled = true;
+
+    fetch(`{{ url_for('api.upload_session_image', appointment_id=appointment.id) }}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            toast.innerHTML = '<i class="fas fa-check"></i> Imagen subida correctamente';
+            toast.classList.replace('bg-primary', 'bg-green-500');
+            setTimeout(() => location.reload(), 1000); 
+        } else {
+            alert('Error: ' + data.error);
+            toast.remove();
+            if(btn) btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al subir la imagen');
+        toast.remove();
+        if(btn) btn.disabled = false;
+    });
+}
+
+async function openCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    const video = document.getElementById('cameraVideo');
+    
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' } // Prefer back camera
+        });
+        video.srcObject = videoStream;
+        
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        // Small delay to allow display:block to apply before opacity transition
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+        });
+    } catch (err) {
+        console.error("Error accessing camera:", err);
+        alert("No se pudo acceder a la cámara. Por favor verifica los permisos en tu navegador.");
+    }
+}
+
+function closeCameraModal() {
+    const modal = document.getElementById('cameraModal');
+    
+    // Animation out
+    modal.classList.add('opacity-0');
+    
+    // Stop stream
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }, 300);
+}
+
+function takePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+    const context = canvas.getContext('2d');
+    
+    // Check if video is playing
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        alert("La cámara aún se está iniciando...");
+        return;
+    }
+
+    // Set canvas dimensions to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to blob and upload
+    canvas.toBlob(blob => {
+        if (blob) {
+            // Create a File object
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            closeCameraModal();
+            uploadImage(file);
+        }
+    }, 'image/jpeg', 0.85); // 85% quality
+}
+
+
+function showImage(url, id, element) {
+    const img = document.getElementById('currentImage');
+    if (img) {
+        // Fade out
+        img.style.opacity = '0.5';
+        setTimeout(() => {
+            img.src = url;
+            img.dataset.id = id; // Update the ID for deletion
+            img.style.opacity = '1';
+        }, 150);
+    }
+    
+    // Update active state in thumbnails
+    document.querySelectorAll('.thumbnail-item').forEach(el => {
+        el.classList.remove('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
+        el.classList.add('border-transparent');
+        el.querySelector('img').classList.add('opacity-60');
+        el.querySelector('img').classList.remove('opacity-100');
+    });
+    
+    if (element) {
+        element.classList.remove('border-transparent');
+        element.classList.add('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
+        element.querySelector('img').classList.remove('opacity-60');
+        element.querySelector('img').classList.add('opacity-100');
+    }
+}
+
+function deleteCurrentImage() {
+    const img = document.getElementById('currentImage');
+    if (!img) return;
+    
+    const imageId = img.dataset.id;
+    if (!imageId) return;
+    
+    if (!confirm('¿Estás seguro de eliminar esta imagen? Esta acción no se puede deshacer.')) return;
+    
+    // Show deleting state (optional)
+    img.style.opacity = '0.3';
+    
+    const deleteUrl = "{{ url_for('api.delete_session_image', appointment_id=appointment.id, image_id=0) }}".replace('0', imageId);
+    
+    fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+            img.style.opacity = '1';
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Error al conectar con el servidor');
+        img.style.opacity = '1';
+    });
+}
+
+function toggleFullscreen() {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('fullscreenImage');
+    const currentImg = document.getElementById('currentImage');
+    
+    // Guard against empty state or null element
+    if (!currentImg) return;
+    
+    img.src = currentImg.src;
+    modal.classList.remove('hidden');
+    
+    // Animation frame for transition
+    requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        img.classList.remove('scale-95');
+        img.classList.add('scale-100');
+    });
+}
+
+function closeFullscreen() {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('fullscreenImage');
+    
+    modal.classList.add('opacity-0');
+    img.classList.remove('scale-100');
+    img.classList.add('scale-95');
+    
+    setTimeout(() => {
+        modal.classList.add('hidden');
+    }, 300);
+}
+
+// Close on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeFullscreen();
+        closeCameraModal();
+    }
+});
+
+function setAttendance(state) {
+    fetch("{{ url_for('api.api_update_session', session_id=appointment.id) }}", {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ attendance: state })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.id) { // Success check
+            location.reload();
+        } else {
+            alert('Error al actualizar asistencia');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar asistencia');
+    });
+}
+
+function saveNotes() {
+    const notes = document.getElementById('sessionNotes').value;
+    const btn = document.getElementById('btnSave');
+    const statusLabel = document.getElementById('lastSaved');
+    
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> <span class="hidden sm:inline">Guardando...</span>';
+    btn.disabled = true;
+
+    fetch("{{ url_for('api.api_update_session', session_id=appointment.id) }}", {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ notes: notes })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.innerHTML = '<i class="fas fa-check text-green-500"></i> <span class="hidden sm:inline">Guardado</span>';
+        statusLabel.textContent = 'Guardado a las ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        statusLabel.classList.add('text-green-600');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            statusLabel.classList.remove('text-green-600');
+        }, 2000);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar notas');
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    });
+}
+
+// Auto-save functionality
+const notesArea = document.getElementById('sessionNotes');
+if (notesArea) {
+    notesArea.addEventListener('input', () => {
+        const lbl = document.getElementById('lastSaved');
+        if(lbl) lbl.textContent = 'Escribiendo...';
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveNotes, 2000); // Auto-save after 2 seconds of inactivity
+    });
+}
+</script>
+{% endblock %}

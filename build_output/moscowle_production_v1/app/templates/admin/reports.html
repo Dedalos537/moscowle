@@ -1,0 +1,292 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_reports' %}
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Reportes y Finanzas</h2>
+  <p class="text-sm text-gray-500">Resumen operativo y financiero</p>
+</div>
+{% endblock %}
+{% block header_action %}{% endblock %}
+{% block content %}
+<div class="p-4 md:p-8 space-y-6">
+
+  <!-- Financial Section (Ticket 5) -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden border-l-4 border-olive">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-textDark">Resumen Financiero (Mes Actual)</h3>
+            <p class="text-gray-500 text-sm">Proyección de caja y ejecución.</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="generateIAReport(this)" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-soft hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Generar análisis estratégico con Llama 3.1">
+                <i class="fas fa-brain"></i> Análisis Llama AI
+            </button>
+            <button onclick="sendWeeklyReport(this)" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-soft hover:bg-blue-700 transition-colors flex items-center gap-2" title="Enviar ahora el resumen de deudores">
+                <i class="fas fa-envelope"></i> Reporte Semanal
+            </button>
+            <a href="{{ url_for('admin.export_payments_csv') }}" class="px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-soft hover:bg-gray-700 transition-colors flex items-center gap-2">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Real Income -->
+        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+            <span class="text-xs font-bold text-green-600 uppercase tracking-widest">Ingresos Reales</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_real) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Recaudado este mes</p>
+        </div>
+        
+        <!-- Expected Income -->
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Proyección</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_expected) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Si todos pagaran a tiempo</p>
+        </div>
+
+        <!-- Overdue -->
+        <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+            <span class="text-xs font-bold text-red-600 uppercase tracking-widest">Morosidad Acumulada</span>
+            <div class="text-3xl font-bold text-red-600 mt-2">S/ {{ "%.2f"|format(financials.overdue_amount) }}</div>
+            <p class="text-xs text-red-400 mt-1">{{ financials.overdue_users_count }} usuarios con deuda</p>
+        </div>
+        
+        <!-- Completion Rate -->
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-center items-center">
+             <!-- Circular Percent Placeholder or simple text -->
+             {% set percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+             <div class="text-2xl font-bold text-charcoal">{{ "%.1f"|format(percent) }}%</div>
+             <p class="text-xs text-gray-500 font-medium uppercase">Ejecución</p>
+             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                <div class="bg-olive h-1.5 rounded-full" style="width: {{ percent }}%"></div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Expenses and Net Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <span class="text-xs font-bold text-gray-600 uppercase tracking-widest">Gastos Totales</span>
+            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.expenses or 0) }}</div>
+            <p class="text-xs text-gray-500 mt-1">Nómina + Operativos</p>
+        </div>
+        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Utilidad Neta (Caja)</span>
+            <div class="text-3xl font-bold text-indigo-700 mt-2">S/ {{ "%.2f"|format(financials.net_profit or 0) }}</div>
+            <p class="text-xs text-indigo-400 mt-1">Ingresos Reales - Gastos</p>
+        </div>
+    </div>
+
+    <!-- Charts Area -->
+    <!-- Note: Adding simple CSS bar chart to avoid heavy JS libs if not present, but using Chart.js structure if desired later. 
+         For MVP, clean HTML CSS bars are safer and faster. -->
+    <div class="border-t border-gray-100 pt-6">
+        <h4 class="text-sm font-bold text-gray-500 uppercase mb-4">Comparativa Visual</h4>
+        <div class="space-y-4">
+            <!-- Bar: Expected -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Proyectado (Total)</span>
+                    <span class="font-bold text-gray-800">S/ {{ "%.2f"|format(financials.income_expected) }}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-blue-400 h-full rounded-full" style="width: 100%"></div>
+                </div>
+            </div>
+             <!-- Bar: Real -->
+             <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Recaudado (Real)</span>
+                    <span class="font-bold text-green-700">S/ {{ "%.2f"|format(financials.income_real) }}</span>
+                </div>
+                {% set real_percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-green-500 h-full rounded-full" style="width: {{ real_percent if real_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+            <!-- Bar: Overdue -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-gray-600">Deuda (Morosidad)</span>
+                    <span class="font-bold text-red-600">S/ {{ "%.2f"|format(financials.overdue_amount) }}</span>
+                </div>
+                 {% set overdue_percent = (financials.overdue_amount / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-red-400 h-full rounded-full" style="width: {{ overdue_percent if overdue_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Therapists Section -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Terapeutas</h3>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-3 py-2 text-left">Nombre</th>
+          <th class="px-3 py-2 text-left">Email</th>
+          <th class="px-3 py-2 text-left">Sesiones</th>
+          <th class="px-3 py-2 text-left">Precisión</th>
+        </tr></thead>
+        <tbody>
+          {% for t in therapists %}
+          <tr class="border-t">
+            <td class="px-3 py-2">{{ t.name }}</td>
+            <td class="px-3 py-2">{{ t.email }}</td>
+            <td class="px-3 py-2">{{ t.sessions }}</td>
+            <td class="px-3 py-2">{{ t.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for t in therapists %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-textDark">{{ t.name }}</p>
+            <p class="text-xs text-gray-500">{{ t.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ t.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-gray-600">
+          <span class="font-medium">{{ t.sessions }}</span> sesiones completadas
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Patients Section -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <h3 class="text-lg font-semibold text-textDark mb-3">Pacientes</h3>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        <thead class="bg-gray-50"><tr>
+          <th class="px-3 py-2 text-left">Nombre</th>
+          <th class="px-3 py-2 text-left">Email</th>
+          <th class="px-3 py-2 text-left">Juegos</th>
+          <th class="px-3 py-2 text-left">Precisión</th>
+        </tr></thead>
+        <tbody>
+          {% for p in patients %}
+          <tr class="border-t">
+            <td class="px-3 py-2">{{ p.name }}</td>
+            <td class="px-3 py-2">{{ p.email }}</td>
+            <td class="px-3 py-2">{{ p.plays }}</td>
+            <td class="px-3 py-2">{{ p.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for p in patients %}
+      <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-textDark">{{ p.name }}</p>
+            <p class="text-xs text-gray-500">{{ p.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ p.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-gray-600">
+          <span class="font-medium">{{ p.plays }}</span> juegos jugados
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function generateIAReport(btn) {
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Llama analizando...';
+        
+        try {
+            const res = await fetch('/admin/generate-ia-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Inyectar el reporte en un modal o área nueva
+                alert('Reporte Estratégico Generado:\n\n' + data.report.substring(0, 500) + '...');
+                console.log(data.report);
+                // Aquí podrías abrir un modal con Markdown renderizado
+            } else {
+                alert('Error IA: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (e) {
+            alert('Error al conectar con Llama: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    async function sendWeeklyReport(btn) {
+        if (!confirm('¿Desea generar y enviar el reporte de deudores ahora mismo al administrador?')) {
+            return;
+        }
+        
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        
+        try {
+            const res = await fetch("{{ url_for('admin.send_weekly_summary_manual') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({})
+            });
+            
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server error: ${text}`);
+            }
+
+            const data = await res.json();
+            
+            if (data.success) {
+                alert('Reporte enviado correctamente. Revise su bandeja de entrada (y spam).');
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+            
+        } catch (e) {
+            console.error(e);
+            alert('Error al enviar reporte: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
+  </div>
+</div>
+</div> <!-- End Wrapper -->
+{% endblock %}

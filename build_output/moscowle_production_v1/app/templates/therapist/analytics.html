@@ -1,0 +1,276 @@
+{% extends "therapist/base.html" %}
+
+{% block header_content %}
+<div>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">AI Analytics</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Real-time insights and adaptive difficulty metrics</p>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<button class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center">
+    <i class="fas fa-download md:mr-2"></i>
+    <span class="hidden md:inline">Export Report</span>
+</button>
+{% endblock %}
+
+{% block content %}
+    <div class="p-8 space-y-6">
+        
+        <section id="ai-overview-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">AI Adaptations</p>
+                        <p class="text-3xl font-bold text-textPrimary">{{- ai_overview.total_adaptations -}}</p>
+                        <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-arrow-up" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrow-up" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path></svg></i>
+                            <span>{{- ai_overview.adaptations_change -}}% this week</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-lightGreen rounded-soft flex items-center justify-center">
+                        <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-robot" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="robot" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M320 0c17.7 0 32 14.3 32 32V96H472c39.8 0 72 32.2 72 72V440c0 39.8-32.2 72-72 72H168c-39.8 0-72-32.2-72-72V168c0-39.8 32.2-72 72-72H288V32c0-17.7 14.3-32 32-32zM208 384c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H208zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H304zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H400zM264 256a40 40 0 1 0 -80 0 40 40 0 1 0 80 0zm152 40a40 40 0 1 0 0-80 40 40 0 1 0 0 80zM48 224H64V416H48c-26.5 0-48-21.5-48-48V272c0-26.5 21.5-48 48-48zm544 0c26.5 0 48 21.5 48 48v96c0 26.5-21.5 48-48 48H576V224h16z"></path></svg></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Avg. Accuracy</p>
+                        <p class="text-3xl font-bold text-textPrimary">{{- ai_overview.avg_accuracy -}}%</p>
+                        <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-arrow-up" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrow-up" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path></svg></i>
+                            <span>{{- ai_overview.accuracy_improvement -}}% improvement</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-lightGreen rounded-soft flex items-center justify-center">
+                        <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-bullseye" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="bullseye" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M448 256A192 192 0 1 0 64 256a192 192 0 1 0 384 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm256 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160zm0-224a144 144 0 1 1 0 288 144 144 0 1 1 0-288zM224 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Success Rate</p>
+                        <p class="text-3xl font-bold text-textPrimary">{{- ai_overview.success_rate -}}%</p>
+                        <p class="text-xs text-green-600 mt-2 flex items-center gap-1">
+                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-arrow-up" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrow-up" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path></svg></i>
+                            <span>{{- ai_overview.success_rate_increase -}}% increase</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-lightGreen rounded-soft flex items-center justify-center">
+                        <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-chart-simple" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chart-simple" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M160 80c0-26.5 21.5-48 48-48h32c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H208c-26.5 0-48-21.5-48-48V80zM0 272c0-26.5 21.5-48 48-48H80c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V272zM368 96h32c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H368c-26.5 0-48-21.5-48-48V144c0-26.5 21.5-48 48-48z"></path></svg></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Active Models</p>
+                        <p class="text-3xl font-bold text-textPrimary">{{- ai_overview.active_models -}}</p>
+                        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <i data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"></path></svg></i>
+                            <span>All operational</span>
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-lightGreen rounded-soft flex items-center justify-center">
+                        <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-microchip" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="microchip" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M176 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64c-35.3 0-64 28.7-64 64H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64v56H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64v56H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64c0 35.3 28.7 64 64 64v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448h56v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448h56v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448c35.3 0 64-28.7 64-64h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448V280h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448V176h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448c0-35.3-28.7-64-64-64V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H280V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H176V24zM160 128H352c17.7 0 32 14.3 32 32V352c0 17.7-14.3 32-32 32H160c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32zm192 32H160V352H352V160z"></path></svg></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <section id="difficulty-adaptation-chart" class="lg:col-span-2 bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-textPrimary">Difficulty Adaptation Over Time</h3>
+                        <p class="text-sm text-gray-500 mt-1">AI-driven difficulty adjustments per patient</p>
+                    </div>
+                    <select class="px-4 py-2 rounded-soft border border-gray-200 text-sm focus:outline-none focus:border-primary w-full sm:w-auto">
+                        <option>Last 7 Days</option>
+                        <option>Last 30 Days</option>
+                        <option>Last 90 Days</option>
+                    </select>
+                </div>
+                <div id="difficultyChart" style="height: 400px;"></div>
+            </section>
+            
+            <section id="model-performance" class="bg-surface p-6 rounded-soft shadow-soft">
+                <h3 class="text-lg font-bold text-textPrimary mb-6">Model Performance</h3>
+                <div class="space-y-4">
+                    {% for model in model_performance %}
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600">{{ model.name }}</span>
+                            <span class="text-sm font-bold text-primary">{{ model.accuracy }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full" style="width: {{ model.accuracy }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-6 p-4 bg-lightGreen rounded-soft">
+                    <div class="flex items-start gap-3">
+                        <i class="text-primary text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-lightbulb" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="lightbulb" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2l0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4l0 0c19.8 27.1 39.7 54.4 49.2 86.2H272zM192 512c44.2 0 80-35.8 80-80V416H112v16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"></path></svg></i>
+                        <div>
+                            <p class="text-sm font-semibold text-textPrimary">AI Insight</p>
+                            <p class="text-xs text-gray-600 mt-1">{{- ai_overview.insight -}}</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <section id="patient-progress-chart" class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-textPrimary">Patient Progress Distribution</h3>
+                        <p class="text-sm text-gray-500 mt-1">Current difficulty levels across all patients</p>
+                    </div>
+                </div>
+                <div id="progressChart" style="height: 400px;"></div>
+            </section>
+            
+            <section id="adaptation-frequency-chart" class="bg-surface p-6 rounded-soft shadow-soft">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-lg font-bold text-textPrimary">Adaptation Frequency</h3>
+                        <p class="text-sm text-gray-500 mt-1">How often AI adjusts difficulty per game type</p>
+                    </div>
+                </div>
+                <div id="adaptationChart" style="height: 400px;"></div>
+            </section>
+        </div>
+        
+        <section id="recent-adaptations" class="bg-surface rounded-soft shadow-soft">
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-textPrimary">Recent AI Adaptations</h3>
+                        <p class="text-sm text-gray-500 mt-1">Latest difficulty adjustments made by the system</p>
+                    </div>
+                    <button class="text-sm text-primary font-medium hover:underline">View All</button>
+                </div>
+            </div>
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-100">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Patient</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Game Type</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Previous Level</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">New Level</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reason</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Timestamp</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for adaptation in recent_adaptations %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="{{ adaptation.patient_avatar }}" alt="Patient" class="w-8 h-8 rounded-full object-cover">
+                                    <span class="font-medium text-sm">{{ adaptation.patient_name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ adaptation.game_type }}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Level {{ adaptation.prev_level }}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 {% if adaptation.new_level > adaptation.prev_level %}bg-green-100 text-green-700{% else %}bg-orange-100 text-orange-700{% endif %} rounded-full text-xs font-medium">Level {{ adaptation.new_level }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ adaptation.reason }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">{{ adaptation.timestamp }}</td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm font-semibold text-primary">{{ adaptation.confidence }}%</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4 p-4">
+                {% for adaptation in recent_adaptations %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ adaptation.patient_avatar }}" alt="Patient" class="w-10 h-10 rounded-full object-cover">
+                            <div>
+                                <p class="font-medium text-textDark">{{ adaptation.patient_name }}</p>
+                                <p class="text-xs text-gray-500">{{ adaptation.timestamp }}</p>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold text-primary">{{ adaptation.confidence }}% Conf.</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Game</p>
+                            <p class="text-sm font-medium">{{ adaptation.game_type }}</p>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Change</p>
+                            <div class="flex items-center gap-2 text-sm">
+                                <span class="text-gray-500">L{{ adaptation.prev_level }}</span>
+                                <i class="fas fa-arrow-right text-xs text-gray-400"></i>
+                                <span class="font-bold {% if adaptation.new_level > adaptation.prev_level %}text-green-600{% else %}text-orange-600{% endif %}">L{{ adaptation.new_level }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <p class="text-xs text-blue-600 font-bold mb-1">Reason</p>
+                        <p class="text-sm text-blue-800">{{ adaptation.reason }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        
+    </div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data from backend
+            const difficultyData = {{ difficulty_adaptation_data | tojson }};
+            const progressData = {{ patient_progress_data | tojson }};
+            const adaptationData = {{ adaptation_frequency_data | tojson }};
+    
+            var config = {
+                displayModeBar: false, // this is the line that hides the bar.
+                responsive: true
+            };
+    
+            // Difficulty Adaptation Chart
+            const difficultyChart = document.getElementById('difficultyChart');
+            if (difficultyChart) {
+                Plotly.newPlot(difficultyChart, difficultyData.data, difficultyData.layout, config);
+            }
+    
+            // Patient Progress Distribution Chart
+            const progressChart = document.getElementById('progressChart');
+            if (progressChart) {
+                Plotly.newPlot(progressChart, progressData.data, progressData.layout, config);
+            }
+    
+            // Adaptation Frequency Chart
+            const adaptationChart = document.getElementById('adaptationChart');
+            if (adaptationChart) {
+                Plotly.newPlot(adaptationChart, adaptationData.data, adaptationData.layout, config);
+            }
+        });
+    </script>
+{% endblock %}

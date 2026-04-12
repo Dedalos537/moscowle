@@ -1,0 +1,66 @@
+{% extends 'therapist/base.html' %}
+
+{% block content %}
+<h2>Informes CSP</h2>
+<form class="form-inline mb-3" method="get">
+  <div class="form-group mr-2">
+    <label class="sr-only">Directive</label>
+    <input name="directive" class="form-control" placeholder="violated directive" value="{{ request.args.get('directive','') }}">
+  </div>
+  <div class="form-group mr-2">
+    <label class="sr-only">Blocked URI</label>
+    <input name="blocked_uri" class="form-control" placeholder="blocked URI" value="{{ request.args.get('blocked_uri','') }}">
+  </div>
+  <div class="form-group mr-2">
+    <label class="sr-only">Since</label>
+    <input name="since" class="form-control" placeholder="YYYY-MM-DD" value="{{ request.args.get('since','') }}">
+  </div>
+  <button class="btn btn-primary" type="submit">Filtrar</button>
+</form>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Recibido</th>
+      <th>Document URI</th>
+      <th>Directive</th>
+      <th>Blocked URI</th>
+      <th>IP</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in pagination.items %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.received_at }}</td>
+      <td><a href="{{ r.document_uri }}" target="_blank">{{ r.document_uri }}</a></td>
+      <td>{{ r.violated_directive }}</td>
+      <td>{{ r.blocked_uri }}</td>
+      <td>{{ r.ip_address }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No hay informes.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav aria-label="Page navigation">
+  <ul class="pagination">
+    {% if pagination.has_prev %}
+      <li class="page-item"><a class="page-link" href="?page={{ pagination.prev_num }}">Anterior</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+    {% endif %}
+
+    <li class="page-item disabled"><span class="page-link">Página {{ pagination.page }} / {{ pagination.pages or 1 }}</span></li>
+
+    {% if pagination.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ pagination.next_num }}">Siguiente</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+    {% endif %}
+  </ul>
+</nav>
+
+{% endblock %}

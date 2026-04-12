@@ -1,0 +1,931 @@
+{% extends "therapist/base.html" %}
+
+{% block header_content %}
+<!-- Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+<!-- Tom Select -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<style>
+  /* Custom Tailwind-like Theme for Tom Select */
+  .ts-control {
+    border-radius: 1.5rem; /* rounded-soft */
+    border-color: #e5e7eb;
+    padding: 0.75rem 1rem;
+    box-shadow: none;
+  }
+  .ts-control.focus {
+    border-color: #75a83a; /* primary */
+    box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.2);
+  }
+  .ts-dropdown {
+    border-radius: 1rem;
+    border-color: #e5e7eb;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+  .ts-dropdown .option {
+    padding: 0.75rem 1rem;
+  }
+  .ts-dropdown .active {
+    background-color: #ecfccb; /* lightGreen */
+    color: #374151;
+  }
+  .ts-wrapper.multi .ts-control > div {
+    background-color: #75a83a;
+    color: white;
+    border-radius: 9999px; /* rounded-full */
+    padding: 0.25rem 0.75rem;
+  }
+</style>
+<div>
+    <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Panel de Control</h2>
+    <p class="text-sm text-gray-500 hidden md:block">Monitoreo y gestión de pacientes</p>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<button id="btn-new-session" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium">
+    <i class="fas fa-plus md:mr-2"></i>
+    <span class="hidden md:inline">Nueva Sesión</span>
+</button>
+{% endblock %}
+
+{% block content %}
+    <div id="dashboard-stats" class="px-4 md:px-8 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- Stats Cards -->
+            <div class="bg-surface rounded-soft shadow-soft p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 rounded-soft bg-lightGreen flex items-center justify-center">
+                        <i class="fa-solid fa-users text-primary text-2xl"></i>
+                    </div>
+                    <span class="text-statusGreen text-sm font-semibold">+12%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-textDark mb-1">{{ stats.active_patients }}</h3>
+                <p class="text-sm text-gray-500 font-medium">Pacientes Activos</p>
+            </div>
+            
+            <div class="bg-surface rounded-soft shadow-soft p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 rounded-soft bg-blue-50 flex items-center justify-center">
+                        <i class="fa-solid fa-calendar-check text-blue-500 text-2xl"></i>
+                    </div>
+                    <span class="text-statusGreen text-sm font-semibold">+8%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-textDark mb-1">{{ stats.total_sessions }}</h3>
+                <p class="text-sm text-gray-500 font-medium">Sesiones Completadas</p>
+            </div>
+
+            <div class="bg-surface rounded-soft shadow-soft p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 rounded-soft bg-purple-50 flex items-center justify-center">
+                        <i class="fa-solid fa-brain text-purple-500 text-2xl"></i>
+                    </div>
+                    <span class="text-primary text-sm font-semibold">IA Activa</span>
+                </div>
+                <h3 class="text-3xl font-bold text-textDark mb-1">{{ stats.ia_precision }}%</h3>
+                <p class="text-sm text-gray-500 font-medium">Precisión de IA</p>
+            </div>
+
+            <div class="bg-surface rounded-soft shadow-soft p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="w-14 h-14 rounded-soft bg-amber-50 flex items-center justify-center">
+                        <i class="fa-solid fa-chart-line text-amber-500 text-2xl"></i>
+                    </div>
+                    <span class="text-statusGreen text-sm font-semibold">+{{ stats.improvement_rate }}%</span>
+                </div>
+                <h3 class="text-3xl font-bold text-textDark mb-1">{{ stats.improvement_rate }}%</h3>
+                <p class="text-sm text-gray-500 font-medium">Tasa de Mejora</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="patient-performance-section" class="px-4 md:px-8 pb-8">
+        <div class="bg-surface rounded-soft shadow-soft p-4 md:p-8">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4">
+                <div>
+                    <h3 class="text-xl md:text-2xl font-bold text-textDark mb-2">Rendimiento de Pacientes</h3>
+                    <p class="text-sm text-gray-500">Análisis en tiempo real con recomendaciones de IA</p>
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full border-2 border-gray-200 text-gray-600 font-medium hover:border-primary hover:text-primary transition-all text-center">
+                        <i class="fa-solid fa-filter mr-2"></i>Filtrar
+                    </button>
+                    <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full bg-primary text-white font-semibold shadow-soft hover:shadow-soft-lg transition-all text-center">
+                        <i class="fa-solid fa-download mr-2"></i>Exportar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Cards (Visible on small screens) -->
+            <div class="md:hidden space-y-4">
+                {% for p in patients %}
+                <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                {{ p.name[:2].upper() if p.name else 'US' }}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-textDark">{{ p.name }}</h4>
+                                <p class="text-xs text-gray-500">{{ p.game }}</p>
+                            </div>
+                        </div>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">Nivel {{ p.level }}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-white p-2 rounded-lg text-center">
+                            <p class="text-xs text-gray-500">Precisión</p>
+                            <p class="font-bold text-textDark">{{ p.accuracy }}%</p>
+                        </div>
+                        <div class="bg-white p-2 rounded-lg text-center">
+                            <p class="text-xs text-gray-500">Tiempo</p>
+                            <p class="font-bold text-textDark">{{ p.avg_time }}s</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-3 rounded-lg mb-3">
+                        <p class="text-xs font-bold text-amber-700 mb-1"><i class="fas fa-robot mr-1"></i> IA Sugiere:</p>
+                        <p class="text-xs text-amber-800">
+                            {% if p.prediction_code == 1 %}
+                                Avanzar al siguiente nivel
+                            {% elif p.prediction_code == 2 %}
+                                Necesita apoyo adicional
+                            {% else %}
+                                Mantener nivel actual
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('therapist.patient_detail', patient_id=p.ptid) }}" class="flex-1 py-2 bg-primary text-white text-center rounded-lg text-sm font-medium">Ver Perfil</a>
+                        <button class="px-3 py-2 bg-gray-200 text-gray-600 rounded-lg"><i class="fas fa-ellipsis-v"></i></button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-gray-100">
+                            <th class="text-left py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Paciente</th>
+                            <th class="text-left py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Ejercicio</th>
+                            <th class="text-center py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Nivel Actual</th>
+                            <th class="text-center py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Precisión</th>
+                            <th class="text-center py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Tiempo Promedio</th>
+                            <th class="text-center py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Sesiones</th>
+                            <th class="text-left py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Recomendación IA</th>
+                            <th class="text-center py-4 px-4 text-sm font-bold text-gray-600 uppercase tracking-wide">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for p in patients %}
+                        <tr class="hover:bg-lightGreen transition-colors">
+                            <td class="py-5 px-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="{{ p.avatar }}" alt="Patient" class="w-11 h-11 rounded-full object-cover">
+                                    <div>
+                                        <p class="font-semibold text-textDark">{{ p.name }}</p>
+                                        <p class="text-xs text-gray-500">ID: {{ p.ptid }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-5 px-4">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-gamepad text-primary"></i>
+                                    <span class="text-sm font-medium">{{ p.game }}</span>
+                                </div>
+                            </td>
+                            <td class="py-5 px-4 text-center">
+                                <span class="inline-block px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">Nivel {{ p.level }}</span>
+                            </td>
+                            <td class="py-5 px-4 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full {% if p.accuracy > 80 %}bg-statusGreen{% elif p.accuracy > 50 %}bg-statusYellow{% else %}bg-statusRed{% endif %} rounded-full" style="width: {{ p.accuracy }}%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold {% if p.accuracy > 80 %}text-statusGreen{% elif p.accuracy > 50 %}text-statusYellow{% else %}text-statusRed{% endif %}">{{ p.accuracy }}%</span>
+                                </div>
+                            </td>
+                            <td class="py-5 px-4 text-center">
+                                <span class="text-sm font-semibold text-textDark">{{ p.avg_time }}s</span>
+                            </td>
+                            <td class="py-5 px-4 text-center">
+                                <span class="text-sm font-semibold text-textDark">{{ p.sessions }}</span>
+                            </td>
+                            <td class="py-5 px-4">
+                                {% if p.prediction_code == 1 %}
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-statusGreen bg-opacity-10 text-statusGreen text-sm font-bold">
+                                    <i class="fa-solid fa-arrow-up"></i>Avanzar Nivel
+                                </span>
+                                {% elif p.prediction_code == 2 %}
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-statusRed bg-opacity-10 text-statusRed text-sm font-bold">
+                                    <i class="fa-solid fa-heart"></i>Necesita Apoyo
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-statusYellow bg-opacity-10 text-statusYellow text-sm font-bold">
+                                    <i class="fa-solid fa-minus"></i>Mantener Nivel
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-5 px-4 text-center">
+                                <button class="p-2 rounded-soft hover:bg-primary hover:text-white transition-all">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="md:hidden space-y-4">
+                {% for p in patients %}
+                <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ p.avatar }}" alt="Patient" class="w-12 h-12 rounded-full object-cover">
+                            <div>
+                                <p class="font-bold text-textDark">{{ p.name }}</p>
+                                <p class="text-xs text-gray-500">ID: {{ p.ptid }}</p>
+                            </div>
+                        </div>
+                        <button class="p-2 rounded-soft hover:bg-primary hover:text-white transition-all text-gray-400">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Juego</p>
+                            <div class="flex items-center gap-1 font-medium text-sm">
+                                <i class="fa-solid fa-gamepad text-primary text-xs"></i>
+                                {{ p.game }}
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded-lg">
+                            <p class="text-xs text-gray-500 mb-1">Nivel</p>
+                            <span class="text-blue-700 font-bold text-sm">Nivel {{ p.level }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-gray-500">Precisión</span>
+                            <span class="font-bold {% if p.accuracy > 80 %}text-statusGreen{% elif p.accuracy > 50 %}text-statusYellow{% else %}text-statusRed{% endif %}">{{ p.accuracy }}%</span>
+                        </div>
+                        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-full {% if p.accuracy > 80 %}bg-statusGreen{% elif p.accuracy > 50 %}bg-statusYellow{% else %}bg-statusRed{% endif %} rounded-full" style="width: {{ p.accuracy }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-t border-gray-100 pt-3">
+                        <div class="text-xs text-gray-500">
+                            <span class="font-bold text-textDark">{{ p.sessions }}</span> sesiones • {{ p.avg_time }}s avg
+                        </div>
+                        {% if p.prediction_code == 1 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusGreen bg-opacity-10 text-statusGreen text-xs font-bold">
+                            <i class="fa-solid fa-arrow-up"></i>Avanzar
+                        </span>
+                        {% elif p.prediction_code == 2 %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusRed bg-opacity-10 text-statusRed text-xs font-bold">
+                            <i class="fa-solid fa-heart"></i>Apoyo
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-statusYellow bg-opacity-10 text-statusYellow text-xs font-bold">
+                            <i class="fa-solid fa-minus"></i>Mantener
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="ai-insights-section" class="px-4 md:px-8 pb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-surface rounded-soft shadow-soft p-4 md:p-8">
+                <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+                    <h3 class="text-xl font-bold text-textDark">Progreso Semanal</h3>
+                    <select class="px-4 py-2 rounded-full border-2 border-gray-200 text-sm font-medium focus:outline-none focus:border-primary w-full sm:w-auto">
+                        <option>Últimos 7 días</option>
+                        <option>Últimos 30 días</option>
+                        <option>Últimos 90 días</option>
+                    </select>
+                </div>
+                <div class="h-64 bg-lightGreen rounded-soft relative" id="weekly-chart"></div>
+            </div>
+
+            <div class="bg-surface rounded-soft shadow-soft p-4 md:p-8">
+                <h3 class="text-xl font-bold text-textDark mb-6">Alertas IA</h3>
+                <div class="space-y-4">
+                    <div id="alerts-list">
+                        {% for alert in alerts %}
+                        <div class="p-4 rounded-soft bg-status{{ alert.type|capitalize }} bg-opacity-5 border-l-4 border-status{{ alert.type|capitalize }}">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-exclamation-circle text-status{{ alert.type|capitalize }} mt-1"></i>
+                                <div>
+                                    <p class="text-sm font-bold text-textDark">{{ alert.patient }}</p>
+                                    <p class="text-xs text-gray-600 mt-1">{{ alert.message }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-gray-500 text-sm">No hay alertas recientes.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer id="footer" class="px-8 py-6 bg-surface border-t border-gray-100 mt-8">
+        <div class="flex items-center justify-between">
+            <p class="text-sm text-gray-500">© 2024 Centro de Terapias Juan Pablo II - Moscowle Platform</p>
+            <div class="flex items-center gap-6">
+                <a href="#" class="text-sm text-gray-500 hover:text-primary transition-colors">Soporte</a>
+                <a href="#" class="text-sm text-gray-500 hover:text-primary transition-colors">Documentación</a>
+                <a href="#" class="text-sm text-gray-500 hover:text-primary transition-colors">Privacidad</a>
+            </div>
+        </div>
+    </footer>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let currentData = { weekly_progress: [], alerts: [] };
+
+    // Fetch insights and render chart + refresh alerts
+    fetch("{{ url_for('api.therapist_insights') }}")
+        .then(r => r.json())
+        .then(data => {
+            currentData = data;
+            renderWeeklyChart(data.weekly_progress || []);
+            refreshAlerts(data.alerts || []);
+        })
+        .catch(err => {
+            console.error('Error fetching insights:', err);
+            // graceful fallback
+            renderWeeklyChart([]);
+        });
+    
+    // Handle resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            renderWeeklyChart(currentData.weekly_progress || []);
+        }, 200);
+    });
+
+    function renderWeeklyChart(series) {
+        const el = document.getElementById('weekly-chart');
+        if (!el) return;
+        el.innerHTML = '';
+        
+        const w = el.clientWidth;
+        const h = el.clientHeight || 250; 
+        const padding = 30; // increased padding for labels
+        
+        const values = (series && series.length) ? series.map(d => d.avg_accuracy) : [0,0,0,0,0,0,0];
+        const dates = (series && series.length) ? series.map(d => {
+            // Format date to simple Day/Month
+            try {
+                const dateObj = new Date(d.date);
+                return dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+            } catch(e) { return ''; }
+        }) : ['', '', '', '', '', '', ''];
+
+        const hasData = values.some(v => v > 0);
+        if (!hasData) {
+            el.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <p class="text-sm">Sin actividad registrada esta semana</p>
+                </div>
+            `;
+            return;
+        }
+
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svg.style.overflow = 'visible';
+        el.appendChild(svg);
+
+        const maxVal = 100; // Percentage is always 0-100
+        // Use full width minus padding
+        const xStep = (w - (padding * 2)) / (values.length - 1);
+        const yScale = v => (h - padding) - (v / maxVal) * (h - (padding * 2));
+
+        // Grid lines (horizontal) - 0. 25, 50, 75, 100
+        [0, 25, 50, 75, 100].forEach(tick => {
+            const y = yScale(tick);
+            const gridLine = document.createElementNS(svgNS, 'line');
+            gridLine.setAttribute('x1', padding);
+            gridLine.setAttribute('y1', y);
+            gridLine.setAttribute('x2', w - padding);
+            gridLine.setAttribute('y2', y);
+            gridLine.setAttribute('stroke', '#E5E7EB'); // gray-200
+            gridLine.setAttribute('stroke-dasharray', '4 4');
+            svg.appendChild(gridLine);
+        });
+
+        // Path
+        const path = document.createElementNS(svgNS, 'path');
+        let d = '';
+        values.forEach((v, i) => {
+            const x = padding + (i * xStep);
+            const y = yScale(v);
+            d += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+        });
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        // Get primary color from CSS variable or fallback
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#16a34a';
+        path.setAttribute('stroke', primaryColor);
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(path);
+
+        // Gradient fill area under line (optional improvement)
+        const areaPath = document.createElementNS(svgNS, 'path');
+        let areaD = d;
+        // Close the path to the bottom
+        const lastX = padding + ((values.length - 1) * xStep);
+        const bottomY = yScale(0);
+        const firstX = padding;
+        areaD += ` L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
+        
+        areaPath.setAttribute('d', areaD);
+        areaPath.setAttribute('fill', primaryColor);
+        areaPath.setAttribute('fill-opacity', '0.1');
+        areaPath.setAttribute('stroke', 'none');
+        svg.insertBefore(areaPath, path); // Put behind line
+
+        // Points
+        values.forEach((v, i) => {
+            const cx = padding + (i * xStep);
+            const cy = yScale(v);
+            const circle = document.createElementNS(svgNS, 'circle');
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', 4);
+            circle.setAttribute('fill', '#fff'); // White center
+            circle.setAttribute('stroke', primaryColor);
+            circle.setAttribute('stroke-width', '2');
+            
+            // Add tooltip via title
+            const title = document.createElementNS(svgNS, 'title');
+            title.textContent = `${dates[i]}: ${v}%`;
+            circle.appendChild(title);
+            
+            svg.appendChild(circle);
+        });
+        
+        // Date Labels (X-Axis)
+        values.forEach((_, i) => {
+            if (dates[i]) {
+               const x = padding + (i * xStep);
+               const text = document.createElementNS(svgNS, 'text');
+               text.textContent = dates[i];
+               text.setAttribute('x', x);
+               text.setAttribute('y', h - 5);
+               text.setAttribute('text-anchor', 'middle');
+               text.setAttribute('fill', '#9CA3AF'); // gray-400
+               text.setAttribute('font-size', '10');
+               svg.appendChild(text);
+            }
+        });
+    }
+
+    function refreshAlerts(alerts) {
+        const container = document.getElementById('alerts-list');
+        if (!container) return;
+        // If data provided but empty, clear default 'server' list if it exists to show empty state
+        // But if alerts is empty array, we probably want to show "No alerts"
+        
+        container.innerHTML = ''; // Clear fallback or loading content
+        
+        if (!alerts || alerts.length === 0) {
+            container.innerHTML = `<p class="text-gray-500 text-sm italic">No hay alertas de riesgo recientes.</p>`;
+            return;
+        }
+        
+        alerts.forEach(a => {
+            const wrapper = document.createElement('div');
+            // Ensure type is safe
+            const type = a.type || 'red';
+            
+            // Fallback classes if 'statusRed' etc aren't defined in Tailwind config:
+            // We use standard tailwind colors as backup in class string
+            wrapper.className = `p-4 rounded-soft bg-red-50 border-l-4 border-red-500`; 
+            
+            // If the custom classes exist, they will apply. If not, we changed to standard utility classes for safety.
+            // The user context uses 'bg-statusRed', assuming extended config.
+            if (type === 'red') {
+               wrapper.className = `p-4 rounded-soft bg-red-50 border-l-4 border-red-500`;
+            } else {
+               wrapper.className = `p-4 rounded-soft bg-gray-50 border-l-4 border-gray-500`;
+            }
+
+            wrapper.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-exclamation-circle text-red-500 mt-1"></i>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${a.patient}</p>
+                        <p class="text-xs text-gray-600 mt-1">${a.message}</p>
+                    </div>
+                </div>`;
+            container.appendChild(wrapper);
+        });
+    }
+});
+</script>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50"></div>
+    
+    <div id="create-modal" class="fixed inset-0 hidden z-50">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-soft shadow-soft w-full max-w-lg relative">
+          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Nueva sesión</h3>
+            <button class="text-gray-500 hover:text-textDark" data-close-modal>
+              ✕
+            </button>
+          </div>
+          <form id="create-form" class="p-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Pacientes (Máx 5)</label>
+                <select name="patient_id" id="patient-select" multiple
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required>
+                  <option value="" disabled selected>
+                    Seleccione pacientes...
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Título</label>
+                <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+              </div>
+            </div>
+            
+            <div>
+              <label class="text-sm text-gray-600">Fechas (Máximo 3)</label>
+              <input type="text" id="multi-dates" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" placeholder="Seleccionar fechas..." required />
+              <p class="text-xs text-gray-500 mt-1">Mantén presionado Ctrl (o Cmd) para seleccionar varias fechas.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Hora Inicio</label>
+                <input type="time" name="time_start"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Hora Fin</label>
+                <input type="time" name="time_end"
+                  class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-sm text-gray-600">Estado</label>
+                <select name="status" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
+                  <option value="scheduled">Programada</option>
+                  <option value="in_progress">En curso</option>
+                  <option value="completed">Completada</option>
+                  <option value="cancelled">Cancelada</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-600">Lugar</label>
+                <input name="location" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+              </div>
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Notas</label>
+              <textarea name="notes" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"></textarea>
+            </div>
+            <div>
+              <label class="text-sm text-gray-600">Juegos (Selección múltiple)</label>
+              <select name="games" id="games-select" multiple class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2 h-32">
+                <!-- Games loaded via JS -->
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Mantén presionado Ctrl (o Cmd) para seleccionar varios.</p>
+            </div>
+            <div class="pt-2 border-t border-gray-100 text-right">
+              <button type="button" class="px-4 py-2 text-gray-700" data-close-modal>
+                Cancelar
+              </button>
+              <button type="submit" class="px-4 py-2 bg-primary text-white rounded-soft">
+                Crear
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 hidden">
+      <div class="bg-white border border-gray-200 shadow-soft rounded-soft px-4 py-3 text-sm text-textDark"
+        id="toast-message"></div>
+    </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalBackdrop = document.getElementById("modal-backdrop");
+        const createModal = document.getElementById("create-modal");
+        const createForm = document.getElementById("create-form");
+        const newBtn = document.getElementById("btn-new-session");
+        const toast = document.getElementById("toast");
+        const toastMsg = document.getElementById("toast-message");
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        let datePicker = null;
+
+        function showToast(message, type = 'info', duration = 3000) {
+          const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+          };
+          if (toastMsg && toast) {
+            toastMsg.textContent = message;
+            toast.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+            toast.classList.remove("hidden");
+            setTimeout(() => toast.classList.add("hidden"), duration);
+          }
+        }
+
+        function openModal(modal) {
+          if (!modal) return;
+          modalBackdrop.classList.remove("hidden");
+          modal.classList.remove("hidden");
+          modal.style.display = "flex";
+          modal.style.alignItems = "center";
+          modal.style.justifyContent = "center";
+          document.body.style.overflow = "hidden";
+        }
+
+        function closeModals() {
+          modalBackdrop.classList.add("hidden");
+          if (createModal) {
+             createModal.classList.add("hidden");
+             createModal.style.display = "none";
+          }
+          document.body.style.overflow = "";
+        }
+
+        document.querySelectorAll("[data-close-modal]").forEach((btn) => 
+            btn.addEventListener("click", closeModals)
+        );
+        if (modalBackdrop) modalBackdrop.addEventListener("click", closeModals);
+
+        function initDatePicker() {
+            const el = document.getElementById("multi-dates");
+            if (el) {
+                datePicker = flatpickr(el, {
+                    mode: "multiple",
+                    dateFormat: "Y-m-d",
+                    locale: "es",
+                    conjunction: " :: ",
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (selectedDates.length > 3) {
+                            selectedDates.pop();
+                            instance.setDate(selectedDates);
+                            showToast("Máximo 3 fechas permitidas", "warning");
+                        }
+                    }
+                });
+            }
+        }
+        initDatePicker();
+
+        let patientsTomSelect = null;
+        let gamesTomSelect = null;
+
+        async function ensureGamesLoaded() {
+            try {
+                const res = await fetch("{{ url_for('api.api_list_games') }}");
+                if (!res.ok) throw new Error("No se pudo cargar juegos");
+                const data = await res.json();
+                const select = document.getElementById("games-select");
+                if (select && data.games) {
+                    select.innerHTML = data.games.map(g => 
+                        `<option value="${g}">${g.replace('.html', '').replace(/_/g, ' ')}</option>`
+                    ).join('');
+                    
+                    if (!gamesTomSelect) {
+                        gamesTomSelect = new TomSelect(select, {
+                            plugins: ['remove_button'],
+                            persist: false,
+                            create: false,
+                            placeholder: 'Selecciona juegos...',
+                            maxItems: null,
+                            hideSelected: true
+                        });
+                    } else {
+                        gamesTomSelect.sync();
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function ensurePatientsLoaded() {
+          try {
+            const res = await fetch("{{ url_for('api.api_patients') }}");
+            if (!res.ok) throw new Error("No se pudo cargar pacientes");
+            const patients = await res.json();
+            const select = document.getElementById("patient-select");
+            
+            select.innerHTML =
+              '<option value="" disabled selected>Seleccione un paciente</option>' +
+              patients.map(p =>
+                    `<option value="${p.id}">${p.username} (${p.email})</option>`
+                ).join("");
+                
+            if (!patientsTomSelect) {
+                patientsTomSelect = new TomSelect(select, {
+                    create: false,
+                    maxItems: 5,
+                    plugins: ['remove_button'],
+                    sortField: { field: "text", direction: "asc" },
+                    placeholder: 'Buscar pacientes...'
+                });
+            } else {
+                patientsTomSelect.sync();
+            }
+          } catch (e) {
+            showToast(e.message || "Error cargando pacientes");
+          }
+        }
+
+        if (newBtn) {
+          newBtn.addEventListener("click", () => {
+             console.log("Nueva sesion click");
+             if (createForm) {
+                 createForm.reset();
+                 if (datePicker) datePicker.clear();
+                 if (patientsTomSelect) patientsTomSelect.clear();
+                 if (gamesTomSelect) gamesTomSelect.clear(); // Clear TomSelect
+
+                 const now = new Date();
+                 const pad = (n) => String(n).padStart(2, "0");
+                 const start = new Date(now.getTime() + 5 * 60 * 1000);
+                 const end = new Date(start.getTime() + 45 * 60 * 1000); // Default to 45 mins
+                 
+                 if (createForm.time_start) createForm.time_start.value = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
+                 if (createForm.time_end) createForm.time_end.value = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+                 if (createForm.status) createForm.status.value = "scheduled";
+             }
+             openModal(createModal);
+             ensurePatientsLoaded();
+             ensureGamesLoaded();
+          });
+        }
+        
+        // Auto-calculate end time in dashboard
+        if (createForm && createForm.time_start && createForm.time_end) {
+             createForm.time_start.addEventListener('change', function() {
+                 if (this.value) {
+                     const [hours, minutes] = this.value.split(':').map(Number);
+                     const date = new Date();
+                     date.setHours(hours);
+                     date.setMinutes(minutes);
+                     date.setMinutes(date.getMinutes() + 45); // Add 45 minutes
+                     
+                     const pad = (n) => String(n).padStart(2, "0");
+                     createForm.time_end.value = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                 }
+             });
+        }
+
+        if (createForm) {
+            createForm.addEventListener("submit", async (e) => {
+              e.preventDefault();
+              const formData = new FormData(createForm);
+              
+              // NEW: Get multiple patient IDs
+              let patientIds = [];
+              if (patientsTomSelect) {
+                  const val = patientsTomSelect.getValue();
+                  patientIds = Array.isArray(val) ? val : (val ? [val] : []);
+              } else {
+                  const sel = document.getElementById("patient-select");
+                  patientIds = Array.from(sel.selectedOptions).map(o => o.value);
+              }
+              
+              const timeStart = formData.get("time_start");
+              const timeEnd = formData.get("time_end");
+              const selectedDates = datePicker ? datePicker.selectedDates : [];
+              
+              if (selectedDates.length === 0) {
+                  showToast("Seleccione al menos una fecha");
+                  return;
+              }
+              if (!patientIds || patientIds.length === 0) {
+                showToast("Por favor seleccione al menos un paciente");
+                return;
+              }
+              if (!timeStart || !timeEnd) {
+                  showToast("Horas de inicio y fin requeridas");
+                  return;
+              }
+
+              const submitBtn = createForm.querySelector('button[type="submit"]');
+              const originalText = submitBtn.innerHTML;
+              // Get selected games via TomSelect or fallback
+              let selectedGames = [];
+              if (gamesTomSelect) {
+                  selectedGames = gamesTomSelect.getValue();
+              } else {
+                  const gamesSelect = document.getElementById("games-select");
+                  if (gamesSelect) {
+                     selectedGames = Array.from(gamesSelect.selectedOptions).map(opt => opt.value);
+                  }
+              }
+              
+              let successCount = 0;
+              let errorCount = 0;
+              let lastError = "";
+
+              try {
+                  submitBtn.disabled = true;
+                  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                  
+                  for (const dateObj of selectedDates) {
+                      const year = dateObj.getFullYear();
+                      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                      const day = String(dateObj.getDate()).padStart(2, '0');
+                      const dateStr = `${year}-${month}-${day}`;
+                      
+                      const startDate = new Date(`${dateStr}T${timeStart}:00`);
+                      const endDate = new Date(`${dateStr}T${timeEnd}:00`);
+
+                      const payload = {
+                        patient_id: patientIds, // Send ARRAY
+                        title: formData.get("title"),
+                        start_time: startDate.toISOString(),
+                        end_time: endDate.toISOString(),
+                        status: formData.get("status"),
+                        location: formData.get("location"),
+                        notes: formData.get("notes"),
+                        games: selectedGames
+                      };
+
+                      const res = await fetch("{{ url_for('api.api_create_session') }}", {
+                          method: "POST",
+                          headers: { 
+                              "Content-Type": "application/json",
+                              "X-CSRFToken": csrfToken
+                          },
+                          body: JSON.stringify(payload),
+                      });
+                      
+                      const data = await res.json();
+                      
+                      if (!res.ok || !data.success) {
+                          errorCount++;
+                          lastError = data.message || "Error desconocido";
+                      } else {
+                          successCount++;
+                      }
+                  }
+
+                  if (successCount > 0) {
+                    closeModals();
+                    showToast(`${successCount} sesión(es) creada(s) exitosamente`, 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                  } else {
+                    showToast(lastError || "No se pudo crear la sesión.", 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                  }
+              } catch (err) {
+                console.error(err);
+                showToast("Error inesperado", 'error');
+              } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+              }
+            });
+        }
+    });
+</script>
+{% endblock %}

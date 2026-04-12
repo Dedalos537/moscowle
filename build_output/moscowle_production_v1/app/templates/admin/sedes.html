@@ -1,0 +1,308 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_sedes' %}
+
+{% block header_content %}
+<div class=\"flex items-center justify-between w-full\">
+    <div>
+        <div class=\"flex items-center gap-2\">
+            <i class=\"fas fa-map-marker-alt text-primary text-lg md:text-2xl\"></i>
+            <h2 class=\"text-lg md:text-2xl font-bold text-textDark truncate\">Sedes</h2>
+        </div>
+        <p class=\"text-xs md:text-sm text-gray-400 hidden sm:block mt-1\">Administra tus puntos de atención</p>
+    </div>
+    <div class=\"text-center hidden md:block\">
+        <div class=\"text-2xl font-bold text-primary\" id=\"sede-count\">0</div>
+        <p class=\"text-xs text-gray-400\">activas</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<button data-action="open-create-sede" class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+    <i class="fas fa-plus md:mr-2"></i>
+    <span class="hidden md:inline">Nueva Sede</span>
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8">
+    <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+        <div id="toast-inner" class="px-4 py-3 rounded-soft shadow-soft text-white"></div>
+    </div>
+
+    <!-- Create Sede Modal -->
+    <div id="createSedeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-surface rounded-soft shadow-soft p-6 w-full max-w-lg relative animate-fadeIn">
+            <button data-action="close-create-sede" class="absolute top-4 right-4 text-gray-400 hover:text-textDark">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <h3 class="text-xl font-bold text-textDark mb-6">Crear Nueva Sede</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Sede</label>
+                    <input id="new-sede-name" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Ej. Piura Centro">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dirección (Opcional)</label>
+                    <input id="new-sede-address" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Av. Grau 123">
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4">
+                    <button data-action="close-create-sede" class="px-6 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors font-medium">
+                        Cancelar
+                    </button>
+                    <button id="create-sede-btn" data-action="create-sede" class="px-6 py-2.5 rounded-lg bg-primary text-white hover:bg-opacity-90 transition-colors font-medium shadow-soft flex items-center gap-2">
+                        <i class="fas fa-save"></i>
+                        <span>Guardar Sede</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- List Sedes -->
+    <div class="bg-surface rounded-soft shadow-soft p-6">
+        <h3 class="text-lg font-semibold text-textDark mb-4">Listado de Sedes</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[600px]">
+                <thead>
+                    <tr class="border-b border-gray-100">
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase">Nombre</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-400 uppercase">Dirección</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-400 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-400 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="sedes-tbody" class="divide-y divide-gray-50">
+                    <!-- JS populated -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module">
+import { apiFetch } from "{{ url_for('static', filename='js/api.js') }}";
+
+const SEDES_API_URL = "{{ url_for('api.admin_sedes') }}";
+
+const SedesModule = (function(){
+    const state = { loading: false, sedes: [] };
+    const sel = {
+        tbody: '#sedes-tbody',
+        toast: '#toast',
+        toastInner: '#toast-inner',
+        modal: '#createSedeModal',
+        newName: '#new-sede-name',
+        newAddr: '#new-sede-address',
+        count: '#sede-count'
+    };
+
+    let toastTimer = null;
+
+    function $(s){ return document.querySelector(s); }
+
+    function showToast(message, type='success'){
+        const toast = $(sel.toast); const inner = $(sel.toastInner);
+        if(!toast || !inner) return;
+        const icon = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+        const bg = type === 'success' ? 'bg-olive' : 'bg-statusRed';
+        inner.innerHTML = `<div class="flex items-center gap-2"><i class="${icon}"></i><span>${message}</span></div>`;
+        inner.className = `px-4 py-3 rounded-soft shadow-soft text-white max-w-sm ${bg}`;
+        toast.classList.remove('hidden');
+        if(toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(()=>{ toast.classList.add('hidden'); }, 3000);
+    }
+
+    function setLoading(v){ state.loading = v; const tbody = $(sel.tbody); if(!tbody) return; if(v){ tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500"><svg class="animate-spin h-5 w-5 mx-auto text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="mt-2 block text-sm">Cargando sedes...</span></td></tr>`;} }
+
+    async function loadSedes(){
+        setLoading(true);
+        try{
+            const sedes = await apiFetch(SEDES_API_URL, { method: 'GET' });
+            if(!Array.isArray(sedes)) throw new Error('Formato de respuesta inválido');
+            state.sedes = sedes;
+            renderSedes();
+        }catch(err){
+            renderError(err);
+            console.error('Error loading sedes', err);
+        }finally{
+            setLoading(false);
+        }
+    }
+
+    function renderError(err){
+        const tbody = $(sel.tbody); if(!tbody) return;
+        showToast(err.message || 'Error cargando sedes', 'error');
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center"><div class="flex flex-col items-center"><div class="w-12 h-12 bg-statusRed/10 rounded-full flex items-center justify-center mb-3"><i class="fas fa-exclamation-triangle text-statusRed text-xl"></i></div><span class="font-semibold text-textDark">Error al cargar datos</span><span class="text-sm text-gray-500 mt-2">${err.message || 'Error de conexión'}</span></div></td></tr>`;
+    }
+
+    function renderSedes(){
+        const tbody = $(sel.tbody); if(!tbody) return; tbody.innerHTML = '';
+        if(state.sedes.length === 0){
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-0 py-0">
+                        <div class="px-6 py-12 text-center bg-gradient-to-b from-primary/5 to-transparent rounded-lg border-2 border-dashed border-primary/20">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                    <i class="fas fa-map-marker-alt text-primary text-3xl"></i>
+                                </div>
+                                <p class="text-lg font-semibold text-textDark">Sin sedes registradas aún</p>
+                                <p class="text-sm text-gray-500 mt-2 max-w-xs mx-auto">Crea tu primera sede para comenzar a organizar tus sucursales</p>
+                                <button data-action="open-create-sede" class="mt-6 px-6 py-3 bg-primary text-white rounded-lg hover:bg-opacity-90 transition-all shadow-soft font-medium inline-flex items-center gap-2">
+                                    <i class="fas fa-plus"></i> Crear Primera Sede
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            const c = $(sel.count); if(c) c.textContent = '0';
+            return;
+        }
+
+        const activeCount = state.sedes.filter(s => s.active).length; const c = $(sel.count); if(c) c.textContent = activeCount;
+
+        state.sedes.forEach(s => {
+            const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50/50 transition-colors group sede-row'; tr.dataset.sedeId = s.id;
+            tr.innerHTML = `
+                <td class="px-6 py-4 text-sm text-gray-500">#${s.id}</td>
+                <td class="px-6 py-4 font-medium text-charcoal">
+                    <div class="relative group/input">
+                         <input class="bg-transparent border-b-2 border-gray-300 hover:border-primary focus:border-primary focus:bg-gray-50/50 focus:outline-none w-full py-2 pr-8 edit-name transition-all" 
+                                data-id="${s.id}" 
+                                data-original="${s.name}" 
+                                value="${s.name}" 
+                                placeholder="Nombre de sede"
+                                aria-label="Nombre de sede: ${s.name}">
+                         <i class="fas fa-pencil-alt absolute right-1 top-3 text-gray-400 text-sm pointer-events-none group-focus-within/input:text-primary transition-colors"></i>
+                     </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                     <div class="relative group/input">
+                         <input class="bg-transparent border-b-2 border-gray-300 hover:border-primary focus:border-primary focus:bg-gray-50/50 focus:outline-none w-full py-2 pr-8 edit-address transition-all" 
+                                data-id="${s.id}" 
+                                data-original="${s.address || ''}" 
+                                value="${s.address || ''}" 
+                                placeholder="Dirección (opcional)">
+                         <i class="fas fa-pencil-alt absolute right-1 top-3 text-gray-400 text-sm pointer-events-none group-focus-within/input:text-primary transition-colors"></i>
+                     </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <label class="relative inline-flex items-center cursor-pointer justify-center group/toggle">
+                        <input type="checkbox" class="sr-only peer toggle-active" data-id="${s.id}" ${s.active ? 'checked' : ''} aria-label="Estado: ${s.active ? 'Activa' : 'Inactiva'}">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button data-action="save-sede" class="text-primary hover:text-primaryDark text-sm font-medium save-btn hidden disabled:opacity-30 disabled:cursor-not-allowed transition-opacity" data-id="${s.id}">
+                        <i class="fas fa-save mr-1"></i> Guardar
+                    </button>
+                    <button data-action="cancel-sede" class="text-gray-400 hover:text-gray-600 text-sm font-medium cancel-btn hidden ml-2" data-id="${s.id}">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Delegated event handling
+    function onClick(e){
+        const el = e.target.closest('[data-action]');
+        if(!el) return;
+        const action = el.dataset.action;
+        if(action === 'open-create-sede') return openCreateSedeModal();
+        if(action === 'close-create-sede') return closeCreateSedeModal();
+        if(action === 'create-sede') return handleCreate(el);
+        if(action === 'save-sede') return handleSave(el.dataset.id, el);
+        if(action === 'cancel-sede') return handleCancel(el.dataset.id, el);
+    }
+
+    function onInput(e){
+        const input = e.target.closest('.edit-name, .edit-address');
+        if(!input) return;
+        const row = input.closest('tr');
+        row.classList.add('bg-blue-50', 'ring-2', 'ring-primary/20');
+        row.querySelector('.save-btn')?.classList.remove('hidden');
+        row.querySelector('.cancel-btn')?.classList.remove('hidden');
+    }
+
+    function onBlur(e){
+        const input = e.target.closest('.edit-name, .edit-address');
+        if(!input) return;
+        const row = input.closest('tr');
+        const nameInput = row.querySelector('.edit-name');
+        const addressInput = row.querySelector('.edit-address');
+        const hasChanges = nameInput.value !== nameInput.dataset.original || addressInput.value !== addressInput.dataset.original;
+        if(!hasChanges){ row.classList.remove('bg-blue-50', 'ring-2', 'ring-primary/20'); row.querySelector('.save-btn')?.classList.add('hidden'); row.querySelector('.cancel-btn')?.classList.add('hidden'); }
+    }
+
+    async function handleSave(id, btn){
+        const row = btn.closest('tr');
+        const name = row.querySelector('.edit-name')?.value.trim();
+        const address = row.querySelector('.edit-address')?.value.trim();
+        if(!name){ showToast('El nombre de la sede es obligatorio','error'); return; }
+        const prev = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+        try{
+            const res = await apiFetch(`${SEDES_API_URL}/${id}`, { method: 'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name, address }) });
+            showToast('Actualizado correctamente','success');
+            // update originals
+            row.querySelector('.edit-name').dataset.original = name;
+            row.querySelector('.edit-address').dataset.original = address;
+            row.classList.remove('bg-blue-50', 'ring-2', 'ring-primary/20');
+            row.querySelector('.save-btn')?.classList.add('hidden'); row.querySelector('.cancel-btn')?.classList.add('hidden');
+        }catch(err){ showToast(err.message || 'Error al actualizar','error'); }
+        finally{ btn.innerHTML = prev; btn.disabled = false; }
+    }
+
+    function handleCancel(id, btn){
+        const row = btn.closest('tr');
+        const nameInput = row.querySelector('.edit-name'); const addrInput = row.querySelector('.edit-address');
+        if(nameInput) nameInput.value = nameInput.dataset.original; if(addrInput) addrInput.value = addrInput.dataset.original;
+        row.classList.remove('bg-blue-50', 'ring-2', 'ring-primary/20'); row.querySelector('.save-btn')?.classList.add('hidden'); row.querySelector('.cancel-btn')?.classList.add('hidden');
+    }
+
+    async function handleCreate(btn){
+        const createBtn = btn || document.getElementById('create-sede-btn');
+        const nameInput = $(sel.newName); const addrInput = $(sel.newAddr);
+        if(!nameInput) return;
+        const name = nameInput.value.trim(); const address = addrInput?.value.trim() || '';
+        if(!name){ nameInput.classList.add('border-red-500','bg-red-50'); nameInput.focus(); showToast('El nombre de la sede es obligatorio','error'); return; }
+        const prev = createBtn?.innerHTML; if(createBtn){ createBtn.disabled = true; createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...'; }
+        try{
+            await apiFetch(SEDES_API_URL, { method: 'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name, address }) });
+            showToast('Sede creada exitosamente','success');
+            closeCreateSedeModal();
+            await loadSedes();
+        }catch(err){ showToast(err.message || 'Error al crear sede','error'); }
+        finally{ if(createBtn){ createBtn.innerHTML = prev; createBtn.disabled = false; createBtn.classList.remove('bg-olive'); } }
+    }
+
+    function openCreateSedeModal(){ const m = $(sel.modal); if(!m) return; m.classList.remove('hidden'); m.classList.add('flex'); setTimeout(()=>{ const n=$(sel.newName); if(n) n.focus(); },100); }
+    function closeCreateSedeModal(){ const m=$(sel.modal); if(!m) return; m.classList.add('hidden'); m.classList.remove('flex'); const n=$(sel.newName); const a=$(sel.newAddr); if(n) n.value=''; if(a) a.value=''; }
+
+    // handle overlay click
+    function onOverlayClick(e){ if(e.target && e.target.id === 'createSedeModal'){ closeCreateSedeModal(); } }
+
+    // toggle change handling
+    async function onChange(e){ const toggle = e.target.closest('.toggle-active'); if(!toggle) return; const id = toggle.dataset.id; const active = toggle.checked; if(!active){ const ok = confirm('¿Desactivar esta sede? Los datos se conservarán.'); if(!ok){ toggle.checked = true; return; } }
+        try{ await apiFetch(`${SEDES_API_URL}/${id}`, { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ active }) }); const activeCount = document.querySelectorAll('.toggle-active:checked').length; const c=$(sel.count); if(c) c.textContent = activeCount; showToast('Estado actualizado','success'); }catch(err){ showToast(err.message||'Error al actualizar','error'); }
+    }
+
+    function bind(){ document.addEventListener('click', onClick); document.addEventListener('input', onInput); document.addEventListener('blur', onBlur, true); document.addEventListener('change', onChange); document.addEventListener('click', onOverlayClick); }
+
+    return {
+        init: function(){ bind(); loadSedes(); }
+    };
+})();
+
+document.addEventListener('DOMContentLoaded', ()=>{ SedesModule.init(); });
+</script>
+{% endblock %}
