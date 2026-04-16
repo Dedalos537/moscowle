@@ -22,6 +22,14 @@
             }
         })();
     </script>
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
     <title>{% block title %}Moscowle{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
@@ -216,6 +224,12 @@
                             <a href="{{ url_for('patient.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-olive">
                                 <i class="fas fa-user-circle w-5"></i> Mi Perfil
                             </a>
+                            <div class="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+                                <span class="text-sm text-gray-700">Modo Oscuro</span>
+                                <button id="theme-toggle-btn" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 hover:bg-gray-300 transition-colors">
+                                    <span id="theme-toggle-dot" class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                                </button>
+                            </div>
                             <button id="logout-btn-header" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                 <i class="fas fa-sign-out-alt w-5"></i> Cerrar Sesión
                             </button>
@@ -590,6 +604,49 @@
                 closeLogoutModal();
             }
         });
+
+        // ========== DARK MODE TOGGLE ==========
+        function initTheme() {
+            const stored = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = stored === 'dark' || (!stored && prefersDark);
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                updateToggle(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateToggle(false);
+            }
+        }
+
+        function updateToggle(isDark) {
+            const dot = document.getElementById('theme-toggle-dot');
+            const btn = document.getElementById('theme-toggle-btn');
+            if (isDark) {
+                dot.classList.remove('translate-x-1');
+                dot.classList.add('translate-x-6');
+                btn.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+                btn.classList.add('bg-olive', 'hover:bg-green-700');
+            } else {
+                dot.classList.remove('translate-x-6');
+                dot.classList.add('translate-x-1');
+                btn.classList.remove('bg-olive', 'hover:bg-green-700');
+                btn.classList.add('bg-gray-200', 'hover:bg-gray-300');
+            }
+        }
+
+        const themeToggle = document.getElementById('theme-toggle-btn');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateToggle(isDark);
+            });
+        }
+
+        // Init theme on load
+        initTheme();
     </script>
 
     {% block extra_scripts %}{% endblock %}

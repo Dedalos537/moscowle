@@ -37,6 +37,7 @@ cp "${PROJECT_ROOT}/config.py" "$BUILD_DIR/${PACKAGE_NAME}/"
 cp "${PROJECT_ROOT}/run.py" "$BUILD_DIR/${PACKAGE_NAME}/"
 cp "${PROJECT_ROOT}/passenger_wsgi.py" "$BUILD_DIR/${PACKAGE_NAME}/"
 cp "${PROJECT_ROOT}/requirements.txt" "$BUILD_DIR/${PACKAGE_NAME}/"
+cp "${PROJECT_ROOT}/create_admin.py" "$BUILD_DIR/${PACKAGE_NAME}/" 2>/dev/null || true
 
 # Copy migrations
 echo -e "${BLUE}[3/9] Copying migrations...${NC}"

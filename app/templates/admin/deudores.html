@@ -1,6 +1,14 @@
 {% extends "therapist/base.html" %}
 {% set active_page = "admin_deudores" %}
 
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% block title %}Deudores por Sede - Moscowle IA{% endblock %}
 
 {% block header_content %}
@@ -261,6 +269,19 @@
         <form id="paymentForm" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="patient_id" id="payment_patient_id">
+            
+            
+            <div id="missing_data_warning" class="hidden mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                <i class="fas fa-exclamation-triangle"></i> Faltan datos para el Recibo Digital. Por favor complete estos campos.
+            </div>
+            <div class="mb-4 hidden" id="fg_document_number">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">DNI del Alumno/Apoderado para Recibo</label>
+                <input type="text" name="document_number" id="input_document_number" class="w-full px-3 py-2 border rounded-soft">
+            </div>
+            <div class="mb-4 hidden" id="fg_guardian_name">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Apoderado para Recibo</label>
+                <input type="text" name="guardian_name" id="input_guardian_name" class="w-full px-3 py-2 border rounded-soft">
+            </div>
             
             <div class="mb-4">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>
@@ -735,6 +756,39 @@ const DeudoresModule = (function(){
             if(resp.success && resp.data){
                 if(resp.data.suggested_date) document.getElementById('payment_next_date').value = resp.data.suggested_date;
                 if(resp.data.absences && resp.data.absences>0){ const hint = document.getElementById('absences_hint'); hint.textContent = `⚠️ ${resp.data.absences} faltas desde el último pago.`; hint.classList.remove('hidden'); }
+                
+                // Handle missing receipt data
+                const docInput = document.getElementById('input_document_number');
+                const guardInput = document.getElementById('input_guardian_name');
+                const docFg = document.getElementById('fg_document_number');
+                const guardFg = document.getElementById('fg_guardian_name');
+                const warning = document.getElementById('missing_data_warning');
+                
+                if(docInput) docInput.value = resp.data.document_number || '';
+                if(guardInput) guardInput.value = resp.data.guardian_name || '';
+                
+                let missing = false;
+                if (!resp.data.document_number) {
+                    if(docFg) docFg.classList.remove('hidden');
+                    missing = true;
+                } else {
+                    if(docFg) docFg.classList.add('hidden');
+                }
+                
+                // Usually check age, but for MVP if it's missing just ask for DNI first
+                if (!resp.data.guardian_name) {
+                    if(guardFg) guardFg.classList.remove('hidden');
+                } else {
+                    if(guardFg) guardFg.classList.add('hidden');
+                }
+                
+                if (missing) {
+                    if(warning) warning.classList.remove('hidden');
+                    if(docInput) docInput.required = true;
+                } else {
+                    if(warning) warning.classList.add('hidden');
+                    if(docInput) docInput.required = false;
+                }
             }
         }).catch(()=>{});
         document.querySelector(sel.paymentModal).classList.remove('hidden'); document.body.classList.add('overflow-hidden');

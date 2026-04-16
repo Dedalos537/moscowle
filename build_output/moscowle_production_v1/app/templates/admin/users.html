@@ -42,6 +42,55 @@
   /* Table cells: ensure vertical centering */
   td.actions-cell { vertical-align: middle; }
   
+  /* ===== IMPROVED STYLES FOR ASSIGN SELECT ===== */
+  
+  /* Select dropdown should be visible and not overflow */
+  .assign-select {
+    position: relative !important;
+    z-index: 10;
+    background-color: white !important;
+    color: #374151 !important;
+  }
+
+  .dark .assign-select {
+    background-color: #0f172a !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+  }
+
+  /* Assign button positioned correctly */
+  .assign-btn {
+    position: relative;
+    z-index: 9;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .assign-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .assign-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Therapist assignment row should not shrink */
+  .therapist-assignment-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Select wrapper */
+  .therapist-select-wrapper {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
   /* User action menu smart positioning */
   .user-action-menu {
     position: absolute !important;
@@ -49,6 +98,7 @@
     top: 100%;
     margin-top: 0.5rem;
     transition: all 0.15s ease-out;
+    z-index: 50;
   }
   
   .user-action-menu.absolute-top {
@@ -87,7 +137,7 @@
   .user-row[data-active="false"][data-is-debtor="false"][data-is-retired="false"]:hover {
     background-color: rgba(251, 146, 60, 0.12) !important;
   }
-  
+
   /* User card status colors */
   .user-card[data-is-retired="true"] {
     border-color: rgba(107, 114, 128, 0.5) !important;
@@ -104,16 +154,101 @@
   .user-card[data-is-debtor="true"] > :first-child {
     background-color: rgba(239, 68, 68, 0.1) !important;
   }
+
+  /* Dark mode overrides for assign select */
+  .dark .assign-select {
+    background-color: #1e293b !important;
+    color: #f3f4f6 !important;
+  }
+
+  .dark .assign-select option {
+    background-color: #1e293b;
+    color: #f3f4f6;
+  }
+
+  .dark .assign-select:focus {
+    border-color: #3b82f6 !important;
+    outline: none;
+  }
+
+  /* ===== TOAST ANIMATIONS & STYLES ===== */
+  
+  @keyframes slideInDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  #toast {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    max-width: 500px;
+  }
+
+  .animate-fade-in {
+    animation: slideInDown 0.3s ease-out !important;
+  }
+
+  #toast.hidden {
+    animation: fadeOut 0.3s ease-out;
+    pointer-events: none;
+  }
+
+  /* Gestalt: Clear visual hierarchy */
+  #toast-inner {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  /* Table responsiveness fix */
+  @media (max-width: 768px) {
+    .therapist-assignment-row {
+      flex-direction: column;
+    }
+
+    .therapist-select-wrapper {
+      min-width: 100%;
+    }
+
+    .assign-select {
+      width: 100% !important;
+    }
+
+    #toast {
+      left: 1rem;
+      right: 1rem;
+      max-width: calc(100vw - 2rem);
+    }
+  }
 </style>
 {% endblock %}
 {% block header_content %}
 <div>
-  <h2 class="text-2xl font-bold text-textDark">Usuarios</h2>
-  <p class="text-sm text-gray-500">Crear y gestionar terapeutas y pacientes</p>
+  <h2 class="text-3xl font-extrabold text-charcoal dark:text-white tracking-tight">Usuarios</h2>
+  <p class="text-sm text-gray-500 mt-1">Crear y gestionar terapeutas y pacientes</p>
 </div>
 {% endblock %}
 {% block header_action %}
-<button data-action="open-create" class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
+<button data-action="open-create" class="px-4 py-2.5 md:px-6 md:py-3 bg-primary text-white rounded-xl hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 font-semibold flex items-center gap-2">
     <i class="fas fa-user-plus"></i>
     <span class="hidden md:inline">Nuevo Usuario</span>
 </button>
@@ -374,106 +509,113 @@
       </div>
   </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-visible">
-    <div class="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
-        <h3 class="text-lg font-semibold text-textDark">Listado</h3>
+    <div class="bg-surface dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 xl:p-8 overflow-visible">
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 dark:border-gray-800 pb-6">
+        <h3 class="text-xl font-bold text-charcoal dark:text-white flex items-center gap-2">
+            <i class="fas fa-users text-primary"></i> 
+            Directorio
+        </h3>
         
         <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
              <!-- Sede Filter -->
              <div class="relative w-full md:w-48">
-                <select id="sedeFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
+                <select id="sedeFilter" class="w-full pl-4 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none bg-gray-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 text-gray-700 dark:text-gray-300 transition-all shadow-sm">
                     <option value="all">Todas las Sedes</option>
                     {% for s in sedes %}
                     <option value="{{ s.id }}">{{ s.name }}</option>
                     {% endfor %}
                 </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                    <i class="fas fa-chevron-down text-xs"></i>
                 </div>
              </div>
 
              <!-- Therapist Filter -->
              <div class="relative w-full md:w-48">
-                <select id="therapistFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
-                    <option value="all">Filtro Terapista</option>
+                <select id="therapistFilter" class="w-full pl-4 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none bg-gray-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 text-gray-700 dark:text-gray-300 transition-all shadow-sm">
+                    <option value="all">Filtro Terapeuta</option>
                     <!-- Populated by JS -->
                 </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                    <i class="fas fa-chevron-down text-xs"></i>
                 </div>
              </div>
 
              <!-- Search Bar -->
              <div class="relative w-full md:w-64">
-                <input type="text" id="userHelperSearch" placeholder="Buscar usuario o email..." class="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-gray-50 focus:bg-white">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400 text-xs"></i>
+                <input type="text" id="userHelperSearch" placeholder="Buscar usuario o email..." class="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all bg-gray-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 text-gray-700 dark:text-gray-300 shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 text-sm"></i>
                 </div>
             </div>
             
             <!-- Filters -->
             <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
-                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-primary text-white font-medium filter-btn active">Todos</button>
-                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Pacientes</button>
-                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-red-100 text-red-600 hover:bg-red-200 font-medium filter-btn">Deudores</button>
-                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium filter-btn">Retirados</button>
-                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Terapeutas</button>
-                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Admin</button>
+                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white font-semibold transition-all filter-btn active shadow-sm">Todos</button>
+                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Pacientes</button>
+                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-semibold transition-all filter-btn shadow-sm">Deudores</button>
+                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Retirados</button>
+                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Terapeutas</button>
+                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Admin</button>
             </div>
         </div>
     </div>
     
                 <!-- Stat Cards -->
-                <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Total Usuarios</div>
-                        <div id="total_users" class="text-2xl font-bold">0</div>
+                <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="stat-card bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 p-6 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-bl-full z-0 group-hover:scale-110 transition-transform"></div>
+                        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 z-10">Total Usuarios</div>
+                        <div id="total_users" class="text-3xl font-extrabold text-charcoal dark:text-white z-10">0</div>
                     </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Activos</div>
-                        <div id="active_users" class="text-2xl font-bold text-green-600">0</div>
+                    <div class="stat-card bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 p-6 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-green-500/5 rounded-bl-full z-0 group-hover:scale-110 transition-transform"></div>
+                        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 z-10">Activos</div>
+                        <div id="active_users" class="text-3xl font-extrabold text-green-500 z-10">0</div>
                     </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Pacientes</div>
-                        <div id="total_patients" class="text-2xl font-bold">0</div>
+                    <div class="stat-card bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 p-6 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full z-0 group-hover:scale-110 transition-transform"></div>
+                        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 z-10">Pacientes</div>
+                        <div id="total_patients" class="text-3xl font-extrabold text-charcoal dark:text-white z-10">0</div>
                     </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Terapeutas</div>
-                        <div id="total_therapists" class="text-2xl font-bold">0</div>
+                    <div class="stat-card bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 p-6 flex flex-col justify-center relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-purple-500/5 rounded-bl-full z-0 group-hover:scale-110 transition-transform"></div>
+                        <div class="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 z-10">Terapeutas</div>
+                        <div id="total_therapists" class="text-3xl font-extrabold text-charcoal dark:text-white z-10">0</div>
                     </div>
                 </div>
 
                 <!-- Dashboard: Charts -->
-                <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Usuarios por Sede</h4>
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Usuarios por Sede</h4>
                         <div style="max-height:210px;"><canvas id="users_sede_chart" aria-label="Usuarios por Sede" style="width:100%;height:100%;"></canvas></div>
                     </div>
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Activo vs Inactivo</h4>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Activo vs Inactivo</h4>
                         <div style="max-height:210px;"><canvas id="active_status_chart" aria-label="Activo vs Inactivo" style="width:100%;height:100%;"></canvas></div>
                     </div>
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Roles (Pacientes/Terapeutas)</h4>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Roles de Usuario</h4>
                         <div style="max-height:210px;"><canvas id="user_role_chart" aria-label="Roles de Usuario" style="width:100%;height:100%;"></canvas></div>
                     </div>
                 </div>
 
         <!-- Desktop Table View -->
-        <div class="hidden md:block overflow-x-auto">
+        <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm mt-4">
       <table class="w-full min-w-[900px]">
-        <thead>
-          <tr class="border-b border-gray-100">
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Usuario</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rol</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Sede</th>
-            <th class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Terapeuta</th>
-            <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
+        <thead class="bg-gray-50 dark:bg-slate-800">
+          <tr>
+            <th class="px-6 py-4 text-left text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usuario</th>
+            <th class="px-6 py-4 text-left text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+            <th class="px-6 py-4 text-left text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rol</th>
+            <th class="px-6 py-4 text-left text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
+            <th class="px-6 py-4 text-center text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-4 text-left text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Terapeuta</th>
+            <th class="px-6 py-4 text-right text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-slate-900">
           {% for u in users %}
           {% set sede_ids = [] %}
           {% if u.role == 'jugador' and u.sede_id %}
@@ -483,7 +625,7 @@
                 {% set _ = sede_ids.append(s.id) %}
              {% endfor %}
           {% endif %}
-          <tr class="divide-y divide-gray-50 border-b border-gray-100 hover:bg-gray-50/50 transition-colors group user-row" 
+          <tr class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors duration-200 group user-row" 
               data-role="{{ u.role }}" 
               data-sede-ids='{{ sede_ids | tojson }}'
               data-active="{{ 'true' if u.is_active else 'false' }}"
@@ -491,83 +633,87 @@
               data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
               data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
             <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/20 shadow-sm">
                     {{ u.username[:2].upper() if u.username else 'US' }}
                 </div>
-                <input class="font-medium text-charcoal bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name py-1" data-id="{{ u.id }}" value="{{ u.username }}" />
+                <div class="flex-1">
+                    <input class="font-bold text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name py-1 text-[15px]" data-id="{{ u.id }}" value="{{ u.username }}" />
+                </div>
               </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-500">{{ u.email }}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400">{{ u.email }}</td>
             <td class="px-6 py-4">
-              <div class="relative">
-                  <select class="appearance-none bg-transparent border border-transparent hover:border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-sm py-1.5 pl-3 pr-8 admin-edit-role cursor-pointer transition-all" data-id="{{ u.id }}">
+              <div class="relative w-fit">
+                  <select class="appearance-none bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-semibold py-2 pl-4 pr-10 admin-edit-role cursor-pointer transition-all duration-200 text-gray-700 dark:text-gray-300 shadow-sm" data-id="{{ u.id }}">
                     <option value="terapista" {{ 'selected' if u.role == 'terapista' else '' }}>Terapeuta</option>
                     <option value="jugador" {{ 'selected' if u.role == 'jugador' else '' }}>Paciente</option>
                     <option value="admin" {{ 'selected' if u.role == 'admin' else '' }}>Admin</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
                   </div>
               </div>
             </td>
             <td class="px-6 py-4">
                 {% if u.role == 'jugador' %}
-                    <span class="text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700">
+                    <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 shadow-sm dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300">
                         {{ u.sede_item.name if u.sede_item else 'Sin Sede' }}
                     </span>
                 {% elif u.role == 'terapista' %}
-                    <div class="flex flex-col gap-1">
+                    <div class="flex flex-wrap gap-2">
                     {% for s in u.assigned_sedes %}
-                        <span class="text-xs font-semibold px-2 py-1 rounded bg-purple-50 text-purple-700">
+                        <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-100 text-purple-700 shadow-sm dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300">
                         {{ s.name }}
                         </span>
                     {% else %}
-                        <span class="text-xs text-gray-400">Sin Asignar</span>
+                        <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-gray-500 shadow-sm dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400">Sin Asignar</span>
                     {% endfor %}
                     </div>
                 {% endif %}
             </td>
             <td class="px-6 py-4 text-center">
-              <label class="relative inline-flex items-center cursor-pointer justify-center">
+              <label class="relative inline-flex items-center cursor-pointer justify-center shadow-sm rounded-full bg-white dark:bg-slate-800">
                 <input type="checkbox" class="sr-only peer admin-edit-active" data-id="{{ u.id }}" {{ 'checked' if u.is_active else '' }}>
-                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                <div class="w-10 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
               </label>
             </td>
             <td class="px-6 py-4">
               {% if u.role == 'jugador' %}
-                <div class="flex items-center gap-2">
-                    <div class="relative w-full max-w-[200px]">
-                        <select multiple class="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-2 h-20 assign-select" data-patient-id="{{ u.id }}">
+                <div class="flex items-center gap-3">
+                    <div class="relative w-full max-w-[220px]">
+                        <select multiple class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary block py-2 pl-4 pr-3 h-24 assign-select shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-colors custom-scrollbar" data-patient-id="{{ u.id }}">
                           {% for t in therapists %}
-                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }}>{{ t.username or t.email }}</option>
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }} class="py-1">{{ t.username or t.email }}</option>
                           {% endfor %}
                         </select>
                     </div>
-                    <button class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors assign-btn self-start mt-1" data-patient-id="{{ u.id }}" title="Guardar Asignación">
-                        <i class="fas fa-check text-xs"></i>
+                    <button class="w-10 h-10 flex items-center justify-center bg-primary/10 text-primary rounded-xl font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 assign-btn self-start shrink-0 cursor-pointer text-base" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                        <i class="fas fa-check"></i>
                     </button>
                 </div>
               {% else %}
-                <span class="text-gray-300 text-sm">—</span>
+                <span class="text-gray-300 dark:text-gray-600 font-bold px-4">—</span>
               {% endif %}
             </td>
             <td class="px-6 py-4 relative overflow-visible">
             <div class="flex justify-end">
               <div class="relative">
-                <button data-action="toggle-user-menu" class="p-2 text-gray-400 hover:text-charcoal rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
+                <button data-action="toggle-user-menu" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-charcoal bg-gray-50 border border-gray-200 dark:border-gray-700 dark:bg-slate-800 dark:text-gray-300 dark:hover:text-white rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-all shadow-sm pointer-events-auto cursor-pointer focus:ring-2 focus:ring-primary/20">
                   <i class="fas fa-ellipsis-v pointer-events-none"></i>
                 </button>
-                <div id="dropdown-{{ u.id }}" class="hidden user-action-menu w-56 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1 text-left ring-1 ring-black ring-opacity-5 focus:outline-none overflow-visible" role="menu">
+                <div id="dropdown-{{ u.id }}" class="hidden user-action-menu w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 py-2 text-left overflow-visible" role="menu">
 
                   <!-- View Profile -->
-                  <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <i class="fas fa-user-circle mr-3 text-gray-400 group-hover:text-indigo-500 w-5 text-center"></i>
+                  <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          <i class="fas fa-user-circle"></i>
+                      </div>
                       Ver Perfil
                   </a>
 
                   <!-- Edit User Button -->
-                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors admin-update-btn"
+                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors admin-update-btn cursor-pointer"
                       data-id="{{ u.id }}"
                       data-username="{{ u.username|e }}"
                       data-email="{{ u.email|e }}"
@@ -585,21 +731,27 @@
                       data-end-time="{{ u.work_end_time or '' }}"
                       data-days='{{ u.work_days or "" }}'
                       data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}">
-                      <i class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500 w-5 text-center"></i>
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-blue-100 dark:group-hover:bg-blue-800/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          <i class="fas fa-edit"></i>
+                      </div>
                       Editar Usuario
                   </button>
 
-                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <i class="fas fa-key mr-3 text-gray-400 group-hover:text-amber-500 w-5 text-center"></i>
+                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-amber-100 dark:group-hover:bg-amber-800/50 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                          <i class="fas fa-key text-[13px]"></i>
+                      </div>
                       Reset Password
                   </button>
 
-                  <div class="h-px bg-gray-100 my-1"></div>
+                  <div class="h-px bg-gray-100 dark:bg-gray-800 my-2 mx-4"></div>
 
                   {% if u.role != 'admin' %}
-                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-statusRed hover:bg-red-50 transition-colors">
-                      <i class="fas fa-trash-alt mr-3 opacity-50 group-hover:opacity-100 w-5 text-center"></i>
-                      Eliminar
+                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 transition-colors cursor-pointer">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-400 dark:text-red-500 mr-3 group-hover:bg-red-100 dark:group-hover:bg-red-800/50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                          <i class="fas fa-trash-alt"></i>
+                      </div>
+                      Eliminar Usuario
                   </button>
                   {% endif %}
                 </div>
@@ -613,7 +765,7 @@
     </div>
 
     <!-- Mobile Card View -->
-    <div class="md:hidden space-y-4">
+    <div class="md:hidden space-y-6 mt-6">
       {% for u in users %}
       {% set sede_ids = [] %}
       {% if u.role == 'jugador' and u.sede_id %}
@@ -623,7 +775,7 @@
             {% set _ = sede_ids.append(s.id) %}
          {% endfor %}
       {% endif %}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md user-card" 
+      <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all hover:shadow-md user-card relative" 
            data-role="{{ u.role }}" 
            data-sede-ids='{{ sede_ids | tojson }}'
            data-active="{{ 'true' if u.is_active else 'false' }}"
@@ -631,7 +783,7 @@
            data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
            data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
         <!-- Header: User Info & Status -->
-        <div class="p-5 border-b border-gray-50 bg-gray-50/30">
+        <div class="p-6 border-b border-gray-50 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-800/50">
           <div class="flex justify-between items-start gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3 mb-1">
@@ -989,8 +1141,44 @@ const UsersModule = (function(){
     function $ (q){ return document.querySelector(q); }
     function $$ (q){ return Array.from(document.querySelectorAll(q)); }
 
-    function showToast(msg, type='success'){
-        const t = $(sel.toast); const inner = $(sel.toastInner); if(!t||!inner) return; inner.textContent = msg; inner.className = 'px-4 py-3 rounded-soft shadow-soft text-white ' + (type==='success'?'bg-olive': type==='error'?'bg-statusRed':'bg-accent'); t.classList.remove('hidden'); setTimeout(()=> t.classList.add('hidden'), 3000);
+    function showToast(msg, type='success', duration=3000) {
+        const t = $(sel.toast); 
+        const inner = $(sel.toastInner); 
+        if (!t || !inner) return;
+        
+        // Gestalt Principle: Clarity through spacing and contrast
+        const bgClass = type === 'success' 
+            ? 'bg-green-500' 
+            : type === 'error' 
+            ? 'bg-red-500' 
+            : type === 'warn'
+            ? 'bg-yellow-500'
+            : 'bg-blue-500';
+        
+        const icon = type === 'success' 
+            ? '✓' 
+            : type === 'error' 
+            ? '✕' 
+            : type === 'warn'
+            ? '⚠'
+            : 'ℹ';
+        
+        // ISO 9241: Clear, concise messages with action items
+        inner.innerHTML = `
+            <div class="flex items-center gap-3">
+                <span class="text-lg font-bold">${icon}</span>
+                <span>${msg}</span>
+            </div>
+        `;
+        inner.className = `px-6 py-4 rounded-lg shadow-lg text-white font-medium flex-1 ${bgClass}`;
+        
+        t.classList.remove('hidden');
+        t.classList.add('animate-fade-in');
+        
+        setTimeout(() => {
+            t.classList.add('hidden');
+            t.classList.remove('animate-fade-in');
+        }, duration);
     }
 
     // Filters & search
@@ -1277,24 +1465,178 @@ const UsersModule = (function(){
     function closeEditUserModal(){ closeModal(sel.editModal); }
 
     // Create user
-    async function handleCreateUser(){
-        const btn = $ (sel.createBtn); const status = $ (sel.createStatus); const prev = btn?.textContent; if(status) status.textContent = 'Creando...'; if(btn){ btn.disabled=true; btn.textContent='Creando…'; }
-        try{
-            const payload = { email: $ (sel.newEmail)?.value, username: $ (sel.newUsername)?.value, role: $ (sel.newRole)?.value };
-            const role = payload.role;
-            if(role==='jugador'){ payload.sede_id = $ (sel.newSede)?.value; payload.modality = $ (sel.newModality)?.value; payload.payment_frequency = $ (sel.newFrequency)?.value; payload.payment_amount = $ (sel.newAmount)?.value; payload.plan_type = $ (sel.newPlanType)?.value; payload.generate_schedule = $ (sel.generateSchedule)?.checked; if(payload.generate_schedule){ payload.start_date = $ (sel.startDate)?.value; payload.start_time = $ (sel.startTime)?.value; payload.therapist_id = $ (sel.scheduleTherapist)?.value; payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb=>cb.value); } }
-            if(role==='terapista'){ const opts = $ (sel.newSedesMulti); if(opts){ const selected = Array.from(opts.selectedOptions).map(o=>o.value); payload.sede_ids = selected; } payload.salary_base = $ ('#new-salary')?.value; payload.contract_hours = $ ('#new-hours')?.value; }
-
-            const data = await apiFetch(urls.create, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
-            if(!data || !data.success) throw new Error(data?.message || 'Error al crear');
-            showToast('Usuario creado','success');
-            setTimeout(()=> window.location.reload(), 300);
-        } catch(err){ if(status) status.textContent = err.message; showToast(err.message || 'Error', 'error'); }
-        finally{ if(btn){ btn.disabled=false; btn.textContent = prev; } }
+    async function handleCreateUser() {
+        try {
+            const btn = $(sel.createBtn);
+            const status = $(sel.createStatus);
+            
+            if (!btn) {
+                showToast('Botón no encontrado', 'error');
+                return;
+            }
+            
+            // Step 1: Validate required fields
+            const email = ($(sel.newEmail)?.value || '').trim();
+            const username = ($(sel.newUsername)?.value || '').trim();
+            const role = $(sel.newRole)?.value || 'jugador';
+            
+            if (!role) {
+                showToast('Selecciona un rol', 'warn');
+                return;
+            }
+            
+            if (role !== 'jugador' && !email) {
+                showToast('Email requerido para admin y terapeutas', 'warn');
+                return;
+            }
+            
+            if (role === 'jugador' && !email && !username) {
+                showToast('Ingresa nombre o email del paciente', 'warn');
+                return;
+            }
+            
+            // Step 2: Build payload
+            const payload = { email, username, role };
+            
+            if (role === 'jugador') {
+                payload.sede_id = $(sel.newSede)?.value || null;
+                payload.modality = $(sel.newModality)?.value || 0;
+                payload.payment_frequency = $(sel.newFrequency)?.value || 'monthly';
+                payload.payment_amount = $(sel.newAmount)?.value || 0;
+                payload.plan_type = $(sel.newPlanType)?.value || 'individual';
+                payload.generate_schedule = $(sel.generateSchedule)?.checked || false;
+                
+                if (payload.generate_schedule) {
+                    payload.start_date = $(sel.startDate)?.value;
+                    payload.start_time = $(sel.startTime)?.value;
+                    payload.therapist_id = $(sel.scheduleTherapist)?.value;
+                    payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => cb.value);
+                }
+            }
+            
+            if (role === 'terapista') {
+                const opts = $(sel.newSedesMulti);
+                if (opts) {
+                    payload.sede_ids = Array.from(opts.selectedOptions).map(o => o.value);
+                }
+                payload.salary_base = $('#new-salary')?.value || 0;
+                payload.contract_hours = $('#new-hours')?.value || 0;
+            }
+            
+            // Step 3: Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            if (status) status.textContent = 'Procesando...';
+            
+            // Step 4: Make API call
+            const response = await apiFetch(urls.create, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            console.log('✅ Usuario creado:', response);
+            
+            // Step 5: Success handling
+            showToast('👤 Usuario creado exitosamente', 'success', 4000);
+            
+            // Close modal after success
+            const modal = $(sel.createModal);
+            if (modal) {
+                modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                modal.classList.remove('flex', 'opacity-100');
+                document.body.style.overflow = '';
+            }
+            
+            // Reset form
+            $(sel.newEmail).value = '';
+            $(sel.newUsername).value = '';
+            $(sel.newRole).value = 'jugador';
+            
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('❌ Error creando usuario:', err);
+            const status = $(sel.createStatus);
+            if (status) status.textContent = err.error || err.message || 'Error desconocido';
+            showToast(err.error || err.message || 'Error al crear usuario', 'error', 5000);
+        } finally {
+            const btn = $(sel.createBtn);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Usuario';
+            }
+        }
     }
 
-    // Assign therapists
-    async function handleAssign(btn){ const container = btn.closest('td') || btn.closest('.bg-blue-50/50'); const select = container?.querySelector(sel.assignSelect); const patientId = btn.dataset.patientId; if(!select) return; const therapistIds = Array.from(select.selectedOptions).map(o=>Number(o.value)); if(therapistIds.length>3){ showToast('Máx 3 terapeutas','error'); return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; try{ const data = await apiFetch(urls.assign, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ patient_id: Number(patientId), therapist_ids: therapistIds }) }); if(!data || !data.success) throw new Error(data?.message || 'Error al asignar'); showToast('Asignación guardada','success'); setTimeout(()=> window.location.reload(), 400); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
+    // ===== ASSIGN THERAPISTS - REWRITTEN FOR CLARITY =====
+    async function handleAssign(btn) {
+        try {
+            // Step 1: Get the row containing this button
+            const row = btn.closest('tr') || btn.closest('.user-row') || btn.closest('.user-card');
+            if (!row) {
+                console.error('❌ No row encontrado para el botón');
+                showToast('Error: No se encontró la fila', 'error');
+                return;
+            }
+
+            // Step 2: Find the select element in THIS row
+            const select = row.querySelector('select.assign-select');
+            if (!select) {
+                console.error('❌ No select encontrado en la fila');
+                showToast('Error: Select de terapeutas no encontrado', 'error');
+                return;
+            }
+
+            // Step 3: Get patient ID from button dataset
+            const patientId = Number(btn.dataset.patientId);
+            if (!patientId || patientId < 1) {
+                console.error('❌ Patient ID inválido:', btn.dataset.patientId);
+                showToast('Error: ID de paciente inválido', 'error');
+                return;
+            }
+
+            // Step 4: Get selected therapist IDs
+            const therapistIds = Array.from(select.selectedOptions).map(o => Number(o.value));
+            console.log('✅ Terapeutas seleccionados:', therapistIds);
+
+            if (therapistIds.length === 0) {
+                showToast('Selecciona al menos 1 terapeuta', 'warn');
+                return;
+            }
+
+            if (therapistIds.length > 3) {
+                showToast('Máximo 3 terapeutas', 'error');
+                return;
+            }
+
+            // Step 5: Make API call
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+            const response = await apiFetch(urls.assign, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: patientId, therapist_ids: therapistIds })
+            });
+
+            console.log('✅ Respuesta del servidor:', response);
+
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error desconocido');
+            }
+
+            showToast('✅ Asignación guardada');
+            setTimeout(() => window.location.reload(), 600);
+
+        } catch (err) {
+            console.error('❌ Error en handleAssign:', err);
+            showToast(err.message || 'Error al asignar terapeutas', 'error');
+            btn.disabled = false;
+            btn.innerHTML = prev;
+        }
+    }
 
     // Open edit modal: populate fields from button dataset
     function openEdit(btn){ const id = btn.dataset.id; const modal = $ (sel.editModal); if(!modal) return; // populate
@@ -1322,75 +1664,251 @@ const UsersModule = (function(){
 
     function toggleEditFields(){ const role = $ ('#edit-role')?.value || 'jugador'; const patientFields = $ ('#edit-patient-fields'); const therapistFields = $ ('#edit-therapist-fields'); const patientLocation = $ ('#edit-patient-location'); if(role==='jugador'){ patientFields?.classList.remove('hidden'); patientLocation?.classList.remove('hidden'); therapistFields?.classList.add('hidden'); } else if(role==='terapista'){ patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.remove('hidden'); } else { patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.add('hidden'); } }
 
-    async function submitEditForm(e){ e.preventDefault(); const btn = e.target.querySelector('button[type=submit]'); const prev = btn?.textContent; if(btn){ btn.disabled=true; btn.textContent='Guardando...'; } const id = $ ('#edit-id').value; const username = $ ('#edit-username').value; const role = $ ('#edit-role').value; const isActive = $ ('#edit-active').checked; 
-        const payload = { 
-            id: parseInt(id), 
-            username, 
-            role, 
-            is_active: isActive,
-            sede_id: $ ('#edit-sede')?.value || null
-        };
-        if(role==='jugador'){ 
-            payload.modality = $ ('#edit-modality')?.value; 
-            payload.payment_plan = $ ('#edit-frequency')?.value; 
-            payload.payment_amount = $ ('#edit-amount')?.value; 
-            payload.sessions_attended = $ ('#edit-attended')?.value; 
-            payload.plan_type = $ ('#edit-plan-type')?.value; 
-            const has2 = $ ('#edit-has-shift2')?.checked; 
-            payload.has_second_shift = !!has2; 
-            if(has2){ 
-                payload.modality_2 = $ ('#edit-modality-2')?.value; 
-                payload.payment_amount_2 = $ ('#edit-amount-2')?.value; 
-                payload.sessions_attended_2 = $ ('#edit-attended-2')?.value; 
-                payload.plan_type_2 = $ ('#edit-plan-type-2')?.value; 
-            } 
+    async function submitEditForm(e) {
+        e.preventDefault();
+        
+        // Get button and show loading state
+        const btn = e.target.querySelector('button[type=submit]');
+        const prev = btn?.textContent;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
         }
-        if(role==='terapista'){ 
-            const ms = $ ('#edit-sedes-multi'); 
-            const selected = []; 
-            if(ms){ for(let i=0;i<ms.options.length;i++){ if(ms.options[i].selected) selected.push(ms.options[i].value); } } 
-            payload.sede_ids = selected; 
-            payload.salary_base = $ ('#edit-salary')?.value; 
-            payload.contract_hours = $ ('#edit-hours')?.value; 
-            payload.work_start_time = $ ('#edit-start-time')?.value; 
-            payload.work_end_time = $ ('#edit-end-time')?.value; 
-            payload.work_days = Array.from(document.querySelectorAll('input[name="edit_days"]:checked')).map(cb=>cb.value).join(','); 
+        
+        try {
+            // Step 1: Collect and validate form inputs
+            const id = $('#edit-id')?.value;
+            const username = $('#edit-username')?.value?.trim();
+            const role = $('#edit-role')?.value;
+            const isActive = $('#edit-active')?.checked;
+            
+            // Field validation (Gestalt: Clear requirements)
+            if (!id || !username || !role) {
+                throw new Error('ID, usuario y rol son requeridos');
+            }
+            
+            if (username.length < 3) {
+                throw new Error('El usuario debe tener al menos 3 caracteres');
+            }
+            
+            // Step 2: Build base payload
+            const payload = {
+                id: parseInt(id),
+                username,
+                role,
+                is_active: isActive,
+                sede_id: $('#edit-sede')?.value || null
+            };
+            
+            // Step 3: Collect role-specific fields
+            if (role === 'jugador') {
+                payload.modality = $('#edit-modality')?.value;
+                payload.payment_plan = $('#edit-frequency')?.value;
+                payload.payment_amount = $('#edit-amount')?.value || '0';
+                payload.sessions_attended = $('#edit-attended')?.value || '0';
+                payload.plan_type = $('#edit-plan-type')?.value;
+                
+                const has2 = $('#edit-has-shift2')?.checked;
+                payload.has_second_shift = !!has2;
+                if (has2) {
+                    payload.modality_2 = $('#edit-modality-2')?.value;
+                    payload.payment_amount_2 = $('#edit-amount-2')?.value || '0';
+                    payload.sessions_attended_2 = $('#edit-attended-2')?.value || '0';
+                    payload.plan_type_2 = $('#edit-plan-type-2')?.value;
+                }
+            }
+            
+            if (role === 'terapista') {
+                const ms = $('#edit-sedes-multi');
+                const selected = [];
+                if (ms) {
+                    for (let i = 0; i < ms.options.length; i++) {
+                        if (ms.options[i].selected) selected.push(ms.options[i].value);
+                    }
+                }
+                
+                if (selected.length === 0) {
+                    throw new Error('Debe seleccionar al menos una sede');
+                }
+                
+                payload.sede_ids = selected;
+                payload.salary_base = $('#edit-salary')?.value || '0';
+                payload.contract_hours = $('#edit-hours')?.value || '0';
+                payload.work_start_time = $('#edit-start-time')?.value || '08:00';
+                payload.work_end_time = $('#edit-end-time')?.value || '17:00';
+                payload.work_days = Array.from(
+                    document.querySelectorAll('input[name="edit_days"]:checked')
+                ).map(cb => cb.value).join(',');
+            }
+            
+            // Step 4: Send update request
+            console.log('Enviando actualización de usuario:', payload);
+            const response = await apiFetch(urls.update, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            // Step 5: Validate response
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al actualizar usuario');
+            }
+            
+            // Step 6: Show success and redirect
+            showToast('✓ Usuario actualizado exitosamente', 'success', 4000);
+            
+            // Close modal if open
+            const modal = document.querySelector('[data-modal="editUserModal"]');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            
+            // Reload after brief delay (ISO 9241: Allow user to see confirmation)
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('Error en submitEditForm:', err);
+            
+            // Show error message (Gestalt: Clear, visible feedback)
+            const errorMsg = err.message || err.error || 'Error al actualizar el usuario';
+            showToast(`✕ ${errorMsg}`, 'error', 5000);
+            
+            // Restore button state
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = prev || 'Guardar cambios';
+            }
         }
-        try{ 
-            console.log('Enviando actualización:', payload);
-            const data = await apiFetch(urls.update, { 
-                method:'POST', 
-                headers:{ 'Content-Type':'application/json' }, 
-                body: JSON.stringify(payload) 
-            }); 
-            if(!data || !data.success) throw new Error(data?.message || 'Error al actualizar'); 
-            showToast('Usuario actualizado','success'); 
-            setTimeout(()=> window.location.reload(), 400); 
-        } catch(err){ 
-            console.error('Error update:', err);
-            showToast(err.message||'Error','error'); 
-            btn.disabled=false; 
-            btn.textContent = prev; 
-        } 
     }
 
-    async function handleResetPassword(btn){ const id = Number(btn.dataset.id); const count = Number(btn.dataset.count||0); let manual = null; if(count===0){ manual = prompt('Ingrese nueva contraseña (manual):'); if(manual===null) return; if(!manual.trim()){ alert('La contraseña no puede estar vacía'); return;} } else { if(!confirm('Generar nueva contraseña automáticamente y enviarla por correo?')) return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; try{ const payload = { id }; if(manual) payload.new_password = manual; const data = await apiFetch(urls.reset_pass, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) }); if(!data || !data.success) throw new Error(data?.message||'Error'); if(manual) alert('Contraseña actualizada: ' + manual); else alert('Contraseña generada: ' + (data.temp_password||' (enviada por correo)')); window.location.reload(); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
+    async function handleResetPassword(btn) {
+        try {
+            const id = Number(btn.dataset.id);
+            const count = Number(btn.dataset.count || 0);
+            
+            // Validate ID (ISO 9241: Prevent invalid operations)
+            if (!id || id < 1) {
+                showToast('✕ ID de usuario inválido', 'error', 4000);
+                return;
+            }
+            
+            let manual = null;
+            
+            // Determine password method
+            if (count === 0) {
+                // First reset: ask for manual password
+                manual = prompt('🔐 Ingrese nueva contraseña (mínimo 6 caracteres):');
+                if (manual === null) {
+                    // User cancelled
+                    return;
+                }
+                
+                // Validate password strength
+                if (!manual.trim()) {
+                    showToast('✕ La contraseña no puede estar vacía', 'error', 4000);
+                    return;
+                }
+                if (manual.trim().length < 6) {
+                    showToast('✕ La contraseña debe tener mínimo 6 caracteres', 'error', 4000);
+                    return;
+                }
+            } else {
+                // Subsequent resets: auto-generate
+                if (!confirm('🔐 ¿Generar nueva contraseña automáticamente y enviarla por correo?')) {
+                    return;
+                }
+            }
+            
+            // Show loading state
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reseteando...';
+            
+            // Step 1: Prepare payload
+            const payload = { id };
+            if (manual) payload.new_password = manual;
+            console.log('Enviando reset de contraseña para usuario ID:', id);
+            
+            // Step 2: Send request
+            const response = await apiFetch(urls.reset_pass, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            // Step 3: Validate response
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al resetear contraseña');
+            }
+            
+            // Step 4: Show confirmation (Gestalt: Clear, non-threatening)
+            if (manual) {
+                showToast(`✓ Contraseña actualizada a: ${manual}`, 'success', 6000);
+            } else {
+                const tempPass = response.temp_password || '(enviada por correo)';
+                showToast(`✓ Contraseña generada: ${tempPass}`, 'success', 5000);
+            }
+            
+            // Step 5: Reload to show updated state
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('Error en handleResetPassword:', err);
+            const errorMsg = err.message || err.error || 'Error desconocido';
+            showToast(`✕ ${errorMsg}`, 'error', 5000);
+            
+            // Restore button state
+            const btn = event?.target;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-redo"></i> Resetear';
+            }
+        }
+    }
 
-    async function handleDelete(btn){
-        const id = Number(btn.dataset.id);
-        if(!confirm('¿Eliminar usuario? Esta acción es permanente.')) return;
-        const prev = btn.textContent;
-        btn.disabled=true;
-        btn.textContent='Eliminando...';
-        try{
-            const data = await apiFetch(urls.delete, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ id }) });
-            if(!data || !data.success) throw new Error(data?.message||'Error al eliminar');
-            showToast('Usuario eliminado','success');
-            window.location.reload();
-        } catch(err){
-            showToast(err.message||'Error','error');
-            btn.disabled=false;
-            btn.textContent = prev;
+    async function handleDelete(btn) {
+        try {
+            const id = Number(btn.dataset.id);
+            if (!id || id < 1) {
+                showToast('ID de usuario inválido', 'error');
+                return;
+            }
+            
+            // Confirmation with details (ISO 9241: Minimize user error)
+            if (!confirm('⚠️ Esta acción es PERMANENTE\n\n¿Estás seguro de eliminar este usuario?')) {
+                return;
+            }
+            
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+            
+            console.log('Eliminando usuario:', id);
+            
+            const response = await apiFetch(urls.delete, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            
+            console.log('✅ Respuesta del servidor:', response);
+            
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al eliminar usuario');
+            }
+            
+            showToast('🗑️ Usuario eliminado correctamente', 'success', 4000);
+            setTimeout(() => window.location.reload(), 1200);
+            
+        } catch (err) {
+            console.error('❌ Error eliminando usuario:', err);
+            showToast(err.error || err.message || 'Error al eliminar usuario', 'error', 5000);
+            
+            const btn = arguments[0]; // Get button from closure
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+            }
         }
     }
 
@@ -1412,6 +1930,14 @@ const UsersModule = (function(){
     function bind(){
         // Click delegation for ALL actions
         document.addEventListener('click', (e) => {
+            // Handle assign button clicks
+            if (e.target.closest('.assign-btn')) {
+                e.preventDefault();
+                const assignBtn = e.target.closest('.assign-btn');
+                handleAssign(assignBtn);
+                return;
+            }
+
             const btn = e.target.closest('[data-action]');
             
             if (!btn || btn.dataset.action !== 'toggle-user-menu') {

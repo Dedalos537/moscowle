@@ -1,13 +1,17 @@
 {% extends 'therapist/base.html' %}
 {% set active_page = 'admin_users' %}
 
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
 {% block extra_styles %}
 <style>
   /* Scoped styles for Admin Usuarios buttons layout */
-  #create-user,
-  .assign-save,
-  .admin-update-btn,
-  .admin-delete-btn {
+    #create-user,
+  .assign-save {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -42,25 +46,147 @@
   /* Table cells: ensure vertical centering */
   td.actions-cell { vertical-align: middle; }
   
-  /* User action menu smart positioning */
+  /* ===== IMPROVED STYLES FOR ASSIGN SELECT ===== */
+  
+  /* Select dropdown should be visible and not overflow */
+  .assign-select {
+    position: relative !important;
+    z-index: 10;
+    background-color: white !important;
+    color: #374151 !important;
+  }
+
+  .dark .assign-select {
+    background-color: #0f172a !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+  }
+
+  /* Assign button positioned correctly */
+  .assign-btn {
+    position: relative;
+    z-index: 9;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .assign-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .assign-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Therapist assignment row should not shrink */
+  .therapist-assignment-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Select wrapper */
+  .therapist-select-wrapper {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
+  /* User action menu off-canvas side drawer */
   .user-action-menu {
-    position: absolute !important;
-    right: 0;
-    top: 100%;
-    margin-top: 0.5rem;
-    transition: all 0.15s ease-out;
+    position: fixed !important;
+    top: 0 !important;
+    right: -300px; /* Start hidden off-screen */
+    width: 300px;
+    height: 100vh;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: 1px solid rgba(0,0,0,0.1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1) !important;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000 !important;
+    display: block !important;
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-top: 2rem !important;
   }
   
+  .dark .user-action-menu {
+    border-left: 1px solid rgba(255,255,255,0.05);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  /* Open state for the drawer */
+  .user-action-menu.drawer-open {
+    right: 0;
+    visibility: visible;
+  }
+  
+  /* Side Panel full Drawer for Modals (Create/Edit) */
+  .side-panel-drawer {
+    position: fixed !important;
+    top: 0 !important;
+    right: -100%;
+    width: 600px;
+    max-width: 100vw;
+    height: 100vh;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: 1px solid rgba(0,0,0,0.1);
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.15) !important;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000 !important;
+    background-color: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+  }
+  
+  .dark .side-panel-drawer {
+    border-left: 1px solid rgba(255,255,255,0.05);
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.5) !important;
+    background-color: #0f172a; /* Custom dark bg */
+  }
+
+  .side-panel-drawer.drawer-open {
+    right: 0;
+    visibility: visible;
+  }
+  
+  /* Backdrop when drawer is open */
+  .drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .drawer-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Prevent absolute positioning conflicts */
   .user-action-menu.absolute-top {
-    top: auto;
-    bottom: 100%;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
+    top: 0 !important;
+    bottom: auto !important;
+    margin: 0 !important;
   }
   
   /* Ensure parent container is positioned relative */
   td.actions-cell {
-    position: relative;
+    position: static !important; /* Changed from relative so drawer works fixed */
   }
   
   /* User row status colors */
@@ -87,7 +213,7 @@
   .user-row[data-active="false"][data-is-debtor="false"][data-is-retired="false"]:hover {
     background-color: rgba(251, 146, 60, 0.12) !important;
   }
-  
+
   /* User card status colors */
   .user-card[data-is-retired="true"] {
     border-color: rgba(107, 114, 128, 0.5) !important;
@@ -104,182 +230,210 @@
   .user-card[data-is-debtor="true"] > :first-child {
     background-color: rgba(239, 68, 68, 0.1) !important;
   }
+
+  /* Dark mode overrides for assign select */
+  .dark .assign-select {
+    background-color: #1e293b !important;
+    color: #f3f4f6 !important;
+  }
+
+  .dark .assign-select option {
+    background-color: #1e293b;
+    color: #f3f4f6;
+  }
+
+  .dark .assign-select:focus {
+    border-color: #3b82f6 !important;
+    outline: none;
+  }
+
+  /* ===== TOAST ANIMATIONS & STYLES ===== */
+  
+  @keyframes slideInDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  #toast {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    max-width: 500px;
+  }
+
+  .animate-fade-in {
+    animation: slideInDown 0.3s ease-out !important;
+  }
+
+  #toast.hidden {
+    animation: fadeOut 0.3s ease-out;
+    pointer-events: none;
+  }
+
+  /* Gestalt: Clear visual hierarchy */
+  #toast-inner {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  /* Table responsiveness fix */
+  @media (max-width: 768px) {
+    .therapist-assignment-row {
+      flex-direction: column;
+    }
+
+    .therapist-select-wrapper {
+      min-width: 100%;
+    }
+
+    .assign-select {
+      width: 100% !important;
+    }
+
+    #toast {
+      left: 1rem;
+      right: 1rem;
+      max-width: calc(100vw - 2rem);
+    }
+  }
 </style>
+
+<!-- Reset Password Drawer (Hidden) -->
+<div id="resetPasswordDrawer" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+    <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                <i class="fas fa-key text-amber-500"></i>
+            </div>
+            Reset Password
+        </h3>
+        {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', '') }}
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <input type="hidden" id="reset-user-id" />
+        <input type="hidden" id="reset-login-count" />
+        
+        <div id="reset-content-first-time" class="hidden">
+            <div class="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 p-4 rounded-xl mb-6 text-sm flex gap-3">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <p>Este usuario nunca ha iniciado sesión. Por favor, <strong>ingrese una contraseña manual</strong> inicial (mínimo 6 caracteres).</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nueva Contraseña</label>
+                <div class="relative">
+                    <input type="password" id="reset-new-password" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all pr-12" placeholder="Ingrese la nueva clave...">
+                    <button type="button" id="toggle-reset-pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 focus:outline-none">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="reset-content-auto" class="hidden">
+            <div class="py-6 flex flex-col items-center justify-center text-center">
+                <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-full flex justify-center items-center mb-4 text-2xl">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h4 class="text-xl font-bold mb-2 dark:text-white">Generar nueva clave</h4>
+                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">El sistema generará una contraseña segura aleatoriamente y borrará la actual. ¿Estás seguro que deseas continuar?</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 sticky bottom-0 z-10 flex flex-col gap-2">
+        <div class="flex justify-end gap-3">
+            {{ btn.secondary_btn('cancelResetBtn', 'Cancelar') }}
+            {{ btn.primary_btn('confirmResetBtn', 'Confirmar Reseteo', 'fas fa-exchange-alt', 'bg-amber-500 hover:bg-amber-600 hover:shadow-amber-500/25') }}
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 {% block header_content %}
 <div>
-  <h2 class="text-2xl font-bold text-textDark">Usuarios</h2>
-  <p class="text-sm text-gray-500">Crear y gestionar terapeutas y pacientes</p>
+  <h2 class="text-3xl font-extrabold text-charcoal dark:text-white tracking-tight">Usuarios</h2>
+  <p class="text-sm text-gray-500 mt-1">Crear y gestionar terapeutas y pacientes</p>
 </div>
 {% endblock %}
 {% block header_action %}
-<button data-action="open-create" class="px-3 py-2 md:px-5 md:py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
-    <i class="fas fa-user-plus"></i>
-    <span class="hidden md:inline">Nuevo Usuario</span>
-</button>
+{{ btn.primary_btn('', 'Nuevo Usuario', 'fas fa-user-plus', 'md:px-6 md:py-3', 'open-create') }}
 {% endblock %}
 
 {% block content %}
+{% set sede_opts = [] %}
+{% for s in sedes %}
+    {% set _ = sede_opts.append({'value': s.id, 'label': s.name}) %}
+{% endfor %}
 <div class="p-4 md:p-8">
-  <div id="toast" class="fixed top-4 right-4 z-50 hidden">
-    <div id="toast-inner" class="px-4 py-3 rounded-soft shadow-soft text-white"></div>
-  </div>
+  <!-- Central notification drawer backdrop -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
   <!-- Create User Modal (Hidden) -->
-  <div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100] backdrop-blur-sm transition-opacity opacity-0 pointer-events-none">
-      <div class="bg-surface rounded-soft shadow-soft-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto relative p-6 pointer-events-auto">
-          <button data-action="close-create" class="absolute top-4 right-4 text-gray-400 hover:text-textDark transition-colors">
-              <i class="fas fa-times text-xl"></i>
-          </button>
-          
-          <h3 class="text-xl font-bold text-textDark mb-6 flex items-center gap-2">
-              <i class="fas fa-user-plus text-primary"></i>
+  <div id="createUserModal" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+      <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+          <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <i class="fas fa-user-plus text-primary"></i>
+              </div>
               Crear Nuevo Usuario
           </h3>
-          
+          {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', 'close-create') }}
+      </div>
+      
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
           <!-- Wrapper for original form fields -->
           <div>
             <!-- Basic Info -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                <input id="new-email" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="email@ejemplo.com" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
-                <input id="new-username" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="Nombre completo" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
-                <select id="new-role" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                  <option value="terapista">Terapeuta</option>
-                  <option value="jugador">Paciente</option>
-                  <option value="admin">Administrador</option>
-                </select>
-              </div>
+              {{ inputs.text_input('new-email', 'Email', 'email@ejemplo.com') }}
+              {{ inputs.text_input('new-username', 'Nombre', 'Nombre completo') }}
+              {{ inputs.select_input('new-role', 'Rol', [
+                  {'value': 'terapista', 'label': 'Terapeuta'},
+                  {'value': 'jugador', 'label': 'Paciente'},
+                  {'value': 'admin', 'label': 'Administrador'}
+              ], default_option='') }}
             </div>
             
             <!-- Sede Selection -->
             <div class="mb-4">
+
                  <div id="patient-sede-div">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
-                    <select id="new-sede" class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                        <option value="">-- Sin asignar --</option>
-                        {% for s in sedes %}
-                        <option value="{{ s.id }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ inputs.select_input('new-sede', 'Sede (Sucursal)', sede_opts, default_option='-- Sin asignar --') }}
                  </div>
                  <div id="therapist-sede-div" class="hidden">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sedes Asignadas (Ctrl+Click para múltiples)</label>
-                    <select id="new-sedes-multi" multiple class="px-3 py-2 border rounded-soft w-full focus:ring-primary focus:border-primary h-24 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                        {% for s in sedes %}
-                        <option value="{{ s.id }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
+                    {{ inputs.select_input('new-sedes-multi', 'Sedes Asignadas (Ctrl+Click para múltiples)', sede_opts, default_option='', multiple=true, select_classes='h-24 custom-scrollbar') }}
                  </div>
             </div>
 
-            <!-- Therapist Specific Fields (Hidden by default) -->
-            <div id="therapist-fields" class="hidden space-y-4 mb-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sueldo Base (S/)</label>
-                        <input type="number" step="0.01" id="new-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Mensuales</label>
-                        <input type="number" id="new-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0">
-                    </div>
-                </div>
-            </div>
 
-            <!-- Patient Specific Fields (Default) -->
-            <div id="patient-fields" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad (Sesiones)</label>
-                        <select id="new-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="0">Sesión Libre / Sin Paquete</option>
-                            <option value="1">1x Semana (4 sesiones)</option>
-                            <option value="2">2x Semana (8 sesiones)</option>
-                            <option value="3">3x Semana (12 sesiones)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia Pago</label>
-                        <select id="new-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="monthly">Mensual</option>
-                            <option value="biweekly">Quincenal</option>
-                            <option value="weekly">Semanal</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
-                        <select id="new-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="individual">Individual</option>
-                            <option value="group">Grupal / Fijo</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto a Pagar (S/)</label>
-                        <input type="number" step="0.01" id="new-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" checked>
-                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Generar Horario Automático</span>
-                    </label>
-                </div>
-
-                <div id="schedule-fields" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-soft border border-gray-100 dark:border-gray-700">
-                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
-                            <input type="date" id="start-date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600"> 
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
-                            <input type="time" id="start-time" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta Asignado</label>
-                            <select id="schedule-therapist" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
-                                <option value="">-- Seleccionar --</option>
-                                {% for t in therapists %}
-                                <option value="{{ t.id }}">{{ t.username }} ({{ t.email }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 mb-2">Días de Sesión (Seleccionar según modalidad)</label>
-                        <div class="flex gap-4 flex-wrap">
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="0" class="text-primary rounded"> Lun</label>
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="1" class="text-primary rounded"> Mar</label>
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="2" class="text-primary rounded"> Mié</label>
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="3" class="text-primary rounded"> Jue</label>
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="4" class="text-primary rounded"> Vie</label>
-                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="5" class="text-primary rounded"> Sáb</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div id="therapist-fields" class="hidden border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 animate-fade-in-down">
                  <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Configuración de Contrato</h4>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Base Salarial / Monto Total (S/)</label>
-                        <input type="number" step="0.01" id="new-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
-                    </div>
-                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Contratadas (Mensual)</label>
-                        <input type="number" id="new-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="e.g. 160">
-                    </div>
+                    {{ inputs.text_input('new-salary', 'Base Salarial / Monto Total (S/)', '0.00', type='number', extra_attrs='step="0.01"') }}
+                    {{ inputs.text_input('new-hours', 'Horas Contratadas (Mensual)', 'e.g. 160', type='number') }}
                  </div>
                  <p class="text-xs text-gray-400">El pago por hora se calculará: Base / Horas.</p>
             </div>
@@ -288,33 +442,24 @@
             <div id="patient-fields" class="hidden border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 animate-fade-in-down">
                 <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración del Plan</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad (Sesiones)</label>
-                        <select id="new-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="1">1x Semana (4 Sesiones/Pago)</option>
-                            <option value="2">2x Semana (8 Sesiones/Pago)</option>
-                            <option value="3">3x Semana (12 Sesiones/Pago)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia de Pago</label>
-                        <select id="new-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="monthly">Mensual</option>
-                            <option value="biweekly">Quincenal</option>
-                            <option value="weekly">Semanal</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
-                        <select id="new-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <option value="individual">Individual</option>
-                            <option value="group">Grupal / Fijo</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto a Pagar (S/)</label>
-                        <input type="number" step="0.01" id="new-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-800 dark:border-gray-700" placeholder="0.00">
-                    </div>
+                    {{ inputs.select_input('new-modality', 'Modalidad (Sesiones)', [
+                        {'value': '1', 'label': '1x Semana (4 Sesiones/Pago)'},
+                        {'value': '2', 'label': '2x Semana (8 Sesiones/Pago)'},
+                        {'value': '3', 'label': '3x Semana (12 Sesiones/Pago)'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.select_input('new-frequency', 'Frecuencia de Pago', [
+                        {'value': 'monthly', 'label': 'Mensual'},
+                        {'value': 'biweekly', 'label': 'Quincenal'},
+                        {'value': 'weekly', 'label': 'Semanal'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.select_input('new-plan-type', 'Tipo de Plan', [
+                        {'value': 'individual', 'label': 'Individual'},
+                        {'value': 'group', 'label': 'Grupal / Fijo'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.text_input('new-amount', 'Monto a Pagar (S/)', '0.00', type='number', extra_attrs='step="0.01"') }}
                 </div>
 
                 <div class="mb-4">
@@ -327,23 +472,14 @@
                 <div id="schedule-fields" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-soft border border-gray-100 dark:border-gray-700">
                     <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha Inicio</label>
-                            <input type="date" id="start-date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600"> 
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Hora Inicio</label>
-                            <input type="time" id="start-time" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta Asignado</label>
-                            <select id="schedule-therapist" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-white dark:bg-gray-700 dark:border-gray-600">
-                                <option value="">-- Seleccionar --</option>
-                                {% for t in therapists %}
-                                <option value="{{ t.id }}">{{ t.username }} ({{ t.email }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {{ inputs.text_input('start-date', 'Fecha Inicio', type='date') }}
+                        {{ inputs.text_input('start-time', 'Hora Inicio', type='time') }}
+                        
+                        {% set therapist_opts = [] %}
+                        {% for t in therapists %}
+                            {% set _ = therapist_opts.append({'value': t.id, 'label': t.username ~ ' (' ~ t.email ~ ')'}) %}
+                        {% endfor %}
+                        {{ inputs.select_input('schedule-therapist', 'Terapeuta Asignado', therapist_opts, default_option='-- Seleccionar --', wrapper_classes='md:col-span-2') }}
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1 mb-2">Días de Sesión (Seleccionar según modalidad)</label>
@@ -358,122 +494,87 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Footer Actions -->
-            <div class="mt-8 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
-              <button data-action="close-create" class="px-5 py-2 text-gray-600 dark:text-gray-300 font-medium hover:text-textDark transition-colors">Cancelar</button>
-              <button id="create-user" class="px-6 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90 transition-all shadow-soft flex items-center gap-2">
-                  <i class="fas fa-save"></i>
-                  Crear Usuario
-              </button>
-            </div>
-            <div class="text-right mt-2">
-                <span id="create-status" class="text-sm text-gray-600 ml-2 font-medium"></span>
-            </div>
+      </div>
+      </div>
+      
+      <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 sticky bottom-0 z-10 flex flex-col gap-2">
+          <div class="flex justify-end gap-3">
+              {{ btn.secondary_btn('', 'Cancelar', '', '', 'close-create') }}
+              {{ btn.primary_btn('create-user', 'Crear Usuario', 'fas fa-save') }}
+          </div>
+          <div class="text-right">
+              <span id="create-status" class="text-sm text-gray-600 dark:text-gray-400 font-medium"></span>
           </div>
       </div>
   </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-visible">
-    <div class="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4">
-        <h3 class="text-lg font-semibold text-textDark">Listado</h3>
-        
-        <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center">
-             <!-- Sede Filter -->
-             <div class="relative w-full md:w-48">
-                <select id="sedeFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
-                    <option value="all">Todas las Sedes</option>
-                    {% for s in sedes %}
-                    <option value="{{ s.id }}">{{ s.name }}</option>
-                    {% endfor %}
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
-                </div>
-             </div>
-
-             <!-- Therapist Filter -->
-             <div class="relative w-full md:w-48">
-                <select id="therapistFilter" class="w-full pl-3 pr-8 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none bg-gray-50 focus:bg-white transition-all">
-                    <option value="all">Filtro Terapista</option>
-                    <!-- Populated by JS -->
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
-                </div>
-             </div>
-
-             <!-- Search Bar -->
-             <div class="relative w-full md:w-64">
-                <input type="text" id="userHelperSearch" placeholder="Buscar usuario o email..." class="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all bg-gray-50 focus:bg-white">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400 text-xs"></i>
-                </div>
-            </div>
-            
-            <!-- Filters -->
-            <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
-                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-primary text-white font-medium filter-btn active">Todos</button>
-                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Pacientes</button>
-                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-red-100 text-red-600 hover:bg-red-200 font-medium filter-btn">Deudores</button>
-                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 font-medium filter-btn">Retirados</button>
-                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Terapeutas</button>
-                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium filter-btn">Admin</button>
-            </div>
-        </div>
-    </div>
-    
-                <!-- Stat Cards -->
-                <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Total Usuarios</div>
-                        <div id="total_users" class="text-2xl font-bold">0</div>
-                    </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Activos</div>
-                        <div id="active_users" class="text-2xl font-bold text-green-600">0</div>
-                    </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Pacientes</div>
-                        <div id="total_patients" class="text-2xl font-bold">0</div>
-                    </div>
-                    <div class="stat-card bg-white rounded-soft shadow-soft p-4">
-                        <div class="text-sm text-gray-500">Terapeutas</div>
-                        <div id="total_therapists" class="text-2xl font-bold">0</div>
-                    </div>
+    <!-- Stat Cards (Molecules) -->
+                <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                    {{ cards.stat_card('total_users', 'Total Usuarios', '0', 'bg-primary/5') }}
+                    {{ cards.stat_card('active_users', 'Activos', '0', 'bg-green-500/5', 'text-green-500') }}
+                    {{ cards.stat_card('total_patients', 'Pacientes', '0', 'bg-indigo-500/5') }}
+                    {{ cards.stat_card('total_therapists', 'Terapeutas', '0', 'bg-purple-500/5') }}
                 </div>
 
-                <!-- Dashboard: Charts -->
-                <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Usuarios por Sede</h4>
+                
+<!-- Dashboard: Charts -->
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Usuarios por Sede</h4>
                         <div style="max-height:210px;"><canvas id="users_sede_chart" aria-label="Usuarios por Sede" style="width:100%;height:100%;"></canvas></div>
                     </div>
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Activo vs Inactivo</h4>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Activo vs Inactivo</h4>
                         <div style="max-height:210px;"><canvas id="active_status_chart" aria-label="Activo vs Inactivo" style="width:100%;height:100%;"></canvas></div>
                     </div>
-                    <div class="bg-white rounded-soft shadow-soft p-4" style="max-height:250px;">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Roles (Pacientes/Terapeutas)</h4>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Roles de Usuario</h4>
                         <div style="max-height:210px;"><canvas id="user_role_chart" aria-label="Roles de Usuario" style="width:100%;height:100%;"></canvas></div>
                     </div>
                 </div>
 
-        <!-- Desktop Table View -->
-        <div class="hidden md:block overflow-x-auto">
+        
+<div class="bg-surface dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 xl:p-8 overflow-visible">
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 dark:border-gray-800 pb-6">
+        <h3 class="text-xl font-bold text-charcoal dark:text-white flex items-center gap-2">
+            <i class="fas fa-users text-primary"></i> 
+            Directorio
+        </h3>
+        
+        <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center flex-wrap justify-end">
+             <!-- Sede Filter -->
+             {{ forms.filter_select('sedeFilter', 'Todas las Sedes', sede_opts) }}
+
+             <!-- Therapist Filter -->
+             {{ forms.filter_select('therapistFilter', 'Filtro Terapeuta', []) }}
+
+             <!-- Search Bar -->
+             {{ forms.search_input('userHelperSearch', 'Buscar usuario o email...') }}
+            
+            <!-- Filters -->
+            <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
+                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white font-semibold transition-all filter-btn active shadow-sm">Todos</button>
+                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Pacientes</button>
+                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-semibold transition-all filter-btn shadow-sm">Deudores</button>
+                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Retirados</button>
+                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Terapeutas</button>
+                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Admin</button>
+            </div>
+        </div>
+      </div>
+<!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm mt-4">
       <table class="w-full min-w-[900px]">
-        <thead>
-          <tr class="border-b border-gray-100">
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Usuario</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Email</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rol</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Sede</th>
-            <th class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Terapeuta</th>
-            <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
+        {{ tables.table_header([
+            {'label': 'Usuario', 'align': 'text-left'},
+            {'label': 'Email', 'align': 'text-left'},
+            {'label': 'Rol', 'align': 'text-left'},
+            {'label': 'Sede', 'align': 'text-left'},
+            {'label': 'Estado', 'align': 'text-center'},
+            {'label': 'Terapeuta', 'align': 'text-left'},
+            {'label': 'Acciones', 'align': 'text-right'}
+        ]) }}
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-slate-900">
           {% for u in users %}
           {% set sede_ids = [] %}
           {% if u.role == 'jugador' and u.sede_id %}
@@ -483,7 +584,7 @@
                 {% set _ = sede_ids.append(s.id) %}
              {% endfor %}
           {% endif %}
-          <tr class="divide-y divide-gray-50 border-b border-gray-100 hover:bg-gray-50/50 transition-colors group user-row" 
+          <tr class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors duration-200 group user-row" 
               data-role="{{ u.role }}" 
               data-sede-ids='{{ sede_ids | tojson }}'
               data-active="{{ 'true' if u.is_active else 'false' }}"
@@ -491,83 +592,97 @@
               data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
               data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
             <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/20 shadow-sm">
                     {{ u.username[:2].upper() if u.username else 'US' }}
                 </div>
-                <input class="font-medium text-charcoal bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name py-1" data-id="{{ u.id }}" value="{{ u.username }}" />
+                <div class="flex-1 min-w-[200px] w-[200px] xl:w-[250px]">
+                    <input class="font-bold text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name py-1 text-[15px]" data-id="{{ u.id }}" value="{{ u.username }}" />
+                </div>
               </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-500">{{ u.email }}</td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[120px] lg:max-w-[180px] xl:max-w-[200px] truncate" title="{{ u.email }}">{{ u.email }}</td>
             <td class="px-6 py-4">
-              <div class="relative">
-                  <select class="appearance-none bg-transparent border border-transparent hover:border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg text-sm py-1.5 pl-3 pr-8 admin-edit-role cursor-pointer transition-all" data-id="{{ u.id }}">
+              <div class="relative w-fit">
+                  <select class="appearance-none bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-semibold py-2 pl-4 pr-10 admin-edit-role cursor-pointer transition-all duration-200 text-gray-700 dark:text-gray-300 shadow-sm" data-id="{{ u.id }}">
                     <option value="terapista" {{ 'selected' if u.role == 'terapista' else '' }}>Terapeuta</option>
                     <option value="jugador" {{ 'selected' if u.role == 'jugador' else '' }}>Paciente</option>
                     <option value="admin" {{ 'selected' if u.role == 'admin' else '' }}>Admin</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                    <i class="fas fa-chevron-down text-[10px]"></i>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
                   </div>
               </div>
             </td>
             <td class="px-6 py-4">
                 {% if u.role == 'jugador' %}
-                    <span class="text-xs font-semibold px-2 py-1 rounded bg-indigo-50 text-indigo-700">
-                        {{ u.sede_item.name if u.sede_item else 'Sin Sede' }}
-                    </span>
+                    {{ atoms.pill_badge(u.sede_item.name if u.sede_item else 'Sin Sede', 'bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300') }}
                 {% elif u.role == 'terapista' %}
-                    <div class="flex flex-col gap-1">
+                    <div class="flex flex-wrap gap-2">
                     {% for s in u.assigned_sedes %}
-                        <span class="text-xs font-semibold px-2 py-1 rounded bg-purple-50 text-purple-700">
-                        {{ s.name }}
-                        </span>
+                        {{ atoms.pill_badge(s.name, 'bg-purple-50 border-purple-100 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300') }}
                     {% else %}
-                        <span class="text-xs text-gray-400">Sin Asignar</span>
+                        {{ atoms.pill_badge('Sin Asignar', 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400') }}
                     {% endfor %}
                     </div>
                 {% endif %}
             </td>
             <td class="px-6 py-4 text-center">
-              <label class="relative inline-flex items-center cursor-pointer justify-center">
+              <label class="relative inline-flex items-center cursor-pointer justify-center shadow-sm rounded-full bg-white dark:bg-slate-800">
                 <input type="checkbox" class="sr-only peer admin-edit-active" data-id="{{ u.id }}" {{ 'checked' if u.is_active else '' }}>
-                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                <div class="w-10 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
               </label>
             </td>
             <td class="px-6 py-4">
               {% if u.role == 'jugador' %}
-                <div class="flex items-center gap-2">
-                    <div class="relative w-full max-w-[200px]">
-                        <select multiple class="w-full bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block py-1.5 pl-3 pr-2 h-20 assign-select" data-patient-id="{{ u.id }}">
+                <div class="flex items-center gap-3">
+                    <div class="relative w-full md:w-48">
+                        <select multiple class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary block py-2 pl-4 pr-3 h-[88px] assign-select shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-colors custom-scrollbar" data-patient-id="{{ u.id }}">
                           {% for t in therapists %}
-                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }}>{{ t.username or t.email }}</option>
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }} class="py-1">{{ t.username or t.email }}</option>
                           {% endfor %}
                         </select>
                     </div>
-                    <button class="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors assign-btn self-start mt-1" data-patient-id="{{ u.id }}" title="Guardar Asignación">
-                        <i class="fas fa-check text-xs"></i>
+                    <button class="w-12 h-12 flex items-center justify-center bg-primary/10 text-primary rounded-xl font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 assign-btn self-start shrink-0 cursor-pointer text-base" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                        <i class="fas fa-check"></i>
                     </button>
                 </div>
               {% else %}
-                <span class="text-gray-300 text-sm">—</span>
+                <span class="text-gray-300 dark:text-gray-500 font-extrabold text-lg px-4">—</span>
               {% endif %}
             </td>
             <td class="px-6 py-4 relative overflow-visible">
-            <div class="flex justify-end">
-              <div class="relative">
-                <button data-action="toggle-user-menu" class="p-2 text-gray-400 hover:text-charcoal rounded-full hover:bg-gray-100 transition-colors pointer-events-auto">
-                  <i class="fas fa-ellipsis-v pointer-events-none"></i>
-                </button>
-                <div id="dropdown-{{ u.id }}" class="hidden user-action-menu w-56 bg-white rounded-lg shadow-xl border border-gray-100 z-50 py-1 text-left ring-1 ring-black ring-opacity-5 focus:outline-none overflow-visible" role="menu">
+            <div class="flex justify-end relative">
+              <div class="static">
+                {{ btn.action_icon_btn('fas fa-ellipsis-v', 'dropdown-' ~ u.id, 'pointer-events-auto cursor-pointer', 'toggle-user-menu') }}
+                <div id="dropdown-{{ u.id }}" class="user-action-menu hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl z-50 text-left overflow-y-auto" role="menu">
 
-                  <!-- View Profile -->
-                  <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <i class="fas fa-user-circle mr-3 text-gray-400 group-hover:text-indigo-500 w-5 text-center"></i>
+                  <div class="px-6 pb-6 pt-4 border-b border-gray-100 dark:border-gray-800 mb-4 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10">
+                      <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                              {{ u.username[:2].upper() if u.username else 'US' }}
+                          </div>
+                          <div>
+                              <h4 class="font-bold text-gray-900 dark:text-white text-base">{{ u.username }}</h4>
+                              <p class="text-xs text-gray-500">{{ u.role|capitalize }}</p>
+                          </div>
+                      </div>
+                      <button data-action="close-drawer" class="close-drawer w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-700 dark:hover:text-white flex items-center justify-center transition-colors">
+                          <i class="fas fa-times text-sm pointer-events-none"></i>
+                      </button>
+                  </div>
+                  
+                  <div class="px-4 space-y-1 flex-1">
+                      <!-- View Profile -->
+                      <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-2xl mb-1">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          <i class="fas fa-user-circle"></i>
+                      </div>
                       Ver Perfil
                   </a>
 
                   <!-- Edit User Button -->
-                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors admin-update-btn"
+                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors admin-update-btn cursor-pointer rounded-2xl mb-1"
                       data-id="{{ u.id }}"
                       data-username="{{ u.username|e }}"
                       data-email="{{ u.email|e }}"
@@ -585,23 +700,42 @@
                       data-end-time="{{ u.work_end_time or '' }}"
                       data-days='{{ u.work_days or "" }}'
                       data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}">
-                      <i class="fas fa-edit mr-3 text-gray-400 group-hover:text-blue-500 w-5 text-center"></i>
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-blue-100 dark:group-hover:bg-blue-800/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          <i class="fas fa-edit"></i>
+                      </div>
                       Editar Usuario
                   </button>
 
-                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                      <i class="fas fa-key mr-3 text-gray-400 group-hover:text-amber-500 w-5 text-center"></i>
+                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer rounded-2xl mb-1">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-amber-100 dark:group-hover:bg-amber-800/50 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                          <i class="fas fa-key text-[13px]"></i>
+                      </div>
                       Reset Password
                   </button>
 
-                  <div class="h-px bg-gray-100 my-1"></div>
+                  <div class="h-px bg-gray-100 dark:bg-gray-800 my-2 mx-4"></div>
 
                   {% if u.role != 'admin' %}
-                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-2 text-sm text-statusRed hover:bg-red-50 transition-colors">
-                      <i class="fas fa-trash-alt mr-3 opacity-50 group-hover:opacity-100 w-5 text-center"></i>
-                      Eliminar
+                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 transition-colors cursor-pointer rounded-2xl">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-400 dark:text-red-500 mr-3 group-hover:bg-red-100 dark:group-hover:bg-red-800/50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                          <i class="fas fa-trash-alt"></i>
+                      </div>
+                      Eliminar Usuario
                   </button>
                   {% endif %}
+                  </div>
+                  <!-- Decorative bottom area -->
+                  <div class="absolute bottom-0 w-full p-4 mt-auto">
+                    <div class="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center shrink-0">
+                            <i class="fas fa-shield-alt text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">ID Usuario: #{{ u.id }}</p>
+                            <p class="text-[10px] text-gray-400">Creado en sistema</p>
+                        </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -613,7 +747,7 @@
     </div>
 
     <!-- Mobile Card View -->
-    <div class="md:hidden space-y-4">
+    <div class="md:hidden space-y-6 mt-6">
       {% for u in users %}
       {% set sede_ids = [] %}
       {% if u.role == 'jugador' and u.sede_id %}
@@ -623,7 +757,7 @@
             {% set _ = sede_ids.append(s.id) %}
          {% endfor %}
       {% endif %}
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md user-card" 
+      <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all hover:shadow-md user-card relative" 
            data-role="{{ u.role }}" 
            data-sede-ids='{{ sede_ids | tojson }}'
            data-active="{{ 'true' if u.is_active else 'false' }}"
@@ -631,7 +765,7 @@
            data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
            data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
         <!-- Header: User Info & Status -->
-        <div class="p-5 border-b border-gray-50 bg-gray-50/30">
+        <div class="p-6 border-b border-gray-50 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-800/50">
           <div class="flex justify-between items-start gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-3 mb-1">
@@ -736,41 +870,38 @@
 </div>
 
 <!-- Edit User Modal -->
-<div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-soft shadow-soft w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-        <button type="button" data-action="close-edit" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times"></i>
-        </button>
-        <div class="flex justify-between items-center mb-6 pr-8">
-            <h3 class="text-xl font-bold text-charcoal m-0">Editar Usuario 
+<div id="editUserModal" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+    <form id="editUserForm" class="flex flex-col h-full overflow-hidden">
+        <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white m-0 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <i class="fas fa-user-edit text-primary"></i>
+                </div>
+                Editar Usuario 
                 <span id="role-badge" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500 font-normal align-middle"></span>
             </h3>
-            <a id="view-details-btn" href="#" class="hidden px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors flex items-center shadow-sm border border-blue-100 whitespace-nowrap">
-                <i class="fas fa-external-link-alt mr-2"></i> Ver Detalles
-            </a>
+            <div class="flex items-center gap-3">
+                <a id="view-details-btn" href="#" class="hidden px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm border border-blue-100 whitespace-nowrap">
+                    <i class="fas fa-external-link-alt mr-2"></i> Detalles
+                </a>
+                {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', 'close-edit-modal') }}
+            </div>
         </div>
         
-        <form id="editUserForm">
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
             <input type="hidden" id="edit-id">
             
             <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label>
-                    <input type="text" id="edit-username" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                    <input type="text" id="edit-email" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" readonly disabled>
-                </div>
+                {{ inputs.text_input('edit-username', 'Nombre') }}
+                {{ inputs.text_input('edit-email', 'Email', readonly=true) }}
             </div>
             
             <div class="mb-4">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Rol</label>
-                <select id="edit-role" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
-                    <option value="terapista">Terapeuta</option>
-                    <option value="jugador">Paciente</option>
-                    <option value="admin">Administrador</option>
-                </select>
+                {{ inputs.select_input('edit-role', 'Rol', [
+                    {'value': 'terapista', 'label': 'Terapeuta'},
+                    {'value': 'jugador', 'label': 'Paciente'},
+                    {'value': 'admin', 'label': 'Administrador'}
+                ], default_option='') }}
             </div>
             
             <div class="mb-4">
@@ -851,13 +982,7 @@
             
             <!-- Sede / Location (Decoupled) -->
             <div id="edit-patient-location" class="hidden mb-4 p-3 bg-white rounded border border-gray-100">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Sucursal)</label>
-                <select id="edit-sede" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
-                    <option value="">-- Sin asignar --</option>
-                    {% for s in sedes %}
-                    <option value="{{ s.id }}">{{ s.name }}</option>
-                    {% endfor %}
-                </select>
+                {{ inputs.select_input('edit-sede', 'Sede (Sucursal)', sede_opts, default_option='-- Sin asignar --') }}
                 <p class="text-[10px] text-gray-400 mt-1">Ubicación principal de atención.</p>
             </div>
 
@@ -946,13 +1071,13 @@
                     <i class="fas fa-info-circle"></i> Al cambiar la modalidad, se actualizará el total de sesiones permitidas por pago.
                 </p>
             </div>
-            
-            <div class="mt-6 flex gap-3">
-                <button type="button" data-action="close-edit-modal" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-soft hover:bg-gray-200">Cancelar</button>
-                <button type="submit" class="flex-1 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90">Guardar Cambios</button>
-            </div>
-        </form>
-    </div>
+        </div>
+        
+        <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 z-10 flex justify-end gap-3">
+            {{ btn.secondary_btn('', 'Cancelar', '', '', 'close-edit-modal') }}
+            {{ btn.primary_btn('', 'Guardar Cambios', 'fas fa-save') }}
+        </div>
+    </form>
 </div>
 
 {% endblock %}
@@ -989,8 +1114,82 @@ const UsersModule = (function(){
     function $ (q){ return document.querySelector(q); }
     function $$ (q){ return Array.from(document.querySelectorAll(q)); }
 
-    function showToast(msg, type='success'){
-        const t = $(sel.toast); const inner = $(sel.toastInner); if(!t||!inner) return; inner.textContent = msg; inner.className = 'px-4 py-3 rounded-soft shadow-soft text-white ' + (type==='success'?'bg-olive': type==='error'?'bg-statusRed':'bg-accent'); t.classList.remove('hidden'); setTimeout(()=> t.classList.add('hidden'), 3000);
+    // Toasts modernizados con persistencia
+    function showToast(msg, type='success', duration=3000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        // Remove trailing emojis from previous messages
+        msg = msg.replace(/^(?:✅|✓|✕|❌|⚠|ℹ)\\s*/g, '');
+        
+        const toast = document.createElement('div');
+        toast.className = 'w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden pointer-events-auto transform translate-x-full transition-transform duration-300 md:w-96 border border-gray-100 dark:border-gray-700';
+        
+        const bgColors = {
+            'success': 'bg-green-500',
+            'error': 'bg-red-500',
+            'warn': 'bg-yellow-500',
+            'info': 'bg-blue-500'
+        };
+        
+        const icons = {
+            'success': '<i class="fas fa-check text-green-500"></i>',
+            'error': '<i class="fas fa-times text-red-500"></i>',
+            'warn': '<i class="fas fa-exclamation-triangle text-yellow-500"></i>',
+            'info': '<i class="fas fa-info-circle text-blue-500"></i>'
+        };
+
+        const accentColor = bgColors[type] || bgColors['info'];
+        
+        toast.innerHTML = `
+            <div class="flex p-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-700 text-lg">
+                    ${icons[type] || icons['info']}
+                </div>
+                <div class="ml-4 w-0 flex-1">
+                    <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">${type === 'success' ? 'Éxito' : type === 'error' ? 'Error' : 'Aviso'}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">${msg}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button class="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="this.closest('.w-80, .md\\\\:w-96').remove()">
+                        <span class="sr-only">Cerrar</span>
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="h-1 ${accentColor}" style="width: 100%; transition: width ${duration}ms linear;"></div>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Save to notifications only if it's a success to keep noise low
+        if (type === 'success') {
+            fetch('/api/notifications/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ message: msg, link: '/admin/users' })
+            }).catch(e => console.warn('Failed to save notification', e));
+        }
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full');
+            toast.classList.add('translate-x-0');
+            // animate progress bar
+            const bar = toast.querySelector('.h-1');
+            if (bar) {
+                setTimeout(() => { bar.style.width = '0%'; }, 50);
+            }
+        });
+        
+        setTimeout(() => {
+            toast.classList.remove('translate-x-0');
+            toast.classList.add('translate-x-full');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 
     // Filters & search
@@ -1272,29 +1471,210 @@ const UsersModule = (function(){
     }
 
     // Modal helpers
-    function openModal(selector){ const m=$(selector); if(!m) return; m.classList.remove('hidden'); document.body.style.overflow='hidden'; }
-    function closeModal(selector){ const m=$(selector); if(!m) return; m.classList.add('hidden'); document.body.style.overflow=''; }
+    function openModal(selector){ 
+        const m=$(selector); 
+        if(!m) return; 
+        const backdrop = document.getElementById('drawerBackdrop');
+        if(backdrop) {
+            document.body.appendChild(m);
+            document.body.appendChild(backdrop);
+            backdrop.style.pointerEvents = 'auto';
+            backdrop.classList.add('active');
+        }
+        m.classList.remove('hidden');
+        setTimeout(() => {
+            m.classList.add('drawer-open');
+            document.body.style.overflow = 'hidden';
+        }, 10);
+    }
+    
+    function closeModal(selector){ 
+        const m=$(selector); 
+        if(!m) return; 
+        m.classList.remove('drawer-open');
+        setTimeout(() => m.classList.add('hidden'), 400);
+        const backdrop = document.getElementById('drawerBackdrop');
+        if(backdrop) {
+            backdrop.classList.remove('active');
+            backdrop.style.pointerEvents = 'none';
+        }
+        document.body.style.overflow=''; 
+    }
     function closeEditUserModal(){ closeModal(sel.editModal); }
 
     // Create user
-    async function handleCreateUser(){
-        const btn = $ (sel.createBtn); const status = $ (sel.createStatus); const prev = btn?.textContent; if(status) status.textContent = 'Creando...'; if(btn){ btn.disabled=true; btn.textContent='Creando…'; }
-        try{
-            const payload = { email: $ (sel.newEmail)?.value, username: $ (sel.newUsername)?.value, role: $ (sel.newRole)?.value };
-            const role = payload.role;
-            if(role==='jugador'){ payload.sede_id = $ (sel.newSede)?.value; payload.modality = $ (sel.newModality)?.value; payload.payment_frequency = $ (sel.newFrequency)?.value; payload.payment_amount = $ (sel.newAmount)?.value; payload.plan_type = $ (sel.newPlanType)?.value; payload.generate_schedule = $ (sel.generateSchedule)?.checked; if(payload.generate_schedule){ payload.start_date = $ (sel.startDate)?.value; payload.start_time = $ (sel.startTime)?.value; payload.therapist_id = $ (sel.scheduleTherapist)?.value; payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb=>cb.value); } }
-            if(role==='terapista'){ const opts = $ (sel.newSedesMulti); if(opts){ const selected = Array.from(opts.selectedOptions).map(o=>o.value); payload.sede_ids = selected; } payload.salary_base = $ ('#new-salary')?.value; payload.contract_hours = $ ('#new-hours')?.value; }
-
-            const data = await apiFetch(urls.create, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
-            if(!data || !data.success) throw new Error(data?.message || 'Error al crear');
-            showToast('Usuario creado','success');
-            setTimeout(()=> window.location.reload(), 300);
-        } catch(err){ if(status) status.textContent = err.message; showToast(err.message || 'Error', 'error'); }
-        finally{ if(btn){ btn.disabled=false; btn.textContent = prev; } }
+    async function handleCreateUser() {
+        try {
+            const btn = $(sel.createBtn);
+            const status = $(sel.createStatus);
+            
+            if (!btn) {
+                showToast('Botón no encontrado', 'error');
+                return;
+            }
+            
+            // Step 1: Validate required fields
+            const email = ($(sel.newEmail)?.value || '').trim();
+            const username = ($(sel.newUsername)?.value || '').trim();
+            const role = $(sel.newRole)?.value || 'jugador';
+            
+            if (!role) {
+                showToast('Selecciona un rol', 'warn');
+                return;
+            }
+            
+            if (role !== 'jugador' && !email) {
+                showToast('Email requerido para admin y terapeutas', 'warn');
+                return;
+            }
+            
+            if (role === 'jugador' && !email && !username) {
+                showToast('Ingresa nombre o email del paciente', 'warn');
+                return;
+            }
+            
+            // Step 2: Build payload
+            const payload = { email, username, role };
+            
+            if (role === 'jugador') {
+                payload.sede_id = $(sel.newSede)?.value || null;
+                payload.modality = $(sel.newModality)?.value || 0;
+                payload.payment_frequency = $(sel.newFrequency)?.value || 'monthly';
+                payload.payment_amount = $(sel.newAmount)?.value || 0;
+                payload.plan_type = $(sel.newPlanType)?.value || 'individual';
+                payload.generate_schedule = $(sel.generateSchedule)?.checked || false;
+                
+                if (payload.generate_schedule) {
+                    payload.start_date = $(sel.startDate)?.value;
+                    payload.start_time = $(sel.startTime)?.value;
+                    payload.therapist_id = $(sel.scheduleTherapist)?.value;
+                    payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => cb.value);
+                }
+            }
+            
+            if (role === 'terapista') {
+                const opts = $(sel.newSedesMulti);
+                if (opts) {
+                    payload.sede_ids = Array.from(opts.selectedOptions).map(o => o.value);
+                }
+                payload.salary_base = $('#new-salary')?.value || 0;
+                payload.contract_hours = $('#new-hours')?.value || 0;
+            }
+            
+            // Step 3: Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            if (status) status.textContent = 'Procesando...';
+            
+            // Step 4: Make API call
+            const response = await apiFetch(urls.create, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            console.log('✅ Usuario creado:', response);
+            
+            // Step 5: Success handling
+            showToast('👤 Usuario creado exitosamente', 'success', 4000);
+            
+            // Close modal after success
+            const modal = $(sel.createModal);
+            if (modal) {
+                modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                modal.classList.remove('flex', 'opacity-100');
+                document.body.style.overflow = '';
+            }
+            
+            // Reset form
+            $(sel.newEmail).value = '';
+            $(sel.newUsername).value = '';
+            $(sel.newRole).value = 'jugador';
+            
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('❌ Error creando usuario:', err);
+            const status = $(sel.createStatus);
+            if (status) status.textContent = err.error || err.message || 'Error desconocido';
+            showToast(err.error || err.message || 'Error al crear usuario', 'error', 5000);
+        } finally {
+            const btn = $(sel.createBtn);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Usuario';
+            }
+        }
     }
 
-    // Assign therapists
-    async function handleAssign(btn){ const container = btn.closest('td') || btn.closest('.bg-blue-50/50'); const select = container?.querySelector(sel.assignSelect); const patientId = btn.dataset.patientId; if(!select) return; const therapistIds = Array.from(select.selectedOptions).map(o=>Number(o.value)); if(therapistIds.length>3){ showToast('Máx 3 terapeutas','error'); return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; try{ const data = await apiFetch(urls.assign, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ patient_id: Number(patientId), therapist_ids: therapistIds }) }); if(!data || !data.success) throw new Error(data?.message || 'Error al asignar'); showToast('Asignación guardada','success'); setTimeout(()=> window.location.reload(), 400); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
+    // ===== ASSIGN THERAPISTS - REWRITTEN FOR CLARITY =====
+    async function handleAssign(btn) {
+        try {
+            // Step 1: Get the row containing this button
+            const row = btn.closest('tr') || btn.closest('.user-row') || btn.closest('.user-card');
+            if (!row) {
+                console.error('❌ No row encontrado para el botón');
+                showToast('Error: No se encontró la fila', 'error');
+                return;
+            }
+
+            // Step 2: Find the select element in THIS row
+            const select = row.querySelector('select.assign-select');
+            if (!select) {
+                console.error('❌ No select encontrado en la fila');
+                showToast('Error: Select de terapeutas no encontrado', 'error');
+                return;
+            }
+
+            // Step 3: Get patient ID from button dataset
+            const patientId = Number(btn.dataset.patientId);
+            if (!patientId || patientId < 1) {
+                console.error('❌ Patient ID inválido:', btn.dataset.patientId);
+                showToast('Error: ID de paciente inválido', 'error');
+                return;
+            }
+
+            // Step 4: Get selected therapist IDs
+            const therapistIds = Array.from(select.selectedOptions).map(o => Number(o.value));
+            console.log('✅ Terapeutas seleccionados:', therapistIds);
+
+            if (therapistIds.length === 0) {
+                showToast('Selecciona al menos 1 terapeuta', 'warn');
+                return;
+            }
+
+            if (therapistIds.length > 3) {
+                showToast('Máximo 3 terapeutas', 'error');
+                return;
+            }
+
+            // Step 5: Make API call
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const response = await apiFetch(urls.assign, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: patientId, therapist_ids: therapistIds })
+            });
+
+            console.log('✅ Respuesta del servidor:', response);
+
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error desconocido');
+            }
+
+            showToast('✅ Asignación guardada');
+            setTimeout(() => window.location.reload(), 600);
+
+        } catch (err) {
+            console.error('❌ Error en handleAssign:', err);
+            showToast(err.message || 'Error al asignar terapeutas', 'error');
+            btn.disabled = false;
+            btn.innerHTML = prev;
+        }
+    }
 
     // Open edit modal: populate fields from button dataset
     function openEdit(btn){ const id = btn.dataset.id; const modal = $ (sel.editModal); if(!modal) return; // populate
@@ -1322,75 +1702,269 @@ const UsersModule = (function(){
 
     function toggleEditFields(){ const role = $ ('#edit-role')?.value || 'jugador'; const patientFields = $ ('#edit-patient-fields'); const therapistFields = $ ('#edit-therapist-fields'); const patientLocation = $ ('#edit-patient-location'); if(role==='jugador'){ patientFields?.classList.remove('hidden'); patientLocation?.classList.remove('hidden'); therapistFields?.classList.add('hidden'); } else if(role==='terapista'){ patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.remove('hidden'); } else { patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.add('hidden'); } }
 
-    async function submitEditForm(e){ e.preventDefault(); const btn = e.target.querySelector('button[type=submit]'); const prev = btn?.textContent; if(btn){ btn.disabled=true; btn.textContent='Guardando...'; } const id = $ ('#edit-id').value; const username = $ ('#edit-username').value; const role = $ ('#edit-role').value; const isActive = $ ('#edit-active').checked; 
-        const payload = { 
-            id: parseInt(id), 
-            username, 
-            role, 
-            is_active: isActive,
-            sede_id: $ ('#edit-sede')?.value || null
-        };
-        if(role==='jugador'){ 
-            payload.modality = $ ('#edit-modality')?.value; 
-            payload.payment_plan = $ ('#edit-frequency')?.value; 
-            payload.payment_amount = $ ('#edit-amount')?.value; 
-            payload.sessions_attended = $ ('#edit-attended')?.value; 
-            payload.plan_type = $ ('#edit-plan-type')?.value; 
-            const has2 = $ ('#edit-has-shift2')?.checked; 
-            payload.has_second_shift = !!has2; 
-            if(has2){ 
-                payload.modality_2 = $ ('#edit-modality-2')?.value; 
-                payload.payment_amount_2 = $ ('#edit-amount-2')?.value; 
-                payload.sessions_attended_2 = $ ('#edit-attended-2')?.value; 
-                payload.plan_type_2 = $ ('#edit-plan-type-2')?.value; 
-            } 
+    async function submitEditForm(e) {
+        e.preventDefault();
+        
+        // Get button and show loading state
+        const btn = e.target.querySelector('button[type=submit]');
+        const prev = btn?.innerHTML || btn?.textContent;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         }
-        if(role==='terapista'){ 
-            const ms = $ ('#edit-sedes-multi'); 
-            const selected = []; 
-            if(ms){ for(let i=0;i<ms.options.length;i++){ if(ms.options[i].selected) selected.push(ms.options[i].value); } } 
-            payload.sede_ids = selected; 
-            payload.salary_base = $ ('#edit-salary')?.value; 
-            payload.contract_hours = $ ('#edit-hours')?.value; 
-            payload.work_start_time = $ ('#edit-start-time')?.value; 
-            payload.work_end_time = $ ('#edit-end-time')?.value; 
-            payload.work_days = Array.from(document.querySelectorAll('input[name="edit_days"]:checked')).map(cb=>cb.value).join(','); 
+        
+        try {
+            // Step 1: Collect and validate form inputs
+            const id = $('#edit-id')?.value;
+            const username = $('#edit-username')?.value?.trim();
+            const role = $('#edit-role')?.value;
+            const isActive = $('#edit-active')?.checked;
+            
+            // Field validation (Gestalt: Clear requirements)
+            if (!id || !username || !role) {
+                throw new Error('ID, usuario y rol son requeridos');
+            }
+            
+            if (username.length < 3) {
+                throw new Error('El usuario debe tener al menos 3 caracteres');
+            }
+            
+            // Step 2: Build base payload
+            const payload = {
+                id: parseInt(id),
+                username,
+                role,
+                is_active: isActive,
+                sede_id: $('#edit-sede')?.value || null
+            };
+            
+            // Step 3: Collect role-specific fields
+            if (role === 'jugador') {
+                payload.modality = $('#edit-modality')?.value;
+                payload.payment_plan = $('#edit-frequency')?.value;
+                payload.payment_amount = $('#edit-amount')?.value || '0';
+                payload.sessions_attended = $('#edit-attended')?.value || '0';
+                payload.plan_type = $('#edit-plan-type')?.value;
+                
+                const has2 = $('#edit-has-shift2')?.checked;
+                payload.has_second_shift = !!has2;
+                if (has2) {
+                    payload.modality_2 = $('#edit-modality-2')?.value;
+                    payload.payment_amount_2 = $('#edit-amount-2')?.value || '0';
+                    payload.sessions_attended_2 = $('#edit-attended-2')?.value || '0';
+                    payload.plan_type_2 = $('#edit-plan-type-2')?.value;
+                }
+            }
+            
+            if (role === 'terapista') {
+                const ms = $('#edit-sedes-multi');
+                const selected = [];
+                if (ms) {
+                    for (let i = 0; i < ms.options.length; i++) {
+                        if (ms.options[i].selected) selected.push(ms.options[i].value);
+                    }
+                }
+                
+                if (selected.length === 0) {
+                    throw new Error('Debe seleccionar al menos una sede');
+                }
+                
+                payload.sede_ids = selected;
+                payload.salary_base = $('#edit-salary')?.value || '0';
+                payload.contract_hours = $('#edit-hours')?.value || '0';
+                payload.work_start_time = $('#edit-start-time')?.value || '08:00';
+                payload.work_end_time = $('#edit-end-time')?.value || '17:00';
+                payload.work_days = Array.from(
+                    document.querySelectorAll('input[name="edit_days"]:checked')
+                ).map(cb => cb.value).join(',');
+            }
+            
+            // Step 4: Send update request
+            console.log('Enviando actualización de usuario:', payload);
+            const response = await apiFetch(urls.update, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            // Step 5: Validate response
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al actualizar usuario');
+            }
+            
+            // Step 6: Show success and redirect
+            showToast('✓ Usuario actualizado exitosamente', 'success', 4000);
+            
+            // Close modal if open
+            const modal = document.querySelector('[data-modal="editUserModal"]');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            
+            // Reload after brief delay (ISO 9241: Allow user to see confirmation)
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('Error en submitEditForm:', err);
+            
+            // Show error message (Gestalt: Clear, visible feedback)
+            const errorMsg = err.message || err.error || 'Error al actualizar el usuario';
+            showToast(`✕ ${errorMsg}`, 'error', 5000);
+            
+            // Restore button state
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = prev || 'Guardar cambios';
+            }
         }
-        try{ 
-            console.log('Enviando actualización:', payload);
-            const data = await apiFetch(urls.update, { 
-                method:'POST', 
-                headers:{ 'Content-Type':'application/json' }, 
-                body: JSON.stringify(payload) 
-            }); 
-            if(!data || !data.success) throw new Error(data?.message || 'Error al actualizar'); 
-            showToast('Usuario actualizado','success'); 
-            setTimeout(()=> window.location.reload(), 400); 
-        } catch(err){ 
-            console.error('Error update:', err);
-            showToast(err.message||'Error','error'); 
-            btn.disabled=false; 
-            btn.textContent = prev; 
-        } 
     }
 
-    async function handleResetPassword(btn){ const id = Number(btn.dataset.id); const count = Number(btn.dataset.count||0); let manual = null; if(count===0){ manual = prompt('Ingrese nueva contraseña (manual):'); if(manual===null) return; if(!manual.trim()){ alert('La contraseña no puede estar vacía'); return;} } else { if(!confirm('Generar nueva contraseña automáticamente y enviarla por correo?')) return; } const prev = btn.innerHTML; btn.disabled=true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; try{ const payload = { id }; if(manual) payload.new_password = manual; const data = await apiFetch(urls.reset_pass, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) }); if(!data || !data.success) throw new Error(data?.message||'Error'); if(manual) alert('Contraseña actualizada: ' + manual); else alert('Contraseña generada: ' + (data.temp_password||' (enviada por correo)')); window.location.reload(); } catch(err){ showToast(err.message||'Error','error'); btn.disabled=false; btn.innerHTML = prev; } }
-
-    async function handleDelete(btn){
+    
+    function handleResetPassword(btn) {
         const id = Number(btn.dataset.id);
-        if(!confirm('¿Eliminar usuario? Esta acción es permanente.')) return;
-        const prev = btn.textContent;
-        btn.disabled=true;
-        btn.textContent='Eliminando...';
-        try{
-            const data = await apiFetch(urls.delete, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ id }) });
-            if(!data || !data.success) throw new Error(data?.message||'Error al eliminar');
-            showToast('Usuario eliminado','success');
-            window.location.reload();
-        } catch(err){
-            showToast(err.message||'Error','error');
-            btn.disabled=false;
-            btn.textContent = prev;
+        const count = Number(btn.dataset.count || 0);
+
+        if (!id || id < 1) {
+            showToast('✕ ID de usuario inválido', 'error');
+            return;
+        }
+        
+        // Show drawer
+        const resetDrawer = document.getElementById('resetPasswordDrawer');
+        const backdrop = document.getElementById('drawerBackdrop');
+        const contentFirstTime = document.getElementById('reset-content-first-time');
+        const contentAuto = document.getElementById('reset-content-auto');
+        
+        if (!resetDrawer || !backdrop) return;
+        
+        // Set values
+        document.getElementById('reset-user-id').value = id;
+        document.getElementById('reset-login-count').value = count;
+        document.getElementById('reset-new-password').value = '';
+        
+        // Toggle visibility
+        if (count === 0) {
+            contentFirstTime.classList.remove('hidden');
+            contentAuto.classList.add('hidden');
+        } else {
+            contentFirstTime.classList.add('hidden');
+            contentAuto.classList.remove('hidden');
+        }
+
+        // Show UI
+        resetDrawer.classList.remove('hidden');
+        setTimeout(() => resetDrawer.classList.add('drawer-open'), 10);
+        backdrop.classList.add('active');
+        
+        // Close menus if any
+        document.querySelectorAll('.user-action-menu').forEach(m => m.classList.remove('drawer-open'));
+    }
+    
+    // Add logic for Confirm button inside drawer
+    window.confirmResetAction = async function() {
+        const id = Number(document.getElementById('reset-user-id').value);
+        const count = Number(document.getElementById('reset-login-count').value);
+        let manual = null;
+        
+        if (count === 0) {
+            manual = document.getElementById('reset-new-password').value.trim();
+            if (!manual) {
+                showToast('✕ La contraseña no puede estar vacía', 'error');
+                return;
+            }
+            if (manual.length < 6) {
+                showToast('✕ Mínimo 6 caracteres', 'error');
+                return;
+            }
+        }
+        
+        const btn = document.getElementById('confirmResetBtn');
+        const prev = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        
+        try {
+            const payload = { id };
+            if (manual) payload.new_password = manual;
+            
+            const response = await apiFetch(urls.reset_pass, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response && response.success) {
+                if (manual) {
+                    showToast(`✓ Contraseña actualizada a: ${manual}`, 'success');
+                } else {
+                    const tempPass = response.temp_password || '(enviada por correo)';
+                    showToast(`✓ Contraseña generada: ${tempPass}`, 'success');
+                }
+                closeResetDrawer();
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                throw new Error((response && response.message) ? response.message : 'Error en servidor');
+            }
+        } catch (err) {
+            showToast('✕ ' + (err.message || 'Hubo un error'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = prev;
+        }
+    }
+    
+    window.closeResetDrawer = function() {
+        const resetDrawer = document.getElementById('resetPasswordDrawer');
+        const backdrop = document.getElementById('drawerBackdrop');
+        if (resetDrawer) {
+            resetDrawer.classList.remove('drawer-open');
+            setTimeout(() => resetDrawer.classList.add('hidden'), 400);
+        }
+        if (backdrop) backdrop.classList.remove('active');
+    }
+    
+async function handleDelete(btn) {
+        try {
+            const id = Number(btn.dataset.id);
+            if (!id || id < 1) {
+                showToast('ID de usuario inválido', 'error');
+                return;
+            }
+            
+            // Confirmation with details (ISO 9241: Minimize user error)
+            if (!confirm('⚠️ Esta acción es PERMANENTE\n\n¿Estás seguro de eliminar este usuario?')) {
+                return;
+            }
+            
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+            
+            console.log('Eliminando usuario:', id);
+            
+            const response = await apiFetch(urls.delete, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            
+            console.log('✅ Respuesta del servidor:', response);
+            
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al eliminar usuario');
+            }
+            
+            showToast('🗑️ Usuario eliminado correctamente', 'success', 4000);
+            setTimeout(() => window.location.reload(), 1200);
+            
+        } catch (err) {
+            console.error('❌ Error eliminando usuario:', err);
+            showToast(err.error || err.message || 'Error al eliminar usuario', 'error', 5000);
+            
+            const btn = arguments[0]; // Get button from closure
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+            }
         }
     }
 
@@ -1410,13 +1984,51 @@ const UsersModule = (function(){
     }
 
     function bind(){
+        // Reset Drawer Buttons
+        const closeResetBtn = document.getElementById('closeResetDrawerBtn');
+        const cancelResetBtn = document.getElementById('cancelResetBtn');
+        const confirmResetBtn = document.getElementById('confirmResetBtn');
+        
+        if (closeResetBtn) closeResetBtn.addEventListener('click', window.closeResetDrawer);
+        if (cancelResetBtn) cancelResetBtn.addEventListener('click', window.closeResetDrawer);
+        if (confirmResetBtn) confirmResetBtn.addEventListener('click', window.confirmResetAction);
+        
+        // Toggle new password visibility
+        const toggleResetPwd = document.getElementById('toggle-reset-pwd');
+        const resetPwdInput = document.getElementById('reset-new-password');
+        if (toggleResetPwd && resetPwdInput) {
+            toggleResetPwd.addEventListener('click', () => {
+                const isPass = resetPwdInput.type === 'password';
+                resetPwdInput.type = isPass ? 'text' : 'password';
+                toggleResetPwd.innerHTML = isPass ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            });
+        }
+
         // Click delegation for ALL actions
         document.addEventListener('click', (e) => {
+            // Handle assign button clicks
+            if (e.target.closest('.assign-btn')) {
+                e.preventDefault();
+                const assignBtn = e.target.closest('.assign-btn');
+                handleAssign(assignBtn);
+                return;
+            }
+
             const btn = e.target.closest('[data-action]');
             
-            if (!btn || btn.dataset.action !== 'toggle-user-menu') {
-                if (!e.target.closest('.user-action-menu')) {
-                    document.querySelectorAll('.user-action-menu').forEach(m => m.classList.add('hidden'));
+            // Handle closing drawers/menus if click is outside
+            if (!btn || (btn.dataset.action !== 'toggle-user-menu' && btn.dataset.action !== 'open-create')) {
+                const targetArea = e.target.closest('.user-action-menu') || e.target.closest('.side-panel-drawer');
+                if (!targetArea) {
+                    // Close all drawers
+                    document.querySelectorAll('.user-action-menu, .side-panel-drawer').forEach(m => {
+                        m.classList.remove('drawer-open');
+                    });
+                    document.querySelectorAll('.drawer-backdrop').forEach(bd => {
+                        bd.classList.remove('active');
+                        bd.style.pointerEvents = 'none';
+                    });
+                    document.body.style.overflow = '';
                 }
             }
 
@@ -1425,12 +2037,22 @@ const UsersModule = (function(){
 
             if (action === 'open-create') {
                 e.preventDefault();
-                console.log('Intento de apertura Modal Create');
                 const modal = document.getElementById('createUserModal');
-                if (modal) {
-                    modal.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-                    modal.classList.add('flex', 'opacity-100');
-                    document.body.style.overflow = 'hidden';
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (modal && backdrop) {
+                    // Move to body level to ensure it floats above all layout clip paths
+                    document.body.appendChild(modal);
+                    document.body.appendChild(backdrop);
+                    
+                    backdrop.style.pointerEvents = 'auto';
+                    backdrop.classList.add('active');
+                    
+                    modal.classList.remove('hidden');
+                    // Small delay to allow element attachment before animating
+                    setTimeout(() => {
+                        modal.classList.add('drawer-open');
+                        document.body.style.overflow = 'hidden';
+                    }, 10);
                     
                     // Reset create form specific visibility
                     const createRole = document.querySelector('#new-role');
@@ -1438,27 +2060,67 @@ const UsersModule = (function(){
                         createRole.value = 'jugador';
                         createRole.dispatchEvent(new Event('change'));
                     }
-                } else {
-                    console.error('No se encontró #createUserModal');
                 }
             }
+            
             if (action === 'close-create') {
                 e.preventDefault();
                 const modal = document.getElementById('createUserModal');
-                if (modal) {
-                    modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
-                    modal.classList.remove('flex', 'opacity-100');
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (modal && backdrop) {
+                    modal.classList.remove('drawer-open');
+                    setTimeout(() => modal.classList.add('hidden'), 400);
+                    backdrop.classList.remove('active');
+                    backdrop.style.pointerEvents = 'none';
                     document.body.style.overflow = '';
                 }
             }
 
             if (action === 'toggle-user-menu') {
                 e.preventDefault(); e.stopPropagation();
-                const menu = btn.closest('.relative').querySelector('.user-action-menu');
+                
+                const targetId = btn.dataset.target;
+                const menu = document.getElementById(targetId);
+                
                 if (menu) {
-                    const isHidden = menu.classList.contains('hidden');
-                    document.querySelectorAll('.user-action-menu').forEach(m => m.classList.add('hidden'));
-                    if (isHidden) menu.classList.remove('hidden');
+                    const isOpen = menu.classList.contains('drawer-open');
+                    document.querySelectorAll('.user-action-menu').forEach(m => {
+                        if (m !== menu) {
+                            m.classList.remove('drawer-open');
+                            setTimeout(() => m.classList.add('hidden'), 400);
+                        }
+                    });
+                    const backdrop = document.getElementById('drawerBackdrop');
+                    if (!isOpen) {
+                        menu.classList.remove('hidden');
+                        setTimeout(() => menu.classList.add('drawer-open'), 10);
+                        if(backdrop) {
+                            backdrop.classList.add('active');
+                            backdrop.style.pointerEvents = 'auto';
+                        }
+                    } else {
+                        menu.classList.remove('drawer-open');
+                        setTimeout(() => menu.classList.add('hidden'), 400);
+                        if(backdrop) {
+                            backdrop.classList.remove('active');
+                            backdrop.style.pointerEvents = 'none';
+                        }
+                    }
+                }
+            }
+            
+            // Add close drawer action
+            if (action === 'close-drawer') {
+                e.preventDefault(); e.stopPropagation();
+                const menu = btn.closest('.user-action-menu');
+                if (menu) {
+                    menu.classList.remove('drawer-open');
+                    setTimeout(() => menu.classList.add('hidden'), 400);
+                }
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                    backdrop.style.pointerEvents = 'none';
                 }
             }
 
@@ -1569,7 +2231,38 @@ const UsersModule = (function(){
 
     function calculateContractHours(){ const startVal = $ ('#edit-start-time')?.value; const endVal = $ ('#edit-end-time')?.value; const daysChecked = document.querySelectorAll('input[name="edit_days"]:checked').length; if(startVal && endVal && daysChecked>0){ const [h1,m1]=startVal.split(':').map(Number); const [h2,m2]=endVal.split(':').map(Number); let diff = (h2*60+m2)-(h1*60+m1); if(diff<0) diff=0; const hours = diff/60; const totalMonthly = Math.round(hours * daysChecked * 4); $ ('#edit-hours').value = totalMonthly; } }
 
-    return { init: function(){ bind(); applyFilters(); applyAutoEdit(); } };
+    return { init: function(){ 
+        bind(); 
+        applyFilters(); 
+        applyAutoEdit(); 
+        
+        const bd = document.getElementById('drawerBackdrop');
+        if(bd) {
+            bd.addEventListener('click', () => {
+                document.querySelectorAll('.side-panel-drawer').forEach(m => {
+                    m.classList.remove('drawer-open');
+                    setTimeout(() => m.classList.add('hidden'), 400);
+                });
+                document.querySelectorAll('.user-action-menu').forEach(m => {
+                    m.classList.remove('drawer-open');
+                    setTimeout(() => m.classList.add('hidden'), 400);
+                });
+                bd.classList.remove('active');
+                bd.style.pointerEvents = 'none';
+                document.body.style.overflow = '';
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') {
+                if(bd) bd.click();
+            }
+        });
+
+        // Move all slider menus to body to break out of any transform/overflow containment
+        document.querySelectorAll('.user-action-menu').forEach(menu => {
+            document.body.appendChild(menu);
+        });
+    } };
 })();
 
 document.addEventListener('DOMContentLoaded', ()=> UsersModule.init());

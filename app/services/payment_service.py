@@ -141,7 +141,7 @@ class PaymentService:
             except Exception:
                 pass # Non-critical
             
-            return True, "Pago registrado exitosamente"
+            return True, new_payment
         except Exception as e:
             db.session.rollback()
             return False, str(e)
@@ -285,7 +285,9 @@ class PaymentService:
             'recovery_msg': f"Ajuste de {to_recover} sesiones (pendientes: {remaining})" if to_recover != 0 else None,
             'current_plan': user.payment_plan,
             'current_amount': user.payment_amount or 0.0,
-            'absences': user.sessions_total - user.sessions_attended if user.sessions_total > user.sessions_attended else 0
+            'absences': user.sessions_total - user.sessions_attended if user.sessions_total > user.sessions_attended else 0,
+            'document_number': user.document_number,
+            'guardian_name': user.guardian_name
         }
     
     def get_financial_summary(self):

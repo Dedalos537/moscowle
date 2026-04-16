@@ -23,6 +23,14 @@
           }
       })();
   </script>
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
   <title>{% block title %}Centro de Terapias{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -300,6 +308,8 @@
       }
     }
   </style>
+
+  {% block extra_styles %}{% endblock %}
 </head>
 
 <body class="bg-background font-sans text-textDark">

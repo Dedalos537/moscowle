@@ -152,6 +152,14 @@
     <div class="md:hidden space-y-4 p-4">
       {% for item in patients %}
       {% set p = item.user %}
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
       <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm cursor-pointer" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=p.id) }}';">
         <div class="flex items-center gap-3 mb-3">
           <img src="https://ui-avatars.com/api/?name={{p.username}}&background=random" class="w-12 h-12 rounded-full" />

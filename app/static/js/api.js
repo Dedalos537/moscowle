@@ -28,12 +28,19 @@ export async function apiFetch(url, opts = {}) {
   // Prefer JSON responses
   if (ct.includes('application/json')) {
     const payload = await res.json();
+    
     // If the backend uses the API wrapper {success,data,error,status}
     if (payload && typeof payload.success !== 'undefined') {
       if (!payload.success) {
-        throw { error: payload.error || payload.message || 'API Error', status: payload.status || res.status, raw: payload };
+        throw { 
+          error: payload.error || payload.message || 'Error al procesar solicitud', 
+          status: payload.status || res.status, 
+          raw: payload 
+        };
       }
-      return payload.data;
+      // ✅ FIXED: Return payload.data if it exists, otherwise return entire payload
+      // This handles both: {success: true, data: {...}} and {success: true, message: "..."}
+      return payload.data !== undefined ? payload.data : payload;
     }
     // Backwards compatibility: return payload as-is
     return payload;

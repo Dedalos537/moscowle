@@ -39,6 +39,7 @@ class User(db.Model, UserMixin):
     date_of_birth = db.Column(db.Date, nullable=True)
     guardian_name = db.Column(db.String(150), nullable=True)
     guardian_contact = db.Column(db.String(150), nullable=True)
+    document_number = db.Column(db.String(20), nullable=True)  # DNI/CE del apoderado o paciente
     therapy_goals = db.Column(db.Text, nullable=True)
     timezone = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)

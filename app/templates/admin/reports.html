@@ -1,5 +1,13 @@
 {% extends 'therapist/base.html' %}
 {% set active_page = 'admin_reports' %}
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% block header_content %}
 <div>
   <h2 class="text-2xl font-bold text-textDark">Reportes y Finanzas</h2>
@@ -17,65 +25,81 @@
             <h3 class="text-lg font-semibold text-textDark">Resumen Financiero (Mes Actual)</h3>
             <p class="text-gray-500 text-sm">Proyección de caja y ejecución.</p>
         </div>
-        <div class="flex gap-2">
-            <button onclick="generateIAReport(this)" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-soft hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Generar análisis estratégico con Llama 3.1">
-                <i class="fas fa-brain"></i> Análisis Llama AI
+        <div class="flex gap-2 flex-wrap sm:flex-nowrap">
+            <button onclick="generateIAReport(this)" title="Generar análisis estratégico con Llama 3.1" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-sm">
+                <i class="fas fa-brain"></i> <span>Análisis Llama AI</span>
             </button>
-            <button onclick="sendWeeklyReport(this)" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-soft hover:bg-blue-700 transition-colors flex items-center gap-2" title="Enviar ahora el resumen de deudores">
-                <i class="fas fa-envelope"></i> Reporte Semanal
+            <button onclick="sendWeeklyReport(this)" title="Enviar ahora el resumen de deudores" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-sm">
+                <i class="fas fa-envelope"></i> <span>Reporte Semanal</span>
             </button>
-            <a href="{{ url_for('admin.export_payments_csv') }}" class="px-4 py-2 bg-charcoal text-white text-sm font-medium rounded-soft hover:bg-gray-700 transition-colors flex items-center gap-2">
-                <i class="fas fa-file-csv"></i> Exportar CSV
+            <a href="{{ url_for('admin.export_payments_csv') }}" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-900 text-sm">
+                <i class="fas fa-file-csv"></i> <span>Exportar CSV</span>
             </a>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <!-- Real Income -->
-        <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-            <span class="text-xs font-bold text-green-600 uppercase tracking-widest">Ingresos Reales</span>
-            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_real) }}</div>
-            <p class="text-xs text-gray-500 mt-1">Recaudado este mes</p>
-        </div>
+        {{ cards.stat_card(
+            id='card-income-real', 
+            title='Ingresos Reales', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.income_real)), 
+            subtext='Recaudado este mes', 
+            bg_color_class='bg-green-500/10', 
+            text_color_class='text-green-600'
+        ) }}
         
         <!-- Expected Income -->
-        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-            <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Proyección</span>
-            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.income_expected) }}</div>
-            <p class="text-xs text-gray-500 mt-1">Si todos pagaran a tiempo</p>
-        </div>
+        {{ cards.stat_card(
+            id='card-income-exp', 
+            title='Proyección', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.income_expected)), 
+            subtext='Si todos pagaran a tiempo', 
+            bg_color_class='bg-blue-500/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
 
         <!-- Overdue -->
-        <div class="bg-red-50 p-4 rounded-xl border border-red-100">
-            <span class="text-xs font-bold text-red-600 uppercase tracking-widest">Morosidad Acumulada</span>
-            <div class="text-3xl font-bold text-red-600 mt-2">S/ {{ "%.2f"|format(financials.overdue_amount) }}</div>
-            <p class="text-xs text-red-400 mt-1">{{ financials.overdue_users_count }} usuarios con deuda</p>
-        </div>
+        {{ cards.stat_card(
+            id='card-income-overdue', 
+            title='Morosidad Acumulada', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.overdue_amount)), 
+            subtext=financials.overdue_users_count ~ ' usuarios con deuda', 
+            bg_color_class='bg-red-500/10', 
+            text_color_class='text-red-500'
+        ) }}
         
         <!-- Completion Rate -->
-        <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col justify-center items-center">
-             <!-- Circular Percent Placeholder or simple text -->
-             {% set percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
-             <div class="text-2xl font-bold text-charcoal">{{ "%.1f"|format(percent) }}%</div>
-             <p class="text-xs text-gray-500 font-medium uppercase">Ejecución</p>
-             <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
-                <div class="bg-olive h-1.5 rounded-full" style="width: {{ percent }}%"></div>
-             </div>
-        </div>
+        {% set percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+        {{ cards.stat_card(
+            id='card-income-percent', 
+            title='Ejecución', 
+            initial_value=("%.1f"|format(percent)) ~ '%', 
+            subtext='Progreso de cobro', 
+            bg_color_class='bg-olive/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
     </div>
 
     <!-- Expenses and Net Row -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-            <span class="text-xs font-bold text-gray-600 uppercase tracking-widest">Gastos Totales</span>
-            <div class="text-3xl font-bold text-charcoal mt-2">S/ {{ "%.2f"|format(financials.expenses or 0) }}</div>
-            <p class="text-xs text-gray-500 mt-1">Nómina + Operativos</p>
-        </div>
-        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-            <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Utilidad Neta (Caja)</span>
-            <div class="text-3xl font-bold text-indigo-700 mt-2">S/ {{ "%.2f"|format(financials.net_profit or 0) }}</div>
-            <p class="text-xs text-indigo-400 mt-1">Ingresos Reales - Gastos</p>
-        </div>
+        {{ cards.stat_card(
+            id='card-expenses', 
+            title='Gastos Totales', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.expenses or 0)), 
+            subtext='Nómina + Operativos', 
+            bg_color_class='bg-gray-500/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
+        
+        {{ cards.stat_card(
+            id='card-net', 
+            title='Utilidad Neta (Caja)', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.net_profit or 0)), 
+            subtext='Ingresos Reales - Gastos', 
+            bg_color_class='bg-indigo-500/10', 
+            text_color_class='text-indigo-600'
+        ) }}
     </div>
 
     <!-- Charts Area -->
@@ -128,19 +152,19 @@
     <!-- Desktop Table -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full min-w-[500px]">
-        <thead class="bg-gray-50"><tr>
-          <th class="px-3 py-2 text-left">Nombre</th>
-          <th class="px-3 py-2 text-left">Email</th>
-          <th class="px-3 py-2 text-left">Sesiones</th>
-          <th class="px-3 py-2 text-left">Precisión</th>
-        </tr></thead>
+        {{ tables.table_header([
+          {'label': 'Nombre'},
+          {'label': 'Email'},
+          {'label': 'Sesiones'},
+          {'label': 'Precisión'}
+        ]) }}
         <tbody>
           {% for t in therapists %}
           <tr class="border-t">
-            <td class="px-3 py-2">{{ t.name }}</td>
-            <td class="px-3 py-2">{{ t.email }}</td>
-            <td class="px-3 py-2">{{ t.sessions }}</td>
-            <td class="px-3 py-2">{{ t.avg_accuracy }}%</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ t.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ t.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ t.sessions }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ t.avg_accuracy }}%</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -173,19 +197,19 @@
     <!-- Desktop Table -->
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full min-w-[500px]">
-        <thead class="bg-gray-50"><tr>
-          <th class="px-3 py-2 text-left">Nombre</th>
-          <th class="px-3 py-2 text-left">Email</th>
-          <th class="px-3 py-2 text-left">Juegos</th>
-          <th class="px-3 py-2 text-left">Precisión</th>
-        </tr></thead>
+        {{ tables.table_header([
+          {'label': 'Nombre'},
+          {'label': 'Email'},
+          {'label': 'Juegos'},
+          {'label': 'Precisión'}
+        ]) }}
         <tbody>
           {% for p in patients %}
           <tr class="border-t">
-            <td class="px-3 py-2">{{ p.name }}</td>
-            <td class="px-3 py-2">{{ p.email }}</td>
-            <td class="px-3 py-2">{{ p.plays }}</td>
-            <td class="px-3 py-2">{{ p.avg_accuracy }}%</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ p.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ p.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ p.plays }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{{ p.avg_accuracy }}%</td>
           </tr>
           {% endfor %}
         </tbody>

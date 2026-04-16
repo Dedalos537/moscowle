@@ -1,6 +1,14 @@
 {% extends 'therapist/base.html' %}
 {% set active_page = 'admin_payments' %}
 
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% block header_content %}
 <div>
   <h2 class="text-xl md:text-2xl font-bold text-textDark truncate leading-tight">Pagos y Finanzas</h2>
@@ -511,7 +519,7 @@
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Monto</th>
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Método</th>
             <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Referencia</th>
-            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Comprobante</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Documentos</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -545,13 +553,14 @@
                 <td class="px-6 py-4 text-sm text-gray-500 font-mono text-xs">
                     {{ pay.reference or '-' }}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">
+                <td class="px-6 py-4 text-sm text-gray-500 flex flex-col gap-2">
+                    <a href="{{ url_for('admin.download_receipt', payment_id=pay.id) }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold flex items-center gap-1">
+                        <i class="fas fa-file-pdf text-red-500"></i> Recibo Digital
+                    </a>
                     {% if pay.receipt_image_path %}
                         <a href="{{ url_for('uploads.protected_file', filename=pay.receipt_image_path) }}" target="_blank" class="text-blue-500 hover:underline text-xs flex items-center gap-1">
                             <i class="fas fa-paperclip"></i> Ver Voucher
                         </a>
-                    {% else %}
-                        <span class="text-gray-300 text-xs">-</span>
                     {% endif %}
                 </td>
             </tr>
@@ -588,6 +597,19 @@
         <form action="{{ url_for('admin.register_payment') }}" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="patient_id" id="payment_patient_id">
+            
+            
+            <div id="missing_data_warning" class="hidden mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                <i class="fas fa-exclamation-triangle"></i> Faltan datos para el Recibo Digital. Por favor complete estos campos.
+            </div>
+            <div class="mb-4 hidden" id="fg_document_number">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">DNI del Alumno/Apoderado para Recibo</label>
+                <input type="text" name="document_number" id="input_document_number" class="w-full px-3 py-2 border rounded-soft">
+            </div>
+            <div class="mb-4 hidden" id="fg_guardian_name">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Apoderado para Recibo</label>
+                <input type="text" name="guardian_name" id="input_guardian_name" class="w-full px-3 py-2 border rounded-soft">
+            </div>
             
             <div class="mb-4">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>

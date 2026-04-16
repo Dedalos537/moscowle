@@ -4,6 +4,14 @@ block header_content %}
   <h2 class="text-2xl font-bold text-textDark">Perfil de Administrador</h2>
   <p class="text-sm text-gray-500">Gestiona tu nombre y contraseña</p>
 </div>
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% endblock %} {% block content %}
 <div class="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
   <div class="bg-white rounded-soft shadow-soft p-6 lg:col-span-2">

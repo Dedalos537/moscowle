@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify
+from app.services.receipt_generator import generate_receipt_pdf
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify, send_file
 from flask_login import login_required, current_user
 from functools import wraps
 import os
@@ -912,21 +913,43 @@ def register_payment():
     except:
          discount_val = 0.0
 
-    success, msg = payment_service.register_payment(patient_id, float(amount), method, reference, next_due_date, receipt_path, discount_val, payment_date=payment_date_obj)
+
+    document_number = request.form.get('document_number')
+    guardian_name = request.form.get('guardian_name')
+    
+    if document_number or guardian_name:
+        patient = User.query.get(patient_id)
+        if patient:
+            if document_number: patient.document_number = document_number
+            if guardian_name: patient.guardian_name = guardian_name
+            db.session.commit()
+
+    success, result_or_payment = payment_service.register_payment(patient_id, float(amount), method, reference, next_due_date, receipt_path, discount_val, payment_date=payment_date_obj)
+    
+    msg_text = "Pago registrado exitosamente" if success else str(result_or_payment)
     
     # Check if this is an AJAX request (from deudores.html)
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.get('application/json'):
+    is_ajax = False
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        is_ajax = True
+    elif hasattr(request.accept_mimetypes, 'accept_json') and request.accept_mimetypes.accept_json:
+        is_ajax = True
+    elif 'application/json' in request.headers.get('Accept', ''):
+        is_ajax = True
+
+    if is_ajax:
         # Return JSON for AJAX clients
         if success:
-            return jsonify({'success': True, 'message': msg}), 200
+            receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
+            return jsonify({'success': True, 'message': msg_text, 'receipt_url': receipt_url}), 200
         else:
-            return jsonify({'success': False, 'error': msg}), 400
+            return jsonify({'success': False, 'error': msg_text}), 400
     
     # For traditional form submissions, use flash messages
     if success:
-        flash(msg, 'success')
+        flash(msg_text, 'success')
     else:
-        flash(msg, 'error')
+        flash(msg_text, 'error')
     
     return redirect(url_for('admin.payments'))
 
@@ -1282,3 +1305,42 @@ def update_session(session_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/payments/<int:payment_id>/receipt', methods=['GET', 'POST'])
+@login_required
+def download_receipt(payment_id):
+    from flask import flash, redirect, url_for
+    from flask_login import current_user
+    
+    if current_user.role != 'admin':
+        flash('Acceso denegado.', 'error')
+        return redirect(url_for('main.dashboard'))
+
+    payment = Payment.query.get_or_404(payment_id)
+    patient = User.query.get(payment.patient_id)
+    
+    if not patient:
+        flash("Paciente no encontrado para este pago.", "error")
+        return redirect(url_for('admin.users'))
+
+    if request.method == 'POST':
+        # Retrieve fields to rectify
+        doc_number = request.form.get('document_number')
+        g_name = request.form.get('guardian_name')
+        concept = request.form.get('concept')
+        
+        # Save rectified data for the future
+        if doc_number: patient.document_number = doc_number
+        if g_name: patient.guardian_name = g_name
+        if concept: payment.notes = concept
+        
+        db.session.commit()
+
+    pdf_buffer = generate_receipt_pdf(payment, patient)
+    
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=f"Recibo_JP2_REC-{payment.id:06d}.pdf",
+        mimetype='application/pdf'
+    )

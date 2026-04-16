@@ -1,6 +1,14 @@
 {% extends 'therapist/base.html' %}
 {% set active_page = 'admin_users' %}
 
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% block content %}
 <div class="p-6 md:p-8 space-y-6 animate-fade-in-up">
     <!-- Header / Identification -->

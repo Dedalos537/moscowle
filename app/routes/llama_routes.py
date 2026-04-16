@@ -174,7 +174,7 @@ def send_message():
                         tutorial_steps = get_tutorial_steps('register_payment')
                         
                         # Registrar pago
-                        payment_service.register_payment(
+                        success, result_or_payment = payment_service.register_payment(
                             patient_id=patient.id,
                             amount=float(payment_params.get('amount', 0)),
                             method='IA/Copilot',
@@ -182,9 +182,15 @@ def send_message():
                             next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
                         )
                         
-                        response = f"✅ Registré S/. {payment_params.get('amount'):.2f} para {patient.username}."
-                        action_result = {'status': 'success', 'patient_id': patient.id}
-                        redirect_url = url_for('admin.payment_history', user_id=patient.id)
+                        if success:
+                            receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
+                            response = f"✅ Registré S/. {payment_params.get('amount'):.2f} para {patient.username}.<br><br><a href='{receipt_url}' target='_blank' class='inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium'><i class='fas fa-file-pdf'></i> 📄 Descargar Recibo</a>"
+                            action_result = {'status': 'success', 'patient_id': patient.id, 'receipt_url': receipt_url}
+                            redirect_url = url_for('admin.payment_history', user_id=patient.id)
+                        else:
+                            response = f"❌ Error al registrar: {result_or_payment}"
+                            action_result = {'status': 'error', 'patient_id': patient.id}
+                            redirect_url = None
                         
                         notif_service.create_notification(
                             current_user.id,

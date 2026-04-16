@@ -1,6 +1,14 @@
 {% extends 'therapist/base.html' %}
 {% set active_page = 'admin_expenses' %}
 
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
 {% block header_content %}
 <div>
   <h2 class="text-2xl font-bold text-textDark">Gestión de Gastos y Terapeutas</h2>

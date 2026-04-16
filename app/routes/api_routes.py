@@ -1927,3 +1927,23 @@ def get_capacity_metrics():
     except Exception as e:
         current_app.logger.error(f"Error fetching capacity metrics: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@api_bp.route('/notifications/create', methods=['POST'])
+@login_required
+def create_notification():
+    try:
+        data = request.get_json()
+        message = data.get('message')
+        link = data.get('link', '')
+        
+        if not message:
+            return jsonify({'success': False, 'message': 'Mensaje es requerido'}), 400
+            
+        notification_service.create_notification(
+            user_id=current_user.id,
+            message=message,
+            link=link
+        )
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500

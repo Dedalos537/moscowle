@@ -29,3 +29,4 @@ pywhatkit>=5.4
 openpyxl>=3.0.0
 Pillow>=9.0.0
 ollama
+reportlab>=3.6.12
