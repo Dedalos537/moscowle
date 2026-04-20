@@ -1,0 +1,96 @@
+<div class="flex min-h-screen items-center justify-center p-4 bg-background">
+  <div class="w-full max-w-md bg-surface rounded-2xl shadow-xl p-8 relative overflow-hidden transition-colors duration-300">
+      
+      <!-- Decorational Line top -->
+      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-[#85c242]"></div>
+
+      <!-- Logo Section -->
+      <div class="text-center mb-8">
+          <div class="w-24 h-24 mx-auto mb-4 transform rotate-3 hover:rotate-0 transition-transform duration-300">
+              <!-- Reemplaza con tu img/logo.svg de assets más adelante -->
+              <div class="w-full h-full bg-primary/10 rounded-full flex items-center justify-center">
+                 <fa-icon [icon]="['fas', 'leaf']" class="text-4xl text-primary drop-shadow-md"></fa-icon>
+              </div>
+          </div>
+          <h2 class="text-2xl font-bold text-textDark">Centro de Terapias</h2>
+          <h3 class="text-lg font-medium text-gray-500">Juan Pablo II</h3>
+          <p class="text-sm text-gray-400 mt-2">Acceso a Plataforma Digital</p>
+      </div>
+
+      <!-- Flash Messages / Alert Component -->
+      @if (alertMessage) {
+         <div class="mb-6 animate-fade-in-up">
+            <app-alert [type]="alertType" [message]="alertMessage"></app-alert>
+         </div>
+      }
+
+      <!-- Login Form -->
+      <form (ngSubmit)="doLogin()" class="space-y-5">
+          
+          <!-- Email Input -->
+          <app-input 
+            id="email"
+            label="Correo Electrónico"
+            type="email"
+            placeholder="usuario@ejemplo.com"
+            [icon]="['fas', 'envelope']"
+            [value]="email"
+            (valueChange)="email = $event">
+          </app-input>
+          
+          <!-- Password Input -->
+          <div class="relative">
+             <app-input 
+               id="password"
+               label="Contraseña"
+               [type]="showPassword ? 'text' : 'password'"
+               placeholder="Ingresa tu contraseña"
+               [icon]="['fas', 'lock']"
+               [value]="password"
+               (valueChange)="password = $event">
+             </app-input>
+
+             <button type="button" (click)="togglePassword()" class="absolute right-4 top-9 text-gray-400 hover:text-textDark focus:outline-none transition-colors z-10 w-8 h-8 flex items-center justify-center">
+                 <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
+             </button>
+          </div>
+
+          <!-- Options -->
+          <div class="flex items-center justify-between pt-1">
+              <label class="flex items-center gap-2 cursor-pointer group">
+                  <div class="relative flex items-center">
+                      <input type="checkbox" class="peer sr-only">
+                      <div class="w-5 h-5 border-2 border-border rounded flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all">
+                         <fa-icon [icon]="['fas', 'check']" class="text-white text-xs opacity-0 peer-checked:opacity-100 transition-opacity"></fa-icon>
+                      </div>
+                  </div>
+                  <span class="text-sm text-gray-500 group-hover:text-textDark transition-colors">Recordarme</span>
+              </label>
+              <a href="javascript:void(0)" class="text-sm font-semibold text-primary hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
+          </div>
+
+          <!-- Submit Button -->
+          <app-button 
+            type="submit" 
+            [label]="isLoading ? 'Verificando...' : 'Iniciar Sesión'" 
+            variant="primary" 
+            class="w-full mt-4 block"
+            [disabled]="!isFormValid || isLoading">
+            
+            @if (isLoading) {
+               <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
+            } @else {
+               <fa-icon [icon]="['fas', 'sign-in-alt']" class="mr-2"></fa-icon>
+            }
+          </app-button>
+          
+      </form>
+
+      <!-- Footer -->
+      <div class="mt-8 pt-6 border-t border-border text-center">
+          <p class="text-xs text-charcoal">
+              ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-primary font-semibold hover:underline">Soporte Técnico</a>
+          </p>
+      </div>
+  </div>
+</div>

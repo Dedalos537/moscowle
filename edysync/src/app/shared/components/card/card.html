@@ -1,0 +1,33 @@
+<div class="bg-surface rounded-2xl shadow-soft border border-border overflow-hidden flex flex-col">
+  <!-- Card Header -->
+  @if (title || icon) {
+    <div class="px-6 py-4 border-b border-border flex items-center gap-3">
+      @if (icon) {
+        <div class="text-primary text-xl">
+          <fa-icon [icon]="icon"></fa-icon>
+        </div>
+      }
+      <div>
+        <h3 class="text-lg font-semibold text-textDark m-0">{{ title }}</h3>
+        @if (subtitle) {
+          <p class="text-sm text-charcoal m-0 mt-0.5">{{ subtitle }}</p>
+        }
+      </div>
+      
+      <!-- Para acciones adicionales en la cabecera (botones, menus) -->
+      <div class="ml-auto">
+        <ng-content select="[card-header-actions]"></ng-content>
+      </div>
+    </div>
+  }
+
+  <!-- Card Body -->
+  <div class="p-6 flex-1">
+    <ng-content></ng-content>
+  </div>
+
+  <!-- Card Footer -->
+  <div class="px-6 py-4 border-t border-border bg-gray-50/50 dark:bg-slate-800/50 min-h-[1px]">
+    <ng-content select="[card-footer]"></ng-content>
+  </div>
+</div>

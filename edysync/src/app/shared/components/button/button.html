@@ -1,0 +1,17 @@
+<button 
+  [type]="type"
+  [class]="buttonClasses" 
+  [disabled]="disabled" 
+  (click)="onClick($event)">
+  
+  @if (icon) {
+    <fa-icon [icon]="icon"></fa-icon>
+  }
+  
+  @if (label) {
+    <span>{{ label }}</span>
+  }
+
+  <!-- Permite pasar contenido personalizado por dentro -->
+  <ng-content></ng-content>
+</button>

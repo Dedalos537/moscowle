@@ -1,1 +1,19 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+
+@theme {
+  /* Paleta base de tu App Angular */
+  --color-primary: #75a83a; /* Un verde institucional, similar al tuyo */
+  --color-surface: #ffffff;
+  --color-background: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-error: #ef4444;
+  --color-charcoal: #475569;
+  --color-textDark: #0f172a;
+
+  /* Sombras y bordes */
+  --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.03);
+}
+
+body {
+  @apply bg-background text-textDark font-sans antialiased;
+}

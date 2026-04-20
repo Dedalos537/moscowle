@@ -1,0 +1,61 @@
+<div class="relative bg-background overflow-hidden min-h-screen font-sans">
+  
+  <!-- Hero Section con Glassmorphism -->
+  <section class="relative max-w-7xl mx-auto px-6 py-20 lg:py-32 flex flex-col-reverse lg:flex-row items-center gap-12 z-10">
+    
+    <!-- Textos y CTA -->
+    <div class="flex-1 space-y-8 z-10 transition-all duration-700 ease-out translate-y-0 opacity-100">
+      <h1 class="text-5xl lg:text-7xl font-extrabold text-textDark leading-tight tracking-tight">
+        Sincroniza y <br><span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#5a9c1e] drop-shadow-sm">Transforma</span> <br>Tu Centro.
+      </h1>
+      <p class="text-lg md:text-xl text-charcoal max-w-xl leading-relaxed">
+        Con EdySync, fusionamos tecnología de inteligencia artificial, agendamiento experto de pacientes y cobros automáticos en una sola experiencia interactiva.
+      </p>
+      
+      <div class="flex items-center gap-4 pt-4">
+        <!-- Reemplacé icon="rocket" temporalmente con un arrar para evotar errores de tipos si tu boton sólo admite String o Array -->
+        <app-button label="Comenzar Ahora" variant="primary" [icon]="['fas', 'rocket']"></app-button>
+        <app-button label="Agendar Cita" variant="secondary" [icon]="['fas', 'calendar-check']"></app-button>
+      </div>
+
+      <div class="pt-8 border-t border-border/50 flex gap-8 items-center text-sm font-medium text-charcoal">
+         <div class="flex flex-col gap-1 items-center hover:text-primary transition-colors cursor-default">
+            <!-- Asistente Robot Llama -->
+            <fa-icon [icon]="['fas', 'robot']" class="text-2xl text-primary drop-shadow-sm"></fa-icon>
+            <span>Asistente IA (Llama)</span>
+         </div>
+         <div class="flex flex-col gap-1 items-center hover:text-[#742384] transition-colors cursor-default">
+            <!-- Simulando Yape Color -->
+            <fa-icon [icon]="['fas', 'mobile-alt']" class="text-2xl text-[#742384] drop-shadow-sm"></fa-icon>
+            <span>Pago Integrado</span>
+         </div>
+      </div>
+    </div>
+
+    <!-- Imagen del Hero y Elementos Flotantes Glassmorphism -->
+    <div class="flex-1 w-full relative z-10">
+      
+      <!-- Efectos de Luces y Sombras Desenfocadas de Fondo -->
+      <div class="absolute -top-10 -right-10 w-[400px] h-[400px] bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
+      <div class="absolute -bottom-10 -left-10 w-[300px] h-[300px] bg-blue-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
+      
+      <!-- Contenedor Imagen -->
+      <div class="relative rounded-[2.5rem] bg-white/20 dark:bg-slate-800/30 backdrop-blur-xl border border-white/40 dark:border-white/10 p-3 shadow-2xl relative group">
+        
+        <!-- Usaremos la imagen generada por la IA que copié a tus assets -->
+        <img src="assets/hero_therapy.png" alt="Centro de Terapias EdySync" class="rounded-[2rem] w-full h-[550px] object-cover shadow-soft transition-transform duration-[1200ms] group-hover:scale-[1.01] group-hover:shadow-[0_10px_40px_rgba(117,168,58,0.15)]">
+        
+        <!-- Tarjeta Flotante (Nuestra app-card Atomica) -->
+        <div class="absolute -left-6 lg:-left-20 top-24 shadow-2xl transform transition-transform duration-500 hover:-translate-y-2">
+           <app-card title="Próxima Sesión" subtitle="Empieza en 15 m" [icon]="['fas', 'clock']">
+              <div class="flex items-center gap-2 mt-1">
+                 <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                 <span class="text-xs text-primary font-bold">Confirmada</span>
+              </div>
+           </app-card>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
