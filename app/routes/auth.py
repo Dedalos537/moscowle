@@ -65,8 +65,3 @@ def api_auth_validate():
         current_app.logger.warning(f"/api/auth/validate error: {e}")
         return jsonify({'valid': False})
 
-# OAuth routes (commented out as in original)
-# @auth_bp.route('/login/google')
-# def login_google():
-#     # ...
-#     pass
