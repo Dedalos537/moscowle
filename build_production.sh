@@ -9,7 +9,7 @@
 set -e
 
 echo "=================================================="
-echo "🏗️  MOSCOWLE IA MVP - PRODUCTION BUILD"
+echo " MOSCOWLE IA MVP - PRODUCTION BUILD"
 echo "=================================================="
 echo ""
 
@@ -111,7 +111,7 @@ cat > "$BUILD_DIR/${PACKAGE_NAME}/SETUP.sh" << 'EOF'
 # Quick setup script for production deployment
 
 echo "=================================================="
-echo "🚀 MOSCOWLE IA MVP - QUICK SETUP"
+echo " MOSCOWLE IA MVP - QUICK SETUP"
 echo "=================================================="
 
 # Define paths
@@ -134,9 +134,9 @@ echo "[5/5] Creating logs directory..."
 mkdir -p "${APP_DIR}/logs"
 
 echo ""
-echo "✅ Setup completed!"
+echo " Setup completed!"
 echo ""
-echo "📝 Next steps:"
+echo "Next steps:"
 echo "1. Copy .env.example to .env"
 echo "2. Update .env with your configuration"
 echo "3. Configure Python App in cPanel"
@@ -181,24 +181,24 @@ cd "$PROJECT_ROOT"
 # Show results
 echo ""
 echo -e "${GREEN}=================================================="
-echo "✅ BUILD SUCCESSFUL"
+echo "BUILD SUCCESSFUL"
 echo "==================================================${NC}"
 echo ""
-echo -e "${GREEN}📦 Package created:${NC}"
+echo -e "${GREEN} Package created:${NC}"
 echo "   Location: $PACKAGE_FILE"
 echo "   Size: $(du -h "$PACKAGE_FILE" | cut -f1)"
 echo ""
-echo -e "${GREEN}📝 Package contents:${NC}"
+echo -e "${GREEN}Package contents:${NC}"
 unzip -l "$PACKAGE_FILE" | head -20
 echo "   ... (and more)"
 echo ""
-echo -e "${GREEN}📋 Next steps:${NC}"
+echo -e "${GREEN} Next steps:${NC}"
 echo "1. Upload $PACKAGE_FILE to your cPanel server using SFTP"
 echo "2. Extract: unzip $PACKAGE_NAME.zip"
 echo "3. Run: cd $PACKAGE_NAME && bash SETUP.sh"
 echo "4. Follow: DEPLOY_PRODUCTION_CPANEL.md for full setup"
 echo ""
-echo -e "${BLUE}💡 Tips:${NC}"
+echo -e "${BLUE} Tips:${NC}"
 echo "   - UPLOAD only: app/ config.py run.py passenger_wsgi.py requirements.txt"
 echo "   - DO NOT upload: venv/ .git .venv tests/ debug files"
 echo "   - CONFIGURE: .env with MySQL credentials and secrets"

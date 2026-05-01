@@ -313,7 +313,6 @@ def create_app(config_class=Config):
     # ========== INITIALIZE EXTENSIONS ==========
     db.init_app(app)
     bcrypt.init_app(app)
-    # Allow CORS for /api/* routes, specifically useful for external frontends
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
     mail.init_app(app)
     oauth.init_app(app)

@@ -15,10 +15,10 @@ def check_ollama():
 def start_ollama():
     """Inicia el servidor de Ollama si no está corriendo."""
     if check_ollama():
-        print("✅ [AI-SHIELD] Ollama ya está en ejecución.")
+        print("[AI-SHIELD] Ollama ya está en ejecución.")
         return True
 
-    print("🚀 [AI-SHIELD] Iniciando servidor Ollama...")
+    print(" [AI-SHIELD] Iniciando servidor Ollama...")
     
     # Intentar encontrar el ejecutable de Ollama
     ollama_path = "/opt/homebrew/bin/ollama" # Ruta detectada en este sistema
@@ -41,13 +41,13 @@ def start_ollama():
         for i in range(15):
             time.sleep(1)
             if check_ollama():
-                print(f"✅ [AI-SHIELD] Ollama iniciado correctamente tras {i+1}s.")
+                print(f"[AI-SHIELD] Ollama iniciado correctamente tras {i+1}s.")
                 return True
         
-        print("❌ [AI-SHIELD] Tiempo de espera agotado al iniciar Ollama.")
+        print("[AI-SHIELD] Tiempo de espera agotado al iniciar Ollama.")
         return False
     except Exception as e:
-        print(f"❌ [AI-SHIELD] Error crítico al intentar iniciar Ollama: {e}")
+        print(f"[AI-SHIELD] Error crítico al intentar iniciar Ollama: {e}")
         return False
 
 if __name__ == "__main__":
