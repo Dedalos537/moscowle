@@ -1,0 +1,24 @@
+<ng-template #headerActions>
+  <div class="text-center hidden sm:block">
+    <div class="text-2xl font-bold text-primary leading-none">{{ activeCount }}</div>
+    <p class="text-xs text-gray-500 font-medium leading-none mt-1">activas</p>
+  </div>
+  
+  <button class="px-5 py-2.5 bg-[#75a83a] text-white rounded-full hover:bg-[#618f2d] transition-colors shadow-sm font-bold flex items-center gap-2 text-sm">
+    <fa-icon [icon]="['fas', 'plus']"></fa-icon>
+    <span>Nueva Sede</span>
+  </button>
+</ng-template>
+
+<div class="p-1 animate-fade-in-up space-y-8">
+  
+  <!-- Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    
+    @for (sede of sedes; track sede.id) {
+      <app-sede-card [sede]="sede"></app-sede-card>
+    }
+    
+  </div>
+
+</div>

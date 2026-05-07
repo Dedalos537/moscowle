@@ -1,13 +1,13 @@
 <div class="flex min-h-screen items-center justify-center p-4 bg-background">
-  <div class="w-full max-w-md bg-surface rounded-2xl shadow-xl p-8 relative overflow-hidden transition-colors duration-300">
+  <div class="login-card w-full max-w-md bg-surface rounded-2xl shadow-xl p-8 relative overflow-hidden transition-colors duration-300">
       
       <!-- Decorational Line top -->
-      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-[#85c242]"></div>
+      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-[#75a83a]"></div>
 
       <!-- Logo Section -->
       <div class="text-center mb-8">
           <div class="w-24 h-24 mx-auto mb-4 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-              <!-- Reemplaza con tu img/logo.svg de assets más adelante -->
+              <!-- Reemplaza con tu img/logo.svg de assets luego, por ahora simulación idéntica -->
               <div class="w-full h-full bg-primary/10 rounded-full flex items-center justify-center">
                  <fa-icon [icon]="['fas', 'leaf']" class="text-4xl text-primary drop-shadow-md"></fa-icon>
               </div>
@@ -24,35 +24,35 @@
          </div>
       }
 
-      <!-- Login Form -->
+      <!-- Login Form (Estilo exacto de app/templates/login.html) -->
       <form (ngSubmit)="doLogin()" class="space-y-5">
           
-          <!-- Email Input -->
-          <app-input 
-            id="email"
-            label="Correo Electrónico"
-            type="email"
-            placeholder="usuario@ejemplo.com"
-            [icon]="['fas', 'envelope']"
-            [value]="email"
-            (valueChange)="email = $event">
-          </app-input>
+          <div class="space-y-2">
+              <label class="text-sm font-semibold text-textDark ml-1">Correo Electrónico</label>
+              <div class="relative group">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 border-none group-focus-within:text-primary transition-colors">
+                      <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
+                  </span>
+                  <input type="email" id="email" name="email" [(ngModel)]="email"
+                      class="login-input w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium focus:border-primary dark:focus:border-primary" 
+                      placeholder="usuario@ejemplo.com" required>
+              </div>
+          </div>
           
-          <!-- Password Input -->
-          <div class="relative">
-             <app-input 
-               id="password"
-               label="Contraseña"
-               [type]="showPassword ? 'text' : 'password'"
-               placeholder="Ingresa tu contraseña"
-               [icon]="['fas', 'lock']"
-               [value]="password"
-               (valueChange)="password = $event">
-             </app-input>
-
-             <button type="button" (click)="togglePassword()" class="absolute right-4 top-9 text-gray-400 hover:text-textDark focus:outline-none transition-colors z-10 w-8 h-8 flex items-center justify-center">
-                 <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
-             </button>
+          <div class="space-y-2">
+              <label class="text-sm font-semibold text-textDark ml-1">Contraseña</label>
+              <div class="relative group">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 border-none group-focus-within:text-primary transition-colors">
+                      <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
+                  </span>
+                  <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
+                      class="login-input w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium focus:border-primary dark:focus:border-primary" 
+                      placeholder="Ingresa tu contraseña" required>
+                  
+                  <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-textDark focus:outline-none transition-colors border-none bg-transparent">
+                      <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
+                  </button>
+              </div>
           </div>
 
           <!-- Options -->
@@ -60,7 +60,7 @@
               <label class="flex items-center gap-2 cursor-pointer group">
                   <div class="relative flex items-center">
                       <input type="checkbox" class="peer sr-only">
-                      <div class="w-5 h-5 border-2 border-border rounded flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all">
+                      <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all">
                          <fa-icon [icon]="['fas', 'check']" class="text-white text-xs opacity-0 peer-checked:opacity-100 transition-opacity"></fa-icon>
                       </div>
                   </div>
@@ -69,21 +69,20 @@
               <a href="javascript:void(0)" class="text-sm font-semibold text-primary hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
           </div>
 
-          <!-- Submit Button -->
-          <app-button 
-            type="submit" 
-            [label]="isLoading ? 'Verificando...' : 'Iniciar Sesión'" 
-            variant="primary" 
-            class="w-full mt-4 block"
-            [disabled]="!isFormValid || isLoading">
-            
-            @if (isLoading) {
-               <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
-            } @else {
-               <fa-icon [icon]="['fas', 'sign-in-alt']" class="mr-2"></fa-icon>
-            }
-          </app-button>
-          
+          <!-- Submit Button - Exactly like Flask implementation -->
+          <button type="submit" 
+             [disabled]="!isFormValid || isLoading"
+             class="w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 text-white"
+             [ngClass]="(isFormValid && !isLoading) ? 'bg-primary hover:bg-opacity-90 hover:-translate-y-0.5 shadow-lg shadow-[#75a83a]/30 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'">
+             
+             @if (isLoading) {
+                 <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
+                 Verificando...
+             } @else {
+                 <fa-icon [icon]="['fas', 'sign-in-alt']"></fa-icon>
+                 Iniciar Sesión
+             }
+          </button>
       </form>
 
       <!-- Footer -->

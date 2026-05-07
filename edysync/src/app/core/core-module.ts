@@ -7,12 +7,18 @@ import { MainLayout } from './layout/main-layout/main-layout';
 import { Navbar } from './layout/navbar/navbar';
 import { Footer } from './layout/footer/footer';
 import { SharedModule } from '../shared/shared-module';
+import { Sidebar } from './components/sidebar/sidebar';
+import { Header } from './components/header/header';
+import { AdminLayout } from './layout/admin-layout/admin-layout';
 
 @NgModule({
   declarations: [
     MainLayout,
     Navbar,
-    Footer
+    Footer,
+    Sidebar,
+    Header,
+    AdminLayout
   ],
   imports: [
     CommonModule,
@@ -21,7 +27,8 @@ import { SharedModule } from '../shared/shared-module';
     SharedModule // Importamos para tener FontAwesome y <app-button> entre otros
   ],
   exports: [
-    MainLayout
+    MainLayout,
+    AdminLayout
   ],
   providers: [
     {

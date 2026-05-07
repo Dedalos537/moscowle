@@ -1,0 +1,48 @@
+<div class="group bg-surface rounded-3xl shadow-sm hover:shadow-md transition-all border border-gray-200 overflow-hidden flex flex-col h-[380px] cursor-pointer hover:border-primary/30">
+  
+  <!-- Card Content -->
+  <div class="p-6 flex-1 flex flex-col">
+    <!-- Badge & Icon -->
+    <div class="flex items-start justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-full bg-[#dcfce7] flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'home']" class="text-[#16a34a] text-xl"></fa-icon>
+        </div>
+        <span class="px-3 py-1 bg-[#dcfce7] text-[#16a34a] text-xs font-bold rounded-full">
+          {{ sede.active ? 'Activa' : 'Inactiva' }}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Sede Info -->
+    <h3 class="text-xl font-bold text-textDark truncate mb-1">{{ sede.name }}</h3>
+    <p class="text-sm text-gray-500 line-clamp-2">{{ sede.address || 'Sin dirección' }}</p>
+  </div>
+  
+  <!-- Stats Footer -->
+  <div class="border-t border-gray-100 p-6 space-y-4 bg-gray-50/50 group-hover:bg-primary/[0.02] transition-colors">
+    
+    <div class="flex justify-between items-center text-sm">
+      <span class="flex items-center gap-3 text-gray-600 font-medium">
+        <fa-icon [icon]="['fas', 'users']" class="text-blue-500 w-4"></fa-icon> Pacientes
+      </span>
+      <span class="font-bold text-textDark">{{ sede.stats.patients.total }}</span>
+    </div>
+    
+    <div class="flex justify-between items-center text-sm">
+      <span class="flex items-center gap-3 text-gray-600 font-medium">
+        <fa-icon [icon]="['fas', 'calendar-alt']" class="text-green-500 w-4"></fa-icon> Sesiones
+      </span>
+      <span class="font-bold text-textDark">{{ sede.stats.sessions.total_completed }}</span>
+    </div>
+    
+    <div class="flex justify-between items-center text-sm">
+      <span class="flex items-center gap-3 text-gray-600 font-medium">
+        <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-amber-500 w-4"></fa-icon> Ingresos
+      </span>
+      <span class="font-bold text-textDark">S/. {{ sede.stats.payments.total_revenue }}</span>
+    </div>
+    
+  </div>
+  
+</div>

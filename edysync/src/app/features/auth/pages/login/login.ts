@@ -45,10 +45,9 @@ export class Login {
         this.alertMessage = 'Inicio de sesión exitoso. Redirigiendo...';
         
         setTimeout(() => {
-           // Simulación del routeo por rol que tienes en Flask
-           // Asignaremos este enrutamiento seguro pronto,
-           // por ahora vamos al layout central o dashboard temporal
-           this.router.navigate(['/']); 
+           // Temnporalmente redirigimos al admin
+           // En el futuro, dependerá de user.role
+           this.router.navigate(['/admin/dashboard']); 
            this.isLoading = false;
         }, 1000);
       },

@@ -1,0 +1,40 @@
+<header class="h-20 bg-surface border-b border-gray-200 flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
+  <!-- Dynamic Left Side -->
+  <div class="flex items-center gap-3">
+    @if (headerService.icon$ | async; as icon) {
+      <fa-icon [icon]="$any(icon)" class="text-primary text-2xl"></fa-icon>
+    }
+    <div class="flex flex-col">
+      <h1 class="text-xl font-bold text-textDark">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
+      <p class="text-sm text-gray-500">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-4">
+    <!-- Dynamic Actions from current view -->
+    <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
+
+    <span class="hidden md:inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold uppercase tracking-wide">
+      <fa-icon [icon]="['fas', 'globe']" class="mr-2"></fa-icon> AMERICA/LIMA
+    </span>
+    
+    <button class="w-10 h-10 rounded-full bg-lightGreen text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
+      <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+    </button>
+    
+    <span class="hidden lg:inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+      <fa-icon [icon]="['fas', 'globe']" class="mr-2"></fa-icon> America/Lima (GMT-05:00)
+    </span>
+
+    <div class="flex items-center gap-3 pl-4 border-l border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
+      <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">
+        A
+      </div>
+      <div class="hidden md:flex flex-col">
+        <span class="font-bold text-textDark text-sm">Administrador</span>
+        <span class="text-gray-500 text-xs">Admin</span>
+      </div>
+      <fa-icon [icon]="['fas', 'chevron-down']" class="text-gray-400 text-xs ml-1"></fa-icon>
+    </div>
+  </div>
+</header>

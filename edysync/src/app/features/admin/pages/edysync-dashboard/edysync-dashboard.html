@@ -1,0 +1,226 @@
+<div class="space-y-8 animate-fade-in-up max-w-7xl mx-auto pb-10">
+
+  <!-- Resumen Diario (Header) -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div class="max-w-2xl">
+      <h2 class="text-primary font-bold text-xs tracking-widest uppercase mb-2">Panel Principal</h2>
+      <h1 class="text-4xl font-extrabold text-textDark leading-tight">
+        Hola, Admin. Tienes <span class="text-primary">4 Tareas</span> sugeridas por la IA hoy.
+      </h1>
+    </div>
+    <div class="flex gap-4">
+      <div class="bg-surface p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-2xl"></fa-icon>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-textDark">
+            @if(summary) { {{ summary.avg_accuracy || '94' }}% } @else { 94% }
+          </div>
+          <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mt-1">Precisión Global</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    
+    <!-- Left Column (8 cols) -->
+    <div class="lg:col-span-8 space-y-8">
+      
+      <!-- Gran Tarjeta (Métricas del Mes / Sesión Actual equivalente) -->
+      <div class="bg-[#0f1f10] text-white p-8 md:p-10 rounded-3xl relative overflow-hidden shadow-lg">
+        <div class="relative z-10">
+          <span class="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 inline-block">Métricas Mensuales</span>
+          <h2 class="text-3xl font-bold mb-2">Desempeño Clínico General</h2>
+          <p class="text-white/70 mb-8 max-w-md">Resumen de avance de terapias y evolución de los pacientes en el mes en curso.</p>
+          
+          <div class="flex flex-col sm:flex-row items-center gap-10">
+            <!-- Circular Progress -->
+            <div class="relative w-40 h-40 shrink-0">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle class="text-white/10" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+                <circle class="text-primary" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="132" stroke-linecap="round" stroke-width="12"></circle>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-3xl font-black text-white">70%</span>
+                <span class="text-[10px] uppercase font-bold text-white/60">Ocupación</span>
+              </div>
+            </div>
+            
+            <div class="flex-1 space-y-3 w-full">
+              <div class="flex items-center justify-between text-sm">
+                <span class="font-medium text-white">Meta de Sesiones</span>
+                <span class="font-bold text-primary">85%</span>
+              </div>
+              <div class="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                <div class="h-full bg-primary" style="width: 70%"></div>
+              </div>
+              <p class="text-xs text-white/60 italic">Faltan 15 puntos porcentuales para alcanzar el objetivo clínico de este mes.</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Blobs de fondo para decoración -->
+        <div class="absolute right-[-50px] top-[-50px] w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
+        <div class="absolute left-[-20px] bottom-[-20px] w-48 h-48 bg-primary/10 rounded-full blur-2xl"></div>
+      </div>
+
+      <!-- Centro de Acción Inteligente (Temas de la sesión equivalente) -->
+      <div class="bg-surface p-8 rounded-3xl border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-8">
+          <h3 class="text-xl font-bold text-textDark flex items-center gap-3">
+            <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> Acción Inteligente
+          </h3>
+          <button class="text-primary font-bold text-sm hover:underline cursor-pointer">Ver Todas →</button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <!-- Tarea 1 -->
+          <div class="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border-l-4 border-primary hover:shadow-md transition-shadow cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <fa-icon [icon]="['far', 'clock']"></fa-icon>
+            </div>
+            <div>
+              <div class="font-bold text-textDark mb-1 text-sm">Confirmar Sesión</div>
+              <div class="text-[10px] font-bold text-primary uppercase">Alta Prioridad</div>
+            </div>
+          </div>
+          
+          <!-- Tarea 2 -->
+          <div class="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border-l-4 border-primary hover:shadow-md transition-shadow cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <fa-icon [icon]="['far', 'clock']"></fa-icon>
+            </div>
+            <div>
+              <div class="font-bold text-textDark mb-1 text-sm">Asistencia Requerida</div>
+              <div class="text-[10px] font-bold text-primary uppercase">Alta Prioridad</div>
+            </div>
+          </div>
+          
+          <!-- Tarea 3 -->
+          <div class="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border-l-4 border-amber-500 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <fa-icon [icon]="['fas', 'user-cog']"></fa-icon>
+            </div>
+            <div>
+              <div class="font-bold text-textDark mb-1 text-sm">Asignar Sede a Paciente</div>
+              <div class="text-[10px] font-bold text-amber-600 uppercase">Acción Manual</div>
+            </div>
+          </div>
+          
+          <!-- Tarea 4 -->
+          <div class="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border-l-4 border-slate-300 hover:shadow-md transition-shadow cursor-pointer">
+            <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 shrink-0">
+              <fa-icon [icon]="['fas', 'file-invoice-dollar']"></fa-icon>
+            </div>
+            <div>
+              <div class="font-bold text-textDark mb-1 text-sm">Validar Pagos Pendientes</div>
+              <div class="text-[10px] font-bold text-slate-500 uppercase">En Espera</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+    
+    <!-- Right Column (4 cols) -->
+    <div class="lg:col-span-4 space-y-8">
+      <div class="bg-surface p-8 rounded-3xl shadow-sm border border-gray-200 h-full">
+        <div class="flex items-center justify-between mb-8">
+          <h3 class="text-xl font-bold text-textDark">Agenda de Hoy</h3>
+          <span class="text-[10px] font-black bg-gray-100 px-2 py-1 rounded uppercase">Hoy</span>
+        </div>
+        
+        <!-- Timeline -->
+        <div class="relative space-y-6">
+          <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-100"></div>
+          
+          <!-- Event 1 (Active) -->
+          <div class="relative pl-10">
+            <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary ring-4 ring-white z-10"></div>
+            <div class="text-xs font-bold text-primary mb-1">AHORA • 10:00 AM</div>
+            <div class="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+              <div class="font-bold text-textDark mb-1">Terapia de Lenguaje</div>
+              <div class="text-xs text-gray-500 mb-3">Consultorio 1 • Manuel Centeno</div>
+              <div class="flex -space-x-2">
+                <div class="w-7 h-7 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-600">SM</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Event 2 -->
+          <div class="relative pl-10 opacity-70 hover:opacity-100 transition-opacity">
+            <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-gray-200 ring-4 ring-white z-10"></div>
+            <div class="text-xs font-bold text-gray-400 mb-1">11:30 AM</div>
+            <div class="p-4 rounded-2xl hover:bg-gray-50 transition-colors">
+              <div class="font-bold text-textDark">Terapia Ocupacional</div>
+              <div class="text-xs text-gray-500">Consultorio 3 • Diego Morales</div>
+            </div>
+          </div>
+          
+          <!-- Event 3 -->
+          <div class="relative pl-10 opacity-70 hover:opacity-100 transition-opacity">
+            <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-gray-200 ring-4 ring-white z-10"></div>
+            <div class="text-xs font-bold text-gray-400 mb-1">01:00 PM</div>
+            <div class="p-4 rounded-2xl hover:bg-gray-50 transition-colors">
+              <div class="font-bold text-textDark">Evaluación Psicológica</div>
+              <div class="text-xs text-gray-500">Consultorio 2 • Milagros B.</div>
+            </div>
+          </div>
+        </div>
+        
+        <button class="w-full mt-8 py-3 bg-gray-50 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200">
+          Ver Calendario Completo
+        </button>
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- Bottom Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+    
+    <div class="bg-surface p-6 rounded-3xl flex items-start gap-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="p-4 bg-primary/10 text-primary rounded-2xl">
+        <fa-icon [icon]="['fas', 'user-friends']" class="text-xl"></fa-icon>
+      </div>
+      <div>
+        <div class="text-3xl font-extrabold text-textDark">
+          @if(summary) { {{ summary.patients || '120' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+        </div>
+        <div class="text-sm font-medium text-gray-500 mt-1">Pacientes Activos</div>
+        <div class="mt-2 text-[10px] text-primary font-bold bg-primary/10 px-2 py-1 rounded inline-block uppercase tracking-wide">Regular</div>
+      </div>
+    </div>
+    
+    <div class="bg-surface p-6 rounded-3xl flex items-start gap-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="p-4 bg-blue-50 text-blue-500 rounded-2xl">
+        <fa-icon [icon]="['fas', 'user-md']" class="text-xl"></fa-icon>
+      </div>
+      <div>
+        <div class="text-3xl font-extrabold text-textDark">
+          @if(summary) { {{ summary.therapists || '15' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+        </div>
+        <div class="text-sm font-medium text-gray-500 mt-1">Terapeutas Registrados</div>
+        <div class="mt-2 text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded inline-block uppercase tracking-wide">Activos</div>
+      </div>
+    </div>
+    
+    <div class="bg-surface p-6 rounded-3xl flex items-start gap-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="p-4 bg-amber-50 text-amber-500 rounded-2xl">
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-xl"></fa-icon>
+      </div>
+      <div>
+        <div class="text-3xl font-extrabold text-textDark">
+          @if(summary) { {{ summary.sessions_total || '142' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+        </div>
+        <div class="text-sm font-medium text-gray-500 mt-1">Sesiones Mensuales</div>
+        <div class="mt-2 text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded inline-block uppercase tracking-wide">Métricas Totales</div>
+      </div>
+    </div>
+    
+  </div>
+
+</div>
