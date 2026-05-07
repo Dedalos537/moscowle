@@ -27,10 +27,10 @@ def check_model_exists(model_name="llama3.1:8b"):
 def start_ollama():
     """Intenta iniciar el proceso de Ollama en segundo plano."""
     if is_ollama_running():
-        logger.info("✅ Ollama ya está corriendo.")
+        logger.info("Ollama ya está corriendo.")
         return True
     
-    logger.info("🚀 Iniciando Ollama...")
+    logger.info("Iniciando Ollama...")
     try:
         # Intentar rutas comunes de MacOS (Homebrew y System)
         ollama_bin = "/opt/homebrew/bin/ollama"
@@ -49,17 +49,17 @@ def start_ollama():
         # Esperar a que el servidor levante (máximo 15 segundos)
         for i in range(15):
             if is_ollama_running():
-                logger.info(f"✅ Ollama iniciado exitosamente tras {i+1}s.")
+                logger.info(f" Ollama iniciado exitosamente tras {i+1}s.")
                 return True
             time.sleep(1)
             logger.info(f"...esperando sincronización de IA ({i+1}/15)")
         
         return False
     except FileNotFoundError:
-        logger.error("❌ Error: No se encontró el ejecutable 'ollama'. Asegúrate de tenerlo instalado.")
+        logger.error("Error: No se encontró el ejecutable 'ollama'. Asegúrate de tenerlo instalado.")
         return False
     except Exception as e:
-        logger.error(f"❌ Error al iniciar Ollama: {e}")
+        logger.error(f" Error al iniciar Ollama: {e}")
         return False
 
 def init_ia_check():
@@ -67,14 +67,14 @@ def init_ia_check():
     logger.info("--- [ IA CHECK: COMPAÑERO LLAMA ] ---")
     if start_ollama():
         if check_model_exists("llama3.1:8b"):
-            logger.info("✅ Modelo llama3.1:8b listo para usar.")
+            logger.info("Modelo llama3.1:8b listo para usar.")
             return True
         else:
-            logger.warning("⚠️ Ollama está activo pero el modelo 'llama3.1:8b' no se encontró.")
-            logger.info("💡 Ejecuta 'ollama pull llama3.1:8b' en tu terminal.")
+            logger.warning("Ollama está activo pero el modelo 'llama3.1:8b' no se encontró.")
+            logger.info("Ejecuta 'ollama pull llama3.1:8b' en tu terminal.")
             return False
     else:
-        logger.error("❌ No se pudo conectar con Ollama. La IA estará desactivada.")
+        logger.error("No se pudo conectar con Ollama. La IA estará desactivada.")
         return False
 
 if __name__ == "__main__":
