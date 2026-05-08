@@ -1,0 +1,169 @@
+<ng-template #headerActions></ng-template>
+
+<div class="p-4 md:p-8 space-y-8">
+
+  @if (loading) {
+    <div class="flex justify-center py-16">
+      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+    </div>
+  } @else {
+    <!-- Contact Messages Inbox -->
+    <div class="bg-surface rounded-soft shadow-soft p-6 border border-gray-100">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h3 class="text-lg font-bold text-gray-800">Mensajes de Contacto (Web Público)</h3>
+          <p class="text-sm text-gray-500">Mensajes recibidos desde el formulario de contacto del sitio web.</p>
+        </div>
+        <span class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full border border-blue-100">
+          {{ contactMessages.length }} Total
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha / Estado</th>
+              <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Remitente</th>
+              <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Interés / Urgencia</th>
+              <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Mensaje</th>
+              <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            @for (msg of contactMessages; track msg.id) {
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{ msg.created_at }}</div>
+                  @if (msg.status === 'unread') {
+                    <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 uppercase tracking-wide">Nuevo</span>
+                  } @else {
+                    <span class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 uppercase tracking-wide">{{ msg.status }}</span>
+                  }
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-bold text-gray-800">{{ msg.first_name }} {{ msg.last_name }}</div>
+                  <div class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                    <a [href]="'mailto:' + msg.email">{{ msg.email }}</a>
+                  </div>
+                  @if (msg.phone) {
+                    <div class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <fa-icon [icon]="['fas', 'phone-alt']" class="text-[10px]"></fa-icon> {{ msg.phone }}
+                    </div>
+                  }
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-800">{{ msg.subject || 'Consulta General' }}</div>
+                  @if (msg.service_interest) {
+                    <div class="text-xs text-primary font-semibold mt-0.5">{{ msg.service_interest }}</div>
+                  }
+                  <div class="mt-1">
+                    @if (msg.urgency === 'high') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-700 border border-red-100">Alta Prioridad</span>
+                    } @else if (msg.urgency === 'medium') {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">Media</span>
+                    } @else {
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100">Baja</span>
+                    }
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="max-w-xs">
+                    <p class="text-sm text-gray-600 line-clamp-3 italic">"{{ msg.message }}"</p>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <div class="flex flex-col gap-2 items-end">
+                    <a [href]="'mailto:' + msg.email + '?subject=RE: ' + (msg.subject || 'Consulta') + '&body=Hola ' + msg.first_name + ', gracias por contactarnos...'"
+                      class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-soft text-white bg-primary hover:bg-opacity-90 shadow-sm transition-all">
+                      <fa-icon [icon]="['fas', 'reply']" class="mr-1.5"></fa-icon> Responder
+                    </a>
+                    @if (msg.phone) {
+                      <a [href]="'https://wa.me/' + sanitizePhone(msg.phone)" target="_blank"
+                        class="inline-flex items-center px-3 py-1.5 border border-green-200 text-xs font-medium rounded-soft text-green-700 bg-green-50 hover:bg-green-100 shadow-sm transition-all">
+                        <fa-icon [icon]="['fab', 'whatsapp']" class="mr-1.5"></fa-icon> WhatsApp
+                      </a>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                  <div class="flex flex-col items-center justify-center">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <fa-icon [icon]="['fas', 'inbox']" class="text-gray-400 text-xl"></fa-icon>
+                    </div>
+                    <p class="font-medium">No hay mensajes de contacto aún.</p>
+                    <p class="text-sm text-gray-400">Los mensajes enviados desde la web aparecerán aquí.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Internal Messaging -->
+    <div class="bg-surface rounded-soft shadow-soft p-6 border border-gray-100">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Enviar Mensaje Interno (Plataforma)</h3>
+      <div class="flex flex-wrap gap-3 mb-4">
+        <button (click)="switchTab('therapists')" class="px-4 py-2 rounded-soft text-sm font-medium transition-colors"
+          [class.bg-olive]="selectedTab === 'therapists'" [class.text-white]="selectedTab === 'therapists'"
+          [class.bg-gray-100]="selectedTab !== 'therapists'" [class.text-gray-700]="selectedTab !== 'therapists'">
+          Terapeutas
+        </button>
+        <button (click)="switchTab('patients')" class="px-4 py-2 rounded-soft text-sm font-medium transition-colors"
+          [class.bg-olive]="selectedTab === 'patients'" [class.text-white]="selectedTab === 'patients'"
+          [class.bg-gray-100]="selectedTab !== 'patients'" [class.text-gray-700]="selectedTab !== 'patients'">
+          Pacientes
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="h-64 lg:h-auto overflow-y-auto border rounded-soft p-2">
+          <h4 class="text-sm font-semibold mb-2 sticky top-0 bg-white pb-2 border-b">Destinatarios</h4>
+          @if (selectedTab === 'therapists') {
+            <div class="space-y-2">
+              @for (t of therapists; track t.id) {
+                <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
+                  <span class="text-sm truncate max-w-[150px]">{{ t.username }}</span>
+                  <button (click)="selectReceiver(t.id)" class="px-2 py-1 text-xs rounded-soft shrink-0"
+                    [class.bg-primary]="selectedReceiverId === t.id" [class.text-white]="selectedReceiverId === t.id"
+                    [class.bg-gray-200]="selectedReceiverId !== t.id">
+                    {{ selectedReceiverId === t.id ? 'Seleccionado' : 'Seleccionar' }}
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="space-y-2">
+              @for (p of patients; track p.id) {
+                <div class="flex items-center justify-between px-2 py-1 border rounded-soft">
+                  <span class="text-sm truncate max-w-[150px]">{{ p.username }}</span>
+                  <button (click)="selectReceiver(p.id)" class="px-2 py-1 text-xs rounded-soft shrink-0"
+                    [class.bg-primary]="selectedReceiverId === p.id" [class.text-white]="selectedReceiverId === p.id"
+                    [class.bg-gray-200]="selectedReceiverId !== p.id">
+                    {{ selectedReceiverId === p.id ? 'Seleccionado' : 'Seleccionar' }}
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="lg:col-span-2">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <app-input id="msg-subject" placeholder="Asunto (opcional)" [(value)]="subject"></app-input>
+            <div class="text-right md:text-right">
+              <app-button variant="primary" label="Enviar" [disabled]="sending" (clicked)="sendMessage()"></app-button>
+            </div>
+          </div>
+          <textarea [(ngModel)]="body" class="w-full mt-3 px-3 py-2 border rounded-soft" rows="6" placeholder="Escribe tu mensaje..."></textarea>
+          <p class="text-sm text-gray-600 mt-2">{{ statusText }}</p>
+        </div>
+      </div>
+    </div>
+  }
+</div>

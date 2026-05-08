@@ -1,263 +1,432 @@
 <div class="space-y-8 animate-fade-in-up">
 
   <!-- Centro de Acción Inteligente -->
-  <div>
-    <div class="flex items-center justify-between mb-4 px-1">
-      <h3 class="text-lg font-bold text-textDark uppercase tracking-wide flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> CENTRO DE ACCIÓN INTELIGENTE
-      </h3>
-      <span class="text-xs font-semibold text-primary/80 uppercase tracking-wider">10 Tareas Sugeridas</span>
+  <div class="space-y-4">
+    <div class="flex items-center justify-between px-1">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+          <fa-icon [icon]="['fas', 'robot']"></fa-icon>
+        </div>
+        <h3 class="text-xl font-black text-textDark uppercase tracking-tighter">Centro de Acción Inteligente</h3>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-      
-      <!-- Smart Action Card 1 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['far', 'clock']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Sesiones</span>
-            <span class="text-[10px] font-bold text-primary tracking-wider uppercase block">Requires Confirmation</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Sesión de Sebastián Enrique Mendoza Avalo con Manuel Augusto Centeno Barrutia del 21/04 no marcada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-[#7cb342] text-white text-[11px] font-bold py-2.5 rounded-full hover:bg-[#689f38] transition-colors shadow-sm">
-            CONFIRMAR
-          </button>
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            VER AGENDA
-          </button>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-3 p-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-gray-200 text-4xl mb-4"></fa-icon>
+        <p class="text-sm font-bold text-gray-400 uppercase tracking-tight">Todas las operaciones al día</p>
+        <p class="text-[10px] text-gray-300 mt-1 uppercase tracking-widest italic">El motor de automatización está monitoreando</p>
       </div>
-
-      <!-- Smart Action Card 2 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['fas', 'user-cog']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Usuarios</span>
-            <span class="text-[10px] font-bold text-yellow-500 tracking-wider uppercase block">Manual</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Paciente Oscar Eduardo Prieto Prieto no tiene sede asignada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            HACER MANUALMENTE
-          </button>
-        </div>
-      </div>
-
-      <!-- Smart Action Card 3 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['far', 'clock']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Sesiones</span>
-            <span class="text-[10px] font-bold text-primary tracking-wider uppercase block">Requires Confirmation</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Sesión de Mathias Diaz Erazo con Milagros Barrutia del 20/04 no marcada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-[#7cb342] text-white text-[11px] font-bold py-2.5 rounded-full hover:bg-[#689f38] transition-colors shadow-sm">
-            CONFIRMAR
-          </button>
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            VER AGENDA
-          </button>
-        </div>
-      </div>
-
-      <!-- Smart Action Card 4 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['far', 'clock']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Sesiones</span>
-            <span class="text-[10px] font-bold text-primary tracking-wider uppercase block">Requires Confirmation</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Sesión de Antuca con Milagros Barrutia del 20/04 no marcada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-[#7cb342] text-white text-[11px] font-bold py-2.5 rounded-full hover:bg-[#689f38] transition-colors shadow-sm">
-            CONFIRMAR
-          </button>
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            VER AGENDA
-          </button>
-        </div>
-      </div>
-
-      <!-- Smart Action Card 5 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['far', 'clock']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Sesiones</span>
-            <span class="text-[10px] font-bold text-primary tracking-wider uppercase block">Requires Confirmation</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Sesión de Antuca con Milagros Barrutia del 17/04 no marcada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-[#7cb342] text-white text-[11px] font-bold py-2.5 rounded-full hover:bg-[#689f38] transition-colors shadow-sm">
-            CONFIRMAR
-          </button>
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            VER AGENDA
-          </button>
-        </div>
-      </div>
-
-      <!-- Smart Action Card 6 -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-between hover:shadow-lg transition-shadow">
-        <div class="flex items-start gap-3 mb-4">
-          <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 mt-1">
-            <fa-icon [icon]="['far', 'clock']"></fa-icon>
-          </div>
-          <div>
-            <span class="text-[10px] font-bold text-gray-400 tracking-wider uppercase block">Sesiones</span>
-            <span class="text-[10px] font-bold text-primary tracking-wider uppercase block">Requires Confirmation</span>
-          </div>
-        </div>
-        <p class="text-sm font-medium text-textDark mb-6 flex-1">
-          Sesión de Valentina con Diego Alejandro Centeno Barrutia del 08/04 no marcada.
-        </p>
-        <div class="flex gap-3">
-          <button class="flex-1 bg-[#7cb342] text-white text-[11px] font-bold py-2.5 rounded-full hover:bg-[#689f38] transition-colors shadow-sm">
-            CONFIRMAR
-          </button>
-          <button class="flex-1 bg-gray-50 text-gray-600 text-[11px] font-bold py-2.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200">
-            VER AGENDA
-          </button>
-        </div>
-      </div>
-
     </div>
   </div>
 
-  <!-- KPIs Section (Resumen General) -->
+  <!-- AI Guidance Banner -->
+  @if (incompletePatients.length > 0) {
+    <div class="bg-gradient-to-r from-red-500 to-orange-600 rounded-2xl shadow-lg p-5 text-white flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white shrink-0">
+          <fa-icon [icon]="['fas', 'robot']" class="text-2xl" animation="spin" *ngIf="false"></fa-icon>
+          <fa-icon [icon]="['fas', 'robot']" class="text-2xl"></fa-icon>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold">Guía de Regularización IA</h3>
+          <p class="text-xs text-white/80 max-w-md">
+            He detectado <span class="font-bold underline">{{ incompletePatients.length }}</span> alumnos con datos incompletos (modalidad o pago). Esto afecta la veracidad de tus finanzas.
+          </p>
+        </div>
+      </div>
+      <div class="flex gap-2 w-full md:w-auto">
+        <app-button class="flex-1 md:flex-none" variant="ghost" label="Ver Pendientes" (clicked)="showGuidanceModal = true"></app-button>
+      </div>
+    </div>
+  }
+
+  <!-- KPIs Section -->
   <div>
-      <h3 class="text-lg font-semibold text-charcoal mb-4 px-1">Resumen General</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        
-        <!-- Terapeutas -->
-        <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1">
-          <div class="flex justify-between items-start">
-              <div>
-                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
-                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-primary transition-colors">
-                      @if(summary) { {{ summary.therapists || '-' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
-                  </h3>
-              </div>
-              <div class="p-3 bg-blue-50 rounded-full text-blue-600 group-hover:bg-blue-100 transition-colors">
-                  <fa-icon [icon]="['fas', 'user-md']" class="text-xl"></fa-icon>
-              </div>
+    <h3 class="text-lg font-semibold text-charcoal mb-4 px-1">Resumen General</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+
+      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
+            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-primary transition-colors">
+              @if (!loading) { {{ summary.therapists }} } @else { <app-spinner size="sm"></app-spinner> }
+            </h3>
+          </div>
+          <div class="p-3 bg-blue-50 rounded-full text-blue-600 group-hover:bg-blue-100 transition-colors">
+            <fa-icon [icon]="['fas', 'user-md']" class="text-xl"></fa-icon>
           </div>
         </div>
-
-        <!-- Pacientes -->
-        <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1">
-           <div class="flex justify-between items-start">
-              <div>
-                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
-                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-green-600 transition-colors">
-                      @if(summary) { {{ summary.patients || '-' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
-                  </h3>
-              </div>
-              <div class="p-3 bg-green-50 rounded-full text-green-600 group-hover:bg-green-100 transition-colors">
-                  <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
-              </div>
-           </div>
-        </div>
-
-        <!-- Sesiones -->
-        <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1">
-           <div class="flex justify-between items-start">
-              <div>
-                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Sesiones</p>
-                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-purple-600 transition-colors">
-                      @if(summary) { {{ summary.sessions_total || '-' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
-                  </h3>
-              </div>
-              <div class="p-3 bg-purple-50 rounded-full text-purple-600 group-hover:bg-purple-100 transition-colors">
-                  <fa-icon [icon]="['fas', 'calendar-check']" class="text-xl"></fa-icon>
-              </div>
-           </div>
-        </div>
-
-        <!-- Precisión -->
-        <div class="bg-surface rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500">
-           <div class="flex justify-between items-start">
-              <div>
-                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Precisión Promedio</p>
-                  <h3 class="text-3xl font-bold text-textDark mt-1">
-                      @if(summary) { {{ summary.avg_accuracy || '-' }}% } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
-                  </h3>
-              </div>
-              <div class="p-3 bg-yellow-50 rounded-full text-yellow-600">
-                  <fa-icon [icon]="['fas', 'bullseye']" class="text-xl"></fa-icon>
-              </div>
-           </div>
-        </div>
-
       </div>
+
+      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
+            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-green-600 transition-colors">
+              @if (!loading) { {{ summary.patients }} } @else { <app-spinner size="sm"></app-spinner> }
+            </h3>
+          </div>
+          <div class="p-3 bg-green-50 rounded-full text-green-600 group-hover:bg-green-100 transition-colors">
+            <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Sesiones</p>
+            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-purple-600 transition-colors">
+              @if (!loading) { {{ summary.sessions_total }} } @else { <app-spinner size="sm"></app-spinner> }
+            </h3>
+          </div>
+          <div class="p-3 bg-purple-50 rounded-full text-purple-600 group-hover:bg-purple-100 transition-colors">
+            <fa-icon [icon]="['fas', 'calendar-check']" class="text-xl"></fa-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Precisión Promedio</p>
+            <h3 class="text-3xl font-bold text-textDark mt-1">
+              @if (!loading) { {{ summary.avg_accuracy }} } @else { <app-spinner size="sm"></app-spinner> }
+            </h3>
+          </div>
+          <div class="p-3 bg-yellow-50 rounded-full text-yellow-600">
+            <fa-icon [icon]="['fas', 'bullseye']" class="text-xl"></fa-icon>
+          </div>
+        </div>
+      </div>
+
+      <a routerLink="/admin/debtors" class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-red-500 cursor-pointer hover:-translate-y-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Deudas Pendientes</p>
+            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-red-600 transition-colors">
+              @if (financials) { S/ {{ financials.overdue_amount.toFixed(2) }} } @else { -- }
+            </h3>
+            <p class="text-xs text-gray-400 mt-2">{{ financials?.overdue_users_count || 0 }} pacientes</p>
+          </div>
+          <div class="p-3 bg-red-50 rounded-full text-red-600 group-hover:bg-red-100 transition-colors">
+            <fa-icon [icon]="['fas', 'credit-card']" class="text-xl"></fa-icon>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Financial & Sedes Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <div class="lg:col-span-2 bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold text-charcoal flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'chart-bar']" class="text-primary"></fa-icon> Flujo de Caja (Mes Actual)
+        </h3>
+        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 px-2 py-1 rounded">Soles (S/)</span>
+      </div>
+      <div class="flex-1 flex items-end justify-around gap-4 h-64">
+        <div class="flex flex-col items-center gap-2 flex-1">
+          <span class="text-sm font-bold text-green-700">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
+          <div class="w-full bg-green-100 rounded-t-lg relative" [style.height.px]="barHeight(financials?.income_real || 0)">
+            <div class="absolute inset-0 bg-green-500 rounded-t-lg opacity-80"></div>
+          </div>
+          <span class="text-[10px] font-black text-green-600 uppercase tracking-widest">Realizado</span>
+        </div>
+        <div class="flex flex-col items-center gap-2 flex-1">
+          <span class="text-sm font-bold text-blue-700">S/ {{ pendingAmount.toFixed(2) }}</span>
+          <div class="w-full bg-blue-100 rounded-t-lg relative" [style.height.px]="barHeight(pendingAmount)">
+            <div class="absolute inset-0 bg-blue-500 rounded-t-lg opacity-80"></div>
+          </div>
+          <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pendiente</span>
+        </div>
+        <div class="flex flex-col items-center gap-2 flex-1">
+          <span class="text-sm font-bold text-purple-700">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</span>
+          <div class="w-full bg-purple-100 rounded-t-lg relative" [style.height.px]="barHeight(financials?.income_expected || 0)">
+            <div class="absolute inset-0 bg-purple-500 rounded-t-lg opacity-80"></div>
+          </div>
+          <span class="text-[10px] font-black text-purple-600 uppercase tracking-widest">Esperado</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-1 bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between">
+      <h3 class="text-lg font-semibold text-charcoal mb-2 flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'coins']" class="text-yellow-500"></fa-icon> Resumen Financiero
+      </h3>
+      <div class="space-y-4">
+        <div class="p-4 bg-green-50 rounded-2xl border border-green-100">
+          <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Ingresos Reales</p>
+          <span class="text-2xl font-black text-green-700">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
+        </div>
+        <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+          <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Pendiente por Cobrar</p>
+          <span class="text-2xl font-black text-blue-700">S/ {{ pendingAmount.toFixed(2) }}</span>
+        </div>
+      </div>
+      <p class="text-[10px] text-gray-400 mt-4 italic text-center">Basado en planes activos registrados en el sistema.</p>
+    </div>
+  </div>
+
+  <!-- Active Users per Sede -->
+  <div class="bg-surface rounded-2xl shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-red-400"></fa-icon> Usuarios por Sede
+    </h3>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      @for (s of sedesStats; track s.id) {
+        <div class="group block p-4 rounded-lg bg-gray-50 border border-transparent hover:border-primary hover:bg-white transition-all shadow-sm hover:shadow-md cursor-pointer">
+          <div class="flex justify-between items-center mb-1">
+            <h4 class="font-bold text-gray-700 group-hover:text-primary transition-colors text-sm uppercase tracking-wide truncate">{{ s.name }}</h4>
+            <fa-icon [icon]="['fas', 'users']" class="text-gray-300 group-hover:text-primary transition-colors text-xs"></fa-icon>
+          </div>
+          <div class="flex items-end gap-2">
+            <span class="text-2xl font-bold text-textDark group-hover:text-primary transition-colors">{{ s.count }}</span>
+            <span class="text-xs text-gray-400 mb-1">pacientes</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="lg:col-span-6 text-sm text-gray-400 py-6 text-center">No hay sedes registradas</div>
+      }
+    </div>
   </div>
 
   <!-- Quick Actions Row -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <!-- Quick Payment -->
-      <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative overflow-hidden">
-          <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full hidden sm:block"></div>
-          
-          <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
-              <fa-icon [icon]="['fas', 'comment-dollar']"></fa-icon> Registrar Pago Rápido
-          </h3>
-          <p class="text-sm text-blue-100 mb-4 relative z-10 opacity-90">Selecciona un paciente para ir directo al formulario de pago.</p>
-          
-          <div class="relative z-10 flex gap-2 w-full">
-              <div class="flex-grow">
-                <input type="text" class="w-full rounded-xl border-0 px-4 py-2.5 text-gray-800 focus:ring-2 focus:ring-white bg-white/90 placeholder-gray-500 font-medium outline-none" placeholder="Buscar paciente...">
-              </div>
-              <button type="button" class="bg-white text-primary font-bold px-6 py-2.5 rounded-xl hover:bg-gray-100 transition-colors shadow-sm cursor-pointer">
-                  Ir
-              </button>
-          </div>
+    <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full hidden sm:block"></div>
+      <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
+        <fa-icon [icon]="['fas', 'comment-dollar']"></fa-icon> Registrar Pago Rápido
+      </h3>
+      <p class="text-sm text-blue-100 mb-4 relative z-10 opacity-90">Selecciona un paciente para ir directo al formulario de pago.</p>
+      <div class="relative z-10 flex gap-2 w-full">
+        <div class="flex-grow">
+          <app-input id="search-patient" placeholder="Buscar paciente..." class="flex-grow"></app-input>
+        </div>
+        <a routerLink="/admin/payments"><app-button variant="ghost" label="Ir"></app-button></a>
       </div>
+    </div>
 
-      <!-- Quick Schedule Check -->
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-center">
-          <h3 class="text-lg font-bold text-charcoal mb-2 flex items-center gap-2">
-             <fa-icon [icon]="['far', 'calendar-alt']" class="text-blue-500"></fa-icon> Disponibilidad y Horarios
-          </h3>
-          <p class="text-sm text-gray-500 mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
-          
-          <div class="flex gap-3">
-              <button class="flex-1 text-center bg-blue-50 text-blue-600 font-bold py-2.5 rounded-xl hover:bg-blue-100 transition-colors cursor-pointer">
-                  Ver Calendario Global
-              </button>
-          </div>
+    <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-center">
+      <h3 class="text-lg font-bold text-charcoal mb-2 flex items-center gap-2">
+        <fa-icon [icon]="['far', 'calendar-alt']" class="text-blue-500"></fa-icon> Disponibilidad y Horarios
+      </h3>
+      <p class="text-sm text-gray-500 mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
+      <div class="flex gap-3">
+        <a routerLink="/admin/sessions"><app-button variant="ghost" label="Ver Calendario Global"></app-button></a>
       </div>
+    </div>
+  </div>
+
+  <!-- Gestión Operativa -->
+  <div>
+    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2 px-1">
+      <fa-icon [icon]="['fas', 'briefcase']" class="text-gray-400"></fa-icon> Gestión Operativa
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <a routerLink="/admin/users" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+        <div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+              <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
+            </div>
+            <h3 class="text-lg font-bold text-textDark">Usuarios</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Gestionar perfiles de terapeutas y pacientes.</p>
+        </div>
+        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+          <span class="text-xs font-bold uppercase tracking-wider">Acceder <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
+        </div>
+      </a>
+
+      <a routerLink="/admin/games" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+        <div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+              <fa-icon [icon]="['fas', 'gamepad']" class="text-xl"></fa-icon>
+            </div>
+            <h3 class="text-lg font-bold text-textDark">Juegos</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Configurar actividades y niveles disponibles.</p>
+        </div>
+        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+          <span class="text-xs font-bold uppercase tracking-wider">Configurar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
+        </div>
+      </a>
+
+      <a routerLink="/admin/reports" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+        <div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
+              <fa-icon [icon]="['fas', 'chart-line']" class="text-xl"></fa-icon>
+            </div>
+            <h3 class="text-lg font-bold text-textDark">Reportes</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Analíticas detalladas de pacientes.</p>
+        </div>
+        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+          <span class="text-xs font-bold uppercase tracking-wider">Analizar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
+        </div>
+      </a>
+
+      <a routerLink="/admin/messages" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+        <div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 group-hover:scale-110 transition-transform">
+              <fa-icon [icon]="['fas', 'envelope']" class="text-xl"></fa-icon>
+            </div>
+            <h3 class="text-lg font-bold text-textDark">Mensajería</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Comunicación interna y avisos globales.</p>
+        </div>
+        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+          <span class="text-xs font-bold uppercase tracking-wider">Enviar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Sistema & Seguridad -->
+  <div>
+    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2 px-1">
+      <fa-icon [icon]="['fas', 'shield-alt']" class="text-gray-400"></fa-icon> Sistema & Seguridad
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <a routerLink="/admin/csp-reports" class="group bg-surface rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+        <div class="flex items-center gap-4">
+          <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+            <fa-icon [icon]="['fas', 'bug']"></fa-icon>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-700">CSP Reports</h3>
+            <p class="text-xs text-gray-500">Monitoreo de seguridad y violaciones de contenido.</p>
+          </div>
+        </div>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-gray-300 text-sm group-hover:text-gray-500"></fa-icon>
+      </a>
+
+      <a routerLink="/admin/api-tokens" class="group bg-surface rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+        <div class="flex items-center gap-4">
+          <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+            <fa-icon [icon]="['fas', 'key']"></fa-icon>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-700">API Tokens</h3>
+            <p class="text-xs text-gray-500">Gestión de credenciales para integraciones externas.</p>
+          </div>
+        </div>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-gray-300 text-sm group-hover:text-gray-500"></fa-icon>
+      </a>
+    </div>
   </div>
 
 </div>
+
+<!-- Guidance Modal -->
+@if (showGuidanceModal) {
+  <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showGuidanceModal = false">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
+      <div class="p-8 border-b border-gray-100 flex items-center justify-between">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-red-200">
+            <fa-icon [icon]="['fas', 'user-clock']" class="text-2xl"></fa-icon>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black text-gray-900 uppercase tracking-tighter">Asignaciones Faltantes</h3>
+            <span class="text-xs font-bold text-red-500 uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded-full inline-block mt-1">Requiere acción administrativa</span>
+          </div>
+        </div>
+        <button (click)="showGuidanceModal = false" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors cursor-pointer">
+          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        </button>
+      </div>
+      <div class="p-8">
+        <div class="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8">
+          @for (p of incompletePatients; track $index) {
+            <div class="group p-5 bg-gray-50 rounded-2xl border border-transparent hover:border-red-200 hover:bg-white transition-all shadow-sm">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                    {{ p.paciente.charAt(0) }}
+                  </div>
+                  <div>
+                    <p class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ p.paciente }}</p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ p.sede }}
+                    </p>
+                  </div>
+                </div>
+                <span class="bg-red-50 text-red-600 text-[9px] font-black px-2 py-1 rounded-full uppercase border border-red-100 italic">Falta: {{ p.details }}</span>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <app-button variant="ghost" label="Más tarde" (clicked)="showGuidanceModal = false"></app-button>
+          <a routerLink="/admin/users" class="block"><app-button variant="primary" label="Configurar ahora"></app-button></a>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Daily Pendings Modal -->
+@if (showDailyModal) {
+  <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showDailyModal = false">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
+      <div class="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-3xl">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md border border-white/30">
+            <fa-icon [icon]="['far', 'calendar-check']" class="text-2xl"></fa-icon>
+          </div>
+          <div>
+            <h3 class="text-2xl font-black uppercase tracking-tighter">Cobros del Día</h3>
+            <p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Guía Operativa Diaria • {{ today | date:'dd/MM/yyyy' }}</p>
+          </div>
+        </div>
+        <button (click)="showDailyModal = false" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer">
+          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        </button>
+      </div>
+      <div class="p-8">
+        <div class="space-y-4 max-h-[450px] overflow-y-auto pr-4 mb-8">
+          @for (item of dailyPendings; track $index) {
+            <div class="p-6 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">
+                  {{ item.paciente.charAt(0) }}
+                </div>
+                <div>
+                  <p class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ item.paciente }}</p>
+                  <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Vence Hoy • S/ {{ item.monto }}</p>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                @if (getWhatsAppLink(item.phone, item.paciente, item.monto)) {
+                  <a [href]="getWhatsAppLink(item.phone, item.paciente, item.monto)" target="_blank" class="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center hover:bg-green-600 transition-all shadow-lg shadow-green-200" title="Notificar por WhatsApp">
+                    <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
+                  </a>
+                }
+                <a [routerLink]="'/admin/payments'" [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }" class="w-10 h-10 bg-white text-blue-600 border border-blue-100 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                  <fa-icon [icon]="['fas', 'cash-register']"></fa-icon>
+                </a>
+              </div>
+            </div>
+          } @empty {
+            <div class="text-center py-8 text-gray-400">
+              <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl mb-2"></fa-icon>
+              <p class="text-sm font-bold">No hay cobros pendientes para hoy</p>
+            </div>
+          }
+        </div>
+        <div class="flex justify-center">
+          <app-button variant="ghost" label="Entendido" (clicked)="showDailyModal = false"></app-button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

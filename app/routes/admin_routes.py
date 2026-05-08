@@ -600,6 +600,142 @@ def create_expense_route():
         
     return redirect(url_for('admin.expenses'))
 
+# --- JSON API endpoints for Angular Admin ---
+
+@admin_bp.route('/api/therapist-financials')
+@login_required
+def api_therapist_financials():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    month = request.args.get('month', type=int)
+    year = request.args.get('year', type=int)
+    financials = finance_service.get_therapist_financials(month=month, year=year)
+    result = []
+    for f in financials:
+        t = f['therapist']
+        result.append({
+            'therapist': {'id': t.id, 'username': t.username, 'salary_base': t.salary_base, 'contract_hours': t.contract_hours},
+            'rate': f['rate'],
+            'contract_hours': f['contract_hours'],
+            'worked_hours': f['worked_hours'],
+            'projected_pay': f['projected_pay'],
+            'paid': f['paid'],
+            'balance': f['balance'],
+        })
+    return jsonify({'success': True, 'data': result})
+
+@admin_bp.route('/api/expenses')
+@login_required
+def api_expenses():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    category = request.args.get('category')
+    expenses = finance_service.get_expenses(start_date=start_date, end_date=end_date, category=category)
+    result = []
+    for e in expenses:
+        result.append({
+            'id': e.id,
+            'category': e.category,
+            'amount': e.amount,
+            'date': e.date.strftime('%Y-%m-%d') if e.date else None,
+            'description': e.description,
+            'method': e.method,
+            'receipt_image_path': e.receipt_image_path,
+            'therapist': {'id': e.therapist.id, 'username': e.therapist.username} if e.therapist else None,
+            'created_at': e.created_at.strftime('%Y-%m-%d %H:%M') if e.created_at else None,
+        })
+    return jsonify({'success': True, 'data': result})
+
+@admin_bp.route('/api/expenses/create', methods=['POST'])
+@login_required
+def api_create_expense():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.form.to_dict() if request.form else request.get_json(silent=True) or {}
+    if not data.get('therapist_id'):
+        data['therapist_id'] = None
+    if 'receipt' in request.files:
+        file = request.files['receipt']
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            unique_name = f"{uuid.uuid4().hex}{ext}"
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+            file.save(os.path.join(upload_dir, unique_name))
+            data['receipt_image_path'] = f"receipts/{unique_name}"
+    success, res = finance_service.create_expense(data)
+    if success:
+        return jsonify({'success': True, 'message': 'Gasto registrado correctamente.', 'expense': {
+            'id': res.id, 'category': res.category, 'amount': res.amount, 'date': res.date.strftime('%Y-%m-%d') if res.date else None
+        }})
+    return jsonify({'success': False, 'error': res}), 400
+
+@admin_bp.route('/api/contact-messages')
+@login_required
+def api_contact_messages():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app.models import ContactMessage
+    messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    result = []
+    for m in messages:
+        result.append({
+            'id': m.id,
+            'first_name': m.first_name,
+            'last_name': m.last_name,
+            'email': m.email,
+            'phone': m.phone,
+            'subject': m.subject,
+            'message': m.message,
+            'service_interest': m.service_interest,
+            'urgency': m.urgency,
+            'status': m.status,
+            'created_at': m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else None,
+        })
+    return jsonify({'success': True, 'data': result})
+
+@admin_bp.route('/api/financial-summary')
+@login_required
+def api_financial_summary():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    financials = payment_service.get_financial_summary()
+    return jsonify({'success': True, 'data': financials})
+
+@admin_bp.route('/api/report-therapist-stats')
+@login_required
+def api_report_therapist_stats():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app.models import SessionMetrics, Appointment
+    therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
+    result = []
+    for t in therapists:
+        sessions = Appointment.query.filter_by(therapist_id=t.id, status='completed').count()
+        acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=t.id).scalar() or 0
+        result.append({'id': t.id, 'name': t.username, 'email': t.email, 'sessions': sessions, 'avg_accuracy': round(acc, 1)})
+    return jsonify({'success': True, 'data': result})
+
+@admin_bp.route('/api/report-patient-stats')
+@login_required
+def api_report_patient_stats():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app.models import SessionMetrics
+    patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
+    result = []
+    for p in patients:
+        plays = SessionMetrics.query.filter_by(user_id=p.id).count()
+        acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=p.id).scalar() or 0
+        result.append({'id': p.id, 'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc, 1)})
+    return jsonify({'success': True, 'data': result})
+
+# --- End JSON API endpoints ---
+
 @admin_bp.route('/messages')
 @login_required
 def messages():

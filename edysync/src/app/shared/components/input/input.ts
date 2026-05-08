@@ -12,14 +12,15 @@ export class Input {
   @NgInput() label: string = '';
   @NgInput() type: string = 'text';
   @NgInput() placeholder: string = '';
-  @NgInput() value: string = '';
+  @NgInput() value: string | number = '';
   @NgInput() error?: string;
   @NgInput() icon?: IconProp;
 
-  @Output() valueChange = new EventEmitter<string>();
+  @Output() valueChange = new EventEmitter<string | number>();
 
   onInput(event: Event) {
-    const val = (event.target as HTMLInputElement).value;
+    const input = event.target as HTMLInputElement;
+    const val = input.type === 'number' ? parseFloat(input.value) || 0 : input.value;
     this.value = val;
     this.valueChange.emit(val);
   }

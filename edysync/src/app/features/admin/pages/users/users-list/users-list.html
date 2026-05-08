@@ -1,0 +1,288 @@
+<div class="space-y-6 animate-fade-in-up">
+
+  <!-- Stats Cards -->
+  @if (!loading) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Usuarios</p>
+        <p class="text-3xl font-bold text-textDark mt-1">{{ stats.total }}</p>
+      </div>
+      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Activos</p>
+        <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.active }}</p>
+      </div>
+      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
+        <p class="text-3xl font-bold text-blue-600 mt-1">{{ stats.patients }}</p>
+      </div>
+      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
+        <p class="text-3xl font-bold text-purple-600 mt-1">{{ stats.therapists }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Directorio -->
+  <div class="bg-surface rounded-3xl shadow-sm border border-gray-100 p-6 xl:p-8">
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 pb-6">
+      <h3 class="text-xl font-bold text-charcoal flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
+      </h3>
+
+      <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center flex-wrap justify-end">
+        <select (change)="onSedeChange($any($event.target).value)" class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:ring-primary focus:border-primary outline-none">
+          <option value="">Todas las Sedes</option>
+          @for (s of sedes; track s.id) {
+            <option [value]="s.id">{{ s.name }}</option>
+          }
+        </select>
+
+        <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full md:w-64"></app-input>
+
+        <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto">
+          <button (click)="setFilter('all')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'all'" [class.text-white]="activeFilter === 'all'" [class.bg-gray-100]="activeFilter !== 'all'" [class.text-gray-600]="activeFilter !== 'all'">Todos</button>
+          <button (click)="setFilter('jugador')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'jugador'" [class.text-white]="activeFilter === 'jugador'" [class.bg-gray-100]="activeFilter !== 'jugador'" [class.text-gray-600]="activeFilter !== 'jugador'">Pacientes</button>
+          <button (click)="setFilter('terapista')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-gray-100]="activeFilter !== 'terapista'" [class.text-gray-600]="activeFilter !== 'terapista'" [class.bg-red-50]="activeFilter === 'terapista'" [class.text-red-600]="activeFilter === 'terapista'">Terapeutas</button>
+          <button (click)="setFilter('deudores')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-red-50 text-red-600 font-semibold transition-all shadow-sm" [class.bg-red-600]="activeFilter === 'deudores'" [class.text-white]="activeFilter === 'deudores'">Deudores</button>
+          <button (click)="setFilter('admin')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 text-gray-600 font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'admin'" [class.text-white]="activeFilter === 'admin'">Admin</button>
+        </div>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="flex justify-center py-20">
+        <app-spinner size="md" colorClass="text-primary"></app-spinner>
+      </div>
+    } @else {
+      <!-- Desktop Table -->
+      <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+        <table class="w-full min-w-[900px]">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rol</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sede</th>
+              <th class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+              <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 bg-white">
+            @for (u of filteredUsers; track u.id) {
+              <tr class="hover:bg-gray-50/80 transition-colors group">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/20 shadow-sm">
+                      {{ getInitials(u.username) }}
+                    </div>
+                    <input [value]="u.username" (change)="updateName(u, $event)" class="font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors py-1 text-[15px]">
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-500 max-w-[180px] truncate" [title]="u.email">{{ u.email }}</td>
+                <td class="px-6 py-4">
+                  <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-gray-50 hover:bg-gray-100 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-semibold py-2 pl-4 pr-10 cursor-pointer transition-all text-gray-700 shadow-sm">
+                    <option value="terapista">Terapeuta</option>
+                    <option value="jugador">Paciente</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </td>
+                <td class="px-6 py-4">
+                  @if (u.role === 'jugador') {
+                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700">{{ getSedeName(u) }}</span>
+                  } @else if (u.role === 'terapista') {
+                    <div class="flex flex-wrap gap-1">
+                      <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-purple-50 border border-purple-100 text-purple-700">{{ getSedeName(u) }}</span>
+                    </div>
+                  }
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <label class="relative inline-flex items-center cursor-pointer justify-center">
+                    <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
+                    <div class="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button (click)="openActionDrawer(u)" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-all cursor-pointer">
+                    <fa-icon [icon]="['fas', 'ellipsis-v']"></fa-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="px-6 py-20 text-center text-gray-400">
+                  <fa-icon [icon]="['fas', 'users']" class="text-3xl mb-2"></fa-icon>
+                  <p class="text-sm font-medium">No se encontraron usuarios</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="md:hidden space-y-4 mt-4">
+        @for (u of filteredUsers; track u.id) {
+          <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-5 border-b border-gray-50 bg-gray-50/50">
+              <div class="flex justify-between items-start gap-4">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    {{ getInitials(u.username) }}
+                  </div>
+                  <div class="min-w-0">
+                    <input [value]="u.username" (change)="updateName(u, $event)" class="font-bold text-charcoal bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors text-lg">
+                    <p class="text-xs text-gray-500 truncate">{{ u.email }}</p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                  <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
+                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+            </div>
+            <div class="p-5 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-400 uppercase">{{ getRoleBadge(u.role) }}</span>
+                <span class="text-xs text-gray-300">|</span>
+                <span class="text-xs text-gray-500">{{ getSedeName(u) }}</span>
+              </div>
+              <button (click)="openActionDrawer(u)" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all cursor-pointer">
+                Acciones
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<!-- Action Drawer -->
+@if (showActionDrawer && selectedUser) {
+  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeActionDrawer()"></div>
+  <div class="fixed top-0 right-0 w-[300px] h-full bg-white shadow-2xl z-[101] flex flex-col border-l border-gray-100">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+          {{ getInitials(selectedUser.username) }}
+        </div>
+        <div>
+          <h4 class="font-bold text-gray-900 text-base">{{ selectedUser.username }}</h4>
+          <p class="text-xs text-gray-500">{{ getRoleBadge(selectedUser.role) }}</p>
+        </div>
+      </div>
+      <button (click)="closeActionDrawer()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+    <div class="flex-1 p-4 space-y-1 overflow-y-auto">
+      <a [routerLink]="['/admin/users', selectedUser.id]" class="flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors rounded-2xl mb-1">
+        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 mr-3 group-hover:bg-indigo-100">
+          <fa-icon [icon]="['fas', 'user-circle']"></fa-icon>
+        </div>
+        Ver Perfil
+      </a>
+      <button (click)="resetPassword(selectedUser)" class="w-full text-left flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-colors rounded-2xl mb-1 cursor-pointer">
+        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 mr-3">
+          <fa-icon [icon]="['fas', 'key']"></fa-icon>
+        </div>
+        Reset Password
+      </button>
+      <hr class="my-2 mx-4 border-gray-100">
+      <button (click)="deleteUser(selectedUser)" class="w-full text-left flex items-center px-4 py-3.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-2xl cursor-pointer">
+        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 mr-3">
+          <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
+        </div>
+        Eliminar Usuario
+      </button>
+    </div>
+    <div class="p-4 border-t border-gray-100">
+      <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+          <fa-icon [icon]="['fas', 'shield-alt']" class="text-xs"></fa-icon>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-gray-700">ID Usuario: #{{ selectedUser.id }}</p>
+          <p class="text-[10px] text-gray-400">Creado en sistema</p>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Create User Drawer -->
+@if (showCreateDrawer) {
+  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeCreateDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-white shadow-2xl z-[101] flex flex-col border-l border-gray-100">
+    <div class="flex-none p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+      <h3 class="text-xl font-bold text-gray-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'user-plus']" class="text-primary"></fa-icon>
+        </div>
+        Crear Nuevo Usuario
+      </h3>
+      <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-full hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label>
+          <input [(ngModel)]="newUser.email" type="email" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="email@ejemplo.com">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nombre</label>
+          <input [(ngModel)]="newUser.username" type="text" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Nombre completo">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Rol</label>
+        <select [(ngModel)]="newUser.role" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-700">
+          <option value="terapista">Terapeuta</option>
+          <option value="jugador">Paciente</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+
+      @if (newUser.role === 'jugador') {
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sede</label>
+          <select [(ngModel)]="newUser.sede_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-700">
+            <option [value]="null">-- Sin asignar --</option>
+            @for (s of sedes; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      @if (newUser.role === 'terapista') {
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sedes Asignadas (Ctrl+Click)</label>
+          <select multiple [(ngModel)]="newUser.sede_ids" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all h-24">
+            @for (s of sedes; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+
+    <div class="flex-none p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
+      <div class="flex justify-end gap-3">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
+        <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'save']" (clicked)="createUser()"></app-button>
+      </div>
+      @if (createStatus) {
+        <span class="text-right text-sm text-gray-600 font-medium">{{ createStatus }}</span>
+      }
+    </div>
+  </div>
+}
+
+<!-- Header Action Button -->
+<ng-template #headerActions>
+  <app-button variant="primary" label="Nuevo Usuario" [icon]="['fas', 'user-plus']" (clicked)="openCreateDrawer()"></app-button>
+</ng-template>

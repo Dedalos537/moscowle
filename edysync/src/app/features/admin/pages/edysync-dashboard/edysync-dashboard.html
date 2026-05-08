@@ -72,7 +72,7 @@
           <h3 class="text-xl font-bold text-textDark flex items-center gap-3">
             <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> Acción Inteligente
           </h3>
-          <button class="text-primary font-bold text-sm hover:underline cursor-pointer">Ver Todas →</button>
+          <app-button variant="ghost" label="Ver Todas →"></app-button>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,9 +171,7 @@
           </div>
         </div>
         
-        <button class="w-full mt-8 py-3 bg-gray-50 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200">
-          Ver Calendario Completo
-        </button>
+        <app-button variant="ghost" label="Ver Calendario Completo" class="w-full mt-8"></app-button>
       </div>
     </div>
     
@@ -188,7 +186,7 @@
       </div>
       <div>
         <div class="text-3xl font-extrabold text-textDark">
-          @if(summary) { {{ summary.patients || '120' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+          @if(summary) { {{ summary.patients || '120' }} } @else { <app-spinner size="sm"></app-spinner> }
         </div>
         <div class="text-sm font-medium text-gray-500 mt-1">Pacientes Activos</div>
         <div class="mt-2 text-[10px] text-primary font-bold bg-primary/10 px-2 py-1 rounded inline-block uppercase tracking-wide">Regular</div>
@@ -201,7 +199,7 @@
       </div>
       <div>
         <div class="text-3xl font-extrabold text-textDark">
-          @if(summary) { {{ summary.therapists || '15' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+          @if(summary) { {{ summary.therapists || '15' }} } @else { <app-spinner size="sm"></app-spinner> }
         </div>
         <div class="text-sm font-medium text-gray-500 mt-1">Terapeutas Registrados</div>
         <div class="mt-2 text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded inline-block uppercase tracking-wide">Activos</div>
@@ -214,7 +212,7 @@
       </div>
       <div>
         <div class="text-3xl font-extrabold text-textDark">
-          @if(summary) { {{ summary.sessions_total || '142' }} } @else { <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> }
+          @if(summary) { {{ summary.sessions_total || '142' }} } @else { <app-spinner size="sm"></app-spinner> }
         </div>
         <div class="text-sm font-medium text-gray-500 mt-1">Sesiones Mensuales</div>
         <div class="mt-2 text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded inline-block uppercase tracking-wide">Métricas Totales</div>
