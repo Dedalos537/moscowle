@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule } from '@angular/router'; // <- IMPORTANTE: Para router-outlet y routerLink
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { ApiBaseInterceptor } from './interceptors/api-base.interceptor';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { Navbar } from './layout/navbar/navbar';
 import { Footer } from './layout/footer/footer';
@@ -34,6 +35,11 @@ import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
     TherapistLayout,
   ],
   providers: [
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ApiBaseInterceptor,
+      multi: true
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,

@@ -11,7 +11,7 @@ export interface LoginResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly LOGIN_URL = '/moscowle/login'; 
+  private readonly LOGIN_URL = '/login';
 
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -56,7 +56,7 @@ export class AuthService {
   }
 
   logout(): Observable<any> {
-    return this.http.get('/moscowle/logout', { responseType: 'text' }).pipe(
+    return this.http.get('/logout', { responseType: 'text' }).pipe(
       tap(() => {
         localStorage.removeItem('user');
         this.currentUserSubject.next(null);

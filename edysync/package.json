@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:prod": "PROXY_TARGET=https://www.centrojuanpabloii.com ng serve -c production",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

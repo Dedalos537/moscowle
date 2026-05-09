@@ -137,6 +137,77 @@ The project has 6 reusable shared components under `shared/components/`. You MUS
 
 **IMPORTANT**: Always prefer these shared components over raw `<button>`, `<input>`, `<div class="card...">`, etc. If you need a new reusable component, create it inside `shared/components/` and register it in `SharedModule`.
 
+# 4. Environment & Proxy Pattern (Local ↔ Production)
+
+The project uses **Angular environment files** + an **`ApiBaseInterceptor`** to automatically switch ALL API URLs between local development and production. No service needs to import `environment` or know about prefixes.
+
+## 4.1 How It Works (Global Interceptor)
+
+`core/interceptors/api-base.interceptor.ts` intercepts EVERY `HttpClient` request and prepends `environment.apiBaseUrl`:
+
+```typescript
+intercept(req, next) {
+  const base = environment.apiBaseUrl;  // '' en dev, '/moscowle' en prod
+  if (base && req.url.startsWith('/')) {
+    req = req.clone({ url: base + req.url });
+  }
+  return next.handle(req);
+}
+```
+
+- **Dev** (`apiBaseUrl = ''`): no modification. `/api/sessions` stays as-is → proxy → local Flask.
+- **Prod build** (`apiBaseUrl = '/moscowle'`): `/api/sessions` → `/moscowle/api/sessions` → Passenger strips prefix → Flask.
+
+## 4.2 Environment Files
+
+| File | Scope | `apiBaseUrl` | `production` |
+|------|-------|-------------|--------------|
+| `src/environments/environment.ts` | `ng serve` (dev) | `''` | `false` |
+| `src/environments/environment.prod.ts` | `ng build --prod` | `'/moscowle'` | `true` |
+
+Swapped automatically by `fileReplacements` in `angular.json`.
+
+## 4.3 Proxy (`proxy.conf.js`)
+
+Only used during `ng serve`. Reads `PROXY_TARGET` env var (defaults to `http://localhost:5000`). Includes BOTH context sets so it works in dev AND prod-test mode:
+
+```js
+const common = ['/api', '/admin/api', '/therapist/api', '/uploads'];
+const moscowle = common.map(p => '/moscowle' + p);  // same paths with /moscowle
+
+module.exports = [
+  {
+    context: [...common, ...moscowle],
+    target: TARGET,
+    ...
+  },
+];
+```
+
+| Env var | Proxies to | Use case |
+|---------|------------|----------|
+| *(not set)* | `http://localhost:5000` | Local Flask development |
+| `https://www.centrojuanpabloii.com` | Production server | Testing against remote |
+
+## 4.4 NPM Scripts
+
+```bash
+npm start              # ng serve → proxy → localhost:5000
+npm run start:prod     # ng serve -c production → proxy → www.centrojuanpabloii.com
+```
+
+## 4.5 How to Write Services (Simpler Than Before)
+
+Services NEVER need to import `environment` or handle prefixes:
+
+```typescript
+// ✅ CORRECTO — el interceptor hace el trabajo
+return this.http.get('/api/sessions');
+return this.http.post('/admin/api/expenses', data);
+return this.http.get('/login', { responseType: 'text' });
+return this.http.get('/logout', { responseType: 'text' });
+```
+
 # 5. Strict Creation Rules (CLI ONLY)
 Whenever asked to create a new element, you MUST NEVER write the files manually to disk. You MUST provide or execute the exact Angular CLI command.
 * Component: ng generate component features/domain-name/components/name
