@@ -1,0 +1,41 @@
+<div class="flex h-screen bg-background text-textDark overflow-hidden transition-colors duration-300">
+  <aside class="w-64 h-screen bg-surface border-r border-gray-200 flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
+    <!-- Logo -->
+    <div class="h-24 flex items-center px-6 border-b border-gray-100 shrink-0">
+      <div class="flex items-center gap-3">
+        <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
+        <div class="flex flex-col">
+          <span class="font-extrabold text-primary tracking-tight text-xl">EdySync</span>
+          <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Terapeuta</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
+      <a routerLink="/therapist/sessions" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
+        <fa-icon [icon]="['fas', 'calendar-alt']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+        <span>Mis Sesiones</span>
+      </a>
+      <a routerLink="/therapist/games" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
+        <fa-icon [icon]="['fas', 'gamepad']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+        <span>Juegos</span>
+      </a>
+      <a routerLink="/therapist/messages" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
+        <fa-icon [icon]="['fas', 'envelope']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+        <span>Mensajes</span>
+      </a>
+      <a routerLink="/therapist/profile" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
+        <fa-icon [icon]="['fas', 'user-circle']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+        <span>Mi Perfil</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
+    <app-header class="z-10"></app-header>
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar relative">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>

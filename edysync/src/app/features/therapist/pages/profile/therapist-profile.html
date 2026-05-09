@@ -1,0 +1,70 @@
+<div class="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+  <div>
+    <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'user-circle']" class="text-primary"></fa-icon> Mi Perfil
+    </h2>
+    <p class="text-sm text-gray-500">Actualiza tu información personal y contraseña</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Stats Cards -->
+    <div class="space-y-4">
+      <app-card title="Resumen">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Pacientes activos</span>
+            <span class="text-lg font-bold text-primary">{{ profile?.patients_count || 0 }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Sesiones realizadas</span>
+            <span class="text-lg font-bold text-green-600">{{ profile?.sessions_count || 0 }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Próximas citas</span>
+            <span class="text-lg font-bold text-amber-600">{{ profile?.upcoming_appointments || 0 }}</span>
+          </div>
+          @if (profile?.created_at) {
+            <div class="pt-2 border-t border-gray-100">
+              <span class="text-xs text-gray-400">Miembro desde</span>
+              <p class="text-sm font-medium">{{ profile?.created_at | date:'MMM yyyy' }}</p>
+            </div>
+          }
+        </div>
+      </app-card>
+    </div>
+
+    <!-- Forms -->
+    <div class="lg:col-span-2 space-y-6">
+      <app-card title="Información Personal">
+        <div class="space-y-4">
+          <app-input id="tp-username" label="Nombre de Usuario" [(value)]="username"></app-input>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label>
+            <p class="px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-500">{{ email }}</p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Zona Horaria</label>
+            <select [(ngModel)]="timezone" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+              @for (tz of timezones; track tz) {
+                <option [value]="tz">{{ tz }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </app-card>
+
+      <app-card title="Cambiar Contraseña" subtitle="Deja en blanco para mantener la actual">
+        <div class="space-y-4">
+          <app-input id="tp-password" label="Nueva Contraseña" [(value)]="newPassword" type="password"></app-input>
+          <app-input id="tp-confirm" label="Confirmar Contraseña" [(value)]="confirmPassword" type="password"></app-input>
+        </div>
+      </app-card>
+
+      @if (statusText) {
+        <app-alert [type]="statusType" [message]="statusText"></app-alert>
+      }
+
+      <app-button variant="primary" label="Guardar Cambios" [disabled]="saving" (clicked)="saveProfile()"></app-button>
+    </div>
+  </div>
+</div>

@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from datetime import timedelta
 
 load_dotenv()
+load_dotenv('.env.local', override=True)
 
 class Config:
     # ========== FLASK CONFIGURATION ==========

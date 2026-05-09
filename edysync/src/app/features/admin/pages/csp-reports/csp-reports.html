@@ -1,0 +1,72 @@
+<div class="space-y-6 animate-fade-in-up">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'bug']" class="text-primary"></fa-icon> CSP Reports
+      </h2>
+      <p class="text-sm text-gray-500">Monitoreo de seguridad y violaciones de contenido</p>
+    </div>
+    <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-csv']" (clicked)="exportCsv()"></app-button>
+  </div>
+
+  <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-wrap gap-4 items-center">
+    <app-input id="filter-directive" placeholder="Directiva" [(value)]="filter.directive" (valueChange)="onFilterChange()"></app-input>
+    <app-input id="filter-uri" placeholder="URI Bloqueada" [(value)]="filter.blocked_uri" (valueChange)="onFilterChange()"></app-input>
+    <app-input id="filter-since" type="date" [(value)]="filter.since" (valueChange)="onFilterChange()"></app-input>
+  </div>
+
+  @if (loading) {
+    <div class="flex justify-center py-16">
+      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+    </div>
+  } @else {
+    <div class="bg-surface rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[800px]">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">Fecha</th>
+              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">Documento</th>
+              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">Directiva</th>
+              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">URI Bloqueada</th>
+              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">IP</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 bg-white">
+            @for (r of reports; track r.id) {
+              <tr class="hover:bg-gray-50/80 text-sm">
+                <td class="px-5 py-4 text-gray-700 whitespace-nowrap">{{ r.received_at }}</td>
+                <td class="px-5 py-4 text-gray-600 max-w-[200px] truncate" [title]="r.document_uri">{{ r.document_uri }}</td>
+                <td class="px-5 py-4">
+                  <span class="px-2 py-1 text-[10px] font-bold rounded bg-red-50 text-red-700">{{ r.violated_directive }}</span>
+                </td>
+                <td class="px-5 py-4 text-gray-600 max-w-[200px] truncate" [title]="r.blocked_uri">{{ r.blocked_uri }}</td>
+                <td class="px-5 py-4 text-gray-500 font-mono text-xs">{{ r.ip_address || '—' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="px-5 py-16 text-center text-gray-400">
+                  <fa-icon [icon]="['fas', 'shield-alt']" class="text-3xl mb-2"></fa-icon>
+                  <p class="text-sm font-medium">No hay reportes CSP</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    @if (pages > 1) {
+      <div class="flex justify-center gap-2">
+        @for (p of [].constructor(pages); track $index) {
+          <button (click)="goToPage($index + 1)" class="px-3 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer"
+            [class.bg-primary]="page === $index + 1" [class.text-white]="page === $index + 1"
+            [class.bg-gray-100]="page !== $index + 1" [class.text-gray-600]="page !== $index + 1">
+            {{ $index + 1 }}
+          </button>
+        }
+      </div>
+    }
+  }
+</div>

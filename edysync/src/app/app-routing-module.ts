@@ -12,6 +12,10 @@ const routes: Routes = [
     loadChildren: () => import('./features/admin/admin-module').then(m => m.AdminModule)
   },
   {
+    path: 'therapist',
+    loadChildren: () => import('./features/therapist/therapist-module').then(m => m.TherapistModule)
+  },
+  {
     path: '',
     component: MainLayout,
     children: [

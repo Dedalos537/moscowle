@@ -1,0 +1,37 @@
+<div class="space-y-6 animate-fade-in-up">
+  <div>
+    <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'gamepad']" class="text-primary"></fa-icon> Juegos
+    </h2>
+    <p class="text-sm text-gray-500">Explora los juegos disponibles para tus sesiones</p>
+  </div>
+
+  @if (loading) {
+    <div class="flex justify-center py-16">
+      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      @for (game of games; track game) {
+        <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-all">
+          <div class="aspect-video bg-gradient-to-br from-primary/5 to-gray-100 flex items-center justify-center">
+            <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl text-primary/30 group-hover:text-primary/50 transition-colors"></fa-icon>
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold text-gray-900 truncate">{{ game }}</h3>
+            <div class="flex items-center gap-2 mt-3">
+              <a [href]="getGameUrl(game)" target="_blank" class="inline-flex items-center px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors">
+                <fa-icon [icon]="['fas', 'external-link-alt']" class="mr-1.5 text-[10px]"></fa-icon> Abrir
+              </a>
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <div class="col-span-full text-center py-16 text-gray-400">
+          <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl mb-3"></fa-icon>
+          <p class="text-sm font-medium">No hay juegos registrados</p>
+        </div>
+      }
+    </div>
+  }
+</div>

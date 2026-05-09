@@ -7,6 +7,11 @@ import { Sede, SedeAnalytics } from '../models/sede';
 import { Payment, PatientPaymentStatus, DebtReport } from '../models/payment';
 import { Appointment, CalendarEvent, BatchSessionPayload } from '../models/appointment';
 import { Expense, TherapistFinancial, ContactMessage, TherapistStats, PatientStats } from '../models/expense';
+import { Game } from '../models/game';
+import { CSPReport, CSPReportFilter, CSPReportResponse } from '../models/csp-report';
+import { AdminAPIToken, CreateTokenResponse } from '../models/api-token';
+import { YapeTransaction, YapeImportStats, YapeDashboardStats } from '../models/yape';
+import { AITrainingStatus, TrainResponse } from '../models/ai-training';
 
 @Injectable({
   providedIn: 'root',
@@ -179,5 +184,102 @@ export class AdminService {
 
   exportPaymentsCsv(): Observable<Blob> {
     return this.http.get('/admin/reports/export-payments', { responseType: 'blob' });
+  }
+
+  // ─── Games ───────────────────────────────────────────────
+  getGames(): Observable<{ games: string[] }> {
+    return this.http.get<{ games: string[] }>('/api/games');
+  }
+
+  uploadGame(name: string, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('file', file);
+    return this.http.post('/api/games/upload', formData);
+  }
+
+  deleteGame(name: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>('/api/admin/games/delete', { name });
+  }
+
+  generateGame(prompt: string, userId: number, name: string): Observable<any> {
+    return this.http.post('/api/ai/generate_game', { prompt, user_id: userId, name });
+  }
+
+  // ─── CSP Reports ─────────────────────────────────────────
+  getCSPReports(filter?: CSPReportFilter): Observable<CSPReportResponse> {
+    let params = new HttpParams();
+    if (filter?.directive) params = params.set('directive', filter.directive);
+    if (filter?.blocked_uri) params = params.set('blocked_uri', filter.blocked_uri);
+    if (filter?.since) params = params.set('since', filter.since);
+    if (filter?.page) params = params.set('page', filter.page);
+    if (filter?.per_page) params = params.set('per_page', filter.per_page);
+    return this.http.get<CSPReportResponse>('/admin/api/csp-reports', { params });
+  }
+
+  exportCSPReportsCsv(filter?: CSPReportFilter): Observable<Blob> {
+    let params = new HttpParams();
+    if (filter?.directive) params = params.set('directive', filter.directive);
+    if (filter?.blocked_uri) params = params.set('blocked_uri', filter.blocked_uri);
+    if (filter?.since) params = params.set('since', filter.since);
+    return this.http.get('/admin/csp-reports/export', { params, responseType: 'blob' });
+  }
+
+  // ─── API Tokens ──────────────────────────────────────────
+  getAPITokens(): Observable<{ tokens: AdminAPIToken[] }> {
+    return this.http.get<{ tokens: AdminAPIToken[] }>('/admin/api/tokens/list');
+  }
+
+  createAPIToken(rotate: boolean = false): Observable<CreateTokenResponse> {
+    return this.http.post<CreateTokenResponse>('/admin/api/tokens/create', { rotate });
+  }
+
+  deactivateAPIToken(tokenId: number): Observable<{ success: boolean }> {
+    return this.http.post<{ success: boolean }>(`/admin/api/tokens/deactivate/${tokenId}`, {});
+  }
+
+  // ─── Profile ─────────────────────────────────────────────
+  updateProfile(data: { username?: string; new_password?: string }): Observable<{ success: boolean; message?: string }> {
+    return this.http.post<{ success: boolean; message?: string }>('/api/admin/profile', data);
+  }
+
+  // ─── Yape Import ─────────────────────────────────────────
+  importYapeFile(file: File): Observable<{ success: boolean; stats: YapeImportStats }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{ success: boolean; stats: YapeImportStats }>('/admin/yape/import', formData);
+  }
+
+  searchYape(query: string): Observable<{ results: YapeTransaction[] }> {
+    return this.http.get<{ results: YapeTransaction[] }>('/admin/yape/search', {
+      params: new HttpParams().set('q', query),
+    });
+  }
+
+  getYapePending(): Observable<{ count: number; transactions: YapeTransaction[] }> {
+    return this.http.get<{ count: number; transactions: YapeTransaction[] }>('/admin/yape/pending');
+  }
+
+  getYapeHistory(): Observable<YapeTransaction[]> {
+    return this.http.get<YapeTransaction[]>('/admin/yape/history');
+  }
+
+  getYapeDashboard(): Observable<YapeDashboardStats> {
+    return this.http.get<YapeDashboardStats>('/admin/yape/dashboard');
+  }
+
+  attachReceipt(operationNumber: string, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`/admin/yape/${operationNumber}/attach-receipt`, formData);
+  }
+
+  // ─── AI Training ─────────────────────────────────────────
+  getAITrainingStatus(): Observable<AITrainingStatus> {
+    return this.http.get<AITrainingStatus>('/admin/ai/status');
+  }
+
+  triggerAITraining(data?: { real_data?: number[][] }): Observable<TrainResponse> {
+    return this.http.post<TrainResponse>('/admin/ai/train', data || {});
   }
 }

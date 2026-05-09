@@ -15,12 +15,12 @@
 | 9 | **Expenses** | `/admin/expenses` | 🟡 Media | ✅ Completado |
 | 10 | **Messages** | `/admin/messages` | 🟡 Media | ✅ Completado |
 | 11 | **Reports** | `/admin/reports` | 🟡 Media | ✅ Completado |
-| 12 | **Games** | `/admin/games` | 🟢 Baja | ❌ Pendiente |
-| 13 | **CSP Reports** | `/admin/csp-reports` | 🔵 Baja | ❌ Pendiente |
-| 14 | **API Tokens** | `/admin/api-tokens` | 🔵 Baja | ❌ Pendiente |
-| 15 | **Profile** | `/admin/profile` | 🔵 Baja | ❌ Pendiente |
-| 16 | **Yape Import** | `/admin/yape-import` | 🔵 Baja | ❌ Pendiente |
-| 17 | **AI Training** | `/admin/ai` | 🟡 Media | ❌ Pendiente |
+| 12 | **Games** | `/admin/games` | 🟢 Baja | ✅ Completado |
+| 13 | **CSP Reports** | `/admin/csp-reports` | 🔵 Baja | ✅ Completado |
+| 14 | **API Tokens** | `/admin/api-tokens` | 🔵 Baja | ✅ Completado |
+| 15 | **Profile** | `/admin/profile` | 🔵 Baja | ✅ Completado |
+| 16 | **Yape Import** | `/admin/yape-import` | 🔵 Baja | ✅ Completado |
+| 17 | **AI Training** | `/admin/ai` | 🟡 Media | ✅ Completado |
 
 ---
 
@@ -183,13 +183,37 @@
   - **APIs nuevas (Flask):** `GET /admin/api/financial-summary`, `GET /admin/api/report-therapist-stats`, `GET /admin/api/report-patient-stats`
   - **APIs existentes:** `POST /admin/generate-ia-report`, `POST /admin/reports/send-weekly-summary`, `GET /admin/reports/export-payments`
 
-### Fase 7 — Páginas secundarias
-- **Games** (`/admin/games`) — CRUD de juegos HTML
-- **CSP Reports** (`/admin/csp-reports`) — Violaciones de seguridad
-- **API Tokens** (`/admin/api-tokens`) — Gestión de tokens
-- **Profile** (`/admin/profile`) — Perfil del admin
-- **Yape Import** (`/admin/yape-import`) — Importar transacciones Yape
-- **AI Training** (`/admin/ai`) — Entrenar modelo IA
+### Fase 7 — Páginas secundarias — ✅ COMPLETADO
+- **Games** (`/admin/games`):
+  - Grid de juegos HTML con apertura en nueva pestaña
+  - Modal de subida (nombre + archivo .html)
+  - Confirmación de eliminación
+  - APIs: `GET /api/games`, `POST /api/games/upload`, `POST /api/admin/games/delete`
+- **CSP Reports** (`/admin/csp-reports`):
+  - Tabla paginada de violaciones CSP con filtros (directiva, URI, fecha)
+  - Botón de exportación CSV
+  - APIs: `GET /admin/api/csp-reports`, `GET /admin/csp-reports/export`
+- **API Tokens** (`/admin/api-tokens`):
+  - Tabla de tokens con estado activo/inactivo
+  - Modal de creación con opción de rotar tokens existentes
+  - Copia al portapapeles del token generado
+  - **APIs nuevas (Flask):** `GET /admin/api/tokens/list`, `POST /admin/api/tokens/create`, `POST /admin/api/tokens/deactivate/<id>`
+- **Profile** (`/admin/profile`):
+  - Formulario de edición de nombre de usuario
+  - Cambio de contraseña con confirmación
+  - API: `POST /api/admin/profile`
+- **Yape Import** (`/admin/yape-import`):
+  - KPIs: total transacciones, pendientes
+  - Tabla de transacciones sin comprobante
+  - Historial de importaciones
+  - Modal de subida de archivo CSV/XLSX
+  - Buscador de transacciones
+  - APIs: `POST /admin/yape/import`, `GET /admin/yape/dashboard`, `GET /admin/yape/pending`, `GET /admin/yape/history`, `GET /admin/yape/search`
+- **AI Training** (`/admin/ai`):
+  - Estado del modelo SVM (entrenado/en progreso)
+  - Botón para disparar entrenamiento
+  - Información técnica del modelo (algoritmo, clases, características)
+  - APIs: `GET /admin/ai/status`, `POST /admin/ai/train`
 
 ---
 

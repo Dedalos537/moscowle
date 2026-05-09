@@ -65,3 +65,17 @@ def api_auth_validate():
         current_app.logger.warning(f"/api/auth/validate error: {e}")
         return jsonify({'valid': False})
 
+@auth_bp.route('/api/auth/me', methods=['GET'])
+@login_required
+def api_auth_me():
+    try:
+        return jsonify({
+            'id': current_user.id,
+            'email': current_user.email,
+            'username': current_user.username,
+            'role': current_user.role,
+        })
+    except Exception as e:
+        current_app.logger.warning(f"/api/auth/me error: {e}")
+        return jsonify({'error': 'Error al obtener usuario'}), 500
+

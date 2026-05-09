@@ -12,6 +12,12 @@ import { Sessions } from './pages/sessions/sessions';
 import { Expenses } from './pages/expenses/expenses';
 import { Messages } from './pages/messages/messages';
 import { Reports } from './pages/reports/reports';
+import { Games } from './pages/games/games';
+import { CspReports } from './pages/csp-reports/csp-reports';
+import { ApiTokens } from './pages/api-tokens/api-tokens';
+import { Profile } from './pages/profile/profile';
+import { YapeImport } from './pages/yape-import/yape-import';
+import { AiTraining } from './pages/ai-training/ai-training';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
 
 const routes: Routes = [
@@ -31,6 +37,12 @@ const routes: Routes = [
       { path: 'expenses', component: Expenses },
       { path: 'messages', component: Messages },
       { path: 'reports', component: Reports },
+      { path: 'games', component: Games },
+      { path: 'csp-reports', component: CspReports },
+      { path: 'api-tokens', component: ApiTokens },
+      { path: 'profile', component: Profile },
+      { path: 'yape-import', component: YapeImport },
+      { path: 'ai', component: AiTraining },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   }

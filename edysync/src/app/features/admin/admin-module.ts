@@ -18,6 +18,12 @@ import { Sessions } from './pages/sessions/sessions';
 import { Expenses } from './pages/expenses/expenses';
 import { Messages } from './pages/messages/messages';
 import { Reports } from './pages/reports/reports';
+import { Games } from './pages/games/games';
+import { CspReports } from './pages/csp-reports/csp-reports';
+import { ApiTokens } from './pages/api-tokens/api-tokens';
+import { Profile } from './pages/profile/profile';
+import { YapeImport } from './pages/yape-import/yape-import';
+import { AiTraining } from './pages/ai-training/ai-training';
 
 @NgModule({
   declarations: [
@@ -33,7 +39,13 @@ import { Reports } from './pages/reports/reports';
     Sessions,
     Expenses,
     Messages,
-    Reports
+    Reports,
+    Games,
+    CspReports,
+    ApiTokens,
+    Profile,
+    YapeImport,
+    AiTraining
   ],
   imports: [
     CommonModule,

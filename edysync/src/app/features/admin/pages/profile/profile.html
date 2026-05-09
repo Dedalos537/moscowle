@@ -1,0 +1,31 @@
+<div class="max-w-2xl mx-auto space-y-6 animate-fade-in-up">
+  <div>
+    <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'user-circle']" class="text-primary"></fa-icon> Mi Perfil
+    </h2>
+    <p class="text-sm text-gray-500">Actualiza tu información personal y contraseña</p>
+  </div>
+
+  <app-card title="Información Personal">
+    <div class="space-y-4">
+      <app-input id="profile-username" label="Nombre de Usuario" [(value)]="username"></app-input>
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label>
+        <p class="px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm text-gray-500">{{ email }}</p>
+      </div>
+    </div>
+  </app-card>
+
+  <app-card title="Cambiar Contraseña" subtitle="Deja en blanco para mantener la actual">
+    <div class="space-y-4">
+      <app-input id="profile-password" label="Nueva Contraseña" [(value)]="newPassword" type="password"></app-input>
+      <app-input id="profile-confirm" label="Confirmar Contraseña" [(value)]="confirmPassword" type="password"></app-input>
+    </div>
+  </app-card>
+
+  @if (statusText) {
+    <app-alert [type]="statusType" [message]="statusText"></app-alert>
+  }
+
+  <app-button variant="primary" label="Guardar Cambios" [disabled]="saving" (clicked)="saveProfile()"></app-button>
+</div>

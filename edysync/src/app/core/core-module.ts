@@ -10,6 +10,7 @@ import { SharedModule } from '../shared/shared-module';
 import { Sidebar } from './components/sidebar/sidebar';
 import { Header } from './components/header/header';
 import { AdminLayout } from './layout/admin-layout/admin-layout';
+import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
 
 @NgModule({
   declarations: [
@@ -18,17 +19,19 @@ import { AdminLayout } from './layout/admin-layout/admin-layout';
     Footer,
     Sidebar,
     Header,
-    AdminLayout
+    AdminLayout,
+    TherapistLayout,
   ],
   imports: [
     CommonModule,
     HttpClientModule,
     RouterModule,
-    SharedModule // Importamos para tener FontAwesome y <app-button> entre otros
+    SharedModule
   ],
   exports: [
     MainLayout,
-    AdminLayout
+    AdminLayout,
+    TherapistLayout,
   ],
   providers: [
     {

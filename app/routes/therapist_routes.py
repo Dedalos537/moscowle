@@ -1063,3 +1063,175 @@ def update_patient(patient_id):
     return jsonify({'success': True, 'message': 'Paciente actualizado correctamente'})
 
 
+# ─────────────────────────────────────────────────────────────
+# JSON API endpoints for Angular therapist module
+# ─────────────────────────────────────────────────────────────
+
+@therapist_bp.route('/api/dashboard-stats')
+@login_required
+def api_dashboard_stats():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    today_start, today_end = get_user_today_utc_range(current_user)
+    now = datetime.utcnow()
+
+    sessions_today = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.start_time >= today_start,
+        Appointment.start_time < today_end,
+        Appointment.status == 'scheduled'
+    ).count()
+
+    completed_sessions = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.status == 'completed'
+    ).count()
+
+    pending_sessions = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.status == 'scheduled',
+        Appointment.start_time > now
+    ).count()
+
+    active_patients = User.query.filter(
+        User.assigned_therapist_id == current_user.id,
+        User.role == 'jugador',
+        User.is_active == True
+    ).count()
+
+    return jsonify({
+        'sessions_today': sessions_today,
+        'completed_sessions': completed_sessions,
+        'pending_sessions': pending_sessions,
+        'active_patients': active_patients,
+    })
+
+
+@therapist_bp.route('/api/conversations')
+@login_required
+def api_conversations():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    unread_expr = func.sum(case(
+        ((Message.is_read == False) & (Message.receiver_id == current_user.id), 1),
+        else_=0
+    ))
+
+    conv_query = db.session.query(
+        User.id, User.username, User.email,
+        func.max(Message.created_at).label('last_message'),
+        unread_expr.label('unread_count')
+    ).join(
+        Message,
+        or_(
+            (Message.sender_id == User.id) & (Message.receiver_id == current_user.id),
+            (Message.receiver_id == User.id) & (Message.sender_id == current_user.id)
+        )
+    ).filter(User.role == 'jugador').group_by(User.id).order_by(func.max(Message.created_at).desc()).all()
+
+    conversations = [{
+        'user_id': c[0],
+        'username': c[1],
+        'email': c[2],
+        'last_message': c[3].isoformat() if c[3] else None,
+        'unread_count': c[4]
+    } for c in conv_query]
+
+    return jsonify({'conversations': conversations})
+
+
+@therapist_bp.route('/api/messages/<int:user_id>')
+@login_required
+def api_conversation_thread(user_id):
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    other_user = User.query.get_or_404(user_id)
+
+    messages = Message.query.filter(
+        or_(
+            (Message.sender_id == current_user.id) & (Message.receiver_id == user_id),
+            (Message.sender_id == user_id) & (Message.receiver_id == current_user.id)
+        )
+    ).order_by(Message.created_at.asc()).all()
+
+    # Mark received messages as read
+    Message.query.filter(
+        Message.receiver_id == current_user.id,
+        Message.sender_id == user_id,
+        Message.is_read == False
+    ).update({'is_read': True})
+    db.session.commit()
+
+    return jsonify({
+        'other_user': {
+            'id': other_user.id,
+            'username': other_user.username,
+            'email': other_user.email,
+        },
+        'messages': [{
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'receiver_id': m.receiver_id,
+            'body': m.body,
+            'file_url': m.file_url,
+            'file_type': m.file_type,
+            'created_at': m.created_at.isoformat() if m.created_at else None,
+            'is_read': m.is_read,
+        } for m in messages]
+    })
+
+
+@therapist_bp.route('/api/profile')
+@login_required
+def api_profile():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    patients_count = User.query.filter_by(
+        assigned_therapist_id=current_user.id, role='jugador', is_active=True
+    ).count()
+
+    sessions_count = Appointment.query.filter_by(therapist_id=current_user.id).count()
+
+    upcoming_appointments = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.status == 'scheduled',
+        Appointment.start_time >= datetime.utcnow()
+    ).count()
+
+    return jsonify({
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'timezone': getattr(current_user, 'timezone', 'America/Lima'),
+        'created_at': current_user.created_at.isoformat() if hasattr(current_user, 'created_at') and current_user.created_at else None,
+        'patients_count': patients_count,
+        'sessions_count': sessions_count,
+        'upcoming_appointments': upcoming_appointments,
+    })
+
+
+@therapist_bp.route('/api/profile', methods=['PUT'])
+@login_required
+def api_update_profile():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    if 'username' in data and data['username']:
+        current_user.username = data['username'].strip()
+    if 'timezone' in data:
+        current_user.timezone = data['timezone']
+
+    if 'new_password' in data and data['new_password']:
+        current_user.password = bcrypt.generate_password_hash(data['new_password']).decode('utf-8')
+
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Perfil actualizado correctamente'})
+
+

@@ -808,6 +808,48 @@ def admin_api_tokens():
     return render_template('admin/api_tokens.html', tokens=tokens, active_page='admin_reports')
 
 
+@admin_bp.route('/api/tokens/list', methods=['GET'])
+@login_required
+def api_tokens_list_json():
+    """JSON: List all API tokens."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'No autorizado'}), 403
+    tokens = AdminAPIToken.query.order_by(AdminAPIToken.created_at.desc()).all()
+    return jsonify({'tokens': [{'id': t.id, 'created_at': t.created_at.isoformat() if t.created_at else None, 'is_active': t.is_active} for t in tokens]})
+
+
+@admin_bp.route('/api/tokens/create', methods=['POST'])
+@login_required
+def api_tokens_create_json():
+    """JSON: Create new API token."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'No autorizado'}), 403
+    data = request.get_json(silent=True) or {}
+    rotate = data.get('rotate', False)
+    if rotate:
+        rows = AdminAPIToken.query.filter_by(is_active=True).all()
+        for r in rows:
+            r.deactivate()
+    token = secrets.token_urlsafe(32)
+    token_hash = bcrypt.generate_password_hash(token).decode('utf-8')
+    new = AdminAPIToken(token_hash=token_hash, is_active=True)
+    db.session.add(new)
+    db.session.commit()
+    return jsonify({'token': token, 'id': new.id, 'created_at': new.created_at.isoformat() if new.created_at else None, 'is_active': True})
+
+
+@admin_bp.route('/api/tokens/deactivate/<int:token_id>', methods=['POST'])
+@login_required
+def api_tokens_deactivate_json(token_id):
+    """JSON: Deactivate an API token."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'No autorizado'}), 403
+    t = AdminAPIToken.query.get_or_404(token_id)
+    t.deactivate()
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @admin_bp.route('/admin/api/tokens/deactivate/<int:token_id>', methods=['POST'])
 @login_required
 def deactivate_admin_token(token_id):
