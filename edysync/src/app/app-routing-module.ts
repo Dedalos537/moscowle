@@ -4,6 +4,11 @@ import { MainLayout } from './core/layout/main-layout/main-layout';
 
 const routes: Routes = [
   {
+    path: '',
+    redirectTo: 'auth/login',
+    pathMatch: 'full'
+  },
+  {
     path: 'auth',
     loadChildren: () => import('./features/auth/auth-module').then(m => m.AuthModule)
   },
