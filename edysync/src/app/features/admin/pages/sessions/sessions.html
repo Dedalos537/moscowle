@@ -10,7 +10,7 @@
     <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
       <option value="all">Todos los Terapeutas</option>
       @for (t of therapists; track t.id) {
-        <option [value]="t.id">{{ t.username }}</option>
+        <option value="{{ t.id }}">{{ t.username }}</option>
       }
     </select>
   </div>
@@ -45,7 +45,7 @@
         <select [(ngModel)]="singleForm.therapist_id" (change)="onTherapistSelect('single')" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
           <option value="">Seleccionar Terapeuta...</option>
           @for (t of therapists; track t.id) {
-            <option [value]="t.id">{{ t.username }}</option>
+            <option value="{{ t.id }}">{{ t.username }}</option>
           }
         </select>
       </div>
@@ -55,7 +55,7 @@
           <select [(ngModel)]="singleForm.patient_id" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" [disabled]="!singleForm.therapist_id">
             <option value="">Seleccionar Paciente...</option>
             @for (p of patients; track p.id) {
-              <option [value]="p.id">{{ p.username }}</option>
+              <option value="{{ p.id }}">{{ p.username }}</option>
             }
           </select>
           @if (patientsLoading) {
@@ -118,7 +118,7 @@
         <select [(ngModel)]="batchForm.therapist_id" (change)="onTherapistSelect('batch')" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
           <option value="">Seleccionar Terapeuta...</option>
           @for (t of therapists; track t.id) {
-            <option [value]="t.id">{{ t.username }}</option>
+            <option value="{{ t.id }}">{{ t.username }}</option>
           }
         </select>
       </div>
@@ -128,7 +128,7 @@
           <select [(ngModel)]="batchForm.patient_id" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" [disabled]="!batchForm.therapist_id">
             <option value="">Seleccionar Paciente...</option>
             @for (p of patients; track p.id) {
-              <option [value]="p.id">{{ p.username }}</option>
+              <option value="{{ p.id }}">{{ p.username }}</option>
             }
           </select>
           @if (patientsLoading) {

@@ -29,6 +29,10 @@ export class AuthService {
         const match = htmlPage.match(/name="csrf_token"\s+value="([^"]+)"/);
         const csrfToken = match ? match[1] : '';
 
+        if (csrfToken) {
+          localStorage.setItem('csrf_token', csrfToken);
+        }
+
         const body = new URLSearchParams();
         if (csrfToken) body.set('csrf_token', csrfToken);
         body.set('email', email);
@@ -59,6 +63,7 @@ export class AuthService {
     return this.http.get('/logout', { responseType: 'text' }).pipe(
       tap(() => {
         localStorage.removeItem('user');
+        localStorage.removeItem('csrf_token');
         this.currentUserSubject.next(null);
       })
     );

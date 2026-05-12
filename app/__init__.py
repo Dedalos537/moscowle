@@ -10,6 +10,7 @@ from pythonjsonlogger import jsonlogger
 import os
 from uuid import uuid4
 from datetime import datetime
+import hashlib
 
 def register_auth_loader(app):
     try:
@@ -35,6 +36,13 @@ def register_auth_loader(app):
             app.logger.warning(f"register_auth_loader failed to import models: {e}")
         except Exception:
             pass
+            
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        if request.path.startswith('/api/') or request.path.startswith('/admin/api/') or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
+            return jsonify({'success': False, 'message': 'Unauthorized - Please log in'}), 401
+        from flask import redirect, url_for
+        return redirect(url_for('auth.login', next=request.url))
 
 def setup_logging(app):
     """Configure robust logging with JSON format and rotation"""
@@ -183,6 +191,40 @@ def register_request_handlers(app):
             mark_request_api()
         except Exception:
             g.is_api = False
+            
+        # Validate App Key for API requests to ensure only edysync frontend can access
+        if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
+            # Allow webhooks or public endpoints if any
+            if 'webhook' not in request.path:
+                app_key = request.headers.get('X-App-Key')
+                if not app_key:
+                    return jsonify({'success': False, 'message': 'Missing App-Key header'}), 403
+                
+                try:
+                    parts = app_key.split('.')
+                    if len(parts) != 2:
+                        raise ValueError("Invalid key format")
+                        
+                    client_timestamp = int(parts[0])
+                    client_hash = parts[1]
+                    
+                    # Verify timestamp is within valid window (+/- 1 window = 300s)
+                    import time
+                    current_timestamp = int(time.time() / 300)
+                    if abs(current_timestamp - client_timestamp) > 1:
+                        return jsonify({'success': False, 'message': 'Expired App-Key'}), 403
+                    
+                    # Compute expected hash
+                    secret = 'EdySync_Mvp_Secret_2026'
+                    message = f"{secret}:{client_timestamp}"
+                    expected_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
+                    
+                    if client_hash != expected_hash:
+                        return jsonify({'success': False, 'message': 'Invalid App-Key'}), 403
+                        
+                except Exception as e:
+                    app.logger.warning(f"App-Key validation failed: {str(e)}")
+                    return jsonify({'success': False, 'message': 'Invalid App-Key format'}), 403
     
     @app.after_request
     def after_request(response):

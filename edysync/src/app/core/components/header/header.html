@@ -1,4 +1,4 @@
-<header class="h-20 bg-surface border-b border-gray-200 flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
+<header class="h-20 bg-surface border-b border-gray-200 flex items-center justify-between px-6 shrink-0 transition-colors duration-300 relative">
   <!-- Dynamic Left Side -->
   <div class="flex items-center gap-3">
     @if (headerService.icon$ | async; as icon) {
@@ -14,27 +14,76 @@
     <!-- Dynamic Actions from current view -->
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
 
-    <span class="hidden md:inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold uppercase tracking-wide">
-      <fa-icon [icon]="['fas', 'globe']" class="mr-2"></fa-icon> AMERICA/LIMA
-    </span>
-    
-    <button class="w-10 h-10 rounded-full bg-lightGreen text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors">
-      <fa-icon [icon]="['fas', 'bell']"></fa-icon>
-    </button>
-    
-    <span class="hidden lg:inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-      <fa-icon [icon]="['fas', 'globe']" class="mr-2"></fa-icon> America/Lima (GMT-05:00)
-    </span>
+    <!-- Notifications -->
+    <div class="relative">
+      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-lightGreen text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors focus:outline-none">
+        <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+        @if (unreadCount > 0) {
+          <span class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-statusRed rounded-full text-white text-[10px] md:text-xs flex items-center justify-center font-bold border-2 border-white">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+        }
+      </button>
 
-    <div class="flex items-center gap-3 pl-4 border-l border-gray-200 cursor-pointer hover:opacity-80 transition-opacity">
-      <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">
-        A
-      </div>
-      <div class="hidden md:flex flex-col">
-        <span class="font-bold text-textDark text-sm">Administrador</span>
-        <span class="text-gray-500 text-xs">Admin</span>
-      </div>
-      <fa-icon [icon]="['fas', 'chevron-down']" class="text-gray-400 text-xs ml-1"></fa-icon>
+      @if (showNotifications) {
+        <div class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-soft border border-gray-100 z-50 flex flex-col max-h-[80vh]">
+          <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+            <h3 class="text-sm font-bold text-textDark">Notificaciones</h3>
+            <button (click)="showNotifications = false" class="text-gray-400 hover:text-gray-600">
+              <fa-icon [icon]="['fas', 'times']"></fa-icon>
+            </button>
+          </div>
+          <div class="p-2 overflow-y-auto flex-1 custom-scrollbar">
+            @for (notif of notifications; track notif.id) {
+              <div class="p-3 hover:bg-lightGreen rounded-lg transition-colors border-b border-gray-50 last:border-0">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                    <fa-icon [icon]="['fas', 'envelope']" class="text-primary text-xs"></fa-icon>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm text-textDark leading-snug break-words">{{ notif.message }}</p>
+                    <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                      <fa-icon [icon]="['far', 'clock']"></fa-icon> {{ notif.timestamp }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <div class="p-8 text-center">
+                <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-300">
+                  <fa-icon [icon]="['far', 'bell-slash']" class="text-xl"></fa-icon>
+                </div>
+                <p class="text-gray-500 text-sm">No tienes notificaciones nuevas</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
+
+    <!-- User Menu -->
+    <div class="relative">
+      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-gray-200 cursor-pointer hover:opacity-80 transition-opacity select-none">
+        <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg uppercase shadow-sm">
+          {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
+        </div>
+        <div class="hidden md:flex flex-col">
+          <span class="font-bold text-textDark text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
+          <span class="text-gray-500 text-xs capitalize">{{ user?.role || 'User' }}</span>
+        </div>
+        <fa-icon [icon]="['fas', 'chevron-down']" class="text-gray-400 text-xs ml-1 transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
+      </div>
+
+      @if (showUserMenu) {
+        <div class="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-soft border border-gray-100 py-2 z-50">
+          <div class="px-4 py-3 border-b border-gray-50 md:hidden bg-gray-50">
+            <p class="text-sm font-bold text-charcoal truncate">{{ user?.username || 'Usuario' }}</p>
+            <p class="text-xs text-gray-500 capitalize">{{ user?.role || 'User' }}</p>
+          </div>
+          <button (click)="logout()" class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center">
+            <fa-icon [icon]="['fas', 'sign-out-alt']" class="w-5 text-center mr-2"></fa-icon> Cerrar Sesión
+          </button>
+        </div>
+      }
+    </div>
+
   </div>
 </header>
