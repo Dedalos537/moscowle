@@ -1,0 +1,50 @@
+/* Limpiar animaciones pesadas anteriores y volver a la estética minimalista */
+:host {
+    display: block;
+}
+
+/* Fix for Autofill to keep it clean */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px #f9fafb inset !important;
+    -webkit-text-fill-color: #334155 !important;
+}
+
+/* Custom checkbox to match the design */
+.custom-checkbox {
+    appearance: none;
+    background-color: transparent;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 1.15em;
+    height: 1.15em;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.25em;
+    display: grid;
+    place-content: center;
+    transition: all 0.2s ease-in-out;
+}
+
+.custom-checkbox::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em white;
+    background-color: transparent;
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+.custom-checkbox:checked {
+    background-color: var(--color-primary, #75a83a);
+    border-color: var(--color-primary, #75a83a);
+}
+
+.custom-checkbox:checked::before {
+    transform: scale(1);
+}

@@ -14,12 +14,12 @@
 <div class="flex items-center justify-between w-full">
     <div>
         <div class="flex items-center space-x-3">
-            <a href="{{ url_for('therapist.patients') }}" class="text-gray-400 hover:text-primary">
-                <i class="fas fa-arrow-left"></i>
+            <a href="{{ url_for('therapist.patients') }}" class="text-on-surface-variant/70 hover:text-primary">
+                <span class="material-symbols-outlined ">arrow_back</span>
             </a>
-            <h2 class="text-2xl font-bold text-textDark truncate max-w-[200px] md:max-w-none">{{ patient.username or patient.email }}</h2>
+            <h2 class="text-2xl font-bold text-on-surface truncate max-w-[200px] md:max-w-none">{{ patient.username or patient.email }}</h2>
         </div>
-        <p class="text-sm text-gray-500 hidden md:block">Historial completo del paciente</p>
+        <p class="text-sm text-on-surface-variant hidden md:block">Historial completo del paciente</p>
     </div>
 </div>
 {% endblock %}
@@ -28,7 +28,7 @@
 <div class="p-4 md:p-8">
     
     <!-- Patient Header Card -->
-    <div class="bg-gradient-to-r from-primary to-green-600 rounded-soft shadow-soft p-6 md:p-8 mb-8 text-white">
+    <div class="bg-gradient-to-r from-primary to-green-600 rounded-2xl shadow-sm shadow-slate-200/50 p-6 md:p-8 mb-8 text-white">
         <div class="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
             <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6 text-center md:text-left">
                 <img src="https://ui-avatars.com/api/?name={{ patient.username or patient.email }}&size=100&background=random" 
@@ -39,54 +39,54 @@
                     <div class="flex flex-wrap justify-center md:justify-start items-center gap-4 text-sm">
                         {% if patient.phone %}
                         <div class="flex items-center space-x-2">
-                            <i class="fas fa-phone"></i>
+                            <span class="material-symbols-outlined fas fa-phone">circle</span>
                             <span>{{ patient.phone }}</span>
                         </div>
                         {% endif %}
                         {% if patient.date_of_birth %}
                         <div class="flex items-center space-x-2">
-                            <i class="fas fa-cake-candles"></i>
+                            <span class="material-symbols-outlined fas fa-cake-candles">circle</span>
                             <span>{{ patient.date_of_birth.strftime('%d/%m/%Y') }}</span>
                         </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            <button onclick="openEditModal()" class="w-full md:w-auto bg-white text-primary px-6 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
-                <i class="fas fa-edit mr-2"></i>Editar Información
+            <button onclick="openEditModal()" class="w-full md:w-auto bg-surface-container-lowest text-primary px-6 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
+                <span class="material-symbols-outlined mr-2">edit</span>Editar Información
             </button>
         </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-        <div class="bg-white rounded-soft shadow-soft p-6">
+        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
-                <i class="fas fa-gamepad text-3xl text-blue-500"></i>
+                <span class="material-symbols-outlined text-3xl text-blue-500">gamepad</span>
             </div>
-            <p class="text-3xl font-bold text-textDark">{{ total_sessions }}</p>
-            <p class="text-sm text-gray-500">Sesiones Totales</p>
+            <p class="text-3xl font-bold text-on-surface">{{ total_sessions }}</p>
+            <p class="text-sm text-on-surface-variant">Sesiones Totales</p>
         </div>
-        <div class="bg-white rounded-soft shadow-soft p-6">
+        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
-                <i class="fas fa-bullseye text-3xl text-green-500"></i>
+                <span class="material-symbols-outlined fas fa-bullseye text-3xl text-green-500">circle</span>
             </div>
-            <p class="text-3xl font-bold text-textDark">{{ avg_accuracy }}%</p>
-            <p class="text-sm text-gray-500">Precisión Promedio</p>
+            <p class="text-3xl font-bold text-on-surface">{{ avg_accuracy }}%</p>
+            <p class="text-sm text-on-surface-variant">Precisión Promedio</p>
         </div>
-        <div class="bg-white rounded-soft shadow-soft p-6">
+        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
-                <i class="fas fa-clock text-3xl text-yellow-500"></i>
+                <span class="material-symbols-outlined text-3xl text-yellow-500">schedule</span>
             </div>
-            <p class="text-3xl font-bold text-textDark">{{ avg_time }}s</p>
-            <p class="text-sm text-gray-500">Tiempo Promedio</p>
+            <p class="text-3xl font-bold text-on-surface">{{ avg_time }}s</p>
+            <p class="text-sm text-on-surface-variant">Tiempo Promedio</p>
         </div>
-        <div class="bg-white rounded-soft shadow-soft p-6">
+        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
-                <i class="fas fa-calendar-check text-3xl text-purple-500"></i>
+                <span class="material-symbols-outlined text-3xl text-purple-500">event_available</span>
             </div>
-            <p class="text-3xl font-bold text-textDark">{{ completed_appointments }}</p>
-            <p class="text-sm text-gray-500">Citas Completadas</p>
+            <p class="text-3xl font-bold text-on-surface">{{ completed_appointments }}</p>
+            <p class="text-sm text-on-surface-variant">Citas Completadas</p>
         </div>
     </div>
 
@@ -95,48 +95,48 @@
         <div class="lg:col-span-2 space-y-6 md:space-y-8">
             
             <!-- Progress Chart -->
-            <div class="bg-white rounded-soft shadow-soft p-6">
-                <h3 class="text-xl font-bold text-textDark mb-6">Evolución de Precisión</h3>
+            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+                <h3 class="text-xl font-bold text-on-surface mb-6">Evolución de Precisión</h3>
                 <canvas id="progressChart" height="80"></canvas>
             </div>
 
             <!-- Recent Sessions -->
-            <div class="bg-white rounded-soft shadow-soft p-6">
+            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-textDark">Historial de Sesiones</h3>
+                    <h3 class="text-xl font-bold text-on-surface">Historial de Sesiones</h3>
                     <div class="flex gap-2">
                         <input type="date" id="sessionDateFilter" class="px-3 py-1 border rounded-lg text-sm" onchange="filterSessions()">
-                        <button onclick="clearFilter()" class="text-sm text-gray-500 hover:text-primary">Limpiar</button>
+                        <button onclick="clearFilter()" class="text-sm text-on-surface-variant hover:text-primary">Limpiar</button>
                     </div>
                 </div>
                 
                 <div class="space-y-3 max-h-[500px] overflow-y-auto" id="sessionsList">
                     {% if history_appointments %}
                         {% for session in history_appointments %}
-                        <div class="session-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-primary transition-colors gap-4"
+                        <div class="session-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border border-outline-variant rounded-xl hover:border-primary transition-colors gap-4"
                              data-date="{{ session.start_time.strftime('%Y-%m-%d') }}">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0
                                     {% if session.attendance == 'absent' %}bg-red-100 text-red-600
                                     {% elif session.status == 'completed' %}bg-green-100 text-green-600
                                     {% elif session.status == 'scheduled' %}bg-blue-100 text-blue-600
-                                    {% else %}bg-gray-100 text-gray-600{% endif %}">
-                                    <i class="fas fa-calendar-check text-xl"></i>
+                                    {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+                                    <span class="material-symbols-outlined  text-[32px]">event_available</span>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-textDark">{{ session.title or 'Sesión de Terapia' }}</h4>
-                                    <p class="text-sm text-gray-500">
+                                    <h4 class="font-bold text-on-surface">{{ session.title or 'Sesión de Terapia' }}</h4>
+                                    <p class="text-sm text-on-surface-variant">
                                         {{ session.start_time.strftime('%d %b %Y, %H:%M') }}
                                         
                                         {% if session.therapist_id != current_user.id %}
-                                        <span class="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200" title="Terapeuta asignado">
-                                            <i class="fas fa-user-md mr-1"></i>{{ session.therapist.username if session.therapist else 'Otro' }}
+                                        <span class="ml-2 px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-xs border border-outline-variant" title="Terapeuta asignado">
+                                            <span class="material-symbols-outlined fas fa-user-md mr-1">circle</span>{{ session.therapist.username if session.therapist else 'Otro' }}
                                         </span>
                                         {% endif %}
 
                                         {% if session.session_images %}
                                             <span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                                <i class="fas fa-camera mr-1"></i>{{ session.session_images|length }} fotos
+                                                <span class="material-symbols-outlined fas fa-camera mr-1">circle</span>{{ session.session_images|length }} fotos
                                             </span>
                                         {% endif %}
                                     </p>
@@ -147,18 +147,18 @@
                                     {% if session.attendance == 'absent' %}bg-red-100 text-red-700
                                     {% elif session.status == 'completed' %}bg-green-100 text-green-700
                                     {% elif session.status == 'scheduled' %}bg-blue-100 text-blue-700
-                                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {% else %}bg-surface-container text-on-surface{% endif %}">
                                     {% if session.attendance == 'absent' %}NO ASISTIÓ{% else %}{{ session.status|upper }}{% endif %}
                                 </span>
                                 <a href="{{ url_for('therapist.session_review', appointment_id=session.id) }}" 
-                                   class="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-primary hover:text-white transition-colors text-sm font-medium">
+                                   class="px-4 py-2 bg-surface-container-low text-on-surface rounded-lg hover:bg-primary hover:text-white transition-colors text-sm font-medium">
                                     Ver Detalles
                                 </a>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-center text-gray-500 py-8">No hay sesiones registradas</p>
+                        <p class="text-center text-on-surface-variant py-8">No hay sesiones registradas</p>
                     {% endif %}
                 </div>
             </div>
@@ -168,56 +168,56 @@
         <div class="space-y-6 md:space-y-8">
             
             <!-- Patient Info -->
-            <div class="bg-white rounded-soft shadow-soft p-6">
-                <h3 class="text-xl font-bold text-textDark mb-6">Información del Paciente</h3>
+            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+                <h3 class="text-xl font-bold text-on-surface mb-6">Información del Paciente</h3>
                 <div class="space-y-4 text-sm">
                     {% if patient.guardian_name %}
                     <div>
-                        <p class="text-gray-500 mb-1">Tutor/Responsable</p>
-                        <p class="font-semibold text-textDark">{{ patient.guardian_name }}</p>
+                        <p class="text-on-surface-variant mb-1">Tutor/Responsable</p>
+                        <p class="font-semibold text-on-surface">{{ patient.guardian_name }}</p>
                         {% if patient.guardian_contact %}
-                        <p class="text-gray-600">{{ patient.guardian_contact }}</p>
+                        <p class="text-on-surface-variant">{{ patient.guardian_contact }}</p>
                         {% endif %}
                     </div>
                     {% endif %}
                     
                     {% if patient.therapy_goals %}
                     <div>
-                        <p class="text-gray-500 mb-1">Objetivos de Terapia</p>
-                        <p class="text-textDark">{{ patient.therapy_goals }}</p>
+                        <p class="text-on-surface-variant mb-1">Objetivos de Terapia</p>
+                        <p class="text-on-surface">{{ patient.therapy_goals }}</p>
                     </div>
                     {% endif %}
                     
                     {% if patient.notes %}
                     <div>
-                        <p class="text-gray-500 mb-1">Notas Privadas</p>
-                        <p class="text-textDark">{{ patient.notes }}</p>
+                        <p class="text-on-surface-variant mb-1">Notas Privadas</p>
+                        <p class="text-on-surface">{{ patient.notes }}</p>
                     </div>
                     {% endif %}
                     
                     <div>
-                        <p class="text-gray-500 mb-1">Fecha de Registro</p>
-                        <p class="text-textDark">{{ patient.created_at.strftime('%d de %B, %Y') }}</p>
+                        <p class="text-on-surface-variant mb-1">Fecha de Registro</p>
+                        <p class="text-on-surface">{{ patient.created_at.strftime('%d de %B, %Y') }}</p>
                     </div>
                 </div>
             </div>
 
             <!-- Upcoming Appointments -->
-            <div class="bg-white rounded-soft shadow-soft p-6">
-                <h3 class="text-xl font-bold text-textDark mb-6">Próximas Citas</h3>
+            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+                <h3 class="text-xl font-bold text-on-surface mb-6">Próximas Citas</h3>
                 <div class="space-y-3">
                     {% if upcoming_appointments %}
                         {% for appt in upcoming_appointments %}
-                        <div class="p-4 border border-gray-200 rounded-xl">
-                            <p class="font-semibold text-textDark mb-1">{{ appt.title }}</p>
-                            <p class="text-sm text-gray-600">
-                                <i class="fas fa-calendar mr-2"></i>
+                        <div class="p-4 border border-outline-variant rounded-xl">
+                            <p class="font-semibold text-on-surface mb-1">{{ appt.title }}</p>
+                            <p class="text-sm text-on-surface-variant">
+                                <span class="material-symbols-outlined fas fa-calendar mr-2">circle</span>
                                 {{ appt.start_time.strftime('%d %b, %H:%M') }}
                             </p>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-center text-gray-500 py-4">No hay citas programadas</p>
+                        <p class="text-center text-on-surface-variant py-4">No hay citas programadas</p>
                     {% endif %}
                 </div>
             </div>
@@ -228,70 +228,70 @@
 
 <!-- Edit Patient Modal -->
 <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white rounded-soft p-6 md:p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-6">
-            <h3 class="text-2xl font-bold text-textDark">Editar Información del Paciente</h3>
-            <button onclick="closeEditModal()" class="text-gray-400 hover:text-textDark">
-                <i class="fas fa-times text-xl"></i>
+            <h3 class="text-2xl font-bold text-on-surface">Editar Información del Paciente</h3>
+            <button onclick="closeEditModal()" class="text-on-surface-variant/70 hover:text-on-surface">
+                <span class="material-symbols-outlined  text-[32px]">close</span>
             </button>
         </div>
 
         <form id="editForm" class="space-y-4">
             <!-- Email Field for Activation -->
             <div>
-                <label class="block text-sm font-medium text-textDark mb-2">Email (Cuenta de Acceso)</label>
+                <label class="block text-sm font-medium text-on-surface mb-2">Email (Cuenta de Acceso)</label>
                 <input type="email" id="email" 
                        value="{{ '' if (patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_'))) else patient.email }}"
                        placeholder="{{ 'Ingresa un email para activar la cuenta' if (patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_'))) else '' }}"
-                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                       class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 {% if patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_')) %}
-                <p class="text-xs text-amber-600 mt-1 font-medium"><i class="fas fa-exclamation-triangle"></i> Cuenta presencial. Agrega un email para generar contraseña y dar acceso.</p>
+                <p class="text-xs text-amber-600 mt-1 font-medium"><span class="material-symbols-outlined fas fa-exclamation-triangle">circle</span> Cuenta presencial. Agrega un email para generar contraseña y dar acceso.</p>
                 {% endif %}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-textDark mb-2">Teléfono</label>
+                    <label class="block text-sm font-medium text-on-surface mb-2">Teléfono</label>
                     <input type="tel" id="phone" value="{{ patient.phone or '' }}" 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                           class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-textDark mb-2">Fecha de Nacimiento</label>
+                    <label class="block text-sm font-medium text-on-surface mb-2">Fecha de Nacimiento</label>
                     <input type="date" id="date_of_birth" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else '' }}"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                           class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-textDark mb-2">Nombre del Tutor</label>
+                    <label class="block text-sm font-medium text-on-surface mb-2">Nombre del Tutor</label>
                     <input type="text" id="guardian_name" value="{{ patient.guardian_name or '' }}"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                           class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-textDark mb-2">Contacto del Tutor</label>
+                    <label class="block text-sm font-medium text-on-surface mb-2">Contacto del Tutor</label>
                     <input type="text" id="guardian_contact" value="{{ patient.guardian_contact or '' }}"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
+                           class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 </div>
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-textDark mb-2">Objetivos de Terapia</label>
+                <label class="block text-sm font-medium text-on-surface mb-2">Objetivos de Terapia</label>
                 <textarea id="therapy_goals" rows="3"
-                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">{{ patient.therapy_goals or '' }}</textarea>
+                          class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">{{ patient.therapy_goals or '' }}</textarea>
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-textDark mb-2">Notas Privadas</label>
+                <label class="block text-sm font-medium text-on-surface mb-2">Notas Privadas</label>
                 <textarea id="notes" rows="4"
-                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">{{ patient.notes or '' }}</textarea>
+                          class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">{{ patient.notes or '' }}</textarea>
             </div>
 
             <div class="flex flex-col md:flex-row gap-4 pt-4">
                 <button type="submit" class="flex-1 bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
-                    <i class="fas fa-save mr-2"></i>Guardar Cambios
+                    <span class="material-symbols-outlined fas fa-save mr-2">circle</span>Guardar Cambios
                 </button>
-                <button type="button" onclick="closeEditModal()" class="flex-1 bg-gray-200 text-textDark px-6 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors">
+                <button type="button" onclick="closeEditModal()" class="flex-1 bg-surface-container-high text-on-surface px-6 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors">
                     Cancelar
                 </button>
             </div>

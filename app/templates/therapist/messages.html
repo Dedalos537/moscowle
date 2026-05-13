@@ -13,11 +13,11 @@
 {% block header_content %}
 <div class="flex justify-between items-end">
     <div>
-        <h2 class="text-lg md:text-2xl font-bold text-textDark truncate">Mensajes</h2>
-        <p class="text-sm text-gray-500 hidden md:block">Comunícate de forma segura con tus pacientes</p>
+        <h2 class="text-lg md:text-2xl font-bold text-on-surface truncate">Mensajes</h2>
+        <p class="text-sm text-on-surface-variant hidden md:block">Comunícate de forma segura con tus pacientes</p>
     </div>
     <a href="{{ url_for('therapist.patients') }}" class="bg-primary hover:bg-opacity-90 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
-        <i class="fas fa-plus"></i> <span class="hidden md:inline">Nueva Conversación</span>
+        <span class="material-symbols-outlined fas fa-plus">circle</span> <span class="hidden md:inline">Nueva Conversación</span>
     </a>
 </div>
 {% endblock %}
@@ -25,10 +25,10 @@
 {% block content %}
 <div class="p-4 md:p-8">
     
-    <div class="bg-white rounded-soft shadow-soft overflow-hidden border border-gray-100">
+    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden border border-outline-variant">
         <!-- List Header -->
-        <div class="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <h3 class="text-lg font-bold text-textDark">Bandeja de Entrada</h3>
+        <div class="p-6 border-b border-outline-variant bg-surface-container-low/50 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-on-surface">Bandeja de Entrada</h3>
             <span class="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full font-bold">
                 {{ conversations|length }} Pacientes
             </span>
@@ -38,7 +38,7 @@
         <div class="divide-y divide-gray-100">
             {% for conv in conversations %}
             <a href="{{ url_for('therapist.conversation', user_id=conv.user_id) }}" 
-               class="group block hover:bg-gray-50 transition-all duration-200 relative overflow-hidden">
+               class="group block hover:bg-surface-container-low transition-all duration-200 relative overflow-hidden">
                 
                 <!-- Hover Indicator Strip -->
                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary transform -translate-x-full group-hover:translate-x-0 transition-transform duration-200"></div>
@@ -61,7 +61,7 @@
                         <!-- Info -->
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
-                                <h4 class="font-bold text-textDark text-lg group-hover:text-primary transition-colors">
+                                <h4 class="font-bold text-on-surface text-lg group-hover:text-primary transition-colors">
                                     {{ conv.username or conv.email }}
                                 </h4>
                                 {% if conv.unread_count > 0 %}
@@ -69,9 +69,9 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="flex items-center text-sm text-gray-500 gap-3">
+                            <div class="flex items-center text-sm text-on-surface-variant gap-3">
                                 <span class="flex items-center gap-1">
-                                    <i class="far fa-clock text-xs opacity-70"></i>
+                                    <span class="material-symbols-outlined opacity-70 text-[16px]">schedule</span>
                                     {{ conv.last_message.strftime('%d %b, %H:%M') if conv.last_message else '' }}
                                 </span>
                             </div>
@@ -85,8 +85,8 @@
                                 Nuevo mensaje
                             </span>
                         {% endif %}
-                        <div class="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 group-hover:border-primary group-hover:text-primary transition-colors shadow-sm">
-                            <i class="fas fa-chevron-right"></i>
+                        <div class="w-10 h-10 rounded-full bg-surface-container-lowest-container-lowest border border-outline-variant flex items-center justify-center text-on-surface-variant/70 group-hover:border-primary group-hover:text-primary transition-colors shadow-sm">
+                            <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
                         </div>
                     </div>
                 </div>
@@ -95,11 +95,11 @@
         </div>
         {% else %}
         <div class="py-16 px-6 text-center">
-            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                <i class="fas fa-inbox text-4xl"></i>
+            <div class="w-20 h-20 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                <span class="material-symbols-outlined fas fa-inbox text-4xl">circle</span>
             </div>
-            <h4 class="text-textDark font-bold text-lg">No hay mensajes aún</h4>
-            <p class="text-gray-500 max-w-sm mx-auto mt-2">Cuando tus pacientes te envíen mensajes o consultas, aparecerán aquí listados.</p>
+            <h4 class="text-on-surface font-bold text-lg">No hay mensajes aún</h4>
+            <p class="text-on-surface-variant max-w-sm mx-auto mt-2">Cuando tus pacientes te envíen mensajes o consultas, aparecerán aquí listados.</p>
             <a href="{{ url_for('therapist.patients') }}" class="inline-block mt-6 text-primary font-medium hover:underline">
                 Ir a lista de pacientes
             </a>

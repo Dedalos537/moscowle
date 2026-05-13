@@ -317,10 +317,67 @@ def reports():
                 'net_profit': 0.0
             }
         
+        # Audit Stats (HU-06 / HU-08)
+        try:
+            from app.models import SessionAudit
+            from sqlalchemy import func as sqlfunc
+            
+            total_audits = SessionAudit.query.filter(SessionAudit.audit_score.isnot(None)).count()
+            avg_score = db.session.query(sqlfunc.avg(SessionAudit.audit_score)).filter(
+                SessionAudit.audit_score.isnot(None)
+            ).scalar() or 0
+            
+            # Recent audits with session info
+            recent_audits = db.session.query(
+                SessionAudit, Appointment, User
+            ).join(
+                Appointment, SessionAudit.appointment_id == Appointment.id
+            ).join(
+                User, Appointment.therapist_id == User.id
+            ).filter(
+                SessionAudit.audit_score.isnot(None)
+            ).order_by(SessionAudit.audited_at.desc()).limit(20).all()
+            
+            audit_rows = []
+            for audit, appt, therapist in recent_audits:
+                patient = User.query.get(appt.patient_id)
+                audit_rows.append({
+                    'id': audit.id,
+                    'therapist': therapist.username,
+                    'patient': patient.username if patient else 'N/A',
+                    'date': appt.start_time.strftime('%d/%m/%Y') if appt.start_time else 'N/A',
+                    'score': round(audit.audit_score, 1) if audit.audit_score else 0,
+                    'status': audit.audit_status
+                })
+            
+            # Scores by therapist
+            therapist_scores = db.session.query(
+                User.username,
+                sqlfunc.avg(SessionAudit.audit_score).label('avg_score'),
+                sqlfunc.count(SessionAudit.id).label('count')
+            ).join(
+                Appointment, SessionAudit.appointment_id == Appointment.id
+            ).join(
+                User, Appointment.therapist_id == User.id
+            ).filter(
+                SessionAudit.audit_score.isnot(None)
+            ).group_by(User.id).all()
+            
+            audit_stats = {
+                'total': total_audits,
+                'avg_score': round(avg_score, 1),
+                'recent': audit_rows,
+                'by_therapist': [{'name': t[0], 'avg_score': round(t[1], 1), 'count': t[2]} for t in therapist_scores]
+            }
+        except Exception as e:
+            current_app.logger.warning(f"Failed to load audit stats: {e}")
+            audit_stats = {'total': 0, 'avg_score': 0, 'recent': [], 'by_therapist': []}
+        
         return render_template('admin/reports.html', 
                                therapists=t_rows, 
                                patients=p_rows, 
                                financials=financials,
+                               audit_stats=audit_stats,
                                active_page='admin_reports')
     except Exception as e:
         current_app.logger.error(f"Error in admin/reports: {e}")

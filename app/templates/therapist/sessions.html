@@ -20,7 +20,7 @@
 <style>
   /* Custom Tailwind-like Theme for Tom Select */
   .ts-control {
-    border-radius: 1.5rem; /* rounded-soft */
+    border-radius: 1.5rem; /* rounded-2xl */
     border-color: #e5e7eb;
     padding: 0.75rem 1rem;
     box-shadow: none;
@@ -51,165 +51,165 @@
 </style>
 
 <div>
-  <h2 class="text-lg md:text-2xl font-bold text-textDark truncate leading-tight">
+  <h2 class="text-lg md:text-2xl font-bold text-on-surface truncate leading-tight">
     <span class="md:hidden">Sesiones</span>
     <span class="hidden md:inline">Sesiones de Terapia</span>
   </h2>
-  <p class="text-sm text-gray-500 hidden md:block">
+  <p class="text-sm text-on-surface-variant hidden md:block">
     Gestiona y programa las sesiones con tus pacientes
   </p>
 </div>
 {% endblock %} {% block header_action %}
 <button id="btn-new-session"
-  class="px-3 md:px-5 py-2 bg-primary text-white rounded-soft hover:bg-opacity-90 transition-all shadow-soft font-medium flex items-center gap-2">
-  <i class="fas fa-plus md:mr-2"></i> <span class="hidden md:inline">Nueva Sesión</span>
+  class="px-3 md:px-5 py-2 bg-primary text-white rounded-2xl hover:bg-opacity-90 transition-all shadow-sm shadow-slate-200/50 font-medium flex items-center gap-2">
+  <span class="material-symbols-outlined md:mr-2">add</span> <span class="hidden md:inline">Nueva Sesión</span>
 </button>
 {% endblock %} {% block content %}
 <div id="content-area" class="p-4 md:p-8">
 
   <!-- Stats Cards (Simplified for Mobile) -->
   <div id="stats-cards" class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-6 mb-6">
-    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6 border border-gray-100/50">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 border border-outline-variant/50">
       <div class="flex items-start justify-between mb-2 md:mb-4">
-        <div class="w-8 h-8 md:w-12 md:h-12 bg-primary bg-opacity-10 rounded-soft flex items-center justify-center">
-          <i class="fas fa-calendar-day text-primary text-sm md:text-xl"></i>
+        <div class="w-8 h-8 md:w-12 md:h-12 bg-primary bg-opacity-10 rounded-2xl flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary  md: text-[20px]">today</span>
         </div>
         <span class="text-[10px] md:text-xs bg-green-100 text-green-700 px-2 py-0.5 md:px-3 md:py-1 rounded-full font-medium">Hoy</span>
       </div>
-      <h3 class="text-xl md:text-3xl font-bold text-textDark mb-1">
+      <h3 class="text-xl md:text-3xl font-bold text-on-surface mb-1">
         {{ sessions_today }}
       </h3>
-      <p class="text-gray-500 text-xs md:text-sm">Programadas</p>
+      <p class="text-on-surface-variant text-xs md:text-sm">Programadas</p>
     </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6 border border-gray-100/50">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 border border-outline-variant/50">
       <div class="flex items-start justify-between mb-2 md:mb-4">
-        <div class="w-8 h-8 md:w-12 md:h-12 bg-blue-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-          <i class="fas fa-circle-check text-blue-500 text-sm md:text-xl"></i>
+        <div class="w-8 h-8 md:w-12 md:h-12 bg-blue-500 bg-opacity-10 rounded-2xl flex items-center justify-center">
+          <span class="material-symbols-outlined fas fa-circle-check text-blue-500  md: text-[20px]">circle</span>
         </div>
         <span class="text-[10px] md:text-xs bg-blue-100 text-blue-700 px-2 py-0.5 md:px-3 md:py-1 rounded-full font-medium">Total</span>
       </div>
-      <h3 class="text-xl md:text-3xl font-bold text-textDark mb-1">
+      <h3 class="text-xl md:text-3xl font-bold text-on-surface mb-1">
         {{ completed_sessions }}
       </h3>
-      <p class="text-gray-500 text-xs md:text-sm">Completadas</p>
+      <p class="text-on-surface-variant text-xs md:text-sm">Completadas</p>
     </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6 border border-gray-100/50">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 border border-outline-variant/50">
       <div class="flex items-start justify-between mb-2 md:mb-4">
-        <div class="w-8 h-8 md:w-12 md:h-12 bg-orange-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-          <i class="fas fa-clock text-orange-500 text-sm md:text-xl"></i>
+        <div class="w-8 h-8 md:w-12 md:h-12 bg-orange-500 bg-opacity-10 rounded-2xl flex items-center justify-center">
+          <span class="material-symbols-outlined text-orange-500  md: text-[20px]">schedule</span>
         </div>
         <span class="text-[10px] md:text-xs bg-orange-100 text-orange-700 px-2 py-0.5 md:px-3 md:py-1 rounded-full font-medium">Pendiente</span>
       </div>
-      <h3 class="text-xl md:text-3xl font-bold text-textDark mb-1">
+      <h3 class="text-xl md:text-3xl font-bold text-on-surface mb-1">
         {{ pending_sessions }}
       </h3>
-      <p class="text-gray-500 text-xs md:text-sm">Pendientes</p>
+      <p class="text-on-surface-variant text-xs md:text-sm">Pendientes</p>
     </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6 border border-gray-100/50">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 border border-outline-variant/50">
       <div class="flex items-start justify-between mb-2 md:mb-4">
-        <div class="w-8 h-8 md:w-12 md:h-12 bg-purple-500 bg-opacity-10 rounded-soft flex items-center justify-center">
-          <i class="fas fa-users text-purple-500 text-sm md:text-xl"></i>
+        <div class="w-8 h-8 md:w-12 md:h-12 bg-purple-500 bg-opacity-10 rounded-2xl flex items-center justify-center">
+          <span class="material-symbols-outlined text-purple-500  md: text-[20px]">group</span>
         </div>
         <span class="text-[10px] md:text-xs bg-purple-100 text-purple-700 px-2 py-0.5 md:px-3 md:py-1 rounded-full font-medium">Activos</span>
       </div>
-      <h3 class="text-xl md:text-3xl font-bold text-textDark mb-1">
+      <h3 class="text-xl md:text-3xl font-bold text-on-surface mb-1">
         {{ active_patients }}
       </h3>
-      <p class="text-gray-500 text-xs md:text-sm">Pacientes</p>
+      <p class="text-on-surface-variant text-xs md:text-sm">Pacientes</p>
     </div>
   </div>
 
   <div id="calendar-sessions-section" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Desktop Calendar -->
-    <div class="hidden lg:block lg:col-span-2 bg-surface rounded-soft shadow-soft p-6 border border-gray-100/50">
+    <div class="hidden lg:block lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 border border-outline-variant/50">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold text-textDark">Calendario de Sesiones</h3>
+        <h3 class="text-xl font-bold text-on-surface">Calendario de Sesiones</h3>
         <div class="flex items-center gap-3">
-          <button id="cal-prev" class="p-2 text-gray-600 hover:text-primary transition-colors" type="button">
-            <i class="fas fa-chevron-left"></i>
+          <button id="cal-prev" class="p-2 text-on-surface-variant hover:text-primary transition-colors" type="button">
+            <span class="material-symbols-outlined fas fa-chevron-left">circle</span>
           </button>
-          <span id="calendar-month-label" class="font-semibold text-textDark px-4"></span>
-          <button id="cal-next" class="p-2 text-gray-600 hover:text-primary transition-colors" type="button">
-            <i class="fas fa-chevron-right"></i>
+          <span id="calendar-month-label" class="font-semibold text-on-surface px-4"></span>
+          <button id="cal-next" class="p-2 text-on-surface-variant hover:text-primary transition-colors" type="button">
+            <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
           </button>
         </div>
       </div>
 
       <div class="grid grid-cols-7 gap-2 mb-3">
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Lun</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Mar</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Mié</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Jue</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Vie</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Sáb</div>
-        <div class="text-center text-xs font-semibold text-gray-500 py-2">Dom</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Lun</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Mar</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Mié</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Jue</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Vie</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Sáb</div>
+        <div class="text-center text-xs font-semibold text-on-surface-variant py-2">Dom</div>
       </div>
 
       <div id="calendar-grid" class="grid grid-cols-7 gap-2 mb-3"></div>
 
-      <div class="flex items-center gap-6 mt-6 pt-6 border-t border-gray-100">
+      <div class="flex items-center gap-6 mt-6 pt-6 border-t border-outline-variant">
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 bg-primary rounded-full"></span>
-          <span class="text-xs text-gray-600">Programada</span>
+          <span class="text-xs text-on-surface-variant">Programada</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 bg-blue-500 rounded-full"></span>
-          <span class="text-xs text-gray-600">Completada</span>
+          <span class="text-xs text-on-surface-variant">Completada</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="w-3 h-3 bg-orange-500 rounded-full"></span>
-          <span class="text-xs text-gray-600">Pendiente</span>
+          <span class="text-xs text-on-surface-variant">Pendiente</span>
         </div>
       </div>
     </div>
 
     <!-- Mobile Date Navigation -->
-    <div class="lg:hidden bg-surface rounded-soft shadow-soft p-4 border border-gray-100/50 text-center">
+    <div class="lg:hidden bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 border border-outline-variant/50 text-center">
         <div class="flex items-center justify-between">
-            <button id="mobile-cal-prev" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-primary hover:text-white transition-colors">
-                <i class="fas fa-chevron-left"></i>
+            <button id="mobile-cal-prev" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-white transition-colors">
+                <span class="material-symbols-outlined fas fa-chevron-left">circle</span>
             </button>
             <div class="text-center">
-                <h3 id="mobile-date-label" class="text-lg font-bold text-textDark">Hoy</h3>
-                <p id="mobile-full-date" class="text-xs text-gray-500"></p>
+                <h3 id="mobile-date-label" class="text-lg font-bold text-on-surface">Hoy</h3>
+                <p id="mobile-full-date" class="text-xs text-on-surface-variant"></p>
             </div>
-            <button id="mobile-cal-next" class="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:bg-primary hover:text-white transition-colors">
-                <i class="fas fa-chevron-right"></i>
+            <button id="mobile-cal-next" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-white transition-colors">
+                <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
             </button>
         </div>
     </div>
 
-    <div class="bg-surface rounded-soft shadow-soft p-4 md:p-6">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6">
       <div id="day-sessions-container">
-        <h3 id="day-sessions-title" class="text-lg md:text-xl font-bold text-textDark mb-2 md:mb-4">
+        <h3 id="day-sessions-title" class="text-lg md:text-xl font-bold text-on-surface mb-2 md:mb-4">
           Sesiones de Hoy
         </h3>
-        <p id="day-sessions-subtitle" class="text-sm text-gray-500 mb-4 md:mb-6">
+        <p id="day-sessions-subtitle" class="text-sm text-on-surface-variant mb-4 md:mb-6">
           Selecciona una fecha
         </p>
 
         <div id="day-sessions" class="space-y-3 md:space-y-4">
           <!-- Dynamically loaded -->
-          <p class="text-sm text-gray-500">Cargando...</p>
+          <p class="text-sm text-on-surface-variant">Cargando...</p>
         </div>
       </div>
       
       <button id="btn-view-all"
-        class="w-full py-3 text-primary text-sm font-medium hover:bg-lightGreen rounded-soft transition-colors mt-4 border border-primary/20">
+        class="w-full py-3 text-primary text-sm font-medium hover:bg-primary-fixed rounded-2xl transition-colors mt-4 border border-primary/20">
         Ver historial completo
       </button>
     </div>
   </div>
 
-  <div id="filters-section" class="bg-surface rounded-soft shadow-soft p-4 md:p-6 mb-6 hidden">
+  <div id="filters-section" class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 mb-6 hidden">
     <!-- Filter content hidden by default to reduce clutter -->
     <div class="flex items-center gap-4 flex-wrap">
       <div class="flex-1 min-w-[280px]">
         <div class="relative">
-          <i class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" data-fa-i2svg=""><svg
+          <i class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/70" data-fa-i2svg=""><svg
               class="svg-inline--fa fa-magnifying-glass" aria-hidden="true" focusable="false" data-prefix="fas"
               data-icon="magnifying-glass" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
               data-fa-i2svg="">
@@ -218,18 +218,18 @@
               </path>
             </svg></i>
           <input type="text" id="filter-search" placeholder="Buscar paciente o sesión..."
-            class="w-full pl-12 pr-4 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20" />
+            class="w-full pl-12 pr-4 py-3 rounded-2xl border border-outline-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20" />
         </div>
       </div>
       <select id="filter-status"
-        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
+        class="px-5 py-3 rounded-2xl border border-outline-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-on-surface-variant">
         <option>Todas las sesiones</option>
         <option>Programadas</option>
         <option>Completadas</option>
         <option>Canceladas</option>
       </select>
        <select id="filter-time"
-        class="px-5 py-3 rounded-soft border border-gray-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-gray-600">
+        class="px-5 py-3 rounded-2xl border border-outline-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-20 text-on-surface-variant">
         <option>Este mes</option>
         <option>Esta semana</option>
         <option>Hoy</option>
@@ -238,28 +238,28 @@
     </div>
   </div>
 
-  <div id="sessions-list-section" class="bg-surface rounded-soft shadow-soft hidden">
-      <div class="p-6 border-b border-gray-100">
-         <h3 class="text-xl font-bold text-textDark">Historial de Sesiones</h3>
+  <div id="sessions-list-section" class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 hidden">
+      <div class="p-6 border-b border-outline-variant">
+         <h3 class="text-xl font-bold text-on-surface">Historial de Sesiones</h3>
       </div>
       <div class="p-4 md:hidden space-y-4" id="sessions-mobile-list"></div>
       <div class="hidden md:block overflow-x-auto">
          <table class="w-full">
-            <thead class="bg-gray-50">
+            <thead class="bg-surface-container-low">
                 <tr>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paciente</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fecha</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tipo</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duración</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Paciente</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Tipo</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Duración</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Acciones</th>
                 </tr>
             </thead>
             <tbody id="sessions-tbody" class="divide-y divide-gray-100"></tbody>
          </table>
       </div>
-       <div class="p-6 border-t border-gray-100 flex items-center justify-between">
-            <p id="sessions-count" class="text-sm text-gray-600">Mostrando 0 de 0 sesiones</p>
+       <div class="p-6 border-t border-outline-variant flex items-center justify-between">
+            <p id="sessions-count" class="text-sm text-on-surface-variant">Mostrando 0 de 0 sesiones</p>
       </div>
   </div>
     
@@ -268,10 +268,10 @@
     
     <!-- Details Modal -->
     <div id="details-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-soft shadow-soft w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-4 border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest">
           <h3 class="text-lg font-semibold">Detalles de la sesión</h3>
-          <button class="text-gray-500 hover:text-textDark p-2" data-close-modal>✕</button>
+          <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
         </div>
         <div class="p-4 space-y-2" id="details-content"></div>
       </div>
@@ -279,30 +279,30 @@
 
     <!-- Edit Modal -->
     <div id="edit-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-soft shadow-soft w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-          <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="p-4 border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest">
               <h3 class="text-lg font-semibold">Editar sesión</h3>
-              <button class="text-gray-500 hover:text-textDark p-2" data-close-modal>✕</button>
+              <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
           </div>
           <form id="edit-form" class="p-4 space-y-3">
               <input type="hidden" name="id" />
               <div>
-                  <label class="text-sm text-gray-600">Título</label>
-                  <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+                  <label class="text-sm text-on-surface-variant">Título</label>
+                  <input name="title" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
               </div>
               <div class="grid grid-cols-2 gap-3">
                   <div>
-                      <label class="text-sm text-gray-600">Inicio</label>
-                      <input type="datetime-local" name="start_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+                      <label class="text-sm text-on-surface-variant">Inicio</label>
+                      <input type="datetime-local" name="start_time" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
                   </div>
                   <div>
-                      <label class="text-sm text-gray-600">Fin</label>
-                      <input type="datetime-local" name="end_time" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+                      <label class="text-sm text-on-surface-variant">Fin</label>
+                      <input type="datetime-local" name="end_time" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
                   </div>
               </div>
               <div>
-                  <label class="text-sm text-gray-600">Estado</label>
-                  <select name="status" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
+                  <label class="text-sm text-on-surface-variant">Estado</label>
+                  <select name="status" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2">
                        <option value="scheduled">Programada</option>
                        <option value="in_progress">En curso</option>
                        <option value="completed">Completada</option>
@@ -310,11 +310,11 @@
                   </select>
               </div>
               <div>
-                 <label class="text-sm text-gray-600">Notas</label>
-                 <textarea name="notes" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" rows="3"></textarea>
+                 <label class="text-sm text-on-surface-variant">Notas</label>
+                 <textarea name="notes" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" rows="3"></textarea>
               </div>
-              <div class="pt-2 border-t border-gray-100 text-right mt-4">
-                  <button type="submit" class="px-4 py-2 bg-primary text-white rounded-soft w-full md:w-auto">Guardar</button>
+              <div class="pt-2 border-t border-outline-variant text-right mt-4">
+                  <button type="submit" class="px-4 py-2 bg-primary text-white rounded-2xl w-full md:w-auto">Guardar</button>
               </div>
           </form>
       </div>
@@ -322,49 +322,49 @@
 
     <!-- Create Modal -->
     <div id="create-modal" class="fixed inset-0 hidden z-50 items-center justify-center p-4">
-        <div class="bg-white rounded-soft shadow-soft w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
-          <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
+          <div class="p-4 border-b border-outline-variant flex items-center justify-between">
             <h3 class="text-lg font-semibold">Nueva sesión</h3>
-            <button class="text-gray-500 hover:text-textDark p-2" data-close-modal>✕</button>
+            <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
           </div>
           <div class="overflow-y-auto p-4 flex-1">
               <form id="create-form" class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-sm text-gray-600">Pacientes</label>
-                        <select name="patient_id" id="patient-select" multiple class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
+                        <label class="text-sm text-on-surface-variant">Pacientes</label>
+                        <select name="patient_id" id="patient-select" multiple class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2">
                             <option value="">Cargando...</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-sm text-gray-600">Título</label>
-                        <input name="title" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+                        <label class="text-sm text-on-surface-variant">Título</label>
+                        <input name="title" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
                     </div>
                 </div>
                 
                  <div>
-                    <label class="text-sm text-gray-600">Fechas</label>
-                    <input type="text" id="multi-dates" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" placeholder="Seleccionar fechas..." />
+                    <label class="text-sm text-on-surface-variant">Fechas</label>
+                    <input type="text" id="multi-dates" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" placeholder="Seleccionar fechas..." />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="text-sm text-gray-600">Hora Inicio</label>
-                    <input type="time" name="time_start" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
+                    <label class="text-sm text-on-surface-variant">Hora Inicio</label>
+                    <input type="time" name="time_start" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" required />
                   </div>
                   <div>
-                    <label class="text-sm text-gray-600">Hora Fin</label>
-                    <input type="time" name="time_end" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" required />
+                    <label class="text-sm text-on-surface-variant">Hora Fin</label>
+                    <input type="time" name="time_end" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" required />
                   </div>
                 </div>
                 <div>
-                     <label class="text-sm text-gray-600">Juegos (Opcional)</label>
-                     <select name="games" id="games-select" multiple class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"></select>
+                     <label class="text-sm text-on-surface-variant">Juegos (Opcional)</label>
+                     <select name="games" id="games-select" multiple class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2"></select>
                 </div>
                  <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="text-sm text-gray-600">Estado</label>
-                        <select name="status" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2">
+                        <label class="text-sm text-on-surface-variant">Estado</label>
+                        <select name="status" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2">
                             <option value="scheduled">Programada</option>
                             <option value="in_progress">En curso</option>
                             <option value="completed">Completada</option>
@@ -372,16 +372,16 @@
                         </select>
                     </div>
                     <div>
-                         <label class="text-sm text-gray-600">Lugar</label>
-                         <input name="location" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2" />
+                         <label class="text-sm text-on-surface-variant">Lugar</label>
+                         <input name="location" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
                     </div>
                  </div>
                  <div>
-                    <label class="text-sm text-gray-600">Notas</label>
-                    <textarea name="notes" class="w-full mt-1 border border-gray-200 rounded-soft px-3 py-2"></textarea>
+                    <label class="text-sm text-on-surface-variant">Notas</label>
+                    <textarea name="notes" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2"></textarea>
                  </div>
-                 <div class="pt-4 border-t border-gray-100 text-right">
-                    <button type="submit" class="px-6 py-2 bg-primary text-white rounded-soft shadow-lg hover:shadow-xl transition-all w-full md:w-auto">Crear Sesión</button>
+                 <div class="pt-4 border-t border-outline-variant text-right">
+                    <button type="submit" class="px-6 py-2 bg-primary text-white rounded-2xl shadow-lg hover:shadow-xl transition-all w-full md:w-auto">Crear Sesión</button>
                  </div>
               </form>
           </div>
@@ -390,13 +390,13 @@
 
     <!-- Games Modal -->
     <div id="session-games-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-soft shadow-soft w-full max-w-2xl mx-4">
-        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-2xl mx-4">
+        <div class="p-4 border-b border-outline-variant flex items-center justify-between">
           <h3 class="text-lg font-semibold">Juegos asignados</h3>
-          <button class="text-gray-500 hover:text-textDark p-2" data-close-modal>✕</button>
+          <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
         </div>
         <div class="p-4">
-          <p id="session-games-status" class="text-sm text-gray-500 mb-3"></p>
+          <p id="session-games-status" class="text-sm text-on-surface-variant mb-3"></p>
           <div id="session-games-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
       </div>
@@ -404,7 +404,7 @@
     
     <!-- Feedback Toast -->
     <div id="toast" class="fixed bottom-4 right-4 hidden z-50 transition-opacity duration-300">
-        <div class="bg-gray-800 text-white px-6 py-3 rounded-soft shadow-lg font-medium" id="toast-message"></div>
+        <div class="bg-gray-800 text-white px-6 py-3 rounded-2xl shadow-lg font-medium" id="toast-message"></div>
     </div>
 
     <!-- Scripts -->
@@ -484,9 +484,9 @@
           const dayOffset = i - startDay + 1; const cellDate = new Date(state.viewDate.getFullYear(), state.viewDate.getMonth(), dayOffset); const iso=isoDate(cellDate);
           const isCurrentMonth = cellDate.getMonth()===state.viewDate.getMonth(); const isSelected = iso===isoDate(state.selectedDate); const isToday = iso===isoDate(new Date());
           const el = document.createElement('div');
-          el.className = `aspect-square rounded-soft border p-1 text-center cursor-pointer relative transition-all ${isCurrentMonth?'border-gray-200 text-textDark':'border-transparent text-gray-300'} ${isSelected?'!bg-primary !text-white !border-primary shadow-md':'hover:bg-gray-50'} ${isToday && !isSelected? 'border-primary border-2 font-bold text-primary':''}`;
+          el.className = `aspect-square rounded-2xl border p-1 text-center cursor-pointer relative transition-all ${isCurrentMonth?'border-outline-variant text-on-surface':'border-transparent text-gray-300'} ${isSelected?'!bg-primary !text-white !border-primary shadow-md':'hover:bg-surface-container-low'} ${isToday && !isSelected? 'border-primary border-2 font-bold text-primary':''}`;
           const span = document.createElement('span'); span.className='text-xs md:text-sm z-10 relative font-medium'; span.textContent = cellDate.getDate(); el.appendChild(span);
-          if(toDateMap[iso]){ const dots = document.createElement('div'); dots.className='absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5'; toDateMap[iso].slice(0,3).forEach(ev=>{ const d=document.createElement('div'); d.className=`w-1.5 h-1.5 rounded-full ${ev.status==='scheduled'?'bg-primary': ev.status==='completed'?'bg-blue-400':'bg-orange-400'}`; if(isSelected) d.className += ' bg-white'; dots.appendChild(d); }); el.appendChild(dots);} 
+          if(toDateMap[iso]){ const dots = document.createElement('div'); dots.className='absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5'; toDateMap[iso].slice(0,3).forEach(ev=>{ const d=document.createElement('div'); d.className=`w-1.5 h-1.5 rounded-full ${ev.status==='scheduled'?'bg-primary': ev.status==='completed'?'bg-blue-400':'bg-orange-400'}`; if(isSelected) d.className += ' bg-surface-container-lowest'; dots.appendChild(d); }); el.appendChild(dots);} 
           el.addEventListener('click', ()=>{ state.selectedDate = cellDate; renderMonth(); loadDaySessions(cellDate); });
           grid.appendChild(el);
         }
@@ -503,23 +503,23 @@
       async function loadDaySessions(date){
         const iso = isoDate(date); const mobileLabel = $(sel.mobileDateLabel); const mobileFull = $(sel.mobileFullDate);
         if(mobileLabel){ const t=new Date(); mobileLabel.textContent = (iso===isoDate(t))? 'Hoy' : dayOfWeek(date); if(mobileFull) mobileFull.textContent = date.toLocaleDateString('es-ES',{day:'numeric', month:'long', year:'numeric'}); }
-        const container = $(sel.dayContainer); if(!container) return; container.innerHTML = '<div class="py-4 text-center"><i class="fas fa-spinner fa-spin text-primary"></i></div>';
+        const container = $(sel.dayContainer); if(!container) return; container.innerHTML = '<div class="py-4 text-center"><span class="material-symbols-outlined fas fa-spinner fa-spin text-primary">circle</span></div>';
         try{
           const offset = new Date().getTimezoneOffset();
           const data = await apiFetch(`${SESSIONS_DAY_API}?date=${iso}&timezone_offset=${offset}`, { method: 'GET' });
           const sessions = data.sessions || [];
           $(sel.dayTitle).textContent = `Sesiones — ${iso}`;
-          if(sessions.length===0){ container.innerHTML = '<p class="text-sm text-center text-gray-500 py-4">No hay sesiones para este día.</p>'; }
+          if(sessions.length===0){ container.innerHTML = '<p class="text-sm text-center text-on-surface-variant py-4">No hay sesiones para este día.</p>'; }
           else{
             container.innerHTML = '';
             sessions.forEach(s=>{
               const time = new Date(s.start||s.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-              const div = document.createElement('div'); div.className='bg-white border border-gray-100 rounded-soft p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
-              const statusColor = s.status==='scheduled'?'text-blue-600 bg-blue-50': s.status==='completed'?'text-green-600 bg-green-50':'text-gray-600 bg-gray-50';
+              const div = document.createElement('div'); div.className='bg-surface-container-lowest-container-lowest border border-outline-variant rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+              const statusColor = s.status==='scheduled'?'text-blue-600 bg-blue-50': s.status==='completed'?'text-green-600 bg-green-50':'text-on-surface-variant bg-surface-container-low';
               div.innerHTML = `
-                <div class="flex justify-between items-start mb-2"><span class="font-bold text-gray-800">${time}</span><span class="text-xs px-2 py-1 rounded-full ${statusColor}">${s.status}</span></div>
-                <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 uppercase">${s.patient?.name?.charAt(0)||'?'}</div><div class="truncate"><p class="text-sm font-semibold truncate leading-tight">${s.patient?.name||'Paciente'}</p><p class="text-xs text-gray-500 truncate">${s.title||'Terapia'}</p></div></div>
-                <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors"><i class="fas fa-camera mr-1"></i> Revisar / Imágenes</a>
+                <div class="flex justify-between items-start mb-2"><span class="font-bold text-on-surface">${time}</span><span class="text-xs px-2 py-1 rounded-full ${statusColor}">${s.status}</span></div>
+                <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold text-on-surface-variant uppercase">${s.patient?.name?.charAt(0)||'?'}</div><div class="truncate"><p class="text-sm font-semibold truncate leading-tight">${s.patient?.name||'Paciente'}</p><p class="text-xs text-on-surface-variant truncate">${s.title||'Terapia'}</p></div></div>
+                <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors"><span class="material-symbols-outlined fas fa-camera mr-1">circle</span> Revisar / Imágenes</a>
               `;
               div.addEventListener('click', (e)=>{ if(e.target.closest('a')) return; renderDetails(s); openModal($(sel.detailsModal)); });
               container.appendChild(div);
@@ -555,7 +555,7 @@
         filterSessions();
       }
 
-      function renderList(list){ const tbody=$(sel.sessionsTbody), mlist=$(sel.sessionsMobileList), sc=$(sel.sessionsCount); if(!tbody||!mlist) return; tbody.innerHTML=''; mlist.innerHTML=''; if(sc) sc.textContent = `Mostrando ${list.length} sesiones`; (list||[]).sort((a,b)=> new Date(b.start)-new Date(a.start)).forEach(s=>{ const d=new Date(s.start); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); const tr=document.createElement('tr'); tr.className='hover:bg-gray-50 transition-colors'; tr.innerHTML = `<td class="px-6 py-4"><div class="text-sm font-medium text-gray-900">${s.patient?.name||'-'}</div></td><td class="px-6 py-4 text-sm text-gray-500">${dateStr} ${timeStr}</td><td class="px-6 py-4 text-sm">${s.title||'-'}</td><td class="px-6 py-4 text-sm">${s.duration||60} min</td><td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 font-medium">${s.status}</span></td><td class="px-6 py-4 text-sm font-medium flex gap-2"><button data-action="edit" data-id="${s.id}" class="text-blue-600 hover:text-blue-900">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 hover:text-red-900">Borrar</button></td>`; tbody.appendChild(tr); const card = document.createElement('div'); card.className='bg-white p-4 mb-3 rounded-lg shadow-sm border border-gray-200'; card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="font-bold text-textDark">${s.patient?.name}</span><span class="text-xs bg-gray-100 px-2 py-1 rounded font-medium">${s.status}</span></div><div class="text-sm text-gray-500 mb-2">${dateStr} - ${timeStr}</div><div class="flex justify-end gap-3 pt-2 border-t border-gray-50"><button data-action="edit" data-id="${s.id}" class="text-blue-600 text-sm font-medium">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 text-sm font-medium">Borrar</button></div>`; mlist.appendChild(card); });
+      function renderList(list){ const tbody=$(sel.sessionsTbody), mlist=$(sel.sessionsMobileList), sc=$(sel.sessionsCount); if(!tbody||!mlist) return; tbody.innerHTML=''; mlist.innerHTML=''; if(sc) sc.textContent = `Mostrando ${list.length} sesiones`; (list||[]).sort((a,b)=> new Date(b.start)-new Date(a.start)).forEach(s=>{ const d=new Date(s.start); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); const tr=document.createElement('tr'); tr.className='hover:bg-surface-container-lowest-container-low transition-colors'; tr.innerHTML = `<td class="px-6 py-4"><div class="text-sm font-medium text-on-surface">${s.patient?.name||'-'}</div></td><td class="px-6 py-4 text-sm text-on-surface-variant">${dateStr} ${timeStr}</td><td class="px-6 py-4 text-sm">${s.title||'-'}</td><td class="px-6 py-4 text-sm">${s.duration||60} min</td><td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-surface-container font-medium">${s.status}</span></td><td class="px-6 py-4 text-sm font-medium flex gap-2"><button data-action="edit" data-id="${s.id}" class="text-blue-600 hover:text-blue-900">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 hover:text-red-900">Borrar</button></td>`; tbody.appendChild(tr); const card = document.createElement('div'); card.className='bg-surface-container-lowest p-4 mb-3 rounded-lg shadow-sm border border-outline-variant'; card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="font-bold text-on-surface">${s.patient?.name}</span><span class="text-xs bg-surface-container px-2 py-1 rounded font-medium">${s.status}</span></div><div class="text-sm text-on-surface-variant mb-2">${dateStr} - ${timeStr}</div><div class="flex justify-end gap-3 pt-2 border-t border-gray-50"><button data-action="edit" data-id="${s.id}" class="text-blue-600 text-sm font-medium">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 text-sm font-medium">Borrar</button></div>`; mlist.appendChild(card); });
       }
 
       async function handleListAction(action,id){ if(action==='edit') return editSession(id); if(action==='delete') return deleteSession(id); }
@@ -595,7 +595,7 @@
         finally{ if(btn){ btn.disabled=false; btn.innerHTML=prev; } }
       }
 
-      function renderDetails(s){ const c = document.getElementById('details-content'); if(!c) return; const date = new Date(s.start||s.start_time); c.innerHTML = `<div class="space-y-3"><div class="flex justify-between border-b pb-2"><span class="text-gray-500">Paciente</span><span class="font-medium">${s.patient?.name||'Unknown'}</span></div><div class="flex justify-between border-b pb-2"><span class="text-gray-500">Fecha</span><span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span></div><div><span class="block text-gray-500 text-sm mb-1">Notas</span><p class="bg-gray-50 p-3 rounded text-sm">${s.notes||'Sin notas'}</p></div><div class="pt-2"><a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-soft font-medium block text-center hover:bg-opacity-90 transition shadow-sm"><i class="fas fa-camera mr-2"></i> Ir a Revisión / Juegos</a></div></div>`; }
+      function renderDetails(s){ const c = document.getElementById('details-content'); if(!c) return; const date = new Date(s.start||s.start_time); c.innerHTML = `<div class="space-y-3"><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Paciente</span><span class="font-medium">${s.patient?.name||'Unknown'}</span></div><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Fecha</span><span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span></div><div><span class="block text-on-surface-variant text-sm mb-1">Notas</span><p class="bg-surface-container-lowest-container-low p-3 rounded text-sm">${s.notes||'Sin notas'}</p></div><div class="pt-2"><a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-2xl font-medium block text-center hover:bg-opacity-90 transition shadow-sm"><span class="material-symbols-outlined fas fa-camera mr-2">circle</span> Ir a Revisión / Juegos</a></div></div>`; }
 
       function attach(){ 
         document.addEventListener('click', onClick); 

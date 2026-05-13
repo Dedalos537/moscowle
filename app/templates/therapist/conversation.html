@@ -219,12 +219,12 @@
 
 {% block header_content %}
 <div class="flex items-center space-x-3">
-    <a href="{{ url_for('therapist.messages') }}" class="text-gray-400 hover:text-primary">
-        <i class="fas fa-arrow-left"></i>
+    <a href="{{ url_for('therapist.messages') }}" class="text-on-surface-variant/70 hover:text-primary">
+        <span class="material-symbols-outlined ">arrow_back</span>
     </a>
     <div>
-        <h2 class="text-2xl font-bold text-textDark truncate max-w-[200px] md:max-w-none">{{ other_user.username or other_user.email }}</h2>
-        <p class="text-sm text-gray-500 hidden md:block">Conversación</p>
+        <h2 class="text-2xl font-bold text-on-surface truncate max-w-[200px] md:max-w-none">{{ other_user.username or other_user.email }}</h2>
+        <p class="text-sm text-on-surface-variant hidden md:block">Conversación</p>
     </div>
 </div>
 {% endblock %}
@@ -232,7 +232,7 @@
 {% block content %}
 <div class="p-4 md:p-8 h-full flex flex-col">
     
-    <div class="bg-white rounded-soft shadow-soft overflow-hidden flex flex-col flex-1 h-[calc(100vh-180px)] md:h-[calc(100vh-250px)] relative">
+    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden flex flex-col flex-1 h-[calc(100vh-180px)] md:h-[calc(100vh-250px)] relative">
         <!-- Background Pattern (Optional) -->
         <div class="absolute inset-0 opacity-10 pointer-events-none" 
             style="background-image: radial-gradient(#6b7c85 1px, transparent 1px); background-size: 20px 20px; z-index: 0;"></div>
@@ -279,7 +279,7 @@
                                 </div>
                             {% else %}
                                 <a href="{{ url_for('uploads.protected_file', filename='messages/' + message.attachment_path) }}" target="_blank" class="file-attachment">
-                                    <i class="fas fa-file-alt file-icon"></i>
+                                    <span class="material-symbols-outlined file-icon">description</span>
                                     <span class="text-sm truncate max-w-xs font-medium">{{ message.attachment_path }}</span>
                                 </a>
                             {% endif %}
@@ -291,8 +291,8 @@
                 {% endfor %}
             {% else %}
                 <div class="text-center text-gray-300 py-12">
-                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-comment-dots text-2xl text-gray-300"></i>
+                    <div class="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-3">
+                        <span class="material-symbols-outlined fas fa-comment-dots  text-gray-300 text-[36px]">circle</span>
                     </div>
                     <p class="text-sm">Inicia la conversación...</p>
                 </div>
@@ -308,26 +308,26 @@
         </div>
 
         <!-- Input Area -->
-        <div class="chat-input-area border-t border-gray-200 z-20">
+        <div class="chat-input-area border-t border-outline-variant z-20">
             <input type="hidden" id="csrf_token" value="{{ csrf_token() }}">
             
             <!-- Attachment Button -->
             <button type="button" class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
-                <i class="fas fa-paperclip text-xl"></i>
+                <span class="material-symbols-outlined fas fa-paperclip text-[32px]">circle</span>
             </button>
             <input type="file" id="fileInput" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="handleFileSelect(this)">
 
             <!-- Recording UI (Hidden by default) -->
-            <div id="recording-ui" class="hidden flex items-center flex-1 gap-3 bg-white px-2 rounded-full border border-gray-200 h-[46px]">
+            <div id="recording-ui" class="hidden flex items-center flex-1 gap-3 bg-surface-container-lowest px-2 rounded-full border border-outline-variant h-[46px]">
                 <div class="text-red-500 animate-pulse text-sm font-bold flex items-center gap-2 pl-2">
-                    <i class="fas fa-circle text-xs"></i> <span id="recording-timer">00:00</span>
+                    <span class="material-symbols-outlined fas fa-circle text-[16px]">circle</span> <span id="recording-timer">00:00</span>
                 </div>
-                <div class="flex-1 text-xs text-gray-400 text-center">Grabando audio...</div>
+                <div class="flex-1 text-xs text-on-surface-variant/70 text-center">Grabando audio...</div>
                 <button type="button" class="text-red-400 p-2 hover:text-red-600 transition" onclick="cancelRecording()" title="Cancelar">
-                    <i class="fas fa-trash-alt"></i>
+                    <span class="material-symbols-outlined fas fa-trash-alt">circle</span>
                 </button>
                 <button type="button" class="text-green-500 p-2 hover:text-green-600 transition" onclick="stopRecording()" title="Finalizar">
-                    <i class="fas fa-check-circle text-xl"></i>
+                    <span class="material-symbols-outlined  text-[32px]">check_circle</span>
                 </button>
             </div>
 
@@ -339,10 +339,10 @@
             <!-- Record/Send Button -->
             <div id="action-buttons">
                 <button type="button" id="recordBtn" class="attach-btn" onclick="toggleRecording()" title="Grabar audio">
-                    <i class="fas fa-microphone text-xl"></i>
+                    <span class="material-symbols-outlined  text-[32px]">mic</span>
                 </button>
                 <button type="button" id="sendBtn" class="send-btn hidden" onclick="sendMessage()" title="Enviar">
-                    <i class="fas fa-paper-plane text-xl"></i>
+                    <span class="material-symbols-outlined  text-[32px]">send</span>
                 </button>
             </div>
         </div>
@@ -406,13 +406,13 @@
         reader.onload = function(e) {
             let html = '';
             if (file.type.startsWith('image/')) {
-                html = `<img src="${e.target.result}" class="rounded-lg shadow-sm border border-gray-200" style="max-height: 100px;">`;
+                html = `<img src="${e.target.result}" class="rounded-lg shadow-sm border border-outline-variant" style="max-height: 100px;">`;
             } else if (file.type.startsWith('video/')) {
-                html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center justify-center h-20 w-20"><i class="fas fa-video text-2xl text-gray-500"></i></div>`;
+                html = `<div class="bg-surface-container p-2 rounded-lg flex items-center justify-center h-20 w-20"><span class="material-symbols-outlined text-on-surface-variant text-[36px]">videocam</span></div>`;
             } else if (file.type.startsWith('audio/')) {
-                 html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center justify-center h-20 w-20"><i class="fas fa-microphone text-2xl text-gray-500"></i></div>`;
+                 html = `<div class="bg-surface-container p-2 rounded-lg flex items-center justify-center h-20 w-20"><span class="material-symbols-outlined text-on-surface-variant text-[36px]">mic</span></div>`;
             } else {
-                html = `<div class="bg-gray-100 p-2 rounded-lg flex items-center gap-2 px-3 py-2"><i class="fas fa-file text-gray-500"></i> <span class="text-xs truncate max-w-[100px]">${file.name}</span></div>`;
+                html = `<div class="bg-surface-container p-2 rounded-lg flex items-center gap-2 px-3 py-2"><span class="material-symbols-outlined fas fa-file text-on-surface-variant">circle</span> <span class="text-xs truncate max-w-[100px]">${file.name}</span></div>`;
             }
             
             previewContent.innerHTML = `
@@ -557,7 +557,7 @@
                     } else if (attType === 'audio') {
                         attachmentHtml = `<div class="attachment-preview w-full"><audio controls class="w-full"><source src="${safePath}"></audio></div>`;
                     } else {
-                        attachmentHtml = `<a href="${safePath}" target="_blank" class="file-attachment"><i class="fas fa-file-alt file-icon"></i> <span>Archivo adjunto</span></a>`;
+                        attachmentHtml = `<a href="${safePath}" target="_blank" class="file-attachment"><span class="material-symbols-outlined file-icon">description</span> <span>Archivo adjunto</span></a>`;
                     }
                 }
 

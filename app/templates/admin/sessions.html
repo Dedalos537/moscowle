@@ -383,6 +383,23 @@
                         <option value="cancelled">Cancelada</option>
                     </select>
                 </div>
+
+                <!-- Programacion de Sesion (.docx) -->
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-file-word text-blue-500 mr-1"></i> Programación de Sesión (.docx)
+                    </label>
+                    <div id="programUploadArea" class="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-primary hover:bg-green-50 transition-all cursor-pointer"
+                         onclick="document.getElementById('programFileInput').click()">
+                        <input type="file" id="programFileInput" class="hidden" accept=".docx" onchange="uploadProgram(this)">
+                        <div id="programUploadContent">
+                            <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-500">Haz clic para subir el documento Word</p>
+                            <p class="text-xs text-gray-400 mt-1">Solo archivos .docx</p>
+                        </div>
+                    </div>
+                    <div id="programStatus" class="hidden mt-2 p-2 rounded-lg text-sm flex items-center gap-2"></div>
+                </div>
             </form>
         </div>
         
@@ -734,9 +751,8 @@
         document.addEventListener('keydown', handleEscape);
         
         // Parse dates for input
-        // Note: Fullcalendar dates are Date objects
         const start = event.start;
-        const end = event.end || event.start; // Fallback
+        const end = event.end || event.start;
         
         const dateStr = start.toISOString().split('T')[0];
         const timeStartStr = start.toTimeString().substring(0,5);
@@ -750,6 +766,30 @@
         // Populate info text
         document.getElementById('edit-info').innerText = 
             `Terapeuta: ${event.extendedProps.therapist} | Paciente: ${event.extendedProps.patient}`;
+
+        // ── Reset program upload section for THIS session ──
+        const uploadArea = document.getElementById('programUploadArea');
+        const statusDiv = document.getElementById('programStatus');
+        const contentDiv = document.getElementById('programUploadContent');
+        uploadArea.className = 'border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-primary hover:bg-green-50 transition-all cursor-pointer';
+        statusDiv.classList.add('hidden');
+        statusDiv.innerHTML = '';
+        contentDiv.innerHTML = '<i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i><p class="text-sm text-gray-500">Haz clic para subir el documento Word</p><p class="text-xs text-gray-400 mt-1">Solo archivos .docx</p>';
+
+        // Load existing audit state for this specific session
+        fetch(`/api/sessions/${event.id}/audit`, {
+            headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.exists && data.audit.has_program) {
+                uploadArea.classList.add('border-green-300', 'bg-green-50');
+                statusDiv.classList.remove('hidden');
+                statusDiv.className = 'mt-2 p-2 rounded-lg text-sm flex items-start gap-2 bg-green-50 text-green-700 border border-green-200';
+                statusDiv.innerHTML = `<i class="fas fa-check-circle mt-0.5"></i><div class="flex-1"><strong>Programación ya subida ✓</strong><p class="text-xs mt-1 opacity-75">${data.audit.planned_text_preview || ''}</p></div><button onclick="deleteProgram()" class="ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all" title="Eliminar programación"><i class="fas fa-trash-alt text-sm"></i></button>`;
+            }
+        })
+        .catch(() => {});
             
         editModal.classList.remove('hidden');
     }
@@ -908,6 +948,88 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Crear Sesiones';
+        }
+    }
+
+    // ═══ Upload Programación (.docx) — HU-06 ═══
+    async function uploadProgram(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const sessionId = document.getElementById('edit-id').value;
+        if (!sessionId) {
+            showToast('Error: No hay sesión seleccionada', 'error');
+            return;
+        }
+
+        const statusDiv = document.getElementById('programStatus');
+        const uploadArea = document.getElementById('programUploadArea');
+
+        statusDiv.className = 'mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-blue-50 text-blue-700';
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando documento Word...';
+        statusDiv.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('program_file', file);
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            const res = await fetch(`/api/sessions/${sessionId}/program`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrf },
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                statusDiv.className = 'mt-2 p-2 rounded-lg text-sm flex items-start gap-2 bg-green-50 text-green-700 border border-green-200';
+                statusDiv.innerHTML = `<i class="fas fa-check-circle mt-0.5"></i>
+                    <div>
+                        <strong>Programación subida ✓</strong>
+                        <p class="text-xs mt-1 opacity-75">${data.char_count} caracteres extraídos</p>
+                        <p class="text-xs mt-1 max-h-20 overflow-y-auto">${data.planned_text_preview || ''}</p>
+                    </div>`;
+                uploadArea.classList.add('border-green-300', 'bg-green-50');
+                showToast('Programación de sesión subida correctamente', 'success');
+            } else {
+                statusDiv.className = 'mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-red-50 text-red-700';
+                statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.error || 'Error desconocido'}`;
+            }
+        } catch (err) {
+            console.error(err);
+            statusDiv.className = 'mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-red-50 text-red-700';
+            statusDiv.innerHTML = '<i class="fas fa-times"></i> Error de conexión';
+        }
+        input.value = '';
+    }
+
+    async function deleteProgram() {
+        const sessionId = document.getElementById('edit-id').value;
+        if (!sessionId) return;
+        if (!confirm('¿Eliminar la programación de esta sesión?')) return;
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            const res = await fetch(`/api/sessions/${sessionId}/program`, {
+                method: 'DELETE',
+                headers: { 'X-CSRFToken': csrf }
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Reset upload section
+                const uploadArea = document.getElementById('programUploadArea');
+                const statusDiv = document.getElementById('programStatus');
+                const contentDiv = document.getElementById('programUploadContent');
+                uploadArea.className = 'border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-primary hover:bg-green-50 transition-all cursor-pointer';
+                statusDiv.classList.add('hidden');
+                contentDiv.innerHTML = '<i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i><p class="text-sm text-gray-500">Haz clic para subir el documento Word</p><p class="text-xs text-gray-400 mt-1">Solo archivos .docx</p>';
+                showToast('Programación eliminada', 'success');
+            } else {
+                showToast(data.error || 'Error al eliminar', 'error');
+            }
+        } catch (err) {
+            showToast('Error de conexión', 'error');
         }
     }
 </script>

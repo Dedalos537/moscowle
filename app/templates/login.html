@@ -1,145 +1,164 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-    /* Force specific overrides for login card to ensure dark mode works */
-    .dark .login-card {
-        background-color: #1e293b !important;
-        color: #f3f4f6 !important;
+    /* Custom Animations for Premium Feel */
+    @keyframes blob {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0px, 0px) scale(1); }
     }
-    .dark .login-input {
-        background-color: #0f172a !important;
-        border-color: #374151 !important;
-        color: #f3f4f6 !important;
+    .animate-blob {
+        animation: blob 7s infinite;
     }
-    .dark .login-input:focus {
-        border-color: var(--color-primary) !important;
-        background-color: #1e293b !important;
+    .animation-delay-2000 {
+        animation-delay: 2s;
+    }
+    .animation-delay-4000 {
+        animation-delay: 4s;
+    }
+    
+    /* Input Animations */
+    .input-wrapper { position: relative; }
+    .floating-label {
+        position: absolute;
+        left: 3rem;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: all 0.2s ease-out;
+        pointer-events: none;
+        color: #9ca3af;
+    }
+    .modern-input:focus ~ .floating-label,
+    .modern-input:not(:placeholder-shown) ~ .floating-label {
+        top: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--color-primary);
+        font-weight: 600;
+    }
+    .modern-input {
+        padding-top: 1.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    /* Glassmorphic overrides */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dark .glass-card {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
     }
 </style>
-<div class="flex min-h-screen items-center justify-center p-4 bg-background">
-    <div class="login-card w-full max-w-md bg-surface rounded-soft shadow-soft p-8 relative overflow-hidden transition-colors duration-300">
-        <!-- Decorational -->
-        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-lightGreen"></div>
 
+<!-- Main Container with Mesh Gradient -->
+<div class="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950 w-full -mt-10 sm:mt-0">
+    
+    <!-- Animated Mesh Gradient Background -->
+    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/30 dark:bg-primary/20 mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"></div>
+        <div class="absolute top-[20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-300/40 dark:bg-blue-600/20 mix-blend-multiply dark:mix-blend-screen filter blur-[120px] animate-blob animation-delay-2000"></div>
+        <div class="absolute bottom-[-20%] left-[20%] w-[60%] h-[50%] rounded-full bg-emerald-300/40 dark:bg-emerald-600/20 mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000"></div>
+    </div>
 
-        <!-- Logo Section -->
-        <div class="text-center mb-8">
-            <div class="w-24 h-24 mx-auto mb-4 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" class="w-full h-full object-contain">
+    <!-- Login Card -->
+    <div class="relative z-10 w-full max-w-md mx-4 glass-card rounded-3xl p-8 sm:p-10 transition-all duration-500">
+        
+        <!-- Header & Logo -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 shadow-xl shadow-primary/20 mb-6 transform transition-transform hover:scale-105 hover:rotate-3 duration-300">
+                <i class="fas fa-leaf text-4xl text-primary bg-clip-text"></i>
             </div>
-            <h2 class="text-2xl font-bold text-textDark">Centro de Terapias</h2>
-            <h3 class="text-lg font-medium text-gray-500">Juan Pablo II</h3>
-            <p class="text-sm text-gray-400 mt-2">Acceso a Plataforma Digital</p>
+            <h1 class="text-3xl font-extrabold text-slate-800 dark:text-white tracking-tight mb-2">Centro de Terapias</h1>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest">Acceso Seguro</p>
         </div>
 
-        <!-- Flash Messages - Interactive with Animations -->
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="space-y-3 mb-6">
                 {% for category, message in messages %}
-                    {% if category == 'success' %}
-                      {% set bg_color = 'bg-gradient-to-r from-green-50 to-emerald-50' %}
-                      {% set border_color = 'border-l-4 border-green-500' %}
-                      {% set text_color = 'text-green-700' %}
-                      {% set icon = 'fa-check-circle' %}
-                      {% set icon_color = 'text-green-500' %}
-                    {% elif category == 'error' %}
-                      {% set bg_color = 'bg-gradient-to-r from-red-50 to-rose-50' %}
-                      {% set border_color = 'border-l-4 border-red-500' %}
-                      {% set text_color = 'text-red-700' %}
-                      {% set icon = 'fa-exclamation-circle' %}
-                      {% set icon_color = 'text-red-500' %}
-                    {% else %}
-                      {% set bg_color = 'bg-gradient-to-r from-amber-50 to-yellow-50' %}
-                      {% set border_color = 'border-l-4 border-amber-500' %}
-                      {% set text_color = 'text-amber-700' %}
-                      {% set icon = 'fa-exclamation-triangle' %}
-                      {% set icon_color = 'text-amber-500' %}
-                    {% endif %}
+                    {% set style = 'bg-green-50/80 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300' if category == 'success' else 'bg-red-50/80 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' %}
+                    {% set icon = 'fa-check-circle text-green-500' if category == 'success' else 'fa-exclamation-circle text-red-500' %}
                     
-                    <div class="notification-alert {{ bg_color }} {{ border_color }} px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 transform transition-all duration-300 hover:shadow-lg animate-slideInDown group cursor-pointer"
-                         onclick="this.classList.add('scale-95', 'opacity-0'); setTimeout(() => this.remove(), 300)">
-                        <i class="fas {{ icon }} {{ icon_color }} text-lg animate-pulse flex-shrink-0"></i>
-                        <span class="{{ text_color }} flex-1">{{ message }}</span>
-                        <button type="button" class="{{ text_color }} hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100 flex-shrink-0"
-                                onclick="event.stopPropagation(); this.closest('.notification-alert').classList.add('scale-95', 'opacity-0'); setTimeout(() => this.closest('.notification-alert').remove(), 300)">
-                            <i class="fas fa-times"></i>
-                        </button>
+                    <div class="backdrop-blur-md border px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-3 transform transition-all duration-300 animate-slideInDown {{ style }} cursor-pointer hover:scale-[0.98]"
+                         onclick="this.style.opacity='0'; setTimeout(() => this.remove(), 300)">
+                        <i class="fas {{ icon }} text-lg animate-pulse flex-shrink-0"></i>
+                        <span class="flex-1">{{ message }}</span>
+                        <i class="fas fa-times opacity-50 hover:opacity-100 transition-opacity"></i>
                     </div>
                 {% endfor %}
                 </div>
                 <style>
-                    @keyframes slideInDown {
-                        from {
-                            opacity: 0;
-                            transform: translateY(-20px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                    
-                    .animate-slideInDown {
-                        animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    }
+                    @keyframes slideInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+                    .animate-slideInDown { animation: slideInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
                 </style>
             {% endif %}
         {% endwith %}
 
-        <!-- Login Form -->
-        <form method="POST" id="loginForm" class="space-y-5">
+        <!-- Form -->
+        <form method="POST" id="loginForm" class="space-y-6">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
-            <div class="space-y-2">
-                <label class="text-sm font-semibold text-textDark ml-1">Correo Electrónico</label>
-                <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
-                        <i class="far fa-envelope text-lg"></i>
-                    </span>
-                    <input type="email" id="email" name="email" 
-                        class="login-input w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-transparent dark:border-gray-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
-                        placeholder="usuario@ejemplo.com" required>
+            <!-- Email Input -->
+            <div class="input-wrapper group">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-10">
+                    <i class="far fa-envelope text-lg"></i>
                 </div>
+                <input type="email" id="email" name="email" 
+                    class="modern-input w-full pl-12 pr-4 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent" 
+                    placeholder="usuario@ejemplo.com" required>
+                <label for="email" class="floating-label">Correo Electrónico</label>
             </div>
             
-            <div class="space-y-2">
-                <label class="text-sm font-semibold text-textDark ml-1">Contraseña</label>
-                <div class="relative group">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
-                        <i class="fas fa-lock text-lg"></i>
-                    </span>
-                    <input type="password" id="password" name="password" 
-                        class="login-input w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-900 border-2 border-transparent dark:border-gray-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium" 
-                        placeholder="Ingresa tu contraseña" required>
-                    <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-textDark focus:outline-none transition-colors">
-                        <i class="far fa-eye" id="eyeIcon"></i>
-                    </button>
+            <!-- Password Input -->
+            <div class="input-wrapper group">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-10">
+                    <i class="fas fa-lock text-lg"></i>
                 </div>
+                <input type="password" id="password" name="password" 
+                    class="modern-input w-full pl-12 pr-12 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent" 
+                    placeholder="Contraseña" required>
+                <label for="password" class="floating-label">Contraseña</label>
+                <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary focus:outline-none transition-colors z-10 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <i class="far fa-eye" id="eyeIcon"></i>
+                </button>
             </div>
 
-            <div class="flex items-center justify-between pt-1">
-                <label class="flex items-center gap-2 cursor-pointer group">
-                    <div class="relative">
+            <!-- Options -->
+            <div class="flex items-center justify-between px-1">
+                <label class="flex items-center gap-3 cursor-pointer group">
+                    <div class="relative flex items-center justify-center">
                         <input type="checkbox" class="peer sr-only">
-                        <div class="w-5 h-5 border-2 border-gray-300 rounded peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
-                        <i class="fas fa-check text-white text-xs absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                        <div class="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-lg peer-checked:bg-primary peer-checked:border-primary transition-all"></div>
+                        <i class="fas fa-check text-white text-[10px] absolute opacity-0 peer-checked:opacity-100 transition-opacity"></i>
                     </div>
-                    <span class="text-sm text-gray-500 group-hover:text-textDark transition-colors">Recordarme</span>
+                    <span class="text-sm font-medium text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Recordarme</span>
                 </label>
-                <a href="#" class="text-sm font-semibold text-primary hover:text-olive transition-colors">¿Olvidaste tu contraseña?</a>
+                <a href="#" class="text-sm font-bold text-primary hover:text-primary/80 transition-colors relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-primary hover:after:w-full after:transition-all after:duration-300">
+                    ¿Olvidaste tu clave?
+                </a>
             </div>
 
-            <button type="submit" id="loginBtn" class="w-full py-3.5 bg-gray-200 text-gray-400 rounded-xl font-bold text-sm uppercase tracking-wide shadow-none cursor-not-allowed transition-all flex items-center justify-center gap-2" disabled>
-                <i class="fas fa-sign-in-alt"></i>
-                Iniciar Sesión
+            <!-- Submit Button -->
+            <button type="submit" id="loginBtn" class="relative w-full py-4 overflow-hidden bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl font-bold text-sm tracking-widest uppercase shadow-none cursor-not-allowed transition-all duration-300 group" disabled>
+                <span class="relative z-10 flex items-center justify-center gap-2">
+                    <i class="fas fa-sign-in-alt group-hover:translate-x-1 transition-transform"></i>
+                    Ingresar
+                </span>
             </button>
         </form>
 
         <!-- Footer -->
-        <div class="mt-8 pt-6 border-t border-gray-100 text-center">
-            <p class="text-xs text-gray-400">
-                ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-primary font-semibold hover:underline">Soporte Técnico</a>
+        <div class="mt-8 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 text-center">
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Sistema protegido con cifrado de extremo a extremo
             </p>
         </div>
     </div>
@@ -155,12 +174,12 @@
 
         function setBtnValid(valid){
             if(valid){
-                loginBtn.classList.remove('bg-gray-200', 'text-gray-400', 'cursor-not-allowed', 'shadow-none');
-                loginBtn.classList.add('bg-primary', 'text-white', 'hover:bg-opacity-90', 'hover:-translate-y-0.5', 'shadow-lg', 'shadow-olive/30', 'cursor-pointer');
+                loginBtn.classList.remove('bg-slate-200', 'dark:bg-slate-800', 'text-slate-400', 'dark:text-slate-500', 'cursor-not-allowed', 'shadow-none');
+                loginBtn.classList.add('bg-primary', 'text-white', 'hover:bg-primary/90', 'hover:-translate-y-1', 'shadow-[0_10px_20px_-10px_rgba(117,168,58,0.5)]', 'cursor-pointer');
                 loginBtn.removeAttribute('disabled');
             } else {
-                loginBtn.classList.add('bg-gray-200', 'text-gray-400', 'cursor-not-allowed', 'shadow-none');
-                loginBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-opacity-90', 'hover:-translate-y-0.5', 'shadow-lg', 'shadow-olive/30', 'cursor-pointer');
+                loginBtn.classList.add('bg-slate-200', 'dark:bg-slate-800', 'text-slate-400', 'dark:text-slate-500', 'cursor-not-allowed', 'shadow-none');
+                loginBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-primary/90', 'hover:-translate-y-1', 'shadow-[0_10px_20px_-10px_rgba(117,168,58,0.5)]', 'cursor-pointer');
                 loginBtn.setAttribute('disabled', 'true');
             }
         }
@@ -178,11 +197,9 @@
                 const res = await fetch('/api/auth/validate',{
                     method:'POST', headers:{'Content-Type':'application/json', 'X-CSRFToken': csrfToken}, body: JSON.stringify({email:e, password:p})
                 });
-                // In local dev, this might fail if API not mocked correctly, so we fallback to simple client validation
                 const data = await res.json();
                 setBtnValid(Boolean(data && data.valid));
             }catch(err){ 
-                // Fallback validation (so user can at least try to submit)
                 setBtnValid(e.length > 5 && p.length > 0);
             }
         }

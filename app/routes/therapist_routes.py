@@ -81,10 +81,80 @@ def dashboard():
         for name_tuple in low_accuracy_users:
             alerts.append({"patient": name_tuple[0], "message": "Rendimiento bajo detectado", "type": "red"})
 
+    # Audit compliance data
+    try:
+        from app.models import SessionAudit
+        from sqlalchemy import func as sqlfunc
+        avg_compliance = db.session.query(sqlfunc.avg(SessionAudit.audit_score)).join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).filter(
+            Appointment.therapist_id == current_user.id,
+            SessionAudit.audit_score.isnot(None)
+        ).scalar() or 0
+        total_audits = SessionAudit.query.join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).filter(
+            Appointment.therapist_id == current_user.id,
+            SessionAudit.audit_score.isnot(None)
+        ).count()
+    except Exception:
+        avg_compliance = 0
+        total_audits = 0
+
+    # Today's sessions (agenda)
+    from datetime import datetime, timedelta
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    today_sessions = Appointment.query.filter(
+        Appointment.therapist_id == current_user.id,
+        Appointment.start_time >= today,
+        Appointment.start_time < tomorrow,
+        Appointment.status != 'cancelled'
+    ).order_by(Appointment.start_time).all()
+
+    agenda = []
+    next_session = None
+    now = datetime.now()
+    for s in today_sessions:
+        patient = User.query.get(s.patient_id)
+        is_current = s.start_time <= now and (s.end_time is None or s.end_time > now)
+        session_info = {
+            'id': s.id,
+            'title': s.title or 'Sesion de Terapia',
+            'patient': patient.username if patient else 'N/A',
+            'start': s.start_time.strftime('%I:%M %p'),
+            'location': s.location or '',
+            'status': s.status,
+            'is_current': is_current
+        }
+        agenda.append(session_info)
+        if not next_session and (is_current or s.start_time > now):
+            next_session = session_info
+
+    # Recent audit objectives for the current/next session
+    session_objectives = []
+    if next_session:
+        try:
+            audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
+            if audit and audit.audit_report_json and isinstance(audit.audit_report_json, dict):
+                for obj in audit.audit_report_json.get('objectives', []):
+                    session_objectives.append({
+                        'name': obj.get('name', ''),
+                        'status': obj.get('status', 'pendiente')
+                    })
+        except Exception:
+            pass
+
     return render_template('therapist/dashboard.html',
                            stats=stats,
                            patients=patients,
                            alerts=alerts,
+                           avg_compliance=round(avg_compliance, 1),
+                           total_audits=total_audits,
+                           agenda=agenda,
+                           next_session=next_session,
+                           session_objectives=session_objectives,
+                           today_date=now.strftime('%d %b'),
                            active_page='dashboard')
 
 @therapist_bp.route('/patients')

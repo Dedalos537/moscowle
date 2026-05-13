@@ -1947,3 +1947,280 @@ def create_notification():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════
+# AUDITORÍA IA — Endpoints para Whisper + Llama 3 (HU-06/08/09)
+# ═══════════════════════════════════════════════════════════════════
+
+@api_bp.route('/sessions/<int:appointment_id>/program', methods=['POST'])
+@login_required
+def upload_session_program(appointment_id):
+    """
+    Subir documento Word (.docx) con la Programación de la Sesión.
+    Extrae el texto y lo guarda en SessionAudit.planned_text.
+    Solo admin puede subir la programación.
+    """
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Solo el administrador puede subir la programación'}), 403
+
+    appointment = Appointment.query.get_or_404(appointment_id)
+
+    if 'program_file' not in request.files:
+        return jsonify({'success': False, 'error': 'No se encontró el archivo'}), 400
+
+    file = request.files['program_file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Nombre de archivo vacío'}), 400
+
+    # Validar extensión .docx
+    if not file.filename.lower().endswith('.docx'):
+        return jsonify({'success': False, 'error': 'Solo se aceptan archivos .docx'}), 400
+
+    try:
+        from app.services.audit_service import extract_docx_text
+        from app.models import SessionAudit
+
+        # Guardar temporalmente para procesar
+        temp_filename = f"temp_program_{uuid.uuid4().hex}.docx"
+        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audit')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, temp_filename)
+        file.save(temp_path)
+
+        # Extraer texto
+        try:
+            planned_text = extract_docx_text(temp_path)
+        finally:
+            # Limpiar archivo temporal
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+        # Crear o actualizar registro de auditoría
+        audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+        if not audit:
+            audit = SessionAudit(appointment_id=appointment_id)
+            db.session.add(audit)
+
+        audit.planned_text = planned_text
+        audit.docx_uploaded_at = datetime.utcnow()
+        audit.docx_uploaded_by = current_user.id
+        # Resetear auditoría si se sube nueva programación
+        audit.audit_status = 'pending'
+        audit.audit_report_json = None
+        audit.audit_score = None
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Programación subida correctamente',
+            'planned_text_preview': planned_text[:500] + ('...' if len(planned_text) > 500 else ''),
+            'char_count': len(planned_text)
+        })
+
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error subiendo programación: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error interno: {str(e)}'}), 500
+
+
+@api_bp.route('/sessions/<int:appointment_id>/audio', methods=['POST'])
+@login_required
+def upload_session_audio(appointment_id):
+    """
+    Subir audio de la sesión para transcripción con Whisper (Groq).
+    🔒 El audio se ELIMINA inmediatamente tras la transcripción (RNF-02 / HU-08).
+    Solo terapistas pueden subir audio de sus sesiones.
+    """
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appointment = Appointment.query.get_or_404(appointment_id)
+
+    # Verificar propiedad
+    if current_user.role == 'terapista' and appointment.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
+    if 'audio_file' not in request.files:
+        return jsonify({'success': False, 'error': 'No se encontró el archivo de audio'}), 400
+
+    file = request.files['audio_file']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Nombre de archivo vacío'}), 400
+
+    # Validar extensión de audio
+    allowed_audio = {'webm', 'wav', 'mp3', 'ogg', 'm4a', 'mp4'}
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in allowed_audio:
+        return jsonify({'success': False, 'error': f'Formato no soportado. Usa: {", ".join(allowed_audio)}'}), 400
+
+    try:
+        from app.services.audit_service import transcribe_audio
+        from app.models import SessionAudit
+
+        # Guardar temporalmente (será eliminado por audit_service)
+        temp_filename = f"session_audio_{appointment_id}_{uuid.uuid4().hex}.{ext}"
+        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audio')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, temp_filename)
+        file.save(temp_path)
+
+        # Transcribir (el archivo se elimina dentro de transcribe_audio)
+        result = transcribe_audio(temp_path)
+
+        # Crear o actualizar registro de auditoría
+        audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+        if not audit:
+            audit = SessionAudit(appointment_id=appointment_id)
+            db.session.add(audit)
+
+        # Append transcript (supports chunked recording every 5 min)
+        existing = audit.transcript_text or ''
+        separator = ' ' if existing else ''
+        audit.transcript_text = existing + separator + result['text']
+        audit.audio_transcribed_at = datetime.utcnow()
+        audit.audio_duration_seconds = (audit.audio_duration_seconds or 0) + result.get('duration', 0)
+        if audit.audit_status == 'completed':
+            audit.audit_status = 'pending'
+            audit.audit_report_json = None
+            audit.audit_score = None
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Audio transcrito correctamente. Archivo eliminado del servidor.',
+            'transcript_text': result['text'],
+            'transcript_preview': result['text'][:500] + ('...' if len(result['text']) > 500 else ''),
+            'duration_seconds': result.get('duration', 0),
+            'char_count': len(result['text'])
+        })
+
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error transcribiendo audio: {str(e)}")
+        # Asegurar eliminación del audio en caso de error no manejado
+        try:
+            if 'temp_path' in locals() and os.path.exists(temp_path):
+                os.remove(temp_path)
+                current_app.logger.info(f"🔒 Audio eliminado tras error: {temp_path}")
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': f'Error al transcribir: {str(e)}'}), 500
+
+
+@api_bp.route('/sessions/<int:appointment_id>/audit', methods=['POST'])
+@login_required
+def trigger_session_audit(appointment_id):
+    """
+    Disparar la auditoría IA que compara programación vs transcripción.
+    Requiere que tanto planned_text como transcript_text ya estén guardados.
+    """
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    try:
+        from app.services.audit_service import run_audit
+        report = run_audit(appointment_id)
+        return jsonify({
+            'success': True,
+            'message': 'Auditoría completada',
+            'report': report
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error en auditoría IA: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error en auditoría: {str(e)}'}), 500
+
+
+@api_bp.route('/sessions/<int:appointment_id>/audit', methods=['GET'])
+@login_required
+def get_session_audit(appointment_id):
+    """
+    Obtener el estado y reporte de auditoría de una sesión.
+    """
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionAudit
+
+    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+    if not audit:
+        return jsonify({
+            'success': True,
+            'exists': False,
+            'message': 'No hay registro de auditoría para esta sesión'
+        })
+
+    return jsonify({
+        'success': True,
+        'exists': True,
+        'audit': {
+            'id': audit.id,
+            'has_program': bool(audit.planned_text),
+            'has_transcript': bool(audit.transcript_text),
+            'planned_text_preview': (audit.planned_text[:300] + '...') if audit.planned_text and len(audit.planned_text) > 300 else audit.planned_text,
+            'transcript_preview': (audit.transcript_text[:300] + '...') if audit.transcript_text and len(audit.transcript_text) > 300 else audit.transcript_text,
+            'audio_duration_seconds': audit.audio_duration_seconds,
+            'audit_status': audit.audit_status,
+            'audit_score': audit.audit_score,
+            'report': audit.get_report() if audit.audit_status == 'completed' else None,
+            'docx_uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
+            'audio_transcribed_at': audit.audio_transcribed_at.isoformat() if audit.audio_transcribed_at else None,
+            'audited_at': audit.audited_at.isoformat() if audit.audited_at else None
+        }
+    })
+
+
+@api_bp.route('/sessions/<int:appointment_id>/program', methods=['DELETE'])
+@login_required
+def delete_session_program(appointment_id):
+    """Eliminar la programación (.docx) de una sesión. Solo admin."""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Solo el administrador puede eliminar la programación'}), 403
+
+    from app.models import SessionAudit
+    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+    if not audit or not audit.planned_text:
+        return jsonify({'success': False, 'error': 'No hay programación para esta sesión'}), 404
+
+    audit.planned_text = None
+    audit.docx_uploaded_at = None
+    audit.docx_uploaded_by = None
+    # Reset audit if it was completed
+    if audit.audit_status == 'completed':
+        audit.audit_status = 'pending'
+        audit.audit_report_json = None
+        audit.audit_score = None
+        audit.audited_at = None
+
+    # If no transcript either, delete the whole record
+    if not audit.transcript_text:
+        db.session.delete(audit)
+    
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Programación eliminada'})
+
+
+@api_bp.route('/sessions/<int:appointment_id>/program', methods=['GET'])
+@login_required
+def get_session_program(appointment_id):
+    """Obtener el texto completo de la programación (para vista del terapista)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionAudit
+    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+    if not audit or not audit.planned_text:
+        return jsonify({'success': False, 'exists': False})
+
+    return jsonify({
+        'success': True,
+        'exists': True,
+        'planned_text': audit.planned_text,
+        'uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None
+    })

@@ -38,9 +38,10 @@
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=home,people,gamepad,monitoring,calendar_month,description,mail,settings,dark_mode,light_mode,power_settings_new,menu,close" rel="stylesheet" />
   <script>
     // 1. Detección y Aplicación Inmediata de Tema (Anti-FOUC)
     (function() {
@@ -57,69 +58,85 @@
     })();
 
     tailwind.config = {
-      darkMode: 'class', // Habilitar modo estrategia 'class'
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            // Colores Semánticos con Variables CSS para cambio automático
-            primary: "var(--color-primary)",
-            olive: "var(--color-primary)", // Alias
-            background: "var(--color-background)",
-            surface: "var(--color-surface)",
-            textDark: "var(--color-text-main)",
-            charcoal: "var(--color-text-muted)",
-            
-            // Colores de estado (suelen mantenerse constantes o con ligero ajuste)
-            lightGreen: "#ecfccb", 
-            accent: "#3b82f6",
-            statusGreen: "#10b981",
-            statusYellow: "#f59e0b",
-            statusRed: "#ef4444",
-            
-            // Colores específicos para dark mode si se necesitan directos
-            darkSurface: "#1F2937",
-            darkBg: "#111827",
+            "primary": "#75a83a",
+            "on-primary": "#ffffff",
+            "primary-container": "#75a83a",
+            "on-primary-container": "#ffffff",
+            "secondary": "#57633f",
+            "on-secondary": "#ffffff",
+            "secondary-container": "#75a83a",
+            "on-secondary-container": "#ffffff",
+            "tertiary": "#00311f",
+            "on-tertiary": "#ffffff",
+            "tertiary-container": "#004a31",
+            "on-tertiary-container": "#ffffff",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "on-error-container": "#93000a",
+            "background": "#f8fbed",
+            "on-background": "#1a1c16",
+            "surface": "#f8fbed",
+            "on-surface": "#1a1c16",
+            "surface-variant": "#e2e4d4",
+            "on-surface-variant": "#44483d",
+            "outline": "#75796a",
+            "outline-variant": "#c7c9b7",
+            "shadow": "#000000",
+            "scrim": "#000000",
+            "inverse-surface": "#2f312a",
+            "inverse-on-surface": "#f1f3e3",
+            "inverse-primary": "#b7d191",
+            "surface-dim": "#d9dbce",
+            "surface-bright": "#f8fbed",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f3f5e7",
+            "surface-container": "#edeedc",
+            "surface-container-high": "#e7e9db",
+            "surface-container-highest": "#e2e4d4"
           },
           fontFamily: {
             sans: ["Inter", "sans-serif"],
+            display: ["Manrope", "sans-serif"],
           },
           borderRadius: {
             soft: "1.5rem",
           },
           boxShadow: {
-            soft: "var(--shadow-soft)",
-            "soft-lg": "var(--shadow-soft-lg)",
+            soft: "0 4px 20px -2px rgba(117, 168, 58, 0.05)",
+            "soft-lg": "0 10px 30px -5px rgba(117, 168, 58, 0.1)",
           },
         },
       },
     };
   </script>
   <style>
-    /* 2. Definición de Diseño con Variables CSS (Design Tokens) */
     :root {
-      /* Palette Light (Original) */
       --color-primary: #75a83a;
-      --color-background: #f9fcf8;
+      --color-background: #f8fbed;
       --color-surface: #ffffff;
-      --color-text-main: #374151; /* Gray 700 */
-      --color-text-muted: #6b7280; /* Gray 500 */
-      --color-border: #e5e7eb; /* Gray 200 */
+      --color-text-main: #1a1c16; 
+      --color-text-muted: #44483d; 
+      --color-border: #c7c9b7; 
       
-      --shadow-soft: 0 10px 30px -5px rgba(117, 168, 58, 0.15);
-      --shadow-soft-lg: 0 20px 40px -10px rgba(117, 168, 58, 0.2);
+      --shadow-soft: 0 4px 20px -2px rgba(117, 168, 58, 0.05);
+      --shadow-soft-lg: 0 10px 30px -5px rgba(117, 168, 58, 0.1);
     }
 
-    /* Palette Dark (Nueva) */
     .dark {
-      --color-primary: #86c246; /* Un poco más brillante para contraste oscuro */
-      --color-background: #0f172a; /* Slate 900 */
-      --color-surface: #1e293b; /* Slate 800 */
-      --color-text-main: #f3f4f6; /* Gray 100 */
-      --color-text-muted: #9ca3af; /* Gray 400 */
-      --color-border: #374151; /* Gray 700 */
+      --color-primary: #b7d191; 
+      --color-background: #12140e; 
+      --color-surface: #1a1c16; 
+      --color-text-main: #e2e4d4; 
+      --color-text-muted: #c7c9b7; 
+      --color-border: #44483d; 
       
-      --shadow-soft: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-      --shadow-soft-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+      --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+      --shadow-soft-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
     }
 
     /* Global Dark Mode Overrides for Hardcoded Utility Classes */
@@ -381,10 +398,10 @@
           <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" class="w-full h-full object-contain">
         </div>
         <div>
-          <h1 class="text-lg font-bold text-textDark leading-tight">
+          <h1 class="text-lg font-bold font-display text-on-surface leading-tight">
             Centro de Terapias
           </h1>
-          <p class="text-xs text-gray-500 font-medium">Juan Pablo II</p>
+          <p class="text-xs text-on-surface-variant font-medium">Juan Pablo II</p>
         </div>
       </div>
       <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-primary">
@@ -394,38 +411,38 @@
     <nav id="main-navigation" class="flex-1 px-4 py-6 space-y-2">
     {% if current_user.role == 'terapista' %}
       <a href="{{ url_for('therapist.dashboard') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-chart-line text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'dashboard' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">home</span>
         <span class="font-semibold">Panel</span>
       </a>
       <a href="{{ url_for('therapist.patients') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'patients' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-users text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'patients' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">people</span>
         <span class="font-medium">Pacientes</span>
       </a>
       <a href="{{ url_for('therapist.games') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-gamepad text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'games' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">gamepad</span>
         <span class="font-medium">Ejercicios</span>
       </a>
       <a href="{{ url_for('therapist.analytics') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'analytics' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-chart-line text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'analytics' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">home</span>
         <span class="font-medium">IA Analytics</span>
       </a>
       <a href="{{ url_for('therapist.sessions') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-calendar-check text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'sessions' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">calendar_month</span>
         <span class="font-medium">Sesiones</span>
       </a>
       <a href="{{ url_for('therapist.reports') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-file-alt text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'reports' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">description</span>
         <span class="font-medium">Reportes</span>
       </a>
       <a href="{{ url_for('therapist.messages') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all relative">
-        <i class="fa-solid fa-envelope text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'messages' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all relative">
+        <span class="material-symbols-outlined text-[20px]">mail</span>
         <span class="font-medium">Mensajes</span>
         <span id="sidebar-unread-badge" class="hidden absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
       </a>
@@ -434,58 +451,58 @@
       {% if current_user.role == 'admin' %}
       <div class="pt-2 mt-2 border-t border-gray-100"></div>
       <a href="{{ url_for('admin.dashboard') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_dashboard' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_dashboard' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-toolbox text-base"></i>
         <span class="font-medium">Panel Admin</span>
       </a>
       <a href="{{ url_for('admin.sessions_calendar') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sessions' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sessions' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-calendar-alt text-base"></i>
         <span class="font-medium">Sesiones Globales</span>
       </a>
       <a href="{{ url_for('admin.users') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_users' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_users' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-user-gear text-base"></i>
         <span class="font-medium">Admin Usuarios</span>
       </a>
       <a href="{{ url_for('admin.sedes_page') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sedes' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_sedes' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-map-location-dot text-base"></i>
         <span class="font-medium">Sedes</span>
       </a>
       <a href="{{ url_for('admin.deudores_page') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_deudores' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_deudores' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-credit-card text-base"></i>
         <span class="font-medium">Deudores</span>
       </a>
       <a href="{{ url_for('admin.payments') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_payments' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_payments' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-file-invoice-dollar text-base"></i>
         <span class="font-medium">Pagos y Membrecías</span>
       </a>
       <a href="{{ url_for('admin.expenses') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_expenses' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_expenses' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-money-bill-wave text-base"></i>
         <span class="font-medium">Gastos y Terapeutas</span>
       </a>
       <a href="{{ url_for('yape.import_transactions') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_yape' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_yape' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-file-import text-base"></i>
         <span class="font-medium">Importar Yape</span>
       </a>
       <a href="{{ url_for('admin.games') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_games' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-gamepad text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_games' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">gamepad</span>
         <span class="font-medium">Admin Juegos</span>
       </a>
       <a href="{{ url_for('admin.reports') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_reports' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_reports' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
         <i class="fa-solid fa-chart-pie text-base"></i>
         <span class="font-medium">Admin Reportes</span>
       </a>
       <a href="{{ url_for('admin.messages') }}"
-        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_messages' %}bg-primary text-white shadow-soft{% else %}text-gray-600 hover:bg-lightGreen hover:text-primary{% endif %} transition-all">
-        <i class="fa-solid fa-envelope text-base"></i>
+        class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'admin_messages' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
+        <span class="material-symbols-outlined text-[20px]">mail</span>
         <span class="font-medium">Admin Mensajes</span>
       </a>
        {% endif %}

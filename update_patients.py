@@ -1,10 +1,94 @@
-{% extends "therapist/base.html" %}
+import re
+
+with open('app/templates/therapist/patients.html', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# We will just write a whole new content
+new_content = """{% extends "therapist/base.html" %}
 
 {% block header_content %}{% endblock %}
 {% block header_action %}{% endblock %}
 
 {% block extra_scripts %}
+<script>
+tail_config = {
+    darkMode: "class",
+    theme: {
+        extend: {
+            "colors": {
+                "outline-variant": "#c7c9b7",
+                "background": "#f8fbed",
+                "surface-dim": "#d9dbce",
+                "error-container": "#ffdad6",
+                "error": "#ba1a1a",
+                "on-tertiary-fixed-variant": "#005236",
+                "on-primary-fixed-variant": "#1d2e00",
+                "surface-container-high": "#e7e9db",
+                "tertiary": "#00311f",
+                "tertiary-fixed": "#6ffbbe",
+                "surface": "#f8fbed",
+                "primary-fixed": "#d3eeab",
+                "surface-tint": "#75a83a",
+                "on-secondary-fixed-variant": "#3f4c2a",
+                "on-secondary-fixed": "#161e07",
+                "surface-bright": "#f8fbed",
+                "tertiary-fixed-dim": "#4edea3",
+                "surface-container-low": "#f3f5e7",
+                "on-background": "#1a1c16",
+                "surface-container-lowest": "#ffffff",
+                "on-secondary": "#ffffff",
+                "secondary-container": "#75a83a",
+                "on-primary-fixed": "#0a1300",
+                "on-error": "#ffffff",
+                "primary": "#75a83a",
+                "on-error-container": "#93000a",
+                "outline": "#75796a",
+                "secondary-fixed": "#d3eeab",
+                "primary-container": "#75a83a",
+                "on-tertiary": "#ffffff",
+                "on-secondary-container": "#ffffff",
+                "on-primary": "#ffffff",
+                "on-surface": "#1a1c16",
+                "primary-fixed-dim": "#b7d191",
+                "inverse-surface": "#2f312a",
+                "tertiary-container": "#004a31",
+                "secondary": "#57633f",
+                "inverse-primary": "#b7d191",
+                "surface-variant": "#e1e4d3",
+                "surface-container": "#ecefdf",
+                "on-tertiary-fixed": "#002113",
+                "on-surface-variant": "#44483d",
+                "on-primary-container": "#ffffff",
+                "surface-container-highest": "#e1e4d3",
+                "inverse-on-surface": "#f1f1e8",
+                "secondary-fixed-dim": "#b7d191",
+                "on-tertiary-container": "#27c38a"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.5rem",
+                "lg": "0.75rem",
+                "xl": "1rem",
+                "full": "9999px"
+            },
+            "fontFamily": {
+                "headline": ["Manrope", "sans-serif"],
+                "body": ["Inter", "sans-serif"],
+                "label": ["Inter", "sans-serif"]
+            }
+        }
+    }
+};
 
+// Si tailwind.config ya existia, lo expandimos
+if (window.tailwind) {
+    if(!window.tailwind.config) window.tailwind.config = {};
+    if(!window.tailwind.config.theme) window.tailwind.config.theme = {extend: {}};
+    if(!window.tailwind.config.theme.extend) window.tailwind.config.theme.extend = {};
+    window.tailwind.config.theme.extend = {...window.tailwind.config.theme.extend, ...tail_config.theme.extend};
+} else {
+    window.tailwind = { config: tail_config };
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <style>
@@ -43,7 +127,7 @@
     </div>
 
     <!-- Bento Filter Bar -->
-    <div class="bg-surface-container-lowest-container-low p-6 rounded-lg mb-8 flex flex-col lg:flex-row gap-4 items-center shadow-sm">
+    <div class="bg-surface-container-low p-6 rounded-lg mb-8 flex flex-col lg:flex-row gap-4 items-center shadow-sm">
         <div class="relative w-full lg:w-1/3">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
             <input id="searchInput" class="w-full bg-surface-container-lowest border-none rounded-full py-4 pl-12 pr-6 text-sm focus:ring-2 focus:ring-[#75a83a]/50 placeholder:text-outline transition-shadow" placeholder="Buscar por nombre o correo..." type="text"/>
@@ -51,7 +135,7 @@
     </div>
 
     <!-- Student Data Table Container -->
-    <div class="bg-surface-container-lowest-container-lowest rounded-lg overflow-hidden shadow-xl shadow-slate-200/50 hidden md:block">
+    <div class="bg-surface-container-lowest rounded-lg overflow-hidden shadow-xl shadow-slate-200/50 hidden md:block">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead class="bg-surface-container-low">
@@ -90,13 +174,13 @@
                         </td>
                         <td class="px-8 py-6 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors bg-surface-container-lowest-container-lowest rounded-full shadow-sm" title="Cambiar Estado">
+                                <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors bg-surface-container-lowest rounded-full shadow-sm" title="Cambiar Estado">
                                     <span class="material-symbols-outlined text-[18px]">power_settings_new</span>
                                 </button>
-                                <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-on-surface-variant hover:text-error transition-colors bg-surface-container-lowest-container-lowest rounded-full shadow-sm" title="Eliminar">
+                                <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-on-surface-variant hover:text-error transition-colors bg-surface-container-lowest rounded-full shadow-sm" title="Eliminar">
                                     <span class="material-symbols-outlined text-[18px]">delete</span>
                                 </button>
-                                <a href="{{ url_for('therapist.patient_detail', patient_id=p.id) }}" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors bg-surface-container-lowest-container-lowest rounded-full shadow-sm flex items-center justify-center gap-1" onclick="event.stopPropagation()">
+                                <a href="{{ url_for('therapist.patient_detail', patient_id=p.id) }}" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors bg-surface-container-lowest rounded-full shadow-sm flex items-center justify-center gap-1" onclick="event.stopPropagation()">
                                     <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
                                 </a>
                             </div>
@@ -120,7 +204,7 @@
     <div class="md:hidden space-y-4">
         {% for item in patients %}
         {% set p = item.user %}
-        <div class="bg-surface-container-lowest border border-gray-100 rounded-lg p-5 shadow-sm cursor-pointer hover:bg-surface-container-low transition-colors" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=p.id) }}';">
+        <div class="bg-surface border border-gray-100 rounded-lg p-5 shadow-sm cursor-pointer hover:bg-surface-container-low transition-colors" onclick="window.location='{{ url_for('therapist.patient_detail',patient_id=p.id) }}';">
             <div class="flex items-center gap-3 mb-4">
                 <div class="w-12 h-12 rounded-full bg-primary-fixed text-[#75a83a] flex items-center justify-center font-bold text-lg">
                     {{ p.username[:2]|upper if p.username else '??' }}
@@ -136,10 +220,10 @@
                     {{ item.status_label }}
                 </span>
                 <div class="flex items-center gap-2">
-                    <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors rounded-full bg-surface-container-lowest-container-lowest shadow-sm" title="Cambiar Estado">
+                    <button onclick="event.stopPropagation(); toggleStatus({{ p.id }})" class="p-2 text-on-surface-variant hover:text-[#75a83a] transition-colors rounded-full bg-surface-container-lowest shadow-sm" title="Cambiar Estado">
                         <span class="material-symbols-outlined text-[18px]">power_settings_new</span>
                     </button>
-                    <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-on-surface-variant hover:text-error transition-colors rounded-full bg-surface-container-lowest-container-lowest shadow-sm" title="Eliminar">
+                    <button onclick="event.stopPropagation(); deletePatient({{ p.id }})" class="p-2 text-on-surface-variant hover:text-error transition-colors rounded-full bg-surface-container-lowest shadow-sm" title="Eliminar">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                 </div>
@@ -163,7 +247,7 @@
             </div>
             <span class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl opacity-10 group-hover:scale-110 transition-transform duration-500" data-icon="groups">groups</span>
         </div>
-        <div class="bg-surface-container-lowest-container-lowest p-8 rounded-lg shadow-sm border border-outline-variant/20">
+        <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm border border-outline-variant/20">
             <p class="label-sm uppercase tracking-widest font-bold text-on-surface-variant mb-2">Estados de Atención</p>
             <h3 class="text-4xl font-bold text-error mb-4">
                 {% set count_inactive = 0 %}
@@ -185,7 +269,7 @@
 
 <!-- Add Patient Modal -->
 <div id="add-patient-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center font-body">
-    <div class="bg-surface-container-lowest-container-lowest rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 md:p-8">
+    <div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 md:p-8">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-bold text-on-surface font-headline">Nuevo Paciente</h3>
             <button id="close-modal-btn" class="text-on-surface-variant hover:text-error bg-surface-container-low p-2 rounded-full transition-colors">
@@ -210,7 +294,7 @@
 
 <!-- Confirmation Modal -->
 <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center font-body">
-    <div class="bg-surface-container-lowest-container-lowest rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 md:p-8 text-center">
+    <div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 md:p-8 text-center">
         <div class="w-16 h-16 bg-[#75a83a]/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <span class="material-symbols-outlined text-3xl text-[#75a83a]">help_center</span>
         </div>
@@ -316,3 +400,9 @@
     }
 </script>
 {% endblock %}
+"""
+
+with open('app/templates/therapist/patients.html', 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print("Updated template safely.")

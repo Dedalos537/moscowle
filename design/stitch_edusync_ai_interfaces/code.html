@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduSync AI - Teacher Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline-variant": "#d9dbce",
+                    "background": "#f8fbed",
+                    "surface-dim": "#d9dbce",
+                    "error-container": "#ffdad6",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed-variant": "#263500",
+                    "on-primary-fixed-variant": "#002100",
+                    "surface-container-high": "#e6e8d8",
+                    "tertiary": "#3e6837",
+                    "tertiary-fixed": "#bef0b1",
+                    "surface": "#f8fbed",
+                    "primary-fixed": "#c0eda0",
+                    "surface-tint": "#75a83a",
+                    "on-secondary-fixed-variant": "#3c4a36",
+                    "on-secondary-fixed": "#121f0e",
+                    "surface-bright": "#f8fbed",
+                    "tertiary-fixed-dim": "#a2d397",
+                    "surface-container-low": "#f3f5e7",
+                    "on-background": "#1a1c16",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#75a83a",
+                    "on-primary-fixed": "#0a2100",
+                    "on-error": "#ffffff",
+                    "primary": "#75a83a",
+                    "on-error-container": "#410002",
+                    "outline": "#76796c",
+                    "secondary-fixed": "#d9e7cb",
+                    "primary-container": "#002100",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-container": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-surface": "#1a1c16",
+                    "primary-fixed-dim": "#a5d087",
+                    "inverse-surface": "#2f312a",
+                    "tertiary-container": "#274f22",
+                    "secondary": "#54624d",
+                    "inverse-primary": "#a5d087",
+                    "surface-variant": "#e2e4d4",
+                    "surface-container": "#eceee0",
+                    "on-tertiary-fixed": "#042103",
+                    "on-surface-variant": "#45483d",
+                    "on-primary-container": "#c0eda0",
+                    "surface-container-highest": "#e2e4d4",
+                    "inverse-on-surface": "#f2f1e5",
+                    "secondary-fixed-dim": "#bdcbb0",
+                    "on-tertiary-container": "#bef0b1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        h1, h2, h3, .headline { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SideNavBar Component Implementation -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-40 shadow-[0_10px_40px_rgba(0,0,0,0.03)] flex flex-col font-manrope antialiased">
+<div class="p-6 mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="school">school</span>
+</div>
+<div>
+<div class="text-xl font-extrabold text-primary tracking-tight">EduAudit ERP</div>
+<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Academic Excellence</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="border-l-4 border-primary text-primary bg-[#75a83a]/5 font-semibold py-3 px-6 flex items-center gap-3 translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 py-3 px-6 flex items-center gap-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="text-sm">Teachers</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 py-3 px-6 flex items-center gap-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-sm">Students</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 py-3 px-6 flex items-center gap-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="text-sm">Courses</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 py-3 px-6 flex items-center gap-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="text-sm">Schedules</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800/50 py-3 px-6 flex items-center gap-3 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="text-sm">Audit Reports</span>
+</a>
+</nav>
+<div class="p-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="text-sm">Support</span>
+</a>
+<button class="w-full mt-4 bg-primary text-on-primary py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                Generate Report
+            </button>
+</div>
+</aside>
+<main class="ml-64 min-h-screen">
+<!-- TopAppBar Component Implementation -->
+<header class="sticky top-0 h-16 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md z-30 border-b border-slate-200 dark:border-slate-800 shadow-sm flex justify-between items-center px-8 font-manrope text-sm">
+<div class="flex items-center gap-2 text-primary font-bold">
+                EduAudit
+            </div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 bg-slate-100 dark:bg-slate-800/50 px-4 py-2 rounded-lg w-80">
+<span class="material-symbols-outlined text-slate-500" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-xs w-full" placeholder="Search teacher profile or course..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all active:scale-95 duration-150 relative">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border border-white"></span>
+</button>
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all active:scale-95 duration-150">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400" data-icon="settings">settings</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<div class="text-xs font-bold text-on-surface">Diego Morales</div>
+<div class="text-[10px] text-slate-500">Director de Matemáticas</div>
+</div>
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full object-cover border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZI_NVNsVkaNcfRht9NO4TbxE2ImGpuVdQUb2fvYKbtqLksf51OGmXP0HTC4Mu6gnBnHetu6jYC87DArIB5a740tgZuVGZdLSYU1bXi83i4fnbXHuDeukZpfBzBreRK35So6mYsQbb0zkY3r3KC_yT8NZS071PTght21u6YlosvJ356i5xFL73LlftH-GFdNQFDFEE1uZDG5Onamkz4jPAzQVeSa3PRW6dQ6EDD2ie5tr6UKiVogsOP1_GMEbuLrBLlTdcOjyx1uw"/>
+</div>
+</div>
+</div>
+</header>
+<section class="p-8 space-y-8 max-w-7xl mx-auto">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="max-w-2xl">
+<h2 class="text-primary font-bold text-xs tracking-widest uppercase mb-2">Resumen Diario</h2>
+<h1 class="text-4xl font-extrabold text-on-surface leading-tight">
+                        Hola, Diego. Tu próxima clase es <span class="text-primary">Matemáticas II</span> a las 10:00 AM.
+                    </h1>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-outline-variant/30 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<div class="text-2xl font-bold text-on-surface">94%</div>
+<div class="text-xs text-slate-500 font-medium">Cumplimiento Global</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-8 space-y-8">
+<div class="bg-primary-container text-white p-10 rounded-lg relative overflow-hidden">
+<div class="relative z-10">
+<span class="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 inline-block">Clase en Vivo</span>
+<h2 class="text-3xl font-bold mb-2">Sesión Actual: Planificación y Estadística</h2>
+<p class="text-on-primary-container/70 mb-8 max-w-md">Sección B-12 • Edificio de Ingeniería • 42 Estudiantes registrados</p>
+<div class="flex flex-col sm:flex-row items-center gap-10">
+<div class="relative w-40 h-40">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-white/10" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="132" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-black text-white">70%</span>
+<span class="text-[10px] uppercase font-bold text-white/60">Cobertura</span>
+</div>
+</div>
+<div class="flex-1 space-y-3 w-full">
+<div class="flex items-center justify-between text-sm">
+<span class="font-medium text-white">Meta Semanal</span>
+<span class="font-bold text-primary">85%</span>
+</div>
+<div class="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 70%"></div>
+</div>
+<p class="text-xs text-white/60 italic">Faltan 15 puntos porcentuales para completar el módulo estadístico.</p>
+</div>
+</div>
+</div>
+<div class="absolute right-[-50px] top-[-50px] w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
+<div class="absolute left-[-20px] bottom-[-20px] w-48 h-48 bg-primary/10 rounded-full blur-2xl"></div>
+</div>
+<div class="bg-surface-container-lowest p-8 rounded-lg border border-outline-variant/10">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="checklist">checklist</span>
+                                Temas de la Sesión
+                            </h3>
+<button class="text-primary font-bold text-sm hover:underline">Gestionar Plan →</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-lg border-l-4 border-primary">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Introducción</div>
+<div class="text-[10px] font-bold text-primary uppercase">Logrado</div>
+</div>
+</div>
+<div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-lg border-l-4 border-primary">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Media Aritmética</div>
+<div class="text-[10px] font-bold text-primary uppercase">Logrado</div>
+</div>
+</div>
+<div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-lg border-l-4 border-amber-500">
+<div class="w-6 h-6 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500">
+<span class="material-symbols-outlined text-sm" data-icon="clock_loader_40">clock_loader_40</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Varianza</div>
+<div class="text-[10px] font-bold text-amber-600 uppercase">Parcial</div>
+</div>
+</div>
+<div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-lg border-l-4 border-slate-300">
+<div class="w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="circle">circle</span>
+</div>
+<div>
+<div class="font-bold text-on-surface">Práctica Grupal</div>
+<div class="text-[10px] font-bold text-slate-400 uppercase">Pendiente</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-4 space-y-8">
+<div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm border border-outline-variant/10">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-xl font-bold text-on-surface">Agenda de Hoy</h3>
+<span class="text-[10px] font-black bg-surface-container-low px-2 py-1 rounded">24 OCT</span>
+</div>
+<div class="relative space-y-6">
+<div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100"></div>
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary ring-4 ring-white z-10"></div>
+<div class="text-xs font-bold text-primary mb-1">AHORA • 10:00 AM</div>
+<div class="bg-primary/5 p-4 rounded-lg">
+<div class="font-bold text-on-surface">Matemáticas II</div>
+<div class="text-xs text-slate-500 mb-2">Aula Magna • Lab 2</div>
+<div class="flex -space-x-2">
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUa2Kp_vnG8SBvaHcXICXSq_JWVObiZx9H9Le3qdY5sAlzpR0TtLSS5M67Jc6dsp1_z7FQkZ-rqYGiep3e8Y0s08btVRgseUIxo3RmnlyuRm463e5XButmUrj-Js-3XVtiN_mHd42J6XwK9waM1rCo-uhtD7nqE-Z4EihwqsGbjhREpjUF7Fwd_Z_7yVvrVKN5kKPLxpmvRliaY7OZzyFU8cf6U78AhJ0VplOC5HmJ4e1am6kQLdlNAXGwehnqPjOVHBhtVpxlS94"/>
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA23gG3ysKsw036XJTk1sj32EeSjpg2e_rWtb-GgiIXh0b6fjTxSH0RRW2ODCxUSpad5oqHuyZ0mmrNcC9vjNSeZYmR0SdTYX8Uxo3DSdvpy1JwqshHjFTjawvpcceqFrhcO1esKDWQlH_pH72zMQpQrC3580mfCtKncI6mrrdEKW6peJQ2ZEJVDLMW4VGcusI3nMfyG2_35gfahux3DlrF0DHOCwrQ1YAHq_lR8XOcGpENHJRnZ7M45DHZML2J1drlAo2cdrjVhNY"/>
+<div class="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-600">+40</div>
+</div>
+</div>
+</div>
+<div class="relative pl-10 opacity-70">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-200 ring-4 ring-white z-10"></div>
+<div class="text-xs font-bold text-slate-400 mb-1">11:30 AM</div>
+<div class="p-4 rounded-lg">
+<div class="font-bold text-on-surface">Álgebra Lineal</div>
+<div class="text-xs text-slate-500">Salón 302 • Teórico</div>
+</div>
+</div>
+<div class="relative pl-10 opacity-70">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-200 ring-4 ring-white z-10"></div>
+<div class="text-xs font-bold text-slate-400 mb-1">01:00 PM</div>
+<div class="p-4 rounded-lg">
+<div class="font-bold text-on-surface">Almuerzo Académico</div>
+<div class="text-xs text-slate-500">Cafetería Central</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-10 py-3 bg-surface-container-low text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors">
+                            Ver Calendario Completo
+                        </button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-surface-container-lowest p-6 rounded-lg flex items-start gap-5 border border-outline-variant/10">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined" data-icon="assignment_late">assignment_late</span>
+</div>
+<div>
+<div class="text-2xl font-bold text-on-surface">08</div>
+<div class="text-sm font-medium text-slate-500">Reportes Pendientes</div>
+<div class="mt-2 text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded inline-block">Prioridad Alta</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg flex items-start gap-5 border border-outline-variant/10">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+<div>
+<div class="text-2xl font-bold text-on-surface">+12%</div>
+<div class="text-sm font-medium text-slate-500">Progreso Académico</div>
+<div class="mt-2 text-[10px] text-primary font-bold bg-primary/10 px-2 py-1 rounded inline-block">Este Mes</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-lg flex items-start gap-5 border border-outline-variant/10">
+<div class="p-3 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div>
+<div class="text-2xl font-bold text-on-surface">AI Coach</div>
+<div class="text-sm font-medium text-slate-500">Nuevas sugerencias</div>
+<div class="mt-2 text-[10px] text-primary font-bold bg-primary/10 px-2 py-1 rounded inline-block">3 Tips Listos</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<div class="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around items-center p-4 z-50">
+<button class="flex flex-col items-center text-primary">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+</button>
+<button class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+</button>
+<button class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+</button>
+<button class="flex flex-col items-center text-slate-400">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</body></html>

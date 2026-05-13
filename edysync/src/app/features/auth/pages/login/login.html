@@ -1,94 +1,86 @@
-<div class="flex min-h-screen items-center justify-center p-4 bg-background">
-  <div class="login-card w-full max-w-md bg-surface rounded-2xl shadow-xl p-8 relative overflow-hidden transition-colors duration-300">
+<div class="flex min-h-screen items-center justify-center p-4 bg-[#F8FAFC]">
+  <div class="w-full max-w-md bg-white rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] p-10 relative overflow-hidden">
       
       <!-- Decorational Line top -->
-      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-[#75a83a]"></div>
+      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#86c246] to-[#b7e477]"></div>
 
       <!-- Logo Section -->
       <div class="text-center mb-8">
-          <div class="w-24 h-24 mx-auto mb-4 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-              <!-- Reemplaza con tu img/logo.svg de assets luego, por ahora simulación idéntica -->
-              <div class="w-full h-full bg-primary/10 rounded-full flex items-center justify-center">
-                 <fa-icon [icon]="['fas', 'leaf']" class="text-4xl text-primary drop-shadow-md"></fa-icon>
-              </div>
+          <div class="w-20 h-20 mx-auto mb-4">
+              <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
           </div>
-          <h2 class="text-2xl font-bold text-textDark">Centro de Terapias</h2>
-          <h3 class="text-lg font-medium text-gray-500">Juan Pablo II</h3>
-          <p class="text-sm text-gray-400 mt-2">Acceso a Plataforma Digital</p>
+          <h2 class="text-2xl font-bold text-[#334155] tracking-tight">Centro de Terapias</h2>
+          <h3 class="text-lg font-medium text-[#64748b]">Juan Pablo II</h3>
+          <p class="text-sm text-[#94a3b8] mt-2">Acceso a Plataforma Digital</p>
       </div>
 
       <!-- Flash Messages / Alert Component -->
       @if (alertMessage) {
-         <div class="mb-6 animate-fade-in-up">
+         <div class="mb-6">
             <app-alert [type]="alertType" [message]="alertMessage"></app-alert>
          </div>
       }
 
-      <!-- Login Form (Estilo exacto de app/templates/login.html) -->
-      <form (ngSubmit)="doLogin()" class="space-y-5">
+      <!-- Login Form -->
+      <form (ngSubmit)="doLogin()" class="space-y-6">
           
-          <div class="space-y-2">
-              <label class="text-sm font-semibold text-textDark ml-1">Correo Electrónico</label>
-              <div class="relative group">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 border-none group-focus-within:text-primary transition-colors">
+          <div class="flex flex-col items-center space-y-2">
+              <label class="text-sm font-bold text-[#334155]">Correo Electrónico</label>
+              <div class="relative w-full">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
                       <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
                   </span>
                   <input type="email" id="email" name="email" [(ngModel)]="email"
-                      class="login-input w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium focus:border-primary dark:focus:border-primary" 
+                      class="w-full pl-12 pr-4 py-3.5 bg-[#f9fafb] border border-transparent rounded-2xl outline-none transition-all text-[#334155] placeholder-[#94a3b8] font-medium focus:border-[#cbd5e1] focus:bg-white" 
                       placeholder="usuario@ejemplo.com" required>
               </div>
           </div>
           
-          <div class="space-y-2">
-              <label class="text-sm font-semibold text-textDark ml-1">Contraseña</label>
-              <div class="relative group">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 border-none group-focus-within:text-primary transition-colors">
+          <div class="flex flex-col items-center space-y-2">
+              <label class="text-sm font-bold text-[#334155]">Contraseña</label>
+              <div class="relative w-full">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
                       <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
                   </span>
                   <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
-                      class="login-input w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-700 rounded-xl outline-none transition-all text-textDark placeholder-gray-400 font-medium focus:border-primary dark:focus:border-primary" 
+                      class="w-full pl-12 pr-12 py-3.5 bg-[#f9fafb] border border-transparent rounded-2xl outline-none transition-all text-[#334155] placeholder-[#94a3b8] font-medium focus:border-[#cbd5e1] focus:bg-white" 
                       placeholder="Ingresa tu contraseña" required>
                   
-                  <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-textDark focus:outline-none transition-colors border-none bg-transparent">
+                  <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#334155] focus:outline-none transition-colors border-none bg-transparent">
                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
                   </button>
               </div>
           </div>
 
           <!-- Options -->
-          <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center justify-between pt-2">
               <label class="flex items-center gap-2 cursor-pointer group">
-                  <div class="relative flex items-center">
-                      <input type="checkbox" class="peer sr-only">
-                      <div class="w-5 h-5 border-2 border-gray-300 rounded flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-all">
-                         <fa-icon [icon]="['fas', 'check']" class="text-white text-xs opacity-0 peer-checked:opacity-100 transition-opacity"></fa-icon>
-                      </div>
-                  </div>
-                  <span class="text-sm text-gray-500 group-hover:text-textDark transition-colors">Recordarme</span>
+                  <input type="checkbox" class="custom-checkbox">
+                  <span class="text-sm font-medium text-[#64748b] group-hover:text-[#334155] transition-colors">Recordarme</span>
               </label>
-              <a href="javascript:void(0)" class="text-sm font-semibold text-primary hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
+              <a href="javascript:void(0)" class="text-sm font-bold text-[#75a83a] hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
           </div>
 
-          <!-- Submit Button - Exactly like Flask implementation -->
+          <!-- Submit Button -->
           <button type="submit" 
              [disabled]="!isFormValid || isLoading"
-             class="w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2 text-white"
-             [ngClass]="(isFormValid && !isLoading) ? 'bg-primary hover:bg-opacity-90 hover:-translate-y-0.5 shadow-lg shadow-[#75a83a]/30 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'">
+             class="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2"
+             [ngClass]="(isFormValid && !isLoading) ? 'bg-[#75a83a] text-white hover:bg-opacity-90 cursor-pointer shadow-lg shadow-[#75a83a]/20' : 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed shadow-none'">
              
              @if (isLoading) {
                  <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
                  Verificando...
              } @else {
                  <fa-icon [icon]="['fas', 'sign-in-alt']"></fa-icon>
-                 Iniciar Sesión
+                 INICIAR SESIÓN
              }
           </button>
       </form>
 
       <!-- Footer -->
-      <div class="mt-8 pt-6 border-t border-border text-center">
-          <p class="text-xs text-charcoal">
-              ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-primary font-semibold hover:underline">Soporte Técnico</a>
+      <div class="mt-8 pt-6 border-t border-[#f1f5f9] text-center">
+          <p class="text-xs font-medium text-[#94a3b8]">
+              ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-[#75a83a] font-bold hover:underline">Soporte Técnico</a>
           </p>
       </div>
   </div>

@@ -144,6 +144,116 @@
     </div>
   </div>
 
+  <!-- Auditoria IA Section (HU-06) -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden border-l-4 border-purple-500">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-textDark">Auditoria IA - Cumplimiento Terapeutico</h3>
+            <p class="text-gray-500 text-sm">Resultados de la comparacion automatica: Programacion vs Ejecucion</p>
+        </div>
+    </div>
+
+    <!-- Audit KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Global Score Gauge -->
+        <div class="bg-white rounded-xl p-6 border border-gray-100 flex flex-col items-center justify-center">
+            {% set score_color = 'text-green-600' if audit_stats.avg_score >= 80 else ('text-yellow-600' if audit_stats.avg_score >= 50 else 'text-red-600') %}
+            {% set bg_color = 'bg-green-50' if audit_stats.avg_score >= 80 else ('bg-yellow-50' if audit_stats.avg_score >= 50 else 'bg-red-50') %}
+            <div class="relative w-24 h-24 mb-3">
+                <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="{{ 'rgb(34,197,94)' if audit_stats.avg_score >= 80 else ('rgb(234,179,8)' if audit_stats.avg_score >= 50 else 'rgb(239,68,68)') }}" 
+                        stroke-width="3" stroke-dasharray="{{ audit_stats.avg_score }}, 100" stroke-linecap="round"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-2xl font-bold {{ score_color }}">{{ audit_stats.avg_score }}%</span>
+                </div>
+            </div>
+            <p class="text-xs font-bold uppercase text-gray-500 tracking-wide">Precision Global</p>
+        </div>
+
+        <!-- Total Audits -->
+        <div class="bg-white rounded-xl p-6 border border-gray-100 flex flex-col items-center justify-center">
+            <span class="text-4xl font-bold text-purple-600 mb-2">{{ audit_stats.total }}</span>
+            <p class="text-xs font-bold uppercase text-gray-500 tracking-wide">Auditorias Completadas</p>
+        </div>
+
+        <!-- Scores by Therapist -->
+        <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <p class="text-xs font-bold uppercase text-gray-500 tracking-wide mb-3">Por Terapista</p>
+            <div class="space-y-3">
+                {% for t in audit_stats.by_therapist %}
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-gray-700">{{ t.name }}</span>
+                        <span class="font-bold {% if t.avg_score >= 80 %}text-green-600{% elif t.avg_score >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ t.avg_score }}% ({{ t.count }})</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2">
+                        <div class="h-full rounded-full {% if t.avg_score >= 80 %}bg-green-500{% elif t.avg_score >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width: {{ t.avg_score }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400 italic text-center">Sin auditorias aun</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Audits Table -->
+    {% if audit_stats.recent %}
+    <div class="border-t border-gray-100 pt-6">
+        <h4 class="text-sm font-bold text-gray-500 uppercase mb-4">Auditorias Recientes</h4>
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full min-w-[600px]">
+                <thead>
+                    <tr class="text-left text-xs font-bold text-gray-400 uppercase">
+                        <th class="px-4 py-3">Fecha</th>
+                        <th class="px-4 py-3">Terapista</th>
+                        <th class="px-4 py-3">Paciente</th>
+                        <th class="px-4 py-3">Score</th>
+                        <th class="px-4 py-3">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in audit_stats.recent %}
+                    <tr class="border-t border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ a.date }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-800">{{ a.therapist }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ a.patient }}</td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm font-bold {% if a.score >= 80 %}text-green-600{% elif a.score >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ a.score }}%</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs font-bold rounded-full {% if a.status == 'completed' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ 'Completada' if a.status == 'completed' else a.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="md:hidden space-y-3">
+            {% for a in audit_stats.recent %}
+            <div class="bg-white border border-gray-100 rounded-soft p-4 shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="font-semibold text-textDark text-sm">{{ a.therapist }}</p>
+                        <p class="text-xs text-gray-500">{{ a.patient }} - {{ a.date }}</p>
+                    </div>
+                    <span class="text-sm font-bold px-2 py-1 rounded-full {% if a.score >= 80 %}bg-green-100 text-green-700{% elif a.score >= 50 %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">{{ a.score }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+  </div>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <!-- Therapists Section -->
   <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">

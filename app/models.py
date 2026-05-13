@@ -413,3 +413,49 @@ class AIChatMessage(db.Model):
             'parameters': self.parameters,
             'action_status': self.action_status
         }
+
+
+class SessionAudit(db.Model):
+    """
+    Auditoría IA de sesión terapéutica (HU-06 / HU-08 / HU-09).
+    Compara la Programación (Word .docx) con la Ejecución Real (audio transcrito + fotos).
+    Genera un reporte de cumplimiento usando Llama 3 vía Groq API.
+    """
+    __tablename__ = 'session_audit'
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=False, unique=True)
+
+    # ── FASE 1: Programación (texto extraído del .docx) ──
+    planned_text = db.Column(db.Text, nullable=True)
+    docx_uploaded_at = db.Column(db.DateTime, nullable=True)
+    docx_uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # ── FASE 2: Ejecución (transcripción de audio vía Whisper/Groq) ──
+    transcript_text = db.Column(db.Text, nullable=True)
+    audio_transcribed_at = db.Column(db.DateTime, nullable=True)
+    audio_duration_seconds = db.Column(db.Integer, nullable=True)
+
+    # ── FASE 3: Resultado de auditoría IA (Llama 3 vía Groq) ──
+    audit_report_json = db.Column(db.Text, nullable=True)   # JSON estructurado del reporte
+    audit_score = db.Column(db.Float, nullable=True)         # 0.0 – 100.0
+    audit_status = db.Column(db.String(30), default='pending')  # pending | processing | completed | error
+    audited_at = db.Column(db.DateTime, nullable=True)
+
+    # ── Metadata ──
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # ── Relaciones ──
+    appointment = db.relationship(
+        'Appointment',
+        backref=db.backref('audit', uselist=False, lazy=True, cascade='all, delete-orphan')
+    )
+    uploader = db.relationship('User', foreign_keys=[docx_uploaded_by])
+
+    def get_report(self):
+        """Parse audit_report_json safely."""
+        import json
+        try:
+            return json.loads(self.audit_report_json) if self.audit_report_json else {}
+        except Exception:
+            return {}

@@ -194,8 +194,17 @@ def register_request_handlers(app):
             
         # Validate App Key for API requests to ensure only edysync frontend can access
         if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
-            # Allow webhooks or public endpoints if any
-            if 'webhook' not in request.path:
+            # Skip X-App-Key validation for:
+            # 1. Webhook endpoints
+            # 2. /api/auth/* (called from Jinja login.html, not Angular)
+            # 3. Requests with a valid Flask session (user is already authenticated
+            #    via cookie — these come from Jinja templates, not Angular)
+            skip_appkey = (
+                'webhook' in request.path
+                or request.path.startswith('/api/auth/')
+                or current_user.is_authenticated
+            )
+            if not skip_appkey:
                 app_key = request.headers.get('X-App-Key')
                 if not app_key:
                     return jsonify({'success': False, 'message': 'Missing App-Key header'}), 403

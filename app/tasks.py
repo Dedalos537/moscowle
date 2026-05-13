@@ -129,19 +129,60 @@ def check_upcoming_payments(app, force=False):
             import traceback
             traceback.print_exc()
 
-# Leave init_scheduler as is...
+def run_daily_audits(app):
+    """
+    Run automated audits for all sessions completed today
+    that have both a program and transcript but haven't been audited yet.
+    """
+    with app.app_context():
+        try:
+            from app.models import SessionAudit
+            from app.services.audit_service import run_audit
+            
+            today_start = datetime.now().replace(hour=0, minute=0, second=0)
+            today_end = datetime.now().replace(hour=23, minute=59, second=59)
+            
+            # Find sessions needing audit: have program + transcript, status pending
+            pending_audits = db.session.query(SessionAudit).join(
+                Appointment, SessionAudit.appointment_id == Appointment.id
+            ).filter(
+                Appointment.start_time >= today_start,
+                Appointment.start_time <= today_end,
+                SessionAudit.planned_text.isnot(None),
+                SessionAudit.transcript_text.isnot(None),
+                SessionAudit.audit_status == 'pending'
+            ).all()
+            
+            count = 0
+            for audit in pending_audits:
+                try:
+                    result = run_audit(audit.planned_text, audit.transcript_text)
+                    audit.audit_report_json = result
+                    audit.audit_score = result.get('score', 0)
+                    audit.audit_status = 'completed'
+                    audit.audited_at = datetime.utcnow()
+                    count += 1
+                except Exception as e:
+                    audit.audit_status = 'error'
+                    print(f"Audit failed for session {audit.appointment_id}: {e}")
+            
+            if count > 0:
+                db.session.commit()
+                print(f"Daily audit: {count} sessions audited automatically")
+                
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in run_daily_audits: {e}")
+
 
 def init_scheduler(app):
-    # Run once at startup for testing/dev (Optional)
-    # check_upcoming_payments(app) 
-    
-    # Schedule to run every Monday at 9:00 AM (or daily?)
-    # User said "en la semana de finalización", implying a weekly check might be good, 
-    # but daily might be safer to ensure they don't miss it if the server is restart.
-    # Let's do Daily at 8 AM.
+    # Schedule payments check daily at 8 AM
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger="cron", hour=8, minute=0)
     
     # Check attendance every 30 minutes
     scheduler.add_job(func=lambda: check_session_attendance(app), trigger="interval", minutes=30)
+    
+    # Run automated audits daily at 11 PM
+    scheduler.add_job(func=lambda: run_daily_audits(app), trigger="cron", hour=23, minute=0)
     
     scheduler.start()
