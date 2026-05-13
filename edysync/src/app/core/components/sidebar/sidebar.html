@@ -1,72 +1,81 @@
-<aside class="w-64 h-screen bg-surface border-r border-gray-200 flex flex-col transition-colors duration-300">
-  <!-- Logo Section -->
-  <div class="h-24 flex items-center px-6 border-b border-gray-100 shrink-0">
+<aside class="w-64 h-screen bg-surface border-r border-border flex flex-col transition-colors duration-300 shadow-soft">
+  <div class="h-24 flex items-center px-6 border-b border-border shrink-0">
     <div class="flex items-center gap-3">
       <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
       <div class="flex flex-col">
         <span class="font-extrabold text-primary tracking-tight text-xl">EdySync</span>
-        <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Centro Juan Pablo II</span>
+        <span class="text-label-caps text-charcoal">Centro Juan Pablo II</span>
       </div>
     </div>
   </div>
 
-  <!-- Navigation -->
-  <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
-    <a routerLink="/admin/dashboard" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'desktop']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+  <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-0.5 custom-scrollbar">
+    <a routerLink="/admin/dashboard" routerLinkActive="active" #rla1="routerLinkActive"
+       class="nav-link" [class.active]="rla1.isActive">
+      <fa-icon [icon]="['fas', 'desktop']" class="w-5 text-center"></fa-icon>
       <span>Panel Admin</span>
     </a>
-    <a routerLink="/admin/edysync" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'school']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/edysync" routerLinkActive="active" #rla2="routerLinkActive"
+       class="nav-link" [class.active]="rla2.isActive">
+      <fa-icon [icon]="['fas', 'school']" class="w-5 text-center"></fa-icon>
       <span>EduSync Dashboard</span>
     </a>
-    <a routerLink="/admin/sessions" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'calendar-alt']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/sessions" routerLinkActive="active" #rla3="routerLinkActive"
+       class="nav-link" [class.active]="rla3.isActive">
+      <fa-icon [icon]="['fas', 'calendar-alt']" class="w-5 text-center"></fa-icon>
       <span>Sesiones Globales</span>
     </a>
-    <a routerLink="/admin/users" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'user-friends']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/users" routerLinkActive="active" #rla4="routerLinkActive"
+       class="nav-link" [class.active]="rla4.isActive">
+      <fa-icon [icon]="['fas', 'user-friends']" class="w-5 text-center"></fa-icon>
       <span>Admin Usuarios</span>
     </a>
-    <a routerLink="/admin/sedes" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'building']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/sedes" routerLinkActive="active" #rla5="routerLinkActive"
+       class="nav-link" [class.active]="rla5.isActive">
+      <fa-icon [icon]="['fas', 'building']" class="w-5 text-center"></fa-icon>
       <span>Sedes</span>
     </a>
-    <a routerLink="/admin/deudores" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'money-bill-wave']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/debtors" routerLinkActive="active" #rla6="routerLinkActive"
+       class="nav-link" [class.active]="rla6.isActive">
+      <fa-icon [icon]="['fas', 'money-bill-wave']" class="w-5 text-center"></fa-icon>
       <span>Deudores</span>
     </a>
-    <a routerLink="/admin/payments" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/payments" routerLinkActive="active" #rla7="routerLinkActive"
+       class="nav-link" [class.active]="rla7.isActive">
+      <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="w-5 text-center"></fa-icon>
       <span>Pagos y Membrecías</span>
     </a>
-    <a routerLink="/admin/expenses" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'wallet']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/expenses" routerLinkActive="active" #rla8="routerLinkActive"
+       class="nav-link" [class.active]="rla8.isActive">
+      <fa-icon [icon]="['fas', 'wallet']" class="w-5 text-center"></fa-icon>
       <span>Gastos y Terapeutas</span>
     </a>
-    <a routerLink="/admin/yape" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'qrcode']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/yape" routerLinkActive="active" #rla9="routerLinkActive"
+       class="nav-link" [class.active]="rla9.isActive">
+      <fa-icon [icon]="['fas', 'qrcode']" class="w-5 text-center"></fa-icon>
       <span>Importar Yape</span>
     </a>
-    <a routerLink="/admin/games" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'gamepad']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/games" routerLinkActive="active" #rla10="routerLinkActive"
+       class="nav-link" [class.active]="rla10.isActive">
+      <fa-icon [icon]="['fas', 'gamepad']" class="w-5 text-center"></fa-icon>
       <span>Admin Juegos</span>
     </a>
-    <a routerLink="/admin/reports" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'chart-line']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/reports" routerLinkActive="active" #rla11="routerLinkActive"
+       class="nav-link" [class.active]="rla11.isActive">
+      <fa-icon [icon]="['fas', 'chart-line']" class="w-5 text-center"></fa-icon>
       <span>Admin Reportes</span>
     </a>
-    <a routerLink="/admin/messages" routerLinkActive="bg-primary text-white hover:bg-primary" class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium text-gray-600 hover:bg-lightGreen hover:text-textDark transition-all duration-200 group">
-      <fa-icon [icon]="['fas', 'envelope']" class="w-5 text-center group-[.active]:text-white"></fa-icon>
+    <a routerLink="/admin/messages" routerLinkActive="active" #rla12="routerLinkActive"
+       class="nav-link" [class.active]="rla12.isActive">
+      <fa-icon [icon]="['fas', 'envelope']" class="w-5 text-center"></fa-icon>
       <span>Admin Mensajes</span>
     </a>
   </nav>
 
-  <!-- Bottom actions -->
-  <div class="p-4 border-t border-gray-100 shrink-0">
-    <button (click)="toggleDarkMode()" class="flex items-center gap-3 px-4 py-3 w-full rounded-full text-sm font-medium text-gray-600 hover:bg-gray-50 transition-all duration-200">
-      <fa-icon [icon]="['fas', 'moon']" class="w-5 text-center"></fa-icon>
-      <span>Modo Oscuro</span>
+  <div class="p-4 border-t border-border shrink-0">
+    <button (click)="toggleDarkMode()" class="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-charcoal hover:bg-surface-container-low transition-all duration-200">
+      <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']" class="w-5 text-center"></fa-icon>
+      <span>{{ theme === 'light' ? 'Modo Oscuro' : 'Modo Claro' }}</span>
     </button>
   </div>
 </aside>

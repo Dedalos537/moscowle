@@ -8,7 +8,7 @@
     </div>
   } @else {
     <!-- Financial Section -->
-    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden border-l-4 border-olive">
+    <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden border-l-4 border-primary">
       <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
         <div>
           <h3 class="text-lg font-semibold text-textDark">Resumen Financiero (Mes Actual)</h3>
@@ -38,8 +38,8 @@
           <p class="text-2xl font-black text-red-500">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
           <p class="text-xs text-gray-500 mt-1">{{ financials.overdue_users_count }} usuarios con deuda</p>
         </div>
-        <div class="bg-olive/10 rounded-2xl p-5 border border-olive">
-          <p class="text-[10px] font-black text-olive-600 uppercase tracking-widest mb-1">Ejecución</p>
+        <div class="bg-primary/10 rounded-2xl p-5 border border-primary">
+          <p class="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Ejecución</p>
           <p class="text-2xl font-black text-charcoal">{{ executionPercent.toFixed(1) }}%</p>
           <p class="text-xs text-gray-500 mt-1">Progreso de cobro</p>
         </div>
@@ -82,7 +82,7 @@
 
     <!-- Therapists & Patients Tables -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+      <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
         <h3 class="text-lg font-semibold text-textDark mb-3">Terapeutas</h3>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[500px]">
@@ -110,7 +110,7 @@
         </div>
       </div>
 
-      <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+      <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
         <h3 class="text-lg font-semibold text-textDark mb-3">Pacientes</h3>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[500px]">

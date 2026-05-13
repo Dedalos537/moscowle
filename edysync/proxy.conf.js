@@ -1,18 +1,26 @@
-const TARGET = process.env.PROXY_TARGET || 'http://127.0.0.1:5000';
+const TARGET = process.env.PROXY_TARGET || 'http://127.0.0.1:5001';
 
-// En desarrollo (apiBaseUrl='') se usan rutas sin /moscowle
-// En modo producción local (ng serve -c production, apiBaseUrl='/moscowle') se usan rutas con /moscowle
-// El proxy debe aceptar ambos contextos para que funcione en cualquier modo
-
-const common = ['/api', '/admin/api', '/therapist/api', '/uploads', '/login', '/logout'];
-const moscowle = common.map(p => '/moscowle' + p);
-
-module.exports = [
-  {
-    context: [...common, ...moscowle],
+const proxyConfig = {
+  '/api': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/api': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/payments/': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/generate-ia-report': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/analyze-receipt': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/reports/': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/csp-reports/': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/yape/': { target: TARGET, changeOrigin: true, secure: false },
+  '/admin/ai/': { target: TARGET, changeOrigin: true, secure: false },
+  '/therapist/api': { target: TARGET, changeOrigin: true, secure: false },
+  '/uploads': { target: TARGET, changeOrigin: true, secure: false },
+  '/login': { target: TARGET, changeOrigin: true, secure: false },
+  '/logout': { target: TARGET, changeOrigin: true, secure: false },
+  '/dashboard': { target: TARGET, changeOrigin: true, secure: false },
+  '/moscowle': {
     target: TARGET,
-    secure: TARGET.startsWith('https'),
     changeOrigin: true,
-    logLevel: 'debug',
+    secure: false,
+    rewrite: (path) => path.replace(/^\/moscowle/, ''),
   },
-];
+};
+
+module.exports = proxyConfig;

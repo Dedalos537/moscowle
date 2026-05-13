@@ -1,0 +1,11 @@
+<div class="flex flex-col gap-1.5 w-full">
+  @if (showLabel) {
+    <div class="flex justify-between text-xs text-charcoal">
+      <ng-content select="[progress-label]"></ng-content>
+      <span>{{ percentage }}%</span>
+    </div>
+  }
+  <div class="w-full overflow-hidden" [class]="trackClass">
+    <div [class]="fillClass" [style.width.%]="percentage"></div>
+  </div>
+</div>

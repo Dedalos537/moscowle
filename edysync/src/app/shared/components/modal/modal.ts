@@ -9,7 +9,7 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 export class Modal {
   @Input() isOpen: boolean = false;
   @Input() title: string = '';
-  
+
   @Output() close = new EventEmitter<void>();
 
   closeModal() {

@@ -200,7 +200,8 @@ def register_request_handlers(app):
             # 3. Requests with a valid Flask session (user is already authenticated
             #    via cookie — these come from Jinja templates, not Angular)
             skip_appkey = (
-                'webhook' in request.path
+                request.method == 'OPTIONS'
+                or 'webhook' in request.path
                 or request.path.startswith('/api/auth/')
                 or current_user.is_authenticated
             )
@@ -364,7 +365,7 @@ def create_app(config_class=Config):
     # ========== INITIALIZE EXTENSIONS ==========
     db.init_app(app)
     bcrypt.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    cors.init_app(app, origins=app.config['CORS_ORIGINS'], supports_credentials=True)
     mail.init_app(app)
     oauth.init_app(app)
     login_manager.init_app(app)
@@ -421,6 +422,8 @@ def create_app(config_class=Config):
             # Surface exact DB connection/creation errors so developer can see remote host errors.
             app.logger.error("Database connection/creation failed", exc_info=True)
             raise
+        finally:
+            db.session.remove()
     
     # ========== BLUEPRINTS ==========
     from app.routes.auth import auth_bp

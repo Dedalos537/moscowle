@@ -18,10 +18,20 @@ except ImportError:
 try:
     import torch
     from transformers import pipeline
-    # Cargar modelo de documento intelligence de Hugging Face
-    doc_pipeline = pipeline("document-question-answering", model="naver-clova-ix/donut-base-finetuned-naver-receipt-ocr")
-except ImportError:
-    doc_pipeline = None
+    # Lazy loading: el modelo se cargará bajo demanda
+    _doc_pipeline = None
+
+    def get_doc_pipeline():
+        global _doc_pipeline
+        if _doc_pipeline is None:
+            _doc_pipeline = pipeline("document-question-answering", model="naver-clova-ix/donut-base-finetuned-naver-receipt-ocr")
+        return _doc_pipeline
+except Exception:
+    _doc_pipeline = None
+    def get_doc_pipeline():
+        return None
+
+doc_pipeline = None  # module-level reference kept for backward compat, but use get_doc_pipeline()
 
 load_dotenv()
 logger = logging.getLogger('app')
@@ -81,13 +91,14 @@ def extract_receipt_data_advanced(image_path: str) -> dict:
     Extrae datos de recibo usando modelo Donut (más preciso).
     Requiere CUDA para velocidad óptima.
     """
-    if not doc_pipeline:
+    pipeline_instance = get_doc_pipeline()
+    if not pipeline_instance:
         logger.warning("Document pipeline not available, falling back to simple OCR")
         return extract_receipt_data_simple(image_path)
     
     try:
         img = Image.open(image_path)
-        result = doc_pipeline(img, "Cuál es el monto total?", top_k=3)
+        result = pipeline_instance(img, "Cuál es el monto total?", top_k=3)
         
         extracted = {
             "status": "success",

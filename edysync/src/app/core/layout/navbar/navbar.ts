@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -9,7 +9,7 @@ import { Observable } from 'rxjs';
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
 })
-export class Navbar {
+export class Navbar implements OnInit {
   user$: Observable<any>;
   theme: string = 'light';
 
@@ -18,6 +18,17 @@ export class Navbar {
     private router: Router
   ) {
     this.user$ = this.authService.currentUser$;
+  }
+
+  ngOnInit() {
+    const saved = localStorage.getItem('theme');
+    const isDark = document.documentElement.classList.contains('dark');
+    if (saved === 'dark' || (!saved && isDark)) {
+      this.theme = 'dark';
+      document.documentElement.classList.add('dark');
+    } else if (saved !== 'dark') {
+      document.documentElement.classList.remove('dark');
+    }
   }
 
   logout() {

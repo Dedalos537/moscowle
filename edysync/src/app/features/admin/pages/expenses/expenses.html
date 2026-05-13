@@ -10,7 +10,7 @@
     </div>
   } @else {
     <!-- Therapist Payroll -->
-    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <h3 class="text-lg font-semibold text-textDark">Nómina de Terapeutas (Mes Actual)</h3>
       </div>
@@ -60,7 +60,7 @@
     </div>
 
     <!-- Recent Expenses -->
-    <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
       <h3 class="text-lg font-semibold text-textDark mb-6">Historial de Gastos Recientes</h3>
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -120,7 +120,7 @@
   <div class="space-y-4">
     <div>
       <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Categoría</label>
-      <select [(ngModel)]="form.category" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+      <select [(ngModel)]="form.category" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
         <option value="therapist_payment">Pago a Terapeuta</option>
         <option value="operational">Gasto Operativo</option>
         <option value="bonus">Bonificación</option>
@@ -131,7 +131,7 @@
     @if (form.therapist_id) {
       <div>
         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destinatario</label>
-        <input type="text" [value]="form.therapist_name" readonly class="w-full px-3 py-2 bg-gray-100 border rounded-soft text-gray-500">
+        <input type="text" [value]="form.therapist_name" readonly class="w-full px-3 py-2 bg-gray-100 border rounded-lg text-gray-500">
       </div>
     }
 
@@ -139,7 +139,7 @@
 
     <div>
       <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Método de Pago</label>
-      <select [(ngModel)]="form.method" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+      <select [(ngModel)]="form.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
         <option value="transfer">Transferencia Bancaria</option>
         <option value="yape_plin">Yape / Plin</option>
         <option value="cash">Efectivo</option>
@@ -149,14 +149,14 @@
 
     <div>
       <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Comprobante (Imagen)</label>
-      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-lightGreen file:text-primary hover:file:bg-green-100">
+      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-green-100">
     </div>
 
     <app-input id="expense-date" label="Fecha" type="date" [(value)]="form.date"></app-input>
 
     <div>
       <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas / Descripción</label>
-      <textarea [(ngModel)]="form.description" rows="2" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
+      <textarea [(ngModel)]="form.description" rows="2" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
     </div>
 
     <app-button variant="primary" label="Registrar" [disabled]="submitting" (clicked)="submitForm()"></app-button>

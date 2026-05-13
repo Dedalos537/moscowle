@@ -12,6 +12,9 @@ import { Input } from './components/input/input';
 import { Spinner } from './components/spinner/spinner';
 import { Alert } from './components/alert/alert';
 import { Modal } from './components/modal/modal';
+import { Chip } from './components/chip/chip';
+import { ProgressBar } from './components/progress-bar/progress-bar';
+import { PillStatus } from './components/pill-status/pill-status';
 
 @NgModule({
   declarations: [
@@ -20,7 +23,10 @@ import { Modal } from './components/modal/modal';
     Input,
     Spinner,
     Alert,
-    Modal
+    Modal,
+    Chip,
+    ProgressBar,
+    PillStatus
   ],
   imports: [
     CommonModule,
@@ -34,11 +40,13 @@ import { Modal } from './components/modal/modal';
     Input,
     Spinner,
     Alert,
-    Modal
+    Modal,
+    Chip,
+    ProgressBar,
+    PillStatus
   ]
 })
 export class SharedModule {
-  // Inyectamos la librería de iconos en el constructor para disponer de ellos globalmente
   constructor(library: FaIconLibrary) {
     library.addIconPacks(fas, far, fab);
   }

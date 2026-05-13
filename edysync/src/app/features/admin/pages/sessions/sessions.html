@@ -5,7 +5,7 @@
 <div class="p-4 md:p-8 space-y-6">
 
   <!-- Therapist Filter -->
-  <div class="bg-surface p-4 rounded-soft shadow-soft border border-gray-100 flex flex-wrap gap-4 items-center">
+  <div class="bg-surface p-4 rounded-lg shadow-soft border border-gray-100 flex flex-wrap gap-4 items-center">
     <label class="text-sm font-medium text-gray-700">Filtrar por Terapeuta:</label>
     <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
       <option value="all">Todos los Terapeutas</option>
@@ -16,7 +16,7 @@
   </div>
 
   <!-- Calendar -->
-  <div class="bg-surface p-4 md:p-6 rounded-soft shadow-soft border border-gray-100 min-h-[600px]">
+  <div class="bg-surface p-4 md:p-6 rounded-lg shadow-soft border border-gray-100 min-h-[600px]">
     <full-calendar [options]="calendarOptions"></full-calendar>
   </div>
 </div>

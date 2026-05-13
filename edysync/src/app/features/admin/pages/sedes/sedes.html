@@ -4,18 +4,63 @@
     <p class="text-xs text-gray-500 font-medium leading-none mt-1">activas</p>
   </div>
   
-  <app-button variant="primary" label="Nueva Sede" [icon]="['fas', 'plus']"></app-button>
+  <app-button variant="primary" label="Nueva Sede" [icon]="['fas', 'plus']" (clicked)="openCreateDrawer()"></app-button>
 </ng-template>
 
 <div class="p-1 animate-fade-in-up space-y-8">
   
-  <!-- Cards Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    
-    @for (sede of sedes; track sede.id) {
-      <app-sede-card [sede]="sede"></app-sede-card>
-    }
-    
-  </div>
+  @if (loading) {
+    <div class="flex justify-center py-20">
+      <app-spinner size="md" colorClass="text-primary"></app-spinner>
+    </div>
+  } @else {
+    <!-- Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      
+      @for (sede of sedes; track sede.id) {
+        <app-sede-card [sede]="sede"></app-sede-card>
+      }
+      
+    </div>
+  }
 
 </div>
+
+<!-- Create Sede Drawer -->
+@if (showCreateDrawer) {
+  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeCreateDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-white shadow-2xl z-[101] flex flex-col border-l border-gray-100">
+    <div class="flex-none p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+      <h3 class="text-xl font-bold text-gray-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'building']" class="text-primary"></fa-icon>
+        </div>
+        Crear Nueva Sede
+      </h3>
+      <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-full hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nombre</label>
+        <input [(ngModel)]="newSede.name" type="text" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Nombre de la sede">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Dirección</label>
+        <input [(ngModel)]="newSede.address" type="text" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Dirección (opcional)">
+      </div>
+    </div>
+
+    <div class="flex-none p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
+      <div class="flex justify-end gap-3">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
+        <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'save']" (clicked)="createSede()"></app-button>
+      </div>
+      @if (createStatus) {
+        <span class="text-right text-sm text-gray-600 font-medium">{{ createStatus }}</span>
+      }
+    </div>
+  </div>
+}

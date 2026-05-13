@@ -2,21 +2,21 @@
   @if (label) {
     <label [for]="id" class="text-sm font-medium text-textDark">{{ label }}</label>
   }
-  
+
   <div class="relative w-full">
     @if (icon) {
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-charcoal">
         <fa-icon [icon]="icon"></fa-icon>
       </div>
     }
-    
-    <input 
+
+    <input
       [id]="id"
       [type]="type"
       [value]="value"
       (input)="onInput($event)"
       [placeholder]="placeholder"
-      class="w-full bg-background text-textDark border border-border rounded-lg outline-none transition-colors 
+      class="w-full bg-background text-textDark border border-border rounded-lg outline-none transition-colors
              focus:border-primary focus:ring-1 focus:ring-primary px-4 py-2"
       [class.pl-10]="icon"
       [class.border-error]="error"

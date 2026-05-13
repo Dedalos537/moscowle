@@ -25,13 +25,18 @@ class Config:
     
     # CRITICAL: Connection pool optimization for MySQL
     # Prevent "MySQL server has gone away" during idle periods
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 10,              # Maintain 10 connections
-        'max_overflow': 20,           # Allow up to 20 bursts
-        'pool_recycle': 1800,         # Recycle connections every 30 mins (MySQL default timeout is often 8hrs, but strict firewalls cut sooner)
-        'pool_pre_ping': True,        # Vital: Check connection aliveness before query
-        'pool_timeout': 30            # Fail fast if pool is exhausted
-    }
+    # NOTE: SQLite uses NullPool implicitly — skip pooling options for SQLite.
+    _uri = os.getenv('SQLALCHEMY_DATABASE_URI', '')
+    if _uri.startswith('sqlite'):
+        SQLALCHEMY_ENGINE_OPTIONS = {}
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 10,
+            'max_overflow': 20,
+            'pool_recycle': 1800,
+            'pool_pre_ping': True,
+            'pool_timeout': 30
+        }
     
     # ========== SECURITY - RATE LIMITING ==========
     RATELIMIT_ENABLED = True
@@ -64,6 +69,9 @@ class Config:
     # Timeout para SMTP (prevent hanging)
     MAIL_TIMEOUT = 10  # segundos
     
+    # ========== CORS ==========
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:4200')
+
     # ========== SESSION CONFIGURATION - CRITICAL ==========
     # These settings help prevent session leaking and improve security
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
@@ -71,7 +79,7 @@ class Config:
     # For production, these should terminate https
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax' # Changed to Lax for compatibility
+    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
     SESSION_COOKIE_NAME = 'moscowle_session'
     # Ensure cookie domain is not set for local development (accept localhost/127.0.0.1)
     SESSION_COOKIE_DOMAIN = None
@@ -83,7 +91,7 @@ class Config:
     REMEMBER_COOKIE_DURATION = timedelta(days=7)
     
     # ========== CSRF CONFIGURATION ==========
-    WTF_CSRF_ENABLED = True
+    WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'True') == 'True'
     WTF_CSRF_TIME_LIMIT = None  # No time limit on CSRF tokens
     WTF_CSRF_SSL_STRICT = False 
     
@@ -118,7 +126,6 @@ class DevelopmentConfig(Config):
     # Development-specific relaxation for local HTTP testing
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False
-    SESSION_COOKIE_SAMESITE = 'Lax'
     FORCE_HTTPS = False
 
 class ProductionConfig(Config):

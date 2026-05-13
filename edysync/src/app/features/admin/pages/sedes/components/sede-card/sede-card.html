@@ -26,21 +26,21 @@
       <span class="flex items-center gap-3 text-gray-600 font-medium">
         <fa-icon [icon]="['fas', 'users']" class="text-blue-500 w-4"></fa-icon> Pacientes
       </span>
-      <span class="font-bold text-textDark">{{ sede.stats.patients.total }}</span>
+      <span class="font-bold text-textDark">{{ sede.stats?.patients?.total ?? '—' }}</span>
     </div>
     
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-gray-600 font-medium">
         <fa-icon [icon]="['fas', 'calendar-alt']" class="text-green-500 w-4"></fa-icon> Sesiones
       </span>
-      <span class="font-bold text-textDark">{{ sede.stats.sessions.total_completed }}</span>
+      <span class="font-bold text-textDark">{{ sede.stats?.sessions?.total_completed ?? '—' }}</span>
     </div>
     
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-gray-600 font-medium">
         <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-amber-500 w-4"></fa-icon> Ingresos
       </span>
-      <span class="font-bold text-textDark">S/. {{ sede.stats.payments.total_revenue }}</span>
+      <span class="font-bold text-textDark">S/. {{ sede.stats?.payments?.total_revenue ?? '—' }}</span>
     </div>
     
   </div>
