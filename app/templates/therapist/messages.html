@@ -17,7 +17,7 @@
         <p class="text-sm text-on-surface-variant hidden md:block">Comunícate de forma segura con tus pacientes</p>
     </div>
     <a href="{{ url_for('therapist.patients') }}" class="bg-primary hover:bg-opacity-90 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
-        <span class="material-symbols-outlined fas fa-plus">circle</span> <span class="hidden md:inline">Nueva Conversación</span>
+        <i class="fas fa-plus"></i> <span class="hidden md:inline">Nueva Conversación</span>
     </a>
 </div>
 {% endblock %}
@@ -25,7 +25,7 @@
 {% block content %}
 <div class="p-4 md:p-8">
     
-    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden border border-outline-variant">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden border border-outline-variant">
         <!-- List Header -->
         <div class="p-6 border-b border-outline-variant bg-surface-container-low/50 flex justify-between items-center">
             <h3 class="text-lg font-bold text-on-surface">Bandeja de Entrada</h3>
@@ -85,8 +85,8 @@
                                 Nuevo mensaje
                             </span>
                         {% endif %}
-                        <div class="w-10 h-10 rounded-full bg-surface-container-lowest-container-lowest border border-outline-variant flex items-center justify-center text-on-surface-variant/70 group-hover:border-primary group-hover:text-primary transition-colors shadow-sm">
-                            <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
+                        <div class="w-10 h-10 rounded-full bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-on-surface-variant/70 group-hover:border-primary group-hover:text-primary transition-colors shadow-sm">
+                            <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
         {% else %}
         <div class="py-16 px-6 text-center">
             <div class="w-20 h-20 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-                <span class="material-symbols-outlined fas fa-inbox text-4xl">circle</span>
+                <i class="fas fa-inbox text-4xl"></i>
             </div>
             <h4 class="text-on-surface font-bold text-lg">No hay mensajes aún</h4>
             <p class="text-on-surface-variant max-w-sm mx-auto mt-2">Cuando tus pacientes te envíen mensajes o consultas, aparecerán aquí listados.</p>

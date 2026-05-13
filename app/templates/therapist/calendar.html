@@ -20,7 +20,7 @@
     </div>
 
     <!-- Actions Bar -->
-    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center space-x-4 w-full md:w-auto justify-center md:justify-start">
                 <button id="prev-month-btn" class="w-10 h-10 rounded-lg border border-outline flex items-center justify-center hover:bg-surface-container-low transition-colors">
@@ -39,7 +39,7 @@
     </div>
 
     <!-- Calendar Grid -->
-    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6 overflow-x-auto">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6 overflow-x-auto">
         <div class="min-w-[700px]">
             <div class="grid grid-cols-7 gap-2 mb-4">
                 <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Domingo</div>
@@ -58,7 +58,7 @@
     </div>
 
     <!-- Upcoming Appointments -->
-    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
         <h3 class="text-xl font-semibold text-charcoal mb-6 flex items-center">
             <span class="material-symbols-outlined text-olive mr-3">event_available</span>
             Próximas Citas
@@ -66,7 +66,7 @@
         
         <div id="appointments-list" class="space-y-4">
             <div class="text-center py-8 text-on-surface-variant">
-                <span class="material-symbols-outlined fas fa-calendar-plus text-gray-300 text-4xl mb-3">circle</span>
+                <i class="fas fa-calendar-plus text-gray-300 text-4xl mb-3"></i>
                 <p>No hay citas programadas</p>
             </div>
         </div>
@@ -222,7 +222,7 @@
         if (upcoming.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-8 text-on-surface-variant">
-                    <span class="material-symbols-outlined fas fa-calendar-plus text-gray-300 text-4xl mb-3">circle</span>
+                    <i class="fas fa-calendar-plus text-gray-300 text-4xl mb-3"></i>
                     <p>No hay citas programadas</p>
                 </div>
             `;
@@ -255,7 +255,7 @@
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        ${appt.location ? `<span class="text-xs text-on-surface-variant"><span class="material-symbols-outlined fas fa-location-dot mr-1">circle</span>${appt.location}</span>` : ''}
+                        ${appt.location ? `<span class="text-xs text-on-surface-variant"><i class="fas fa-location-dot mr-1"></i>${appt.location}</span>` : ''}
                         ${appt.games && appt.games.length ? `<button class="ml-3 px-3 py-1 bg-primary text-white text-xs rounded-2xl open-game-btn" data-game="${appt.games[0]}">Abrir Juego</button>` : ''}
                     </div>
                 </div>

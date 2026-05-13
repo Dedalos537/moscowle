@@ -25,9 +25,14 @@ px = None
 def _import_analytics_libs():
     global pd, go, px
     if pd is None:
-        import pandas as pd
-        import plotly.graph_objects as go
-        import plotly.express as px
+        try:
+            import pandas as pd
+            import plotly.graph_objects as go
+            import plotly.express as px
+        except ImportError:
+            pd = None
+            go = None
+            px = None
 
 therapist_bp = Blueprint('therapist', __name__, url_prefix='/therapist')
 dashboard_service = DashboardService()
@@ -133,15 +138,18 @@ def dashboard():
 
     # Recent audit objectives for the current/next session
     session_objectives = []
+    session_progress = 0
     if next_session:
         try:
             audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
-            if audit and audit.audit_report_json and isinstance(audit.audit_report_json, dict):
-                for obj in audit.audit_report_json.get('objectives', []):
-                    session_objectives.append({
-                        'name': obj.get('name', ''),
-                        'status': obj.get('status', 'pendiente')
-                    })
+            if audit:
+                session_progress = int(audit.audit_score or 0)
+                if audit.audit_report_json and isinstance(audit.audit_report_json, dict):
+                    for obj in audit.audit_report_json.get('objectives', []):
+                        session_objectives.append({
+                            'name': obj.get('name', ''),
+                            'status': obj.get('status', 'pendiente')
+                        })
         except Exception:
             pass
 
@@ -154,6 +162,8 @@ def dashboard():
                            agenda=agenda,
                            next_session=next_session,
                            session_objectives=session_objectives,
+                           session_progress=session_progress,
+                           planned_text=None,
                            today_date=now.strftime('%d %b'),
                            active_page='dashboard')
 
@@ -367,91 +377,98 @@ def analytics():
             })
 
     # 4. Charts Data
-    
-    # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients of MINE)
-    last_30_days = datetime.utcnow() - timedelta(days=30)
     difficulty_adaptation_data = {}
-    
-    if my_patient_ids:
-        # Get top 5 patients by activity FROM mY LIST
-        top_patients = db.session.query(SessionMetrics.user_id, func.count(SessionMetrics.id))\
-            .filter(SessionMetrics.user_id.in_(my_patient_ids))\
-            .group_by(SessionMetrics.user_id).order_by(func.count(SessionMetrics.id).desc()).limit(5).all()
-        
-        top_patient_ids = [p[0] for p in top_patients]
-        
-        if top_patient_ids:
-            metrics_data = SessionMetrics.query.filter(
-                SessionMetrics.date >= last_30_days,
-                SessionMetrics.user_id.in_(top_patient_ids)
-            ).order_by(SessionMetrics.date).all()
-            
-            # Organize by patient
-            patient_data = {}
-
-            # Re-query users to get names map
-            names_map = {u.id: u.username for u in User.query.filter(User.id.in_(top_patient_ids)).all()}
-
-            for m in metrics_data:
-                p_name = names_map.get(m.user_id, "User")
-                if p_name not in patient_data:
-                    patient_data[p_name] = {'x': [], 'y': []}
-                patient_data[p_name]['x'].append(m.date.isoformat())
-                patient_data[p_name]['y'].append(m.prediction) # 0, 1, 2
-
-            fig_difficulty = go.Figure()
-            for name, data in patient_data.items():
-                fig_difficulty.add_trace(go.Scatter(x=data['x'], y=data['y'], name=name, mode='lines+markers'))
-            
-            fig_difficulty.update_layout(
-                title='Adaptación de Nivel (Últimos 30 días)', 
-                xaxis_title='Fecha', 
-                yaxis_title='Decisión IA (0=Mantener, 1=Avanzar, 2=Apoyo)',
-                template='plotly_white',
-                legend_title_text='Pacientes'
-            )
-            difficulty_adaptation_data = json.loads(fig_difficulty.to_json())
-
-    # Chart 2: Patient Progress Distribution (Latest prediction per patient)
-    # Get latest metric for each patient
     patient_progress_data = {}
-    if my_patient_ids:
-        subq = db.session.query(
-            SessionMetrics.user_id, 
-            func.max(SessionMetrics.date).label('max_date')
-        ).filter(SessionMetrics.user_id.in_(my_patient_ids))\
-        .group_by(SessionMetrics.user_id).subquery()
-        
-        latest_metrics = db.session.query(SessionMetrics).join(
-            subq, 
-            (SessionMetrics.user_id == subq.c.user_id) & (SessionMetrics.date == subq.c.max_date)
-        ).all()
-        
-        # Count predictions
-        pred_counts = {0: 0, 1: 0, 2: 0}
-        for m in latest_metrics:
-            if m.prediction in pred_counts:
-                pred_counts[m.prediction] += 1
-                
-        df_progress = pd.DataFrame({
-            'Decisión': ['Mantener', 'Avanzar', 'Apoyo'],
-            'Pacientes': [pred_counts[0], pred_counts[1], pred_counts[2]]
-        })
-        
-        fig_progress = px.bar(df_progress, x='Decisión', y='Pacientes', title='Estado Actual de Pacientes', template='plotly_white', color='Decisión')
-        patient_progress_data = json.loads(fig_progress.to_json())
-
-    # Chart 3: Adaptation Frequency by Game
     adaptation_frequency_data = {}
-    if my_patient_ids:
-        game_counts = db.session.query(SessionMetrics.game_name, func.count(SessionMetrics.id))\
-            .filter(SessionMetrics.user_id.in_(my_patient_ids))\
-            .group_by(SessionMetrics.game_name).all()
+    
+    if go is None or pd is None or px is None:
+        pass
+    
+    else:
+        # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients of MINE)
+        last_30_days = datetime.utcnow() - timedelta(days=30)
         
-        if game_counts:
-            df_adaptation = pd.DataFrame(game_counts, columns=['Juego', 'Frecuencia'])
-            fig_adaptation = px.pie(df_adaptation, values='Frecuencia', names='Juego', title='Juegos Más Jugados', hole=.3, template='plotly_white')
-            adaptation_frequency_data = json.loads(fig_adaptation.to_json())
+        if my_patient_ids:
+            try:
+                top_patients = db.session.query(SessionMetrics.user_id, func.count(SessionMetrics.id))\
+                    .filter(SessionMetrics.user_id.in_(my_patient_ids))\
+                    .group_by(SessionMetrics.user_id).order_by(func.count(SessionMetrics.id).desc()).limit(5).all()
+                
+                top_patient_ids = [p[0] for p in top_patients]
+                
+                if top_patient_ids:
+                    metrics_data = SessionMetrics.query.filter(
+                        SessionMetrics.date >= last_30_days,
+                        SessionMetrics.user_id.in_(top_patient_ids)
+                    ).order_by(SessionMetrics.date).all()
+                    
+                    patient_data = {}
+                    names_map = {u.id: u.username for u in User.query.filter(User.id.in_(top_patient_ids)).all()}
+
+                    for m in metrics_data:
+                        p_name = names_map.get(m.user_id, "User")
+                        if p_name not in patient_data:
+                            patient_data[p_name] = {'x': [], 'y': []}
+                        patient_data[p_name]['x'].append(m.date.isoformat())
+                        patient_data[p_name]['y'].append(m.prediction)
+
+                    if patient_data:
+                        fig_difficulty = go.Figure()
+                        for name, data in patient_data.items():
+                            fig_difficulty.add_trace(go.Scatter(x=data['x'], y=data['y'], name=name, mode='lines+markers'))
+                        fig_difficulty.update_layout(
+                            title='Adaptación de Nivel (Últimos 30 días)', 
+                            xaxis_title='Fecha', 
+                            yaxis_title='Decisión IA (0=Mantener, 1=Avanzar, 2=Apoyo)',
+                            template='plotly_white',
+                            legend_title_text='Pacientes'
+                        )
+                        difficulty_adaptation_data = json.loads(fig_difficulty.to_json())
+            except Exception:
+                pass
+
+        # Chart 2: Patient Progress Distribution
+        if my_patient_ids:
+            try:
+                subq = db.session.query(
+                    SessionMetrics.user_id, 
+                    func.max(SessionMetrics.date).label('max_date')
+                ).filter(SessionMetrics.user_id.in_(my_patient_ids))\
+                .group_by(SessionMetrics.user_id).subquery()
+                
+                latest_metrics = db.session.query(SessionMetrics).join(
+                    subq, 
+                    (SessionMetrics.user_id == subq.c.user_id) & (SessionMetrics.date == subq.c.max_date)
+                ).all()
+                
+                pred_counts = {0: 0, 1: 0, 2: 0}
+                for m in latest_metrics:
+                    if m.prediction in pred_counts:
+                        pred_counts[m.prediction] += 1
+                        
+                df_progress = pd.DataFrame({
+                    'Decisión': ['Mantener', 'Avanzar', 'Apoyo'],
+                    'Pacientes': [pred_counts[0], pred_counts[1], pred_counts[2]]
+                })
+                
+                fig_progress = px.bar(df_progress, x='Decisión', y='Pacientes', title='Estado Actual de Pacientes', template='plotly_white', color='Decisión')
+                patient_progress_data = json.loads(fig_progress.to_json())
+            except Exception:
+                pass
+
+        # Chart 3: Adaptation Frequency by Game
+        if my_patient_ids:
+            try:
+                game_counts = db.session.query(SessionMetrics.game_name, func.count(SessionMetrics.id))\
+                    .filter(SessionMetrics.user_id.in_(my_patient_ids))\
+                    .group_by(SessionMetrics.game_name).all()
+                
+                if game_counts:
+                    df_adaptation = pd.DataFrame(game_counts, columns=['Juego', 'Frecuencia'])
+                    fig_adaptation = px.pie(df_adaptation, values='Frecuencia', names='Juego', title='Juegos Más Jugados', hole=.3, template='plotly_white')
+                    adaptation_frequency_data = json.loads(fig_adaptation.to_json())
+            except Exception:
+                pass
 
     return render_template('therapist/analytics.html',
                            ai_overview=ai_overview,

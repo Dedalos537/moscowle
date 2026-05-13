@@ -39,13 +39,13 @@
                     <div class="flex flex-wrap justify-center md:justify-start items-center gap-4 text-sm">
                         {% if patient.phone %}
                         <div class="flex items-center space-x-2">
-                            <span class="material-symbols-outlined fas fa-phone">circle</span>
+                            <i class="fas fa-phone"></i>
                             <span>{{ patient.phone }}</span>
                         </div>
                         {% endif %}
                         {% if patient.date_of_birth %}
                         <div class="flex items-center space-x-2">
-                            <span class="material-symbols-outlined fas fa-cake-candles">circle</span>
+                            <i class="fas fa-cake-candles"></i>
                             <span>{{ patient.date_of_birth.strftime('%d/%m/%Y') }}</span>
                         </div>
                         {% endif %}
@@ -60,28 +60,28 @@
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
                 <span class="material-symbols-outlined text-3xl text-blue-500">gamepad</span>
             </div>
             <p class="text-3xl font-bold text-on-surface">{{ total_sessions }}</p>
             <p class="text-sm text-on-surface-variant">Sesiones Totales</p>
         </div>
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
-                <span class="material-symbols-outlined fas fa-bullseye text-3xl text-green-500">circle</span>
+                <i class="fas fa-bullseye text-3xl text-green-500"></i>
             </div>
             <p class="text-3xl font-bold text-on-surface">{{ avg_accuracy }}%</p>
             <p class="text-sm text-on-surface-variant">Precisión Promedio</p>
         </div>
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
                 <span class="material-symbols-outlined text-3xl text-yellow-500">schedule</span>
             </div>
             <p class="text-3xl font-bold text-on-surface">{{ avg_time }}s</p>
             <p class="text-sm text-on-surface-variant">Tiempo Promedio</p>
         </div>
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
             <div class="flex items-center justify-between mb-3">
                 <span class="material-symbols-outlined text-3xl text-purple-500">event_available</span>
             </div>
@@ -95,13 +95,13 @@
         <div class="lg:col-span-2 space-y-6 md:space-y-8">
             
             <!-- Progress Chart -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-bold text-on-surface mb-6">Evolución de Precisión</h3>
                 <canvas id="progressChart" height="80"></canvas>
             </div>
 
             <!-- Recent Sessions -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-xl font-bold text-on-surface">Historial de Sesiones</h3>
                     <div class="flex gap-2">
@@ -130,13 +130,13 @@
                                         
                                         {% if session.therapist_id != current_user.id %}
                                         <span class="ml-2 px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-xs border border-outline-variant" title="Terapeuta asignado">
-                                            <span class="material-symbols-outlined fas fa-user-md mr-1">circle</span>{{ session.therapist.username if session.therapist else 'Otro' }}
+                                            <i class="fas fa-user-md mr-1"></i>{{ session.therapist.username if session.therapist else 'Otro' }}
                                         </span>
                                         {% endif %}
 
                                         {% if session.session_images %}
                                             <span class="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                                                <span class="material-symbols-outlined fas fa-camera mr-1">circle</span>{{ session.session_images|length }} fotos
+                                                <i class="fas fa-camera mr-1"></i>{{ session.session_images|length }} fotos
                                             </span>
                                         {% endif %}
                                     </p>
@@ -168,7 +168,7 @@
         <div class="space-y-6 md:space-y-8">
             
             <!-- Patient Info -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-bold text-on-surface mb-6">Información del Paciente</h3>
                 <div class="space-y-4 text-sm">
                     {% if patient.guardian_name %}
@@ -203,7 +203,7 @@
             </div>
 
             <!-- Upcoming Appointments -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-bold text-on-surface mb-6">Próximas Citas</h3>
                 <div class="space-y-3">
                     {% if upcoming_appointments %}
@@ -211,7 +211,7 @@
                         <div class="p-4 border border-outline-variant rounded-xl">
                             <p class="font-semibold text-on-surface mb-1">{{ appt.title }}</p>
                             <p class="text-sm text-on-surface-variant">
-                                <span class="material-symbols-outlined fas fa-calendar mr-2">circle</span>
+                                <i class="fas fa-calendar mr-2"></i>
                                 {{ appt.start_time.strftime('%d %b, %H:%M') }}
                             </p>
                         </div>
@@ -245,7 +245,7 @@
                        placeholder="{{ 'Ingresa un email para activar la cuenta' if (patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_'))) else '' }}"
                        class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent">
                 {% if patient.email and (patient.email.startswith('noemail_') or patient.email.startswith('temp_')) %}
-                <p class="text-xs text-amber-600 mt-1 font-medium"><span class="material-symbols-outlined fas fa-exclamation-triangle">circle</span> Cuenta presencial. Agrega un email para generar contraseña y dar acceso.</p>
+                <p class="text-xs text-amber-600 mt-1 font-medium"><i class="fas fa-exclamation-triangle"></i> Cuenta presencial. Agrega un email para generar contraseña y dar acceso.</p>
                 {% endif %}
             </div>
 
@@ -289,7 +289,7 @@
 
             <div class="flex flex-col md:flex-row gap-4 pt-4">
                 <button type="submit" class="flex-1 bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-opacity-90 transition-colors">
-                    <span class="material-symbols-outlined fas fa-save mr-2">circle</span>Guardar Cambios
+                    <i class="fas fa-save mr-2"></i>Guardar Cambios
                 </button>
                 <button type="button" onclick="closeEditModal()" class="flex-1 bg-surface-container-high text-on-surface px-6 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors">
                     Cancelar
@@ -310,7 +310,7 @@
         datasets: [{
             label: 'Precisión (%)',
             data: sessions.map(s => s.accurracy),
-            borderColor: '#75a83a',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#75a83a',
             backgroundColor: 'rgba(117, 168, 58, 0.1)',
             tension: 0.4,
             fill: true

@@ -37,3 +37,4 @@ ollama
 reportlab>=3.6.12
 python-docx>=0.8.11
 groq>=0.4.0
+plotly>=6.0.0

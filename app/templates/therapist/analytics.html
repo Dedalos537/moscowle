@@ -17,7 +17,7 @@
 
 {% block header_action %}
 <button class="px-3 md:px-5 py-2 bg-primary text-white rounded-2xl hover:bg-opacity-90 transition-all shadow-sm shadow-slate-200/50 font-medium flex items-center">
-    <span class="material-symbols-outlined fas fa-download md:mr-2">circle</span>
+    <i class="fas fa-download md:mr-2"></i>
     <span class="hidden md:inline">Export Report</span>
 </button>
 {% endblock %}
@@ -212,7 +212,7 @@
             <!-- Mobile Cards -->
             <div class="md:hidden space-y-4 p-4">
                 {% for adaptation in recent_adaptations %}
-                <div class="bg-surface-container-lowest-container-lowest border border-outline-variant rounded-2xl p-4 shadow-sm">
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-sm">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center gap-3">
                             <img src="{{ adaptation.patient_avatar }}" alt="Patient" class="w-10 h-10 rounded-full object-cover">

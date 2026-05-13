@@ -23,7 +23,7 @@
         <div class="md:col-span-2 space-y-6">
 
             <!-- Personal Information -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-semibold text-charcoal mb-6">Información Personal</h3>
                 <form id="profileForm" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -70,13 +70,13 @@
                     <div class="pt-4">
                         <button type="submit"
                             class="bg-olive text-white px-8 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
-                            <span class="material-symbols-outlined fas fa-save mr-2">circle</span>Guardar Cambios
+                            <i class="fas fa-save mr-2"></i>Guardar Cambios
                         </button>
                     </div>
                 </form>
             </div>
             <!-- Change Password -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-semibold text-charcoal mb-6">Cambiar Contraseña</h3>
                 <form id="passwordForm" class="space-y-4">
                     <div>
@@ -100,23 +100,23 @@
                             </div>
                             <div id="strengthRequirements" class="text-xs space-y-1">
                                 <div id="req-length" class="flex items-center space-x-2 text-on-surface-variant">
-                                    <span class="material-symbols-outlined fas fa-circle text-gray-300 text-[6px]">circle</span>
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
                                     <span>Mínimo 8 caracteres</span>
                                 </div>
                                 <div id="req-uppercase" class="flex items-center space-x-2 text-on-surface-variant">
-                                    <span class="material-symbols-outlined fas fa-circle text-gray-300 text-[6px]">circle</span>
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
                                     <span>Una letra mayúscula</span>
                                 </div>
                                 <div id="req-lowercase" class="flex items-center space-x-2 text-on-surface-variant">
-                                    <span class="material-symbols-outlined fas fa-circle text-gray-300 text-[6px]">circle</span>
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
                                     <span>Una letra minúscula</span>
                                 </div>
                                 <div id="req-number" class="flex items-center space-x-2 text-on-surface-variant">
-                                    <span class="material-symbols-outlined fas fa-circle text-gray-300 text-[6px]">circle</span>
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
                                     <span>Un número</span>
                                 </div>
                                 <div id="req-special" class="flex items-center space-x-2 text-on-surface-variant">
-                                    <span class="material-symbols-outlined fas fa-circle text-gray-300 text-[6px]">circle</span>
+                                    <i class="fas fa-circle text-gray-300 text-[6px]"></i>
                                     <span>Un carácter especial (!@#$%)</span>
                                 </div>
                             </div>
@@ -135,14 +135,14 @@
                     <div class="pt-4">
                         <button type="submit"
                             class="bg-blue-500 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-600 transition-colors">
-                            <span class="material-symbols-outlined fas fa-key mr-2">circle</span>Cambiar Contraseña
+                            <i class="fas fa-key mr-2"></i>Cambiar Contraseña
                         </button>
                     </div>
                 </form>
             </div>
 
             <!-- Professional Information -->
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
                 <h3 class="text-xl font-semibold text-charcoal mb-6">Información Profesional</h3>
                 <div class="grid grid-cols-2 gap-4 text-sm">
                     <div class="p-4 bg-surface-container-low rounded-lg">
@@ -168,20 +168,20 @@
 
         <!-- Profile Summary -->
         <div class="space-y-6">
-            <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 text-center">
+            <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 text-center">
                 <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent mx-auto mb-4 flex items-center justify-center">
                     <span class="text-white text-4xl font-bold">{{ current_user.username[0].upper() if current_user.username else 'T' }}</span>
                 </div>
                 <h3 class="text-xl font-bold text-charcoal mb-1">{{ current_user.username or 'Terapeuta' }}</h3>
                 <p class="text-sm text-on-surface-variant mb-4">Terapeuta</p>
                 <span class="inline-block px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                    <span class="material-symbols-outlined fas fa-circle text-green-500  mr-1 text-[16px]">circle</span>Activo
+                    <i class="fas fa-circle text-green-500  mr-1 text-[16px]"></i>Activo
                 </span>
             </div>
 
             <div class="bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl p-6">
                 <div class="flex items-center space-x-3 mb-4">
-                    <span class="material-symbols-outlined fas fa-star text-accent text-[36px]">circle</span>
+                    <i class="fas fa-star text-accent text-[36px]"></i>
                     <h4 class="font-semibold text-charcoal">Consejos</h4>
                 </div>
                 <ul class="text-sm text-on-surface space-y-2">
@@ -197,7 +197,7 @@
 
 <!-- Modal Alert -->
 <div id="alertModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-surface-container-lowest-container-lowest rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden">
         <div id="modalHeader" class="px-6 py-4 border-b flex items-center space-x-3">
             <i id="modalIcon" class="fas text-2xl"></i>
             <h3 id="modalTitle" class="text-lg font-semibold text-charcoal"></h3>

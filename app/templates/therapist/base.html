@@ -172,8 +172,22 @@
     .dark .text-gray-600 { color: #d1d5db !important; } /* Gray 300 */
     .dark .text-gray-700 { color: #f3f4f6 !important; } /* Gray 100 */
     .dark .text-gray-400 { color: #6b7280 !important; } /* Gray 500 */
+    .dark .text-gray-300 { color: #d1d5db !important; }
+    .dark .text-gray-800 { color: #f3f4f6 !important; }
+    .dark .text-slate-500 { color: #9ca3af !important; }
+    .dark .text-charcoal { color: #e2e4d4 !important; }
+    .dark .bg-gray-300 { background-color: #4b5563 !important; }
+    .dark .bg-gray-500 { background-color: #6b7280 !important; }
+    .dark .bg-gray-800 { background-color: #1f2937 !important; }
     .dark .border-gray-100 { border-color: #374151 !important; }
     .dark .border-gray-200 { border-color: #4b5563 !important; }
+    .dark .border-gray-500 { border-color: #6b7280 !important; }
+    .dark .text-primary { color: #b7d191 !important; }
+    .dark .bg-primary { background-color: #b7d191 !important; }
+    .dark .bg-primary\/10 { background-color: rgba(183, 209, 145, 0.1) !important; }
+    .dark .shadow-primary\/20 { box-shadow: 0 4px 6px -1px rgba(183, 209, 145, 0.2) !important; }
+    .dark .focus\:ring-primary\/50:focus { --tw-ring-color: rgba(183, 209, 145, 0.5) !important; }
+    .dark .hover\:text-primary:hover { color: #b7d191 !important; }
     
     /* Input Elements in Dark Mode */
     .dark input, .dark select, .dark textarea {
@@ -225,6 +239,10 @@
     /* Transiciones suaves de color */
     body, div, nav, a, button, input, select, textarea, span, p, h1, h2, h3, h4, h5, h6 {
        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
 
     ::-webkit-scrollbar {
@@ -427,7 +445,7 @@
       </a>
       <a href="{{ url_for('therapist.analytics') }}"
         class="flex items-center gap-2 px-4 py-2 rounded-soft text-sm {% if active_page == 'analytics' %}bg-primary-container text-on-primary-container font-semibold shadow-soft{% else %}text-on-surface-variant hover:bg-surface-container-high hover:text-primary font-medium{% endif %} transition-all">
-        <span class="material-symbols-outlined text-[20px]">home</span>
+        <span class="material-symbols-outlined text-[20px]">monitoring</span>
         <span class="font-medium">IA Analytics</span>
       </a>
       <a href="{{ url_for('therapist.sessions') }}"

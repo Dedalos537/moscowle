@@ -232,7 +232,7 @@
 {% block content %}
 <div class="p-4 md:p-8 h-full flex flex-col">
     
-    <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden flex flex-col flex-1 h-[calc(100vh-180px)] md:h-[calc(100vh-250px)] relative">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 overflow-hidden flex flex-col flex-1 h-[calc(100vh-180px)] md:h-[calc(100vh-250px)] relative">
         <!-- Background Pattern (Optional) -->
         <div class="absolute inset-0 opacity-10 pointer-events-none" 
             style="background-image: radial-gradient(#6b7c85 1px, transparent 1px); background-size: 20px 20px; z-index: 0;"></div>
@@ -292,7 +292,7 @@
             {% else %}
                 <div class="text-center text-gray-300 py-12">
                     <div class="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-3">
-                        <span class="material-symbols-outlined fas fa-comment-dots  text-gray-300 text-[36px]">circle</span>
+                        <i class="fas fa-comment-dots  text-gray-300 text-[36px]"></i>
                     </div>
                     <p class="text-sm">Inicia la conversación...</p>
                 </div>
@@ -313,18 +313,18 @@
             
             <!-- Attachment Button -->
             <button type="button" class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Adjuntar archivo">
-                <span class="material-symbols-outlined fas fa-paperclip text-[32px]">circle</span>
+                <i class="fas fa-paperclip text-[32px]"></i>
             </button>
             <input type="file" id="fileInput" class="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" onchange="handleFileSelect(this)">
 
             <!-- Recording UI (Hidden by default) -->
             <div id="recording-ui" class="hidden flex items-center flex-1 gap-3 bg-surface-container-lowest px-2 rounded-full border border-outline-variant h-[46px]">
                 <div class="text-red-500 animate-pulse text-sm font-bold flex items-center gap-2 pl-2">
-                    <span class="material-symbols-outlined fas fa-circle text-[16px]">circle</span> <span id="recording-timer">00:00</span>
+                    <i class="fas fa-circle text-[16px]"></i> <span id="recording-timer">00:00</span>
                 </div>
                 <div class="flex-1 text-xs text-on-surface-variant/70 text-center">Grabando audio...</div>
                 <button type="button" class="text-red-400 p-2 hover:text-red-600 transition" onclick="cancelRecording()" title="Cancelar">
-                    <span class="material-symbols-outlined fas fa-trash-alt">circle</span>
+                    <i class="fas fa-trash-alt"></i>
                 </button>
                 <button type="button" class="text-green-500 p-2 hover:text-green-600 transition" onclick="stopRecording()" title="Finalizar">
                     <span class="material-symbols-outlined  text-[32px]">check_circle</span>
@@ -412,7 +412,7 @@
             } else if (file.type.startsWith('audio/')) {
                  html = `<div class="bg-surface-container p-2 rounded-lg flex items-center justify-center h-20 w-20"><span class="material-symbols-outlined text-on-surface-variant text-[36px]">mic</span></div>`;
             } else {
-                html = `<div class="bg-surface-container p-2 rounded-lg flex items-center gap-2 px-3 py-2"><span class="material-symbols-outlined fas fa-file text-on-surface-variant">circle</span> <span class="text-xs truncate max-w-[100px]">${file.name}</span></div>`;
+                html = `<div class="bg-surface-container p-2 rounded-lg flex items-center gap-2 px-3 py-2"><i class="fas fa-file text-on-surface-variant"></i> <span class="text-xs truncate max-w-[100px]">${file.name}</span></div>`;
             }
             
             previewContent.innerHTML = `

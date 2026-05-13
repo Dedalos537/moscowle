@@ -25,7 +25,7 @@
     box-shadow: none;
   }
   .ts-control.focus {
-    border-color: #75a83a; /* primary */
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.2);
   }
   .ts-dropdown {
@@ -42,7 +42,7 @@
     color: #374151;
   }
   .ts-wrapper.multi .ts-control > div {
-    background-color: #75a83a;
+    background-color: var(--color-primary);
     color: white;
     border-radius: 9999px; /* rounded-full */
     padding: 0.25rem 0.75rem;
@@ -74,7 +74,7 @@
                 </h1>
             </div>
             <div class="flex gap-4">
-                <div class="bg-surface-container-lowest-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-center gap-4">
+                <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-center gap-4">
                     <div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
                         <span class="material-symbols-outlined text-[32px]">check_circle</span>
                     </div>
@@ -133,7 +133,7 @@
                 </div>
 
                 <!-- Session Objectives -->
-                <div class="bg-surface-container-lowest-container-lowest p-6 md:p-8 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant">
+                <div class="bg-surface-container-lowest p-6 md:p-8 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant">
                     <div class="flex items-center justify-between mb-8">
                         <h3 class="text-xl font-bold text-on-surface flex items-center gap-2">
                             <span class="material-symbols-outlined text-primary text-[24px]">task</span> Temas de la Sesión
@@ -149,7 +149,7 @@
                                     {% elif obj.status == 'parcial' %}
                                         <span class="material-symbols-outlined text-[16px]">schedule</span>
                                     {% else %}
-                                        <span class="material-symbols-outlined text-[12px] opacity-50">circle</span>
+                                        <i class="text-[12px] opacity-50"></i>
                                     {% endif %}
                                 </div>
                                 <div>
@@ -183,7 +183,7 @@
 
             <!-- Right col: Agenda -->
             <div class="lg:col-span-4 space-y-8">
-                <div class="bg-surface-container-lowest-container-lowest p-6 md:p-8 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant">
+                <div class="bg-surface-container-lowest p-6 md:p-8 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant">
                     <div class="flex items-center justify-between mb-8">
                         <h3 class="text-xl font-bold text-on-surface">Agenda de Hoy</h3>
                         <span class="text-[10px] font-black bg-surface-container px-2 py-1 rounded text-on-surface">{{ today_date }}</span>
@@ -222,9 +222,9 @@
 
         <!-- Bottom Stats from old dashboard -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="bg-surface-container-lowest-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
+            <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
                 <div class="p-3 bg-red-100 text-statusRed rounded-lg">
-                    <span class="material-symbols-outlined fas fa-exclamation-triangle">circle</span>
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
                 <div>
                     <div class="text-2xl font-bold text-on-surface">{{ alerts|length }}</div>
@@ -233,9 +233,9 @@
                 </div>
             </div>
             
-            <div class="bg-surface-container-lowest-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
+            <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
                 <div class="p-3 bg-primary-fixed text-primary rounded-lg">
-                    <span class="material-symbols-outlined fas fa-chart-line">circle</span>
+                    <i class="fas fa-chart-line"></i>
                 </div>
                 <div>
                     <div class="text-2xl font-bold text-on-surface">{{ stats.improvement_rate }}%</div>
@@ -244,9 +244,9 @@
                 </div>
             </div>
             
-            <div class="bg-surface-container-lowest-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
+            <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
                 <div class="p-3 bg-blue-50 text-blue-500 rounded-lg">
-                    <span class="material-symbols-outlined fas fa-robot">circle</span>
+                    <i class="fas fa-robot"></i>
                 </div>
                 <div>
                     <div class="text-2xl font-bold text-on-surface">{{ stats.ia_precision }}%</div>
@@ -259,7 +259,7 @@
 
     <!-- Main Patient Table Section (Retained from existing for functionality constraints) -->
     <div id="patient-performance-section" class="px-4 md:px-8 pb-8">
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant p-4 md:p-8">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant p-4 md:p-8">
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4">
                 <div>
                     <h3 class="text-xl md:text-2xl font-bold text-on-surface mb-2">Rendimiento de Pacientes</h3>
@@ -267,10 +267,10 @@
                 </div>
                 <div class="flex items-center gap-3 w-full md:w-auto">
                     <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full border-2 border-outline-variant text-on-surface-variant font-medium hover:border-primary hover:text-primary transition-all text-center">
-                        <span class="material-symbols-outlined fa-solid fa-filter mr-2">circle</span>Filtrar
+                        <i class="fas fa-filter mr-2"></i>Filtrar
                     </button>
                     <button class="flex-1 md:flex-none px-5 py-2.5 rounded-full bg-primary text-white font-semibold shadow-sm shadow-slate-200/50 transition-all text-center">
-                        <span class="material-symbols-outlined fa-solid fa-download mr-2">circle</span>Exportar
+                        <i class="fas fa-download mr-2"></i>Exportar
                     </button>
                 </div>
             </div>
@@ -317,21 +317,21 @@
                             <td class="py-4 px-4">
                                 {% if p.prediction_code == 1 %}
                                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-50 text-green-600 text-xs font-bold">
-                                    <span class="material-symbols-outlined fa-solid fa-arrow-up">circle</span>Avanzar
+                                    <i class="fas fa-arrow-up"></i>Avanzar
                                 </span>
                                 {% elif p.prediction_code == 2 %}
                                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold">
-                                    <span class="material-symbols-outlined fa-solid fa-heart">circle</span>Apoyo
+                                    <i class="fas fa-heart"></i>Apoyo
                                 </span>
                                 {% else %}
                                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant text-xs font-bold">
-                                    <span class="material-symbols-outlined fa-solid fa-minus">circle</span>Mantener
+                                    <i class="fas fa-minus"></i>Mantener
                                 </span>
                                 {% endif %}
                             </td>
                             <td class="py-4 px-4 text-center">
                                 <a href="{{ url_for('therapist.patient_detail', patient_id=p.ptid) }}" class="p-2 rounded-2xl hover:bg-surface-container-high transition-all text-on-surface-variant">
-                                    <span class="material-symbols-outlined fa-solid fa-eye">circle</span>
+                                    <i class="fas fa-eye"></i>
                                 </a>
                             </td>
                         </tr>
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     <div id="create-modal" class="fixed inset-0 hidden z-50">
       <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg relative">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg relative">
           <div class="p-4 border-b border-outline-variant flex items-center justify-between">
             <h3 class="text-lg font-semibold">Nueva sesión</h3>
             <button class="text-on-surface-variant hover:text-on-surface" data-close-modal>
@@ -641,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     <!-- Toast -->
     <div id="toast" class="fixed bottom-4 right-4 hidden">
-      <div class="bg-surface-container-lowest-container-lowest border border-outline-variant shadow-sm shadow-slate-200/50 rounded-2xl px-4 py-3 text-sm text-on-surface"
+      <div class="bg-surface-container-lowest border border-outline-variant shadow-sm shadow-slate-200/50 rounded-2xl px-4 py-3 text-sm text-on-surface"
         id="toast-message"></div>
     </div>
 
@@ -867,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               try {
                   submitBtn.disabled = true;
-                  submitBtn.innerHTML = '<span class="material-symbols-outlined fas fa-spinner fa-spin">circle</span> Procesando...';
+                  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
                   
                   for (const dateObj of selectedDates) {
                       const year = dateObj.getFullYear();

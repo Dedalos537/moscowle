@@ -26,7 +26,7 @@
     box-shadow: none;
   }
   .ts-control.focus {
-    border-color: #75a83a; /* primary */
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.2);
   }
   .ts-dropdown {
@@ -43,7 +43,7 @@
     color: #374151;
   }
   .ts-wrapper.multi .ts-control > div {
-    background-color: #75a83a;
+    background-color: var(--color-primary);
     color: white;
     border-radius: 9999px; /* rounded-full */
     padding: 0.25rem 0.75rem;
@@ -85,7 +85,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 md:p-6 border border-outline-variant/50">
       <div class="flex items-start justify-between mb-2 md:mb-4">
         <div class="w-8 h-8 md:w-12 md:h-12 bg-blue-500 bg-opacity-10 rounded-2xl flex items-center justify-center">
-          <span class="material-symbols-outlined fas fa-circle-check text-blue-500  md: text-[20px]">circle</span>
+          <i class="fas fa-circle-check text-blue-500  md: text-[20px]"></i>
         </div>
         <span class="text-[10px] md:text-xs bg-blue-100 text-blue-700 px-2 py-0.5 md:px-3 md:py-1 rounded-full font-medium">Total</span>
       </div>
@@ -129,11 +129,11 @@
         <h3 class="text-xl font-bold text-on-surface">Calendario de Sesiones</h3>
         <div class="flex items-center gap-3">
           <button id="cal-prev" class="p-2 text-on-surface-variant hover:text-primary transition-colors" type="button">
-            <span class="material-symbols-outlined fas fa-chevron-left">circle</span>
+            <i class="fas fa-chevron-left"></i>
           </button>
           <span id="calendar-month-label" class="font-semibold text-on-surface px-4"></span>
           <button id="cal-next" class="p-2 text-on-surface-variant hover:text-primary transition-colors" type="button">
-            <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
+            <i class="fas fa-chevron-right"></i>
           </button>
         </div>
       </div>
@@ -170,14 +170,14 @@
     <div class="lg:hidden bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-4 border border-outline-variant/50 text-center">
         <div class="flex items-center justify-between">
             <button id="mobile-cal-prev" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-white transition-colors">
-                <span class="material-symbols-outlined fas fa-chevron-left">circle</span>
+                <i class="fas fa-chevron-left"></i>
             </button>
             <div class="text-center">
                 <h3 id="mobile-date-label" class="text-lg font-bold text-on-surface">Hoy</h3>
                 <p id="mobile-full-date" class="text-xs text-on-surface-variant"></p>
             </div>
             <button id="mobile-cal-next" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant hover:bg-primary hover:text-white transition-colors">
-                <span class="material-symbols-outlined fas fa-chevron-right">circle</span>
+                <i class="fas fa-chevron-right"></i>
             </button>
         </div>
     </div>
@@ -268,7 +268,7 @@
     
     <!-- Details Modal -->
     <div id="details-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-4 border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest">
           <h3 class="text-lg font-semibold">Detalles de la sesión</h3>
           <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
@@ -279,7 +279,7 @@
 
     <!-- Edit Modal -->
     <div id="edit-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
           <div class="p-4 border-b border-outline-variant flex items-center justify-between sticky top-0 bg-surface-container-lowest">
               <h3 class="text-lg font-semibold">Editar sesión</h3>
               <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
@@ -322,7 +322,7 @@
 
     <!-- Create Modal -->
     <div id="create-modal" class="fixed inset-0 hidden z-50 items-center justify-center p-4">
-        <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg mx-4 max-h-[90vh] flex flex-col">
           <div class="p-4 border-b border-outline-variant flex items-center justify-between">
             <h3 class="text-lg font-semibold">Nueva sesión</h3>
             <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
@@ -390,7 +390,7 @@
 
     <!-- Games Modal -->
     <div id="session-games-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
-      <div class="bg-surface-container-lowest-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-2xl mx-4">
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-2xl mx-4">
         <div class="p-4 border-b border-outline-variant flex items-center justify-between">
           <h3 class="text-lg font-semibold">Juegos asignados</h3>
           <button class="text-on-surface-variant hover:text-on-surface p-2" data-close-modal>✕</button>
@@ -503,7 +503,7 @@
       async function loadDaySessions(date){
         const iso = isoDate(date); const mobileLabel = $(sel.mobileDateLabel); const mobileFull = $(sel.mobileFullDate);
         if(mobileLabel){ const t=new Date(); mobileLabel.textContent = (iso===isoDate(t))? 'Hoy' : dayOfWeek(date); if(mobileFull) mobileFull.textContent = date.toLocaleDateString('es-ES',{day:'numeric', month:'long', year:'numeric'}); }
-        const container = $(sel.dayContainer); if(!container) return; container.innerHTML = '<div class="py-4 text-center"><span class="material-symbols-outlined fas fa-spinner fa-spin text-primary">circle</span></div>';
+        const container = $(sel.dayContainer); if(!container) return; container.innerHTML = '<div class="py-4 text-center"><i class="fas fa-spinner fa-spin text-primary"></i></div>';
         try{
           const offset = new Date().getTimezoneOffset();
           const data = await apiFetch(`${SESSIONS_DAY_API}?date=${iso}&timezone_offset=${offset}`, { method: 'GET' });
@@ -514,12 +514,12 @@
             container.innerHTML = '';
             sessions.forEach(s=>{
               const time = new Date(s.start||s.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-              const div = document.createElement('div'); div.className='bg-surface-container-lowest-container-lowest border border-outline-variant rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
+              const div = document.createElement('div'); div.className='bg-surface-container-lowest border border-outline-variant rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer';
               const statusColor = s.status==='scheduled'?'text-blue-600 bg-blue-50': s.status==='completed'?'text-green-600 bg-green-50':'text-on-surface-variant bg-surface-container-low';
               div.innerHTML = `
                 <div class="flex justify-between items-start mb-2"><span class="font-bold text-on-surface">${time}</span><span class="text-xs px-2 py-1 rounded-full ${statusColor}">${s.status}</span></div>
                 <div class="flex items-center gap-2 mb-2"><div class="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-xs font-bold text-on-surface-variant uppercase">${s.patient?.name?.charAt(0)||'?'}</div><div class="truncate"><p class="text-sm font-semibold truncate leading-tight">${s.patient?.name||'Paciente'}</p><p class="text-xs text-on-surface-variant truncate">${s.title||'Terapia'}</p></div></div>
-                <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors"><span class="material-symbols-outlined fas fa-camera mr-1">circle</span> Revisar / Imágenes</a>
+                <a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="block text-center text-xs font-medium text-primary border border-primary/30 rounded py-1.5 hover:bg-primary hover:text-white transition-colors"><i class="fas fa-camera mr-1"></i> Revisar / Imágenes</a>
               `;
               div.addEventListener('click', (e)=>{ if(e.target.closest('a')) return; renderDetails(s); openModal($(sel.detailsModal)); });
               container.appendChild(div);
@@ -555,7 +555,7 @@
         filterSessions();
       }
 
-      function renderList(list){ const tbody=$(sel.sessionsTbody), mlist=$(sel.sessionsMobileList), sc=$(sel.sessionsCount); if(!tbody||!mlist) return; tbody.innerHTML=''; mlist.innerHTML=''; if(sc) sc.textContent = `Mostrando ${list.length} sesiones`; (list||[]).sort((a,b)=> new Date(b.start)-new Date(a.start)).forEach(s=>{ const d=new Date(s.start); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); const tr=document.createElement('tr'); tr.className='hover:bg-surface-container-lowest-container-low transition-colors'; tr.innerHTML = `<td class="px-6 py-4"><div class="text-sm font-medium text-on-surface">${s.patient?.name||'-'}</div></td><td class="px-6 py-4 text-sm text-on-surface-variant">${dateStr} ${timeStr}</td><td class="px-6 py-4 text-sm">${s.title||'-'}</td><td class="px-6 py-4 text-sm">${s.duration||60} min</td><td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-surface-container font-medium">${s.status}</span></td><td class="px-6 py-4 text-sm font-medium flex gap-2"><button data-action="edit" data-id="${s.id}" class="text-blue-600 hover:text-blue-900">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 hover:text-red-900">Borrar</button></td>`; tbody.appendChild(tr); const card = document.createElement('div'); card.className='bg-surface-container-lowest p-4 mb-3 rounded-lg shadow-sm border border-outline-variant'; card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="font-bold text-on-surface">${s.patient?.name}</span><span class="text-xs bg-surface-container px-2 py-1 rounded font-medium">${s.status}</span></div><div class="text-sm text-on-surface-variant mb-2">${dateStr} - ${timeStr}</div><div class="flex justify-end gap-3 pt-2 border-t border-gray-50"><button data-action="edit" data-id="${s.id}" class="text-blue-600 text-sm font-medium">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 text-sm font-medium">Borrar</button></div>`; mlist.appendChild(card); });
+      function renderList(list){ const tbody=$(sel.sessionsTbody), mlist=$(sel.sessionsMobileList), sc=$(sel.sessionsCount); if(!tbody||!mlist) return; tbody.innerHTML=''; mlist.innerHTML=''; if(sc) sc.textContent = `Mostrando ${list.length} sesiones`; (list||[]).sort((a,b)=> new Date(b.start)-new Date(a.start)).forEach(s=>{ const d=new Date(s.start); const dateStr=d.toLocaleDateString(); const timeStr=d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); const tr=document.createElement('tr'); tr.className='hover:bg-surface-container-low transition-colors'; tr.innerHTML = `<td class="px-6 py-4"><div class="text-sm font-medium text-on-surface">${s.patient?.name||'-'}</div></td><td class="px-6 py-4 text-sm text-on-surface-variant">${dateStr} ${timeStr}</td><td class="px-6 py-4 text-sm">${s.title||'-'}</td><td class="px-6 py-4 text-sm">${s.duration||60} min</td><td class="px-6 py-4"><span class="px-2 py-0.5 text-xs rounded-full bg-surface-container font-medium">${s.status}</span></td><td class="px-6 py-4 text-sm font-medium flex gap-2"><button data-action="edit" data-id="${s.id}" class="text-blue-600 hover:text-blue-900">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 hover:text-red-900">Borrar</button></td>`; tbody.appendChild(tr); const card = document.createElement('div'); card.className='bg-surface-container-lowest p-4 mb-3 rounded-lg shadow-sm border border-outline-variant'; card.innerHTML = `<div class="flex justify-between items-center mb-1"><span class="font-bold text-on-surface">${s.patient?.name}</span><span class="text-xs bg-surface-container px-2 py-1 rounded font-medium">${s.status}</span></div><div class="text-sm text-on-surface-variant mb-2">${dateStr} - ${timeStr}</div><div class="flex justify-end gap-3 pt-2 border-t border-gray-50"><button data-action="edit" data-id="${s.id}" class="text-blue-600 text-sm font-medium">Editar</button><button data-action="delete" data-id="${s.id}" class="text-red-600 text-sm font-medium">Borrar</button></div>`; mlist.appendChild(card); });
       }
 
       async function handleListAction(action,id){ if(action==='edit') return editSession(id); if(action==='delete') return deleteSession(id); }
@@ -595,7 +595,7 @@
         finally{ if(btn){ btn.disabled=false; btn.innerHTML=prev; } }
       }
 
-      function renderDetails(s){ const c = document.getElementById('details-content'); if(!c) return; const date = new Date(s.start||s.start_time); c.innerHTML = `<div class="space-y-3"><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Paciente</span><span class="font-medium">${s.patient?.name||'Unknown'}</span></div><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Fecha</span><span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span></div><div><span class="block text-on-surface-variant text-sm mb-1">Notas</span><p class="bg-surface-container-lowest-container-low p-3 rounded text-sm">${s.notes||'Sin notas'}</p></div><div class="pt-2"><a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-2xl font-medium block text-center hover:bg-opacity-90 transition shadow-sm"><span class="material-symbols-outlined fas fa-camera mr-2">circle</span> Ir a Revisión / Juegos</a></div></div>`; }
+      function renderDetails(s){ const c = document.getElementById('details-content'); if(!c) return; const date = new Date(s.start||s.start_time); c.innerHTML = `<div class="space-y-3"><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Paciente</span><span class="font-medium">${s.patient?.name||'Unknown'}</span></div><div class="flex justify-between border-b pb-2"><span class="text-on-surface-variant">Fecha</span><span class="font-medium">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</span></div><div><span class="block text-on-surface-variant text-sm mb-1">Notas</span><p class="bg-surface-container-low p-3 rounded text-sm">${s.notes||'Sin notas'}</p></div><div class="pt-2"><a href="${SESSION_REVIEW_URL_TEMPLATE.replace('999999', s.id)}" class="bg-primary text-white w-full py-2.5 rounded-2xl font-medium block text-center hover:bg-opacity-90 transition shadow-sm"><i class="fas fa-camera mr-2"></i> Ir a Revisión / Juegos</a></div></div>`; }
 
       function attach(){ 
         document.addEventListener('click', onClick); 
