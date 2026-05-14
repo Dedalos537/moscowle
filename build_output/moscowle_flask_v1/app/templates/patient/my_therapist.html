@@ -1,0 +1,36 @@
+{% extends "patient/base.html" %}
+
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block title %}Mi Terapeuta - Moscowle{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-charcoal mb-2">Mi Terapeuta</h2>
+    <p class="text-gray-600">Información de contacto y comunicación</p>
+</div>
+
+<!-- Therapist Profile -->
+{% include "patient/components/_therapist_header.html" %}
+
+<!-- Contact Options -->
+{% include "patient/components/_therapist_contact_options.html" %}
+
+<!-- Recent Communications -->
+{% include "patient/components/_therapist_messages.html" %}
+
+<!-- Resources -->
+{% include "patient/components/_therapist_resources.html" %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/patient/my_therapist.js') }}"></script>
+{% endblock %}

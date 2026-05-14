@@ -1,0 +1,223 @@
+{% extends "patient/base.html" %}
+
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block title %}Mensajes - Moscowle{% endblock %}
+
+{% block extra_styles %}
+<style>
+/* Chat specific styles */
+.message-bubble {
+    position: relative;
+    max-width: 85%;
+    border-radius: 1.25rem; /* rounded-xl/2xl feel */
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.message-bubble.sent {
+    background-color: #ecfccb; /* bg-lightGreen */
+    color: #374151; /* text-charcoal */
+    border-bottom-right-radius: 4px;
+    margin-left: auto;
+}
+.message-bubble.received {
+    background-color: #ffffff; /* bg-surface */
+    color: #374151; /* text-charcoal */
+    border-bottom-left-radius: 4px;
+    margin-right: auto;
+    border: 1px solid #f3f4f6;
+}
+
+.message-time {
+    font-size: 0.7rem;
+    display: block;
+    text-align: right;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+.sent .message-time {
+    color: #659230; /* primary dark-ish */
+}
+.received .message-time {
+    color: #9ca3af;
+}
+
+/* Attachment styling */
+.attachment-preview {
+    max-width: 100%;
+    margin-top: 8px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.attachment-preview img, .attachment-preview video {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    display: block;
+}
+.file-attachment {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: rgba(255,255,255,0.5); 
+    border-radius: 12px;
+    margin-top: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+.received .file-attachment {
+    background: #f3f4f6; /* gray for received */
+}
+.file-attachment:hover {
+    background: rgba(0,0,0,0.05); /* darken slightly */
+}
+.file-icon {
+    font-size: 1.5rem;
+    margin-right: 12px;
+}
+
+/* Custom file input & area */
+.chat-input-area {
+    background: #ffffff;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+.chat-input-wrapper {
+    flex: 1;
+    background: #f9fcf8; /* bg-background */
+    border: 1px solid #e5e7eb;
+    border-radius: 1.5rem; /* rounded-soft */
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.chat-input-wrapper:focus-within {
+    border-color: #75a83a; /* primary */
+    box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.1);
+}
+.chat-textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    max-height: 120px;
+    font-size: 0.95rem;
+    padding: 0;
+    line-height: 1.5;
+    color: #374151; /* textDark */
+}
+.action-btn {
+    color: #9ca3af; /* gray-400 */
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+}
+.action-btn:hover {
+    background: #f3f4f6;
+    color: #75a83a;
+}
+.send-btn {
+    background: #75a83a; /* primary */
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(117, 168, 58, 0.3);
+}
+.send-btn:hover {
+    background: #659230;
+    transform: scale(1.05);
+}
+.send-btn i {
+    font-size: 1rem;
+    margin-left: -2px; /* optical adjustment */
+}
+
+/* Preview floating area */
+#attachment-preview-area {
+    display: none;
+    padding: 12px 20px;
+    background: #f9fcf8;
+    border-bottom: 1px solid #e5e7eb;
+}
+.preview-thumb {
+    position: relative;
+    display: inline-block;
+}
+.remove-attachment {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #fee2e2; /* red-100 */
+    color: #ef4444; /* red-500 */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    text-align: center;
+    line-height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+.remove-attachment:hover {
+    background: #ef4444;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="h-full flex flex-col bg-background relative" style="height: calc(100vh - 80px);">
+    <!-- Chat Background Pattern Overlay (Subtle) -->
+    <div class="absolute inset-0 opacity-[0.03] pointer-events-none" 
+         style="background-image: radial-gradient(#374151 1px, transparent 1px); background-size: 24px 24px;"></div>
+
+    <!-- Header -->
+    {% include "patient/components/_messages_header.html" %}
+
+    <!-- Messages Container -->
+    {% include "patient/components/_messages_list.html" %}
+
+    <!-- Input Area -->
+    {% include "patient/components/_messages_input.html" %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    window.CHAT_CONFIG = {
+        therapistId: {{ therapist.id if therapist else 'null' }},
+        csrfToken: "{{ csrf_token() }}",
+        uploadsBaseUrl: "{{ url_for('uploads.protected_file', filename='messages/') }}" /* Approximate base URL */
+    };
+</script>
+<script src="{{ url_for('static', filename='js/patient/messages.js') }}"></script>
+{% endblock %}

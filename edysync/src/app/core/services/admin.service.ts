@@ -282,4 +282,28 @@ export class AdminService {
   triggerAITraining(data?: { real_data?: number[][] }): Observable<TrainResponse> {
     return this.http.post<TrainResponse>('/admin/ai/train', data || {});
   }
+
+  // --- PROGRAM UPLOADS / AUDITS ---
+  getSessionAudit(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/audit`);
+  }
+
+  uploadSessionProgram(sessionId: number, currentFile: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('program_file', currentFile);
+    return this.http.post<any>(`/api/sessions/${sessionId}/program`, formData);
+  }
+
+  deleteSessionProgram(sessionId: number): Observable<any> {
+    return this.http.delete<any>(`/api/sessions/${sessionId}/program`);
+  }
+
+  getAuditStats(): Observable<any> {
+    return this.http.get('/api/admin/audit-stats');
+  }
+
+  generateIAReport(): Observable<any> {
+    return this.http.post('/admin/generate-ia-report', {});
+  }
+
 }

@@ -31,6 +31,9 @@ export class Reports implements OnInit, OnDestroy {
   };
   therapists: TherapistStats[] = [];
   patients: PatientStats[] = [];
+  // --- AUDITORIA IA ---
+  auditStats: any = { total: 0, avg_score: 0, recent: [], by_therapist: [] };
+
   loading = true;
   aiGenerating = false;
   reportSending = false;
@@ -56,6 +59,16 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   private loadData() {
+    
+    this.adminService.getAuditStats().subscribe({
+      next: (res: any) => {
+        if (res.success && res.data) {
+          this.auditStats = res.data;
+        }
+      },
+      error: (err) => console.error("Error cargando Stats Auditoria", err)
+    });
+
     this.adminService.getFinancialSummary().subscribe({
       next: (res) => {
         if (res.success && res.data) {
@@ -124,4 +137,30 @@ export class Reports implements OnInit, OnDestroy {
   closeAIReport() {
     this.aiReport = null;
   }
+
+  generateReport() {
+    if (!confirm('Esta operación tomará 1-2 minutos y analizará las últimas notas transcritas. ¿Continuar?')) {
+      return;
+    }
+    
+    this.aiGenerating = true;
+    this.aiReport = null;
+    
+    this.adminService.generateIAReport().subscribe({
+      next: (res: any) => {
+        this.aiGenerating = false;
+        if (res.success) {
+          this.aiReport = res.report;
+        } else {
+          alert('Error: ' + res.error);
+        }
+      },
+      error: (err) => {
+        this.aiGenerating = false;
+        alert('Error de conexión al generar el reporte.');
+        console.error(err);
+      }
+    })
+  }
+
 }

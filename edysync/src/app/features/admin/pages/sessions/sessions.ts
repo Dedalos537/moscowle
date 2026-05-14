@@ -65,6 +65,13 @@ export class Sessions implements OnInit, OnDestroy {
 
   submitting = false;
 
+  // --- PROGRAM UPLOADS / AUDITS ---
+  auditState: any = null;
+  programUploading = false;
+  programError: string | null = null;
+  programSuccessMessage: string | null = null;
+
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
@@ -261,11 +268,30 @@ export class Sessions implements OnInit, OnDestroy {
       therapist: (ext['therapist'] as string) || '',
       patient: (ext['patient'] as string) || '',
     };
+    
+    // Reset states
+    this.auditState = null;
+    this.programError = null;
+    this.programSuccessMessage = null;
+    
+    // Load audit state
+    this.adminService.getSessionAudit(this.editForm.id).subscribe({
+      next: (data: any) => {
+        if (data && data.success && data.exists && data.audit.has_program) {
+            this.auditState = data.audit;
+        }
+      },
+      error: () => {}
+    });
+
     this.showEditModal = true;
   }
 
   closeEditModal() {
     this.showEditModal = false;
+    this.auditState = null;
+    this.programError = null;
+    this.programSuccessMessage = null;
   }
 
   submitEdit() {
@@ -330,5 +356,49 @@ export class Sessions implements OnInit, OnDestroy {
       is_past_session: false,
     };
     this.patients = [];
+  }
+  onFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    if (file && this.editForm.id) {
+      this.programUploading = true;
+      this.programError = null;
+      this.programSuccessMessage = null;
+      
+      this.adminService.uploadSessionProgram(this.editForm.id, file).subscribe({
+        next: (res: any) => {
+          this.programUploading = false;
+          if (res.success) {
+            this.programSuccessMessage = 'Programación subida correctamente.';
+            this.auditState = { has_program: true, planned_text_preview: res.planned_text_preview };
+          } else {
+            this.programError = res.error || 'Error desconocido';
+          }
+          event.target.value = null;
+        },
+        error: (err) => {
+          this.programUploading = false;
+          this.programError = 'Error de conexión al subir.';
+          event.target.value = null;
+        }
+      });
+    }
+  }
+
+  deleteProgram() {
+    if (confirm('¿Eliminar la programación de esta sesión?')) {
+      this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.auditState = null;
+            this.programSuccessMessage = 'Programación eliminada.';
+          } else {
+            this.programError = res.error || 'Error al eliminar';
+          }
+        },
+        error: () => {
+          this.programError = 'Error de conexión al eliminar.';
+        }
+      });
+    }
   }
 }

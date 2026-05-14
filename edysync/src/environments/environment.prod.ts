@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBaseUrl: '/moscowle',
+  apiBaseUrl: 'https://centrojuanpabloii.com/moscowle',
 };

@@ -1,3 +1,4 @@
+import { TherapistDashboard } from './pages/dashboard/dashboard';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,6 +13,7 @@ import { TherapistGames } from './pages/games/therapist-games';
 
 @NgModule({
   declarations: [
+    TherapistDashboard,
     TherapistSessions,
     TherapistMessages,
     TherapistProfile,

@@ -1,3 +1,4 @@
+import { TherapistDashboard } from './pages/dashboard/dashboard';
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { RoleGuard } from '../../core/guards/role.guard';
@@ -14,11 +15,12 @@ const routes: Routes = [
     canActivate: [RoleGuard],
     data: { role: 'terapista' },
     children: [
+      { path: 'dashboard', component: TherapistDashboard },
       { path: 'sessions', component: TherapistSessions },
       { path: 'messages', component: TherapistMessages },
       { path: 'profile', component: TherapistProfile },
       { path: 'games', component: TherapistGames },
-      { path: '', redirectTo: 'sessions', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
 ];

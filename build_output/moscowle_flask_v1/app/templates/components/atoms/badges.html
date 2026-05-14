@@ -1,0 +1,17 @@
+{% macro role_badge(role) %}
+  {% if role == 'jugador' %}
+      <span class="text-[10px] uppercase font-extrabold px-2 py-1 rounded bg-indigo-500/10 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 tracking-wider">Paciente</span>
+  {% elif role == 'terapista' %}
+      <span class="text-[10px] uppercase font-extrabold px-2 py-1 rounded bg-purple-500/10 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 tracking-wider">Terapeuta</span>
+  {% elif role == 'admin' %}
+      <span class="text-[10px] uppercase font-extrabold px-2 py-1 rounded bg-amber-500/10 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 tracking-wider">Admin</span>
+  {% else %}
+      <span class="text-[10px] uppercase font-extrabold px-2 py-1 rounded bg-gray-500/10 text-gray-600 dark:bg-gray-800 dark:text-gray-400 tracking-wider">{{ role }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro pill_badge(text, color_class) %}
+  <span class="text-xs font-bold px-3 py-1.5 rounded-lg border shadow-sm {{ color_class }}">
+      {{ text }}
+  </span>
+{% endmacro %}

@@ -44,10 +44,17 @@ export class Login {
         this.alertType = 'success';
         this.alertMessage = 'Inicio de sesión exitoso. Redirigiendo...';
         
-        setTimeout(() => {
-           // Temnporalmente redirigimos al admin
-           // En el futuro, dependerá de user.role
-           this.router.navigate(['/admin/dashboard']); 
+                setTimeout(() => {
+           if (user && user.role === 'admin') {
+               this.router.navigate(['/admin/dashboard']); 
+           } else if (user && user.role === 'terapista') {
+               this.router.navigate(['/therapist/dashboard']);
+               // O usar window.location.href = '/therapist/dashboard' si está en Flask aún, 
+               // pero viendo el código de EDYSYNC parece rutar a `/therapist/dashboard`. 
+               // ¡Revisaremos y usaremos el routing nativo!
+           } else {
+               this.router.navigate(['/']); // fallback
+           }
            this.isLoading = false;
         }, 1000);
       },
