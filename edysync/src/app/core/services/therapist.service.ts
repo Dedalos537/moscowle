@@ -129,4 +129,49 @@ export class TherapistService {
   getGameUrl(filename: string): string {
     return `/static/games/${filename}`;
   }
+
+  // ─── Session Review ─────────────────────────────────────
+  getSession(id: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${id}`);
+  }
+
+  updateAttendance(id: number, attendance: string): Observable<any> {
+    return this.http.put<any>(`/api/sessions/${id}`, { attendance });
+  }
+
+  saveNotes(id: number, notes: string): Observable<any> {
+    return this.http.put<any>(`/api/sessions/${id}`, { notes });
+  }
+
+  // ─── Session Images ─────────────────────────────────────
+  uploadSessionImage(appointmentId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('image_type', 'session_photo');
+    return this.http.post<any>(`/api/appointments/${appointmentId}/upload_image`, formData);
+  }
+
+  deleteSessionImage(appointmentId: number, imageId: number): Observable<any> {
+    return this.http.delete<any>(`/api/appointments/${appointmentId}/images/${imageId}`);
+  }
+
+  // ─── Audio Recording (Whisper/Groq) ─────────────────────
+  uploadAudioChunk(appointmentId: number, blob: Blob, chunkNum: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('audio_file', blob, `session_${appointmentId}_chunk${chunkNum}_${Date.now()}.webm`);
+    return this.http.post<any>(`/api/sessions/${appointmentId}/audio`, formData);
+  }
+
+  // ─── Audit IA ───────────────────────────────────────────
+  getSessionAudit(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/audit`);
+  }
+
+  triggerAudit(sessionId: number): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/audit`, {});
+  }
+
+  getSessionProgram(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/program`);
+  }
 }

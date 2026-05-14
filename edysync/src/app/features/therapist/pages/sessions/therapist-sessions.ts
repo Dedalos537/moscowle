@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
 import { FullCalendarComponent } from '@fullcalendar/angular';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -54,6 +55,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
+    private router: Router,
   ) {
     this.calendarOptions = {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -193,6 +195,11 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.submitting = false;
       },
     });
+  }
+
+  navigateToReview() {
+    this.closeEditModal();
+    this.router.navigate(['/therapist/sessions', this.editForm.id, 'review']);
   }
 
   deleteSession() {

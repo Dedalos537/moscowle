@@ -118,7 +118,10 @@
     </div>
   </div>
   <div modal-footer>
-    <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-alt']" (clicked)="deleteSession()"></app-button>
+    <div class="flex gap-2">
+      <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-alt']" (clicked)="deleteSession()"></app-button>
+      <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
+    </div>
     <div class="flex gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
       <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>

@@ -7,6 +7,7 @@ import { FullCalendarModule } from '@fullcalendar/angular';
 import { TherapistRoutingModule } from './therapist-routing-module';
 import { SharedModule } from '../../shared/shared-module';
 import { TherapistSessions } from './pages/sessions/therapist-sessions';
+import { TherapistSessionReview } from './pages/session-review/session-review';
 import { TherapistMessages } from './pages/messages/therapist-messages';
 import { TherapistProfile } from './pages/profile/therapist-profile';
 import { TherapistGames } from './pages/games/therapist-games';
@@ -15,6 +16,7 @@ import { TherapistGames } from './pages/games/therapist-games';
   declarations: [
     TherapistDashboard,
     TherapistSessions,
+    TherapistSessionReview,
     TherapistMessages,
     TherapistProfile,
     TherapistGames,

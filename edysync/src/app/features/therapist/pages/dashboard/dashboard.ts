@@ -23,7 +23,7 @@ export class TherapistDashboard implements OnInit {
     this.headerService.setConfig({
       title: 'EduAudit',
       subtitle: '',
-      icon: [] // no icon needed
+      icon: null
     });
 
     this.auth.currentUser$.subscribe(u => {

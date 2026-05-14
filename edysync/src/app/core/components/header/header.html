@@ -1,7 +1,9 @@
 <header class="h-20 bg-surface border-b border-border flex items-center justify-between px-6 shrink-0 transition-colors duration-300 relative">
   <div class="flex items-center gap-3">
     @if (headerService.icon$ | async; as icon) {
-      <fa-icon [icon]="$any(icon)" class="text-primary text-2xl"></fa-icon>
+      @if (icon && icon.length && icon.length === 2) {
+        <fa-icon [icon]="icon" class="text-primary text-2xl"></fa-icon>
+      }
     }
     <div class="flex flex-col">
       <h1 class="text-xl font-bold text-textDark">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>

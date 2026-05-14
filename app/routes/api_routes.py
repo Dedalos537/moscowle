@@ -458,10 +458,63 @@ def api_create_session():
     return jsonify(created)
 
 
+@api_bp.route('/sessions/<int:session_id>', methods=['GET'])
+@login_required
+def api_get_session(session_id):
+    """Return full detail of a single session (for therapist review)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionImage
+
+    appt = Appointment.query.get_or_404(session_id)
+
+    # Verify ownership or assignment
+    if current_user.role == 'terapista':
+        is_assigned = False
+        if appt.patient:
+            is_assigned = current_user in appt.patient.therapists
+        if appt.therapist_id != current_user.id and not is_assigned:
+            return jsonify({'error': 'No tienes permiso para ver esta sesión'}), 403
+
+    images = []
+    for img in appt.session_images or []:
+        images.append({
+            'id': img.id,
+            'url': url_for('static', filename=img.image_path),
+            'type': img.image_type,
+            'notes': img.notes,
+            'uploaded_at': img.uploaded_at.isoformat() if img.uploaded_at else None,
+            'uploaded_by': img.uploaded_by.username if img.uploaded_by else None,
+        })
+
+    start_iso = appt.start_time.isoformat() if appt.start_time else None
+    if start_iso and appt.start_time.tzinfo is None:
+        start_iso += 'Z'
+    end_iso = appt.end_time.isoformat() if appt.end_time else None
+    if end_iso and appt.end_time.tzinfo is None:
+        end_iso += 'Z'
+
+    return jsonify({
+        'id': appt.id,
+        'title': appt.title or 'Sesión de Terapia',
+        'start_time': start_iso,
+        'end_time': end_iso,
+        'status': appt.status,
+        'attendance': appt.attendance,
+        'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+        'therapist_id': appt.therapist_id,
+        'location': appt.location,
+        'notes': appt.notes,
+        'games': appt.games_list,
+        'images': images,
+    })
+
+
 @api_bp.route('/sessions/<int:session_id>', methods=['PUT'])
 @login_required
 def api_update_session(session_id):
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
