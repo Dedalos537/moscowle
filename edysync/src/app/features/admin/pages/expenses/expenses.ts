@@ -3,12 +3,14 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-expenses',
   standalone: false,
   templateUrl: './expenses.html',
   styleUrl: './expenses.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Expenses implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

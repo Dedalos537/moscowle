@@ -19,14 +19,22 @@ import { AITrainingStatus, TrainResponse } from '../models/ai-training';
 export class AdminService {
   constructor(private http: HttpClient) {}
 
-  getOverview(): Observable<{ success: boolean; users: { id: number; email: string; username: string; role: string }[] }> {
-    return this.http.get<{ success: boolean; users: { id: number; email: string; username: string; role: string }[] }>('/api/admin/list-users');
+  getOverview(): Observable<{ success: boolean; users: any[] }> {
+    return this.http.get<{ success: boolean; users: any[] }>('/api/admin/list-users');
   }
 
-  getUsers(role?: string): Observable<{ success: boolean; users: { id: number; email: string; username: string; role: string }[] }> {
+  getUser(id: number): Observable<{ success: boolean; user: any }> {
+    return this.http.get<{ success: boolean; user: any }>(`/api/admin/user/${id}`);
+  }
+
+  getAdminOverview(): Observable<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } }> {
+    return this.http.get<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } }>('/admin/api/overview');
+  }
+
+  getUsers(role?: string): Observable<{ success: boolean; users: any[] }> {
     let params = new HttpParams();
     if (role) params = params.set('role', role);
-    return this.http.get<{ success: boolean; users: { id: number; email: string; username: string; role: string }[] }>('/api/admin/list-users', { params });
+    return this.http.get<{ success: boolean; users: any[] }>('/api/admin/list-users', { params });
   }
 
   createUser(data: CreateUserPayload): Observable<ApiResponse<{ user: User; temp_password: string }>> {
@@ -77,6 +85,10 @@ export class AdminService {
 
   getPaymentHistory(userId: number): Observable<{ success: boolean; payments: Payment[]; patient: User }> {
     return this.http.get<{ success: boolean; payments: Payment[]; patient: User }>(`/admin/payments/history/${userId}`);
+  }
+
+  getAllPayments(): Observable<{ success: boolean; payments: any[] }> {
+    return this.http.get<{ success: boolean; payments: any[] }>('/admin/api/payments/all');
   }
 
   deletePayment(paymentId: number): Observable<ApiResponse> {

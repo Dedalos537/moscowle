@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { PublicRoutingModule } from './public-routing-module';
 import { SharedModule } from '../../shared/shared-module';
@@ -16,8 +17,9 @@ import { Contact } from './pages/contact/contact';
   ],
   imports: [
     CommonModule,
+    FormsModule,
     PublicRoutingModule,
-    SharedModule // <-- Integramos Atomic Components (Inputs, Buttons, FontAwesome)
+    SharedModule
   ]
 })
 export class PublicModule { }

@@ -1,11 +1,11 @@
-<div class="space-y-6 animate-fade-in-up">
+<div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
 
   <div class="flex items-center justify-between">
     <div>
-      <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+      <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
         <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon> API Tokens
       </h2>
-      <p class="text-sm text-gray-500">Gestión de tokens de acceso para integraciones externas</p>
+      <p class="text-sm text-on-surface-variant">Gestión de tokens de acceso para integraciones externas</p>
     </div>
     <app-button variant="primary" label="Generar Token" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
   </div>
@@ -15,27 +15,27 @@
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
-    <div class="bg-surface rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/20 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[600px]">
           <thead>
-            <tr class="bg-gray-50">
-              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">ID</th>
-              <th class="px-5 py-4 text-left text-xs font-bold text-gray-500 uppercase">Creado</th>
-              <th class="px-5 py-4 text-center text-xs font-bold text-gray-500 uppercase">Estado</th>
-              <th class="px-5 py-4 text-right text-xs font-bold text-gray-500 uppercase">Acción</th>
+            <tr class="bg-surface-container-high">
+              <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">ID</th>
+              <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Creado</th>
+              <th class="px-5 py-4 text-center text-xs font-bold text-on-surface-variant uppercase">Estado</th>
+              <th class="px-5 py-4 text-right text-xs font-bold text-on-surface-variant uppercase">Acción</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 bg-white">
+          <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
             @for (t of tokens; track t.id) {
-              <tr class="hover:bg-gray-50/80 text-sm">
-                <td class="px-5 py-4 font-mono text-gray-700">#{{ t.id }}</td>
-                <td class="px-5 py-4 text-gray-600">{{ t.created_at }}</td>
+              <tr class="hover:bg-surface-container-high/80 text-sm">
+                <td class="px-5 py-4 font-mono text-on-surface">#{{ t.id }}</td>
+                <td class="px-5 py-4 text-on-surface">{{ t.created_at }}</td>
                 <td class="px-5 py-4 text-center">
                   @if (t.is_active) {
                     <span class="px-2 py-1 text-[10px] font-bold rounded bg-green-100 text-green-700">Activo</span>
                   } @else {
-                    <span class="px-2 py-1 text-[10px] font-bold rounded bg-gray-100 text-gray-500">Inactivo</span>
+                    <span class="px-2 py-1 text-[10px] font-bold rounded bg-surface-container-high text-on-surface-variant">Inactivo</span>
                   }
                 </td>
                 <td class="px-5 py-4 text-right">
@@ -46,7 +46,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="4" class="px-5 py-16 text-center text-gray-400">
+                <td colspan="4" class="px-5 py-16 text-center text-on-surface-variant/60">
                   <fa-icon [icon]="['fas', 'key']" class="text-3xl mb-2"></fa-icon>
                   <p class="text-sm font-medium">No hay tokens registrados</p>
                 </td>
@@ -62,17 +62,17 @@
 <app-modal [isOpen]="showCreateModal" title="Generar Token" (close)="closeCreateModal()">
   @if (!newToken) {
     <div class="space-y-4">
-      <p class="text-sm text-gray-600">Se generará un nuevo token de acceso. El token solo se mostrará una vez.</p>
+      <p class="text-sm text-on-surface">Se generará un nuevo token de acceso. El token solo se mostrará una vez.</p>
       <label class="flex items-center gap-3">
         <input type="checkbox" [(ngModel)]="rotate" class="rounded text-primary focus:ring-primary">
-        <span class="text-sm text-gray-700">Desactivar tokens existentes</span>
+        <span class="text-sm text-on-surface">Desactivar tokens existentes</span>
       </label>
     </div>
   } @else {
     <div class="space-y-4">
       <app-alert type="warning" message="Copia este token ahora. No se volverá a mostrar."></app-alert>
       <div class="flex gap-2">
-        <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono">
+        <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl text-sm font-mono">
         <app-button variant="primary" label="Copiar" (clicked)="copyToken(newToken)"></app-button>
       </div>
     </div>

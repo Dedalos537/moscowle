@@ -1,0 +1,11 @@
+@if (loading) {
+  <div class="flex justify-center py-24">
+    <app-spinner size="md" colorClass="text-primary"></app-spinner>
+  </div>
+} @else {
+  <app-calendar-widget
+    [events]="widgetEvents"
+    [role]="'patient'"
+    [readonly]="true"
+  ></app-calendar-widget>
+}

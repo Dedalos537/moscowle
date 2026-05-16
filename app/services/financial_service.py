@@ -47,45 +47,47 @@ class FinancialService:
 
         for patient in patients:
             try:
-                due_date = getattr(patient, 'payment_due_date', None)
-                if not due_date:
-                    continue
+                monto = float(getattr(patient, 'payment_amount', 0.0) or 0.0)
 
-                # Apply date filters
-                if filter_start and due_date < filter_start:
-                    continue
-                # If we are looking for 'current' or specific month, but we want ALL deudores 
-                # including past ones, we only filter the UPPER bound if needed.
-                # Common fix: dashboard audit usually wants 'all' anyway.
+                # Therapist name
+                therapist_name = ''
+                if patient.assigned_therapist:
+                    therapist_name = patient.assigned_therapist.username or ''
+                elif getattr(patient, 'assigned_therapist_id', None):
+                    from app.models import User
+                    th = User.query.get(patient.assigned_therapist_id)
+                    if th:
+                        therapist_name = th.username or ''
+
+                due_date = getattr(patient, 'payment_due_date', None)
+                days_overdue = (today - due_date).days if due_date else 0
+
+                if not due_date or monto <= 0:
+                    status = 'sin_plan'
+                    urgencia = 'baja'
+                elif days_overdue > 0:
+                    status = 'vencido'
+                    urgencia = 'critica' if days_overdue > 7 else 'alta'
+                    vencidos_count += 1
+                elif today <= due_date <= week_ahead:
+                    status = 'proximo'
+                    urgencia = 'alta'
+                    proximo_a_vencer_count += 1
+                else:
+                    status = 'al_dia'
+                    urgencia = 'baja'
 
                 sede_id, sede_name = self.repo.get_sede_for_patient(patient)
-                sede_key = str(sede_id)
+                sede_key = str(sede_id) if sede_id else 'sin_sede'
                 if sede_key not in deudores_by_sede:
                     deudores_by_sede[sede_key] = {
-                        'sede_name': sede_name,
+                        'sede_name': sede_name or 'Sin Sede',
                         'sede_id': sede_id,
                         'total': 0.0,
                         'count': 0,
                         'deudores': []
                     }
 
-                days_overdue = (today - due_date).days
-                if days_overdue > 0:
-                    status = 'vencido'
-                    urgencia = 'crítica' if days_overdue > 7 else 'alta'
-                    vencidos_count += 1
-                elif today <= due_date <= week_ahead:
-                    status = 'próximo'
-                    urgencia = 'alta'
-                    proximo_a_vencer_count += 1
-                else:
-                    # Even if not overdue or soon, for the "Dashboard Audit" we might want them
-                    # as 'al día' if we are looking for incomplete data.
-                    # For now, let's include 'al día' but don't count towards counts/urgency
-                    status = 'al_día'
-                    urgencia = 'baja'
-
-                monto = float(getattr(patient, 'payment_amount', 0.0) or 0.0)
                 deudor = {
                     'id': patient.id,
                     'paciente': patient.username or patient.email,
@@ -94,21 +96,29 @@ class FinancialService:
                     'phone': patient.phone,
                     'payment_day': patient.payment_day,
                     'modality': patient.plan_type,
+                    'modality_2': getattr(patient, 'modality_2', None),
                     'monto': round(monto, 2),
-                    'fecha_vencimiento': due_date.strftime('%Y-%m-%d') if due_date else 'N/A',
+                    'payment_amount_2': round(float(getattr(patient, 'payment_amount_2', 0) or 0), 2),
+                    'frequency': getattr(patient, 'payment_plan', ''),
+                    'fecha_vencimiento': due_date.strftime('%Y-%m-%d') if due_date else '',
                     'dias_adeudo': days_overdue if days_overdue > 0 else 0,
                     'estado': status,
-                    'urgencia': urgencia
+                    'urgencia': urgencia,
+                    'sessions_total': getattr(patient, 'sessions_total', 0) or 0,
+                    'sessions_attended': getattr(patient, 'sessions_attended', 0) or 0,
+                    'sessions_remaining': getattr(patient, 'sessions_remaining', 0) or 0,
+                    'therapist_name': therapist_name,
+                    'has_plan_config': bool(due_date and monto > 0),
                 }
 
                 deudores_by_sede[sede_key]['deudores'].append(deudor)
                 deudores_by_sede[sede_key]['total'] += monto
                 deudores_by_sede[sede_key]['count'] += 1
-                total_adeudado += monto
-                total_deudores += 1
+                if status in ('vencido', 'proximo'):
+                    total_adeudado += monto
+                    total_deudores += 1
 
             except Exception:
-                # Keep service resilient; log from caller if needed
                 continue
 
         # Sort

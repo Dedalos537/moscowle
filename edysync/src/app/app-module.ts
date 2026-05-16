@@ -1,8 +1,10 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { AppRoutingModule } from './app-routing-module';
 import { CoreModule } from './core/core-module';
+import { SharedModule } from './shared/shared-module';
 import { App } from './app';
 
 @NgModule({
@@ -11,8 +13,10 @@ import { App } from './app';
   ],
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
     AppRoutingModule,
-    CoreModule
+    CoreModule,
+    SharedModule
   ],
   providers: [
     provideBrowserGlobalErrorListeners()

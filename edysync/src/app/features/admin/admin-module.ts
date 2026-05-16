@@ -1,16 +1,16 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FullCalendarModule } from '@fullcalendar/angular';
+import { BaseChartDirective } from 'ng2-charts';
 
 import { AdminRoutingModule } from './admin-routing-module';
 import { SharedModule } from '../../shared/shared-module';
 import { Dashboard } from './pages/dashboard/dashboard';
-import { EdysyncDashboard } from './pages/edysync-dashboard/edysync-dashboard';
 import { Sedes } from './pages/sedes/sedes';
 import { SedeCard } from './pages/sedes/components/sede-card/sede-card';
 import { UsersList } from './pages/users/users-list/users-list';
 import { UserDetail } from './pages/users/user-detail/user-detail';
+import { Finanzas } from './pages/finanzas/finanzas';
 import { Payments } from './pages/payments/payments';
 import { Debtors } from './pages/debtors/debtors';
 import { PaymentHistory } from './pages/payment-history/payment-history';
@@ -28,11 +28,11 @@ import { AiTraining } from './pages/ai-training/ai-training';
 @NgModule({
   declarations: [
     Dashboard,
-    EdysyncDashboard,
     Sedes,
     SedeCard,
     UsersList,
     UserDetail,
+    Finanzas,
     Payments,
     Debtors,
     PaymentHistory,
@@ -50,9 +50,9 @@ import { AiTraining } from './pages/ai-training/ai-training';
   imports: [
     CommonModule,
     FormsModule,
-    FullCalendarModule,
     AdminRoutingModule,
-    SharedModule
+    SharedModule,
+    BaseChartDirective
   ]
 })
 export class AdminModule { }

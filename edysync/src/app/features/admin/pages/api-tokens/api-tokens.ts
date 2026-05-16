@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AdminAPIToken } from '../../../../core/models/api-token';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-api-tokens',
   standalone: false,
   templateUrl: './api-tokens.html',
-  styleUrl: './api-tokens.scss'
+  styleUrl: './api-tokens.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class ApiTokens implements OnInit {
   tokens: AdminAPIToken[] = [];

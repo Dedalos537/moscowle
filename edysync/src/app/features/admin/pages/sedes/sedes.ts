@@ -2,12 +2,14 @@ import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/c
 import { HeaderService } from '../../../../core/services/header.service';
 import { AdminService } from '../../../../core/services/admin.service';
 import { Sede } from '../../../../core/models/sede';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-sedes',
   standalone: false,
   templateUrl: './sedes.html',
   styleUrl: './sedes.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Sedes implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

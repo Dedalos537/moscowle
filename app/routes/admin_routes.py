@@ -394,21 +394,85 @@ def generate_ia_report():
         
     try:
         from app.services.llm_automation_service import generate_weekly_report, process_chat_command
-        from datetime import datetime
+        from app.services.financial_service import FinancialService
+        from app.repositories.payment_repository import PaymentRepository
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
         
-        # Últimas 10 notas de sesión para que Llama las analice
-        sessions = Appointment.query.filter(Appointment.status == 'completed').order_by(Appointment.updated_at.desc()).limit(10).all()
-        session_data = [{"notes": s.notes, "patient": s.patient.username, "therapist": s.therapist.username} for s in sessions if s.notes]
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+        first_of_month = now.replace(day=1)
+        
+        # General counts
+        total_therapists = User.query.filter_by(role='terapista', is_active=True).count()
+        total_patients = User.query.filter_by(role='jugador', is_active=True).count()
+        total_sessions = Appointment.query.filter(Appointment.status == 'completed').count()
+        sessions_this_month = Appointment.query.filter(
+            Appointment.status == 'completed',
+            Appointment.updated_at >= first_of_month
+        ).count()
+        
+        # Financial data
+        recent_payments = Payment.query.filter(Payment.date >= thirty_days_ago).all()
+        total_income = sum((p.amount or 0) - (p.discount or 0) for p in recent_payments)
+        
+        total_expenses = 0
+        try:
+            from app.models import Expense
+            recent_expenses = Expense.query.filter(Expense.date >= thirty_days_ago).all()
+            total_expenses = sum((e.amount or 0) for e in recent_expenses)
+        except ImportError:
+            pass
+        
+        # Debt report
+        fs = FinancialService(PaymentRepository())
+        debt_data = fs.build_debt_report(days_ahead=7, month='all')
+        total_debt = debt_data.get('total_deuda', 0)
+        total_debtors = debt_data.get('total_pacientes', 0)
+        
+        # Top therapists by session count
+        top_therapists = db.session.query(
+            User.username,
+            func.count(Appointment.id).label('session_count')
+        ).join(Appointment, Appointment.therapist_id == User.id)\
+         .filter(Appointment.status == 'completed')\
+         .group_by(User.id)\
+         .order_by(func.count(Appointment.id).desc())\
+         .limit(5).all()
+        
+        # Recent session notes
+        sessions = Appointment.query.filter(Appointment.status == 'completed')\
+            .order_by(Appointment.updated_at.desc()).limit(10).all()
+        session_data = [{
+            "notes": s.notes,
+            "patient": s.patient.username if s.patient else '—',
+            "therapist": s.therapist.username if s.therapist else '—'
+        } for s in sessions if s.notes]
         
         data_for_ai = {
+            "period": f"Reporte Estratégico {now.strftime('%d/%m/%Y')}",
+            "general": {
+                "therapists": total_therapists,
+                "patients": total_patients,
+                "total_sessions": total_sessions,
+                "sessions_this_month": sessions_this_month,
+            },
+            "financial": {
+                "total_debt": total_debt,
+                "total_debtors": total_debtors,
+                "income_last_30d": total_income,
+                "total_expenses": total_expenses,
+            },
+            "top_therapists": [{"name": t.username, "sessions": t.session_count} for t in top_therapists],
             "recent_session_notes": session_data,
-            "period": f"Reporte Estratégico {datetime.now().strftime('%d/%m/%Y')}"
         }
         
         report_md = generate_weekly_report(data_for_ai)
         return jsonify({'success': True, 'report': report_md})
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/ai-chat-process', methods=['POST'])
@@ -763,6 +827,33 @@ def api_financial_summary():
     financials = payment_service.get_financial_summary()
     return jsonify({'success': True, 'data': financials})
 
+@admin_bp.route('/api/payments/all')
+@login_required
+def api_all_payments():
+    """Bulk payment history for all patients."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app.models import Payment, User
+    payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
+    result = []
+    for p in payments:
+        patient = User.query.get(p.patient_id)
+        result.append({
+            'id': p.id,
+            'patient_id': p.patient_id,
+            'patient_name': patient.username if patient else '',
+            'amount': p.amount or 0,
+            'discount': p.discount or 0,
+            'method': p.method or '',
+            'reference': p.reference or '',
+            'date': p.date.strftime('%Y-%m-%dT%H:%M:%S') if p.date else '',
+            'status': p.status or 'completed',
+            'receipt_image_path': p.receipt_image_path or '',
+            'document_number': getattr(p, 'document_number', '') or '',
+            'guardian_name': getattr(p, 'guardian_name', '') or '',
+        })
+    return jsonify({'success': True, 'payments': result})
+
 @admin_bp.route('/api/report-therapist-stats')
 @login_required
 def api_report_therapist_stats():
@@ -790,6 +881,14 @@ def api_report_patient_stats():
         acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=p.id).scalar() or 0
         result.append({'id': p.id, 'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc, 1)})
     return jsonify({'success': True, 'data': result})
+
+@admin_bp.route('/api/overview')
+@login_required
+def api_admin_overview():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    overview = dashboard_service.get_admin_overview()
+    return jsonify({'success': True, 'data': overview})
 
 # --- End JSON API endpoints ---
 

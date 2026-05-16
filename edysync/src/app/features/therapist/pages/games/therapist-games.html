@@ -1,4 +1,4 @@
-<div class="space-y-6 animate-fade-in-up">
+<div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
   <div>
     <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
       <fa-icon [icon]="['fas', 'gamepad']" class="text-primary"></fa-icon> Juegos
@@ -13,7 +13,7 @@
   } @else {
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (game of games; track game) {
-        <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-all">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-lg transition-all">
           <div class="aspect-video bg-gradient-to-br from-primary/5 to-gray-100 flex items-center justify-center">
             <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl text-primary/30 group-hover:text-primary/50 transition-colors"></fa-icon>
           </div>

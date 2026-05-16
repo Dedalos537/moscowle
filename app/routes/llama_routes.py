@@ -11,7 +11,7 @@ import uuid
 import json
 import logging
 
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import User, Payment, AIConversation, AIChatMessage
 from app.services.enhanced_llm_service_v5 import (
     process_chat_enhanced_v5,
@@ -79,6 +79,7 @@ def get_chat_history():
 
 
 @llama_bp.route('/chat/send', methods=['POST'])
+@csrf.exempt
 @login_required
 def send_message():
     """Endpoint principal para enviar mensajes al Copilot."""
@@ -132,48 +133,45 @@ def send_message():
         action_result = None
         redirect_url = None
         tutorial_steps = []
-        
+
+        # ===== INTENTOS QUE REQUIEREN ACCION EN BD =====
+
         if intent == 'navigation':
             target_section = params.get('target_section', 'dashboard')
             redirect_url = get_navigation_url(target_section, current_user.id)
             tutorial_steps = get_tutorial_steps('navigation', target_section)
-            
+
             notif_service.create_notification(
                 current_user.id,
-                f"🤖 Llama te está llevando a {target_section}...",
+                f"Llama te esta llevando a {target_section}...",
                 redirect_url
             )
             action_result = {'status': 'redirect_prepared', 'section': target_section}
-        
+
         elif intent == 'register_payment':
-            # Usar parámetros de Llama o extraer del mensaje
-            payment_params = params
+            payment_params = dict(params)
             if not payment_params.get('patient_name') or not payment_params.get('amount'):
-                # Intentar extraer del mensaje original
                 from app.services.enhanced_llm_service_v3 import extract_payment_details
                 extracted = extract_payment_details(user_message)
-                payment_params = {**payment_params, **extracted}
-            
-            # Validar parámetros
+                payment_params.update(extracted)
+
             is_valid, error_msg = validate_payment_parameters(payment_params)
             if not is_valid:
-                response = f"❌ No puedo registrar el pago: {error_msg}. ¿Puedes corregir?"
+                response = f"No puedo registrar el pago: {error_msg}. Por favor corrige los datos."
                 action_result = {'status': 'validation_failed', 'error': error_msg}
             else:
-                # Buscar paciente
                 patient = User.query.filter(
                     User.username.ilike(f"%{payment_params.get('patient_name', '')}%"),
                     User.role == 'jugador'
                 ).first()
-                
+
                 if not patient:
-                    response = f"❌ No encontré al paciente '{payment_params.get('patient_name')}'. ¿Puedes deletrear el nombre?"
+                    response = f"No encontre al paciente '{payment_params.get('patient_name')}'. Deletrea el nombre por favor."
                     action_result = {'status': 'patient_not_found'}
                 else:
                     try:
                         tutorial_steps = get_tutorial_steps('register_payment')
-                        
-                        # Registrar pago
+
                         success, result_or_payment = payment_service.register_payment(
                             patient_id=patient.id,
                             amount=float(payment_params.get('amount', 0)),
@@ -181,109 +179,30 @@ def send_message():
                             reference=payment_params.get('reference', 'Copilot'),
                             next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
                         )
-                        
+
                         if success:
                             receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
-                            response = f"✅ Registré S/. {payment_params.get('amount'):.2f} para {patient.username}.<br><br><a href='{receipt_url}' target='_blank' class='inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm font-medium'><i class='fas fa-file-pdf'></i> 📄 Descargar Recibo</a>"
+                            response = f"Pago registrado: S/. {payment_params.get('amount'):.2f} para {patient.username}."
                             action_result = {'status': 'success', 'patient_id': patient.id, 'receipt_url': receipt_url}
                             redirect_url = url_for('admin.payment_history', user_id=patient.id)
                         else:
-                            response = f"❌ Error al registrar: {result_or_payment}"
+                            response = f"Error al registrar: {result_or_payment}"
                             action_result = {'status': 'error', 'patient_id': patient.id}
                             redirect_url = None
-                        
+
                         notif_service.create_notification(
                             current_user.id,
-                            f"🤖 Pago registrado: S/. {payment_params.get('amount')} - {patient.username}",
+                            f"Pago registrado: S/. {payment_params.get('amount')} - {patient.username}",
                             redirect_url
                         )
                     except Exception as e:
-                        response = f"❌ Error al registrar: {str(e)[:50]}"
+                        response = f"Error al registrar: {str(e)[:50]}"
                         action_result = {'status': 'error', 'error': str(e)}
-        
-        elif intent == 'business_analysis':
-            # Análisis de negocio con datos reales
-            from app.services.business_analytics_service import (
-                get_unpaid_users,
-                get_weekly_due_payments,
-                calculate_revenue_metrics,
-                answer_business_question
-            )
-            
-            analysis_type = params.get('analysis_type', 'revenue_metrics')
-            
-            if analysis_type == 'unpaid_users':
-                data = get_unpaid_users()
-                response = f"📊 {data['total_unpaid']} alumnos sin pagar este mes, deuda acumulada: S/. {data['total_debt']:.2f}"
-                action_result = {'status': 'analysis_complete', 'data': data}
-            
-            elif analysis_type == 'weekly_due':
-                data = get_weekly_due_payments()
-                names_list = ', '.join([p['name'] for p in data['payments'][:5]])
-                response = f"📅 {data['count']} alumnos deben pagar próxima semana: {names_list}. Total esperado: S/. {data['total_amount']:.2f}"
-                action_result = {'status': 'analysis_complete', 'data': data}
-            
-            elif analysis_type == 'revenue_metrics':
-                data = calculate_revenue_metrics()
-                response = f"💰 Ingresos: S/. {data['total_income']:.2f} | Egresos: S/. {data['total_expenses']:.2f} | Ganancia: S/. {data['net_profit']:.2f} ({data['profit_margin_percent']:.1f}%)"
-                action_result = {'status': 'analysis_complete', 'data': data}
-            
-            else:
-                # Análisis genérico con IA
-                analysis = answer_business_question(user_message)
-                response = analysis['answer']
-                action_result = {'status': 'analysis_complete', 'method': 'ai_analysis'}
-        
-        elif intent == 'generate_report':
-            # Generar informe completo
-            from app.services.business_analytics_service import generate_business_report
-            
-            report = generate_business_report()
-            response = "✅ Informe generado. Ver detalles:"
-            action_result = {'status': 'report_generated', 'report_preview': report[:500]}
-            
-            # Guardar informe en notification para que el usuario pueda descargarlo
-            notif_service.create_notification(
-                current_user.id,
-                "📄 Informe financiero generado",
-                "/admin/reports"
-            )
-        
-        elif intent == 'schedule_optimization':
-            # Recomendaciones para mejorar horarios
-            from app.services.business_analytics_service import get_schedule_recommendations
-            
-            recommendations = get_schedule_recommendations()
-            response = recommendations['recommendations']
-            action_result = {'status': 'optimization_provided'}
-        
-        elif intent == 'breakeven_analysis':
-            # Análisis de punto de equilibrio
-            from app.services.business_analytics_service import estimate_breakeven_point
-            
-            # Extraer monto objetivo del mensaje
-            target = params.get('target_profit', 5000)
-            try:
-                # Intentar extraer número del mensaje
-                import re
-                match = re.search(r'\d+(?:,\d{3})*(?:\.\d{2})?', user_message)
-                if match:
-                    target = float(match.group(0).replace(',', ''))
-            except:
-                pass
-            
-            breakeven = estimate_breakeven_point(target)
-            if breakeven:
-                response = f"📈 Para ganancia de S/. {target:.0f}: Necesitas {breakeven['students_needed']} alumnos (tienes {breakeven['current_students']}). Diferencia: {breakeven['additional_students']} más."
-                action_result = {'status': 'analysis_complete', 'data': breakeven}
-            else:
-                response = "No se pudo calcular el punto de equilibrio"
-                action_result = {'status': 'calculation_error'}
-        
-        elif intent == 'register_expense':
+
+        elif intent in ('register_expense', 'create_expense'):
             is_valid, error_msg = validate_expense_parameters(params)
             if not is_valid:
-                response = f"❌ Datos inválidos: {error_msg}"
+                response = f"Datos invalidos: {error_msg}"
                 action_result = {'status': 'validation_failed'}
             else:
                 try:
@@ -291,22 +210,268 @@ def send_message():
                         'category': params.get('category', 'operativo'),
                         'amount': float(params.get('amount', 0)),
                         'date': datetime.now().strftime('%Y-%m-%d'),
-                        'description': params.get('description', 'Gasto vía Copilot'),
+                        'description': params.get('description', 'Gasto via Copilot'),
                         'method': 'IA/Copilot'
                     })
-                    
-                    response = f"✅ Registré gasto de S/. {params.get('amount')} en {params.get('category')}."
+
+                    response = f"Gasto registrado: S/. {params.get('amount')} en {params.get('category')}."
                     action_result = {'status': 'success'}
                     redirect_url = url_for('admin.expenses')
-                    
+
                     notif_service.create_notification(
                         current_user.id,
-                        f"🤖 Gasto registrado: S/. {params.get('amount')} - {params.get('category')}",
+                        f"Gasto registrado: S/. {params.get('amount')} - {params.get('category')}",
                         redirect_url
                     )
                 except Exception as e:
-                    response = f"❌ Error: {str(e)[:50]}"
+                    response = f"Error: {str(e)[:50]}"
                     action_result = {'status': 'error'}
+
+        elif intent == 'create_user':
+            from werkzeug.security import generate_password_hash
+            name = params.get('patient_name', '')
+            if not name:
+                response = "Proporciona el nombre del nuevo usuario."
+                action_result = {'status': 'validation_failed', 'error': 'name_required'}
+            else:
+                try:
+                    existing = User.query.filter(
+                        db.or_(
+                            User.username.ilike(name),
+                            User.email.ilike(f"{name.lower().replace(' ', '.')}@temp.com")
+                        )
+                    ).first()
+                    if existing:
+                        response = f"Ya existe un usuario con nombre similar: {existing.username}"
+                        action_result = {'status': 'duplicate'}
+                    else:
+                        email = f"{name.lower().replace(' ', '.')}@centrojuanpabloii.com"
+                        new_user = User(
+                            username=name,
+                            email=email,
+                            password=generate_password_hash('changeme123'),
+                            role='jugador',
+                            is_active=True
+                        )
+                        db.session.add(new_user)
+                        db.session.commit()
+                        response = f"Usuario creado: {name} ({email}). Password predeterminado: changeme123"
+                        action_result = {'status': 'success', 'user_id': new_user.id}
+                        redirect_url = url_for('admin.users_list')
+                        notif_service.create_notification(
+                            current_user.id,
+                            f"Nuevo usuario creado: {name}",
+                            redirect_url
+                        )
+                except Exception as e:
+                    db.session.rollback()
+                    response = f"Error al crear usuario: {str(e)[:60]}"
+                    action_result = {'status': 'error', 'error': str(e)}
+
+        elif intent == 'create_appointment':
+            patient_name = params.get('patient_name', '')
+            day_ref = params.get('day', '')
+            time_ref = params.get('time', '')
+            if not patient_name:
+                response = "Indica el nombre del paciente y el dia/hora para la sesion."
+                action_result = {'status': 'validation_failed', 'error': 'missing_patient'}
+            else:
+                patient = User.query.filter(
+                    User.username.ilike(f"%{patient_name}%"),
+                    User.role == 'jugador'
+                ).first()
+                if not patient:
+                    response = f"No encontre al paciente '{patient_name}'."
+                    action_result = {'status': 'patient_not_found'}
+                else:
+                    try:
+                        from datetime import timedelta
+                        start = datetime.utcnow() + timedelta(hours=1)
+                        end = start + timedelta(hours=1)
+                        therapist_id = current_user.id
+
+                        appt = Appointment(
+                            therapist_id=therapist_id,
+                            patient_id=patient.id,
+                            title=f"Sesion con {patient.username}",
+                            start_time=start,
+                            end_time=end,
+                            status='scheduled'
+                        )
+                        db.session.add(appt)
+                        db.session.commit()
+                        response = f"Sesion creada para {patient.username} (ID: {appt.id}). Revisa el calendario para ajustar hora."
+                        action_result = {'status': 'success', 'appointment_id': appt.id}
+                        redirect_url = url_for('admin.sesiones')
+                        notif_service.create_notification(
+                            current_user.id,
+                            f"Sesion creada para {patient.username}",
+                            redirect_url
+                        )
+                    except Exception as e:
+                        db.session.rollback()
+                        response = f"Error al crear sesion: {str(e)[:60]}"
+                        action_result = {'status': 'error', 'error': str(e)}
+
+        elif intent == 'assign_therapist':
+            patient_name = params.get('patient_name', '')
+            if not patient_name:
+                response = "Indica el nombre del paciente para asignarle un terapeuta."
+                action_result = {'status': 'validation_failed', 'error': 'missing_patient_name'}
+            else:
+                patient = User.query.filter(
+                    User.username.ilike(f"%{patient_name}%"),
+                    User.role == 'jugador'
+                ).first()
+                if not patient:
+                    response = f"No encontre al paciente '{patient_name}'."
+                    action_result = {'status': 'patient_not_found'}
+                else:
+                    therapist = User.query.filter(
+                        User.role.in_(['terapista', 'admin']),
+                        User.is_active == True
+                    ).first()
+                    if therapist:
+                        patient.assigned_therapist_id = therapist.id
+                        db.session.commit()
+                        response = f"Terapeuta {therapist.username} asignado a {patient.username}."
+                        action_result = {'status': 'success', 'therapist_id': therapist.id}
+                    else:
+                        response = "No hay terapeutas disponibles para asignar."
+                        action_result = {'status': 'no_therapist_available'}
+
+        elif intent == 'update_session':
+            patient_name = params.get('patient_name', '')
+            if not patient_name:
+                response = "Indica el nombre del paciente para actualizar su sesion."
+                action_result = {'status': 'validation_failed'}
+            else:
+                patient = User.query.filter(
+                    User.username.ilike(f"%{patient_name}%"),
+                    User.role == 'jugador'
+                ).first()
+                if not patient:
+                    response = f"No encontre al paciente '{patient_name}'."
+                    action_result = {'status': 'patient_not_found'}
+                else:
+                    try:
+                        from app.services.appointment_service import AppointmentService
+                        svc = AppointmentService()
+                        appt = Appointment.query.filter_by(
+                            patient_id=patient.id,
+                            status='scheduled'
+                        ).order_by(Appointment.start_time).first()
+                        if not appt:
+                            response = f"{patient.username} no tiene sesiones programadas."
+                            action_result = {'status': 'no_sessions'}
+                        else:
+                            new_start = datetime.utcnow() + timedelta(hours=2)
+                            new_end = new_start + timedelta(hours=1)
+                            svc.update_session(appt.id, {
+                                'start_time': new_start,
+                                'end_time': new_end
+                            })
+                            response = f"Sesion de {patient.username} reprogramada."
+                            action_result = {'status': 'success', 'appointment_id': appt.id}
+                    except Exception as e:
+                        response = f"Error: {str(e)[:60]}"
+                        action_result = {'status': 'error', 'error': str(e)}
+
+        elif intent == 'delete_session':
+            patient_name = params.get('patient_name', '')
+            if not patient_name:
+                response = "Indica el nombre del paciente para cancelar su sesion."
+                action_result = {'status': 'validation_failed'}
+            else:
+                patient = User.query.filter(
+                    User.username.ilike(f"%{patient_name}%"),
+                    User.role == 'jugador'
+                ).first()
+                if not patient:
+                    response = f"No encontre al paciente '{patient_name}'."
+                    action_result = {'status': 'patient_not_found'}
+                else:
+                    try:
+                        from app.services.appointment_service import AppointmentService
+                        svc = AppointmentService()
+                        appt = Appointment.query.filter_by(
+                            patient_id=patient.id,
+                            status='scheduled'
+                        ).order_by(Appointment.start_time).first()
+                        if not appt:
+                            response = f"{patient.username} no tiene sesiones programadas para cancelar."
+                            action_result = {'status': 'no_sessions'}
+                        else:
+                            svc.delete_session(appt.id, current_user.id)
+                            response = f"Sesion de {patient.username} cancelada."
+                            action_result = {'status': 'success', 'appointment_id': appt.id}
+                    except Exception as e:
+                        response = f"Error: {str(e)[:60]}"
+                        action_result = {'status': 'error', 'error': str(e)}
+
+        elif intent == 'broadcast_message':
+            msg_text = user_message
+            try:
+                patients = User.query.filter_by(role='jugador', is_active=True).all()
+                count = 0
+                for p in patients:
+                    notif_service.create_notification(
+                        p.id,
+                        f"Anuncio: {msg_text[:200]}",
+                        "/dashboard"
+                    )
+                    count += 1
+                response = f"Mensaje enviado a {count} pacientes."
+                action_result = {'status': 'success', 'recipients': count}
+            except Exception as e:
+                response = f"Error al enviar mensajes: {str(e)[:60]}"
+                action_result = {'status': 'error', 'error': str(e)}
+
+        # ===== INTENTOS QUE V5 YA PROCESA POR SI MISMO =====
+        # generate_report, schedule_optimization, breakeven_analysis,
+        # unpaid_users, weekly_due, revenue_metrics, list_sessions,
+        # list_payments, list_users:
+        #   V5 ya retorna la respuesta completa con datos.
+        #   Solo vinculamos notificacion extra si aplica.
+
+        elif intent == 'generate_report':
+            from app.services.business_analytics_service import generate_business_report
+            report = generate_business_report()
+            response = report
+            action_result = {'status': 'report_generated'}
+            notif_service.create_notification(
+                current_user.id,
+                "Informe financiero generado",
+                "/admin/reports"
+            )
+
+        elif intent == 'schedule_optimization':
+            from app.services.business_analytics_service import get_schedule_recommendations
+            rec = get_schedule_recommendations()
+            response = rec['recommendations']
+            action_result = {'status': 'optimization_provided'}
+
+        elif intent == 'breakeven_analysis':
+            from app.services.business_analytics_service import estimate_breakeven_point
+            target = params.get('target_profit', 5000)
+            try:
+                import re
+                match = re.search(r'\d+(?:,\d{3})*(?:\.\d{2})?', user_message)
+                if match:
+                    target = float(match.group(0).replace(',', '').replace(',', ''))
+            except:
+                pass
+            be = estimate_breakeven_point(target)
+            if be:
+                response = (f"Punto de Equilibrio para S/. {target:,.0f}: "
+                            f"{be['students_needed']} alumnos necesarios "
+                            f"(tienes {be['current_students']}, "
+                            f"faltan {be['additional_students']}). "
+                            f"Factibilidad: {be['feasibility']}.")
+                action_result = {'status': 'analysis_complete', 'data': be}
+            else:
+                response = "No se pudo calcular el punto de equilibrio"
+                action_result = {'status': 'calculation_error'}
         
         # Actualizar estado de la acción
         if action_result:
@@ -337,6 +502,7 @@ def send_message():
 
 
 @llama_bp.route('/chat/upload-voucher', methods=['POST'])
+@csrf.exempt
 @login_required
 def upload_voucher():
     """Procesa un voucher/comprobante de pago con análisis inteligente."""
@@ -474,6 +640,7 @@ def upload_voucher():
 
 
 @llama_bp.route('/chat/confirm-payment', methods=['POST'])
+@csrf.exempt
 @login_required
 def confirm_payment():
     """Confirma y registra un pago después de análisis de voucher."""

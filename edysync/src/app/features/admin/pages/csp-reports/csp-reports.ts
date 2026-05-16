@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { CSPReport, CSPReportFilter } from '../../../../core/models/csp-report';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-csp-reports',
   standalone: false,
   templateUrl: './csp-reports.html',
-  styleUrl: './csp-reports.scss'
+  styleUrl: './csp-reports.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class CspReports implements OnInit {
   reports: CSPReport[] = [];

@@ -1,0 +1,18 @@
+.animate-gradient {
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+:host ::ng-deep canvas {
+  max-width: 100%;
+  max-height: 100%;
+}

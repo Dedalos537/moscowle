@@ -1,31 +1,32 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
-import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
-import { FullCalendarComponent } from '@fullcalendar/angular';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import esLocale from '@fullcalendar/core/locales/es';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { CalendarWidgetEvent, CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-sessions',
   standalone: false,
   templateUrl: './sessions.html',
   styleUrl: './sessions.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Sessions implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
-  @ViewChild(FullCalendarComponent) calendarComponent!: FullCalendarComponent;
+  @ViewChild(CalendarWidget) calendarWidget!: CalendarWidget;
 
   therapists: { id: number; username: string }[] = [];
   selectedTherapistId = 'all';
-  calendarOptions: CalendarOptions;
+  patients: { id: number; username: string }[] = [];
+  patientsLoading = false;
+  loading = true;
+
+  rawEvents: any[] = [];
+  widgetEvents: CalendarWidgetEvent[] = [];
+
   showCreateModal = false;
   showEditModal = false;
   activeTab: 'single' | 'batch' = 'single';
-  patients: { id: number; username: string }[] = [];
-  patientsLoading = false;
 
   singleForm = {
     therapist_id: '',
@@ -71,26 +72,10 @@ export class Sessions implements OnInit, OnDestroy {
   programError: string | null = null;
   programSuccessMessage: string | null = null;
 
-
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
-  ) {
-    this.calendarOptions = {
-      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-      initialView: 'dayGridMonth',
-      locale: esLocale,
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay',
-      },
-      navLinks: true,
-      events: this.loadEvents.bind(this),
-      eventClick: this.handleEventClick.bind(this),
-      height: 'auto',
-    };
-  }
+  ) {}
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -100,6 +85,7 @@ export class Sessions implements OnInit, OnDestroy {
       actionTemplate: this.headerActions,
     });
     this.loadTherapists();
+    this.loadSessions();
   }
 
   ngOnDestroy() {
@@ -114,16 +100,86 @@ export class Sessions implements OnInit, OnDestroy {
     });
   }
 
-  private loadEvents(fetchInfo: any, successCallback: (events: any[]) => void, failureCallback: (error: any) => void) {
+  private loadSessions() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
     const therapistId = this.selectedTherapistId !== 'all' ? parseInt(this.selectedTherapistId) : undefined;
-    this.adminService.getSessions(fetchInfo.startStr, fetchInfo.endStr, therapistId).subscribe({
-      next: (events) => successCallback(events),
-      error: (err) => failureCallback(err),
+
+    this.adminService.getSessions(start, end, therapistId).subscribe({
+      next: (events) => {
+        this.rawEvents = events;
+        this.widgetEvents = events.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          date: new Date(e.start),
+          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
+          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+          status: e.extendedProps?.status || 'scheduled',
+          therapist: e.extendedProps?.therapist,
+          patient: e.extendedProps?.patient,
+          therapistId: e.extendedProps?.therapist_id,
+          patientId: e.extendedProps?.patient_id,
+        }));
+        this.loading = false;
+      },
+      error: () => (this.loading = false),
     });
   }
 
   onTherapistFilterChange() {
-    this.calendarComponent?.getApi().refetchEvents();
+    this.loading = true;
+    this.loadSessions();
+  }
+
+  onDayDblClick(date: Date) {
+    this.singleForm.dates = date.toISOString().split('T')[0];
+    this.openCreateModal();
+  }
+
+  onRangeDblClick(range: { start: Date; end: Date }) {
+    const dates: string[] = [];
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    const cursor = new Date(Math.min(start.getTime(), end.getTime()));
+    const last = new Date(Math.max(start.getTime(), end.getTime()));
+    while (cursor <= last) {
+      dates.push(cursor.toISOString().split('T')[0]);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    this.singleForm.dates = dates.join(', ');
+    this.openCreateModal();
+  }
+
+  onEventClick(event: CalendarWidgetEvent) {
+    const raw = this.rawEvents.find((e: any) => e.id === event.id);
+    if (!raw) return;
+
+    this.editForm = {
+      id: event.id,
+      title: event.title,
+      date: event.date.toISOString().split('T')[0],
+      start_time: event.time || '',
+      end_time: event.endTime || '',
+      status: event.status,
+      therapist: event.therapist || '',
+      patient: event.patient || '',
+    };
+
+    this.auditState = null;
+    this.programError = null;
+    this.programSuccessMessage = null;
+
+    this.adminService.getSessionAudit(this.editForm.id).subscribe({
+      next: (data: any) => {
+        if (data && data.success && data.exists && data.audit.has_program) {
+          this.auditState = data.audit;
+        }
+      },
+      error: () => {},
+    });
+
+    this.showEditModal = true;
   }
 
   openCreateModal() {
@@ -178,9 +234,7 @@ export class Sessions implements OnInit, OnDestroy {
 
   private submitSingle() {
     const f = this.singleForm;
-    if (!f.therapist_id || !f.patient_id || !f.dates || !f.start_time || !f.end_time) {
-      return;
-    }
+    if (!f.therapist_id || !f.patient_id || !f.dates || !f.start_time || !f.end_time) return;
 
     this.submitting = true;
     const dateList = f.dates.split(', ');
@@ -223,14 +277,12 @@ export class Sessions implements OnInit, OnDestroy {
     if (completed < total) return;
     this.submitting = false;
     this.closeCreateModal();
-    this.refreshCalendar();
+    this.refreshEvents();
   }
 
   private submitBatch() {
     const f = this.batchForm;
-    if (!f.therapist_id || !f.patient_id || !f.start_date || !f.start_time || !f.end_time || f.days.length === 0) {
-      return;
-    }
+    if (!f.therapist_id || !f.patient_id || !f.start_date || !f.start_time || !f.end_time || f.days.length === 0) return;
 
     this.submitting = true;
     const payload = {
@@ -248,7 +300,7 @@ export class Sessions implements OnInit, OnDestroy {
       next: () => {
         this.submitting = false;
         this.closeCreateModal();
-        this.refreshCalendar();
+        this.refreshEvents();
       },
       error: () => {
         this.submitting = false;
@@ -256,35 +308,9 @@ export class Sessions implements OnInit, OnDestroy {
     });
   }
 
-  private handleEventClick(arg: EventClickArg) {
-    const ext = arg.event.extendedProps;
-    this.editForm = {
-      id: parseInt(arg.event.id),
-      title: arg.event.title,
-      date: arg.event.start?.toISOString().split('T')[0] || '',
-      start_time: arg.event.start?.toTimeString().substring(0, 5) || '',
-      end_time: arg.event.end?.toTimeString().substring(0, 5) || '',
-      status: (ext['status'] as string) || 'scheduled',
-      therapist: (ext['therapist'] as string) || '',
-      patient: (ext['patient'] as string) || '',
-    };
-    
-    // Reset states
-    this.auditState = null;
-    this.programError = null;
-    this.programSuccessMessage = null;
-    
-    // Load audit state
-    this.adminService.getSessionAudit(this.editForm.id).subscribe({
-      next: (data: any) => {
-        if (data && data.success && data.exists && data.audit.has_program) {
-            this.auditState = data.audit;
-        }
-      },
-      error: () => {}
-    });
-
-    this.showEditModal = true;
+  private refreshEvents() {
+    this.loading = true;
+    this.loadSessions();
   }
 
   closeEditModal() {
@@ -308,7 +334,7 @@ export class Sessions implements OnInit, OnDestroy {
         next: () => {
           this.submitting = false;
           this.closeEditModal();
-          this.refreshCalendar();
+          this.refreshEvents();
         },
         error: () => {
           this.submitting = false;
@@ -318,17 +344,12 @@ export class Sessions implements OnInit, OnDestroy {
 
   deleteSession() {
     if (!confirm('¿Estás seguro de que deseas eliminar esta sesión? Esta acción no se puede deshacer.')) return;
-
     this.adminService.deleteSession(this.editForm.id).subscribe({
       next: () => {
         this.closeEditModal();
-        this.refreshCalendar();
+        this.refreshEvents();
       },
     });
-  }
-
-  private refreshCalendar() {
-    this.calendarComponent?.getApi().refetchEvents();
   }
 
   private resetForms() {
@@ -357,13 +378,14 @@ export class Sessions implements OnInit, OnDestroy {
     };
     this.patients = [];
   }
+
   onFileSelected(event: any) {
     const file: File = event.target.files[0];
     if (file && this.editForm.id) {
       this.programUploading = true;
       this.programError = null;
       this.programSuccessMessage = null;
-      
+
       this.adminService.uploadSessionProgram(this.editForm.id, file).subscribe({
         next: (res: any) => {
           this.programUploading = false;
@@ -375,11 +397,11 @@ export class Sessions implements OnInit, OnDestroy {
           }
           event.target.value = null;
         },
-        error: (err) => {
+        error: () => {
           this.programUploading = false;
           this.programError = 'Error de conexión al subir.';
           event.target.value = null;
-        }
+        },
       });
     }
   }
@@ -397,7 +419,7 @@ export class Sessions implements OnInit, OnDestroy {
         },
         error: () => {
           this.programError = 'Error de conexión al eliminar.';
-        }
+        },
       });
     }
   }

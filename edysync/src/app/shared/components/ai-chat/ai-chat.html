@@ -1,0 +1,75 @@
+<div class="chat-toggle" (click)="togglePanel()" [title]="isOpen ? 'Cerrar' : 'Abrir Llama AI'">
+  @if (hasUnread) {
+    <span class="notif-dot"></span>
+  }
+  @if (isOpen) {
+    <span class="material-symbols-outlined">close</span>
+  } @else {
+    <span class="material-symbols-outlined">psychology</span>
+  }
+</div>
+
+@if (isOpen) {
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-header-icon">
+          <span class="material-symbols-outlined">psychology</span>
+        </div>
+        <div>
+          <h3>Llama Copilot</h3>
+          <p>Asistente IA</p>
+        </div>
+      </div>
+      <button class="chat-close" (click)="togglePanel()">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <div class="chat-messages" #scrollContainer>
+      @if (messages.length === 0 && !loading) {
+        <div class="welcome-msg animate-fade-in">
+          <div class="icon">🦙</div>
+          <h4>¡Hola! Soy Llama</h4>
+          <p>Pregúntame sobre finanzas, sesiones, o gestiona el centro</p>
+          <div class="suggestion-chips">
+            @for (s of suggestions; track s) {
+              <span class="suggestion-chip" (click)="sendSuggestion(s)">{{ s }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      @for (msg of messages; track msg.id || $index) {
+        <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
+          @if (msg.intent) {
+            <div class="intent-badge">{{ msg.intent }}</div>
+          }
+          <div [innerHTML]="sanitize(msg.content)"></div>
+        </div>
+      }
+
+      @if (loading) {
+        <div class="message assistant" style="opacity:1">
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="chat-input-area">
+      <textarea
+        class="chat-input"
+        [(ngModel)]="inputMessage"
+        (keydown.enter)="$event.preventDefault(); sendMessage()"
+        placeholder="Escribe un mensaje..."
+        rows="1"
+        #inputEl
+      ></textarea>
+      <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading">
+        <span class="material-symbols-outlined">send</span>
+      </button>
+    </div>
+  </div>
+}

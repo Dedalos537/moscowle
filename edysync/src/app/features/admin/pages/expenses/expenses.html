@@ -2,7 +2,7 @@
   <app-button variant="secondary" label="Registrar Gasto Operativo" [icon]="['fas', 'plus']" (clicked)="openOperationalModal()"></app-button>
 </ng-template>
 
-<div class="p-4 md:p-8 space-y-8">
+<div class="p-4 md:p-8 space-y-8" [@fadeInUp]>
 
   @if (loading) {
     <div class="flex justify-center py-16">
@@ -10,37 +10,37 @@
     </div>
   } @else {
     <!-- Therapist Payroll -->
-    <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <h3 class="text-lg font-semibold text-textDark">Nómina de Terapeutas (Mes Actual)</h3>
+        <h3 class="text-lg font-semibold text-on-surface">Nómina de Terapeutas (Mes Actual)</h3>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-gray-100">
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Terapeuta</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Contrato</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Horas Trab.</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">A Pagar (Est.)</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Pagado</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Pendiente</th>
-              <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Acciones</th>
+            <tr class="border-b border-outline-variant/20">
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Terapeuta</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Contrato</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Horas Trab.</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">A Pagar (Est.)</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pagado</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pendiente</th>
+              <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Acciones</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-outline-variant/10">
             @for (t of therapistFinancials; track t.therapist.id) {
-              <tr class="hover:bg-gray-50/50">
-                <td class="px-6 py-4 font-medium text-charcoal">{{ t.therapist.username }}</td>
-                <td class="px-6 py-4 text-sm text-gray-500">
+              <tr class="hover:bg-surface-container-high/50">
+                <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username }}</td>
+                <td class="px-6 py-4 text-sm text-on-surface-variant">
                   @if (t.contract_hours > 0) {
                     S/ {{ t.rate.toFixed(2) }}/hr
-                    <div class="text-xs text-gray-400">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
+                    <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
                   } @else {
                     <span class="text-xs text-orange-400 bg-orange-50 px-2 py-1 rounded">Sin contrato</span>
                   }
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">{{ t.worked_hours.toFixed(1) }} hrs</td>
-                <td class="px-6 py-4 text-sm font-bold text-charcoal">S/ {{ t.projected_pay.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
+                <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
                 <td class="px-6 py-4 text-sm text-green-600">S/ {{ t.paid.toFixed(2) }}</td>
                 <td class="px-6 py-4 text-sm" [class.text-red-500]="t.balance > 0" [class.text-green-500]="t.balance <= 0">
                   S/ {{ t.balance.toFixed(2) }}
@@ -52,7 +52,7 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">No hay terapeutas activos.</td></tr>
+              <tr><td colspan="7" class="px-6 py-8 text-center text-on-surface-variant/60">No hay terapeutas activos.</td></tr>
             }
           </tbody>
         </table>
@@ -60,40 +60,40 @@
     </div>
 
     <!-- Recent Expenses -->
-    <div class="bg-surface rounded-lg shadow-soft p-6 overflow-hidden">
-      <h3 class="text-lg font-semibold text-textDark mb-6">Historial de Gastos Recientes</h3>
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+      <h3 class="text-lg font-semibold text-on-surface mb-6">Historial de Gastos Recientes</h3>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-gray-100">
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Fecha</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Categoría</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Descripción</th>
-              <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Monto</th>
+            <tr class="border-b border-outline-variant/20">
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Fecha</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Categoría</th>
+              <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Descripción</th>
+              <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Monto</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-50">
+          <tbody class="divide-y divide-outline-variant/10">
             @for (e of recentExpenses; track e.id) {
-              <tr class="hover:bg-gray-50/50">
-                <td class="px-6 py-4 text-sm text-gray-500">{{ e.date }}</td>
+              <tr class="hover:bg-surface-container-high/50">
+                <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
                 <td class="px-6 py-4 text-sm capitalize">
                   <span class="px-2 py-1 rounded text-xs font-bold"
                     [class.bg-blue-100]="e.category === 'therapist_payment'" [class.text-blue-700]="e.category === 'therapist_payment'"
-                    [class.bg-gray-100]="e.category === 'operational'" [class.text-gray-700]="e.category === 'operational'"
+                    [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
                     [class.bg-green-100]="e.category === 'bonus'" [class.text-green-700]="e.category === 'bonus'"
                     [class.bg-yellow-100]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'"
                     [class.text-yellow-700]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'">
                     {{ e.category.replace('_', ' ') }}
                   </span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
+                <td class="px-6 py-4 text-sm text-on-surface">
                   {{ e.description }}
                   @if (e.therapist) {
-                    <span class="text-gray-400 text-xs block">Destino: {{ e.therapist.username }}</span>
+                    <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username }}</span>
                   }
                   <div class="mt-1 flex items-center gap-2">
                     @if (e.method) {
-                      <span class="text-xs border px-1 rounded text-gray-500 bg-white">
+                      <span class="text-xs border px-1 rounded text-on-surface-variant bg-surface-container-lowest">
                         {{ e.method === 'transfer' ? 'Transferencia' : e.method === 'yape_plin' ? 'Yape/Plin' : e.method === 'cash' ? 'Efectivo' : e.method }}
                       </span>
                     }
@@ -104,10 +104,10 @@
                     }
                   </div>
                 </td>
-                <td class="px-6 py-4 text-right font-mono font-bold text-charcoal">S/ {{ e.amount.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">S/ {{ e.amount.toFixed(2) }}</td>
               </tr>
             } @empty {
-              <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">No hay gastos registrados.</td></tr>
+              <tr><td colspan="4" class="px-6 py-8 text-center text-on-surface-variant/60">No hay gastos registrados.</td></tr>
             }
           </tbody>
         </table>
@@ -119,7 +119,7 @@
 <app-modal [isOpen]="showModal" [title]="modalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'" (close)="closeModal()">
   <div class="space-y-4">
     <div>
-      <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Categoría</label>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Categoría</label>
       <select [(ngModel)]="form.category" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
         <option value="therapist_payment">Pago a Terapeuta</option>
         <option value="operational">Gasto Operativo</option>
@@ -130,15 +130,15 @@
 
     @if (form.therapist_id) {
       <div>
-        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destinatario</label>
-        <input type="text" [value]="form.therapist_name" readonly class="w-full px-3 py-2 bg-gray-100 border rounded-lg text-gray-500">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Destinatario</label>
+        <input type="text" [value]="form.therapist_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
       </div>
     }
 
     <app-input id="expense-amount" label="Monto (S/)" type="number" [(value)]="form.amount"></app-input>
 
     <div>
-      <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Método de Pago</label>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
       <select [(ngModel)]="form.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
         <option value="transfer">Transferencia Bancaria</option>
         <option value="yape_plin">Yape / Plin</option>
@@ -148,14 +148,14 @@
     </div>
 
     <div>
-      <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Comprobante (Imagen)</label>
-      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-green-100">
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Comprobante (Imagen)</label>
+      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-green-100">
     </div>
 
     <app-input id="expense-date" label="Fecha" type="date" [(value)]="form.date"></app-input>
 
     <div>
-      <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas / Descripción</label>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas / Descripción</label>
       <textarea [(ngModel)]="form.description" rows="2" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
     </div>
 

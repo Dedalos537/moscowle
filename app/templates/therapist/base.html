@@ -170,6 +170,7 @@
 
     .dark .text-gray-500 { color: #9ca3af !important; } /* Gray 400 */
     .dark .text-gray-600 { color: #d1d5db !important; } /* Gray 300 */
+    .dark .text-gray-900 { color: #f8fafc !important; }
     .dark .text-gray-700 { color: #f3f4f6 !important; } /* Gray 100 */
     .dark .text-gray-400 { color: #6b7280 !important; } /* Gray 500 */
     .dark .text-gray-300 { color: #d1d5db !important; }
@@ -301,6 +302,61 @@
 
     .fade-in-content {
       animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeInUp 0.4s ease-out forwards;
+    }
+
+    .animate-fade-in-delay-1 {
+      animation: fadeInUp 0.4s ease-out 0.1s forwards;
+      opacity: 0;
+    }
+
+    .animate-fade-in-delay-2 {
+      animation: fadeInUp 0.4s ease-out 0.2s forwards;
+      opacity: 0;
+    }
+
+    /* Modal overlay transition */
+    .modal-overlay {
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-content {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+
+    .modal-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal-hidden .modal-content {
+      transform: scale(0.92) translateY(10px);
+      opacity: 0;
+    }
+
+    .modal-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-visible .modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
     }
 
     /* Dinamismo del Sidebar para auto-ajustar pestañas y evitar desbordes */

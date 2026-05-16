@@ -52,8 +52,94 @@ def analyze_transaction_message(message):
 def analyze_receipt_image(image_path):
     return json.dumps({"status": "success"})
 
-def generate_weekly_report(data_json):
-    return "Reporte"
+def generate_weekly_report(data):
+    """
+    Generate a strategic report from comprehensive data.
+    data dict expects keys: period, general (therapists, patients, total_sessions, sessions_this_month),
+    financial (total_debt, total_debtors, income_last_30d, total_expenses),
+    top_therapists, recent_session_notes.
+    """
+    gen = data.get('general', {})
+    fin = data.get('financial', {})
+    top = data.get('top_therapists', [])
+    notes = data.get('recent_session_notes', [])
+    period = data.get('period', 'Reporte')
+
+    lines = []
+    lines.append(f"# {period}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## Resumen General")
+    lines.append("")
+    lines.append(f"- **Terapeutas activos:** {gen.get('therapists', 0)}")
+    lines.append(f"- **Pacientes activos:** {gen.get('patients', 0)}")
+    lines.append(f"- **Sesiones totales completadas:** {gen.get('total_sessions', 0)}")
+    lines.append(f"- **Sesiones este mes:** {gen.get('sessions_this_month', 0)}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## Estado Financiero")
+    lines.append("")
+    lines.append(f"- **Deuda total pendiente:** S/ {fin.get('total_debt', 0):.2f}")
+    lines.append(f"- **Total deudores:** {fin.get('total_debtors', 0)}")
+    lines.append(f"- **Ingresos últimos 30 días:** S/ {fin.get('income_last_30d', 0):.2f}")
+    lines.append(f"- **Gastos últimos 30 días:** S/ {fin.get('total_expenses', 0):.2f}")
+    balance = fin.get('income_last_30d', 0) - fin.get('total_expenses', 0)
+    balance_label = "Positivo" if balance >= 0 else "Negativo"
+    lines.append(f"- **Balance neto:** S/ {balance:.2f} ({balance_label})")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## Top Terapeutas")
+    lines.append("")
+    if top:
+        lines.append("| Terapeuta | Sesiones |")
+        lines.append("|-----------|----------|")
+        for t in top:
+            lines.append(f"| {t.get('name', '—')} | {t.get('sessions', 0)} |")
+    else:
+        lines.append("_Sin datos de terapeutas._")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## Notas de Sesiones Recientes")
+    lines.append("")
+    if notes:
+        for n in notes:
+            patient = n.get('patient', '—')
+            therapist = n.get('therapist', '—')
+            note_text = n.get('notes', '') or 'Sin notas'
+            lines.append(f"**Paciente:** {patient} | **Terapeuta:** {therapist}")
+            lines.append(f"> {note_text[:200]}{'…' if len(note_text) > 200 else ''}")
+            lines.append("")
+    else:
+        lines.append("_No hay notas de sesión recientes._")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## Recomendaciones")
+    lines.append("")
+    recs = []
+    if fin.get('total_debtors', 0) > 0:
+        recs.append(f"- 🔴 **Cobranza pendiente:** {fin.get('total_debtors', 0)} pacientes tienen deuda. Revisa la pestaña Deudores para gestionar recordatorios.")
+    if gen.get('sessions_this_month', 0) < gen.get('total_sessions', 0) * 0.1:
+        recs.append(f"- 📉 **Baja actividad mensual:** Solo {gen.get('sessions_this_month', 0)} sesiones este mes. Considera campañas de retención.")
+    if balance < 0:
+        recs.append(f"- ⚠️ **Balance negativo:** Los gastos superan a los ingresos. Revisa los gastos operativos.")
+    if not notes:
+        recs.append("- 📝 **Falta de notas:** No hay notas de sesión recientes. Motiva a los terapeutas a documentar sus sesiones.")
+    if fin.get('total_expenses', 0) > fin.get('income_last_30d', 0) * 0.8:
+        recs.append("- 💰 **Margen ajustado:** Los gastos representan más del 80% de los ingresos. Evalúa reducir costos operativos.")
+
+    if not recs:
+        recs.append("- ✅ Todo en orden. Sigue monitoreando los indicadores clave.")
+
+    for r in recs:
+        lines.append(r)
+        lines.append("")
+
+    return "\n".join(lines)
 
 def process_chat_command(user_id, command, context_brief=""):
     """

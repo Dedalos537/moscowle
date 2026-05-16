@@ -1,7 +1,13 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { AlertService } from '../../../../core/services/alert.service';
 import { TherapistStats, PatientStats } from '../../../../core/models/expense';
+import { Chart, registerables } from 'chart.js';
+import type { ChartConfiguration, ChartData } from 'chart.js';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+
+Chart.register(...registerables);
 
 interface FinancialSummary {
   income_real: number;
@@ -17,9 +23,12 @@ interface FinancialSummary {
   standalone: false,
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Reports implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
+  @ViewChild('financialChart') financialChart?: any;
+  @ViewChild('therapistChart') therapistChart?: any;
 
   financials: FinancialSummary = {
     income_real: 0,
@@ -31,17 +40,137 @@ export class Reports implements OnInit, OnDestroy {
   };
   therapists: TherapistStats[] = [];
   patients: PatientStats[] = [];
-  // --- AUDITORIA IA ---
   auditStats: any = { total: 0, avg_score: 0, recent: [], by_therapist: [] };
+
+  overview: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } | null = null;
 
   loading = true;
   aiGenerating = false;
   reportSending = false;
   aiReport: string | null = null;
 
+  readonly financialChartLabels = ['Proyectado', 'Recaudado', 'Gastos'];
+
+  financialChartData: ChartData<'bar'> = {
+    labels: this.financialChartLabels,
+    datasets: [
+      {
+        label: 'Monto (S/)',
+        data: [0, 0, 0],
+        backgroundColor: [
+          'rgba(59, 130, 246, 0.85)',
+          'rgba(117, 168, 58, 0.85)',
+          'rgba(186, 26, 26, 0.85)',
+        ],
+        borderColor: ['#3b82f6', '#75a83a', '#ba1a1a'],
+        borderWidth: 1,
+        borderRadius: 8,
+        barPercentage: 0.6,
+      },
+    ],
+  };
+
+  financialChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(26, 28, 22, 0.92)',
+        titleFont: { family: 'Manrope', size: 12, weight: 700 },
+        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
+        padding: { x: 14, y: 10 },
+        cornerRadius: 10,
+        displayColors: true,
+        boxPadding: 6,
+        callbacks: {
+          label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { family: 'Manrope', size: 12, weight: 600 },
+          color: '#76796c',
+        },
+      },
+      y: {
+        grid: { color: 'rgba(217, 219, 206, 0.4)' },
+        ticks: {
+          font: { family: 'Manrope', size: 11, weight: 500 },
+          color: '#76796c',
+          callback: (val) => `S/${val}`,
+        },
+        beginAtZero: true,
+      },
+    },
+  };
+
+  readonly financialChartType = 'bar' as const;
+
+  therapistChartLabels: string[] = [];
+
+  therapistChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: [
+      {
+        label: 'Precisión (%)',
+        data: [],
+        backgroundColor: 'rgba(117, 168, 58, 0.8)',
+        borderColor: '#75a83a',
+        borderWidth: 1,
+        borderRadius: 6,
+        barPercentage: 0.5,
+      },
+    ],
+  };
+
+  therapistChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(26, 28, 22, 0.92)',
+        titleFont: { family: 'Manrope', size: 12, weight: 700 },
+        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
+        padding: { x: 14, y: 10 },
+        cornerRadius: 10,
+        callbacks: {
+          label: (ctx) => `${ctx.raw}%`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(217, 219, 206, 0.3)' },
+        ticks: {
+          font: { family: 'Manrope', size: 10, weight: 500 },
+          color: '#76796c',
+          callback: (val) => `${val}%`,
+        },
+        beginAtZero: true,
+        max: 100,
+      },
+      y: {
+        grid: { display: false },
+        ticks: {
+          font: { family: 'Manrope', size: 11, weight: 600 },
+          color: '#1a1c16',
+        },
+      },
+    },
+  };
+
+  readonly therapistChartType = 'bar' as const;
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private alertService: AlertService,
   ) {}
 
   ngOnInit() {
@@ -59,26 +188,37 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   private loadData() {
-    
+    this.adminService.getAdminOverview().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.overview = res.data;
+        }
+      },
+    });
+
     this.adminService.getAuditStats().subscribe({
       next: (res: any) => {
         if (res.success && res.data) {
           this.auditStats = res.data;
         }
       },
-      error: (err) => console.error("Error cargando Stats Auditoria", err)
+      error: (err) => console.error('Error cargando Stats Auditoria', err),
     });
 
     this.adminService.getFinancialSummary().subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.financials = res.data;
+          this.updateFinancialChart();
         }
       },
     });
 
     this.adminService.getTherapistStats().subscribe({
-      next: (res) => (this.therapists = res.data),
+      next: (res) => {
+        this.therapists = res.data;
+        this.updateTherapistChart();
+      },
     });
 
     this.adminService.getPatientStats().subscribe({
@@ -88,6 +228,36 @@ export class Reports implements OnInit, OnDestroy {
       },
       error: () => (this.loading = false),
     });
+  }
+
+  private updateFinancialChart() {
+    this.financialChartData = {
+      ...this.financialChartData,
+      datasets: [
+        {
+          ...this.financialChartData.datasets[0],
+          data: [
+            this.financials.income_expected,
+            this.financials.income_real,
+            this.financials.expenses,
+          ],
+        },
+      ],
+    };
+  }
+
+  private updateTherapistChart() {
+    this.therapistChartLabels = this.therapists.map((t) => t.name);
+    this.therapistChartData = {
+      ...this.therapistChartData,
+      labels: this.therapistChartLabels,
+      datasets: [
+        {
+          ...this.therapistChartData.datasets[0],
+          data: this.therapists.map((t) => t.avg_accuracy),
+        },
+      ],
+    };
   }
 
   get executionPercent(): number {
@@ -139,28 +309,46 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   generateReport() {
-    if (!confirm('Esta operación tomará 1-2 minutos y analizará las últimas notas transcritas. ¿Continuar?')) {
+    if (
+      !confirm(
+        'Esta operación tomará 1-2 minutos y analizará las últimas notas transcritas. ¿Continuar?',
+      )
+    ) {
       return;
     }
-    
+
     this.aiGenerating = true;
     this.aiReport = null;
-    
+
     this.adminService.generateIAReport().subscribe({
       next: (res: any) => {
         this.aiGenerating = false;
         if (res.success) {
           this.aiReport = res.report;
         } else {
-          alert('Error: ' + res.error);
+          this.alertService.show('Error: ' + res.error, 'error');
         }
       },
       error: (err) => {
         this.aiGenerating = false;
-        alert('Error de conexión al generar el reporte.');
+        this.alertService.show('Error de conexión al generar el reporte.', 'error');
         console.error(err);
-      }
-    })
+      },
+    });
   }
 
+  get barMaxValue(): number {
+    return Math.max(
+      this.financials.income_expected,
+      this.financials.income_real,
+      this.financials.overdue_amount,
+      1,
+    );
+  }
+
+  accuracyColor(avg: number): string {
+    if (avg >= 90) return 'text-emerald-600 bg-emerald-100';
+    if (avg >= 75) return 'text-amber-600 bg-amber-100';
+    return 'text-red-600 bg-red-100';
+  }
 }

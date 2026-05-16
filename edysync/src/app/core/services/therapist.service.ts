@@ -129,4 +129,93 @@ export class TherapistService {
   getGameUrl(filename: string): string {
     return `/static/games/${filename}`;
   }
+
+  getAnalytics(): Observable<ApiResponse<AnalyticsData>> {
+    return this.http.get<ApiResponse<AnalyticsData>>('/therapist/api/analytics');
+  }
+
+  getReportsOverview(): Observable<ApiResponse<ReportsOverview>> {
+    return this.http.get<ApiResponse<ReportsOverview>>('/therapist/api/reports/overview');
+  }
+
+  getDetailedReports(start?: string, end?: string): Observable<ApiResponse<PatientReport[]>> {
+    let params = new HttpParams();
+    if (start) params = params.set('start', start);
+    if (end) params = params.set('end', end);
+    return this.http.get<ApiResponse<PatientReport[]>>('/therapist/api/reports/detailed', { params });
+  }
+
+  getTherapistAppointments(month: number, year: number): Observable<ApiResponse<CalendarEvent[]>> {
+    return this.http.get<ApiResponse<CalendarEvent[]>>(`/therapist/api/appointments/${year}/${month}`);
+  }
+
+  getPatientStats(): Observable<ApiResponse<PatientStatsReport[]>> {
+    return this.http.get<ApiResponse<PatientStatsReport[]>>('/therapist/api/patient-stats');
+  }
+}
+
+export interface AnalyticsData {
+  kpi: {
+    adaptations_count: number;
+    avg_accuracy: number;
+    success_rate: number;
+    active_models: number;
+  };
+  difficulty_matrix: DifficultyMatrixEntry[];
+  prediction_distribution: PredictionDistribution[];
+  model_confidence: ModelConfidence[];
+  recent_adaptations: Adaptation[];
+}
+
+export interface DifficultyMatrixEntry {
+  game: string;
+  levels: DifficultyLevel[];
+}
+
+export interface DifficultyLevel {
+  level: string;
+  accuracy: number;
+  count: number;
+}
+
+export interface PredictionDistribution {
+  label: PredictionType;
+  value: number;
+}
+
+export type PredictionType = 'Avanzar' | 'Apoyar' | 'Mantener';
+
+export interface ModelConfidence {
+  model: string;
+  confidence: number;
+}
+
+export interface Adaptation {
+  date: string;
+  description: string;
+  impact: 'positive' | 'neutral' | 'negative';
+}
+
+export interface ReportsOverview {
+  improvement_rate: number;
+  avg_session_time_minutes: number;
+  completed_objectives: number;
+  active_patients: number;
+}
+
+export interface PatientReport {
+  patient_id: number;
+  patient_name: string;
+  sessions_count: number;
+  avg_accuracy: number;
+  total_plays: number;
+}
+
+export interface PatientStatsReport {
+  patient_id: number;
+  patient_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  avg_accuracy: number;
+  improvement: number;
 }

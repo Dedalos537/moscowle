@@ -2,12 +2,12 @@
   <app-button variant="primary" label="Nueva Programación en Bloque" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
 </ng-template>
 
-<div class="p-4 md:p-8 space-y-6">
+<div class="p-4 md:p-8 space-y-6" [@fadeInUp]>
 
   <!-- Therapist Filter -->
-  <div class="bg-surface p-4 rounded-lg shadow-soft border border-gray-100 flex flex-wrap gap-4 items-center">
-    <label class="text-sm font-medium text-gray-700">Filtrar por Terapeuta:</label>
-    <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="border-gray-200 rounded-lg text-sm px-3 py-2 w-full md:w-64 focus:ring-primary focus:border-primary">
+  <div class="card p-4 flex flex-wrap gap-4 items-center">
+    <label class="text-sm font-semibold text-on-surface">Filtrar por Terapeuta:</label>
+    <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="input-field text-sm w-full md:w-64">
       <option value="all">Todos los Terapeutas</option>
       @for (t of therapists; track t.id) {
         <option value="{{ t.id }}">{{ t.username }}</option>
@@ -15,24 +15,36 @@
     </select>
   </div>
 
-  <!-- Calendar -->
-  <div class="bg-surface p-4 md:p-6 rounded-lg shadow-soft border border-gray-100 min-h-[600px]">
-    <full-calendar [options]="calendarOptions"></full-calendar>
+  <!-- Calendar Widget -->
+  <div class="min-h-[500px]">
+    @if (loading) {
+      <div class="flex justify-center py-24">
+        <app-spinner size="md" colorClass="text-primary"></app-spinner>
+      </div>
+    } @else {
+      <app-calendar-widget
+        [events]="widgetEvents"
+        [role]="'admin'"
+        (dayDblClick)="onDayDblClick($event)"
+        (rangeDblClick)="onRangeDblClick($event)"
+        (eventClick)="onEventClick($event)"
+      ></app-calendar-widget>
+    }
   </div>
 </div>
 
 <!-- Create Session Modal -->
 <app-modal [isOpen]="showCreateModal" title="Programar Sesiones" (close)="closeCreateModal()">
   <!-- Tabs -->
-  <div class="flex gap-4 border-b border-gray-100 pb-2 mb-4">
-    <button (click)="switchTab('single')" class="pb-2 text-sm font-medium border-b-2 transition-colors"
+  <div class="flex gap-4 border-b border-outline-variant/20 pb-2 mb-4">
+    <button (click)="switchTab('single')" class="pb-2 text-sm font-bold border-b-2 transition-all duration-200"
       [class.border-primary]="activeTab === 'single'" [class.text-primary]="activeTab === 'single'"
-      [class.border-transparent]="activeTab !== 'single'" [class.text-gray-500]="activeTab !== 'single'">
+      [class.border-transparent]="activeTab !== 'single'" [class.text-on-surface-variant]="activeTab !== 'single'">
       Sesión Individual
     </button>
-    <button (click)="switchTab('batch')" class="pb-2 text-sm font-medium border-b-2 transition-colors"
+    <button (click)="switchTab('batch')" class="pb-2 text-sm font-bold border-b-2 transition-all duration-200"
       [class.border-primary]="activeTab === 'batch'" [class.text-primary]="activeTab === 'batch'"
-      [class.border-transparent]="activeTab !== 'batch'" [class.text-gray-500]="activeTab !== 'batch'">
+      [class.border-transparent]="activeTab !== 'batch'" [class.text-on-surface-variant]="activeTab !== 'batch'">
       Programación en Bloque
     </button>
   </div>
@@ -41,8 +53,8 @@
   @if (activeTab === 'single') {
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
-        <select [(ngModel)]="singleForm.therapist_id" (change)="onTherapistSelect('single')" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta</label>
+        <select [(ngModel)]="singleForm.therapist_id" (change)="onTherapistSelect('single')" class="input-field text-sm">
           <option value="">Seleccionar Terapeuta...</option>
           @for (t of therapists; track t.id) {
             <option value="{{ t.id }}">{{ t.username }}</option>
@@ -50,62 +62,62 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
         <div class="relative">
-          <select [(ngModel)]="singleForm.patient_id" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" [disabled]="!singleForm.therapist_id">
+          <select [(ngModel)]="singleForm.patient_id" class="input-field text-sm" [disabled]="!singleForm.therapist_id">
             <option value="">Seleccionar Paciente...</option>
             @for (p of patients; track p.id) {
               <option value="{{ p.id }}">{{ p.username }}</option>
             }
           </select>
           @if (patientsLoading) {
-            <app-spinner size="sm" colorClass="text-gray-400"></app-spinner>
+            <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
           }
         </div>
         @if (!singleForm.therapist_id) {
-          <p class="text-xs text-gray-500 mt-1">Primero selecciona un terapeuta.</p>
+          <p class="text-xs text-on-surface-variant/60 mt-1">Primero selecciona un terapeuta.</p>
         }
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-        <input type="text" [(ngModel)]="singleForm.title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Título</label>
+        <input type="text" [(ngModel)]="singleForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
       </div>
       <div>
-        <label class="text-sm font-medium text-gray-700 mb-1 block">Fechas</label>
-        <input type="text" [(ngModel)]="singleForm.dates" placeholder="Ej: 2026-05-10, 2026-05-12" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
-        <p class="text-xs text-gray-500 mt-1">Ingresa las fechas separadas por coma (YYYY-MM-DD).</p>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas</label>
+        <input type="text" [(ngModel)]="singleForm.dates" placeholder="Ej: 2026-05-10, 2026-05-12" class="input-field text-sm">
+        <p class="text-xs text-on-surface-variant/60 mt-1">Ingresa las fechas separadas por coma (YYYY-MM-DD).</p>
       </div>
       <div class="flex items-center gap-2">
         <input type="checkbox" id="is_past_session" [(ngModel)]="singleForm.is_past_session" class="rounded text-primary focus:ring-primary">
-        <label for="is_past_session" class="text-sm text-gray-700">Registrar sesión en el pasado (ya terminada)</label>
+        <label for="is_past_session" class="text-sm text-on-surface">Registrar sesión en el pasado (ya terminada)</label>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-          <input type="time" [(ngModel)]="singleForm.start_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
+          <input type="time" [(ngModel)]="singleForm.start_time" class="input-field text-sm">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-          <input type="time" [(ngModel)]="singleForm.end_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
+          <input type="time" [(ngModel)]="singleForm.end_time" class="input-field text-sm">
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-          <select [(ngModel)]="singleForm.status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado</label>
+          <select [(ngModel)]="singleForm.status" class="input-field text-sm">
             <option value="scheduled">Programada</option>
             <option value="completed">Completada</option>
             <option value="cancelled">Cancelada</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Lugar</label>
-          <input type="text" [(ngModel)]="singleForm.location" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" placeholder="Consultorio 1">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Lugar</label>
+          <input type="text" [(ngModel)]="singleForm.location" class="input-field text-sm" placeholder="Consultorio 1">
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-        <textarea [(ngModel)]="singleForm.notes" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" rows="2"></textarea>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Notas</label>
+        <textarea [(ngModel)]="singleForm.notes" class="input-field text-sm" rows="2"></textarea>
       </div>
     </div>
   }
@@ -114,8 +126,8 @@
   @if (activeTab === 'batch') {
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Terapeuta</label>
-        <select [(ngModel)]="batchForm.therapist_id" (change)="onTherapistSelect('batch')" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta</label>
+        <select [(ngModel)]="batchForm.therapist_id" (change)="onTherapistSelect('batch')" class="input-field text-sm">
           <option value="">Seleccionar Terapeuta...</option>
           @for (t of therapists; track t.id) {
             <option value="{{ t.id }}">{{ t.username }}</option>
@@ -123,63 +135,63 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Paciente <span class="text-red-500">*</span></label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
         <div class="relative">
-          <select [(ngModel)]="batchForm.patient_id" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm" [disabled]="!batchForm.therapist_id">
+          <select [(ngModel)]="batchForm.patient_id" class="input-field text-sm" [disabled]="!batchForm.therapist_id">
             <option value="">Seleccionar Paciente...</option>
             @for (p of patients; track p.id) {
               <option value="{{ p.id }}">{{ p.username }}</option>
             }
           </select>
           @if (patientsLoading) {
-            <app-spinner size="sm" colorClass="text-gray-400"></app-spinner>
+            <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
           }
         </div>
         @if (!batchForm.therapist_id) {
-          <p class="text-xs text-gray-500 mt-1">Primero selecciona un terapeuta.</p>
+          <p class="text-xs text-on-surface-variant/60 mt-1">Primero selecciona un terapeuta.</p>
         }
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Título de la Sesión (Opcional)</label>
-        <input type="text" [(ngModel)]="batchForm.title" placeholder="Ej: Terapia de Lenguaje" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
-        <p class="text-xs text-gray-500 mt-1">Si se deja vacío, se generará como "Sesión X/Y".</p>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Título de la Sesión (Opcional)</label>
+        <input type="text" [(ngModel)]="batchForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
+        <p class="text-xs text-on-surface-variant/60 mt-1">Si se deja vacío, se generará como "Sesión X/Y".</p>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
-        <input type="date" [(ngModel)]="batchForm.start_date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fecha de Inicio</label>
+        <input type="date" [(ngModel)]="batchForm.start_date" class="input-field text-sm">
       </div>
       <div class="flex items-center gap-2">
         <input type="checkbox" id="is_past_session_batch" [(ngModel)]="batchForm.is_past_session" class="rounded text-primary focus:ring-primary">
-        <label for="is_past_session_batch" class="text-sm text-gray-700">Registrar sesión en el pasado (ya terminada)</label>
+        <label for="is_past_session_batch" class="text-sm text-on-surface">Registrar sesión en el pasado (ya terminada)</label>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-          <input type="time" [(ngModel)]="batchForm.start_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
+          <input type="time" [(ngModel)]="batchForm.start_time" class="input-field text-sm">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-          <input type="time" [(ngModel)]="batchForm.end_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
+          <input type="time" [(ngModel)]="batchForm.end_time" class="input-field text-sm">
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Duración / Recurrencia</label>
-        <select [(ngModel)]="batchForm.weeks" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Duración / Recurrencia</label>
+        <select [(ngModel)]="batchForm.weeks" class="input-field text-sm">
           <option [value]="1">1 Semana (Semanal / Puntual)</option>
           <option [value]="2">2 Semanas</option>
           <option [value]="4" selected>4 Semanas (1 Mes)</option>
           <option [value]="8">8 Semanas (2 Meses)</option>
           <option [value]="12">12 Semanas (3 Meses)</option>
         </select>
-        <p class="text-xs text-gray-500 mt-1">Selecciona por cuánto tiempo se repetirán las sesiones.</p>
+        <p class="text-xs text-on-surface-variant/60 mt-1">Selecciona por cuánto tiempo se repetirán las sesiones.</p>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Días de la semana <span class="text-red-500">*</span></label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Días de la semana <span class="text-error">*</span></label>
         <div class="flex flex-wrap gap-2">
           @for (day of [{i: 0, label: 'Lun'}, {i: 1, label: 'Mar'}, {i: 2, label: 'Mié'}, {i: 3, label: 'Jue'}, {i: 4, label: 'Vie'}, {i: 5, label: 'Sáb'}]; track day.i) {
             <div class="relative">
               <input type="checkbox" [id]="'day-' + day.i" [checked]="batchForm.days.includes(day.i)" (change)="toggleDay(day.i)" class="peer sr-only">
-              <label [for]="'day-' + day.i" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary select-none">
+              <label [for]="'day-' + day.i" class="inline-flex items-center justify-center min-w-[3rem] min-h-[3rem] bg-surface-container-high rounded-lg border border-outline-variant/30 cursor-pointer hover:bg-surface-container-highest transition-all duration-200 peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary select-none text-sm font-bold text-on-surface-variant peer-checked:text-white">
                 {{ day.label }}
               </label>
             </div>
@@ -197,33 +209,32 @@
 
 <!-- Edit Session Modal -->
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <div class="bg-blue-50 p-3 rounded text-sm text-blue-700 mb-2">
-    <fa-icon [icon]="['fas', 'info-circle']" class="mr-1"></fa-icon>
+  <div class="bg-primary-container p-3 rounded text-sm text-primary mb-2">
     Terapeuta: {{ editForm.therapist }} | Paciente: {{ editForm.patient }}
   </div>
 
   <div class="space-y-4">
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-      <input type="text" [(ngModel)]="editForm.title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Título</label>
+      <input type="text" [(ngModel)]="editForm.title" class="input-field text-sm">
     </div>
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-      <input type="date" [(ngModel)]="editForm.date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fecha</label>
+      <input type="date" [(ngModel)]="editForm.date" class="input-field text-sm">
     </div>
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-        <input type="time" [(ngModel)]="editForm.start_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
+        <input type="time" [(ngModel)]="editForm.start_time" class="input-field text-sm">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-        <input type="time" [(ngModel)]="editForm.end_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
+        <input type="time" [(ngModel)]="editForm.end_time" class="input-field text-sm">
       </div>
     </div>
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-      <select [(ngModel)]="editForm.status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm mb-4">
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado</label>
+      <select [(ngModel)]="editForm.status" class="input-field text-sm mb-4">
         <option value="scheduled">Programada</option>
         <option value="completed">Completada</option>
         <option value="cancelled">Cancelada</option>
@@ -231,9 +242,9 @@
     </div>
 
     <!-- DOCUMENT UPLOAD SECTION -->
-    <div class="mt-6 border-t pt-4">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Documento de Programación (.docx)</label>
-      
+    <div class="mt-6 border-t border-outline-variant/20 pt-4">
+      <label class="text-label-caps text-on-surface-variant mb-2 block">Documento de Programación (.docx)</label>
+
       <!-- Existing Program state -->
       <div *ngIf="auditState" class="mt-2 p-3 rounded-lg text-sm flex items-start gap-2 bg-green-50 text-green-700 border border-green-200">
         <span class="material-symbols-outlined mt-0.5" style="font-family: 'Material Symbols Outlined'">check_circle</span>
@@ -248,23 +259,23 @@
 
       <!-- Upload Trigger (Empty state) -->
       <div *ngIf="!auditState" class="mt-2">
-        <label for="programFileInput" class="block w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary hover:bg-green-50 transition-all cursor-pointer">
-            <span class="material-symbols-outlined text-gray-400 mb-2 text-[36px]" style="font-family: 'Material Symbols Outlined'">cloud_upload</span>
-            <p class="text-sm text-gray-600">Haz clic para subir el documento Word</p>
-            <p class="text-xs text-gray-400 mt-1">Solo archivos .docx</p>
+        <label for="programFileInput" class="block w-full border-2 border-dashed border-outline-variant/40 rounded-lg p-4 text-center hover:border-primary hover:bg-surface-container-high transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-on-surface-variant/60 mb-2 text-[36px]" style="font-family: 'Material Symbols Outlined'">cloud_upload</span>
+          <p class="text-sm text-on-surface">Haz clic para subir el documento Word</p>
+          <p class="text-xs text-on-surface-variant/60 mt-1">Solo archivos .docx</p>
         </label>
         <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
       </div>
 
       <!-- Uploading / Messages -->
       <div *ngIf="programUploading" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-blue-50 text-blue-700">
-          <span class="material-symbols-outlined fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span> Procesando documento Word...
+        <span class="material-symbols-outlined fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span> Procesando documento Word...
       </div>
       <div *ngIf="programError" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-red-50 text-red-700">
-          <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">error</span> {{ programError }}
+        <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">error</span> {{ programError }}
       </div>
       <div *ngIf="programSuccessMessage" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-green-50 text-green-700">
-          <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">check_circle</span> {{ programSuccessMessage }}
+        <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">check_circle</span> {{ programSuccessMessage }}
       </div>
     </div>
 

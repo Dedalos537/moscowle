@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/c
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { Sede } from '../../../../core/models/sede';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 interface SedeStat {
   id: number;
@@ -37,6 +38,7 @@ interface DailyPending {
   standalone: false,
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -77,6 +79,16 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loadUserCounts();
     this.loadSedes();
     this.loadDebtData();
+  }
+  
+  private setFinancialSummary() {
+    this.adminService.getFinancialSummary().subscribe({
+      next: (res) => {
+        if (res.success && res.data && this.financials) {
+          this.financials.income_real = res.data.income_real;
+        }
+      },
+    });
   }
 
   private loadUserCounts() {
@@ -149,18 +161,28 @@ export class Dashboard implements OnInit, OnDestroy {
           if (deudores.length > 0) overdueCount += deudores.length;
         });
 
-        incomeReal = incomeExpected * 0.7;
-
-        this.financials = { income_real: incomeReal, income_expected: incomeExpected, overdue_amount: overdueAmount, overdue_users_count: overdueCount };
+        this.financials = { income_real: 0, income_expected: incomeExpected, overdue_amount: overdueAmount, overdue_users_count: overdueCount };
         this.sedesStats = stats;
         this.incompletePatients = incomplete;
         this.dailyPendings = daily;
+        
+        this.setFinancialSummary();
 
         if (incomplete.length > 5) {
           setTimeout(() => (this.showGuidanceModal = true), 2000);
         }
         if (daily.length > 0 && incomplete.length <= 5) {
           setTimeout(() => (this.showDailyModal = true), 2000);
+        }
+      },
+    });
+  }
+
+  private loadFinancialSummary() {
+    this.adminService.getFinancialSummary().subscribe({
+      next: (res) => {
+        if (res.success && res.data && this.financials) {
+          this.financials.income_real = res.data.income_real;
         }
       },
     });

@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../../core/services/admin.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 
 @Component({
   selector: 'app-user-detail',
   standalone: false,
   templateUrl: './user-detail.html',
   styleUrl: './user-detail.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class UserDetail implements OnInit {
   userId!: number;
@@ -29,15 +31,12 @@ export class UserDetail implements OnInit {
   }
 
   private loadUser() {
-    this.adminService.getOverview().subscribe({
+    this.adminService.getUser(this.userId).subscribe({
       next: (res) => {
-        if (res.success && res.users) {
-          const found = res.users.find((u) => u.id === this.userId);
-          if (found) {
-            this.user = found;
-            this.selectedStatus = found.role === 'admin' ? 'active' : 'active';
-            this.editData = { username: found.username, role: found.role, is_active: true };
-          }
+        if (res.success && res.user) {
+          this.user = res.user;
+          this.selectedStatus = res.user.role === 'admin' ? 'active' : 'active';
+          this.editData = { username: res.user.username, role: res.user.role, is_active: true };
         }
         this.loading = false;
       },

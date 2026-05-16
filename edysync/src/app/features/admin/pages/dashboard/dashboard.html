@@ -1,4 +1,4 @@
-<div class="space-y-8 animate-fade-in-up">
+<div class="space-y-8" [@fadeInUp]>
 
   <!-- Centro de Acción Inteligente -->
   <div class="space-y-4">
@@ -7,16 +7,54 @@
         <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
           <fa-icon [icon]="['fas', 'robot']"></fa-icon>
         </div>
-        <h3 class="text-xl font-black text-textDark uppercase tracking-tighter">Centro de Acción Inteligente</h3>
+        <h3 class="text-xl font-black text-on-surface uppercase tracking-tighter">Centro de Acción Inteligente</h3>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-3 p-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-gray-200 text-4xl mb-4"></fa-icon>
-        <p class="text-sm font-bold text-gray-400 uppercase tracking-tight">Todas las operaciones al día</p>
-        <p class="text-[10px] text-gray-300 mt-1 uppercase tracking-widest italic">El motor de automatización está monitoreando</p>
-      </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      @if (dailyPendings.length > 0) {
+        <div class="bg-surface-container-lowest rounded-2xl border border-orange-200 dark:border-orange-500/20 shadow-card p-5">
+          <div class="flex items-start justify-between mb-2">
+            <span class="text-label-caps text-orange-700 dark:text-orange-400">Cobros Hoy</span>
+            <span class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-orange-500 text-xl">payments</span>
+            </span>
+          </div>
+          <p class="text-2xl font-black text-on-surface">{{ dailyPendings.length }}</p>
+          <p class="text-xs text-on-surface-variant">Pacientes con vencimiento hoy</p>
+        </div>
+      }
+      @if (financials && incompletePatients.length > 0) {
+        <div class="bg-surface-container-lowest rounded-2xl border border-red-200 dark:border-red-500/20 shadow-card p-5">
+          <div class="flex items-start justify-between mb-2">
+            <span class="text-label-caps text-red-700 dark:text-red-400">Sin Configurar</span>
+            <span class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+            </span>
+          </div>
+          <p class="text-2xl font-black text-on-surface">{{ incompletePatients.length }}</p>
+          <p class="text-xs text-on-surface-variant">Pacientes sin plan de pago</p>
+        </div>
+      }
+      @if (financials && financials.overdue_amount > 0) {
+        <div class="bg-surface-container-lowest rounded-2xl border border-amber-200 dark:border-amber-500/20 shadow-card p-5">
+          <div class="flex items-start justify-between mb-2">
+            <span class="text-label-caps text-amber-700 dark:text-amber-400">Deuda Total</span>
+            <span class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-amber-500 text-xl">account_balance_wallet</span>
+            </span>
+          </div>
+          <p class="text-2xl font-black text-on-surface">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
+          <p class="text-xs text-on-surface-variant">{{ financials.overdue_users_count }} pacientes morosos</p>
+        </div>
+      }
+      @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
+        <div class="lg:col-span-4 p-8 bg-surface-container-high rounded-2xl border-2 border-dashed border-outline-variant/20 flex flex-col items-center justify-center text-center">
+          <span class="material-symbols-outlined text-on-surface-variant/20 text-4xl mb-3">check_circle</span>
+          <p class="text-sm font-bold text-on-surface-variant/60 uppercase tracking-tight">Todas las operaciones al día</p>
+          <p class="text-[10px] text-on-surface-variant/40 mt-1">El motor de automatización está monitoreando</p>
+        </div>
+      }
     </div>
   </div>
 
@@ -43,14 +81,14 @@
 
   <!-- KPIs Section -->
   <div>
-    <h3 class="text-lg font-semibold text-charcoal mb-4 px-1">Resumen General</h3>
+    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 px-1">Resumen General</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
 
-      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1">
+      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.05s">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
-            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-primary transition-colors">
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Terapeutas</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-primary transition-colors">
               @if (!loading) { {{ summary.therapists }} } @else { <app-spinner size="sm"></app-spinner> }
             </h3>
           </div>
@@ -60,11 +98,11 @@
         </div>
       </div>
 
-      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1">
+      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.1s">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
-            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-green-600 transition-colors">
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Pacientes</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-green-600 transition-colors">
               @if (!loading) { {{ summary.patients }} } @else { <app-spinner size="sm"></app-spinner> }
             </h3>
           </div>
@@ -74,11 +112,11 @@
         </div>
       </div>
 
-      <div class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1">
+      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.15s">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Sesiones</p>
-            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-purple-600 transition-colors">
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Sesiones</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-purple-600 transition-colors">
               @if (!loading) { {{ summary.sessions_total }} } @else { <app-spinner size="sm"></app-spinner> }
             </h3>
           </div>
@@ -88,11 +126,11 @@
         </div>
       </div>
 
-      <div class="bg-surface rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500">
+      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500 animate-fade-in" style="animation-delay:0.2s">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Precisión Promedio</p>
-            <h3 class="text-3xl font-bold text-textDark mt-1">
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Precisión Promedio</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1">
               @if (!loading) { {{ summary.avg_accuracy }} } @else { <app-spinner size="sm"></app-spinner> }
             </h3>
           </div>
@@ -102,14 +140,14 @@
         </div>
       </div>
 
-      <a routerLink="/admin/debtors" class="group bg-surface rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-red-500 cursor-pointer hover:-translate-y-1">
+      <a routerLink="/admin/debtors" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-red-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.25s">
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Deudas Pendientes</p>
-            <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-red-600 transition-colors">
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Deudas Pendientes</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-red-600 transition-colors">
               @if (financials) { S/ {{ financials.overdue_amount.toFixed(2) }} } @else { -- }
             </h3>
-            <p class="text-xs text-gray-400 mt-2">{{ financials?.overdue_users_count || 0 }} pacientes</p>
+            <p class="text-xs text-on-surface-variant/60 mt-2">{{ financials?.overdue_users_count || 0 }} pacientes</p>
           </div>
           <div class="p-3 bg-red-50 rounded-full text-red-600 group-hover:bg-red-100 transition-colors">
             <fa-icon [icon]="['fas', 'credit-card']" class="text-xl"></fa-icon>
@@ -122,12 +160,12 @@
   <!-- Financial & Sedes Row -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <div class="lg:col-span-2 bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between">
+    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-charcoal flex items-center gap-2">
+        <h3 class="text-lg font-semibold text-on-surface-variant flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-bar']" class="text-primary"></fa-icon> Flujo de Caja (Mes Actual)
         </h3>
-        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 px-2 py-1 rounded">Soles (S/)</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 bg-surface-container-high px-2 py-1 rounded">Soles (S/)</span>
       </div>
       <div class="flex-1 flex items-end justify-around gap-4 h-64">
         <div class="flex flex-col items-center gap-2 flex-1">
@@ -154,8 +192,8 @@
       </div>
     </div>
 
-    <div class="lg:col-span-1 bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between">
-      <h3 class="text-lg font-semibold text-charcoal mb-2 flex items-center gap-2">
+    <div class="lg:col-span-1 bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between">
+      <h3 class="text-lg font-semibold text-on-surface-variant mb-2 flex items-center gap-2">
         <fa-icon [icon]="['fas', 'coins']" class="text-yellow-500"></fa-icon> Resumen Financiero
       </h3>
       <div class="space-y-4">
@@ -168,29 +206,29 @@
           <span class="text-2xl font-black text-blue-700">S/ {{ pendingAmount.toFixed(2) }}</span>
         </div>
       </div>
-      <p class="text-[10px] text-gray-400 mt-4 italic text-center">Basado en planes activos registrados en el sistema.</p>
+      <p class="text-[10px] text-on-surface-variant/60 mt-4 italic text-center">Basado en planes activos registrados en el sistema.</p>
     </div>
   </div>
 
   <!-- Active Users per Sede -->
-  <div class="bg-surface rounded-2xl shadow-soft p-6">
-    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6">
+    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2">
       <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-red-400"></fa-icon> Usuarios por Sede
     </h3>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
       @for (s of sedesStats; track s.id) {
-        <div class="group block p-4 rounded-lg bg-gray-50 border border-transparent hover:border-primary hover:bg-white transition-all shadow-sm hover:shadow-md cursor-pointer">
+        <div class="group block p-4 rounded-lg bg-surface-container-high border border-transparent hover:border-primary hover:bg-surface-container-lowest transition-all shadow-sm hover:shadow-md cursor-pointer">
           <div class="flex justify-between items-center mb-1">
-            <h4 class="font-bold text-gray-700 group-hover:text-primary transition-colors text-sm uppercase tracking-wide truncate">{{ s.name }}</h4>
-            <fa-icon [icon]="['fas', 'users']" class="text-gray-300 group-hover:text-primary transition-colors text-xs"></fa-icon>
+            <h4 class="font-bold text-on-surface group-hover:text-primary transition-colors text-sm uppercase tracking-wide truncate">{{ s.name }}</h4>
+            <fa-icon [icon]="['fas', 'users']" class="text-on-surface-variant/40 group-hover:text-primary transition-colors text-xs"></fa-icon>
           </div>
           <div class="flex items-end gap-2">
-            <span class="text-2xl font-bold text-textDark group-hover:text-primary transition-colors">{{ s.count }}</span>
-            <span class="text-xs text-gray-400 mb-1">pacientes</span>
+            <span class="text-2xl font-bold text-on-surface group-hover:text-primary transition-colors">{{ s.count }}</span>
+            <span class="text-xs text-on-surface-variant/60 mb-1">pacientes</span>
           </div>
         </div>
       } @empty {
-        <div class="lg:col-span-6 text-sm text-gray-400 py-6 text-center">No hay sedes registradas</div>
+        <div class="lg:col-span-6 text-sm text-on-surface-variant/60 py-6 text-center">No hay sedes registradas</div>
       }
     </div>
   </div>
@@ -211,11 +249,11 @@
       </div>
     </div>
 
-    <div class="bg-surface rounded-2xl shadow-soft p-6 border border-gray-100 flex flex-col justify-center">
-      <h3 class="text-lg font-bold text-charcoal mb-2 flex items-center gap-2">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20 flex flex-col justify-center">
+      <h3 class="text-lg font-bold text-on-surface-variant mb-2 flex items-center gap-2">
         <fa-icon [icon]="['far', 'calendar-alt']" class="text-blue-500"></fa-icon> Disponibilidad y Horarios
       </h3>
-      <p class="text-sm text-gray-500 mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
+      <p class="text-sm text-on-surface-variant mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
       <div class="flex gap-3">
         <a routerLink="/admin/sessions"><app-button variant="ghost" label="Ver Calendario Global"></app-button></a>
       </div>
@@ -224,64 +262,64 @@
 
   <!-- Gestión Operativa -->
   <div>
-    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2 px-1">
-      <fa-icon [icon]="['fas', 'briefcase']" class="text-gray-400"></fa-icon> Gestión Operativa
+    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
+      <fa-icon [icon]="['fas', 'briefcase']" class="text-on-surface-variant/60"></fa-icon> Gestión Operativa
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-      <a routerLink="/admin/users" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+      <a routerLink="/admin/users" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
         <div>
           <div class="flex items-center gap-4 mb-4">
             <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
               <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
             </div>
-            <h3 class="text-lg font-bold text-textDark">Usuarios</h3>
+            <h3 class="text-lg font-bold text-on-surface">Usuarios</h3>
           </div>
-          <p class="text-sm text-gray-500 mb-2">Gestionar perfiles de terapeutas y pacientes.</p>
+          <p class="text-sm text-on-surface-variant mb-2">Gestionar perfiles de terapeutas y pacientes.</p>
         </div>
         <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
           <span class="text-xs font-bold uppercase tracking-wider">Acceder <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
         </div>
       </a>
 
-      <a routerLink="/admin/games" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+      <a routerLink="/admin/games" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
         <div>
           <div class="flex items-center gap-4 mb-4">
             <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
               <fa-icon [icon]="['fas', 'gamepad']" class="text-xl"></fa-icon>
             </div>
-            <h3 class="text-lg font-bold text-textDark">Juegos</h3>
+            <h3 class="text-lg font-bold text-on-surface">Juegos</h3>
           </div>
-          <p class="text-sm text-gray-500 mb-2">Configurar actividades y niveles disponibles.</p>
+          <p class="text-sm text-on-surface-variant mb-2">Configurar actividades y niveles disponibles.</p>
         </div>
         <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
           <span class="text-xs font-bold uppercase tracking-wider">Configurar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
         </div>
       </a>
 
-      <a routerLink="/admin/reports" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+      <a routerLink="/admin/reports" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
         <div>
           <div class="flex items-center gap-4 mb-4">
             <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
               <fa-icon [icon]="['fas', 'chart-line']" class="text-xl"></fa-icon>
             </div>
-            <h3 class="text-lg font-bold text-textDark">Reportes</h3>
+            <h3 class="text-lg font-bold text-on-surface">Reportes</h3>
           </div>
-          <p class="text-sm text-gray-500 mb-2">Analíticas detalladas de pacientes.</p>
+          <p class="text-sm text-on-surface-variant mb-2">Analíticas detalladas de pacientes.</p>
         </div>
         <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
           <span class="text-xs font-bold uppercase tracking-wider">Analizar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
         </div>
       </a>
 
-      <a routerLink="/admin/messages" class="group bg-surface rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+      <a routerLink="/admin/messages" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
         <div>
           <div class="flex items-center gap-4 mb-4">
             <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 group-hover:scale-110 transition-transform">
               <fa-icon [icon]="['fas', 'envelope']" class="text-xl"></fa-icon>
             </div>
-            <h3 class="text-lg font-bold text-textDark">Mensajería</h3>
+            <h3 class="text-lg font-bold text-on-surface">Mensajería</h3>
           </div>
-          <p class="text-sm text-gray-500 mb-2">Comunicación interna y avisos globales.</p>
+          <p class="text-sm text-on-surface-variant mb-2">Comunicación interna y avisos globales.</p>
         </div>
         <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
           <span class="text-xs font-bold uppercase tracking-wider">Enviar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
@@ -292,34 +330,34 @@
 
   <!-- Sistema & Seguridad -->
   <div>
-    <h3 class="text-lg font-semibold text-charcoal mb-4 flex items-center gap-2 px-1">
-      <fa-icon [icon]="['fas', 'shield-alt']" class="text-gray-400"></fa-icon> Sistema & Seguridad
+    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
+      <fa-icon [icon]="['fas', 'shield-alt']" class="text-on-surface-variant/60"></fa-icon> Sistema & Seguridad
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      <a routerLink="/admin/csp-reports" class="group bg-surface rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+      <a routerLink="/admin/csp-reports" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-outline-variant/20 opacity-90 hover:opacity-100">
         <div class="flex items-center gap-4">
-          <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+          <div class="h-10 w-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
             <fa-icon [icon]="['fas', 'bug']"></fa-icon>
           </div>
           <div>
-            <h3 class="text-base font-bold text-gray-700">CSP Reports</h3>
-            <p class="text-xs text-gray-500">Monitoreo de seguridad y violaciones de contenido.</p>
+            <h3 class="text-base font-bold text-on-surface">CSP Reports</h3>
+            <p class="text-xs text-on-surface-variant">Monitoreo de seguridad y violaciones de contenido.</p>
           </div>
         </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-gray-300 text-sm group-hover:text-gray-500"></fa-icon>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-on-surface-variant/40 text-sm group-hover:text-on-surface-variant"></fa-icon>
       </a>
 
-      <a routerLink="/admin/api-tokens" class="group bg-surface rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+      <a routerLink="/admin/api-tokens" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-outline-variant/20 opacity-90 hover:opacity-100">
         <div class="flex items-center gap-4">
-          <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+          <div class="h-10 w-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
             <fa-icon [icon]="['fas', 'key']"></fa-icon>
           </div>
           <div>
-            <h3 class="text-base font-bold text-gray-700">API Tokens</h3>
-            <p class="text-xs text-gray-500">Gestión de credenciales para integraciones externas.</p>
+            <h3 class="text-base font-bold text-on-surface">API Tokens</h3>
+            <p class="text-xs text-on-surface-variant">Gestión de credenciales para integraciones externas.</p>
           </div>
         </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-gray-300 text-sm group-hover:text-gray-500"></fa-icon>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-on-surface-variant/40 text-sm group-hover:text-on-surface-variant"></fa-icon>
       </a>
     </div>
   </div>
@@ -329,33 +367,33 @@
 <!-- Guidance Modal -->
 @if (showGuidanceModal) {
   <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showGuidanceModal = false">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
-      <div class="p-8 border-b border-gray-100 flex items-center justify-between">
+    <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
+      <div class="p-8 border-b border-outline-variant/20 flex items-center justify-between">
         <div class="flex items-center gap-5">
           <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-red-200">
             <fa-icon [icon]="['fas', 'user-clock']" class="text-2xl"></fa-icon>
           </div>
           <div>
-            <h3 class="text-2xl font-black text-gray-900 uppercase tracking-tighter">Asignaciones Faltantes</h3>
+            <h3 class="text-2xl font-black text-on-surface uppercase tracking-tighter">Asignaciones Faltantes</h3>
             <span class="text-xs font-bold text-red-500 uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded-full inline-block mt-1">Requiere acción administrativa</span>
           </div>
         </div>
-        <button (click)="showGuidanceModal = false" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors cursor-pointer">
+        <button (click)="showGuidanceModal = false" class="w-10 h-10 rounded-full hover:bg-surface-container-highest flex items-center justify-center text-on-surface-variant/60 transition-colors cursor-pointer">
           <fa-icon [icon]="['fas', 'times']"></fa-icon>
         </button>
       </div>
       <div class="p-8">
         <div class="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8">
           @for (p of incompletePatients; track $index) {
-            <div class="group p-5 bg-gray-50 rounded-2xl border border-transparent hover:border-red-200 hover:bg-white transition-all shadow-sm">
+            <div class="group p-5 bg-surface-container-high rounded-2xl border border-transparent hover:border-red-200 hover:bg-surface-container-lowest transition-all shadow-sm">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform border border-gray-100">
+                  <div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform border border-outline-variant/20">
                     {{ p.paciente.charAt(0) }}
                   </div>
                   <div>
-                    <p class="text-xs font-black text-gray-900 uppercase tracking-tight">{{ p.paciente }}</p>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                    <p class="text-xs font-black text-on-surface uppercase tracking-tight">{{ p.paciente }}</p>
+                    <p class="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest">
                       <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ p.sede }}
                     </p>
                   </div>
@@ -377,8 +415,8 @@
 <!-- Daily Pendings Modal -->
 @if (showDailyModal) {
   <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showDailyModal = false">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
-      <div class="p-8 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-3xl">
+    <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
+      <div class="p-8 border-b border-outline-variant/20 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-3xl">
         <div class="flex items-center gap-5">
           <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md border border-white/30">
             <fa-icon [icon]="['far', 'calendar-check']" class="text-2xl"></fa-icon>
@@ -397,11 +435,11 @@
           @for (item of dailyPendings; track $index) {
             <div class="p-6 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center justify-between gap-4">
               <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">
+                <div class="w-12 h-12 bg-surface-container-lowest rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">
                   {{ item.paciente.charAt(0) }}
                 </div>
                 <div>
-                  <p class="text-sm font-black text-gray-900 uppercase tracking-tight">{{ item.paciente }}</p>
+                  <p class="text-sm font-black text-on-surface uppercase tracking-tight">{{ item.paciente }}</p>
                   <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Vence Hoy • S/ {{ item.monto }}</p>
                 </div>
               </div>
@@ -411,13 +449,13 @@
                     <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
                   </a>
                 }
-                <a [routerLink]="'/admin/payments'" [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }" class="w-10 h-10 bg-white text-blue-600 border border-blue-100 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                <a [routerLink]="'/admin/payments'" [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }" class="w-10 h-10 bg-surface-container-lowest text-blue-600 border border-blue-100 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
                   <fa-icon [icon]="['fas', 'cash-register']"></fa-icon>
                 </a>
               </div>
             </div>
           } @empty {
-            <div class="text-center py-8 text-gray-400">
+            <div class="text-center py-8 text-on-surface-variant/60">
               <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl mb-2"></fa-icon>
               <p class="text-sm font-bold">No hay cobros pendientes para hoy</p>
             </div>

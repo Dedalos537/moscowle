@@ -1,0 +1,46 @@
+<div *ngIf="loading" class="flex justify-center items-center h-96">
+  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+</div>
+
+<div *ngIf="!loading" class="space-y-4" [@fadeInUp]>
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-outline-variant/20 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-surface-container-low">
+          <tr>
+            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Fecha</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Título</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Terapeuta</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Estado</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Asistencia</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          <tr *ngFor="let session of sessions" class="hover:bg-surface-container-low transition-colors">
+            <td class="px-6 py-4 text-sm text-textDark font-medium">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
+            <td class="px-6 py-4 text-sm text-textDark">{{ session.title }}</td>
+            <td class="px-6 py-4 text-sm text-charcoal">{{ session.therapist }}</td>
+            <td class="px-6 py-4">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    [ngClass]="getStatusClass(session.status)">
+                {{ getStatusLabel(session.status) }}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <span class="text-sm" *ngIf="session.attendance">
+                {{ session.attendance === 'present' ? 'Presente' : session.attendance === 'absent' ? 'Ausente' : session.attendance }}
+              </span>
+              <span class="text-sm text-charcoal" *ngIf="!session.attendance">—</span>
+            </td>
+          </tr>
+          <tr *ngIf="sessions.length === 0">
+            <td colspan="5" class="px-6 py-12 text-center text-charcoal">
+              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl mb-2 opacity-30"></fa-icon>
+              <p class="text-sm">No tienes sesiones registradas</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

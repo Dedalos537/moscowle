@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-profile',
   standalone: false,
   templateUrl: './profile.html',
-  styleUrl: './profile.scss'
+  styleUrl: './profile.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Profile implements OnInit {
   username = '';

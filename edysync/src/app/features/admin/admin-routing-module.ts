@@ -1,10 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { Dashboard } from './pages/dashboard/dashboard';
-import { EdysyncDashboard } from './pages/edysync-dashboard/edysync-dashboard';
 import { Sedes } from './pages/sedes/sedes';
 import { UsersList } from './pages/users/users-list/users-list';
 import { UserDetail } from './pages/users/user-detail/user-detail';
+import { Finanzas } from './pages/finanzas/finanzas';
 import { Payments } from './pages/payments/payments';
 import { Debtors } from './pages/debtors/debtors';
 import { PaymentHistory } from './pages/payment-history/payment-history';
@@ -26,10 +26,10 @@ const routes: Routes = [
     component: AdminLayout,
     children: [
       { path: 'dashboard', component: Dashboard },
-      { path: 'edysync', component: EdysyncDashboard },
       { path: 'sedes', component: Sedes },
       { path: 'users', component: UsersList },
       { path: 'users/:id', component: UserDetail },
+      { path: 'finanzas', component: Finanzas },
       { path: 'payments', component: Payments },
       { path: 'debtors', component: Debtors },
       { path: 'payments/history/:userId', component: PaymentHistory },

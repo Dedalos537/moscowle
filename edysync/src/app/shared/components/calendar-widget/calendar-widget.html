@@ -1,0 +1,129 @@
+<div class="calendar-widget">
+
+  <!-- ═══ Header: Month Navigation ═══ -->
+  <div class="calendar-header">
+    <button class="nav-btn" (click)="prevMonth()" title="Mes anterior">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <div class="month-title">
+      <h3>{{ monthLabel }}</h3>
+      @if (todayButtonVisible) {
+        <button class="today-btn" (click)="today()">Hoy</button>
+      }
+    </div>
+    <button class="nav-btn" (click)="nextMonth()" title="Mes siguiente">
+      <span class="material-symbols-outlined">chevron_right</span>
+    </button>
+  </div>
+
+  <!-- ═══ Range hint ═══ -->
+  @if (isRangeSelected) {
+    <div class="range-hint">
+      <span class="material-symbols-outlined">calendar_month</span>
+      <span>{{ rangeStart!.getDate() }} {{ months[rangeStart!.getMonth()] }} — {{ rangeEnd!.getDate() }} {{ months[rangeEnd!.getMonth()] }}</span>
+      <span class="range-hint-action">Doble click para crear sesiones &middot; Click en un día fuera del rango o triple click para limpiar</span>
+    </div>
+  }
+
+  <!-- ═══ Grid: Weekday Headers ═══ -->
+  <div class="calendar-grid">
+    <div class="weekday-row">
+      @for (day of weekdays; track day) {
+        <div class="weekday-cell">{{ day }}</div>
+      }
+    </div>
+
+    <!-- ═══ Grid: Day Cells ═══ -->
+    @for (week of weeks; track week) {
+      <div class="week-row">
+        @for (cell of week; track cell.date.toISOString()) {
+          <button
+            class="day-cell"
+            [class.other-month]="!cell.isCurrentMonth"
+            [class.today]="cell.isToday"
+            [class.selected]="cell.isSelected"
+            [class.in-range]="cell.isInRange"
+            [class.range-start]="cell.isRangeStart"
+            [class.range-end]="cell.isRangeEnd"
+            (click)="onDayClick(cell, $event)"
+          >
+            <span class="day-number">{{ cell.day }}</span>
+            @if (cell.events.length > 0 && !cell.isInRange) {
+              <div class="event-dots">
+                @for (e of cell.events.slice(0, 3); track e.id) {
+                  <span class="event-dot" [class]="statusColor(e.status)"></span>
+                }
+                @if (cell.events.length > 3) {
+                  <span class="more-badge">+{{ cell.events.length - 3 }}</span>
+                }
+              </div>
+            }
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- ═══ Agenda: Selected Day/Range Events ═══ -->
+  <div class="agenda-panel">
+    <div class="agenda-header">
+      <span class="material-symbols-outlined text-on-surface-variant/60">event</span>
+      <span class="agenda-date">{{ selectedDateLabel }}</span>
+      @if (eventCount > 0) {
+        <span class="event-count-badge">{{ eventCount }} sesión{{ eventCount !== 1 ? 'es' : '' }}</span>
+      }
+      @if (isRangeSelected) {
+        <span class="range-actions">
+          <button class="range-action-btn" title="Limpiar selección" (click)="today()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </span>
+      }
+    </div>
+
+    @if (eventCount > 0) {
+      <div class="agenda-list">
+        @for (event of selectedDayEvents; track event.id) {
+          <button
+            class="agenda-item"
+            [class.clickable]="!readonly"
+            (click)="onEventClick(event)"
+          >
+            <div class="agenda-item-indicator" [class]="statusColor(event.status)"></div>
+            <div class="agenda-item-body">
+              <div class="agenda-item-title">{{ event.title }}</div>
+              <div class="agenda-item-meta">
+                @if (event.time) {
+                  <span>{{ event.time }}{{ event.endTime ? ' - ' + event.endTime : '' }}</span>
+                }
+                @if (role === 'admin') {
+                  @if (event.therapist) {
+                    <span class="meta-sep"></span>
+                    <span>{{ event.therapist }}</span>
+                  }
+                  @if (event.patient) {
+                    <span class="meta-sep"></span>
+                    <span>{{ event.patient }}</span>
+                  }
+                }
+                @if (role === 'therapist' && event.patient) {
+                  <span class="meta-sep"></span>
+                  <span>{{ event.patient }}</span>
+                }
+              </div>
+            </div>
+            <span class="status-pill" [class]="statusBgClass(event.status)">{{ statusLabel(event.status) }}</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <div class="agenda-empty">
+        <span class="material-symbols-outlined text-on-surface-variant/30">event_busy</span>
+        <p class="agenda-empty-text">Sin sesiones para esta fecha</p>
+        @if (!readonly) {
+          <p class="agenda-empty-hint">Doble click en un día para crear sesión{{ isRangeSelected ? 'es' : '' }}</p>
+        }
+      </div>
+    }
+  </div>
+</div>

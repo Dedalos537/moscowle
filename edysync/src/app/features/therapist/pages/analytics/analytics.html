@@ -1,0 +1,172 @@
+<div *ngIf="loading" class="flex justify-center items-center h-96">
+  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+</div>
+
+<div *ngIf="!loading && data" class="space-y-6 animate-fade-in" [@fadeInUp]>
+
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h2 class="text-h3 text-on-surface">Panel de Analíticas IA</h2>
+      <p class="text-body text-on-surface-variant mt-0.5">Métricas de rendimiento y adaptaciones del modelo</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="btn-secondary text-sm" (click)="exportCsv()">
+        <span class="material-symbols-outlined text-lg">download</span>
+        Exportar CSV
+      </button>
+      <button class="btn-primary text-sm" (click)="refresh()">
+        <span class="material-symbols-outlined text-lg">refresh</span>
+        Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards Row -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div *ngFor="let kpi of kpiCards"
+         class="stat-card flex items-start gap-4">
+      <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+           [ngClass]="kpi.bgColor">
+        <span class="material-symbols-outlined" [ngClass]="kpi.color">{{ kpi.icon }}</span>
+      </div>
+      <div class="min-w-0">
+        <p class="text-label-caps text-on-surface-variant mb-0.5">{{ kpi.label }}</p>
+        <p class="text-2xl font-extrabold text-on-surface tracking-tight">
+          {{ kpi.value }}<span class="text-base font-bold ml-0.5" [ngClass]="kpi.color">{{ kpi.suffix }}</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Grid: Difficulty Matrix + Prediction Distribution -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Difficulty Matrix -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Matriz de Dificultad</h3>
+        <span class="material-symbols-outlined text-on-surface-variant text-lg">grid_view</span>
+      </div>
+
+      <div class="overflow-x-auto -mx-2">
+        <table class="w-full text-sm">
+          <thead>
+            <tr>
+              <th class="text-left py-2 pr-4 text-label-caps text-on-surface-variant w-28">Juego</th>
+              <th *ngFor="let level of data.difficulty_matrix[0]?.levels || []"
+                  class="text-center py-2 px-2 text-label-caps text-on-surface-variant">
+                {{ level.level }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let entry of difficultyMatrix" class="border-t border-outline-variant/30">
+              <td class="py-2.5 pr-4 font-semibold text-on-surface text-sm truncate">{{ entry.game }}</td>
+              <td *ngFor="let lvl of entry.levels" class="text-center py-2.5 px-2">
+                <div class="flex flex-col items-center gap-1.5">
+                  <div class="w-4 h-4 rounded-full shrink-0" [ngClass]="lvl.dotColor"></div>
+                  <span class="text-[11px] font-bold text-on-surface-variant">{{ lvl.accuracy }}%</span>
+                  <span class="text-[10px] text-on-surface-variant/60">{{ lvl.count }} ses.</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Prediction Distribution -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Distribución de Predicciones</h3>
+        <span class="material-symbols-outlined text-on-surface-variant text-lg">bar_chart</span>
+      </div>
+
+      <div class="h-56">
+        <canvas baseChart
+                #predictionChart
+                type="bar"
+                [data]="predictionChartData"
+                [options]="predictionChartOptions">
+        </canvas>
+      </div>
+
+      <!-- Legend with percentages -->
+      <div class="flex items-center justify-center gap-6 mt-3">
+        <div *ngFor="let p of data.prediction_distribution"
+             class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+          <span class="w-2.5 h-2.5 rounded-sm"
+                [style.background]="p.label === 'Avanzar' ? '#75a83a' : (p.label === 'Apoyar' ? '#3e6837' : '#a5d087')">
+          </span>
+          {{ p.label }}
+          <span class="text-on-surface">{{ getPredictionPercent(p.value) }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Confidence Chart (full width) -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Confianza por Modelo</h3>
+      <span class="material-symbols-outlined text-on-surface-variant text-lg">speed</span>
+    </div>
+
+    <div class="h-64">
+      <canvas baseChart
+              #confidenceChart
+              type="bar"
+              [data]="confidenceChartData"
+              [options]="confidenceChartOptions">
+      </canvas>
+    </div>
+  </div>
+
+  <!-- Recent Adaptations -->
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Adaptaciones Recientes</h3>
+      <span class="material-symbols-outlined text-on-surface-variant text-lg">history</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-outline-variant/30">
+            <th class="text-left py-3 text-label-caps text-on-surface-variant">Fecha</th>
+            <th class="text-left py-3 text-label-caps text-on-surface-variant">Descripción</th>
+            <th class="text-left py-3 text-label-caps text-on-surface-variant">Impacto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ad of adaptations" class="border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+            <td class="py-3 pr-4 text-sm text-on-surface whitespace-nowrap">{{ ad.date | date:'dd/MM/yyyy' }}</td>
+            <td class="py-3 pr-4 text-sm text-on-surface-variant">{{ ad.description }}</td>
+            <td class="py-3">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    [ngClass]="{
+                      'bg-emerald-50 text-emerald-700': ad.impact === 'positive',
+                      'bg-amber-50 text-amber-700': ad.impact === 'neutral',
+                      'bg-red-50 text-red-700': ad.impact === 'negative'
+                    }">
+                <span class="material-symbols-outlined text-[14px]">
+                  {{ ad.impact === 'positive' ? 'trending_up' : (ad.impact === 'neutral' ? 'remove' : 'trending_down') }}
+                </span>
+                {{ ad.impact === 'positive' ? 'Positivo' : (ad.impact === 'neutral' ? 'Neutral' : 'Negativo') }}
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!adaptations.length">
+            <td colspan="3" class="py-8 text-center text-on-surface-variant text-sm">No hay adaptaciones recientes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!loading && !data" class="text-center py-16 text-on-surface-variant">
+  <span class="material-symbols-outlined text-5xl mb-3 opacity-30">analytics</span>
+  <p class="text-sm">No hay datos analíticos disponibles</p>
+</div>

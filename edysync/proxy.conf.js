@@ -2,6 +2,7 @@ const TARGET = process.env.PROXY_TARGET || 'http://127.0.0.1:5001';
 
 const proxyConfig = {
   '/api': { target: TARGET, changeOrigin: true, secure: false },
+  '/llama': { target: TARGET, changeOrigin: true, secure: false },
   '/admin/api': { target: TARGET, changeOrigin: true, secure: false },
   '/admin/payments/': { target: TARGET, changeOrigin: true, secure: false },
   '/admin/generate-ia-report': { target: TARGET, changeOrigin: true, secure: false },

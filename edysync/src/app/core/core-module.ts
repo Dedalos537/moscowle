@@ -1,7 +1,7 @@
 import { NgModule, Optional, SkipSelf } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { RouterModule } from '@angular/router'; // <- IMPORTANTE: Para router-outlet y routerLink
+import { RouterModule } from '@angular/router';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { ApiBaseInterceptor } from './interceptors/api-base.interceptor';
 import { MainLayout } from './layout/main-layout/main-layout';
@@ -12,6 +12,7 @@ import { Sidebar } from './components/sidebar/sidebar';
 import { Header } from './components/header/header';
 import { AdminLayout } from './layout/admin-layout/admin-layout';
 import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
+import { PatientLayout } from './layout/patient-layout/patient-layout';
 
 @NgModule({
   declarations: [
@@ -22,6 +23,7 @@ import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
     Header,
     AdminLayout,
     TherapistLayout,
+    PatientLayout,
   ],
   imports: [
     CommonModule,
@@ -33,6 +35,7 @@ import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
     MainLayout,
     AdminLayout,
     TherapistLayout,
+    PatientLayout,
   ],
   providers: [
     {
@@ -54,4 +57,3 @@ export class CoreModule {
     }
   }
 }
-

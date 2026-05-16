@@ -1,11 +1,13 @@
-<header class="h-20 bg-surface border-b border-border flex items-center justify-between px-6 shrink-0 transition-colors duration-300 relative">
+<header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-3">
     @if (headerService.icon$ | async; as icon) {
-      <fa-icon [icon]="$any(icon)" class="text-primary text-2xl"></fa-icon>
+      @if (isString(icon)) {
+        <span class="material-symbols-outlined text-primary text-2xl">{{ icon }}</span>
+      }
     }
     <div class="flex flex-col">
-      <h1 class="text-xl font-bold text-textDark">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
-      <p class="text-body-sm text-charcoal">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
+      <h1 class="text-xl font-bold text-on-surface">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
+      <p class="text-sm text-on-surface-variant">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
     </div>
   </div>
 
@@ -13,32 +15,32 @@
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
 
     <div class="relative">
-      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors focus:outline-none">
-        <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none">
+        <span class="material-symbols-outlined" [class.fill]="unreadCount > 0">notifications</span>
         @if (unreadCount > 0) {
-          <span class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-error rounded-full text-white text-[10px] md:text-xs flex items-center justify-center font-bold border-2 border-white">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          <span class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-error rounded-full text-on-error text-[10px] md:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
         }
       </button>
 
       @if (showNotifications) {
-        <div class="absolute right-0 mt-3 w-80 bg-surface rounded-xl shadow-soft border border-border z-50 flex flex-col max-h-[80vh]">
-          <div class="p-4 border-b border-border flex justify-between items-center bg-surface-container-low rounded-t-xl">
-            <h3 class="text-sm font-bold text-textDark">Notificaciones</h3>
-            <button (click)="showNotifications = false" class="text-charcoal hover:text-textDark">
-              <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        <div class="absolute right-0 mt-3 w-80 bg-surface/95 backdrop-blur-xl rounded-xl shadow-soft border border-outline-variant/50 z-50 flex flex-col max-h-[80vh] animate-fade-in">
+          <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
+            <h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
+            <button (click)="showNotifications = false" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+              <span class="material-symbols-outlined text-sm">close</span>
             </button>
           </div>
           <div class="p-2 overflow-y-auto flex-1 custom-scrollbar">
             @for (notif of notifications; track notif.id) {
-              <div class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-border/20 last:border-0">
+              <div class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-outline-variant/10 last:border-0">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <fa-icon [icon]="['fas', 'envelope']" class="text-primary text-xs"></fa-icon>
+                    <span class="material-symbols-outlined text-primary text-sm">notifications</span>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm text-textDark leading-snug break-words">{{ notif.message }}</p>
-                    <p class="text-label-caps text-charcoal mt-1 flex items-center gap-1">
-                      <fa-icon [icon]="['far', 'clock']"></fa-icon> {{ notif.timestamp }}
+                    <p class="text-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
+                    <p class="text-label-caps text-on-surface-variant mt-1 flex items-center gap-1">
+                      <span class="material-symbols-outlined text-xs leading-none">schedule</span> {{ notif.timestamp }}
                     </p>
                   </div>
                 </div>
@@ -46,9 +48,9 @@
             } @empty {
               <div class="p-8 text-center">
                 <div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-3 text-outline">
-                  <fa-icon [icon]="['far', 'bell-slash']" class="text-xl"></fa-icon>
+                  <span class="material-symbols-outlined text-2xl">notifications_off</span>
                 </div>
-                <p class="text-charcoal text-body-sm">No tienes notificaciones nuevas</p>
+                <p class="text-on-surface-variant text-sm">No tienes notificaciones nuevas</p>
               </div>
             }
           </div>
@@ -57,29 +59,28 @@
     </div>
 
     <div class="relative">
-      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-border cursor-pointer hover:opacity-80 transition-opacity select-none">
+      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-outline-variant/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
         <div class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-lg uppercase shadow-sm">
           {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
         </div>
         <div class="hidden md:flex flex-col">
-          <span class="font-bold text-textDark text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
-          <span class="text-charcoal text-label-caps capitalize">{{ user?.role || 'User' }}</span>
+          <span class="font-bold text-on-surface text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
+          <span class="text-on-surface-variant text-label-caps capitalize">{{ user?.role || 'User' }}</span>
         </div>
-        <fa-icon [icon]="['fas', 'chevron-down']" class="text-charcoal text-xs ml-1 transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
+        <span class="material-symbols-outlined text-on-surface-variant text-sm transition-transform" [class.rotate-180]="showUserMenu">expand_more</span>
       </div>
 
       @if (showUserMenu) {
-        <div class="absolute right-0 mt-3 w-56 bg-surface rounded-xl shadow-soft border border-border py-2 z-50">
-          <div class="px-4 py-3 border-b border-border md:hidden bg-surface-container-low">
-            <p class="text-sm font-bold text-charcoal truncate">{{ user?.username || 'Usuario' }}</p>
-            <p class="text-label-caps text-charcoal capitalize">{{ user?.role || 'User' }}</p>
+        <div class="absolute right-0 mt-3 w-56 bg-surface/95 backdrop-blur-xl rounded-xl shadow-soft border border-outline-variant/50 py-2 z-50 animate-fade-in">
+          <div class="px-4 py-3 border-b border-outline-variant/30 md:hidden bg-surface-container-low/80">
+            <p class="text-sm font-bold text-on-surface truncate">{{ user?.username || 'Usuario' }}</p>
+            <p class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</p>
           </div>
-          <button (click)="logout()" class="w-full text-left px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors flex items-center">
-            <fa-icon [icon]="['fas', 'sign-out-alt']" class="w-5 text-center mr-2"></fa-icon> Cerrar Sesión
+          <button (click)="logout()" class="w-full text-left px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors flex items-center gap-3">
+            <span class="material-symbols-outlined text-base leading-none">logout</span> Cerrar Sesión
           </button>
         </div>
       }
     </div>
-
   </div>
 </header>

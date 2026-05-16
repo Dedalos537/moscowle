@@ -1,12 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { TherapistService, TherapistProfileData } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-therapist-profile',
   standalone: false,
   templateUrl: './therapist-profile.html',
   styleUrl: './therapist-profile.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class TherapistProfile implements OnInit, OnDestroy {
   profile: TherapistProfileData | null = null;

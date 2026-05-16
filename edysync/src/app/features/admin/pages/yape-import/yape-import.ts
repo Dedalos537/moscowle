@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { YapeTransaction, YapeDashboardStats } from '../../../../core/models/yape';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-yape-import',
   standalone: false,
   templateUrl: './yape-import.html',
-  styleUrl: './yape-import.scss'
+  styleUrl: './yape-import.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class YapeImport implements OnInit {
   dashboard: YapeDashboardStats = { total: 0, pending: 0 };

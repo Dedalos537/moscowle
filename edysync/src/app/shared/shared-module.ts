@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
@@ -15,35 +16,22 @@ import { Modal } from './components/modal/modal';
 import { Chip } from './components/chip/chip';
 import { ProgressBar } from './components/progress-bar/progress-bar';
 import { PillStatus } from './components/pill-status/pill-status';
+import { AiChat } from './components/ai-chat/ai-chat';
+import { CalendarWidget } from './components/calendar-widget/calendar-widget';
+import { AlertModal } from './components/alert-modal/alert-modal.component';
 
 @NgModule({
   declarations: [
-    Button,
-    Card,
-    Input,
-    Spinner,
-    Alert,
-    Modal,
-    Chip,
-    ProgressBar,
-    PillStatus
+    Button, Card, Input, Spinner, Alert, Modal, Chip,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal,
   ],
   imports: [
-    CommonModule,
-    FontAwesomeModule
+    CommonModule, FormsModule, FontAwesomeModule
   ],
   exports: [
-    CommonModule,
-    FontAwesomeModule,
-    Button,
-    Card,
-    Input,
-    Spinner,
-    Alert,
-    Modal,
-    Chip,
-    ProgressBar,
-    PillStatus
+    CommonModule, FormsModule, FontAwesomeModule,
+    Button, Card, Input, Spinner, Alert, Modal, Chip,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal,
   ]
 })
 export class SharedModule {

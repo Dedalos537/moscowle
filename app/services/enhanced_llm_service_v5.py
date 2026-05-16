@@ -7,16 +7,15 @@ Versión V5 - NLP AVANZADO CON ANÁLISIS SEMÁNTICO Y 60+ INTENCIONES ADMIN
 """
 import json
 import logging
+import os
 import re
 from datetime import datetime, timedelta
 from app.extensions import db
 from app.models import User, Payment, Appointment, Expense
-import ollama
 from app.services.context_cache_service import get_cached_context, get_cached_context_text
 from app.services.workflow_intelligence_service import track_workflow, predict_next_action
 
 logger = logging.getLogger('app')
-client = ollama.Client(host='http://127.0.0.1:11434')
 
 # ==================== MAPAS SEMÁNTICOS ====================
 
@@ -104,7 +103,7 @@ SEMANTIC_MAPS = {
     'create_expense': {
         'keywords': ['crear gasto', 'nuevo gasto', 'gastar', 'egreso', 'costo',
                      'expense', 'invertir', 'pagar proveedor', 'registra gasto',
-                     'registrar costo', 'de', 'soles'],
+                     'registrar costo', 'registrar egreso'],
         'alternatives': ['por', 'categoría', 'descripción', 'útiles'],
         'example': 'Registra un gasto de S/.200 para útiles'
     },
@@ -201,19 +200,20 @@ def detect_user_intent_v5(message: str) -> tuple:
     valid_intents = [(k, v) for k, v in scores.items() if v > 0.0]
     valid_intents.sort(key=lambda x: x[1], reverse=True)
     
-    if valid_intents:
+    MIN_CONFIDENCE = 0.5  # se necesita al menos 0.5 para override general_chat
+    if valid_intents and valid_intents[0][1] >= MIN_CONFIDENCE:
         best_intent = valid_intents[0][0]
         best_confidence = valid_intents[0][1]
     else:
-        # Si no hay matches, intentar con análisis semántico más amplio
         best_intent = 'general_chat'
-        best_confidence = 0.3
+        best_confidence = valid_intents[0][1] if valid_intents else 0.3
+        best_confidence = max(best_confidence, 0.3)
     
     # Extraer parámetros según intención
     params = extract_parameters_v5(message, best_intent)
     
-    # Si falta información crucial, pedir clarificación
-    if should_ask_clarification(best_intent, params):
+    # Solo preguntar clarificacion si el intent NO es general_chat
+    if best_intent != 'general_chat' and should_ask_clarification(best_intent, params):
         question = generate_clarification_question(best_intent, params)
         return best_intent, params, best_confidence, question
     
@@ -336,55 +336,55 @@ def process_intent_with_data_v5(intent: str, params: dict, message: str):
     try:
         if intent == 'unpaid_users':
             data = get_unpaid_users()
-            response = f"""📊 **ALUMNOS SIN PAGAR - ESTE MES**
+            response = f"""ALUMNOS SIN PAGAR - ESTE MES
 
-📌 **Resumen:**
-  • Total de deudores: {data['total_unpaid']} alumno(s)
-  • Deuda acumulada: S/. {data['total_debt']:.2f}
+Resumen:
+  - Total de deudores: {data['total_unpaid']} alumno(s)
+  - Deuda acumulada: S/. {data['total_debt']:.2f}
 
-💳 **Top Deudores:**"""
+Top Deudores:"""
             for i, user in enumerate(data['users'][:5], 1):
                 response += f"\n  {i}. {user['name']}"
-                response += f"\n     └─ Deuda: S/. {user['amount_due']:.2f}"
+                response += f"\n     - Deuda: S/. {user['amount_due']:.2f}"
             return response
         
         elif intent == 'weekly_due':
             data = get_weekly_due_payments()
-            response = f"""📅 **PAGOS PRÓXIMA SEMANA**
+            response = f"""PAGOS PROXIMA SEMANA
 
-📌 **Resumen:**
-  • Alumnos que vencen: {data['count']}
-  • Ingresos esperados: S/. {data['total_amount']:.2f}
+Resumen:
+  - Alumnos que vencen: {data['count']}
+  - Ingresos esperados: S/. {data['total_amount']:.2f}
 
-💰 **Próximos a Pagar:**"""
+Proximos a Pagar:"""
             for i, p in enumerate(data['payments'][:5], 1):
                 response += f"\n  {i}. {p['name']}"
-                response += f"\n     └─ Monto: S/. {p['amount']}"
+                response += f"\n     - Monto: S/. {p['amount']}"
             return response
         
         elif intent == 'revenue_metrics':
             data = calculate_revenue_metrics()
-            response = f"""💰 **MÉTRICAS FINANCIERAS - ESTE MES**
+            response = f"""METRICAS FINANCIERAS - ESTE MES
 
-📈 **Estado General:**
-  • Ingresos totales: S/. {data['total_income']:.2f}
-  • Egresos totales: S/. {data['total_expenses']:.2f}
+Estado General:
+  - Ingresos totales: S/. {data['total_income']:.2f}
+  - Egresos totales: S/. {data['total_expenses']:.2f}
   
-💵 **Rentabilidad:**
-  • Ganancia neta: S/. {data['net_profit']:.2f}
-  • Margen de ganancia: {data['profit_margin_percent']:.1f}%
+Rentabilidad:
+  - Ganancia neta: S/. {data['net_profit']:.2f}
+  - Margen de ganancia: {data['profit_margin_percent']:.1f}%
   
-📊 **Cobranza:**
-  • Tasa de cobranza: {data['collection_rate']:.1f}%
+Cobranza:
+  - Tasa de cobranza: {data['collection_rate']:.1f}%
   
-🔍 **Análisis:** {'✅ Ganando dinero' if data['net_profit'] > 0 else '⚠️ Gastos superiores a ingresos - Requiere atención'}"""
+Analisis: {'Ganando dinero' if data['net_profit'] > 0 else 'Gastos superiores a ingresos - Requiere atencion'}"""
             return response
         
         elif intent == 'breakeven_analysis':
             target = params.get('target_profit', 5000)
             be = estimate_breakeven_point(target)
             if be:
-                return f"""📈 **Punto de Equilibrio para S/. {target:,.0f}**
+                return f"""Punto de Equilibrio para S/. {target:,.0f}
 Alumnos actuales: {be['current_students']}
 Necesarios: {be['students_needed']}
 Adicionales: {be['additional_students']}
@@ -393,7 +393,7 @@ Factibilidad: {be['feasibility'].upper()}"""
         
         elif intent == 'schedule_optimization':
             rec = get_schedule_recommendations()
-            return f"""🎯 **Recomendaciones para Horarios**\n{rec['recommendations'][:500]}"""
+            return f"""Recomendaciones para Horarios\n{rec['recommendations'][:500]}"""
         
         elif intent == 'generate_report':
             return generate_business_report()
@@ -410,9 +410,9 @@ Factibilidad: {be['feasibility'].upper()}"""
             ).order_by(Appointment.start_time).limit(10).all()
             
             if not sessions:
-                return "📅 No hay sesiones programadas para la próxima semana"
+                return "No hay sesiones programadas para la proxima semana"
             
-            response = "📅 **Próximas Sesiones**\n"
+            response = "Proximas Sesiones\n"
             for s in sessions:
                 patient = User.query.get(s.patient_id)
                 response += f"\n• {patient.username}: {s.start_time.strftime('%a %d %b %H:%M')}"
@@ -423,9 +423,9 @@ Factibilidad: {be['feasibility'].upper()}"""
             payments = Payment.query.order_by(Payment.date.desc()).limit(10).all()
             
             if not payments:
-                return "💳 Sin pagos registrados"
+                return "Sin pagos registrados"
             
-            response = "💳 **Últimos Pagos**\n"
+            response = "Ultimos Pagos\n"
             for p in payments:
                 patient = User.query.get(p.patient_id)
                 response += f"\n• {patient.username}: S/. {p.amount} ({p.date.strftime('%d/%m')})"
@@ -440,9 +440,9 @@ Factibilidad: {be['feasibility'].upper()}"""
             patients_list = patients_data.get('patients', [])
             
             if not patients_list:
-                return "👥 No hay pacientes registrados"
+                return "No hay pacientes registrados"
             
-            response = f"👥 **{len(patients_list)} Pacientes Activos**\n"
+            response = f"{len(patients_list)} Pacientes Activos\n"
             for p in patients_list[:10]:
                 # Mostrar nombre, último pago, estado
                 response += f"\n• {p.get('name', '?')}"
@@ -515,7 +515,7 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
             
             result = {
                 'intent': intent,
-                'response': f"🚀 Llevándote a {target_section}...",
+                'response': f"Llevandote a {target_section}...",
                 'parameters': params,
                 'redirect': redirect_url,
                 'tutorial_steps': get_tutorial_steps('navigation', target_section),
@@ -533,7 +533,7 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
             
             result = {
                 'intent': intent,
-                'response': f"✅ **Pago Registrado**\n\n💰 Cantidad: S/. {amount:.2f}\n👤 Alumno: {patient_name}\n\n🔄 Contexto actualizado - Próxima consulta tendrá datos actualizados",
+                'response': f"Pago Registrado\n\nCantidad: S/. {amount:.2f}\nAlumno: {patient_name}\n\nContexto actualizado - Proxima consulta tendra datos actualizados",
                 'parameters': params,
                 'confidence': confidence,
                 'action': 'register_payment',
@@ -560,33 +560,35 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
             
             result = {
                 'intent': intent,
-                'response': f"""✅ **Nuevo Usuario Creado**
+                'response': f"""Nuevo Usuario Creado
 
-👤 Nombre: {user_name}
+Nombre: {user_name}
 
-📋 Pasos Siguientes:
+Pasos Siguientes:
   1. Configura el email del usuario
   2. Asigna un plan de pago
   3. Establece terapeuta responsable
   4. Crea sesiones
 
-🔄 Contexto actualizado""",
+Contexto actualizado""",
                 'parameters': params,
                 'confidence': confidence,
                 'action': 'create_user',
                 'tutorial_steps': []
             }
         
-        else:  # general_chat o chat con Llama
-            if not client:
-                response = "Asistente IA desconectado"
-            else:
-                try:
-                    # Cargar información de funciones disponibles
+        else:  # general_chat o chat con Llama (via Groq)
+            try:
+                from groq import Groq
+                api_key = os.getenv('GROQ_API_KEY')
+                if not api_key:
+                    response = "GROQ_API_KEY no configurada"
+                else:
+                    groq_client = Groq(api_key=api_key)
+
                     from app.services.functions_trainer_service import functions_trainer
                     functions_info = functions_trainer.get_functions_prompt()
-                    
-                    # Crear prompt con contexto + funciones disponibles
+
                     system_prompt = f"""Eres asistente inteligente del Centro de Terapias Juan Pablo II.
 
 {context_text}
@@ -596,11 +598,11 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
 RESPUESTAS:
 - Si el usuario pregunta por datos, cita cifras EXACTAS del contexto
 - Si pide crear/registrar algo, usa la función apropiada
-- Sé práctico, conciso y útil
+- Se practico, conciso y util
 - Siempre usa los datos reales proporcionados"""
-                    
-                    resp = client.chat(
-                        model='llama3.1:8b',
+
+                    resp = groq_client.chat.completions.create(
+                        model='llama-3.1-8b-instant',
                         messages=[{
                             'role': 'system',
                             'content': system_prompt
@@ -608,12 +610,13 @@ RESPUESTAS:
                             'role': 'user',
                             'content': msg
                         }],
-                        options={'temperature': 0.3}
+                        temperature=0.3,
+                        max_tokens=2000
                     )
-                    response = resp['message'].get('content', 'Error')
-                except Exception as e:
-                    logger.error(f"Llama error: {e}")
-                    response = f"Error consultando IA: {str(e)[:50]}"
+                    response = resp.choices[0].message.content or ''
+            except Exception as e:
+                logger.error(f"Groq error: {e}")
+                response = f"Error consultando IA: {str(e)[:50]}"
             
             result = {
                 'intent': intent,
@@ -628,7 +631,7 @@ RESPUESTAS:
         # Agregar predicción de siguiente acción si existe
         if 'next_action' in locals() and next_action:
             result['next_predicted_action'] = next_action
-            logger.info(f"💡 Próxima acción sugerida: {next_action}")
+            logger.info(f"Proxima accion sugerida: {next_action}")
         
         return result
     

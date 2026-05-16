@@ -16,7 +16,6 @@ export class Header implements OnInit, OnDestroy {
   showUserMenu = false;
   notifications: any[] = [];
   unreadCount = 0;
-  
   user: any = null;
   private userSub!: Subscription;
 
@@ -43,10 +42,9 @@ export class Header implements OnInit, OnDestroy {
   toggleNotifications() {
     this.showNotifications = !this.showNotifications;
     this.showUserMenu = false;
-    
+
     if (this.showNotifications) {
       this.fetchNotifications();
-      // Mark as read
       this.adminService.markNotificationsRead().subscribe(() => {
         this.unreadCount = 0;
       });
@@ -67,17 +65,20 @@ export class Header implements OnInit, OnDestroy {
     });
   }
 
+  isString(value: any): boolean {
+    return typeof value === 'string';
+  }
+
   logout() {
     this.authService.logout().subscribe({
       next: () => {
-        this.router.navigate(['/auth/login']);
+        this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
       },
       error: (err) => {
         console.error('Logout error:', err);
-        // Force navigation even if backend logout fails (e.g. CORS or already logged out)
         localStorage.removeItem('user');
         localStorage.removeItem('csrf_token');
-        this.router.navigate(['/auth/login']);
+        this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
       }
     });
   }

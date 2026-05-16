@@ -3,7 +3,9 @@
 
   <div class="flex flex-1 overflow-hidden relative">
     <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-      <router-outlet></router-outlet>
+      <div [@routeAnimations]="prepareRoute()">
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div>
 

@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-games',
   standalone: false,
   templateUrl: './games.html',
-  styleUrl: './games.scss'
+  styleUrl: './games.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Games implements OnInit {
   games: string[] = [];

@@ -2,12 +2,14 @@ import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, After
 import { TherapistService, Conversation, MessageItem } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-therapist-messages',
   standalone: false,
   templateUrl: './therapist-messages.html',
   styleUrl: './therapist-messages.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

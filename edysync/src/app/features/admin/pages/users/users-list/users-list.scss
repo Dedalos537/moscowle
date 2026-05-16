@@ -1,0 +1,17 @@
+:host {
+  canvas {
+    max-height: 200px;
+    width: 100% !important;
+  }
+}
+
+.assign-select::-webkit-scrollbar {
+  width: 4px;
+}
+.assign-select::-webkit-scrollbar-track {
+  background: transparent;
+}
+.assign-select::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 4px;
+}

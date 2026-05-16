@@ -21,6 +21,14 @@ const routes: Routes = [
     loadChildren: () => import('./features/therapist/therapist-module').then(m => m.TherapistModule)
   },
   {
+    path: 'patient',
+    loadChildren: () => import('./features/patient/patient-module').then(m => m.PatientModule)
+  },
+  {
+    path: 'ai-assistant',
+    loadChildren: () => import('./features/ai-assistant/ai-assistant-module').then(m => m.AiAssistantModule)
+  },
+  {
     path: '',
     component: MainLayout,
     children: [

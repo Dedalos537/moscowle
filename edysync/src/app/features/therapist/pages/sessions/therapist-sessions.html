@@ -2,35 +2,47 @@
   <app-button variant="primary" label="Nueva Sesión" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
 </ng-template>
 
-<div class="space-y-6">
+<div class="space-y-6" [@fadeInUp]>
 
   <!-- Stat Cards -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div class="bg-surface rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Hoy</div>
       <div class="text-2xl font-bold text-primary mt-1">{{ stats.sessions_today }}</div>
       <div class="text-xs text-gray-400">sesiones programadas</div>
     </div>
-    <div class="bg-surface rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Completadas</div>
       <div class="text-2xl font-bold text-green-600 mt-1">{{ stats.completed_sessions }}</div>
       <div class="text-xs text-gray-400">sesiones realizadas</div>
     </div>
-    <div class="bg-surface rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pendientes</div>
       <div class="text-2xl font-bold text-amber-600 mt-1">{{ stats.pending_sessions }}</div>
       <div class="text-xs text-gray-400">próximas sesiones</div>
     </div>
-    <div class="bg-surface rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pacientes</div>
       <div class="text-2xl font-bold text-blue-600 mt-1">{{ stats.active_patients }}</div>
       <div class="text-xs text-gray-400">pacientes activos</div>
     </div>
   </div>
 
-  <!-- Calendar -->
-  <div class="bg-surface p-4 md:p-6 rounded-lg shadow-soft border border-gray-100 min-h-[600px]">
-    <full-calendar [options]="calendarOptions"></full-calendar>
+  <!-- Calendar Widget -->
+  <div class="min-h-[500px]">
+    @if (loading) {
+      <div class="flex justify-center py-24">
+        <app-spinner size="md" colorClass="text-primary"></app-spinner>
+      </div>
+    } @else {
+      <app-calendar-widget
+        [events]="widgetEvents"
+        [role]="'therapist'"
+        (dayDblClick)="onDayDblClick($event)"
+        (rangeDblClick)="onRangeDblClick($event)"
+        (eventClick)="onEventClick($event)"
+      ></app-calendar-widget>
+    }
   </div>
 </div>
 
@@ -87,8 +99,7 @@
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
   <div class="space-y-4">
     <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
-      <fa-icon [icon]="['fas', 'info-circle']" class="mr-1"></fa-icon>
-      Paciente: {{ editForm.patient }}
+        Paciente: {{ editForm.patient }}
     </div>
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>

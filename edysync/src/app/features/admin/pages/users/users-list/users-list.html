@@ -1,256 +1,604 @@
-<div class="space-y-6 animate-fade-in-up">
+<div class="space-y-6 animate-fade-in" [@fadeInUp]>
 
   <!-- Stats Cards -->
   @if (!loading) {
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
-        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total Usuarios</p>
-        <p class="text-3xl font-bold text-textDark mt-1">{{ stats.total }}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="stat-card animate-fade-in" style="animation-delay:0.02s">
+        <p class="text-label-caps text-on-surface-variant">Total</p>
+        <p class="text-h3 text-on-surface mt-1">{{ stats.total }}</p>
       </div>
-      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
-        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Activos</p>
-        <p class="text-3xl font-bold text-green-600 mt-1">{{ stats.active }}</p>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.06s">
+        <p class="text-label-caps text-on-surface-variant">Activos</p>
+        <p class="text-h3 text-primary mt-1">{{ stats.active }}</p>
       </div>
-      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
-        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
-        <p class="text-3xl font-bold text-blue-600 mt-1">{{ stats.patients }}</p>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.1s">
+        <p class="text-label-caps text-on-surface-variant">Inactivos</p>
+        <p class="text-h3 text-tertiary mt-1">{{ stats.inactive }}</p>
       </div>
-      <div class="bg-surface rounded-2xl p-6 shadow-soft border border-gray-100">
-        <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
-        <p class="text-3xl font-bold text-purple-600 mt-1">{{ stats.therapists }}</p>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.14s">
+        <p class="text-label-caps text-on-surface-variant">Pacientes</p>
+        <p class="text-h3 text-secondary mt-1">{{ stats.patients }}</p>
+      </div>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.18s">
+        <p class="text-label-caps text-on-surface-variant">Terapeutas</p>
+        <p class="text-h3 text-blue-600 mt-1">{{ stats.therapists }}</p>
+      </div>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.22s">
+        <p class="text-label-caps text-on-surface-variant">Deudores</p>
+        <p class="text-h3 text-error mt-1">{{ stats.debtors }}</p>
+      </div>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.26s">
+        <p class="text-label-caps text-on-surface-variant">Retirados</p>
+        <p class="text-h3 text-on-surface-variant mt-1">{{ stats.retired }}</p>
+      </div>
+      <div class="stat-card animate-fade-in" style="animation-delay:0.3s">
+        <p class="text-label-caps text-on-surface-variant">Admins</p>
+        <p class="text-h3 text-amber-600 mt-1">{{ stats.admins }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Charts Row -->
+  @if (!loading) {
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.05s">
+        <div class="p-5">
+          <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">location_on</span> Usuarios por Sede
+          </h4>
+          <div style="max-height:200px">
+            <canvas baseChart [data]="chartSede" [options]="chartSedeOpt" type="bar"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.1s">
+        <div class="p-5">
+          <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-green-500">circle</span> Activo vs Inactivo
+          </h4>
+          <div style="max-height:200px">
+            <canvas baseChart [data]="chartActive" [options]="chartActiveOpt" type="doughnut"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.15s">
+        <div class="p-5">
+          <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-purple-500">badge</span> Roles
+          </h4>
+          <div style="max-height:200px">
+            <canvas baseChart [data]="chartRole" [options]="chartRoleOpt" type="doughnut"></canvas>
+          </div>
+        </div>
       </div>
     </div>
   }
 
   <!-- Directorio -->
-  <div class="bg-surface rounded-3xl shadow-sm border border-gray-100 p-6 xl:p-8">
-    <div class="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 pb-6">
-      <h3 class="text-xl font-bold text-charcoal flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
-      </h3>
+  <div class="card animate-fade-in" style="animation-delay:0.2s">
+    <div class="p-6 xl:p-8">
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 border-b border-outline-variant/20 pb-6">
+        <h3 class="text-h3 text-on-surface flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">group</span> Directorio
+        </h3>
 
-      <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center flex-wrap justify-end">
-        <select (change)="onSedeChange($any($event.target).value)" class="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 focus:ring-primary focus:border-primary outline-none">
-          <option value="">Todas las Sedes</option>
-          @for (s of sedes; track s.id) {
-            <option [value]="s.id">{{ s.name }}</option>
-          }
-        </select>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
+          <select (change)="onSedeChange($any($event.target).value)" class="input-field text-sm">
+            <option value="">Todas las Sedes</option>
+            @for (s of sedes; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
 
-        <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full md:w-64"></app-input>
+          <select (change)="onTherapistFilterChange($any($event.target).value)" class="input-field text-sm">
+            <option value="">Todos Terapeutas</option>
+            @for (t of therapists; track t.id) {
+              <option [value]="t.id">{{ t.username }}</option>
+            }
+          </select>
 
-        <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto">
-          <button (click)="setFilter('all')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'all'" [class.text-white]="activeFilter === 'all'" [class.bg-gray-100]="activeFilter !== 'all'" [class.text-gray-600]="activeFilter !== 'all'">Todos</button>
-          <button (click)="setFilter('jugador')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'jugador'" [class.text-white]="activeFilter === 'jugador'" [class.bg-gray-100]="activeFilter !== 'jugador'" [class.text-gray-600]="activeFilter !== 'jugador'">Pacientes</button>
-          <button (click)="setFilter('terapista')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl font-semibold transition-all shadow-sm" [class.bg-gray-100]="activeFilter !== 'terapista'" [class.text-gray-600]="activeFilter !== 'terapista'" [class.bg-red-50]="activeFilter === 'terapista'" [class.text-red-600]="activeFilter === 'terapista'">Terapeutas</button>
-          <button (click)="setFilter('deudores')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-red-50 text-red-600 font-semibold transition-all shadow-sm" [class.bg-red-600]="activeFilter === 'deudores'" [class.text-white]="activeFilter === 'deudores'">Deudores</button>
-          <button (click)="setFilter('admin')" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 text-gray-600 font-semibold transition-all shadow-sm" [class.bg-primary]="activeFilter === 'admin'" [class.text-white]="activeFilter === 'admin'">Admin</button>
+          <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full sm:w-56"></app-input>
+
+          <div class="flex gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
+            <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">Todos</button>
+            <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">Pacientes</button>
+            <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">Terapeutas</button>
+            <button (click)="setFilter('deudores')" class="btn-filter" [class.active]="activeFilter === 'deudores'">Deudores</button>
+            <button (click)="setFilter('retirados')" class="btn-filter" [class.active]="activeFilter === 'retirados'">Retirados</button>
+            <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">Admin</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    @if (loading) {
-      <div class="flex justify-center py-20">
-        <app-spinner size="md" colorClass="text-primary"></app-spinner>
-      </div>
-    } @else {
-      <!-- Desktop Table -->
-      <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
-        <table class="w-full min-w-[900px]">
-          <thead>
-            <tr class="bg-gray-50">
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Usuario</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rol</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sede</th>
-              <th class="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
-              <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 bg-white">
-            @for (u of filteredUsers; track u.id) {
-              <tr class="hover:bg-gray-50/80 transition-colors group">
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/20 shadow-sm">
+      @if (loading) {
+        <div class="flex justify-center py-20">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+        <!-- Desktop Table -->
+        <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/20 shadow-card">
+          <table class="w-full min-w-[1100px]">
+            <thead>
+              <tr class="bg-surface-container-high">
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Usuario</th>
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Email</th>
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
+                <th class="px-5 py-3.5 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
+                <th class="px-5 py-3.5 text-center text-label-caps text-on-surface-variant">Activo</th>
+                <th class="px-5 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="bg-surface-container-lowest divide-y divide-outline-variant/20">
+              @for (u of filteredUsers; track u.id; let i = $index) {
+                <tr class="animate-fade-in transition-colors duration-150" [style.animation-delay]="i * 0.04 + 's'" [class.bg-surface-container-high/30]="i % 2 === 1 && u.account_status === 'active' && u.is_active" [class.bg-error-container/20]="u.account_status === 'debtor'" [class.bg-surface-container-highest/40]="u.account_status === 'retired'" [class.bg-orange-50/40]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'" [class.hover:bg-surface-container-highest/50]="u.account_status === 'active' && u.is_active">
+                  <td class="px-5 py-3.5">
+                    <div class="flex items-center gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                        {{ getInitials(u.username) }}
+                      </div>
+                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:outline-none w-full transition-colors py-0.5 text-sm">
+                    </div>
+                  </td>
+                  <td class="px-5 py-3.5 text-sm text-on-surface-variant max-w-[160px] truncate" [title]="u.email">{{ u.email }}</td>
+                  <td class="px-5 py-3.5">
+                    <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg text-sm font-medium py-1.5 pl-3 pr-8 cursor-pointer transition-all text-on-surface">
+                      <option value="terapista">Terapeuta</option>
+                      <option value="jugador">Paciente</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                  <td class="px-5 py-3.5">
+                    @if (u.role === 'jugador') {
+                      <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-primary/10 text-primary">{{ getSedeName(u) }}</span>
+                    } @else if (u.role === 'terapista') {
+                      <div class="flex flex-wrap gap-1">
+                        @for (s of u.assigned_sedes; track s.id) {
+                          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-secondary/10 text-secondary">{{ s.name }}</span>
+                        }
+                        @if (!u.assigned_sedes?.length) {
+                          <span class="text-xs text-on-surface-variant/60">—</span>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-xs text-on-surface-variant/50">—</span>
+                    }
+                  </td>
+                  <td class="px-5 py-3.5">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md" [class.bg-primary/10]="u.account_status === 'active'" [class.text-primary]="u.account_status === 'active'" [class.bg-tertiary/10]="u.account_status === 'inactive'" [class.text-tertiary]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
+                      <span class="w-1.5 h-1.5 rounded-full" [class.bg-primary]="u.account_status === 'active'" [class.bg-tertiary]="u.account_status === 'inactive'" [class.bg-on-surface-variant]="u.account_status === 'retired'" [class.bg-error]="u.account_status === 'debtor'"></span>
+                      {{ getStatusLabel(u.account_status) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5">
+                    @if (u.role === 'jugador') {
+                      <div class="flex items-center gap-2">
+                        <select #sel multiple class="w-44 bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs font-medium rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary py-1.5 pl-3 pr-2 h-20 custom-scrollbar">
+                          @for (t of therapists; track t.id) {
+                            <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)" class="py-0.5">{{ t.username }}</option>
+                          }
+                        </select>
+                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary/10 text-primary rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all shrink-0 cursor-pointer" title="Guardar">
+                          <span class="material-symbols-outlined text-lg">check</span>
+                        </button>
+                      </div>
+                    } @else {
+                      <span class="text-on-surface-variant/30 font-bold px-3">—</span>
+                    }
+                  </td>
+                  <td class="px-5 py-3.5 text-center">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
+                      <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </td>
+                  <td class="px-5 py-3.5 text-right">
+                    <button (click)="openActionDrawer(u)" class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
+                      <span class="material-symbols-outlined text-lg">more_horiz</span>
+                    </button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="px-5 py-16 text-center text-on-surface-variant/60">
+                    <span class="material-symbols-outlined text-3xl mb-2 block">group_off</span>
+                    <p class="text-sm font-medium">No se encontraron usuarios</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="md:hidden space-y-3 mt-4">
+          @for (u of filteredUsers; track u.id; let i = $index) {
+            <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'" [class.bg-error-container/10]="u.account_status === 'debtor'" [class.bg-surface-container-highest/30]="u.account_status === 'retired'" [class.bg-orange-50/30]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
+              <div class="p-4 border-b border-outline-variant/15 bg-surface-container-high/30">
+                <div class="flex justify-between items-start gap-3">
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
                       {{ getInitials(u.username) }}
                     </div>
-                    <input [value]="u.username" (change)="updateName(u, $event)" class="font-bold text-gray-900 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors py-1 text-[15px]">
-                  </div>
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-gray-500 max-w-[180px] truncate" [title]="u.email">{{ u.email }}</td>
-                <td class="px-6 py-4">
-                  <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-gray-50 hover:bg-gray-100 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-semibold py-2 pl-4 pr-10 cursor-pointer transition-all text-gray-700 shadow-sm">
-                    <option value="terapista">Terapeuta</option>
-                    <option value="jugador">Paciente</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </td>
-                <td class="px-6 py-4">
-                  @if (u.role === 'jugador') {
-                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700">{{ getSedeName(u) }}</span>
-                  } @else if (u.role === 'terapista') {
-                    <div class="flex flex-wrap gap-1">
-                      <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-purple-50 border border-purple-100 text-purple-700">{{ getSedeName(u) }}</span>
+                    <div class="min-w-0">
+                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:outline-none w-full transition-colors text-base">
+                      <p class="text-xs text-on-surface-variant truncate mt-0.5">{{ u.email }}</p>
                     </div>
-                  }
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <label class="relative inline-flex items-center cursor-pointer justify-center">
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
                     <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
-                    <div class="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    <div class="w-8 h-4.5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <button (click)="openActionDrawer(u)" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-all cursor-pointer">
-                    <fa-icon [icon]="['fas', 'ellipsis-v']"></fa-icon>
-                  </button>
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="6" class="px-6 py-20 text-center text-gray-400">
-                  <fa-icon [icon]="['fas', 'users']" class="text-3xl mb-2"></fa-icon>
-                  <p class="text-sm font-medium">No se encontraron usuarios</p>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile Card View -->
-      <div class="md:hidden space-y-4 mt-4">
-        @for (u of filteredUsers; track u.id) {
-          <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-5 border-b border-gray-50 bg-gray-50/50">
-              <div class="flex justify-between items-start gap-4">
-                <div class="flex items-center gap-3 flex-1 min-w-0">
-                  <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                    {{ getInitials(u.username) }}
-                  </div>
-                  <div class="min-w-0">
-                    <input [value]="u.username" (change)="updateName(u, $event)" class="font-bold text-charcoal bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors text-lg">
-                    <p class="text-xs text-gray-500 truncate">{{ u.email }}</p>
-                  </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                  <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
-                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                </label>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-label-caps text-on-surface-variant">{{ getRoleBadge(u.role) }}</span>
+                    <span class="text-on-surface-variant/30">|</span>
+                    <span class="text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md" [class.bg-primary/10]="u.account_status === 'active'" [class.text-primary]="u.account_status === 'active'" [class.bg-tertiary/10]="u.account_status === 'inactive'" [class.text-tertiary]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
+                      {{ getStatusLabel(u.account_status) }}
+                    </span>
+                  </div>
+                  <button (click)="openActionDrawer(u)" class="btn-ghost text-xs !px-3 !py-1.5 cursor-pointer">
+                    Acciones
+                  </button>
+                </div>
+
+                @if (u.role === 'jugador') {
+                  <div class="bg-surface-container-high/50 rounded-xl p-3.5 border border-outline-variant/20">
+                    <label class="text-label-caps text-secondary mb-2 flex items-center gap-1.5">
+                      <span class="material-symbols-outlined text-sm">stethoscope</span> Terapeutas Asignados
+                    </label>
+                    <div class="flex gap-2">
+                      <select #sel2 multiple class="flex-1 bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs rounded-lg focus:ring-primary focus:border-primary p-2 h-20 custom-scrollbar">
+                        @for (t of therapists; track t.id) {
+                          <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)">{{ t.username }}</option>
+                        }
+                      </select>
+                      <button (click)="assignTherapist(u.id, sel2)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-sm self-start shrink-0 cursor-pointer">
+                        <span class="material-symbols-outlined text-sm">check</span>
+                      </button>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
-            <div class="p-5 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-400 uppercase">{{ getRoleBadge(u.role) }}</span>
-                <span class="text-xs text-gray-300">|</span>
-                <span class="text-xs text-gray-500">{{ getSedeName(u) }}</span>
-              </div>
-              <button (click)="openActionDrawer(u)" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-200 transition-all cursor-pointer">
-                Acciones
-              </button>
-            </div>
-          </div>
-        }
-      </div>
-    }
+          }
+        </div>
+      }
+    </div>
   </div>
 </div>
 
 <!-- Action Drawer -->
 @if (showActionDrawer && selectedUser) {
-  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeActionDrawer()"></div>
-  <div class="fixed top-0 right-0 w-[300px] h-full bg-white shadow-2xl z-[101] flex flex-col border-l border-gray-100">
-    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+  <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeActionDrawer()"></div>
+  <div class="fixed top-0 right-0 w-[280px] h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
+    <div class="p-5 border-b border-outline-variant/20 flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+        <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
           {{ getInitials(selectedUser.username) }}
         </div>
         <div>
-          <h4 class="font-bold text-gray-900 text-base">{{ selectedUser.username }}</h4>
-          <p class="text-xs text-gray-500">{{ getRoleBadge(selectedUser.role) }}</p>
+          <h4 class="font-semibold text-on-surface text-sm">{{ selectedUser.username }}</h4>
+          <p class="text-xs text-on-surface-variant">{{ getRoleBadge(selectedUser.role) }}</p>
         </div>
       </div>
-      <button (click)="closeActionDrawer()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      <button (click)="closeActionDrawer()" class="w-7 h-7 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-lg">close</span>
       </button>
     </div>
-    <div class="flex-1 p-4 space-y-1 overflow-y-auto">
-      <a [routerLink]="['/admin/users', selectedUser.id]" class="flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors rounded-2xl mb-1">
-        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 mr-3 group-hover:bg-indigo-100">
-          <fa-icon [icon]="['fas', 'user-circle']"></fa-icon>
-        </div>
+    <div class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <a [routerLink]="['/admin/users', selectedUser.id]" class="flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
+        <span class="material-symbols-outlined text-lg text-on-surface-variant">person</span>
         Ver Perfil
       </a>
-      <button (click)="resetPassword(selectedUser)" class="w-full text-left flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-colors rounded-2xl mb-1 cursor-pointer">
-        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 mr-3">
-          <fa-icon [icon]="['fas', 'key']"></fa-icon>
-        </div>
+      <button (click)="openEditDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
+        <span class="material-symbols-outlined text-lg text-on-surface-variant">edit</span>
+        Editar Usuario
+      </button>
+      <button (click)="openResetDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-tertiary/10 hover:text-tertiary transition-colors rounded-lg cursor-pointer">
+        <span class="material-symbols-outlined text-lg text-on-surface-variant">vpn_key</span>
         Reset Password
       </button>
-      <hr class="my-2 mx-4 border-gray-100">
-      <button (click)="deleteUser(selectedUser)" class="w-full text-left flex items-center px-4 py-3.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-2xl cursor-pointer">
-        <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 mr-3">
-          <fa-icon [icon]="['fas', 'trash-alt']"></fa-icon>
-        </div>
+      <hr class="my-2 mx-3.5 border-outline-variant/20">
+      <button (click)="deleteUser(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-error hover:bg-error-container/30 transition-colors rounded-lg cursor-pointer">
+        <span class="material-symbols-outlined text-lg text-error/70">delete</span>
         Eliminar Usuario
       </button>
     </div>
-    <div class="p-4 border-t border-gray-100">
-      <div class="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-          <fa-icon [icon]="['fas', 'shield-alt']" class="text-xs"></fa-icon>
-        </div>
+    <div class="p-4 border-t border-outline-variant/20">
+      <div class="p-3 bg-surface-container-high rounded-xl flex items-center gap-3">
+        <span class="material-symbols-outlined text-sm text-primary">verified</span>
         <div>
-          <p class="text-xs font-semibold text-gray-700">ID Usuario: #{{ selectedUser.id }}</p>
-          <p class="text-[10px] text-gray-400">Creado en sistema</p>
+          <p class="text-xs font-semibold text-on-surface">ID: #{{ selectedUser.id }}</p>
+          <p class="text-[10px] text-on-surface-variant/60">Creado en sistema</p>
         </div>
       </div>
     </div>
   </div>
 }
 
-<!-- Create User Drawer -->
-@if (showCreateDrawer) {
-  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeCreateDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-white shadow-2xl z-[101] flex flex-col border-l border-gray-100">
-    <div class="flex-none p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-      <h3 class="text-xl font-bold text-gray-800 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'user-plus']" class="text-primary"></fa-icon>
-        </div>
-        Crear Nuevo Usuario
+<!-- Edit User Drawer -->
+@if (showEditDrawer) {
+  <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeEditDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
+    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">manage_accounts</span>
+        Editar Usuario
       </h3>
-      <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-full hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      <button (click)="closeEditDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-lg">close</span>
       </button>
     </div>
-
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+      <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email</label>
-          <input [(ngModel)]="newUser.email" type="email" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="email@ejemplo.com">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
+          <input [(ngModel)]="editData.username" class="input-field text-sm">
         </div>
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nombre</label>
-          <input [(ngModel)]="newUser.username" type="text" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder="Nombre completo">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Email</label>
+          <input [value]="editData.email" class="input-field text-sm bg-surface-container-high text-on-surface-variant" readonly disabled>
         </div>
       </div>
       <div>
-        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Rol</label>
-        <select [(ngModel)]="newUser.role" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-700">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
+        <select [(ngModel)]="editData.role" class="input-field text-sm">
           <option value="terapista">Terapeuta</option>
           <option value="jugador">Paciente</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" [(ngModel)]="editData.is_active" class="rounded text-primary focus:ring-primary">
+        <span class="text-sm font-medium text-on-surface">Cuenta Activa</span>
+      </label>
+
+      @if (editData.role === 'terapista') {
+        <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
+          <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">work</span> Contrato
+          </h4>
+          <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
+            <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
+            <p class="text-[10px] text-on-surface-variant/60 mb-1">Ctrl+Click para múltiples</p>
+            <select multiple [(ngModel)]="editData.sede_ids" class="input-field h-24 text-sm">
+              @for (s of sedes; track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
+            <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horario Regular</label>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <span class="text-[10px] text-on-surface-variant/60 block mb-1">Entrada</span>
+                <input type="time" [(ngModel)]="editData.start_time" class="input-field text-sm">
+              </div>
+              <div>
+                <span class="text-[10px] text-on-surface-variant/60 block mb-1">Salida</span>
+                <input type="time" [(ngModel)]="editData.end_time" class="input-field text-sm">
+              </div>
+            </div>
+            <span class="text-[10px] text-on-surface-variant/60 block mb-1.5">Días Laborales</span>
+            <div class="flex flex-wrap gap-1.5">
+              @for (day of [{v:0,l:'L'},{v:1,l:'M'},{v:2,l:'X'},{v:3,l:'J'},{v:4,l:'V'},{v:5,l:'S'}]; track day.v) {
+                <label class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary/10]="editData.days.includes(day.v)" [class.border-primary/30]="editData.days.includes(day.v)">
+                  <input type="checkbox" [value]="day.v" [checked]="editData.days.includes(day.v)" (change)="editData.days.includes(day.v) ? editData.days.splice(editData.days.indexOf(day.v),1) : editData.days.push(day.v)" class="sr-only">
+                  {{ day.l }}
+                </label>
+              }
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Base Salarial (S/)</label>
+              <input type="number" step="0.01" [(ngModel)]="editData.salary" class="input-field text-sm">
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horas Mensuales</label>
+              <input type="number" [(ngModel)]="editData.hours" class="input-field text-sm">
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (editData.role === 'jugador') {
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
+          <select [(ngModel)]="editData.sede_id" class="input-field text-sm">
+            <option [value]="null">— Sin asignar —</option>
+            @for (s of sedes; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
+          <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">receipt_long</span> Configuración de Plan
+          </h4>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1 block">Modalidad</label>
+              <select [(ngModel)]="editData.modality" class="input-field text-sm">
+                <option [value]="0">Sin paquete</option>
+                <option [value]="1">1x (4 ses)</option>
+                <option [value]="2">2x (8 ses)</option>
+                <option [value]="3">3x (12 ses)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1 block">Plan</label>
+              <select [(ngModel)]="editData.plan_type" class="input-field text-sm">
+                <option value="individual">Individual</option>
+                <option value="group">Grupal</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1 block">Frecuencia</label>
+              <select [(ngModel)]="editData.frequency" class="input-field text-sm">
+                <option value="monthly">Mensual</option>
+                <option value="biweekly">Quincenal</option>
+                <option value="weekly">Semanal</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1 block">Monto (S/)</label>
+              <input type="number" step="0.01" [(ngModel)]="editData.amount" class="input-field text-sm">
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1 block">Sesiones Asistidas</label>
+              <input type="number" [(ngModel)]="editData.attended" class="input-field text-sm">
+            </div>
+          </div>
+
+          <div class="border-t border-outline-variant/20 pt-3">
+            <label class="inline-flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" [(ngModel)]="editData.has_shift2" class="sr-only peer">
+              <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary relative"></div>
+              <span class="text-sm font-medium text-on-surface">2do Turno / Plan Diferenciado</span>
+            </label>
+          </div>
+
+          @if (editData.has_shift2) {
+            <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20 space-y-3">
+              <h5 class="text-label-caps text-on-surface-variant">Turno 2</h5>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="text-[10px] text-on-surface-variant/60 uppercase">Modalidad</label>
+                  <select [(ngModel)]="editData.modality_2" class="input-field text-sm">
+                    <option [value]="0">Sin paq.</option>
+                    <option [value]="1">1x</option>
+                    <option [value]="2">2x</option>
+                    <option [value]="3">3x</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-on-surface-variant/60 uppercase">Plan</label>
+                  <select [(ngModel)]="editData.plan_type_2" class="input-field text-sm">
+                    <option value="individual">Individual</option>
+                    <option value="group">Grupal</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-on-surface-variant/60 uppercase">Monto</label>
+                  <input type="number" step="0.01" [(ngModel)]="editData.amount_2" class="input-field text-sm">
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] text-on-surface-variant/60 uppercase">Sesiones Asistidas</label>
+                <input type="number" [(ngModel)]="editData.attended_2" class="input-field text-sm">
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+    <div class="flex-none p-5 border-t border-outline-variant/20 flex justify-end gap-3">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
+      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="saveEditUser()"></app-button>
+    </div>
+  </div>
+}
+
+<!-- Reset Password Drawer -->
+@if (showResetDrawer) {
+  <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeResetDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
+    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
+        <span class="material-symbols-outlined text-tertiary">vpn_key</span>
+        Reset Password
+      </h3>
+      <button (click)="closeResetDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-lg">close</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+      @if (resetData.firstTime) {
+        <div>
+          <div class="bg-tertiary/10 text-tertiary p-4 rounded-xl mb-5 text-sm flex gap-3">
+            <span class="material-symbols-outlined text-lg shrink-0">info</span>
+            <p>Este usuario nunca ha iniciado sesión. Ingrese una <strong>contraseña manual</strong> inicial (mín. 6 caracteres).</p>
+          </div>
+          <div>
+            <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva Contraseña</label>
+            <div class="relative">
+              <input [type]="resetData.showPassword ? 'text' : 'password'" [(ngModel)]="resetData.newPassword" class="input-field text-sm pr-12" placeholder="Ingrese la nueva clave...">
+              <button (click)="toggleResetPasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-tertiary cursor-pointer">
+                <span class="material-symbols-outlined text-lg">{{ resetData.showPassword ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="py-8 flex flex-col items-center text-center">
+          <div class="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl">mail</span>
+          </div>
+          <h4 class="text-lg font-bold text-on-surface mb-2">Generar nueva clave</h4>
+          <p class="text-sm text-on-surface-variant max-w-xs">El sistema generará una contraseña segura aleatoriamente y borrará la actual. ¿Estás seguro?</p>
+        </div>
+      }
+      @if (resetData.status) {
+        <div class="p-4 rounded-xl text-sm font-medium text-center" [class.bg-primary/10]="resetData.status.includes('reseteada')" [class.text-primary]="resetData.status.includes('reseteada')" [class.bg-error-container/30]="resetData.status.includes('Error')" [class.text-error]="resetData.status.includes('Error')">
+          {{ resetData.status }}
+        </div>
+      }
+    </div>
+    <div class="flex-none p-5 border-t border-outline-variant/20 flex justify-end gap-3">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
+      <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'exchange-alt']" (clicked)="confirmResetPassword()"></app-button>
+    </div>
+  </div>
+}
+
+<!-- Create User Drawer -->
+@if (showCreateDrawer) {
+  <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeCreateDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
+    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">person_add</span>
+        Crear Nuevo Usuario
+      </h3>
+      <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
+        <span class="material-symbols-outlined text-lg">close</span>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-5 space-y-5">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Email</label>
+          <input [(ngModel)]="newUser.email" type="email" class="input-field text-sm" placeholder="email@ejemplo.com">
+        </div>
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
+          <input [(ngModel)]="newUser.username" class="input-field text-sm" placeholder="Nombre completo">
+        </div>
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
+          <select [(ngModel)]="newUser.role" class="input-field text-sm">
+            <option value="terapista">Terapeuta</option>
+            <option value="jugador">Paciente</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
 
       @if (newUser.role === 'jugador') {
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sede</label>
-          <select [(ngModel)]="newUser.sede_id" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-gray-700">
-            <option [value]="null">-- Sin asignar --</option>
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
+          <select [(ngModel)]="newUser.sede_id" class="input-field text-sm">
+            <option [value]="null">— Sin asignar —</option>
             @for (s of sedes; track s.id) {
               <option [value]="s.id">{{ s.name }}</option>
             }
@@ -260,23 +608,118 @@
 
       @if (newUser.role === 'terapista') {
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sedes Asignadas (Ctrl+Click)</label>
-          <select multiple [(ngModel)]="newUser.sede_ids" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all h-24">
+          <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas (Ctrl+Click)</label>
+          <select multiple [(ngModel)]="newUser.sede_ids" class="input-field h-24 text-sm">
             @for (s of sedes; track s.id) {
               <option [value]="s.id">{{ s.name }}</option>
             }
           </select>
         </div>
+        <div class="bg-surface-container-high rounded-xl p-4">
+          <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-lg">work</span> Configuración de Contrato
+          </h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Base Salarial (S/)</label>
+              <input [(ngModel)]="newUser.salary" type="number" step="0.01" class="input-field text-sm" placeholder="0.00">
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horas Contratadas</label>
+              <input [(ngModel)]="newUser.hours" type="number" class="input-field text-sm" placeholder="e.g. 160">
+            </div>
+          </div>
+          <p class="text-xs text-on-surface-variant/60 mt-2">El pago por hora se calculará: Base / Horas.</p>
+        </div>
+      }
+
+      @if (newUser.role === 'jugador') {
+        <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
+          <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">receipt_long</span> Configuración del Plan
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Modalidad</label>
+              <select [(ngModel)]="newUser.modality" class="input-field text-sm">
+                <option [value]="1">1x Semana (4 ses)</option>
+                <option [value]="2">2x Semana (8 ses)</option>
+                <option [value]="3">3x Semana (12 ses)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Frecuencia</label>
+              <select [(ngModel)]="newUser.frequency" class="input-field text-sm">
+                <option value="monthly">Mensual</option>
+                <option value="biweekly">Quincenal</option>
+                <option value="weekly">Semanal</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-label-caps text-on-surface-variant mb-1.5 block">Tipo de Plan</label>
+              <select [(ngModel)]="newUser.plan_type" class="input-field text-sm">
+                <option value="individual">Individual</option>
+                <option value="group">Grupal / Fijo</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-label-caps text-on-surface-variant mb-1.5 block">Monto a Pagar (S/)</label>
+            <input [(ngModel)]="newUser.amount" type="number" step="0.01" class="input-field text-sm" placeholder="0.00">
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" [(ngModel)]="newUser.generate_schedule" class="rounded text-primary focus:ring-primary">
+            <span class="text-sm font-semibold text-on-surface">Generar Horario Automático</span>
+          </label>
+
+          @if (newUser.generate_schedule) {
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 space-y-4">
+              <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm">calendar_month</span> Programación de Sesiones
+              </h5>
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Inicio</label>
+                  <input [(ngModel)]="newUser.start_date" type="date" class="input-field text-sm">
+                </div>
+                <div>
+                  <label class="text-label-caps text-on-surface-variant mb-1 block">Hora Inicio</label>
+                  <input [(ngModel)]="newUser.start_time" type="time" class="input-field text-sm">
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="text-label-caps text-on-surface-variant mb-1 block">Terapeuta</label>
+                  <select [(ngModel)]="newUser.schedule_therapist" class="input-field text-sm">
+                    <option [value]="null">— Seleccionar —</option>
+                    @for (t of therapists; track t.id) {
+                      <option [value]="t.id">{{ t.username }} ({{ t.email }})</option>
+                    }
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="text-label-caps text-on-surface-variant mb-1.5 block">Días de Sesión</label>
+                <div class="flex gap-2 flex-wrap">
+                  @for (day of [{v:0,l:'Lun'},{v:1,l:'Mar'},{v:2,l:'Mié'},{v:3,l:'Jue'},{v:4,l:'Vie'},{v:5,l:'Sáb'}]; track day.v) {
+                    <label class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary/10]="newUser.days.includes(day.v)" [class.border-primary/30]="newUser.days.includes(day.v)">
+                      <input type="checkbox" [value]="day.v" [checked]="newUser.days.includes(day.v)" (change)="newUser.days.includes(day.v) ? newUser.days.splice(newUser.days.indexOf(day.v),1) : newUser.days.push(day.v)" class="sr-only">
+                      {{ day.l }}
+                    </label>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
-
-    <div class="flex-none p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
+    <div class="flex-none p-5 border-t border-outline-variant/20 flex flex-col gap-2">
       <div class="flex justify-end gap-3">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
         <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'save']" (clicked)="createUser()"></app-button>
       </div>
       @if (createStatus) {
-        <span class="text-right text-sm text-gray-600 font-medium">{{ createStatus }}</span>
+        <span class="text-right text-sm" [class.text-primary]="createStatus.includes('Creado')" [class.text-error]="createStatus.includes('Error')" [class.text-on-surface-variant]="!createStatus.includes('Creado') && !createStatus.includes('Error')">{{ createStatus }}</span>
       }
     </div>
   </div>

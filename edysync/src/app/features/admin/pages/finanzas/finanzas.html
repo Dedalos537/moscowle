@@ -1,0 +1,1310 @@
+<ng-template #headerActions>
+  <app-button variant="ghost" label="Ayuda" [icon]="['fas', 'question-circle']" (clicked)="showHelp()"></app-button>
+</ng-template>
+
+<div class="p-4 md:p-8">
+
+  <!-- ═══ Chrome-like Tab Bar ═══ -->
+  <div class="chrome-tab-bar">
+    <button class="chrome-tab" [class.active]="activeTab === 'resumen'" (click)="switchTab('resumen')">
+      <span class="material-symbols-outlined">dashboard</span>
+      <span>Dashboard</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'deudores'" (click)="switchTab('deudores')">
+      <span class="material-symbols-outlined">payments</span>
+      <span>Deudores</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'pagos'" (click)="switchTab('pagos')">
+      <span class="material-symbols-outlined">account_balance_wallet</span>
+      <span>Pagos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'gastos'" (click)="switchTab('gastos')">
+      <span class="material-symbols-outlined">receipt_long</span>
+      <span>Gastos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ═══ TAB: RESUMEN ═══ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'resumen') {
+    <div class="space-y-6" [@fadeInUp]>
+      <!-- ═══ KPI ROW ═══ -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-red-700 dark:text-red-400">Deuda Total</span>
+            <span class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryTotalDeuda.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-red-600">
+              <span class="material-symbols-outlined text-[14px]">trending_up</span> Pendiente
+            </span>
+            <span class="text-xs text-on-surface-variant">de cobro</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-emerald-700 dark:text-emerald-400">Ingresos Reales</span>
+            <span class="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-emerald-500 text-xl">payments</span>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryIngresos.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-emerald-600">
+              <span class="material-symbols-outlined text-[14px]">trending_up</span> Recaudado
+            </span>
+            <span class="text-xs text-on-surface-variant">del período</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-orange-700 dark:text-orange-400">Gastos</span>
+            <span class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-orange-500 text-xl">receipt_long</span>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryGastos.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-orange-600">
+              <span class="material-symbols-outlined text-[14px]">trending_down</span> Operativos
+            </span>
+            <span class="text-xs text-on-surface-variant">y terapeutas</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-blue-700 dark:text-blue-400">Balance Neto</span>
+            <span class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
+              <span class="material-symbols-outlined text-blue-500 text-xl">account_balance</span>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight"
+            [class.text-emerald-600]="summaryBalance >= 0"
+            [class.text-red-600]="summaryBalance < 0">
+            S/ {{ summaryBalance.toFixed(2) }}
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold"
+              [class.text-emerald-600]="summaryBalance >= 0"
+              [class.text-red-600]="summaryBalance < 0">
+              <span class="material-symbols-outlined text-[14px]">
+                {{ summaryBalance >= 0 ? 'trending_up' : 'trending_down' }}
+              </span>
+              {{ summaryBalance >= 0 ? 'Positivo' : 'Negativo' }}
+            </span>
+            <span class="text-xs text-on-surface-variant">Ingresos - Gastos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ CHARTS ROW ═══ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">stacked_line_chart</span>
+              Ingresos vs Gastos
+            </h3>
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1.5 text-[11px]">
+                <span class="w-3 h-0.5 rounded-full bg-[#75a83a]"></span>
+                <span class="text-on-surface-variant font-medium">Ingresos</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-[11px]">
+                <span class="w-3 h-0.5 rounded-full bg-[#ba1a1a]"></span>
+                <span class="text-on-surface-variant font-medium">Gastos</span>
+              </span>
+            </div>
+          </div>
+          <div class="relative" style="height: 260px">
+            <canvas baseChart [data]="dashIncomeExpenseChart" [options]="dashIncomeExpenseOpt" [type]="dashIncomeExpenseType"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-lg">donut_large</span>
+              Gastos por Categoría
+            </h3>
+          </div>
+          <div class="relative" style="height: 220px">
+            <canvas baseChart [data]="dashExpenseCategoryChart" [options]="dashExpenseCategoryOpt" [type]="dashExpenseCategoryType"></canvas>
+          </div>
+          @if (dashExpenseStats.total > 0) {
+            <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-outline-variant/20">
+              <div class="text-center">
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Terapeutas</p>
+                <p class="text-sm font-bold text-emerald-700 dark:text-emerald-400">S/ {{ dashExpenseStats.therapistPayments.toFixed(0) }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Operativos</p>
+                <p class="text-sm font-bold text-blue-700 dark:text-blue-400">S/ {{ dashExpenseStats.operational.toFixed(0) }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- ═══ COLLECTION EFFICIENCY ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-lg">speed</span>
+                Eficiencia de Cobranza
+              </h3>
+              <span class="text-2xl font-black text-on-surface">{{ dashCollectionRate.toFixed(0) }}%</span>
+            </div>
+            <div class="w-full h-2.5 bg-surface-container-high rounded-full overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-1000"
+                [class.bg-emerald-500]="dashCollectionRate >= 75"
+                [class.bg-amber-500]="dashCollectionRate >= 40 && dashCollectionRate < 75"
+                [class.bg-red-500]="dashCollectionRate < 40"
+                [style.width.%]="dashCollectionRate"
+              ></div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mt-3">
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Recaudado</p>
+                <p class="text-sm font-bold text-emerald-600">S/ {{ (financials?.income_real || 0).toFixed(2) }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Proyectado</p>
+                <p class="text-sm font-bold text-on-surface">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Pendiente</p>
+                <p class="text-sm font-bold text-orange-600">S/ {{ Math.max(0, (financials?.income_expected || 0) - (financials?.income_real || 0)).toFixed(2) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ RECENT TRANSACTIONS ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-lg">receipt_long</span>
+            Transacciones Recientes
+          </h3>
+          @if (dashRecentTransactions.length > 0) {
+            <span class="text-[11px] font-bold text-on-surface-variant">{{ dashRecentTransactions.length }} última(s)</span>
+          }
+        </div>
+        @if (dashRecentTransactions.length > 0) {
+          <div class="divide-y divide-outline-variant/10">
+            @for (t of dashRecentTransactions; track t.id) {
+              <div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-surface-container-low/30 -mx-2 px-2 rounded-lg transition-colors">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm"
+                  [class.bg-purple-100]="t.method === 'yape' || t.method === 'plin'"
+                  [class.bg-blue-100]="t.method === 'transfer'"
+                  [class.bg-green-100]="t.method === 'cash'"
+                  [class.bg-cyan-100]="t.method === 'card'"
+                  [class.bg-surface-container-high]="!['yape','plin','transfer','cash','card'].includes(t.method)">
+                  <span class="material-symbols-outlined text-lg"
+                    [class.text-purple-600]="t.method === 'yape' || t.method === 'plin'"
+                    [class.text-blue-600]="t.method === 'transfer'"
+                    [class.text-green-600]="t.method === 'cash'"
+                    [class.text-cyan-600]="t.method === 'card'"
+                    [class.text-on-surface-variant]="!['yape','plin','transfer','cash','card'].includes(t.method)">
+                    @switch (t.method) {
+                      @case ('yape') { smartphone }
+                      @case ('plin') { smartphone }
+                      @case ('transfer') { account_balance }
+                      @case ('cash') { payments }
+                      @case ('card') { credit_card }
+                      @default { receipt }
+                    }
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-on-surface truncate">{{ t.patient_name || 'Paciente' }}</p>
+                  <p class="text-[11px] text-on-surface-variant">{{ t.date | date:'dd/MM/yyyy' }} · {{ getMethodLabel(t.method) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-bold text-on-surface">S/ {{ (t.amount - (t.discount || 0)).toFixed(2) }}</p>
+                  @if (t.reference) {
+                    <p class="text-[10px] text-on-surface-variant/60 truncate max-w-[100px]">{{ t.reference }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="text-center py-8">
+            <span class="material-symbols-outlined text-3xl text-on-surface-variant/40 block mb-2">receipt_long</span>
+            <p class="text-sm font-medium text-on-surface-variant">Sin transacciones recientes</p>
+            <p class="text-xs text-on-surface-variant/60 mt-0.5">Los pagos registrados aparecerán aquí</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ═══ TAB: DEUDORES ═══ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'deudores') {
+    <div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
+
+      <!-- Header with filters -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'credit-card']" class="text-primary"></fa-icon> Deudores
+          </h2>
+          <p class="text-sm text-on-surface-variant">Gestiona pagos pendientes por sede</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select (change)="onDebtorMonthChange($any($event.target).value)" class="pl-3 pr-8 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer">
+            <option value="current">Mes Actual</option>
+            <option value="all">Histórico Total</option>
+          </select>
+          <app-button variant="primary" label="Actualizar" [icon]="['fas', 'sync-alt']" (clicked)="loadDebtorsData()"></app-button>
+        </div>
+      </div>
+
+      <!-- Daily Guide -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-blue-100 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'tasks']" class="text-blue-500"></fa-icon> Guía de Flujo Diario
+            </h3>
+            <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-3">
+              <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-blue-200 transition-all cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                  <fa-icon [icon]="['fas', 'phone-alt']" class="text-xs"></fa-icon>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-on-surface">Contactar Morosos (>3 días)</p>
+                  <p class="text-[10px] text-on-surface-variant">Prioridad: Alta. Enviar recordatorio vía WhatsApp.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-blue-200 transition-all cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
+                  <fa-icon [icon]="['fas', 'calendar-check']" class="text-xs"></fa-icon>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-on-surface">Validar Sesiones de Ayer</p>
+                  <p class="text-[10px] text-on-surface-variant">Verifica que los terapeutas marcaron asistencia.</p>
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-blue-200 transition-all cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                  <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-xs"></fa-icon>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-on-surface">Conciliación de Vouchers</p>
+                  <p class="text-[10px] text-on-surface-variant">Hay pagos pendientes de validar en el historial.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-blue-200 transition-all cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                  <fa-icon [icon]="['fas', 'user-plus']" class="text-xs"></fa-icon>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-on-surface">Nuevos Ingresos</p>
+                  <p class="text-[10px] text-on-surface-variant">Completa la modalidad de pacientes nuevos.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="space-y-4">
+          <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-red-100 p-5">
+            <p class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Deuda Total</p>
+            <p class="text-2xl font-black text-red-700">S/ {{ totalDeuda.toFixed(2) }}</p>
+          </div>
+          <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-orange-100 p-5">
+            <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">Deudores</p>
+            <p class="text-2xl font-black text-orange-700">{{ totalDeudores }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sede Groups -->
+      @if (debtorsLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+        @for (group of filteredGroups; track group.sede_name) {
+          <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/20 overflow-hidden">
+            <div class="px-6 py-4 bg-surface-container-high border-b border-outline-variant/20 flex justify-between items-center">
+              <h3 class="font-bold text-on-surface flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon> {{ group.sede_name }}
+              </h3>
+              <span class="text-sm font-bold text-red-600">S/ {{ group.total_deuda.toFixed(2) }}</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="bg-surface-container-high/50">
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Paciente</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Modalidad</th>
+                    <th class="px-5 py-3 text-right text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Monto</th>
+                    <th class="px-5 py-3 text-center text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Vencimiento</th>
+                    <th class="px-5 py-3 text-right text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                  @for (d of group.deudores; track $index) {
+                    <tr class="hover:bg-surface-container-high/80 transition-colors">
+                      <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold text-xs">{{ getInitials(d.paciente) }}</div>
+                          <div>
+                            <p class="text-sm font-medium text-on-surface">{{ d.paciente }}</p>
+                            <p class="text-[10px] text-on-surface-variant/60">{{ d.email }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-5 py-3 text-sm text-on-surface">{{ d.modality }}</td>
+                      <td class="px-5 py-3 text-right text-sm font-bold text-red-600">S/ {{ d.monto.toFixed(2) }}</td>
+                      <td class="px-5 py-3 text-center text-sm text-on-surface">{{ d.fecha_vencimiento }}</td>
+                      <td class="px-5 py-3 text-right">
+                        <div class="flex justify-end gap-2">
+                          @if (getWhatsAppLink(d.phone, d.paciente, d.monto)) {
+                            <a [href]="getWhatsAppLink(d.phone, d.paciente, d.monto)" target="_blank" class="w-8 h-8 rounded-lg bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-all text-xs" title="WhatsApp">
+                              <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
+                            </a>
+                          }
+                          <button (click)="openPaymentModal(d)" class="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-all cursor-pointer">
+                            Cobrar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @empty {
+          <div class="text-center py-16 text-on-surface-variant/60">
+            <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl mb-3"></fa-icon>
+            <p class="text-sm font-bold">No hay deudores registrados</p>
+            <p class="text-[10px] text-on-surface-variant/40 mt-1">Todas las cuentas están al día</p>
+          </div>
+        }
+      }
+    </div>
+
+    <app-modal [isOpen]="showPaymentModal" title="Registrar Pago" (close)="closePaymentModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Paciente</label>
+          <p class="text-sm font-bold text-on-surface">{{ paymentForm.patient_name }}</p>
+        </div>
+        <app-input id="modal-amount" label="Monto (S/)" type="number" [(value)]="paymentForm.amount"></app-input>
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Método</label>
+          <select [(ngModel)]="paymentForm.method" class="w-full px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:border-primary outline-none">
+            <option value="transfer">Transferencia</option>
+            <option value="yape">Yape</option>
+            <option value="cash">Efectivo</option>
+          </select>
+        </div>
+        <app-input id="modal-reference" label="Referencia" [(value)]="paymentForm.reference"></app-input>
+      </div>
+      <div modal-footer>
+        <div class="flex items-center justify-between w-full">
+          <span class="text-sm text-on-surface-variant">{{ paymentStatus }}</span>
+          <div class="flex gap-3">
+            <app-button variant="ghost" label="Cancelar" (clicked)="closePaymentModal()"></app-button>
+            <app-button variant="primary" label="Registrar" (clicked)="submitDebtorPayment()"></app-button>
+          </div>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ═══ TAB: PAGOS ═══ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'pagos') {
+    <div class="p-4 md:p-8 -mx-4 md:-mx-8 -mb-8 space-y-6 animate-fade-in" [@fadeInUp]>
+
+      @if (paymentsLoading) {
+        <div class="flex justify-center py-24">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+
+        <!-- Setup Guidance Banner -->
+        @if (incompletePlanPatients.length > 0) {
+          <div class="flex items-start gap-4 p-4 bg-orange-50 dark:bg-amber-500/10 border border-orange-200 dark:border-amber-500/20 rounded-xl">
+            <span class="material-symbols-outlined text-orange-500 text-2xl shrink-0">notification_important</span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-orange-800 dark:text-amber-400">
+                {{ incompletePlanPatients.length }} pacientes sin configuración de pago
+              </p>
+              <p class="text-xs text-orange-600 dark:text-amber-300 mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
+            </div>
+          </div>
+        }
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-emerald-700 dark:text-emerald-400">Total Recaudado (Mes)</span>
+              <span class="material-symbols-outlined text-emerald-500 text-xl">payments</span>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalIncomeReal.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-emerald-500">trending_up</span>
+              Ingresos del período actual
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-blue-700 dark:text-blue-400">Pendiente por Cobrar</span>
+              <span class="material-symbols-outlined text-blue-500 text-xl">account_balance_wallet</span>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalPending.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-blue-500">schedule</span>
+              Monto total pendiente
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-red-700 dark:text-red-400">Total Deuda</span>
+              <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-red-500">people</span>
+              {{ financials?.overdue_users_count || 0 }} pacientes morosos
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-primary">Pacientes Registrados</span>
+              <span class="material-symbols-outlined text-primary text-xl">personal_health</span>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">{{ totalPatients }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+              En el sistema de pagos
+            </p>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">donut_large</span>
+              Estado de Pagos
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">location_on</span>
+              Deuda por Sede
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">schedule</span>
+              Antigüedad de Vencimientos
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">trending_up</span>
+              Historial de Ingresos (6 Meses)
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">category</span>
+              Ingresos por Tipo de Plan
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+              Proyección vs Real
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 7: Revenue by Location -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 lg:col-start-2">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[16px]">map</span>
+              Ingresos por Sede
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
+          <button
+            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+            [class.bg-surface-container-lowest]="pagosTab === 'pacientes'"
+            [class.text-on-surface]="pagosTab === 'pacientes'"
+            [class.text-on-surface-variant]="pagosTab !== 'pacientes'"
+            [class.shadow-sm]="pagosTab === 'pacientes'"
+            (click)="pagosTab = 'pacientes'"
+          >
+            <span class="material-symbols-outlined text-[18px]">group</span>
+            Pacientes
+          </button>
+          <button
+            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+            [class.bg-surface-container-lowest]="pagosTab === 'historial'"
+            [class.text-on-surface]="pagosTab === 'historial'"
+            [class.text-on-surface-variant]="pagosTab !== 'historial'"
+            [class.shadow-sm]="pagosTab === 'historial'"
+            (click)="pagosTab = 'historial'"
+          >
+            <span class="material-symbols-outlined text-[18px]">history</span>
+            Historial
+            @if (paymentHistory.length > 0) {
+              <span class="text-[10px] bg-primary/10 text-primary font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
+            }
+          </button>
+        </div>
+
+        <!-- Pacientes Subtab -->
+        @if (pagosTab === 'pacientes') {
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
+
+            <div class="flex flex-col gap-4 mb-6">
+              <div class="flex flex-col md:flex-row gap-3">
+                <div class="relative flex-1">
+                  <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                  <input
+                    (input)="searchQuery = $any($event.target).value"
+                    [value]="searchQuery"
+                    type="text"
+                    placeholder="Buscar paciente..."
+                    class="input-field !pl-10"
+                  >
+                </div>
+
+                <select (change)="selectedSedeId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
+                  <option value="">Todas las Sedes</option>
+                  @for (s of sedes; track s.id) {
+                    <option [value]="s.id" [selected]="selectedSedeId === s.id">{{ s.name }}</option>
+                  }
+                </select>
+
+                <select (change)="selectedTherapistId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
+                  <option value="">Todos los Terapeutas</option>
+                  @for (t of therapistsList; track t.id) {
+                    <option [value]="t.id" [selected]="selectedTherapistId === t.id">{{ t.username }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="flex flex-col md:flex-row gap-3">
+                <select (change)="selectedStatus = $any($event.target).value" class="input-field min-w-[160px]">
+                  <option value="">Todos los Estados</option>
+                  <option value="al_dia">Al Día</option>
+                  <option value="deudor">Deudores</option>
+                  <option value="sin_plan">Sin Plan</option>
+                  <option value="inactivo">Inactivos</option>
+                </select>
+
+                <select (change)="selectedSort = $any($event.target).value" class="input-field min-w-[180px]">
+                  <option value="">Ordenar por...</option>
+                  <option value="nombre">Nombre</option>
+                  <option value="vencimiento_cercano">Vencimiento cercano</option>
+                  <option value="vencimiento_lejano">Vencimiento lejano</option>
+                  <option value="mayor_deuda">Mayor deuda</option>
+                </select>
+
+                @if (activeFilterCount > 0) {
+                  <div class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+                    <span class="material-symbols-outlined text-[14px]">filter_alt</span>
+                    {{ activeFilterCount }} filtro{{ activeFilterCount > 1 ? 's' : '' }} activo{{ activeFilterCount > 1 ? 's' : '' }}
+                    <button (click)="clearFilters()" class="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer">
+                      <span class="material-symbols-outlined text-[14px]">close</span>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Desktop Table -->
+            <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/30">
+              <table class="w-full min-w-[1000px]">
+                <thead>
+                  <tr class="bg-surface-container-high/50">
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Plan / Frecuencia</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Progreso</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Deuda Est.</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Próx. Venc.</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Estado</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                  @for (p of filteredPatients; track p.id) {
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                      <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-3">
+                          <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                            {{ getInitials(p.username) }}
+                          </div>
+                          <div class="min-w-0">
+                            <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                            <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
+                      <td class="px-4 py-3.5">
+                        <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
+                        @if (p.plan_frequency) {
+                          <span class="text-xs text-on-surface-variant block">{{ p.plan_frequency }}</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-2 justify-center">
+                          <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                            <div
+                              class="h-full rounded-full transition-all duration-700"
+                              [class.bg-emerald-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                              [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                              [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                              [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
+                            ></div>
+                          </div>
+                          <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
+                            {{ p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100).toFixed(0) : '0' }}%
+                          </span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-right">
+                        @if (p.payment_amount <= 0) {
+                          <span class="text-sm text-on-surface-variant">—</span>
+                        } @else {
+                          <span
+                            class="text-sm font-bold"
+                            [class.text-green-700]="p.payment_amount < 100"
+                            [class.text-amber-700]="p.payment_amount >= 100 && p.payment_amount < 300"
+                            [class.text-red-700]="p.payment_amount >= 300"
+                          >
+                            S/ {{ p.payment_amount.toFixed(2) }}
+                          </span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                        @if (p.next_due_date) {
+                          <div class="flex flex-col items-center">
+                            <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+                            @if (isOverdue(p)) {
+                              <span class="text-[10px] font-black text-red-600 bg-red-100 dark:bg-red-500/10 dark:text-red-400 px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+                            }
+                          </div>
+                        } @else {
+                          <span class="text-sm text-on-surface-variant">—</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                          [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                          <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                          {{ getStatusInfo(p).label }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Registrar Pago"
+                            (click)="openRegisterModal(p)"
+                          >
+                            <span class="material-symbols-outlined text-[16px]">payments</span>
+                          </button>
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Configurar Plan"
+                            (click)="openSettingsModal(p)"
+                          >
+                            <span class="material-symbols-outlined text-[16px]">settings</span>
+                          </button>
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Ver Historial"
+                            (click)="viewPatientHistory(p)"
+                          >
+                            <span class="material-symbols-outlined text-[16px]">history</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="9" class="px-4 py-16 text-center">
+                        <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">payments</span>
+                        <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+                        <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card Layout -->
+            <div class="md:hidden space-y-3">
+              @for (p of filteredPatients; track p.id) {
+                <div
+                  class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4 transition-all duration-200"
+                  [class.border-l-4]="isOverdue(p)"
+                  [class.border-l-red-500]="isOverdue(p)"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                        {{ getInitials(p.username) }}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                        <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
+                      </div>
+                    </div>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+                      [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                      <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                      {{ getStatusInfo(p).label }}
+                    </span>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mb-3">
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Sede</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.sede_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.therapist_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Plan</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.plan_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Deuda</span>
+                      <p class="text-sm font-bold"
+                        [class.text-green-700]="p.payment_amount < 100"
+                        [class.text-amber-700]="p.payment_amount >= 100 && p.payment_amount < 300"
+                        [class.text-red-700]="p.payment_amount >= 300">
+                        S/ {{ p.payment_amount.toFixed(2) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="flex justify-between text-xs text-on-surface-variant mb-1">
+                      <span>Progreso</span>
+                      <span class="font-bold">{{ p.sessions_attended }}/{{ p.sessions_total }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all"
+                        [class.bg-emerald-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                        [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                        [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                        [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
+                      ></div>
+                    </div>
+                  </div>
+
+                  @if (p.next_due_date) {
+                    <div class="flex items-center gap-2 mb-3 text-xs">
+                      <span class="material-symbols-outlined text-[14px] text-on-surface-variant">event</span>
+                      <span class="text-on-surface-variant">Próx. venc.:</span>
+                      <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+                      @if (isOverdue(p)) {
+                        <span class="text-[10px] font-black text-red-600 bg-red-100 dark:bg-red-500/10 dark:text-red-400 px-1.5 py-0.5 rounded-full">VENCIDO</span>
+                      }
+                    </div>
+                  }
+
+                  <div class="flex gap-2 pt-2 border-t border-outline-variant/20">
+                    <button class="btn-primary !text-xs !px-3 !py-2 flex-1" (click)="openRegisterModal(p)">
+                      <span class="material-symbols-outlined text-[14px]">payments</span>
+                      Pagar
+                    </button>
+                    <button class="btn-secondary !text-xs !px-3 !py-2 flex-1" (click)="openSettingsModal(p)">
+                      <span class="material-symbols-outlined text-[14px]">settings</span>
+                      Plan
+                    </button>
+                    <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
+                      <span class="material-symbols-outlined text-[16px]">history</span>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="text-center py-12">
+                  <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">payments</span>
+                  <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+                  <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
+                </div>
+              }
+            </div>
+
+          </div>
+        }
+
+        <!-- Historial Subtab -->
+        @if (pagosTab === 'historial') {
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
+
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-lg">receipt_long</span>
+                Historial de Pagos
+              </h3>
+              <div class="flex gap-3 items-center">
+                <select (change)="historyMonth = $any($event.target).value" class="input-field min-w-[160px]">
+                  <option value="">Todos los meses</option>
+                  @for (m of historyMonths; track m) {
+                    <option [value]="m" [selected]="historyMonth === m">{{ m }}</option>
+                  }
+                </select>
+                <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-outline-variant/30">
+              <table class="w-full min-w-[800px]">
+                <thead>
+                  <tr class="bg-surface-container-high/50">
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Monto</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Método</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Referencia</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Documentos</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Fecha</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                  @for (p of filteredHistory; track p.id) {
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                      <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name || '—' }}</td>
+                      <td class="px-4 py-3.5 text-right">
+                        <span class="text-sm font-bold text-on-surface">S/ {{ (p.amount - (p.discount || 0)).toFixed(2) }}</span>
+                        @if (p.discount > 0) {
+                          <span class="text-[10px] text-on-surface-variant block">Desc: S/ {{ p.discount.toFixed(2) }}</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                          [class]="getMethodBadgeClass(p.method)">
+                          <span class="material-symbols-outlined text-[12px]">
+                            @switch (p.method) {
+                              @case ('yape') { smartphone }
+                              @case ('plin') { smartphone }
+                              @case ('transfer') { account_balance }
+                              @case ('cash') { payments }
+                              @case ('card') { credit_card }
+                              @default { receipt }
+                            }
+                          </span>
+                          {{ getMethodLabel(p.method) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.reference || '—' }}</td>
+                      <td class="px-4 py-3.5 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                          @if (p.receipt_image_path) {
+                            <a [href]="p.receipt_image_path" target="_blank" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
+                              <span class="material-symbols-outlined text-[14px]">image</span>
+                            </a>
+                          }
+                          @if (p.document_number) {
+                            <span class="text-[10px] text-on-surface-variant font-medium" title="DNI: {{ p.document_number }}">
+                              <span class="material-symbols-outlined text-[12px]">badge</span>
+                            </span>
+                          }
+                          @if (!p.receipt_image_path && !p.document_number) {
+                            <span class="text-xs text-on-surface-variant">—</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
+                      <td class="px-4 py-3.5 text-right">
+                        <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" title="Eliminar">
+                          <span class="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="px-4 py-16 text-center">
+                        <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">receipt_long</span>
+                        <p class="text-sm font-medium text-on-surface-variant">No hay historial de pagos</p>
+                        <p class="text-xs text-on-surface-variant mt-1">Los pagos registrados aparecerán aquí.</p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Register Payment Modal -->
+    <app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
+          <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
+          <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de Pago</label>
+          <input [(ngModel)]="registerForm.payment_date" type="date" class="input-field">
+        </div>
+        <app-input id="amount" label="Monto (S/)" type="number" [(value)]="registerForm.amount"></app-input>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Método</label>
+            <select [(ngModel)]="registerForm.method" class="input-field">
+              <option value="transfer">Transferencia</option>
+              <option value="yape">Yape</option>
+              <option value="plin">Plin</option>
+              <option value="cash">Efectivo</option>
+              <option value="card">Tarjeta</option>
+            </select>
+          </div>
+          <app-input id="discount" label="Descuento (S/)" type="number" [(value)]="registerForm.discount"></app-input>
+        </div>
+        <app-input id="reference" label="Referencia" [(value)]="registerForm.reference" placeholder="N° de operación"></app-input>
+        <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
+
+        @if (needsRecalculation) {
+          <div class="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+            <span class="material-symbols-outlined text-blue-500 text-lg shrink-0">info</span>
+            <p class="text-xs text-blue-700 dark:text-blue-400">
+              <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
+            </p>
+          </div>
+        }
+
+        @if (hasMissingData) {
+          <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+            <span class="material-symbols-outlined text-amber-500 text-lg shrink-0">warning</span>
+            <div>
+              <p class="text-xs font-bold text-amber-800 dark:text-amber-400">Datos faltantes</p>
+              <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                @if (!registerForm.document_number) { • DNI del paciente<br> }
+                @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
+                Se recomienda completar estos campos para el comprobante.
+              </p>
+            </div>
+          </div>
+        }
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
+          <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
+        </div>
+
+        @if (analyzingReceipt) {
+          <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg">
+            <app-spinner size="sm" colorClass="text-purple-500"></app-spinner>
+            <span class="text-xs font-medium text-purple-700 dark:text-purple-400">Analizando voucher con OCR...</span>
+          </div>
+        }
+
+        @if (analyzeResult && !analyzingReceipt) {
+          <div class="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
+            <span class="material-symbols-outlined text-green-500 text-lg shrink-0">check_circle</span>
+            <div>
+              <p class="text-xs font-bold text-green-800 dark:text-green-400">OCR Completado</p>
+              <p class="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
+              </p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div modal-footer>
+        <div class="flex items-center justify-between w-full">
+          <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
+          <div class="flex gap-2">
+            <button class="btn-secondary !text-xs !px-4 !py-2" (click)="closeRegisterModal()">Cancelar</button>
+            <button class="btn-primary !text-xs !px-4 !py-2" [disabled]="!registerForm.amount" (click)="submitRegisterPayment()">
+              <span class="material-symbols-outlined text-[14px]">save</span>
+              Registrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </app-modal>
+
+    <!-- Settings Modal -->
+    <app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
+      <div class="space-y-4">
+        <p class="text-sm text-on-surface-variant">
+          Configurando plan para <strong class="text-on-surface">{{ settingsForm.patient_name }}</strong>
+        </p>
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Frecuencia de Pago</label>
+          <select [(ngModel)]="settingsForm.payment_plan" class="input-field">
+            <option value="Mensual">Mensual</option>
+            <option value="Quincenal">Quincenal</option>
+          </select>
+        </div>
+        <app-input id="settings-amount" label="Monto Acordado (S/)" type="number" [(value)]="settingsForm.payment_amount"></app-input>
+        <app-input id="settings-due" label="Fecha de Vencimiento Actual" type="date" [(value)]="settingsForm.payment_due_date"></app-input>
+      </div>
+      <div modal-footer>
+        <div class="flex items-center justify-between w-full">
+          <span class="text-xs text-on-surface-variant">{{ settingsStatus }}</span>
+          <div class="flex gap-2">
+            <button class="btn-secondary !text-xs !px-4 !py-2" (click)="closeSettingsModal()">Cancelar</button>
+            <button class="btn-primary !text-xs !px-4 !py-2" [disabled]="!settingsForm.payment_amount" (click)="submitSettings()">
+              <span class="material-symbols-outlined text-[14px]">save</span>
+              Guardar Configuración
+            </button>
+          </div>
+        </div>
+      </div>
+    </app-modal>
+  }
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- ═══ TAB: GASTOS ═══ -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  @if (activeTab === 'gastos') {
+    <div class="p-4 md:p-8 -mx-4 md:-mx-8 -mb-8 space-y-8" [@fadeInUp]>
+
+      @if (expensesLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+        <!-- Therapist Payroll -->
+        <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+          <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h3 class="text-lg font-semibold text-on-surface">Nómina de Terapeutas (Mes Actual)</h3>
+            <app-button variant="secondary" label="Registrar Gasto Operativo" [icon]="['fas', 'plus']" (clicked)="openOperationalModal()"></app-button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-outline-variant/20">
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Terapeuta</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Contrato</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Horas Trab.</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">A Pagar (Est.)</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pagado</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pendiente</th>
+                  <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant/10">
+                @for (t of therapistFinancials; track t.therapist.id) {
+                  <tr class="hover:bg-surface-container-high/50">
+                    <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username }}</td>
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">
+                      @if (t.contract_hours > 0) {
+                        S/ {{ t.rate.toFixed(2) }}/hr
+                        <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
+                      } @else {
+                        <span class="text-xs text-orange-400 bg-orange-50 px-2 py-1 rounded">Sin contrato</span>
+                      }
+                    </td>
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
+                    <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
+                    <td class="px-6 py-4 text-sm text-green-600">S/ {{ t.paid.toFixed(2) }}</td>
+                    <td class="px-6 py-4 text-sm" [class.text-red-500]="t.balance > 0" [class.text-green-500]="t.balance <= 0">
+                      S/ {{ t.balance.toFixed(2) }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      @if (t.balance > 0) {
+                        <app-button variant="primary" label="Pagar" [icon]="['fas', 'hand-holding-usd']" (clicked)="openTherapistPaymentModal(t)"></app-button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="7" class="px-6 py-8 text-center text-on-surface-variant/60">No hay terapeutas activos.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Expenses -->
+        <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+          <h3 class="text-lg font-semibold text-on-surface mb-6">Historial de Gastos Recientes</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-outline-variant/20">
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Fecha</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Categoría</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Descripción</th>
+                  <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Monto</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant/10">
+                @for (e of recentExpenses; track e.id) {
+                  <tr class="hover:bg-surface-container-high/50">
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
+                    <td class="px-6 py-4 text-sm capitalize">
+                      <span class="px-2 py-1 rounded text-xs font-bold"
+                        [class.bg-blue-100]="e.category === 'therapist_payment'" [class.text-blue-700]="e.category === 'therapist_payment'"
+                        [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
+                        [class.bg-green-100]="e.category === 'bonus'" [class.text-green-700]="e.category === 'bonus'"
+                        [class.bg-yellow-100]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'"
+                        [class.text-yellow-700]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'">
+                        {{ e.category.replace('_', ' ') }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-on-surface">
+                      {{ e.description }}
+                      @if (e.therapist) {
+                        <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username }}</span>
+                      }
+                      <div class="mt-1 flex items-center gap-2">
+                        @if (e.method) {
+                          <span class="text-xs border px-1 rounded text-on-surface-variant bg-surface-container-lowest">
+                            {{ e.method === 'transfer' ? 'Transferencia' : e.method === 'yape_plin' ? 'Yape/Plin' : e.method === 'cash' ? 'Efectivo' : e.method }}
+                          </span>
+                        }
+                        @if (e.receipt_image_path) {
+                          <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-green-700" title="Ver Comprobante">
+                            <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+                          </a>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">S/ {{ e.amount.toFixed(2) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4" class="px-6 py-8 text-center text-on-surface-variant/60">No hay gastos registrados.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Expense Modal -->
+    <app-modal [isOpen]="showExpenseModal" [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'" (close)="closeExpenseModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Categoría</label>
+          <select [(ngModel)]="expenseForm.category" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
+            <option value="therapist_payment">Pago a Terapeuta</option>
+            <option value="operational">Gasto Operativo</option>
+            <option value="bonus">Bonificación</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+
+        @if (expenseForm.therapist_id) {
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Destinatario</label>
+            <input type="text" [value]="expenseForm.therapist_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+          </div>
+        }
+
+        <app-input id="expense-amount" label="Monto (S/)" type="number" [(value)]="expenseForm.amount"></app-input>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
+          <select [(ngModel)]="expenseForm.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
+            <option value="transfer">Transferencia Bancaria</option>
+            <option value="yape_plin">Yape / Plin</option>
+            <option value="cash">Efectivo</option>
+            <option value="other">Otro</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Comprobante (Imagen)</label>
+          <input type="file" (change)="onExpenseFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-green-100">
+        </div>
+
+        <app-input id="expense-date" label="Fecha" type="date" [(value)]="expenseForm.date"></app-input>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas / Descripción</label>
+          <textarea [(ngModel)]="expenseForm.description" rows="2" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
+        </div>
+
+        <app-button variant="primary" label="Registrar" [disabled]="submitting" (clicked)="submitExpenseForm()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+</div>

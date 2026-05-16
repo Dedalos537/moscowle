@@ -2,12 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { Payment } from '../../../../core/models/payment';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-payment-history',
   standalone: false,
   templateUrl: './payment-history.html',
   styleUrl: './payment-history.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class PaymentHistory implements OnInit {
   userId!: number;

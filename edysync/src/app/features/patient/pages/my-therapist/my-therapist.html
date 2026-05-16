@@ -1,0 +1,43 @@
+<div *ngIf="loading" class="flex justify-center items-center h-96">
+  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+</div>
+
+<div *ngIf="!loading && therapist" class="max-w-2xl mx-auto" [@fadeInUp]>
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-outline-variant/20 overflow-hidden">
+    <div class="bg-primary/5 p-8 text-center border-b border-border">
+      <div class="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+        <fa-icon [icon]="['fas', 'user']" class="text-3xl text-primary"></fa-icon>
+      </div>
+      <h2 class="text-xl font-bold text-textDark">{{ therapist.username }}</h2>
+      <p class="text-sm text-charcoal">{{ therapist.email }}</p>
+    </div>
+    <div class="p-6 space-y-4">
+      <div *ngIf="therapist.phone" class="flex items-center gap-3">
+        <fa-icon [icon]="['fas', 'phone']" class="text-primary w-5"></fa-icon>
+        <span class="text-sm text-textDark">{{ therapist.phone }}</span>
+      </div>
+      <div *ngIf="therapist.specialties?.length" class="flex items-center gap-3">
+        <fa-icon [icon]="['fas', 'stethoscope']" class="text-primary w-5"></fa-icon>
+        <div class="flex flex-wrap gap-2">
+          <span *ngFor="let spec of therapist.specialties"
+                class="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">{{ spec }}</span>
+        </div>
+      </div>
+      <div *ngIf="therapist.bio" class="pt-4 border-t border-border">
+        <p class="text-sm text-charcoal">{{ therapist.bio }}</p>
+      </div>
+      <div class="pt-4 flex gap-3">
+        <a routerLink="/patient/messages"
+           class="flex-1 text-center px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-fixed-dim transition-colors">
+          <fa-icon [icon]="['fas', 'envelope']" class="mr-2"></fa-icon>
+          Enviar Mensaje
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!loading && !therapist" class="text-center py-16 text-charcoal">
+  <fa-icon [icon]="['fas', 'user-md']" class="text-4xl mb-3 opacity-30"></fa-icon>
+  <p class="text-sm">No tienes un terapeuta asignado aún</p>
+</div>

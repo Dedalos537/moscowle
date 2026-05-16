@@ -1,1 +1,90 @@
-<p>contact works!</p>
+<div class="max-w-4xl mx-auto py-12">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+    <!-- Info -->
+    <div>
+      <h1 class="text-3xl font-extrabold text-textDark mb-4">Contáctanos</h1>
+      <p class="text-charcoal mb-8">Estamos aquí para resolver tus dudas y mostrarte cómo EduSync AI puede transformar tu centro terapéutico.</p>
+      
+      <div class="space-y-6">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon>
+          </div>
+          <div>
+            <p class="font-bold text-textDark">Dirección</p>
+            <p class="text-sm text-charcoal">Centro de Terapias Juan Pablo II<br>Piura, Perú</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <fa-icon [icon]="['fas', 'envelope']" class="text-primary"></fa-icon>
+          </div>
+          <div>
+            <p class="font-bold text-textDark">Email</p>
+            <p class="text-sm text-charcoal">contacto@edusync.ai</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <fa-icon [icon]="['fas', 'phone']" class="text-primary"></fa-icon>
+          </div>
+          <div>
+            <p class="font-bold text-textDark">Teléfono</p>
+            <p class="text-sm text-charcoal">+51 999 888 777</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-8 border border-outline-variant/20">
+      <div *ngIf="success" class="text-center py-8">
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl text-green-500 mb-3"></fa-icon>
+        <p class="text-lg font-bold text-textDark">¡Mensaje enviado!</p>
+        <p class="text-sm text-charcoal">Te contactaremos pronto.</p>
+        <button (click)="success = false" class="mt-4 text-sm font-bold text-primary hover:underline">Enviar otro mensaje</button>
+      </div>
+
+      <div *ngIf="!success" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-charcoal mb-1">Nombre *</label>
+            <input [(ngModel)]="form.first_name" required
+                   class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-charcoal mb-1">Apellido *</label>
+            <input [(ngModel)]="form.last_name" required
+                   class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-charcoal mb-1">Email *</label>
+          <input [(ngModel)]="form.email" type="email" required
+                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-charcoal mb-1">Teléfono</label>
+          <input [(ngModel)]="form.phone"
+                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-charcoal mb-1">Asunto</label>
+          <input [(ngModel)]="form.subject"
+                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-charcoal mb-1">Mensaje *</label>
+          <textarea [(ngModel)]="form.message" rows="4" required
+                    class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"></textarea>
+        </div>
+        <p *ngIf="error" class="text-sm text-red-500">{{ error }}</p>
+        <button (click)="submitForm()" [disabled]="submitting || !form.first_name || !form.last_name || !form.email || !form.message"
+                class="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-fixed-dim transition-colors disabled:opacity-50">
+          <fa-icon [icon]="['fas', 'spinner']" *ngIf="submitting" class="mr-2 fa-spin"></fa-icon>
+          Enviar Mensaje
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

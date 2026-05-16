@@ -1,5 +1,18 @@
-<div class="flex min-h-screen items-center justify-center p-4 bg-[#F8FAFC]">
-  <div class="w-full max-w-md bg-white rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] p-10 relative overflow-hidden">
+<div class="flex min-h-screen items-center justify-center p-4 bg-[#F8FAFC] dark:bg-[#0f0f10] transition-colors duration-300">
+  
+  <!-- Dark Mode Toggle -->
+  <button (click)="toggleDarkMode()"
+    class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-lg border z-50 cursor-pointer"
+    [ngClass]="darkMode ? 'bg-[#1e1f20] text-[#fbbf24] border-[#373839] hover:bg-[#2a2b2d]' : 'bg-white text-[#64748b] border-[#e2e8f0] hover:bg-[#f8fafc]'"
+    [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
+    @if (darkMode) {
+      <fa-icon [icon]="['fas', 'sun']" class="text-lg"></fa-icon>
+    } @else {
+      <fa-icon [icon]="['fas', 'moon']" class="text-lg"></fa-icon>
+    }
+  </button>
+
+  <div class="w-full max-w-md bg-white dark:bg-[#18191a] rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] p-10 relative overflow-hidden transition-colors duration-300">
       
       <!-- Decorational Line top -->
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#86c246] to-[#b7e477]"></div>
@@ -9,9 +22,9 @@
           <div class="w-20 h-20 mx-auto mb-4">
               <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
           </div>
-          <h2 class="text-2xl font-bold text-[#334155] tracking-tight">Centro de Terapias</h2>
-          <h3 class="text-lg font-medium text-[#64748b]">Juan Pablo II</h3>
-          <p class="text-sm text-[#94a3b8] mt-2">Acceso a Plataforma Digital</p>
+          <h2 class="text-2xl font-bold text-[#334155] dark:text-[#e4e4e7] tracking-tight transition-colors">Centro de Terapias</h2>
+          <h3 class="text-lg font-medium text-[#64748b] dark:text-[#a1a1aa] transition-colors">Juan Pablo II</h3>
+          <p class="text-sm text-[#94a3b8] dark:text-[#71717a] mt-2 transition-colors">Acceso a Plataforma Digital</p>
       </div>
 
       <!-- Flash Messages / Alert Component -->
@@ -25,28 +38,28 @@
       <form (ngSubmit)="doLogin()" class="space-y-6">
           
           <div class="flex flex-col items-center space-y-2">
-              <label class="text-sm font-bold text-[#334155]">Correo Electrónico</label>
-              <div class="relative w-full">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
-                      <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
-                  </span>
-                  <input type="email" id="email" name="email" [(ngModel)]="email"
-                      class="w-full pl-12 pr-4 py-3.5 bg-[#f9fafb] border border-transparent rounded-2xl outline-none transition-all text-[#334155] placeholder-[#94a3b8] font-medium focus:border-[#cbd5e1] focus:bg-white" 
-                      placeholder="usuario@ejemplo.com" required>
-              </div>
-          </div>
-          
-          <div class="flex flex-col items-center space-y-2">
-              <label class="text-sm font-bold text-[#334155]">Contraseña</label>
-              <div class="relative w-full">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none">
-                      <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
-                  </span>
-                  <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
-                      class="w-full pl-12 pr-12 py-3.5 bg-[#f9fafb] border border-transparent rounded-2xl outline-none transition-all text-[#334155] placeholder-[#94a3b8] font-medium focus:border-[#cbd5e1] focus:bg-white" 
-                      placeholder="Ingresa tu contraseña" required>
+               <label class="text-sm font-bold text-[#334155] dark:text-[#e4e4e7] transition-colors">Correo Electrónico</label>
+               <div class="relative w-full">
+                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#71717a] pointer-events-none transition-colors">
+                       <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
+                   </span>
+                   <input type="email" id="email" name="email" [(ngModel)]="email"
+                       class="w-full pl-12 pr-4 py-3.5 bg-[#f9fafb] dark:bg-[#1e1f20] border border-transparent dark:border-[#373839] rounded-2xl outline-none transition-all text-[#334155] dark:text-[#e4e4e7] placeholder-[#94a3b8] dark:placeholder-[#71717a] font-medium focus:border-[#cbd5e1] dark:focus:border-[#52525b] focus:bg-white dark:focus:bg-[#242526]" 
+                       placeholder="usuario@ejemplo.com" required>
+               </div>
+           </div>
+           
+           <div class="flex flex-col items-center space-y-2">
+               <label class="text-sm font-bold text-[#334155] dark:text-[#e4e4e7] transition-colors">Contraseña</label>
+               <div class="relative w-full">
+                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#71717a] pointer-events-none transition-colors">
+                       <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
+                   </span>
+                   <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
+                       class="w-full pl-12 pr-12 py-3.5 bg-[#f9fafb] dark:bg-[#1e1f20] border border-transparent dark:border-[#373839] rounded-2xl outline-none transition-all text-[#334155] dark:text-[#e4e4e7] placeholder-[#94a3b8] dark:placeholder-[#71717a] font-medium focus:border-[#cbd5e1] dark:focus:border-[#52525b] focus:bg-white dark:focus:bg-[#242526]" 
+                       placeholder="Ingresa tu contraseña" required>
                   
-                  <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#334155] focus:outline-none transition-colors border-none bg-transparent">
+                   <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#71717a] hover:text-[#334155] dark:hover:text-[#e4e4e7] focus:outline-none transition-colors border-none bg-transparent">
                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
                   </button>
               </div>
@@ -54,11 +67,11 @@
 
           <!-- Options -->
           <div class="flex items-center justify-between pt-2">
-              <label class="flex items-center gap-2 cursor-pointer group">
-                  <input type="checkbox" class="custom-checkbox">
-                  <span class="text-sm font-medium text-[#64748b] group-hover:text-[#334155] transition-colors">Recordarme</span>
-              </label>
-              <a href="javascript:void(0)" class="text-sm font-bold text-[#75a83a] hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
+               <label class="flex items-center gap-2 cursor-pointer group">
+                   <input type="checkbox" class="custom-checkbox">
+                   <span class="text-sm font-medium text-[#64748b] dark:text-[#a1a1aa] group-hover:text-[#334155] dark:group-hover:text-[#e4e4e7] transition-colors">Recordarme</span>
+               </label>
+              <a routerLink="/auth/reset-password" class="text-sm font-bold text-[#75a83a] hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
           </div>
 
           <!-- Submit Button -->
@@ -68,7 +81,7 @@
              [ngClass]="(isFormValid && !isLoading) ? 'bg-[#75a83a] text-white hover:bg-opacity-90 cursor-pointer shadow-lg shadow-[#75a83a]/20' : 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed shadow-none'">
              
              @if (isLoading) {
-                 <fa-icon [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
+                 <fa-icon [icon]="['fas', 'spinner']" class="mr-2 fa-spin"></fa-icon>
                  Verificando...
              } @else {
                  <fa-icon [icon]="['fas', 'sign-in-alt']"></fa-icon>
@@ -78,10 +91,10 @@
       </form>
 
       <!-- Footer -->
-      <div class="mt-8 pt-6 border-t border-[#f1f5f9] text-center">
-          <p class="text-xs font-medium text-[#94a3b8]">
-              ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-[#75a83a] font-bold hover:underline">Soporte Técnico</a>
-          </p>
-      </div>
+       <div class="mt-8 pt-6 border-t border-[#f1f5f9] dark:border-[#2a2b2d] text-center">
+           <p class="text-xs font-medium text-[#94a3b8] dark:text-[#71717a] transition-colors">
+               ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-[#75a83a] dark:text-[#a5d087] font-bold hover:underline">Soporte Técnico</a>
+           </p>
+       </div>
   </div>
 </div>

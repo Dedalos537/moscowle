@@ -2,11 +2,13 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: false,
-  templateUrl: './dashboard.html'
+  templateUrl: './dashboard.html',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class TherapistDashboard implements OnInit {
   loading = true;
@@ -23,7 +25,7 @@ export class TherapistDashboard implements OnInit {
     this.headerService.setConfig({
       title: 'EduAudit',
       subtitle: '',
-      icon: [] // no icon needed
+      icon: []
     });
 
     this.auth.currentUser$.subscribe(u => {
@@ -34,7 +36,6 @@ export class TherapistDashboard implements OnInit {
       next: (res: any) => {
         if (res.success) {
           this.data = res.data;
-          // Parse topics from planned text
           this.data.topics = this.parseTopics(res.data.planned_text);
         }
         this.loading = false;
@@ -43,7 +44,6 @@ export class TherapistDashboard implements OnInit {
     });
   }
 
-  // Very naive parser simulating topics
   parseTopics(text: string): {name: string, status: string}[] {
     if (!text) return [ {name: 'Introducción', status: 'LOGRADO'}, {name: 'Revisión General', status: 'PENDIENTE'} ];
     const lines = text.split('\\n').filter(l => l.trim().length > 3).slice(0, 4);

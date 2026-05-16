@@ -1,61 +1,208 @@
-<div class="relative bg-background overflow-hidden min-h-screen font-sans">
-  
-  <!-- Hero Section con Glassmorphism -->
-  <section class="relative max-w-7xl mx-auto px-6 py-20 lg:py-32 flex flex-col-reverse lg:flex-row items-center gap-12 z-10">
-    
-    <!-- Textos y CTA -->
-    <div class="flex-1 space-y-8 z-10 transition-all duration-700 ease-out translate-y-0 opacity-100">
-      <h1 class="text-5xl lg:text-7xl font-extrabold text-textDark leading-tight tracking-tight">
-        Sincroniza y <br><span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-[#5a9c1e] drop-shadow-sm">Transforma</span> <br>Tu Centro.
+<!-- ============================================================
+  HERO
+============================================================ -->
+<section
+  class="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_left,_var(--color-primary)_0%,_transparent_60%),radial-gradient(ellipse_at_bottom_right,_var(--color-primary-fixed)_0%,_transparent_50%)]"
+>
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/10 blur-3xl"></div>
+    <div class="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary-fixed-dim/10 blur-3xl"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/[0.03] blur-3xl"></div>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:pt-32 lg:pb-36">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-8 animate-fade-up delay-1">
+        <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+        Plataforma Integral de Terapias
+      </div>
+
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-on-surface leading-[1.1] tracking-tight mb-6 animate-fade-up delay-2">
+        Transformando Vidas a Través de la
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary-fixed-dim">Terapia</span>
       </h1>
-      <p class="text-lg md:text-xl text-charcoal max-w-xl leading-relaxed">
-        Con EdySync, fusionamos tecnología de inteligencia artificial, agendamiento experto de pacientes y cobros automáticos en una sola experiencia interactiva.
+
+      <p class="text-lg sm:text-xl text-on-surface-variant max-w-2xl leading-relaxed mb-10 animate-fade-up delay-3">
+        La plataforma inteligente que conecta terapeutas, pacientes y centros en un solo ecosistema.
+        Evaluaciones con IA, juegos interactivos y seguimiento en tiempo real para una terapia más efectiva.
       </p>
-      
-      <div class="flex items-center gap-4 pt-4">
-        <!-- Reemplacé icon="rocket" temporalmente con un arrar para evotar errores de tipos si tu boton sólo admite String o Array -->
-        <app-button label="Comenzar Ahora" variant="primary" [icon]="['fas', 'rocket']"></app-button>
-        <app-button label="Agendar Cita" variant="secondary" [icon]="['fas', 'calendar-check']"></app-button>
+
+      <div class="flex flex-wrap gap-4 animate-fade-up delay-4">
+        <a href="#" class="btn-primary text-base px-8 py-3.5 gap-3 shadow-lg shadow-primary/20">
+          <span class="material-symbols-outlined text-[20px]">rocket_launch</span>
+          Comenzar Ahora
+        </a>
+        <a href="#" class="btn-secondary text-base px-8 py-3.5 gap-3">
+          <span class="material-symbols-outlined text-[20px]">play_circle</span>
+          Saber Más
+        </a>
       </div>
 
-      <div class="pt-8 border-t border-border/50 flex gap-8 items-center text-sm font-medium text-charcoal">
-         <div class="flex flex-col gap-1 items-center hover:text-primary transition-colors cursor-default">
-            <!-- Asistente Robot Llama -->
-            <fa-icon [icon]="['fas', 'robot']" class="text-2xl text-primary drop-shadow-sm"></fa-icon>
-            <span>Asistente IA (Llama)</span>
-         </div>
-         <div class="flex flex-col gap-1 items-center hover:text-[#742384] transition-colors cursor-default">
-            <!-- Simulando Yape Color -->
-            <fa-icon [icon]="['fas', 'mobile-alt']" class="text-2xl text-[#742384] drop-shadow-sm"></fa-icon>
-            <span>Pago Integrado</span>
-         </div>
-      </div>
-    </div>
-
-    <!-- Imagen del Hero y Elementos Flotantes Glassmorphism -->
-    <div class="flex-1 w-full relative z-10">
-      
-      <!-- Efectos de Luces y Sombras Desenfocadas de Fondo -->
-      <div class="absolute -top-10 -right-10 w-[400px] h-[400px] bg-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
-      <div class="absolute -bottom-10 -left-10 w-[300px] h-[300px] bg-blue-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-70"></div>
-      
-      <!-- Contenedor Imagen -->
-      <div class="relative rounded-[2.5rem] bg-white/20 dark:bg-slate-800/30 backdrop-blur-xl border border-white/40 dark:border-white/10 p-3 shadow-2xl relative group">
-        
-        <!-- Usaremos la imagen generada por la IA que copié a tus assets -->
-        <img src="assets/hero_therapy.png" alt="Centro de Terapias EdySync" class="rounded-[2rem] w-full h-[550px] object-cover shadow-soft transition-transform duration-[1200ms] group-hover:scale-[1.01] group-hover:shadow-[0_10px_40px_rgba(117,168,58,0.15)]">
-        
-        <!-- Tarjeta Flotante (Nuestra app-card Atomica) -->
-        <div class="absolute -left-6 lg:-left-20 top-24 shadow-2xl transform transition-transform duration-500 hover:-translate-y-2">
-           <app-card title="Próxima Sesión" subtitle="Empieza en 15 m" [icon]="['fas', 'clock']">
-              <div class="flex items-center gap-2 mt-1">
-                 <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-                 <span class="text-xs text-primary font-bold">Confirmada</span>
-              </div>
-           </app-card>
+      <div class="flex flex-wrap items-center gap-6 mt-12 pt-8 border-t border-outline-variant/30 animate-fade-up delay-5">
+        <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-primary text-xl">check_circle</span>
+          Sin compromiso
+        </div>
+        <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-primary text-xl">shield</span>
+          Datos seguros
+        </div>
+        <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+          <span class="material-symbols-outlined text-primary text-xl">support</span>
+          Soporte 24/7
         </div>
       </div>
     </div>
+  </div>
+</section>
 
-  </section>
-</div>
+
+<!-- ============================================================
+  FEATURES
+============================================================ -->
+<section class="py-20 sm:py-28 bg-surface-container-low">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <span class="text-label text-primary mb-4 block animate-fade-up">CARACTERÍSTICAS</span>
+      <h2 class="text-h2 text-on-surface mb-4 animate-fade-up delay-1">Todo lo que necesitás en un solo lugar</h2>
+      <p class="text-body text-on-surface-variant animate-fade-up delay-2">
+        EdySync reúne las herramientas más avanzadas para potenciar tu centro de terapias,
+        optimizar el tiempo de los terapeutas y mejorar la experiencia de los pacientes.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (feature of features; track feature.title; let i = $index) {
+        <div
+          class="feature-card group animate-fade-up"
+          [class.delay-1]="i === 0"
+          [class.delay-2]="i === 1"
+          [class.delay-3]="i === 2"
+          [class.delay-4]="i === 3"
+          [class.delay-5]="i === 4"
+          [class.delay-6]="i === 5"
+        >
+          <div class="feature-card-icon">
+            <span class="material-symbols-outlined text-3xl">{{ feature.icon }}</span>
+          </div>
+          <h3 class="text-h3 text-on-surface mb-2">{{ feature.title }}</h3>
+          <p class="text-body text-on-surface-variant leading-relaxed">{{ feature.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+  STATS
+============================================================ -->
+<section #statsSection class="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 py-16 sm:py-20">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-0 left-1/4 w-[300px] h-[300px] rounded-full bg-primary/10 blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/4 w-[250px] h-[250px] rounded-full bg-primary-fixed-dim/20 blur-3xl"></div>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+      @for (stat of stats; track stat.label; let i = $index) {
+        <div class="text-center animate-fade-up" [class.delay-1]="i === 0" [class.delay-2]="i === 1" [class.delay-3]="i === 2" [class.delay-4]="i === 3">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-4 mx-auto">
+            <span class="material-symbols-outlined text-2xl">{{ stat.icon }}</span>
+          </div>
+          <div class="text-4xl sm:text-5xl font-extrabold text-primary mb-1 tabular-nums">
+            {{ displayedStats[i] | number }}<span class="text-3xl sm:text-4xl">{{ stat.suffix }}</span>
+          </div>
+          <div class="text-sm text-on-surface-variant font-medium">{{ stat.label }}</div>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+  TESTIMONIALS
+============================================================ -->
+<section class="py-20 sm:py-28">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <span class="text-label text-primary mb-4 block animate-fade-up">TESTIMONIOS</span>
+      <h2 class="text-h2 text-on-surface mb-4 animate-fade-up delay-1">Lo que dicen nuestros usuarios</h2>
+      <p class="text-body text-on-surface-variant animate-fade-up delay-2">
+        Conocé cómo EdySync está transformando la práctica terapéutica de profesionales en toda la región.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for (testimonial of testimonials; track testimonial.name; let i = $index) {
+        <div
+          class="testimonial-card animate-fade-up"
+          [class.delay-1]="i === 0"
+          [class.delay-2]="i === 1"
+          [class.delay-3]="i === 2"
+        >
+          <div class="flex items-center gap-4 mb-5">
+            <img
+              [src]="testimonial.avatar"
+              [alt]="testimonial.name"
+              class="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20"
+              loading="lazy"
+            />
+            <div>
+              <div class="font-bold text-on-surface">{{ testimonial.name }}</div>
+              <div class="text-sm text-primary font-medium">{{ testimonial.role }}</div>
+            </div>
+          </div>
+          <div class="relative">
+            <span class="absolute -top-2 -left-1 text-4xl text-primary/10 leading-none select-none">&ldquo;</span>
+            <p class="text-body text-on-surface-variant leading-relaxed pl-5 relative z-10">
+              {{ testimonial.quote }}
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+  CTA
+============================================================ -->
+<section class="py-20 sm:py-24">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary-fixed-dim to-primary px-8 py-16 sm:px-16 sm:py-20 text-center">
+      <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute -top-20 -right-20 w-[300px] h-[300px] rounded-full bg-white/5 blur-3xl"></div>
+        <div class="absolute -bottom-20 -left-20 w-[250px] h-[250px] rounded-full bg-white/5 blur-3xl"></div>
+      </div>
+
+      <div class="relative">
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-on-primary mb-4 animate-fade-up">
+          Comenzá Hoy
+        </h2>
+        <p class="text-lg sm:text-xl text-on-primary/80 max-w-xl mx-auto mb-10 animate-fade-up delay-1">
+          Unite a los centros que ya transforman su práctica con EdySync.
+          Probá gratis durante 14 días, sin compromiso.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4 animate-fade-up delay-2">
+          <a
+            href="#"
+            class="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-on-primary text-primary font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:brightness-105 transition-all duration-200 active:scale-[0.97]"
+          >
+            <span class="material-symbols-outlined text-[20px]">calendar_add</span>
+            Prueba Gratis
+          </a>
+          <a
+            href="#"
+            class="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-white/15 text-on-primary font-bold text-base backdrop-blur-sm border border-white/20 hover:bg-white/25 transition-all duration-200 active:scale-[0.97]"
+          >
+            <span class="material-symbols-outlined text-[20px]">call</span>
+            Hablar con Ventas
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

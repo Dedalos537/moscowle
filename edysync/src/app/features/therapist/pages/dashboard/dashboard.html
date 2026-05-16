@@ -1,66 +1,83 @@
-<div class="px-4 py-8 max-w-7xl mx-auto" *ngIf="!loading && data">
-  <!-- Top Greeting -->
+<div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in" *ngIf="!loading && data" [@fadeInUp]>
+  <!-- Top Section: Daily Summary + Compliance Badge -->
   <div class="flex justify-between items-start mb-8">
     <div>
-      <p class="text-xs font-bold uppercase tracking-widest text-[#75a83a] mb-2">RESUMEN DIARIO</p>
-      <h1 class="text-3xl md:text-4xl font-bold text-gray-800 leading-tight">
+      <p class="text-label-caps text-primary mb-2">RESUMEN DIARIO</p>
+      <h1 class="text-h2 text-on-surface">
         Hola, {{ currentUser?.username || 'Usuario' }}. Tu próxima sesión es<br>
-        <span class="text-[#75a83a]">{{ data.next_session?.title || 'Terapia General' }}</span> a las {{ data.next_session?.start || '10:00 AM' }}.
+        <span class="text-primary">{{ data.next_session?.title || 'Terapia General' }}</span> a las {{ data.next_session?.start || '10:00 AM' }}.
       </h1>
     </div>
-    
-    <!-- Compliance Badge -->
-    <div class="hidden md:flex items-center bg-white rounded-2xl px-6 py-4 shadow-sm border border-gray-100 min-w-[200px]">
-      <div class="bg-green-100 rounded-full p-2 mr-4">
-        <span class="material-symbols-outlined text-green-600" style="font-family: 'Material Symbols Outlined'">verified</span>
+
+    <!-- Compliance SVG Ring Badge -->
+    <div class="hidden md:flex items-center gap-4 bg-surface-container-lowest rounded-2xl px-6 py-4 shadow-soft border border-outline-variant/30 min-w-[200px]">
+      <div class="relative w-[72px] h-[72px] flex-shrink-0">
+        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="8" class="text-outline-variant/30"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="264"
+                  [attr.stroke-dashoffset]="264 - (264 * (data.avg_compliance * 10)) / 100" class="text-primary transition-all duration-1000"/>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span class="text-xl font-black text-on-surface leading-none">{{ (data.avg_compliance * 10) | number:'1.0-0' }}%</span>
+        </div>
       </div>
       <div>
-        <p class="text-2xl font-black text-gray-800">{{ (data.avg_compliance * 10) | number:'1.0-0' }}%</p>
-        <p class="text-[10px] text-gray-500 uppercase tracking-widest">Cumplimiento Global</p>
+        <p class="text-xs text-on-surface-variant font-semibold leading-tight">Cumplimiento</p>
+        <p class="text-label-caps text-on-surface-variant">Global</p>
       </div>
     </div>
   </div>
 
+  <!-- Main Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Left Column (Main Card & Topics) -->
+    <!-- Left Column (2/3) -->
     <div class="col-span-1 lg:col-span-2 space-y-6">
-      
+
       <!-- Dark Current Session Card -->
-      <div class="bg-[#0f2e0f] rounded-[2rem] p-8 text-white relative overflow-hidden">
-        <!-- Decoration -->
+      <div class="bg-[#0f2e0f] rounded-2xl p-8 text-white relative overflow-hidden shadow-soft">
         <div class="absolute top-0 right-0 w-64 h-64 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-20 -translate-y-20"></div>
-        
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-10 translate-y-10"></div>
+
         <div class="relative z-10">
-          <span class="inline-block px-3 py-1 bg-white/10 rounded-full text-xs font-bold tracking-widest uppercase mb-6 backdrop-blur-sm">Sesión en Vivo</span>
-          
-          <h2 class="text-3xl font-bold mb-3 leading-tight">Sesión Actual: {{ data.next_session?.title || 'Planificación y Revisión' }}</h2>
-          <p class="text-white/70 text-sm mb-12">Paciente: {{ data.next_session?.patient || 'N/A' }} • Ubicación: {{ data.next_session?.location || 'Virtual' }} • {{ data.total_students || 1 }} Estudiantes registrados</p>
-          
-          <div class="flex items-center gap-8">
-            <!-- Circular Progress -->
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-label-caps mb-6 backdrop-blur-sm">
+            <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+            Sesión en Vivo
+          </span>
+
+          <h2 class="text-h3 mb-3">Sesión Actual: {{ data.next_session?.title || 'Planificación y Revisión' }}</h2>
+          <p class="text-white/70 text-sm mb-12">
+            Paciente: {{ data.next_session?.patient || 'N/A' }}
+            <span class="mx-2 opacity-30">•</span>
+            {{ data.next_session?.location || 'Virtual' }}
+            <span class="mx-2 opacity-30">•</span>
+            {{ data.total_students || 1 }} Estudiantes registrados
+          </p>
+
+          <div class="flex items-center gap-8 flex-wrap">
+            <!-- Circular Progress Ring -->
             <div class="relative w-32 h-32 flex-shrink-0">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <!-- Background circle -->
-                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"></circle>
-                <!-- Progress circle -->
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
                 <circle cx="50" cy="50" r="45" fill="none" stroke="#a3e635" stroke-width="10" stroke-linecap="round"
-                        [attr.stroke-dasharray]="283" 
-                        [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"></circle>
+                        [attr.stroke-dasharray]="283"
+                        [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"
+                        class="transition-all duration-1000"/>
               </svg>
               <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-2xl font-black">{{ data.session_progress || 0 }}%</span>
-                <span class="text-[8px] uppercase tracking-widest text-white/70">Cobertura</span>
+                <span class="text-2xl font-black leading-none">{{ data.session_progress || 0 }}%</span>
+                <span class="text-label-caps text-white/70">Cobertura</span>
               </div>
             </div>
-            
+
             <!-- Linear Progress -->
-            <div class="flex-1 max-w-sm">
+            <div class="flex-1 min-w-[200px]">
               <div class="flex justify-between text-sm font-medium mb-2">
                 <span>Meta Semanal</span>
                 <span class="text-[#a3e635]">85%</span>
               </div>
               <div class="w-full bg-white/10 rounded-full h-2.5 mb-3">
-                <div class="bg-[#a3e635] h-2.5 rounded-full" style="width: 85%"></div>
+                <div class="bg-[#a3e635] h-2.5 rounded-full transition-all duration-1000" style="width: 85%"></div>
               </div>
               <p class="text-xs text-white/50 italic">Faltan 15 puntos porcentuales para completar el módulo estadístico.</p>
             </div>
@@ -68,89 +85,101 @@
         </div>
       </div>
 
-      <!-- Topics / Items of the Session -->
-      <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+      <!-- Topics / Objectives Card -->
+      <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-soft border border-outline-variant/30">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[#75a83a]" style="font-family: 'Material Symbols Outlined'">checklist</span> Textos de la Sesión
+          <h3 class="text-h3 text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">checklist</span>
+            Textos de la Sesión
           </h3>
-          <a href="/therapist/sessions" class="text-sm font-bold text-[#75a83a] hover:text-[#5a822b] transition-colors flex items-center">
-            Gestionar Plan <span class="material-symbols-outlined text-sm ml-1" style="font-family: 'Material Symbols Outlined'">arrow_forward</span>
+          <a href="/therapist/sessions" class="text-label text-primary hover:text-primary-fixed-dim transition-colors flex items-center gap-1">
+            Gestionar Plan
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
           </a>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div *ngFor="let topic of data.topics" 
+          <div *ngFor="let topic of data.topics"
                [ngClass]="{
-                 'bg-[#f4f8f1] border-[#75a83a]/30': topic.status === 'LOGRADO',
-                 'bg-orange-50 border-orange-200': topic.status === 'PARCIAL',
-                 'bg-gray-50 border-gray-200': topic.status === 'PENDIENTE'
+                 'bg-primary/5 border-primary/20': topic.status === 'LOGRADO',
+                 'bg-amber-50 border-amber-200': topic.status === 'PARCIAL',
+                 'bg-surface-container-low border-outline-variant/30': topic.status === 'PENDIENTE'
                }"
-               class="rounded-xl p-4 border flex items-start gap-3 transition-all hover:shadow-md">
-            
-            <!-- Icon -->
-            <div class="rounded-full flex-shrink-0 mt-0.5" 
+               class="rounded-xl p-4 border flex items-start gap-3 transition-all hover:shadow-hover">
+
+            <div class="rounded-full flex-shrink-0 mt-0.5 w-8 h-8 flex items-center justify-center"
                  [ngClass]="{
-                   'text-[#75a83a] bg-[#75a83a]/20': topic.status === 'LOGRADO',
-                   'text-orange-500 bg-orange-100': topic.status === 'PARCIAL',
-                   'text-gray-400 bg-gray-200': topic.status === 'PENDIENTE'
+                   'bg-primary/20 text-primary': topic.status === 'LOGRADO',
+                   'bg-amber-100 text-amber-600': topic.status === 'PARCIAL',
+                   'bg-surface-container-high text-on-surface-variant/50': topic.status === 'PENDIENTE'
                  }">
-               <span class="material-symbols-outlined text-sm p-1" style="font-family: 'Material Symbols Outlined'">
-                 {{ topic.status === 'LOGRADO' ? 'check' : (topic.status === 'PARCIAL' ? 'timelapse' : 'radio_button_unchecked') }}
+               <span class="material-symbols-outlined text-sm">
+                 {{ topic.status === 'LOGRADO' ? 'check' : (topic.status === 'PARCIAL' ? 'clock_loader_40' : 'circle') }}
                </span>
             </div>
-            
-            <div>
-              <p class="font-bold text-gray-800 text-sm mb-0.5">{{ topic.name }}</p>
-              <p class="text-[9px] uppercase tracking-wider font-black"
+
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-on-surface text-sm mb-0.5 truncate">{{ topic.name }}</p>
+              <p class="text-label-caps"
                  [ngClass]="{
-                   'text-[#75a83a]': topic.status === 'LOGRADO',
-                   'text-orange-600': topic.status === 'PARCIAL',
-                   'text-gray-500': topic.status === 'PENDIENTE'
+                   'text-primary': topic.status === 'LOGRADO',
+                   'text-amber-600': topic.status === 'PARCIAL',
+                   'text-on-surface-variant/50': topic.status === 'PENDIENTE'
                  }">{{ topic.status }}</p>
             </div>
           </div>
         </div>
       </div>
-      
+
     </div>
 
-    <!-- Right Column (Agenda) -->
+    <!-- Right Column (1/3 - Agenda) -->
     <div class="col-span-1">
-      <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 h-full relative">
+      <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 h-full flex flex-col">
         <div class="flex justify-between items-center mb-8">
-          <h3 class="text-lg font-bold text-gray-800">Agenda de Hoy</h3>
-          <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase">{{ '' | date:'dd MMM' }}</span>
+          <h3 class="text-h3 text-on-surface">Agenda de Hoy</h3>
+          <span class="px-3 py-1 bg-surface-container-low text-on-surface-variant text-label-caps rounded-full">{{ '' | date:'dd MMM' }}</span>
         </div>
 
-        <div class="relative pl-4 space-y-8 before:absolute before:inset-0 before:ml-[1.1rem] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gray-100">
-          
-          <div *ngFor="let item of data.agenda" class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-            <div class="flex items-center justify-center w-6 h-6 rounded-full border-4 border-white bg-gray-200 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 absolute -left-[1.3rem] z-10"
-                 [ngClass]="{'bg-[#75a83a]': item.is_current, 'bg-gray-200': !item.is_current}">
+        <!-- Timeline -->
+        <div class="relative pl-8 flex-1">
+          <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-outline-variant/50"></div>
+
+          <div *ngFor="let item of data.agenda" class="relative pb-8 last:pb-0">
+            <div class="absolute -left-8 top-1 w-[22px] h-[22px] rounded-full border-[3px] z-10 flex items-center justify-center"
+                 [ngClass]="{
+                   'bg-primary border-surface': item.is_current,
+                   'bg-surface-container-lowest border-outline-variant/50': !item.is_current
+                 }">
+              <span *ngIf="item.is_current" class="w-2 h-2 bg-white rounded-full"></span>
             </div>
-            <div class="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] ml-6 p-4 rounded-2xl transition-all"
-                 [ngClass]="{'bg-[#f4f8f1] border border-[#75a83a]/20': item.is_current, 'hover:bg-gray-50': !item.is_current}">
-              <p class="text-[10px] font-bold uppercase tracking-widest mb-1" 
-                 [ngClass]="{'text-[#75a83a]': item.is_current, 'text-gray-400': !item.is_current}">
+
+            <div class="p-4 rounded-xl transition-all"
+                 [ngClass]="{
+                   'bg-primary/5 border border-primary/20 shadow-sm': item.is_current,
+                   'bg-surface-container-low border border-transparent hover:bg-surface-container-high': !item.is_current
+                 }">
+              <p class="text-label-caps mb-1"
+                 [ngClass]="{'text-primary': item.is_current, 'text-on-surface-variant/60': !item.is_current}">
                 {{ item.is_current ? 'AHORA • ' : '' }}{{ item.start }}
               </p>
-              <h4 class="font-bold text-gray-800">{{ item.title }}</h4>
-              <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                {{ item.location }} <span *ngIf="item.patient">•</span> {{ item.patient }}
+              <h4 class="font-bold text-on-surface text-sm">{{ item.title }}</h4>
+              <p class="text-xs text-on-surface-variant/70 mt-1">
+                <span class="material-symbols-outlined text-[14px] align-text-bottom mr-0.5">location_on</span>
+                {{ item.location }}
+                <span *ngIf="item.patient" class="mx-1">•</span>
+                {{ item.patient }}
               </p>
             </div>
           </div>
-          
-          <!-- Empty State -->
-          <div *ngIf="!data.agenda?.length" class="text-center text-sm text-gray-400 py-8">
+
+          <div *ngIf="!data.agenda?.length" class="text-center text-sm text-on-surface-variant/60 py-8">
             No tienes sesiones agendadas para hoy.
           </div>
-
         </div>
 
-        <div class="mt-8 text-center">
-          <a href="/therapist/sessions" class="inline-block w-full py-3 bg-[#f8f9fa] hover:bg-gray-100 text-gray-700 font-bold text-sm rounded-xl transition-colors">
+        <div class="mt-6 pt-4 border-t border-outline-variant/20">
+          <a href="/therapist/sessions" class="btn-secondary w-full justify-center">
             Ver Calendario Completo
           </a>
         </div>
@@ -159,42 +188,43 @@
   </div>
 
   <!-- Bottom Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
-        <span class="material-symbols-outlined">assignment_late</span>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 flex-shrink-0">
+        <span class="material-symbols-outlined text-2xl">assignment_late</span>
       </div>
-      <div>
-        <p class="text-3xl font-black text-gray-800">08</p>
-        <p class="text-sm text-gray-500">Reportes Pendientes</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black text-orange-600 bg-orange-50">Prioridad Alta</span>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
-        <span class="material-symbols-outlined">trending_up</span>
-      </div>
-      <div>
-        <p class="text-3xl font-black text-gray-800">+12%</p>
-        <p class="text-sm text-gray-500">Progreso Académico</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black text-green-600 bg-green-50">Este Mes</span>
+      <div class="min-w-0">
+        <p class="text-h2 text-on-surface">08</p>
+        <p class="text-sm text-on-surface-variant font-medium">Reportes Pendientes</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-orange-600 bg-orange-50">Prioridad Alta</span>
       </div>
     </div>
 
-    <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-        <span class="material-symbols-outlined">psychiatry</span>
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
+        <span class="material-symbols-outlined text-2xl">trending_up</span>
       </div>
-      <div>
-        <p class="text-xl font-black text-gray-800 mt-1">AI Coach</p>
-        <p class="text-sm text-gray-500">Nuevas sugerencias</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50">3 Tips Listos</span>
+      <div class="min-w-0">
+        <p class="text-h2 text-on-surface">+12%</p>
+        <p class="text-sm text-on-surface-variant font-medium">Progreso Académico</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-green-600 bg-green-50">Este Mes</span>
+      </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+        <span class="material-symbols-outlined text-2xl">psychiatry</span>
+      </div>
+      <div class="min-w-0">
+        <p class="text-h3 text-on-surface">AI Coach</p>
+        <p class="text-sm text-on-surface-variant font-medium">Nuevas sugerencias</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-emerald-600 bg-emerald-50">3 Tips Listos</span>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Loading State -->
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
 </div>

@@ -232,43 +232,43 @@ def generate_business_report():
         weekly = get_weekly_due_payments()
         
         report_text = f"""
-╔════════════════════════════════════════════════════════════╗
-║          REPORTE FINANCIERO - CENTRO DE TERAPIAS           ║
-║                    Mes: {datetime.now().strftime('%B %Y')}                      ║
-╚════════════════════════════════════════════════════════════╝
+================================================
+   REPORTE FINANCIERO - CENTRO DE TERAPIAS
+   Mes: {datetime.now().strftime('%B %Y')}
+================================================
 
-📊 RESUMEN FINANCIERO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👥 Total de Alumnos: {metrics['total_patients']}
-💰 Ingresos Total: S/. {metrics['total_income']:.2f}
-💸 Egresos Total: S/. {metrics['total_expenses']:.2f}
-✅ Ganancia Neta: S/. {metrics['net_profit']:.2f}
-📈 Margen de Ganancia: {metrics['profit_margin_percent']:.1f}%
+RESUMEN FINANCIERO
+------------------------------------------------
+Total de Alumnos: {metrics['total_patients']}
+Ingresos Total: S/. {metrics['total_income']:.2f}
+Egresos Total: S/. {metrics['total_expenses']:.2f}
+Ganancia Neta: S/. {metrics['net_profit']:.2f}
+Margen de Ganancia: {metrics['profit_margin_percent']:.1f}%
 
-💳 COBRANZA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ Alumnos que Pagaron: {metrics['paid_patients']} ({metrics['collection_rate']:.1f}%)
-❌ Alumnos sin Pagar: {unpaid['total_unpaid']}
-💥 Deuda Acumulada: S/. {unpaid['total_debt']:.2f}
+COBRANZA
+------------------------------------------------
+Alumnos que Pagaron: {metrics['paid_patients']} ({metrics['collection_rate']:.1f}%)
+Alumnos sin Pagar: {unpaid['total_unpaid']}
+Deuda Acumulada: S/. {unpaid['total_debt']:.2f}
 
-📅 PRÓXIMAS 7 DÍAS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔔 Pendientes de Pago: {weekly['count']} alumnos
-💰 Ingresos Esperados: S/. {weekly['total_amount']:.2f}
+PROXIMOS 7 DIAS
+------------------------------------------------
+Pendientes de Pago: {weekly['count']} alumnos
+Ingresos Esperados: S/. {weekly['total_amount']:.2f}
 
-📌 USUARIOS MOROSOS (Sin pagar este mes)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+USUARIOS MOROSOS (Sin pagar este mes)
+------------------------------------------------"""
         
         for user in unpaid['users'][:10]:  # Top 10
             days = user['days_overdue']
-            status = "🔴 URGENTE" if days > 7 else "🟡 ATENCIÓN"
-            report_text += f"\n{status} {user['name']} - S/. {user['amount_due']:.2f} ({days} días vencido)"
+            status = "URGENTE" if days > 7 else "ATENCION"
+            report_text += f"\n{status} {user['name']} - S/. {user['amount_due']:.2f} ({days} dias vencido)"
         
         if len(unpaid['users']) > 10:
-            report_text += f"\n... y {len(unpaid['users']) - 10} más"
+            report_text += f"\n... y {len(unpaid['users']) - 10} mas"
         
-        report_text += f"\n\n📊 PROMEDIO POR ALUMNO: S/. {metrics['avg_income_per_paid_patient']:.2f}/mes"
-        report_text += f"\n\n⚠️  NOTA: Este reporte fue generado automáticamente por la IA"
+        report_text += f"\n\nPROMEDIO POR ALUMNO: S/. {metrics['avg_income_per_paid_patient']:.2f}/mes"
+        report_text += f"\n\nNOTA: Este reporte fue generado automaticamente por la IA"
         
         return report_text
     except Exception as e:

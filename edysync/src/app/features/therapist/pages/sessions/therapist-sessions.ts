@@ -1,24 +1,21 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
-import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
-import { FullCalendarComponent } from '@fullcalendar/angular';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import esLocale from '@fullcalendar/core/locales/es';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-therapist-sessions',
   standalone: false,
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class TherapistSessions implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
-  @ViewChild(FullCalendarComponent) calendarComponent!: FullCalendarComponent;
 
-  calendarOptions: CalendarOptions;
+  loading = true;
+  widgetEvents: CalendarWidgetEvent[] = [];
   showCreateModal = false;
   showEditModal = false;
   patients: { id: number; username: string }[] = [];
@@ -54,22 +51,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
-  ) {
-    this.calendarOptions = {
-      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-      initialView: 'dayGridMonth',
-      locale: esLocale,
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay',
-      },
-      navLinks: true,
-      events: this.loadEvents.bind(this),
-      eventClick: this.handleEventClick.bind(this),
-      height: 'auto',
-    };
-  }
+  ) {}
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -80,6 +62,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
     this.loadStats();
     this.loadPatients();
+    this.loadSessions();
   }
 
   ngOnDestroy() {
@@ -100,11 +83,52 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
   }
 
-  private loadEvents(fetchInfo: any, successCallback: (events: any[]) => void, failureCallback: (error: any) => void) {
-    this.therapistService.getSessions(fetchInfo.startStr, fetchInfo.endStr).subscribe({
-      next: (events) => successCallback(events),
-      error: (err) => failureCallback(err),
+  private loadSessions() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
+
+    this.therapistService.getSessions(start, end).subscribe({
+      next: (events) => {
+        this.widgetEvents = events.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          date: new Date(e.start),
+          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
+          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+          status: e.extendedProps?.status || 'scheduled',
+          therapist: e.extendedProps?.therapist,
+          patient: e.extendedProps?.patient,
+          therapistId: e.extendedProps?.therapist_id,
+          patientId: e.extendedProps?.patient_id,
+        }));
+        this.loading = false;
+      },
+      error: () => (this.loading = false),
     });
+  }
+
+  onDayDblClick(date: Date) {
+    this.createForm.date = date.toISOString().split('T')[0];
+    this.openCreateModal();
+  }
+
+  onRangeDblClick(range: { start: Date; end: Date }) {
+    this.createForm.date = range.start.toISOString().split('T')[0];
+    this.openCreateModal();
+  }
+
+  onEventClick(event: CalendarWidgetEvent) {
+    this.editForm = {
+      id: event.id,
+      title: event.title,
+      date: event.date.toISOString().split('T')[0],
+      start_time: event.time || '',
+      end_time: event.endTime || '',
+      status: event.status,
+      patient: event.patient || '',
+    };
+    this.showEditModal = true;
   }
 
   openCreateModal() {
@@ -147,27 +171,13 @@ export class TherapistSessions implements OnInit, OnDestroy {
       next: () => {
         this.submitting = false;
         this.closeCreateModal();
-        this.refreshCalendar();
+        this.refreshEvents();
         this.loadStats();
       },
       error: () => {
         this.submitting = false;
       },
     });
-  }
-
-  private handleEventClick(arg: EventClickArg) {
-    const ext = arg.event.extendedProps;
-    this.editForm = {
-      id: parseInt(arg.event.id),
-      title: arg.event.title,
-      date: arg.event.start?.toISOString().split('T')[0] || '',
-      start_time: arg.event.start?.toTimeString().substring(0, 5) || '',
-      end_time: arg.event.end?.toTimeString().substring(0, 5) || '',
-      status: (ext['status'] as string) || 'scheduled',
-      patient: (ext['patient'] as string) || '',
-    };
-    this.showEditModal = true;
   }
 
   closeEditModal() {
@@ -186,7 +196,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       next: () => {
         this.submitting = false;
         this.closeEditModal();
-        this.refreshCalendar();
+        this.refreshEvents();
         this.loadStats();
       },
       error: () => {
@@ -200,13 +210,14 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.therapistService.deleteSession(this.editForm.id).subscribe({
       next: () => {
         this.closeEditModal();
-        this.refreshCalendar();
+        this.refreshEvents();
         this.loadStats();
       },
     });
   }
 
-  private refreshCalendar() {
-    this.calendarComponent?.getApi().refetchEvents();
+  private refreshEvents() {
+    this.loading = true;
+    this.loadSessions();
   }
 }

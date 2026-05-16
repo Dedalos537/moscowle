@@ -1,10 +1,10 @@
-<div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+<div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up" [@fadeInUp]>
 
   <div>
-    <h2 class="text-xl font-bold text-charcoal flex items-center gap-2">
+    <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
       <fa-icon [icon]="['fas', 'brain']" class="text-primary"></fa-icon> Entrenamiento IA
     </h2>
-    <p class="text-sm text-gray-500">Gestiona el modelo de inteligencia artificial para predicción de niveles</p>
+    <p class="text-sm text-on-surface-variant">Gestiona el modelo de inteligencia artificial para predicción de niveles</p>
   </div>
 
   @if (loading) {
@@ -15,22 +15,22 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <app-card title="Estado del Modelo">
         <div class="space-y-4">
-          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-            <span class="text-sm font-medium text-gray-700">Modelo entrenado</span>
+          <div class="flex items-center justify-between p-4 bg-surface-container-high rounded-xl">
+            <span class="text-sm font-medium text-on-surface">Modelo entrenado</span>
             @if (status.model_exists) {
               <span class="px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700">Disponible</span>
             } @else {
-              <span class="px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-500">No entrenado</span>
+              <span class="px-3 py-1 text-xs font-bold rounded-full bg-surface-container-high text-on-surface-variant">No entrenado</span>
             }
           </div>
-          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-            <span class="text-sm font-medium text-gray-700">Entrenando</span>
+          <div class="flex items-center justify-between p-4 bg-surface-container-high rounded-xl">
+            <span class="text-sm font-medium text-on-surface">Entrenando</span>
             @if (status.training_in_progress) {
               <span class="flex items-center gap-2 px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700">
                 <app-spinner size="sm" colorClass="text-yellow-600"></app-spinner> En progreso
               </span>
             } @else {
-              <span class="px-3 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-500">Inactivo</span>
+              <span class="px-3 py-1 text-xs font-bold rounded-full bg-surface-container-high text-on-surface-variant">Inactivo</span>
             }
           </div>
         </div>
@@ -38,7 +38,7 @@
 
       <app-card title="Acciones">
         <div class="space-y-4">
-          <p class="text-sm text-gray-600">El modelo SVM se entrena con datos sintéticos + reales de sesiones de juego para predecir si un paciente debe mantener, avanzar o retroceder de nivel.</p>
+          <p class="text-sm text-on-surface">El modelo SVM se entrena con datos sintéticos + reales de sesiones de juego para predecir si un paciente debe mantener, avanzar o retroceder de nivel.</p>
           <app-button variant="primary" label="Entrenar Modelo" [icon]="['fas', 'play']" [disabled]="training || status.training_in_progress" (clicked)="triggerTraining()"></app-button>
           @if (statusText) {
             <app-alert [type]="statusText.includes('Error') ? 'error' : 'info'" [message]="statusText"></app-alert>
@@ -48,7 +48,7 @@
     </div>
 
     <app-card title="Información del Modelo">
-      <div class="prose prose-sm max-w-none text-gray-600">
+      <div class="prose prose-sm max-w-none text-on-surface">
         <ul class="space-y-2">
           <li><strong>Algoritmo:</strong> SVM (SVC con kernel RBF)</li>
           <li><strong>Datos sintéticos:</strong> 300 muestras generadas</li>

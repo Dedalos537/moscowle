@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AITrainingStatus } from '../../../../core/models/ai-training';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-ai-training',
   standalone: false,
   templateUrl: './ai-training.html',
-  styleUrl: './ai-training.scss'
+  styleUrl: './ai-training.scss',
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class AiTraining implements OnInit {
   status: AITrainingStatus = { model_exists: false, training_in_progress: false };

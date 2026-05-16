@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
@@ -8,20 +8,43 @@ import { AuthService } from '../../../../core/services/auth.service';
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })
-export class Login {
+export class Login implements OnInit {
   email = '';
   password = '';
   showPassword = false;
   isLoading = false;
   
-  // Para manejar el estado visual (Flash messages simulados)
   alertMessage = '';
   alertType: 'success' | 'error' | 'warning' | 'info' = 'info';
+  darkMode = false;
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
+
+  ngOnInit() {
+    this.darkMode = document.documentElement.classList.contains('dark') ||
+                    localStorage.getItem('theme') === 'dark';
+    this.route.queryParams.subscribe(params => {
+      if (params['logout'] === 'success') {
+        this.alertType = 'success';
+        this.alertMessage = 'Has cerrado sesión correctamente.';
+      }
+    });
+  }
+
+  toggleDarkMode() {
+    this.darkMode = !this.darkMode;
+    if (this.darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }
 
   get isFormValid(): boolean {
     return this.email.trim().length > 5 && this.password.length > 0;
@@ -38,22 +61,19 @@ export class Login {
     this.alertMessage = '';
 
     this.authService.login(this.email, this.password).subscribe({
-      next: (user) => {
-        // En tu backend esto ruteaba al /dashboard 
-        // y desde ahí el controlador redirigía basado en user.role
+      next: (res) => {
         this.alertType = 'success';
         this.alertMessage = 'Inicio de sesión exitoso. Redirigiendo...';
         
-                setTimeout(() => {
-           if (user && user.role === 'admin') {
-               this.router.navigate(['/admin/dashboard']); 
-           } else if (user && user.role === 'terapista') {
+        setTimeout(() => {
+           if (res.user && res.user.role === 'admin') {
+               this.router.navigate(['/admin/dashboard']);
+           } else if (res.user && res.user.role === 'terapista') {
                this.router.navigate(['/therapist/dashboard']);
-               // O usar window.location.href = '/therapist/dashboard' si está en Flask aún, 
-               // pero viendo el código de EDYSYNC parece rutar a `/therapist/dashboard`. 
-               // ¡Revisaremos y usaremos el routing nativo!
+           } else if (res.user && res.user.role === 'jugador') {
+               this.router.navigate(['/patient/dashboard']);
            } else {
-               this.router.navigate(['/']); // fallback
+               this.router.navigate(['/']);
            }
            this.isLoading = false;
         }, 1000);

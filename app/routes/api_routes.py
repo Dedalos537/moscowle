@@ -733,6 +733,36 @@ def api_admin_broadcast():
         
     return jsonify({'success': True, 'count': result})
 
+def _serialize_user(u):
+    return {
+        'id': u.id,
+        'email': u.email,
+        'username': u.username,
+        'role': u.role,
+        'is_active': u.is_active,
+        'account_status': u.account_status or 'active',
+        'admin_password_changed_count': u.admin_password_changed_count or 0,
+        'sede_id': u.sede_id,
+        'sede_name': u.sede_item.name if u.sede_item else None,
+        'assigned_sedes': [{'id': s.id, 'name': s.name} for s in u.assigned_sedes.all()],
+        'therapist_ids': [t.id for t in u.therapists.all()],
+        'payment_plan': u.payment_plan,
+        'payment_amount': u.payment_amount or 0,
+        'sessions_total': u.sessions_total or 0,
+        'sessions_attended': u.sessions_attended or 0,
+        'plan_type': u.plan_type or 'individual',
+        'has_second_shift': u.has_second_shift or False,
+        'payment_amount_2': u.payment_amount_2 or 0,
+        'sessions_total_2': u.sessions_total_2 or 0,
+        'sessions_attended_2': u.sessions_attended_2 or 0,
+        'plan_type_2': u.plan_type_2 or 'individual',
+        'salary_base': u.salary_base or 0,
+        'contract_hours': u.contract_hours or 0,
+        'work_start_time': u.work_start_time,
+        'work_end_time': u.work_end_time,
+        'work_days': u.work_days,
+    }
+
 @api_bp.route('/admin/list-users')
 @login_required
 def api_admin_list_users():
@@ -740,7 +770,17 @@ def api_admin_list_users():
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     role = (request.args.get('role') or '').strip()
     users = admin_service.list_users(role)
-    return jsonify({'success': True, 'users': [{'id': u.id, 'email': u.email, 'username': u.username, 'role': u.role} for u in users]})
+    return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
+
+@api_bp.route('/admin/user/<int:user_id>')
+@login_required
+def api_admin_get_user(user_id):
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    u = User.query.get(user_id)
+    if not u:
+        return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+    return jsonify({'success': True, 'user': _serialize_user(u)})
 
 @api_bp.route('/admin/update-user', methods=['POST'])
 @login_required
@@ -2329,7 +2369,7 @@ def get_therapist_dashboard():
         session_info = {
             'id': s.id,
             'title': s.title or 'Sesión de Terapia',
-            'patient': patient.name if patient else 'N/A',
+            'patient': patient.username if patient else 'N/A',
             'start': s.start_time.strftime('%I:%M %p'),
             'location': s.location or '',
             'status': s.status,

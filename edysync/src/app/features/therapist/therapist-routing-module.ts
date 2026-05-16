@@ -7,6 +7,12 @@ import { TherapistSessions } from './pages/sessions/therapist-sessions';
 import { TherapistMessages } from './pages/messages/therapist-messages';
 import { TherapistProfile } from './pages/profile/therapist-profile';
 import { TherapistGames } from './pages/games/therapist-games';
+import { TherapistPatients } from './pages/patients/patients';
+import { TherapistPatientDetail } from './pages/patient-detail/patient-detail';
+import { TherapistSessionReview } from './pages/session-review/session-review';
+import { TherapistReports } from './pages/reports/reports';
+import { TherapistAnalytics } from './pages/analytics/analytics';
+import { TherapistCalendarPage } from './pages/calendar/calendar';
 
 const routes: Routes = [
   {
@@ -20,6 +26,12 @@ const routes: Routes = [
       { path: 'messages', component: TherapistMessages },
       { path: 'profile', component: TherapistProfile },
       { path: 'games', component: TherapistGames },
+      { path: 'patients', component: TherapistPatients },
+      { path: 'patients/:id', component: TherapistPatientDetail },
+      { path: 'session-review/:id', component: TherapistSessionReview },
+      { path: 'reports', component: TherapistReports },
+      { path: 'analytics', component: TherapistAnalytics },
+      { path: 'calendar', component: TherapistCalendarPage },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },
