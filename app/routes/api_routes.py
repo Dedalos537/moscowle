@@ -9,7 +9,7 @@ from app.services.patient_service import PatientService
 from app.services.dashboard_service import DashboardService
 from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, start_async_training
-from app.utils import get_user_today_utc_range, get_user_now, normalize_datetime_for_storage, localize_datetime_for_display, get_user_timezone
+from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt, limiter, csrf
 from app.services.email_service import EmailService
@@ -58,6 +58,20 @@ def _parse_datetime(value):
                 continue
     return None
 
+
+@api_bp.route('/time', methods=['GET'])
+def api_time():
+    now_local = datetime.now()
+    now_utc = datetime.utcnow()
+    return jsonify({
+        'server_time_local': now_local.isoformat(),
+        'server_time_utc': now_utc.isoformat(),
+        'timezone': 'America/Lima',
+        'utc_offset_minutes': -300,
+        'is_dst': False,
+    })
+
+
 @api_bp.route('/therapist/insights')
 @login_required
 def therapist_insights():
@@ -75,12 +89,68 @@ def therapist_insights():
 @login_required
 def get_notifications():
     notifications = notification_service.get_unread_notifications(current_user.id)
-    return jsonify([{
+
+    result = [{
         'id': n.id,
         'message': n.message,
         'timestamp': n.timestamp.strftime('%d %b, %H:%M'),
         'link': n.link
-    } for n in notifications])
+    } for n in notifications]
+
+    # Enrich with debtor info and today's activities for admin
+    if current_user.role == 'admin':
+        try:
+            today = datetime.utcnow().date()
+            tomorrow = today + timedelta(days=1)
+
+            # Today's sessions
+            today_sessions = Appointment.query.filter(
+                Appointment.start_time >= today,
+                Appointment.start_time < tomorrow,
+                Appointment.status != 'cancelled'
+            ).count()
+
+            if today_sessions > 0:
+                result.append({
+                    'id': -1,
+                    'message': f'📋 {today_sessions} sesión(es) programadas para hoy',
+                    'timestamp': 'Hoy',
+                    'link': None,
+                    'type': 'activity'
+                })
+
+            # Overdue patients (morosos)
+            from app.models import Payment, User
+            overdue = db.session.query(
+                Payment.patient_id, User.username, Payment.amount, Payment.due_date
+            ).join(User, User.id == Payment.patient_id).filter(
+                Payment.status == 'pending',
+                Payment.due_date < today
+            ).order_by(Payment.due_date.asc()).limit(5).all()
+
+            overdue_count = len(overdue)
+            if overdue_count > 0:
+                msg = f'⚠️ {overdue_count} paciente(s) con deuda vencida'
+                result.append({
+                    'id': -2,
+                    'message': msg,
+                    'timestamp': 'Pendiente',
+                    'link': None,
+                    'type': 'debt'
+                })
+                for p in overdue:
+                    days_overdue = (today - p.due_date).days
+                    result.append({
+                        'id': -3 - (p.patient_id or 0),
+                        'message': f'💰 {p.username} debe S/ {p.amount:.0f} ({days_overdue}d vencido)',
+                        'timestamp': f'Vence: {p.due_date.strftime("%d/%m")}',
+                        'link': None,
+                        'type': 'debt'
+                    })
+        except Exception:
+            pass
+
+    return jsonify(result)
 
 @api_bp.route('/patients')
 @login_required
@@ -132,12 +202,15 @@ def api_get_sessions():
 
     start = request.args.get('start')
     end = request.args.get('end')
-    
-    # ... rest of the logic ...
+    timezone_offset = request.args.get('timezone_offset')
 
     try:
         start_dt = _parse_datetime(start)
         end_dt = _parse_datetime(end)
+        if start_dt and end_dt and timezone_offset:
+            offset_minutes = int(timezone_offset)
+            start_dt = start_dt + timedelta(minutes=offset_minutes)
+            end_dt = end_dt + timedelta(minutes=offset_minutes)
     except Exception:
         start_dt = None
         end_dt = None
@@ -158,12 +231,8 @@ def api_get_sessions():
     results = []
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
-        if start_iso and a.start_time.tzinfo is None:
-            start_iso += 'Z'
             
         end_iso = a.end_time.isoformat() if a.end_time else None
-        if end_iso and a.end_time.tzinfo is None:
-            end_iso += 'Z'
 
         results.append({
             'id': a.id,
@@ -194,12 +263,8 @@ def api_upcoming_sessions():
     for a in appts:
         patient = User.query.get(a.patient_id)
         start_iso = a.start_time.isoformat()
-        if a.start_time.tzinfo is None:
-            start_iso += 'Z'
             
         end_iso = a.end_time.isoformat() if a.end_time else None
-        if end_iso and a.end_time.tzinfo is None:
-            end_iso += 'Z'
 
         results.append({
             'id': a.id,
@@ -235,12 +300,8 @@ def api_get_patient_appointments():
     results = []
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
-        if start_iso and a.start_time.tzinfo is None:
-            start_iso += 'Z'
             
         end_iso = a.end_time.isoformat() if a.end_time else None
-        if end_iso and a.end_time.tzinfo is None:
-            end_iso += 'Z'
 
         results.append({
             'id': a.id,
@@ -304,14 +365,10 @@ def api_get_sessions_day():
     results = []
     for a in query:
         start_iso = a.start_time.isoformat()
-        if a.start_time.tzinfo is None:
-            start_iso += 'Z'
             
         end_iso = None
         if a.end_time:
             end_iso = a.end_time.isoformat()
-            if a.end_time.tzinfo is None:
-                end_iso += 'Z'
 
         results.append({
             'id': a.id,
@@ -336,18 +393,11 @@ def api_create_session():
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
-    
-    # Get user's timezone for proper normalization
-    user_tz = current_user.timezone or 'UTC'
-    
-    # Pre-process dates - normalize to UTC for storage
-    try:
-        if data.get('start_time'):
-            data['start_time'] = normalize_datetime_for_storage(data.get('start_time'), user_tz)
-        if data.get('end_time'):
-            data['end_time'] = normalize_datetime_for_storage(data.get('end_time'), user_tz)
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Formato de fecha inválido: {str(e)}'}), 400
+
+    # Parse ISO string → datetime object (naive Peru local, no timezone conversion)
+    for field in ('start_time', 'end_time'):
+        if isinstance(data.get(field), str):
+            data[field] = datetime.fromisoformat(data[field])
 
     if not data.get('patient_id') or not data.get('start_time'):
         return jsonify({'success': False, 'message': 'patient_id and start_time are required'}), 400
@@ -458,26 +508,68 @@ def api_create_session():
     return jsonify(created)
 
 
+@api_bp.route('/sessions/<int:session_id>', methods=['GET'])
+@login_required
+def api_get_session(session_id):
+    """Return full detail of a single session (for therapist review)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionImage
+
+    appt = Appointment.query.get_or_404(session_id)
+
+    # Verify ownership or assignment
+    if current_user.role == 'terapista':
+        is_assigned = False
+        if appt.patient:
+            is_assigned = current_user in appt.patient.therapists
+        if appt.therapist_id != current_user.id and not is_assigned:
+            return jsonify({'error': 'No tienes permiso para ver esta sesión'}), 403
+
+    images = []
+    for img in appt.session_images or []:
+        images.append({
+            'id': img.id,
+            'url': url_for('static', filename=img.image_path),
+            'type': img.image_type,
+            'notes': img.notes,
+            'uploaded_at': img.uploaded_at.isoformat() if img.uploaded_at else None,
+            'uploaded_by': img.uploaded_by.username if img.uploaded_by else None,
+        })
+
+    start_iso = appt.start_time.isoformat() if appt.start_time else None
+    end_iso = appt.end_time.isoformat() if appt.end_time else None
+
+    return jsonify({
+        'id': appt.id,
+        'title': appt.title or 'Sesión de Terapia',
+        'start_time': start_iso,
+        'end_time': end_iso,
+        'status': appt.status,
+        'attendance': appt.attendance,
+        'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+        'therapist_id': appt.therapist_id,
+        'location': appt.location,
+        'notes': appt.notes,
+        'games': appt.games_list,
+        'images': images,
+    })
+
+
 @api_bp.route('/sessions/<int:session_id>', methods=['PUT'])
 @login_required
 def api_update_session(session_id):
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
-    
-    # Get user's timezone for proper normalization
-    user_tz = current_user.timezone or 'UTC'
-    
-    # Normalize datetime fields to UTC
-    try:
-        if 'start_time' in data:
-            data['start_time'] = normalize_datetime_for_storage(data.get('start_time'), user_tz)
-        if 'end_time' in data:
-            data['end_time'] = normalize_datetime_for_storage(data.get('end_time'), user_tz)
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Formato de fecha inválido: {str(e)}'}), 400
-    
+
+    # Parse ISO string → datetime object (naive Peru local, no timezone conversion)
+    for field in ('start_time', 'end_time'):
+        if isinstance(data.get(field), str):
+            data[field] = datetime.fromisoformat(data[field])
+
     # Get existing appointment for validation
     existing_appt = Appointment.query.get(session_id)
     if not existing_appt:
@@ -525,7 +617,7 @@ def api_update_session(session_id):
 @api_bp.route('/sessions/<int:session_id>', methods=['DELETE'])
 @login_required
 def api_delete_session(session_id):
-    if current_user.role != 'terapista':
+    if current_user.role not in ('terapista', 'admin'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     success = appointment_service.delete_session(session_id, current_user.id)
@@ -2164,7 +2256,20 @@ def trigger_session_audit(appointment_id):
 
     try:
         from app.services.audit_service import run_audit
+        from app.models import User
         report = run_audit(appointment_id)
+        appt = Appointment.query.get(appointment_id)
+        score = None
+        if report:
+            score = report.get('score') or (report.get('report') or {}).get('audit_score') if isinstance(report, dict) else None
+        therapist_name = appt.therapist.username if appt and appt.therapist else 'Desconocido'
+        patient_name = appt.patient.username if appt and appt.patient else 'Desconocido'
+        score_str = f' — Puntuación: {score}/100' if score is not None else ''
+        msg = f'✅ Auditoría completada: {therapist_name} / {patient_name}{score_str}'
+        admins = User.query.filter_by(role='admin').all()
+        for admin in admins:
+            from app.services.notification_service import NotificationService
+            NotificationService().create_notification(admin.id, msg)
         return jsonify({
             'success': True,
             'message': 'Auditoría completada',
@@ -2264,6 +2369,242 @@ def get_session_program(appointment_id):
         'planned_text': audit.planned_text,
         'uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None
     })
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════
+# REPORTES — Weekly per-patient + Daily accumulation
+# ═══════════════════════════════════════════════════════════════════
+
+@api_bp.route('/reports/generate-weekly', methods=['POST'])
+@login_required
+def generate_weekly_report():
+    """Generate weekly report for a specific patient."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    data = request.get_json(silent=True) or {}
+    patient_id = data.get('patient_id')
+    week_start = data.get('week_start')
+
+    if not patient_id or not week_start:
+        return jsonify({'success': False, 'error': 'patient_id y week_start son requeridos'}), 400
+
+    try:
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        therapist_id = current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        report = rs.generate_patient_weekly_report(patient_id, therapist_id, week_start)
+        return jsonify({'success': True, 'report': report})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error generating weekly report: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/reports/weekly/<int:patient_id>', methods=['GET'])
+@login_required
+def get_weekly_report(patient_id):
+    """Get weekly report for a patient."""
+    if current_user.role not in ('terapista', 'admin', 'jugador'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    week_start = request.args.get('week')
+
+    try:
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        report = rs.get_patient_weekly_report(patient_id, week_start)
+        if not report:
+            return jsonify({'success': True, 'exists': False})
+        return jsonify({'success': True, 'exists': True, 'report': report})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/reports/generate-daily', methods=['POST'])
+@login_required
+def generate_daily_report():
+    """Generate daily report for a specific patient (therapist side)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    data = request.get_json(silent=True) or {}
+    patient_id = data.get('patient_id')
+    report_date = data.get('date')
+
+    if not patient_id:
+        return jsonify({'success': False, 'error': 'patient_id es requerido'}), 400
+
+    try:
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        therapist_id = current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        report = rs.generate_daily_report(patient_id, therapist_id, report_date)
+        return jsonify({'success': True, 'report': report})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ═══════════════════════════════════════════════════════════════════
+# NO-SHOW DETECTION — Attendance Analysis + Warning Timer
+# ═══════════════════════════════════════════════════════════════════
+
+@api_bp.route('/sessions/<int:session_id>/start-recording', methods=['POST'])
+@login_required
+def start_session_recording(session_id):
+    """Marks session as in_progress and returns OK for frontend to start MediaRecorder."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt = Appointment.query.get_or_404(session_id)
+    if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
+    if appt.status == 'completed':
+        return jsonify({'success': False, 'error': 'Esta sesión ya fue completada'}), 400
+
+    if appt.status != 'in_progress':
+        appt.status = 'in_progress'
+        appt.status_changed_at = datetime.utcnow()
+        appt.status_changed_by = current_user.id
+        db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Grabación iniciada', 'session_id': session_id})
+
+
+@api_bp.route('/sessions/<int:session_id>/analyze-attendance', methods=['POST'])
+@login_required
+def analyze_session_attendance(session_id):
+    """Analyze transcript vs planned text to detect possible no-show."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt = Appointment.query.get_or_404(session_id)
+    if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
+    from app.models import SessionAudit
+    audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
+
+    transcript = audit.transcript_text if audit and audit.transcript_text else ''
+    planned = audit.planned_text if audit and audit.planned_text else ''
+
+    if not transcript or len(transcript.strip()) < 50:
+        return jsonify({
+            'success': True,
+            'suggested_attendance': 'absent',
+            'confidence': 0.95,
+            'reason': 'Sin transcripción o muy corta',
+            'coverage_pct': 0
+        })
+
+    if not planned:
+        return jsonify({
+            'success': True,
+            'suggested_attendance': 'present',
+            'confidence': 0.5,
+            'reason': 'Sin programación para comparar',
+            'coverage_pct': 50
+        })
+
+    try:
+        from app.services.audit_service import analyze_attendance
+        result = analyze_attendance(planned, transcript)
+        return jsonify({
+            'success': True,
+            'suggested_attendance': result['suggested_attendance'],
+            'confidence': result['confidence'],
+            'reason': result.get('reason', ''),
+            'coverage_pct': result.get('coverage_pct', 0)
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Error analyzing attendance: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error: {str(e)}'}), 500
+
+
+@api_bp.route('/sessions/<int:session_id>/mark-absent', methods=['POST'])
+@login_required
+def mark_session_absent(session_id):
+    """Mark a session as absent (no-show)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt = Appointment.query.get_or_404(session_id)
+    if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
+    appt.attendance = 'absent'
+    appt.status = 'completed'
+    appt.status_changed_at = datetime.utcnow()
+    appt.status_changed_by = current_user.id
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Sesión marcada como ausente',
+        'session_id': session_id
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+# THERAPIST FEEDBACK
+# ═══════════════════════════════════════════════════════════════════
+
+@api_bp.route('/sessions/<int:session_id>/feedback', methods=['POST'])
+@login_required
+def submit_session_feedback(session_id):
+    """Submit therapist feedback for a session (engagement, progress, notes)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt = Appointment.query.get_or_404(session_id)
+    if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
+
+    data = request.get_json(silent=True) or {}
+    engagement = data.get('engagement')
+    progress = data.get('progress')
+    notes = data.get('notes', '')
+
+    from app.models import SessionAudit
+    audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
+    if not audit:
+        audit = SessionAudit(appointment_id=session_id)
+        db.session.add(audit)
+
+    audit.feedback_engagement = engagement
+    audit.feedback_progress = progress
+    audit.feedback_notes = notes
+    audit.feedback_submitted_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Feedback guardado'})
+
+
+@api_bp.route('/therapist/efficiency', methods=['GET'])
+@login_required
+def get_therapist_efficiency():
+    """Get efficiency score for the current therapist (or admin-specified)."""
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    therapist_id = current_user.id
+    if current_user.role == 'admin':
+        therapist_id = request.args.get('therapist_id', type=int) or current_user.id
+
+    try:
+        from app.services.dashboard_service import DashboardService
+        ds = DashboardService()
+        efficiency = ds.get_therapist_efficiency(therapist_id)
+        return jsonify({'success': True, 'data': efficiency})
+    except Exception as e:
+        current_app.logger.error(f"Error getting efficiency: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @api_bp.route('/admin/audit-stats', methods=['GET'])
 @login_required

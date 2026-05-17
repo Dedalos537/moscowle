@@ -7,12 +7,12 @@ import { BaseChartDirective } from 'ng2-charts';
 import { TherapistRoutingModule } from './therapist-routing-module';
 import { SharedModule } from '../../shared/shared-module';
 import { TherapistSessions } from './pages/sessions/therapist-sessions';
+import { TherapistSessionReview } from './pages/session-review/session-review';
 import { TherapistMessages } from './pages/messages/therapist-messages';
 import { TherapistProfile } from './pages/profile/therapist-profile';
 import { TherapistGames } from './pages/games/therapist-games';
 import { TherapistPatients } from './pages/patients/patients';
 import { TherapistPatientDetail } from './pages/patient-detail/patient-detail';
-import { TherapistSessionReview } from './pages/session-review/session-review';
 import { TherapistReports } from './pages/reports/reports';
 import { TherapistAnalytics } from './pages/analytics/analytics';
 import { TherapistCalendarPage } from './pages/calendar/calendar';
@@ -21,6 +21,7 @@ import { TherapistCalendarPage } from './pages/calendar/calendar';
   declarations: [
     TherapistDashboard,
     TherapistSessions,
+    TherapistSessionReview,
     TherapistMessages,
     TherapistProfile,
     TherapistGames,

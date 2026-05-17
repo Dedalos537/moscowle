@@ -69,6 +69,8 @@ export class Sessions implements OnInit, OnDestroy {
   // --- PROGRAM UPLOADS / AUDITS ---
   auditState: any = null;
   programUploading = false;
+  programDeleting = false;
+  deleting = false;
   programError: string | null = null;
   programSuccessMessage: string | null = null;
 
@@ -133,37 +135,27 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   onDayDblClick(date: Date) {
-    this.singleForm.dates = date.toISOString().split('T')[0];
     this.openCreateModal();
+    this.singleForm.dates = date.toISOString().split('T')[0];
   }
 
   onRangeDblClick(range: { start: Date; end: Date }) {
-    const dates: string[] = [];
-    const start = new Date(range.start);
-    const end = new Date(range.end);
-    const cursor = new Date(Math.min(start.getTime(), end.getTime()));
-    const last = new Date(Math.max(start.getTime(), end.getTime()));
-    while (cursor <= last) {
-      dates.push(cursor.toISOString().split('T')[0]);
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    this.singleForm.dates = dates.join(', ');
     this.openCreateModal();
+    this.singleForm.dates = range.start.toISOString().split('T')[0];
   }
 
   onEventClick(event: CalendarWidgetEvent) {
     const raw = this.rawEvents.find((e: any) => e.id === event.id);
-    if (!raw) return;
 
     this.editForm = {
       id: event.id,
-      title: event.title,
+      title: raw?.title || event.title,
       date: event.date.toISOString().split('T')[0],
       start_time: event.time || '',
       end_time: event.endTime || '',
-      status: event.status,
-      therapist: event.therapist || '',
-      patient: event.patient || '',
+      status: raw?.extendedProps?.status || event.status,
+      therapist: raw?.extendedProps?.therapist || event.therapist || '',
+      patient: raw?.extendedProps?.patient || event.patient || '',
     };
 
     this.auditState = null;
@@ -237,47 +229,30 @@ export class Sessions implements OnInit, OnDestroy {
     if (!f.therapist_id || !f.patient_id || !f.dates || !f.start_time || !f.end_time) return;
 
     this.submitting = true;
-    const dateList = f.dates.split(', ');
+    const dObj = new Date(f.dates + 'T00:00:00');
+    const pyDay = (dObj.getDay() + 6) % 7;
 
-    let successCount = 0;
-    const errors: string[] = [];
-    let completed = 0;
+    const payload = {
+      therapist_id: parseInt(f.therapist_id),
+      patient_id: parseInt(f.patient_id),
+      title_prefix: f.title,
+      start_date: f.dates,
+      start_time: f.start_time,
+      end_time: f.end_time,
+      weeks: 1,
+      days: [pyDay],
+    };
 
-    for (const dateStr of dateList) {
-      const dObj = new Date(dateStr + 'T00:00:00');
-      const pyDay = (dObj.getDay() + 6) % 7;
-
-      const payload = {
-        therapist_id: parseInt(f.therapist_id),
-        patient_id: parseInt(f.patient_id),
-        title_prefix: f.title,
-        start_date: dateStr,
-        start_time: f.start_time,
-        end_time: f.end_time,
-        weeks: 1,
-        days: [pyDay],
-      };
-
-      this.adminService.batchCreateSessions(payload).subscribe({
-        next: () => {
-          successCount++;
-          completed++;
-          this.checkCreateDone(completed, dateList.length, successCount, errors);
-        },
-        error: () => {
-          errors.push(dateStr);
-          completed++;
-          this.checkCreateDone(completed, dateList.length, successCount, errors);
-        },
-      });
-    }
-  }
-
-  private checkCreateDone(completed: number, total: number, successCount: number, errors: string[]) {
-    if (completed < total) return;
-    this.submitting = false;
-    this.closeCreateModal();
-    this.refreshEvents();
+    this.adminService.batchCreateSessions(payload).subscribe({
+      next: () => {
+        this.submitting = false;
+        this.closeCreateModal();
+        this.refreshEvents();
+      },
+      error: () => {
+        this.submitting = false;
+      },
+    });
   }
 
   private submitBatch() {
@@ -344,10 +319,15 @@ export class Sessions implements OnInit, OnDestroy {
 
   deleteSession() {
     if (!confirm('¿Estás seguro de que deseas eliminar esta sesión? Esta acción no se puede deshacer.')) return;
+    this.deleting = true;
     this.adminService.deleteSession(this.editForm.id).subscribe({
       next: () => {
+        this.deleting = false;
         this.closeEditModal();
         this.refreshEvents();
+      },
+      error: () => {
+        this.deleting = false;
       },
     });
   }
@@ -407,20 +387,22 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   deleteProgram() {
-    if (confirm('¿Eliminar la programación de esta sesión?')) {
-      this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
-        next: (res: any) => {
-          if (res.success) {
-            this.auditState = null;
-            this.programSuccessMessage = 'Programación eliminada.';
-          } else {
-            this.programError = res.error || 'Error al eliminar';
-          }
-        },
-        error: () => {
-          this.programError = 'Error de conexión al eliminar.';
-        },
-      });
-    }
+    if (!confirm('¿Eliminar la programación de esta sesión?')) return;
+    this.programDeleting = true;
+    this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
+      next: (res: any) => {
+        this.programDeleting = false;
+        if (res.success) {
+          this.auditState = null;
+          this.programSuccessMessage = 'Programación eliminada.';
+        } else {
+          this.programError = res.error || 'Error al eliminar';
+        }
+      },
+      error: () => {
+        this.programDeleting = false;
+        this.programError = 'Error de conexión al eliminar.';
+      },
+    });
   }
 }

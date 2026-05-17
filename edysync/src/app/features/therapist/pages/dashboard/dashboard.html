@@ -228,3 +228,30 @@
 <div *ngIf="loading" class="flex justify-center items-center h-96">
   <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
 </div>
+
+<!-- Weekly Report Review Modal -->
+@if (showWeeklyReviewModal) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="dismissWeeklyReview()">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+      <div class="text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
+          <span class="material-symbols-outlined text-3xl text-purple-600">calendar_view_week</span>
+        </div>
+        <h3 class="text-h3 text-on-surface mb-2">Reporte Semanal Disponible</h3>
+        <p class="text-sm text-on-surface-variant mb-4">
+          Tus reportes semanales del {{ weeklyReportWeekStart }} al {{ weeklyReportWeekEnd }} ya estan listos.
+          Tienes <strong>{{ weeklyReportsCount }} reportes</strong> pendientes de revision.
+        </p>
+        <div class="flex gap-3 justify-center">
+          <button class="btn-secondary" (click)="dismissWeeklyReview()">
+            Revisar Despues
+          </button>
+          <button class="btn-primary" (click)="viewWeeklyReports()">
+            <span class="material-symbols-outlined text-[18px]">visibility</span>
+            Ver Reportes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

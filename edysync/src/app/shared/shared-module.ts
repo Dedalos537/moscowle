@@ -19,11 +19,12 @@ import { PillStatus } from './components/pill-status/pill-status';
 import { AiChat } from './components/ai-chat/ai-chat';
 import { CalendarWidget } from './components/calendar-widget/calendar-widget';
 import { AlertModal } from './components/alert-modal/alert-modal.component';
+import { RecordingOverlay } from './components/recording-overlay/recording-overlay';
 
 @NgModule({
   declarations: [
     Button, Card, Input, Spinner, Alert, Modal, Chip,
-    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay,
   ],
   imports: [
     CommonModule, FormsModule, FontAwesomeModule
@@ -31,7 +32,7 @@ import { AlertModal } from './components/alert-modal/alert-modal.component';
   exports: [
     CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip,
-    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay,
   ]
 })
 export class SharedModule {

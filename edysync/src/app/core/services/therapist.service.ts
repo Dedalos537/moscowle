@@ -130,6 +130,70 @@ export class TherapistService {
     return `/static/games/${filename}`;
   }
 
+  // ─── Session Review ─────────────────────────────────────
+  getSession(id: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${id}`);
+  }
+
+  updateAttendance(id: number, attendance: string): Observable<any> {
+    return this.http.put<any>(`/api/sessions/${id}`, { attendance });
+  }
+
+  saveNotes(id: number, notes: string): Observable<any> {
+    return this.http.put<any>(`/api/sessions/${id}`, { notes });
+  }
+
+  // ─── Session Images ─────────────────────────────────────
+  uploadSessionImage(appointmentId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('image_type', 'session_photo');
+    return this.http.post<any>(`/api/appointments/${appointmentId}/upload_image`, formData);
+  }
+
+  deleteSessionImage(appointmentId: number, imageId: number): Observable<any> {
+    return this.http.delete<any>(`/api/appointments/${appointmentId}/images/${imageId}`);
+  }
+
+  // ─── Audio Recording (Whisper/Groq) ─────────────────────
+  uploadAudioChunk(appointmentId: number, blob: Blob, chunkNum: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('audio_file', blob, `session_${appointmentId}_chunk${chunkNum}_${Date.now()}.webm`);
+    return this.http.post<any>(`/api/sessions/${appointmentId}/audio`, formData);
+  }
+
+  // ─── No-Show Detection ─────────────────────────────────
+  startRecording(sessionId: number): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/start-recording`, {});
+  }
+
+  analyzeAttendance(sessionId: number): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/analyze-attendance`, {});
+  }
+
+  markAbsent(sessionId: number): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/mark-absent`, {});
+  }
+
+  // ─── Feedback ───────────────────────────────────────────
+  submitFeedback(sessionId: number, data: { engagement: number | null; progress: number | null; notes: string }): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/feedback`, data);
+  }
+
+  // ─── Audit IA ───────────────────────────────────────────
+  getSessionAudit(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/audit`);
+  }
+
+  triggerAudit(sessionId: number): Observable<any> {
+    return this.http.post<any>(`/api/sessions/${sessionId}/audit`, {});
+  }
+
+  getSessionProgram(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/program`);
+  }
+
+  // ─── Analytics & Reports ───────────────────────────────
   getAnalytics(): Observable<ApiResponse<AnalyticsData>> {
     return this.http.get<ApiResponse<AnalyticsData>>('/therapist/api/analytics');
   }
@@ -151,6 +215,15 @@ export class TherapistService {
 
   getPatientStats(): Observable<ApiResponse<PatientStatsReport[]>> {
     return this.http.get<ApiResponse<PatientStatsReport[]>>('/therapist/api/patient-stats');
+  }
+
+  // ─── Reports ────────────────────────────────────────────
+  generateWeeklyReport(patientId: number): Observable<any> {
+    return this.http.post<any>('/reports/generate-weekly', { patient_id: patientId });
+  }
+
+  getWeeklyReport(patientId: number): Observable<any> {
+    return this.http.get<any>(`/reports/weekly/${patientId}`);
   }
 }
 

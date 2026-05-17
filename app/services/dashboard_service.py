@@ -159,6 +159,52 @@ class DashboardService:
 
         return {'weekly_progress': series, 'alerts': alerts}
 
+
+
+    def get_therapist_efficiency(self, therapist_id):
+        """
+        Calculate therapist efficiency 0-100% based on:
+        - 50% average audit_score from session audits
+        - 50% average therapist feedback (engagement + progress)
+        """
+        from app.models import SessionAudit, Appointment
+        from sqlalchemy import func as sqlfunc
+        from app.extensions import db
+
+        # 1. Average audit score for this therapist's sessions
+        avg_audit = db.session.query(sqlfunc.avg(SessionAudit.audit_score)).join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).filter(
+            Appointment.therapist_id == therapist_id,
+            SessionAudit.audit_score.isnot(None)
+        ).scalar() or 0
+
+        # 2. Average feedback score (engagement + progress converted to 0-100)
+        feedback_scores = []
+        audits = SessionAudit.query.join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).filter(
+            Appointment.therapist_id == therapist_id,
+            SessionAudit.feedback_engagement.isnot(None)
+        ).all()
+
+        for a in audits:
+            eng = (a.feedback_engagement or 3) / 5.0 * 100  # 1-5 to 0-100
+            prog = (a.feedback_progress or 3) / 5.0 * 100
+            feedback_scores.append((eng + prog) / 2)
+
+        avg_feedback = sum(feedback_scores) / len(feedback_scores) if feedback_scores else 0
+
+        # 3. Combined: 50% audit + 50% feedback
+        efficiency = (float(avg_audit) * 0.5) + (avg_feedback * 0.5)
+
+        return {
+            'efficiency': round(efficiency, 1),
+            'avg_audit_score': round(float(avg_audit), 1),
+            'avg_feedback_score': round(avg_feedback, 1),
+            'audits_count': audits.count_sessions if hasattr(audits, 'count_sessions') else len(audits),
+        }
+
     def get_player_stats(self, player_id):
         metrics = self.metrics_repo.get_recent_metrics_by_user(player_id, limit=1000)
         total_sessions = self.metrics_repo.count_sessions_by_user(player_id)

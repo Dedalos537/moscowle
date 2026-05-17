@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from app.extensions import db, scheduler
-from app.models import User, Appointment
+from app.models import User, Appointment, Notification
 from app.services.email_service import EmailService
 from flask import current_app
 
@@ -139,7 +139,7 @@ def run_daily_audits(app):
             from app.models import SessionAudit
             from app.services.audit_service import run_audit
             
-            today_start = datetime.now().replace(hour=0, minute=0, second=0)
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = datetime.now().replace(hour=23, minute=59, second=59)
             
             # Find sessions needing audit: have program + transcript, status pending
@@ -175,6 +175,45 @@ def run_daily_audits(app):
             print(f"Error in run_daily_audits: {e}")
 
 
+def generate_weekly_reports(app):
+    """Auto-generate weekly reports for all therapists/patients on Saturday."""
+    with app.app_context():
+        try:
+            from app.services.report_service import ReportService
+            rs = ReportService()
+            week_start, week_end = rs.get_this_week_range()
+            generated = rs.generate_all_weekly_reports(week_start)
+
+            from app.models import Notification
+            admin_users = User.query.filter_by(role='admin').all()
+            for admin in admin_users:
+                notif = Notification(
+                    user_id=admin.id,
+                    title='Reportes Semanales Listos',
+                    message=f'Se generaron {len(generated)} reportes semanales del {week_start.strftime("%d/%m")} al {week_end.strftime("%d/%m")}.',
+                    type='reportes'
+                )
+                db.session.add(notif)
+
+            therapists = User.query.filter_by(role='terapista', is_active=True).all()
+            for therapist in therapists:
+                patient_count = therapist.associated_patients.filter_by(role='jugador').count()
+                if patient_count > 0:
+                    notif = Notification(
+                        user_id=therapist.id,
+                        title='Reporte Semanal Disponible',
+                        message=f'Tus reportes semanales del {week_start.strftime("%d/%m")} al {week_end.strftime("%d/%m")} ya estan listos. Revisalos en tu panel.',
+                        type='reportes'
+                    )
+                    db.session.add(notif)
+
+            db.session.commit()
+            print(f"Weekly reports: {len(generated)} generated for week {week_start} - {week_end}")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in generate_weekly_reports: {e}")
+
+
 def init_scheduler(app):
     # Schedule payments check daily at 8 AM
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger="cron", hour=8, minute=0)
@@ -184,5 +223,8 @@ def init_scheduler(app):
     
     # Run automated audits daily at 11 PM
     scheduler.add_job(func=lambda: run_daily_audits(app), trigger="cron", hour=23, minute=0)
+    
+    # Generate weekly reports Saturday at 8 PM
+    scheduler.add_job(func=lambda: generate_weekly_reports(app), trigger="cron", day_of_week='sat', hour=20, minute=0)
     
     scheduler.start()

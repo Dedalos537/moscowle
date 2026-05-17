@@ -4,6 +4,8 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from app.extensions import db
 
+DEFAULT_TIMEZONE = 'America/Lima'
+
 try:
     from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 except ImportError:
@@ -50,13 +52,13 @@ def handle_db_errors(f):
     return decorated_function
 
 def get_user_timezone(user):
-    """Helper to get a ZoneInfo object from user."""
+    """Helper to get a ZoneInfo object from user. Falls back to DEFAULT_TIMEZONE (America/Lima)."""
     if not user or not user.timezone:
-        return timezone.utc
+        return ZoneInfo(DEFAULT_TIMEZONE)
     try:
         return ZoneInfo(user.timezone)
     except (ZoneInfoNotFoundError, Exception):
-        return timezone.utc
+        return ZoneInfo(DEFAULT_TIMEZONE)
 
 def get_user_now(user):
     """
@@ -87,7 +89,7 @@ def get_user_today_utc_range(user):
     
     return start_utc, end_utc
 
-def normalize_datetime_for_storage(dt_input, user_timezone_str='UTC'):
+def normalize_datetime_for_storage(dt_input, user_timezone_str=DEFAULT_TIMEZONE):
     """
     Convert any datetime (string, aware, or naive) to UTC naive for DB storage.
     
@@ -123,7 +125,7 @@ def normalize_datetime_for_storage(dt_input, user_timezone_str='UTC'):
     # Convert to UTC and make naive
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
-def localize_datetime_for_display(dt_utc_naive, user_timezone_str='UTC'):
+def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZONE):
     """
     Convert UTC naive datetime from DB to user's local timezone.
     

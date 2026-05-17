@@ -301,3 +301,84 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
         db.session.commit()
         logger.error(f"Error en auditoría IA: {str(e)}")
         raise ValueError(f"Error en auditoría IA: {str(e)}")
+# ═══════════════════════════════════════════════════════════════
+# NO-SHOW DETECTION — Attendance Analysis via Groq
+# ═══════════════════════════════════════════════════════════════
+
+ATTENDANCE_SYSTEM_PROMPT = """Eres un asistente que determina si un paciente asistió a su sesión terapéutica.
+Comparas el PLAN DE SESIÓN con la TRANSCRIPCIÓN REAL.
+
+Reglas:
+1. Si la transcripción tiene menos de 50 caracteres o solo contiene ruido/saludos sin contenido → el paciente NO asistió.
+2. Si la transcripción cubre al menos un 5% de las actividades planificadas → el paciente SÍ asistió.
+3. Calcula el porcentaje de cobertura: qué tanto de lo planificado se menciona/ejecuta en la transcripción.
+
+Responde SOLO con JSON:
+{
+  "suggested_attendance": "present" o "absent",
+  "confidence": 0.0-1.0,
+  "coverage_pct": 0-100,
+  "reason": "Explicación breve"
+}
+"""
+
+def analyze_attendance(planned_text, transcript_text):
+    """
+    Analyze whether a patient attended the session based on planned vs transcript comparison.
+    Uses Groq Llama for intelligent analysis.
+    
+    Args:
+        planned_text: str - the planned session program
+        transcript_text: str - the actual session transcript
+        
+    Returns:
+        dict with suggested_attendance, confidence, coverage_pct, reason
+    """
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key:
+        raise ValueError("GROQ_API_KEY no está configurada")
+    
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+        
+        user_prompt = f"""PLAN DE SESIÓN:
+---
+{planned_text[:3000]}
+---
+
+TRANSCRIPCIÓN REAL:
+---
+{transcript_text[:3000]}
+---
+
+Analiza si el paciente asistió y cubrió al menos el 5% de lo planificado."""
+        
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": ATTENDANCE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1,
+            max_tokens=500,
+            response_format={"type": "json_object"}
+        )
+        
+        import json
+        result = json.loads(response.choices[0].message.content.strip())
+        
+        return {
+            'suggested_attendance': result.get('suggested_attendance', 'present'),
+            'confidence': float(result.get('confidence', 0.5)),
+            'coverage_pct': float(result.get('coverage_pct', 50)),
+            'reason': result.get('reason', '')
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in analyze_attendance: {str(e)}")
+        # Fallback: if Groq fails, use simple heuristic
+        if len(transcript_text.strip()) < 50:
+            return {'suggested_attendance': 'absent', 'confidence': 0.8, 'coverage_pct': 0, 'reason': 'Transcripción insuficiente'}
+        return {'suggested_attendance': 'present', 'confidence': 0.6, 'coverage_pct': 50, 'reason': 'Fallback: no se pudo analizar con IA'}
+

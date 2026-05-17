@@ -1,4 +1,11 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Router } from '@angular/router';
+import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
+import { FullCalendarComponent } from '@fullcalendar/angular';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
@@ -28,6 +35,8 @@ export class TherapistSessions implements OnInit, OnDestroy {
     active_patients: 0,
   };
 
+  calendarOptions: CalendarOptions = {};
+
   createForm = {
     patient_id: '',
     title: '',
@@ -51,7 +60,54 @@ export class TherapistSessions implements OnInit, OnDestroy {
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
-  ) {}
+    private router: Router,
+  ) {
+    this.initCalendar();
+  }
+
+  private initCalendar() {
+    this.calendarOptions = {
+      plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+      initialView: 'dayGridMonth',
+      locale: esLocale,
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay',
+      },
+      navLinks: true,
+      events: this.loadFullCalendarEvents.bind(this),
+      eventClick: this.onFullCalendarEventClick.bind(this),
+      height: 'auto',
+    };
+  }
+
+  private loadFullCalendarEvents(fetchInfo: any, successCallback: Function, failureCallback: Function) {
+    const start = fetchInfo.start.toISOString().split('T')[0];
+    const end = fetchInfo.end.toISOString().split('T')[0];
+    this.therapistService.getSessions(start, end).subscribe({
+      next: (events) => {
+        successCallback(events);
+      },
+      error: () => failureCallback(),
+    });
+  }
+
+  onFullCalendarEventClick(info: EventClickArg) {
+    const event = info.event;
+    this.onEventClick({
+      id: event.id ? parseInt(event.id) : 0,
+      title: event.title,
+      date: event.start || new Date(),
+      time: event.start ? event.start.toTimeString().substring(0, 5) : undefined,
+      endTime: event.end ? event.end.toTimeString().substring(0, 5) : undefined,
+      status: event.extendedProps?.['status'] || 'scheduled',
+      therapist: event.extendedProps?.['therapist'],
+      patient: event.extendedProps?.['patient'],
+      therapistId: event.extendedProps?.['therapist_id'],
+      patientId: event.extendedProps?.['patient_id'],
+    });
+  }
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -203,6 +259,11 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.submitting = false;
       },
     });
+  }
+
+  navigateToReview() {
+    this.closeEditModal();
+    this.router.navigate(['/therapist/sessions', this.editForm.id, 'review']);
   }
 
   deleteSession() {

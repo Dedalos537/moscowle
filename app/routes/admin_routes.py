@@ -38,7 +38,6 @@ def dashboard():
     
     # Trigger workflow update (Phase 1: Background scan)
     try:
-        from app.services.workflow_engine import WorkflowEngine
         WorkflowEngine().generate_daily_actions()
     except Exception as e:
         current_app.logger.error(f"Workflow Engine Scan Error: {str(e)}")
@@ -1560,11 +1559,11 @@ def batch_create_sessions():
         
         while current_date_iter < end_date_iter:
             if current_date_iter.weekday() in days_of_week:
-                # Set time
+                # Set time (stored as Peru local time, naive)
                 session_start = current_date_iter.replace(hour=start_h, minute=start_m)
                 session_end = current_date_iter.replace(hour=end_h, minute=end_m)
                 
-                # If end time < start time, assume it ends next day (rare but possible)
+                # If end time < start time, assume it ends next day
                 if session_end < session_start:
                     session_end += timedelta(days=1)
                 
@@ -1613,16 +1612,20 @@ def update_session(session_id):
         if 'title' in data:
             appt.title = data['title']
         
-        # Only parse dates if provided
-        if 'start_date' in data and 'start_time' in data:
-            # Combine
+        # Parse ISO string → datetime object (naive Peru local)
+        if 'start_time' in data and isinstance(data['start_time'], str) and 'T' in data['start_time']:
+            appt.start_time = datetime.fromisoformat(data['start_time'])
+        elif 'start_date' in data and 'start_time' in data:
             start_dt = datetime.strptime(f"{data['start_date']} {data['start_time']}", "%Y-%m-%d %H:%M")
             appt.start_time = start_dt
-            
-        if 'end_time' in data and data.get('start_date'):
-            # Reconstruct end timestamp
+        
+        if 'end_time' in data and isinstance(data['end_time'], str) and 'T' in data['end_time']:
+            end_dt = datetime.fromisoformat(data['end_time'])
+            if appt.start_time and end_dt < appt.start_time:
+                end_dt += timedelta(days=1)
+            appt.end_time = end_dt
+        elif 'end_time' in data and data.get('start_date'):
             end_dt = datetime.strptime(f"{data['start_date']} {data['end_time']}", "%Y-%m-%d %H:%M")
-            # Handle next day case for end time (though rare in simple edit)
             if end_dt < appt.start_time:
                 end_dt += timedelta(days=1)
             appt.end_time = end_dt
@@ -1640,8 +1643,229 @@ def update_session(session_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/payments/<int:payment_id>/receipt', methods=['GET', 'POST'])
+@admin_bp.route('/api/daily-reports', methods=['GET'])
 @login_required
+def api_daily_reports():
+    """Get daily reports within a date range for admin."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    start = request.args.get('start')
+    end = request.args.get('end')
+    
+    if not start or not end:
+        return jsonify({'success': False, 'error': 'start y end son requeridos (YYYY-MM-DD)'}), 400
+
+    try:
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        reports = rs.get_daily_reports(start, end)
+        return jsonify({'success': True, 'reports': reports})
+    except Exception as e:
+        current_app.logger.error(f"Error fetching daily reports: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/weekly-summary', methods=['GET'])
+@login_required
+def api_weekly_summary():
+    """Get consolidated weekly summary for admin."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    week_start = request.args.get('week_start')
+    if not week_start:
+        # Default to current week (Monday)
+        today = datetime.utcnow().date()
+        week_start = (today - timedelta(days=today.weekday())).isoformat()
+
+    try:
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        summary = rs.get_weekly_summary(week_start)
+        return jsonify({'success': True, 'summary': summary})
+    except Exception as e:
+        current_app.logger.error(f"Error fetching weekly summary: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/reports/accumulate', methods=['POST'])
+@login_required
+def api_accumulate_reports():
+    """Trigger daily report accumulation for all patients with completed sessions."""
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    report_date = request.args.get('date')
+    
+    from app.services.report_service import ReportService
+    rs = ReportService()
+
+    # Get all therapists with completed sessions today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    if report_date:
+        try:
+            today_start = datetime.strptime(report_date, '%Y-%m-%d')
+        except:
+            pass
+    
+    tomorrow = today_start + timedelta(days=1)
+
+    therapists = User.query.filter_by(role='terapista', is_active=True).all()
+    accumulated = 0
+
+    for therapist in therapists:
+        patients = therapist.associated_patients.filter_by(role='jugador').all()
+        for patient in patients:
+            has_sessions = Appointment.query.filter(
+                Appointment.patient_id == patient.id,
+                Appointment.therapist_id == therapist.id,
+                Appointment.start_time >= today_start,
+                Appointment.start_time < tomorrow,
+                Appointment.status == 'completed'
+            ).count()
+            
+            if has_sessions > 0:
+                rs.generate_daily_report(patient.id, therapist.id, today_start.strftime('%Y-%m-%d'))
+                accumulated += 1
+
+    return jsonify({
+        'success': True,
+        'message': f'Reportes acumulados para {accumulated} pacientes',
+        'date': today_start.strftime('%Y-%m-%d')
+    })
+
+
+@admin_bp.route('/api/reports/monthly', methods=['GET'])
+@login_required
+def api_monthly_reports():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    year = request.args.get('year', type=int, default=datetime.utcnow().year)
+    month = request.args.get('month', type=int, default=datetime.utcnow().month)
+
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    summary = rs.get_monthly_summary(year, month)
+    return jsonify({'success': True, 'summary': summary})
+
+
+@admin_bp.route('/api/reports/quarterly', methods=['GET'])
+@login_required
+def api_quarterly_reports():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    year = request.args.get('year', type=int, default=datetime.utcnow().year)
+    quarter = request.args.get('quarter', type=int, default=(datetime.utcnow().month - 1) // 3 + 1)
+
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    summary = rs.get_quarterly_summary(year, quarter)
+    return jsonify({'success': True, 'summary': summary})
+
+
+@admin_bp.route('/api/reports/generate-all-weekly', methods=['POST'])
+@login_required
+def api_generate_all_weekly():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    week_start = request.args.get('week_start')
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    generated = rs.generate_all_weekly_reports(week_start)
+
+    from app.models import Notification
+    admin_users = User.query.filter_by(role='admin').all()
+    for admin in admin_users:
+        notif = Notification(
+            user_id=admin.id,
+            title='Reportes Semanales Generados',
+            message=f'Se generaron {len(generated)} reportes semanales automaticamente.',
+            type='reportes'
+        )
+        db.session.add(notif)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes semanales generados',
+        'count': len(generated)
+    })
+
+
+@admin_bp.route('/api/reports/generate-monthly', methods=['POST'])
+@login_required
+def api_generate_monthly():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    year = request.args.get('year', type=int, default=datetime.utcnow().year)
+    month = request.args.get('month', type=int, default=datetime.utcnow().month)
+
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    generated = rs.generate_all_monthly_reports(year, month)
+
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes mensuales generados',
+        'count': len(generated)
+    })
+
+
+@admin_bp.route('/api/reports/generate-quarterly', methods=['POST'])
+@login_required
+def api_generate_quarterly():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    year = request.args.get('year', type=int, default=datetime.utcnow().year)
+    quarter = request.args.get('quarter', type=int, default=(datetime.utcnow().month - 1) // 3 + 1)
+
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    generated = rs.generate_all_quarterly_reports(year, quarter)
+
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes trimestrales generados',
+        'count': len(generated)
+    })
+
+
+@admin_bp.route('/api/reports/patient-monthly/<int:patient_id>', methods=['GET'])
+@login_required
+def api_patient_monthly_reports(patient_id):
+    if current_user.role not in ('admin', 'terapista'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    reports = MonthlyReport.query.filter_by(patient_id=patient_id).order_by(MonthlyReport.year.desc(), MonthlyReport.month.desc()).all()
+    return jsonify({'success': True, 'reports': [{
+        'id': r.id, 'month': r.month, 'year': r.year,
+        'sessions_count': r.sessions_count, 'avg_score': r.avg_score,
+        'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
+        'report_text': r.report_text, 'created_at': r.created_at.isoformat(),
+    } for r in reports]})
+
+
+@admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
+@login_required
+def api_patient_quarterly_reports(patient_id):
+    if current_user.role not in ('admin', 'terapista'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    reports = QuarterlyReport.query.filter_by(patient_id=patient_id).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).all()
+    return jsonify({'success': True, 'reports': [{
+        'id': r.id, 'quarter': r.quarter, 'year': r.year,
+        'sessions_count': r.sessions_count, 'avg_score': r.avg_score,
+        'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
+        'report_text': r.report_text, 'created_at': r.created_at.isoformat(),
+    } for r in reports]})
+
+
 def download_receipt(payment_id):
     from flask import flash, redirect, url_for
     from flask_login import current_user

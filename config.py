@@ -44,6 +44,9 @@ class Config:
     RATELIMIT_STORAGE_URL = "memory://"
     RATELIMIT_STRATEGY = "fixed-window"
     
+    # ========== TIMEZONE (Peru = UTC-5, no DST) ==========
+    TIMEZONE = 'America/Lima'
+    
     # ========== GEMINI API_KEY ==========
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     

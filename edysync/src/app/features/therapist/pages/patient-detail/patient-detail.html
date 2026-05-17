@@ -42,7 +42,14 @@
     <!-- Sessions History -->
     <div class="lg:col-span-2">
       <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-outline-variant/20 p-6">
-        <h3 class="text-lg font-bold text-textDark mb-4">Sesiones Recientes</h3>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-textDark">Sesiones Recientes</h3>
+          <button (click)="generateWeeklyReport()" [disabled]="weeklyReportGenerating"
+                  class="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-full hover:bg-purple-700 transition-all shadow-sm flex items-center gap-2 disabled:opacity-50">
+            <fa-icon [icon]="weeklyReportGenerating ? ['fas', 'spinner'] : ['fas', 'file-alt']" [class.fa-spin]="weeklyReportGenerating"></fa-icon>
+            {{ weeklyReportGenerating ? 'Generando...' : 'Generar Reporte Semanal' }}
+          </button>
+        </div>
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead>
@@ -74,6 +81,35 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Weekly Report Section -->
+        <div *ngIf="weeklyReport" class="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+          <h4 class="text-sm font-bold text-purple-800 mb-3 flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'file-alt']" class="text-purple-600"></fa-icon>
+            Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div class="bg-white rounded-lg p-3 text-center border border-purple-100">
+              <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">Sesiones</p>
+              <p class="text-xl font-black text-purple-900">{{ weeklyReport.sessions_count }}</p>
+            </div>
+            <div class="bg-white rounded-lg p-3 text-center border border-purple-100">
+              <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">Score Promedio</p>
+              <p class="text-xl font-black text-purple-900">{{ weeklyReport.avg_score || '—' }}</p>
+            </div>
+            <div class="bg-white rounded-lg p-3 text-center border border-purple-100">
+              <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">Objetivos Logrados</p>
+              <p class="text-xl font-black text-purple-900">{{ weeklyReport.objectives_achieved }}/{{ weeklyReport.objectives_total }}</p>
+            </div>
+            <div class="bg-white rounded-lg p-3 text-center border border-purple-100">
+              <p class="text-xs text-purple-600 font-bold uppercase tracking-wider">Progreso</p>
+              <p class="text-xl font-black text-purple-900">{{ weeklyReport.objectives_total > 0 ? (weeklyReport.objectives_achieved / weeklyReport.objectives_total * 100).toFixed(0) : 0 }}%</p>
+            </div>
+          </div>
+          <div *ngIf="weeklyReport.report_text" class="p-3 bg-white rounded-lg border border-purple-100 text-sm text-purple-900 whitespace-pre-wrap max-h-40 overflow-y-auto">
+            {{ weeklyReport.report_text }}
+          </div>
         </div>
       </div>
     </div>

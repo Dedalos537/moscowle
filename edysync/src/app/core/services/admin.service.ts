@@ -126,7 +126,7 @@ export class AdminService {
   }
 
   deleteSession(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(`/admin/api/sessions/${id}`);
+    return this.http.delete<ApiResponse>(`/api/sessions/${id}`);
   }
 
   executeSmartAction(actionId: number): Observable<{ success: boolean; message: string }> {
@@ -316,6 +316,65 @@ export class AdminService {
 
   generateIAReport(): Observable<any> {
     return this.http.post('/admin/generate-ia-report', {});
+  }
+
+  // ─── Weekly / Daily Reports ────────────────────────────
+  getWeeklySummary(weekStart?: string): Observable<any> {
+    let params = new HttpParams();
+    if (weekStart) params = params.set('week_start', weekStart);
+    return this.http.get<any>('/api/weekly-summary', { params });
+  }
+
+  getDailyReports(start?: string, end?: string): Observable<any> {
+    let params = new HttpParams();
+    if (start) params = params.set('start', start);
+    if (end) params = params.set('end', end);
+    return this.http.get<any>('/api/daily-reports', { params });
+  }
+
+  accumulateReports(): Observable<any> {
+    return this.http.post<any>('/api/reports/accumulate', {});
+  }
+
+  // ─── Monthly / Quarterly Reports ───────────────────────
+  getMonthlySummary(year?: number, month?: number): Observable<any> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year);
+    if (month) params = params.set('month', month);
+    return this.http.get<any>('/api/reports/monthly', { params });
+  }
+
+  getQuarterlySummary(year?: number, quarter?: number): Observable<any> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year);
+    if (quarter) params = params.set('quarter', quarter);
+    return this.http.get<any>('/api/reports/quarterly', { params });
+  }
+
+  generateAllWeeklyReports(weekStart?: string): Observable<any> {
+    let params = new HttpParams();
+    if (weekStart) params = params.set('week_start', weekStart);
+    return this.http.post<any>('/api/reports/generate-all-weekly', {}, { params });
+  }
+
+  generateMonthlyReports(year?: number, month?: number): Observable<any> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year);
+    if (month) params = params.set('month', month);
+    return this.http.post<any>('/api/reports/generate-monthly', {}, { params });
+  }
+
+  generateQuarterlyReports(year?: number, quarter?: number): Observable<any> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year);
+    if (quarter) params = params.set('quarter', quarter);
+    return this.http.post<any>('/api/reports/generate-quarterly', {}, { params });
+  }
+
+  getTherapistEfficiency(therapistId?: number): Observable<any> {
+    let params = new HttpParams();
+    if (therapistId) params = params.set('therapist_id', therapistId);
+    return this.http.get<any>('/therapist/efficiency', { params });
   }
 
 }

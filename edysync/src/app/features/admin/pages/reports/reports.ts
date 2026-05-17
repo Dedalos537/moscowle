@@ -44,6 +44,30 @@ export class Reports implements OnInit, OnDestroy {
 
   overview: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } | null = null;
 
+  // Weekly / Daily Reports
+  weeklySummary: any = null;
+  dailyReports: any[] = [];
+  weeklySummaryLoading = false;
+  dailyReportsLoading = false;
+  reportsAccumulating = false;
+  selectedWeekStart: string = '';
+  dailyStartDate: string = '';
+  dailyEndDate: string = '';
+
+  // Monthly / Quarterly Reports
+  activeReportTab: 'weekly' | 'monthly' | 'quarterly' = 'weekly';
+  monthlySummary: any = null;
+  quarterlySummary: any = null;
+  monthlyLoading = false;
+  quarterlyLoading = false;
+  selectedMonth: number = new Date().getMonth() + 1;
+  selectedYear: number = new Date().getFullYear();
+  selectedQuarter: number = Math.floor(new Date().getMonth() / 3) + 1;
+
+  // Efficiency
+  therapistEfficiency: any = null;
+  efficiencyLoading = false;
+
   loading = true;
   aiGenerating = false;
   reportSending = false;
@@ -346,9 +370,172 @@ export class Reports implements OnInit, OnDestroy {
     );
   }
 
+  // ─── Weekly / Daily Reports ────────────────────────────
+
+  loadWeeklySummary() {
+    this.weeklySummaryLoading = true;
+    this.adminService.getWeeklySummary(this.selectedWeekStart || undefined).subscribe({
+      next: (res) => {
+        this.weeklySummaryLoading = false;
+        if (res.success) {
+          this.weeklySummary = res.data;
+        }
+      },
+      error: () => {
+        this.weeklySummaryLoading = false;
+      },
+    });
+  }
+
+  loadDailyReports() {
+    this.dailyReportsLoading = true;
+    this.adminService.getDailyReports(this.dailyStartDate || undefined, this.dailyEndDate || undefined).subscribe({
+      next: (res) => {
+        this.dailyReportsLoading = false;
+        if (res.success) {
+          this.dailyReports = res.data || [];
+        }
+      },
+      error: () => {
+        this.dailyReportsLoading = false;
+      },
+    });
+  }
+
+  accumulateReports() {
+    this.reportsAccumulating = true;
+    this.adminService.accumulateReports().subscribe({
+      next: (res) => {
+        this.reportsAccumulating = false;
+        if (res.success) {
+          this.alertService.show('Reportes acumulados correctamente.', 'success');
+          this.loadWeeklySummary();
+          this.loadDailyReports();
+        }
+      },
+      error: () => {
+        this.reportsAccumulating = false;
+        this.alertService.show('Error al acumular reportes.', 'error');
+      },
+    });
+  }
+
+  loadEfficiency(therapistId?: number) {
+    this.efficiencyLoading = true;
+    this.adminService.getTherapistEfficiency(therapistId).subscribe({
+      next: (res) => {
+        this.efficiencyLoading = false;
+        if (res.success) {
+          this.therapistEfficiency = res;
+        }
+      },
+      error: () => {
+        this.efficiencyLoading = false;
+      },
+    });
+  }
+
+  setWeekStart(date: string) {
+    this.selectedWeekStart = date;
+    this.loadWeeklySummary();
+  }
+
   accuracyColor(avg: number): string {
     if (avg >= 90) return 'text-emerald-600 bg-emerald-100';
     if (avg >= 75) return 'text-amber-600 bg-amber-100';
     return 'text-red-600 bg-red-100';
+  }
+
+  get therapistWeeklyPatients(): any[] {
+    if (!this.weeklySummary?.by_therapist) return [];
+    return this.weeklySummary.by_therapist;
+  }
+
+  // ─── Monthly / Quarterly Reports ────────────────────────
+
+  setReportTab(tab: 'weekly' | 'monthly' | 'quarterly') {
+    this.activeReportTab = tab;
+    if (tab === 'monthly') this.loadMonthlySummary();
+    if (tab === 'quarterly') this.loadQuarterlySummary();
+  }
+
+  loadMonthlySummary() {
+    this.monthlyLoading = true;
+    this.adminService.getMonthlySummary(this.selectedYear, this.selectedMonth).subscribe({
+      next: (res) => {
+        this.monthlyLoading = false;
+        if (res.success) this.monthlySummary = res.summary;
+      },
+      error: () => this.monthlyLoading = false,
+    });
+  }
+
+  loadQuarterlySummary() {
+    this.quarterlyLoading = true;
+    this.adminService.getQuarterlySummary(this.selectedYear, this.selectedQuarter).subscribe({
+      next: (res) => {
+        this.quarterlyLoading = false;
+        if (res.success) this.quarterlySummary = res.summary;
+      },
+      error: () => this.quarterlyLoading = false,
+    });
+  }
+
+  generateMonthlyReports() {
+    this.monthlyLoading = true;
+    this.adminService.generateMonthlyReports(this.selectedYear, this.selectedMonth).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.alertService.show(`${res.count} reportes mensuales generados`, 'success');
+          this.loadMonthlySummary();
+        }
+      },
+      error: () => {
+        this.monthlyLoading = false;
+        this.alertService.show('Error al generar reportes mensuales', 'error');
+      },
+    });
+  }
+
+  generateQuarterlyReports() {
+    this.quarterlyLoading = true;
+    this.adminService.generateQuarterlyReports(this.selectedYear, this.selectedQuarter).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.alertService.show(`${res.count} reportes trimestrales generados`, 'success');
+          this.loadQuarterlySummary();
+        }
+      },
+      error: () => {
+        this.quarterlyLoading = false;
+        this.alertService.show('Error al generar reportes trimestrales', 'error');
+      },
+    });
+  }
+
+  generateAllWeeklyReports() {
+    this.weeklySummaryLoading = true;
+    this.adminService.generateAllWeeklyReports(this.selectedWeekStart).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.alertService.show(`${res.count} reportes semanales generados`, 'success');
+          this.loadWeeklySummary();
+        }
+      },
+      error: () => {
+        this.weeklySummaryLoading = false;
+        this.alertService.show('Error al generar reportes', 'error');
+      },
+    });
+  }
+
+  get monthlyTherapistPatients(): any[] {
+    if (!this.monthlySummary?.by_therapist) return [];
+    return Object.values(this.monthlySummary.by_therapist);
+  }
+
+  get quarterlyTherapistPatients(): any[] {
+    if (!this.quarterlySummary?.by_therapist) return [];
+    return Object.values(this.quarterlySummary.by_therapist);
   }
 }

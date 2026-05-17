@@ -83,9 +83,9 @@
         <input type="text" [(ngModel)]="singleForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas</label>
-        <input type="text" [(ngModel)]="singleForm.dates" placeholder="Ej: 2026-05-10, 2026-05-12" class="input-field text-sm">
-        <p class="text-xs text-on-surface-variant/60 mt-1">Ingresa las fechas separadas por coma (YYYY-MM-DD).</p>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fecha <span class="text-error">*</span></label>
+        <input type="date" [(ngModel)]="singleForm.dates" class="input-field text-sm">
+        <p class="text-xs text-on-surface-variant/60 mt-1">Haz doble clic en el calendario para auto-completar.</p>
       </div>
       <div class="flex items-center gap-2">
         <input type="checkbox" id="is_past_session" [(ngModel)]="singleForm.is_past_session" class="rounded text-primary focus:ring-primary">
@@ -209,83 +209,109 @@
 
 <!-- Edit Session Modal -->
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <div class="bg-primary-container p-3 rounded text-sm text-primary mb-2">
-    Terapeuta: {{ editForm.therapist }} | Paciente: {{ editForm.patient }}
+  <!-- Session Info Header -->
+  <div class="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl border border-outline mb-4">
+    <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+      <span class="material-symbols-outlined text-primary text-lg" style="font-family: 'Material Symbols Outlined'">event</span>
+    </div>
+    <div class="min-w-0">
+      <p class="text-sm font-bold text-on-surface truncate">{{ editForm.title || 'Sin título' }}</p>
+      <p class="text-xs text-on-surface-variant truncate">{{ editForm.therapist }} &middot; {{ editForm.patient }} &middot; {{ editForm.date }}</p>
+    </div>
+    <span class="ml-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0"
+          [class.bg-green-100]="editForm.status === 'completed'"
+          [class.text-green-700]="editForm.status === 'completed'"
+          [class.bg-blue-100]="editForm.status === 'scheduled'"
+          [class.text-blue-700]="editForm.status === 'scheduled'"
+          [class.bg-red-100]="editForm.status === 'cancelled'"
+          [class.text-red-700]="editForm.status === 'cancelled'">
+      {{ editForm.status }}
+    </span>
   </div>
 
-  <div class="space-y-4">
+  <div class="space-y-5">
+    <!-- Basic Info -->
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Título</label>
-      <input type="text" [(ngModel)]="editForm.title" class="input-field text-sm">
-    </div>
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fecha</label>
-      <input type="date" [(ngModel)]="editForm.date" class="input-field text-sm">
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
-        <input type="time" [(ngModel)]="editForm.start_time" class="input-field text-sm">
-      </div>
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
-        <input type="time" [(ngModel)]="editForm.end_time" class="input-field text-sm">
-      </div>
-    </div>
-    <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado</label>
-      <select [(ngModel)]="editForm.status" class="input-field text-sm mb-4">
-        <option value="scheduled">Programada</option>
-        <option value="completed">Completada</option>
-        <option value="cancelled">Cancelada</option>
-      </select>
-    </div>
-
-    <!-- DOCUMENT UPLOAD SECTION -->
-    <div class="mt-6 border-t border-outline-variant/20 pt-4">
-      <label class="text-label-caps text-on-surface-variant mb-2 block">Documento de Programación (.docx)</label>
-
-      <!-- Existing Program state -->
-      <div *ngIf="auditState" class="mt-2 p-3 rounded-lg text-sm flex items-start gap-2 bg-green-50 text-green-700 border border-green-200">
-        <span class="material-symbols-outlined mt-0.5" style="font-family: 'Material Symbols Outlined'">check_circle</span>
-        <div class="flex-1">
-          <strong>Programación ya subida ✓</strong>
-          <p class="text-xs mt-1 opacity-75">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
+      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Información General</p>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-medium text-on-surface-variant mb-1 block">Título</label>
+          <input type="text" [(ngModel)]="editForm.title" class="input-field text-sm w-full" placeholder="Título de la sesión">
         </div>
-        <button (click)="deleteProgram()" class="ml-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all" title="Eliminar programación">
-          <span class="material-symbols-outlined text-[20px]" style="font-family: 'Material Symbols Outlined'">delete</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Fecha</label>
+            <input type="date" [(ngModel)]="editForm.date" class="input-field text-sm w-full">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Hora Inicio</label>
+            <input type="time" [(ngModel)]="editForm.start_time" class="input-field text-sm w-full">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-on-surface-variant mb-1 block">Hora Fin</label>
+            <input type="time" [(ngModel)]="editForm.end_time" class="input-field text-sm w-full">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-on-surface-variant mb-1 block">Estado</label>
+          <select [(ngModel)]="editForm.status" class="input-field text-sm w-full">
+            <option value="scheduled">Programada</option>
+            <option value="completed">Completada</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="border-t border-outline pt-5">
+      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación de Sesión (.docx)</p>
+
+      <!-- Existing Program -->
+      <div *ngIf="auditState" class="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+        <span class="material-symbols-outlined text-green-600 shrink-0 mt-0.5" style="font-family: 'Material Symbols Outlined'">check_circle</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-green-800">Programación subida</p>
+          <p class="text-xs text-green-600 mt-0.5 truncate">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
+        </div>
+        <button (click)="deleteProgram()" [disabled]="programDeleting" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-500 hover:bg-red-100 disabled:opacity-50 transition-all" title="Eliminar">
+          <span *ngIf="!programDeleting" class="material-symbols-outlined text-lg" style="font-family: 'Material Symbols Outlined'">delete</span>
+          <span *ngIf="programDeleting" class="material-symbols-outlined text-lg fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span>
         </button>
       </div>
 
-      <!-- Upload Trigger (Empty state) -->
-      <div *ngIf="!auditState" class="mt-2">
-        <label for="programFileInput" class="block w-full border-2 border-dashed border-outline-variant/40 rounded-lg p-4 text-center hover:border-primary hover:bg-surface-container-high transition-all cursor-pointer">
-          <span class="material-symbols-outlined text-on-surface-variant/60 mb-2 text-[36px]" style="font-family: 'Material Symbols Outlined'">cloud_upload</span>
-          <p class="text-sm text-on-surface">Haz clic para subir el documento Word</p>
-          <p class="text-xs text-on-surface-variant/60 mt-1">Solo archivos .docx</p>
+      <!-- Upload Area (empty state) -->
+      <div *ngIf="!auditState" class="mt-1">
+        <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
+          <span class="material-symbols-outlined text-3xl text-on-surface-variant/50" style="font-family: 'Material Symbols Outlined'">cloud_upload</span>
+          <div class="text-center">
+            <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
+            <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
+          </div>
         </label>
         <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
       </div>
 
-      <!-- Uploading / Messages -->
-      <div *ngIf="programUploading" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-blue-50 text-blue-700">
-        <span class="material-symbols-outlined fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span> Procesando documento Word...
+      <!-- Status Messages -->
+      <div *ngIf="programUploading" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm">
+        <span class="material-symbols-outlined fa-spin text-lg" style="font-family: 'Material Symbols Outlined'">refresh</span> Procesando documento...
       </div>
-      <div *ngIf="programError" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-red-50 text-red-700">
-        <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">error</span> {{ programError }}
+      <div *ngIf="programError" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-red-50 text-red-700 text-sm">
+        <span class="material-symbols-outlined text-lg" style="font-family: 'Material Symbols Outlined'">error</span> {{ programError }}
       </div>
-      <div *ngIf="programSuccessMessage" class="mt-2 p-2 rounded-lg text-sm flex items-center gap-2 bg-green-50 text-green-700">
-        <span class="material-symbols-outlined" style="font-family: 'Material Symbols Outlined'">check_circle</span> {{ programSuccessMessage }}
+      <div *ngIf="programSuccessMessage" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-green-50 text-green-700 text-sm">
+        <span class="material-symbols-outlined text-lg" style="font-family: 'Material Symbols Outlined'">check_circle</span> {{ programSuccessMessage }}
       </div>
     </div>
-
   </div>
 
-  <div modal-footer>
-    <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-alt']" (clicked)="deleteSession()"></app-button>
-    <div class="flex gap-3">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
-    </div>
+  <div modal-footer class="flex items-center justify-between">
+    <button (click)="deleteSession()" [disabled]="deleting"
+            class="h-9 px-4 bg-error text-on-error text-xs font-bold rounded-full hover:bg-error/90 disabled:opacity-50 transition-all flex items-center gap-2">
+      <span *ngIf="!deleting" class="material-symbols-outlined text-[16px]" style="font-family: 'Material Symbols Outlined'">delete</span>
+      <span *ngIf="deleting" class="material-symbols-outlined text-[16px] fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span>
+      {{ deleting ? 'Eliminando...' : 'Eliminar Sesión' }}
+    </button>
+    <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
   </div>
 </app-modal>

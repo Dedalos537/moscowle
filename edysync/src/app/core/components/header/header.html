@@ -1,8 +1,8 @@
 <header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-3">
     @if (headerService.icon$ | async; as icon) {
-      @if (isString(icon)) {
-        <span class="material-symbols-outlined text-primary text-2xl">{{ icon }}</span>
+      @if (icon && icon.length && icon.length === 2) {
+        <fa-icon [icon]="icon" class="text-primary text-2xl"></fa-icon>
       }
     }
     <div class="flex flex-col">
@@ -13,6 +13,14 @@
 
   <div class="flex items-center gap-4">
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
+
+    <!-- Recording Indicator -->
+    @if (isRecording) {
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
+        <span class="w-2 h-2 rounded-full bg-red-500 recording-dot"></span>
+        <span class="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider hidden sm:inline">Grabando</span>
+      </div>
+    }
 
     <div class="relative">
       <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none">
@@ -34,13 +42,22 @@
             @for (notif of notifications; track notif.id) {
               <div class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-outline-variant/10 last:border-0">
                 <div class="flex items-start gap-3">
-                  <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                    <span class="material-symbols-outlined text-primary text-sm">notifications</span>
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                       [class.bg-primary/10]="!notif.type || notif.type === 'default'"
+                       [class.bg-amber-100]="notif.type === 'debt'"
+                       [class.bg-blue-100]="notif.type === 'activity'">
+                    @if (notif.type === 'debt') {
+                      <span class="material-symbols-outlined text-amber-600 text-sm" style="font-family: 'Material Symbols Outlined'">payments</span>
+                    } @else if (notif.type === 'activity') {
+                      <span class="material-symbols-outlined text-blue-600 text-sm" style="font-family: 'Material Symbols Outlined'">event</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-primary text-sm" style="font-family: 'Material Symbols Outlined'">notifications</span>
+                    }
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
                     <p class="text-label-caps text-on-surface-variant mt-1 flex items-center gap-1">
-                      <span class="material-symbols-outlined text-xs leading-none">schedule</span> {{ notif.timestamp }}
+                      <span class="material-symbols-outlined text-xs leading-none" style="font-family: 'Material Symbols Outlined'">schedule</span> {{ notif.timestamp }}
                     </p>
                   </div>
                 </div>
@@ -84,3 +101,24 @@
     </div>
   </div>
 </header>
+
+<!-- Logout Warning Modal -->
+@if (showLogoutWarning) {
+  <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="cancelLogout()">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl" style="font-family: 'Material Symbols Outlined'">mic_off</span>
+      </div>
+      <h3 class="text-lg font-bold text-on-surface text-center mb-2">Grabación en curso</h3>
+      <p class="text-sm text-on-surface-variant text-center mb-6">Hay una sesión grabándose en este momento. Si cierras sesión, la grabación se detendrá y la sesión quedará incompleta.</p>
+      <div class="flex gap-3">
+        <button (click)="cancelLogout()" class="flex-1 h-10 rounded-xl border border-outline-variant/40 text-sm font-bold text-on-surface hover:bg-surface-container-high transition-all">
+          Cancelar
+        </button>
+        <button (click)="logout()" class="flex-1 h-10 rounded-xl bg-error text-on-error text-sm font-bold hover:bg-error/90 transition-all">
+          Detener y Salir
+        </button>
+      </div>
+    </div>
+  </div>
+}

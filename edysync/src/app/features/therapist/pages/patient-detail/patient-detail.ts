@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HeaderService } from '../../../../core/services/header.service';
+import { TherapistService } from '../../../../core/services/therapist.service';
 import { HttpClient } from '@angular/common/http';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
@@ -17,9 +18,15 @@ export class TherapistPatientDetail implements OnInit {
   patient: any = null;
   sessions: any[] = [];
 
+  // Weekly Report
+  weeklyReport: any = null;
+  weeklyReportLoading = false;
+  weeklyReportGenerating = false;
+
   constructor(
     private route: ActivatedRoute,
     private headerService: HeaderService,
+    private therapistService: TherapistService,
     private http: HttpClient
   ) {}
 
@@ -41,6 +48,40 @@ export class TherapistPatientDetail implements OnInit {
         this.loading = false;
       },
       error: () => (this.loading = false),
+    });
+  }
+
+  // ─── Weekly Report ──────────────────────────────────────
+
+  generateWeeklyReport() {
+    this.weeklyReportGenerating = true;
+    this.weeklyReport = null;
+    this.therapistService.generateWeeklyReport(this.patientId).subscribe({
+      next: (res) => {
+        this.weeklyReportGenerating = false;
+        if (res.success) {
+          this.weeklyReport = res.report;
+          this.loadWeeklyReport();
+        }
+      },
+      error: () => {
+        this.weeklyReportGenerating = false;
+      },
+    });
+  }
+
+  loadWeeklyReport() {
+    this.weeklyReportLoading = true;
+    this.therapistService.getWeeklyReport(this.patientId).subscribe({
+      next: (res) => {
+        this.weeklyReportLoading = false;
+        if (res.success && res.report) {
+          this.weeklyReport = res.report;
+        }
+      },
+      error: () => {
+        this.weeklyReportLoading = false;
+      },
     });
   }
 }

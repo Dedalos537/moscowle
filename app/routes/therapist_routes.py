@@ -1322,3 +1322,36 @@ def api_update_profile():
     return jsonify({'success': True, 'message': 'Perfil actualizado correctamente'})
 
 
+@therapist_bp.route('/api/weekly-reports/pending', methods=['GET'])
+@login_required
+def api_weekly_reports_pending():
+    if current_user.role != 'terapista':
+        return jsonify({'error': 'Acceso denegado'}), 403
+
+    from app.models import WeeklyReport, Notification
+
+    week_start, week_end = None, None
+    today = datetime.utcnow().date()
+    monday = today - timedelta(days=today.weekday())
+
+    reports = WeeklyReport.query.filter(
+        WeeklyReport.therapist_id == current_user.id,
+        WeeklyReport.week_start == monday
+    ).count()
+
+    notification = Notification.query.filter(
+        Notification.user_id == current_user.id,
+        Notification.type == 'reportes',
+        Notification.read == False
+    ).order_by(Notification.created_at.desc()).first()
+
+    return jsonify({
+        'success': True,
+        'has_pending': reports > 0,
+        'reports_count': reports,
+        'has_notification': notification is not None,
+        'week_start': monday.isoformat(),
+        'week_end': (monday + timedelta(days=6)).isoformat(),
+    })
+
+
