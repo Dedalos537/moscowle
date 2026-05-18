@@ -1,0 +1,2270 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_users' %}
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+{% block extra_styles %}
+<style>
+  /* Scoped styles for Admin Usuarios buttons layout */
+    #create-user,
+  .assign-save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.75rem; /* px-3 py-1.5 */
+    border-radius: 0.5rem; /* rounded-soft */
+    gap: 0.375rem; /* space between icon/text if any */
+    white-space: nowrap;
+  }
+
+  /* Consistent sizing for green primary actions */
+  .assign-save,
+  #create-user {
+    min-height: 2rem;
+    min-width: 6rem;
+    font-weight: 600;
+  }
+
+  /* Action group spacing in the table */
+  .admin-actions-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem; /* space between buttons */
+  }
+
+  /* Fallback: if group class is not present, space buttons individually */
+  .assign-save { margin-right: 0.5rem; }
+  .admin-update-btn { margin-left: 0.25rem; }
+  .admin-delete-btn { margin-left: 0.25rem; }
+
+  /* Table cells: ensure vertical centering */
+  td.actions-cell { vertical-align: middle; }
+  
+  /* ===== IMPROVED STYLES FOR ASSIGN SELECT ===== */
+  
+  /* Select dropdown should be visible and not overflow */
+  .assign-select {
+    position: relative !important;
+    z-index: 10;
+    background-color: white !important;
+    color: #374151 !important;
+  }
+
+  .dark .assign-select {
+    background-color: #0f172a !important;
+    color: #f3f4f6 !important;
+    border-color: #374151 !important;
+  }
+
+  /* Assign button positioned correctly */
+  .assign-btn {
+    position: relative;
+    z-index: 9;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .assign-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  .assign-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Therapist assignment row should not shrink */
+  .therapist-assignment-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Select wrapper */
+  .therapist-select-wrapper {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
+  /* User action menu off-canvas side drawer */
+  .user-action-menu {
+    position: fixed !important;
+    top: 0 !important;
+    right: -300px; /* Start hidden off-screen */
+    width: 300px;
+    height: 100vh;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: 1px solid rgba(0,0,0,0.1);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1) !important;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000 !important;
+    display: block !important;
+    visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-top: 2rem !important;
+  }
+  
+  .dark .user-action-menu {
+    border-left: 1px solid rgba(255,255,255,0.05);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  /* Open state for the drawer */
+  .user-action-menu.drawer-open {
+    right: 0;
+    visibility: visible;
+  }
+  
+  /* Side Panel full Drawer for Modals (Create/Edit) */
+  .side-panel-drawer {
+    position: fixed !important;
+    top: 0 !important;
+    right: -100%;
+    width: 600px;
+    max-width: 100vw;
+    height: 100vh;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: 1px solid rgba(0,0,0,0.1);
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.15) !important;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000 !important;
+    background-color: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+  }
+  
+  .dark .side-panel-drawer {
+    border-left: 1px solid rgba(255,255,255,0.05);
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.5) !important;
+    background-color: #0f172a; /* Custom dark bg */
+  }
+
+  .side-panel-drawer.drawer-open {
+    right: 0;
+    visibility: visible;
+  }
+  
+  /* Backdrop when drawer is open */
+  .drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .drawer-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Prevent absolute positioning conflicts */
+  .user-action-menu.absolute-top {
+    top: 0 !important;
+    bottom: auto !important;
+    margin: 0 !important;
+  }
+  
+  /* Ensure parent container is positioned relative */
+  td.actions-cell {
+    position: static !important; /* Changed from relative so drawer works fixed */
+  }
+  
+  /* User row status colors */
+  .user-row[data-is-retired="true"] {
+    background-color: rgba(107, 114, 128, 0.1) !important; /* gray-500 with 10% opacity */
+  }
+  
+  .user-row[data-is-retired="true"]:hover {
+    background-color: rgba(107, 114, 128, 0.15) !important;
+  }
+  
+  .user-row[data-is-debtor="true"] {
+    background-color: rgba(239, 68, 68, 0.08) !important; /* red-500 with 8% opacity */
+  }
+  
+  .user-row[data-is-debtor="true"]:hover {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+  }
+  
+  .user-row[data-active="false"][data-is-debtor="false"][data-is-retired="false"] {
+    background-color: rgba(251, 146, 60, 0.08) !important; /* orange-500 with 8% opacity for inactive */
+  }
+  
+  .user-row[data-active="false"][data-is-debtor="false"][data-is-retired="false"]:hover {
+    background-color: rgba(251, 146, 60, 0.12) !important;
+  }
+
+  /* User card status colors */
+  .user-card[data-is-retired="true"] {
+    border-color: rgba(107, 114, 128, 0.5) !important;
+  }
+  
+  .user-card[data-is-retired="true"] > :first-child {
+    background-color: rgba(107, 114, 128, 0.1) !important;
+  }
+  
+  .user-card[data-is-debtor="true"] {
+    border-color: rgba(239, 68, 68, 0.5) !important;
+  }
+  
+  .user-card[data-is-debtor="true"] > :first-child {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+  }
+
+  /* Dark mode overrides for assign select */
+  .dark .assign-select {
+    background-color: #1e293b !important;
+    color: #f3f4f6 !important;
+  }
+
+  .dark .assign-select option {
+    background-color: #1e293b;
+    color: #f3f4f6;
+  }
+
+  .dark .assign-select:focus {
+    border-color: #3b82f6 !important;
+    outline: none;
+  }
+
+  /* ===== TOAST ANIMATIONS & STYLES ===== */
+  
+  @keyframes slideInDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  #toast {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    max-width: 500px;
+  }
+
+  .animate-fade-in {
+    animation: slideInDown 0.3s ease-out !important;
+  }
+
+  #toast.hidden {
+    animation: fadeOut 0.3s ease-out;
+    pointer-events: none;
+  }
+
+  /* Gestalt: Clear visual hierarchy */
+  #toast-inner {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+    max-width: 100%;
+    word-break: break-word;
+  }
+
+  /* Table responsiveness fix */
+  @media (max-width: 768px) {
+    .therapist-assignment-row {
+      flex-direction: column;
+    }
+
+    .therapist-select-wrapper {
+      min-width: 100%;
+    }
+
+    .assign-select {
+      width: 100% !important;
+    }
+
+    #toast {
+      left: 1rem;
+      right: 1rem;
+      max-width: calc(100vw - 2rem);
+    }
+  }
+</style>
+
+<!-- Reset Password Drawer (Hidden) -->
+<div id="resetPasswordDrawer" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+    <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+        <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                <i class="fas fa-key text-amber-500"></i>
+            </div>
+            Reset Password
+        </h3>
+        {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', '') }}
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <input type="hidden" id="reset-user-id" />
+        <input type="hidden" id="reset-login-count" />
+        
+        <div id="reset-content-first-time" class="hidden">
+            <div class="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 p-4 rounded-xl mb-6 text-sm flex gap-3">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <p>Este usuario nunca ha iniciado sesión. Por favor, <strong>ingrese una contraseña manual</strong> inicial (mínimo 6 caracteres).</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nueva Contraseña</label>
+                <div class="relative">
+                    <input type="password" id="reset-new-password" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all pr-12" placeholder="Ingrese la nueva clave...">
+                    <button type="button" id="toggle-reset-pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 focus:outline-none">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="reset-content-auto" class="hidden">
+            <div class="py-6 flex flex-col items-center justify-center text-center">
+                <div class="w-16 h-16 bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-full flex justify-center items-center mb-4 text-2xl">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h4 class="text-xl font-bold mb-2 dark:text-white">Generar nueva clave</h4>
+                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">El sistema generará una contraseña segura aleatoriamente y borrará la actual. ¿Estás seguro que deseas continuar?</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 sticky bottom-0 z-10 flex flex-col gap-2">
+        <div class="flex justify-end gap-3">
+            {{ btn.secondary_btn('cancelResetBtn', 'Cancelar') }}
+            {{ btn.primary_btn('confirmResetBtn', 'Confirmar Reseteo', 'fas fa-exchange-alt', 'bg-amber-500 hover:bg-amber-600 hover:shadow-amber-500/25') }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block header_content %}
+<div>
+  <h2 class="text-3xl font-extrabold text-charcoal dark:text-white tracking-tight">Usuarios</h2>
+  <p class="text-sm text-gray-500 mt-1">Crear y gestionar terapeutas y pacientes</p>
+</div>
+{% endblock %}
+{% block header_action %}
+{{ btn.primary_btn('', 'Nuevo Usuario', 'fas fa-user-plus', 'md:px-6 md:py-3', 'open-create') }}
+{% endblock %}
+
+{% block content %}
+{% set sede_opts = [] %}
+{% for s in sedes %}
+    {% set _ = sede_opts.append({'value': s.id, 'label': s.name}) %}
+{% endfor %}
+<div class="p-4 md:p-8">
+  <!-- Central notification drawer backdrop -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- Create User Modal (Hidden) -->
+  <div id="createUserModal" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+      <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+          <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <i class="fas fa-user-plus text-primary"></i>
+              </div>
+              Crear Nuevo Usuario
+          </h3>
+          {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', 'close-create') }}
+      </div>
+      
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+          <!-- Wrapper for original form fields -->
+          <div>
+            <!-- Basic Info -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              {{ inputs.text_input('new-email', 'Email', 'email@ejemplo.com') }}
+              {{ inputs.text_input('new-username', 'Nombre', 'Nombre completo') }}
+              {{ inputs.select_input('new-role', 'Rol', [
+                  {'value': 'terapista', 'label': 'Terapeuta'},
+                  {'value': 'jugador', 'label': 'Paciente'},
+                  {'value': 'admin', 'label': 'Administrador'}
+              ], default_option='') }}
+            </div>
+            
+            <!-- Sede Selection -->
+            <div class="mb-4">
+
+                 <div id="patient-sede-div">
+                    {{ inputs.select_input('new-sede', 'Sede (Sucursal)', sede_opts, default_option='-- Sin asignar --') }}
+                 </div>
+                 <div id="therapist-sede-div" class="hidden">
+                    {{ inputs.select_input('new-sedes-multi', 'Sedes Asignadas (Ctrl+Click para múltiples)', sede_opts, default_option='', multiple=true, select_classes='h-24 custom-scrollbar') }}
+                 </div>
+            </div>
+
+
+
+            <div id="therapist-fields" class="hidden border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 animate-fade-in-down">
+                 <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Configuración de Contrato</h4>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {{ inputs.text_input('new-salary', 'Base Salarial / Monto Total (S/)', '0.00', type='number', extra_attrs='step="0.01"') }}
+                    {{ inputs.text_input('new-hours', 'Horas Contratadas (Mensual)', 'e.g. 160', type='number') }}
+                 </div>
+                 <p class="text-xs text-gray-400">El pago por hora se calculará: Base / Horas.</p>
+            </div>
+
+            <!-- Patient Specific Fields (Hidden by default) -->
+            <div id="patient-fields" class="hidden border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 animate-fade-in-down">
+                <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración del Plan</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    {{ inputs.select_input('new-modality', 'Modalidad (Sesiones)', [
+                        {'value': '1', 'label': '1x Semana (4 Sesiones/Pago)'},
+                        {'value': '2', 'label': '2x Semana (8 Sesiones/Pago)'},
+                        {'value': '3', 'label': '3x Semana (12 Sesiones/Pago)'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.select_input('new-frequency', 'Frecuencia de Pago', [
+                        {'value': 'monthly', 'label': 'Mensual'},
+                        {'value': 'biweekly', 'label': 'Quincenal'},
+                        {'value': 'weekly', 'label': 'Semanal'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.select_input('new-plan-type', 'Tipo de Plan', [
+                        {'value': 'individual', 'label': 'Individual'},
+                        {'value': 'group', 'label': 'Grupal / Fijo'}
+                    ], default_option='') }}
+                    
+                    {{ inputs.text_input('new-amount', 'Monto a Pagar (S/)', '0.00', type='number', extra_attrs='step="0.01"') }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="check-generate" class="rounded text-primary focus:ring-primary" checked>
+                        <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Generar Horario Automático</span>
+                    </label>
+                </div>
+
+                <div id="schedule-fields" class="bg-gray-50 dark:bg-gray-800 p-4 rounded-soft border border-gray-100 dark:border-gray-700">
+                    <h4 class="text-sm font-bold text-gray-600 dark:text-gray-300 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                        {{ inputs.text_input('start-date', 'Fecha Inicio', type='date') }}
+                        {{ inputs.text_input('start-time', 'Hora Inicio', type='time') }}
+                        
+                        {% set therapist_opts = [] %}
+                        {% for t in therapists %}
+                            {% set _ = therapist_opts.append({'value': t.id, 'label': t.username ~ ' (' ~ t.email ~ ')'}) %}
+                        {% endfor %}
+                        {{ inputs.select_input('schedule-therapist', 'Terapeuta Asignado', therapist_opts, default_option='-- Seleccionar --', wrapper_classes='md:col-span-2') }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1 mb-2">Días de Sesión (Seleccionar según modalidad)</label>
+                        <div class="flex gap-4 flex-wrap">
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="0" class="text-primary rounded"> Lun</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="1" class="text-primary rounded"> Mar</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="2" class="text-primary rounded"> Mié</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="3" class="text-primary rounded"> Jue</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="4" class="text-primary rounded"> Vie</label>
+                            <label class="inline-flex items-center gap-1 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 px-3 py-1 rounded border hover:border-primary cursor-pointer"><input type="checkbox" name="days" value="5" class="text-primary rounded"> Sáb</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+      </div>
+      </div>
+      
+      <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 sticky bottom-0 z-10 flex flex-col gap-2">
+          <div class="flex justify-end gap-3">
+              {{ btn.secondary_btn('', 'Cancelar', '', '', 'close-create') }}
+              {{ btn.primary_btn('create-user', 'Crear Usuario', 'fas fa-save') }}
+          </div>
+          <div class="text-right">
+              <span id="create-status" class="text-sm text-gray-600 dark:text-gray-400 font-medium"></span>
+          </div>
+      </div>
+  </div>
+
+    <!-- Stat Cards (Molecules) -->
+                <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                    {{ cards.stat_card('total_users', 'Total Usuarios', '0', 'bg-primary/5') }}
+                    {{ cards.stat_card('active_users', 'Activos', '0', 'bg-green-500/5', 'text-green-500') }}
+                    {{ cards.stat_card('total_patients', 'Pacientes', '0', 'bg-indigo-500/5') }}
+                    {{ cards.stat_card('total_therapists', 'Terapeutas', '0', 'bg-purple-500/5') }}
+                </div>
+
+                
+<!-- Dashboard: Charts -->
+                <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Usuarios por Sede</h4>
+                        <div style="max-height:210px;"><canvas id="users_sede_chart" aria-label="Usuarios por Sede" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Activo vs Inactivo</h4>
+                        <div style="max-height:210px;"><canvas id="active_status_chart" aria-label="Activo vs Inactivo" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6" style="max-height:280px;">
+                        <h4 class="text-sm font-bold tracking-wide text-gray-400 uppercase mb-4">Roles de Usuario</h4>
+                        <div style="max-height:210px;"><canvas id="user_role_chart" aria-label="Roles de Usuario" style="width:100%;height:100%;"></canvas></div>
+                    </div>
+                </div>
+
+        
+<div class="bg-surface dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-6 xl:p-8 overflow-visible">
+    <div class="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 border-b border-gray-100 dark:border-gray-800 pb-6">
+        <h3 class="text-xl font-bold text-charcoal dark:text-white flex items-center gap-2">
+            <i class="fas fa-users text-primary"></i> 
+            Directorio
+        </h3>
+        
+        <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center flex-wrap justify-end">
+             <!-- Sede Filter -->
+             {{ forms.filter_select('sedeFilter', 'Todas las Sedes', sede_opts) }}
+
+             <!-- Therapist Filter -->
+             {{ forms.filter_select('therapistFilter', 'Filtro Terapeuta', []) }}
+
+             <!-- Search Bar -->
+             {{ forms.search_input('userHelperSearch', 'Buscar usuario o email...') }}
+            
+            <!-- Filters -->
+            <div class="flex gap-2 overflow-x-auto pb-1 md:pb-0 w-full md:w-auto no-scrollbar">
+                <button data-action="filter" data-filter="all" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white font-semibold transition-all filter-btn active shadow-sm">Todos</button>
+                <button data-action="filter" data-filter="jugador" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Pacientes</button>
+                <button data-action="filter" data-filter="deudores" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-red-50 text-red-600 hover:bg-red-100 font-semibold transition-all filter-btn shadow-sm">Deudores</button>
+                <button data-action="filter" data-filter="retirados" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Retirados</button>
+                <button data-action="filter" data-filter="terapista" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Terapeutas</button>
+                <button data-action="filter" data-filter="admin" class="whitespace-nowrap px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-semibold transition-all filter-btn shadow-sm">Admin</button>
+            </div>
+        </div>
+      </div>
+<!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm mt-4">
+      <table class="w-full min-w-[900px]">
+        {{ tables.table_header([
+            {'label': 'Usuario', 'align': 'text-left'},
+            {'label': 'Email', 'align': 'text-left'},
+            {'label': 'Rol', 'align': 'text-left'},
+            {'label': 'Sede', 'align': 'text-left'},
+            {'label': 'Estado', 'align': 'text-center'},
+            {'label': 'Terapeuta', 'align': 'text-left'},
+            {'label': 'Acciones', 'align': 'text-right'}
+        ]) }}
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-slate-900">
+          {% for u in users %}
+          {% set sede_ids = [] %}
+          {% if u.role == 'jugador' and u.sede_id %}
+             {% set _ = sede_ids.append(u.sede_id) %}
+          {% elif u.role == 'terapista' %}
+             {% for s in u.assigned_sedes %}
+                {% set _ = sede_ids.append(s.id) %}
+             {% endfor %}
+          {% endif %}
+          <tr class="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors duration-200 group user-row" 
+              data-role="{{ u.role }}" 
+              data-sede-ids='{{ sede_ids | tojson }}'
+              data-active="{{ 'true' if u.is_active else 'false' }}"
+              data-account-status="{{ u.account_status or 'active' }}"
+              data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
+              data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-primary/20 shadow-sm">
+                    {{ u.username[:2].upper() if u.username else 'US' }}
+                </div>
+                <div class="flex-1 min-w-[200px] w-[200px] xl:w-[250px]">
+                    <input class="font-bold text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name py-1 text-[15px]" data-id="{{ u.id }}" value="{{ u.username }}" />
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[120px] lg:max-w-[180px] xl:max-w-[200px] truncate" title="{{ u.email }}">{{ u.email }}</td>
+            <td class="px-6 py-4">
+              <div class="relative w-fit">
+                  <select class="appearance-none bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl text-sm font-semibold py-2 pl-4 pr-10 admin-edit-role cursor-pointer transition-all duration-200 text-gray-700 dark:text-gray-300 shadow-sm" data-id="{{ u.id }}">
+                    <option value="terapista" {{ 'selected' if u.role == 'terapista' else '' }}>Terapeuta</option>
+                    <option value="jugador" {{ 'selected' if u.role == 'jugador' else '' }}>Paciente</option>
+                    <option value="admin" {{ 'selected' if u.role == 'admin' else '' }}>Admin</option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                  </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+                {% if u.role == 'jugador' %}
+                    {{ atoms.pill_badge(u.sede_item.name if u.sede_item else 'Sin Sede', 'bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300') }}
+                {% elif u.role == 'terapista' %}
+                    <div class="flex flex-wrap gap-2">
+                    {% for s in u.assigned_sedes %}
+                        {{ atoms.pill_badge(s.name, 'bg-purple-50 border-purple-100 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300') }}
+                    {% else %}
+                        {{ atoms.pill_badge('Sin Asignar', 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-slate-800 dark:border-gray-700 dark:text-gray-400') }}
+                    {% endfor %}
+                    </div>
+                {% endif %}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <label class="relative inline-flex items-center cursor-pointer justify-center shadow-sm rounded-full bg-white dark:bg-slate-800">
+                <input type="checkbox" class="sr-only peer admin-edit-active" data-id="{{ u.id }}" {{ 'checked' if u.is_active else '' }}>
+                <div class="w-10 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+              </label>
+            </td>
+            <td class="px-6 py-4">
+              {% if u.role == 'jugador' %}
+                <div class="flex items-center gap-3">
+                    <div class="relative w-full md:w-48">
+                        <select multiple class="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary block py-2 pl-4 pr-3 h-[88px] assign-select shadow-sm hover:bg-white dark:hover:bg-slate-700 transition-colors custom-scrollbar" data-patient-id="{{ u.id }}">
+                          {% for t in therapists %}
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }} class="py-1">{{ t.username or t.email }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <button class="w-12 h-12 flex items-center justify-center bg-primary/10 text-primary rounded-xl font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 assign-btn self-start shrink-0 cursor-pointer text-base" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+              {% else %}
+                <span class="text-gray-300 dark:text-gray-500 font-extrabold text-lg px-4">—</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 relative overflow-visible">
+            <div class="flex justify-end relative">
+              <div class="static">
+                {{ btn.action_icon_btn('fas fa-ellipsis-v', 'dropdown-' ~ u.id, 'pointer-events-auto cursor-pointer', 'toggle-user-menu') }}
+                <div id="dropdown-{{ u.id }}" class="user-action-menu hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl z-50 text-left overflow-y-auto" role="menu">
+
+                  <div class="px-6 pb-6 pt-4 border-b border-gray-100 dark:border-gray-800 mb-4 flex justify-between items-center sticky top-0 bg-white dark:bg-slate-900 z-10">
+                      <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                              {{ u.username[:2].upper() if u.username else 'US' }}
+                          </div>
+                          <div>
+                              <h4 class="font-bold text-gray-900 dark:text-white text-base">{{ u.username }}</h4>
+                              <p class="text-xs text-gray-500">{{ u.role|capitalize }}</p>
+                          </div>
+                      </div>
+                      <button data-action="close-drawer" class="close-drawer w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-slate-700 dark:hover:text-white flex items-center justify-center transition-colors">
+                          <i class="fas fa-times text-sm pointer-events-none"></i>
+                      </button>
+                  </div>
+                  
+                  <div class="px-4 space-y-1 flex-1">
+                      <!-- View Profile -->
+                      <a href="{{ url_for('admin.user_details', user_id=u.id) }}" class="group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-2xl mb-1">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-800/50 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          <i class="fas fa-user-circle"></i>
+                      </div>
+                      Ver Perfil
+                  </a>
+
+                  <!-- Edit User Button -->
+                  <button type="button" data-action="edit-user" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors admin-update-btn cursor-pointer rounded-2xl mb-1"
+                      data-id="{{ u.id }}"
+                      data-username="{{ u.username|e }}"
+                      data-email="{{ u.email|e }}"
+                      data-role="{{ u.role }}"
+                      data-active="{{ 'true' if u.is_active else 'false' }}"
+                      data-sede-id="{{ u.sede_id or '' }}"
+                      data-sede-ids='{{ sede_ids | tojson | safe }}'
+                      data-payment-plan="{{ u.payment_plan or '' }}"
+                      data-payment-amount="{{ u.payment_amount or 0 }}"
+                      data-plan-type="{{ u.plan_type or '' }}"
+                      data-sessions-attended="{{ u.sessions_attended or 0 }}"
+                      data-salary="{{ u.salary_base or 0 }}"
+                      data-hours="{{ u.contract_hours or 0 }}"
+                      data-start-time="{{ u.work_start_time or '' }}"
+                      data-end-time="{{ u.work_end_time or '' }}"
+                      data-days='{{ u.work_days or "" }}'
+                      data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-blue-100 dark:group-hover:bg-blue-800/50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          <i class="fas fa-edit"></i>
+                      </div>
+                      Editar Usuario
+                  </button>
+
+                  <button type="button" data-action="reset-pass" data-id="{{ u.id }}" data-count="{{ u.login_count or 0 }}" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer rounded-2xl mb-1">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500 mr-3 group-hover:bg-amber-100 dark:group-hover:bg-amber-800/50 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                          <i class="fas fa-key text-[13px]"></i>
+                      </div>
+                      Reset Password
+                  </button>
+
+                  <div class="h-px bg-gray-100 dark:bg-gray-800 my-2 mx-4"></div>
+
+                  {% if u.role != 'admin' %}
+                  <button type="button" data-action="delete-user" data-id="{{ u.id }}" class="w-full text-left group flex items-center px-4 py-3.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-700 transition-colors cursor-pointer rounded-2xl">
+                      <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/30 text-red-400 dark:text-red-500 mr-3 group-hover:bg-red-100 dark:group-hover:bg-red-800/50 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                          <i class="fas fa-trash-alt"></i>
+                      </div>
+                      Eliminar Usuario
+                  </button>
+                  {% endif %}
+                  </div>
+                  <!-- Decorative bottom area -->
+                  <div class="absolute bottom-0 w-full p-4 mt-auto">
+                    <div class="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center shrink-0">
+                            <i class="fas fa-shield-alt text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">ID Usuario: #{{ u.id }}</p>
+                            <p class="text-[10px] text-gray-400">Creado en sistema</p>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="md:hidden space-y-6 mt-6">
+      {% for u in users %}
+      {% set sede_ids = [] %}
+      {% if u.role == 'jugador' and u.sede_id %}
+         {% set _ = sede_ids.append(u.sede_id) %}
+      {% elif u.role == 'terapista' %}
+         {% for s in u.assigned_sedes %}
+            {% set _ = sede_ids.append(s.id) %}
+         {% endfor %}
+      {% endif %}
+      <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden transition-all hover:shadow-md user-card relative" 
+           data-role="{{ u.role }}" 
+           data-sede-ids='{{ sede_ids | tojson }}'
+           data-active="{{ 'true' if u.is_active else 'false' }}"
+           data-account-status="{{ u.account_status or 'active' }}"
+           data-is-debtor="{{ 'true' if u.account_status == 'debtor' else 'false' }}"
+           data-is-retired="{{ 'true' if u.account_status == 'retired' else 'false' }}">
+        <!-- Header: User Info & Status -->
+        <div class="p-6 border-b border-gray-50 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-800/50">
+          <div class="flex justify-between items-start gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 mb-1">
+                 <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    {{ u.username[:2].upper() if u.username else 'US' }}
+                 </div>
+                 <div class="w-full">
+                     <input class="font-bold text-charcoal bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none w-full transition-colors admin-edit-name text-lg" data-id="{{ u.id }}" value="{{ u.username }}" placeholder="Nombre del usuario" />
+                 </div>
+              </div>
+              <p class="text-xs text-gray-500 truncate pl-[3.25rem]">{{ u.email }}</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+              <input type="checkbox" class="sr-only peer admin-edit-active" data-id="{{ u.id }}" {{ 'checked' if u.is_active else '' }}>
+              <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Body: Settings -->
+        <div class="p-5 space-y-5">
+            <!-- Role Selection -->
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Rol de Usuario</label>
+                <div class="relative">
+                    <select class="w-full appearance-none bg-gray-50 border border-gray-200 text-charcoal text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 pr-8 admin-edit-role transition-colors hover:bg-white" data-id="{{ u.id }}">
+                      <option value="terapista" {{ 'selected' if u.role == 'terapista' else '' }}>Terapeuta</option>
+                      <option value="jugador" {{ 'selected' if u.role == 'jugador' else '' }}>Paciente</option>
+                      <option value="admin" {{ 'selected' if u.role == 'admin' else '' }}>Administrador</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Therapist Assignment (Conditional) -->
+            {% if u.role == 'jugador' %}
+            <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+                <label class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-2 flex items-center gap-2">
+                    <i class="fas fa-user-md"></i> Terapeutas Asignados (Máx 3)
+                </label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <select multiple class="w-full bg-white border border-blue-200 text-charcoal text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 h-24 assign-select" data-patient-id="{{ u.id }}">
+                          {% for t in therapists %}
+                            <option value="{{ t.id }}" {{ 'selected' if t.id in patient_therapist_map.get(u.id, []) else '' }}>{{ t.username or t.email }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors shadow-sm assign-btn self-start" data-patient-id="{{ u.id }}" title="Guardar Asignación">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer: Actions -->
+        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center gap-4">
+            {% if u.role != 'admin' %}
+            <button class="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-2 transition-colors admin-delete-btn px-2 py-1 rounded hover:bg-red-50" data-id="{{ u.id }}">
+                <i class="far fa-trash-alt"></i> <span class="hidden sm:inline">Eliminar</span>
+            </button>
+            {% else %}
+            <div></div>
+            {% endif %}
+            
+            <button class="px-5 py-2.5 bg-charcoal text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-all shadow-sm flex items-center gap-2 admin-update-btn ml-auto" 
+                    data-id="{{ u.id }}" 
+                    data-username="{{ u.username }}"
+                    data-email="{{ u.email }}"
+                    data-role="{{ u.role }}"
+                    data-active="{{ 'true' if u.is_active else 'false' }}"
+                    data-payment-plan="{{ u.payment_plan or 'monthly' }}"
+                    data-payment-amount="{{ u.payment_amount or 0 }}"
+                    data-sessions-total="{{ u.sessions_total or 0 }}"
+                    data-sessions-attended="{{ u.sessions_attended or 0 }}"
+                    data-plan-type="{{ u.plan_type or 'individual' }}"
+
+                    data-has-shift2="{{ 'true' if u.has_second_shift else 'false' }}"
+                    data-amount-2="{{ u.payment_amount_2 or 0 }}"
+                    data-sessions-total-2="{{ u.sessions_total_2 or 0 }}"
+                    data-sessions-attended-2="{{ u.sessions_attended_2 or 0 }}"
+                    data-plan-type-2="{{ u.plan_type_2 or 'individual' }}"
+
+                    data-salary="{{ u.salary_base or 0 }}"
+                    data-hours="{{ u.contract_hours or 0 }}"
+                    
+                    data-sede-id="{{ u.sede_id or '' }}"
+                    data-sede-ids='{% if u.role == "terapista" %}{{ u.assigned_sedes.all() | map(attribute="id") | list | tojson }}{% else %}[]{% endif %}'
+                    
+                    title="Actualizar Datos">
+
+                <i class="fas fa-edit text-xs"></i> Actualizar
+            </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="side-panel-drawer hidden bg-white dark:bg-slate-900 border-l border-gray-100 dark:border-gray-800 shadow-2xl flex flex-col z-[1000]">
+    <form id="editUserForm" class="flex flex-col h-full overflow-hidden">
+        <div class="flex-none p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm sticky top-0 z-10">
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white m-0 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <i class="fas fa-user-edit text-primary"></i>
+                </div>
+                Editar Usuario 
+                <span id="role-badge" class="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500 font-normal align-middle"></span>
+            </h3>
+            <div class="flex items-center gap-3">
+                <a id="view-details-btn" href="#" class="hidden px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shadow-sm border border-blue-100 whitespace-nowrap">
+                    <i class="fas fa-external-link-alt mr-2"></i> Detalles
+                </a>
+                {{ btn.action_icon_btn('fas fa-times', '', 'w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-900 border-none shadow-none', 'close-edit-modal') }}
+            </div>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <input type="hidden" id="edit-id">
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                {{ inputs.text_input('edit-username', 'Nombre') }}
+                {{ inputs.text_input('edit-email', 'Email', readonly=true) }}
+            </div>
+            
+            <div class="mb-4">
+                {{ inputs.select_input('edit-role', 'Rol', [
+                    {'value': 'terapista', 'label': 'Terapeuta'},
+                    {'value': 'jugador', 'label': 'Paciente'},
+                    {'value': 'admin', 'label': 'Administrador'}
+                ], default_option='') }}
+            </div>
+            
+            <div class="mb-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="edit-active" class="rounded text-primary focus:ring-primary">
+                    <span class="text-sm text-gray-700">Cuenta Activa</span>
+                </label>
+            </div>
+            
+            <!-- Therapist Specific Edit Fields -->
+            <div id="edit-therapist-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-briefcase mr-2"></i>Contrato</h4>
+                
+                <!-- Sedes -->
+                <div class="mb-4 bg-white p-3 rounded border border-gray-100">
+                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Sedes Asignadas</label>
+                     <p class="text-[10px] text-gray-400 mb-1">Ctrl + Click para seleccionar múltiples</p>
+                     <select id="edit-sedes-multi" multiple class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary h-24">
+                        {% for s in sedes %}
+                            <option value="{{ s.id }}">{{ s.name }}</option>
+                        {% endfor %}
+                     </select>
+                </div>
+
+                <!-- Schedule Configuration -->
+                <div class="mb-4 bg-white p-3 rounded border border-gray-100">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Horario Regular (Auto-calculo)</label>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <span class="text-xs text-gray-400 block mb-1">Hora Entrada</span>
+                            <input type="time" id="edit-start-time" class="w-full px-2 py-1 text-sm border rounded focus:ring-primary focus:border-primary schedule-calc-trigger">
+                        </div>
+                        <div>
+                             <span class="text-xs text-gray-400 block mb-1">Hora Salida</span>
+                            <input type="time" id="edit-end-time" class="w-full px-2 py-1 text-sm border rounded focus:ring-primary focus:border-primary schedule-calc-trigger">
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-gray-400 block mb-1">Días Laborales</span>
+                        <div class="flex flex-wrap gap-2">
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="0" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> L
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="1" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> M
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="2" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> X
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="3" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> J
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="4" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> V
+                             </label>
+                             <label class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border hover:bg-gray-50 cursor-pointer select-none">
+                                <input type="checkbox" name="edit_days" value="5" class="rounded text-primary focus:ring-0 w-3 h-3 schedule-calc-trigger"> S
+                             </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Base Salarial (S/)</label>
+                        <input type="number" step="0.01" id="edit-salary" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Mensuales</label>
+                        <div class="relative">
+                            <input type="number" id="edit-hours" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <span class="absolute right-2 top-2 text-xs text-gray-400 pointer-events-none">hrs</span>
+                        </div>
+                         <p class="text-[10px] text-gray-400 mt-1">* Se actualiza auto. al cambiar horario</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sede / Location (Decoupled) -->
+            <div id="edit-patient-location" class="hidden mb-4 p-3 bg-white rounded border border-gray-100">
+                {{ inputs.select_input('edit-sede', 'Sede (Sucursal)', sede_opts, default_option='-- Sin asignar --') }}
+                <p class="text-[10px] text-gray-400 mt-1">Ubicación principal de atención.</p>
+            </div>
+
+            <div id="edit-patient-fields" class="hidden border-t border-gray-100 pt-4 mt-4 bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-sm font-bold text-primary mb-3"><i class="fas fa-file-invoice-dollar mr-2"></i>Configuración de Plan</h4>
+
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Modalidad</label>
+                        <select id="edit-modality" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="0">Sin paquete</option>
+                            <option value="1">1x Semana (4 Sesiones)</option>
+                            <option value="2">2x Semana (8 Sesiones)</option>
+                            <option value="3">3x Semana (12 Sesiones)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Plan</label>
+                        <select id="edit-plan-type" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="individual">Individual (Pago por Sesión)</option>
+                            <option value="group">Grupal / Fijo Mensual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Frecuencia Pago</label>
+                        <select id="edit-frequency" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                            <option value="monthly">Mensual</option>
+                            <option value="biweekly">Quincenal</option>
+                            <option value="weekly">Semanal</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>
+                        <input type="number" step="0.01" id="edit-amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sesiones Asistidas</label>
+                        <input type="number" id="edit-attended" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    </div>
+                </div>
+                
+                <!-- SECOND SHIFT TOGGLE -->
+                <div class="mt-4 border-t border-gray-200 pt-3">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="edit-has-shift2" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary relative"></div>
+                        <span class="ml-3 text-sm font-medium text-gray-700">Habilitar 2do Turno / Plan Diferenciado</span>
+                    </label>
+                </div>
+
+                <!-- SECOND SHIFT FIELDS -->
+                <div id="shift2-fields" class="hidden mt-3 bg-white p-3 rounded border border-gray-200">
+                     <h5 class="text-xs font-bold text-gray-500 uppercase mb-2">Turno 2 (Monto Adicional)</h5>
+                     <div class="grid grid-cols-3 gap-3 mb-2">
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Modalidad</label>
+                            <select id="edit-modality-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                                <option value="0">Sin paquete</option>
+                                <option value="1">1x Semana (4)</option>
+                                <option value="2">2x Semana (8)</option>
+                                <option value="3">3x Semana (12)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Tipo Plan</label>
+                            <select id="edit-plan-type-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                                <option value="individual">Individual</option>
+                                <option value="group">Grupal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-gray-400 uppercase">Monto (S/)</label>
+                            <input type="number" step="0.01" id="edit-amount-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                        </div>
+                     </div>
+                     <div>
+                         <label class="block text-[10px] text-gray-400 uppercase">Sesiones Asistidas (Turno 2)</label>
+                         <input type="number" id="edit-attended-2" class="w-full px-2 py-1.5 text-sm border rounded focus:ring-primary focus:border-primary">
+                     </div>
+                </div>
+
+                <p class="text-xs text-gray-400 mt-2">
+                    <i class="fas fa-info-circle"></i> Al cambiar la modalidad, se actualizará el total de sesiones permitidas por pago.
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex-none p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-slate-900 z-10 flex justify-end gap-3">
+            {{ btn.secondary_btn('', 'Cancelar', '', '', 'close-edit-modal') }}
+            {{ btn.primary_btn('', 'Guardar Cambios', 'fas fa-save') }}
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module">
+import { apiFetch } from "{{ url_for('static', filename='js/api.js') }}";
+
+const UsersModule = (function(){
+    const urls = {
+        create: "{{ url_for('api.api_admin_create_user') }}",
+        assign: "{{ url_for('api.api_admin_assign_therapist') }}",
+        update: "{{ url_for('api.api_admin_update_user') }}",
+        reset_pass: "{{ url_for('api.api_admin_reset_password') }}",
+        delete: "{{ url_for('api.api_admin_delete_user') }}"
+    };
+
+    const sel = {
+        toast: '#toast', toastInner: '#toast-inner',
+        createModal: '#createUserModal', createBtn: '#create-user', createStatus: '#create-status',
+        newEmail: '#new-email', newUsername: '#new-username', newRole: '#new-role', newSede: '#new-sede', newSedesMulti: '#new-sedes-multi',
+        newModality: '#new-modality', newFrequency: '#new-frequency', newAmount: '#new-amount', newPlanType: '#new-plan-type',
+        generateSchedule: '#check-generate', startDate: '#start-date', startTime: '#start-time', scheduleTherapist: '#schedule-therapist',
+        filterSede: '#sedeFilter', filterTherapist: '#therapistFilter', searchInput: '#userHelperSearch', filterButtons: '.filter-btn',
+        userRows: '.user-row', userCards: '.user-card', assignBtn: '.assign-btn', assignSelect: '.assign-select',
+        adminUpdateBtn: '.admin-update-btn', resetPassBtn: '.admin-reset-pass-btn', deleteBtn: '.admin-delete-btn',
+        editModal: '#editUserModal', editForm: '#editUserForm'
+    };
+
+    const isDesktop = window.innerWidth >= 768;
+
+    function $ (q){ return document.querySelector(q); }
+    function $$ (q){ return Array.from(document.querySelectorAll(q)); }
+
+    // Toasts modernizados con persistencia
+    function showToast(msg, type='success', duration=3000) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        // Remove trailing emojis from previous messages
+        msg = msg.replace(/^(?:✅|✓|✕|❌|⚠|ℹ)\\s*/g, '');
+        
+        const toast = document.createElement('div');
+        toast.className = 'w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden pointer-events-auto transform translate-x-full transition-transform duration-300 md:w-96 border border-gray-100 dark:border-gray-700';
+        
+        const bgColors = {
+            'success': 'bg-green-500',
+            'error': 'bg-red-500',
+            'warn': 'bg-yellow-500',
+            'info': 'bg-blue-500'
+        };
+        
+        const icons = {
+            'success': '<i class="fas fa-check text-green-500"></i>',
+            'error': '<i class="fas fa-times text-red-500"></i>',
+            'warn': '<i class="fas fa-exclamation-triangle text-yellow-500"></i>',
+            'info': '<i class="fas fa-info-circle text-blue-500"></i>'
+        };
+
+        const accentColor = bgColors[type] || bgColors['info'];
+        
+        toast.innerHTML = `
+            <div class="flex p-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 dark:bg-slate-700 text-lg">
+                    ${icons[type] || icons['info']}
+                </div>
+                <div class="ml-4 w-0 flex-1">
+                    <p class="text-sm font-bold text-gray-900 dark:text-white capitalize">${type === 'success' ? 'Éxito' : type === 'error' ? 'Error' : 'Aviso'}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">${msg}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0 flex">
+                    <button class="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="this.closest('.w-80, .md\\\\:w-96').remove()">
+                        <span class="sr-only">Cerrar</span>
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="h-1 ${accentColor}" style="width: 100%; transition: width ${duration}ms linear;"></div>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Save to notifications only if it's a success to keep noise low
+        if (type === 'success') {
+            fetch('/api/notifications/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ message: msg, link: '/admin/users' })
+            }).catch(e => console.warn('Failed to save notification', e));
+        }
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full');
+            toast.classList.add('translate-x-0');
+            // animate progress bar
+            const bar = toast.querySelector('.h-1');
+            if (bar) {
+                setTimeout(() => { bar.style.width = '0%'; }, 50);
+            }
+        });
+        
+        setTimeout(() => {
+            toast.classList.remove('translate-x-0');
+            toast.classList.add('translate-x-full');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+    // Filters & search
+    let currentFilter = 'all';
+
+    // Lookup for sede names
+    const sedeLookup = {
+        {% for s in sedes %}
+        "{{ s.id }}": "{{ s.name|e }}",
+        {% endfor %}
+    };
+
+    // Chart instances
+    let usersSedeChart = null;
+    let activeStatusChart = null;
+    let userRoleChart = null;
+
+    function updateCharts(filteredData){
+        try{
+            // Guard: if no chart canvases exist, bail out early
+            const hasSede = !!document.getElementById('users_sede_chart');
+            const hasActive = !!document.getElementById('active_status_chart');
+            const hasRole = !!document.getElementById('user_role_chart');
+            if(!hasSede && !hasActive && !hasRole) return;
+
+            const total = Array.isArray(filteredData) ? filteredData.length : 0;
+            const active = Array.isArray(filteredData) ? filteredData.filter(u=>u.isActive).length : 0;
+            const inactive = total - active;
+            const patients = Array.isArray(filteredData) ? filteredData.filter(u=>u.role==='jugador').length : 0;
+            const therapists = Array.isArray(filteredData) ? filteredData.filter(u=>u.role==='terapista').length : 0;
+
+            // Update stat cards (safe updates)
+            try{ const el = document.getElementById('total_users'); if(el) el.textContent = total; }catch(e){}
+            try{ const el = document.getElementById('active_users'); if(el) el.textContent = active; }catch(e){}
+            try{ const el = document.getElementById('total_patients'); if(el) el.textContent = patients; }catch(e){}
+            try{ const el = document.getElementById('total_therapists'); if(el) el.textContent = therapists; }catch(e){}
+
+            // Users by sede aggregation (sede names expected in filteredData as sedeNames[])
+            const sedeCounts = {};
+            (Array.isArray(filteredData) ? filteredData : []).forEach(u=>{
+                try{
+                    const names = (u.sedeNames && u.sedeNames.length) ? u.sedeNames : (u.sedeName ? [u.sedeName] : ['Sin Sede']);
+                    names.forEach(n=>{ const key = (n||'Sin Sede').trim(); sedeCounts[key] = (sedeCounts[key]||0) + 1; });
+                }catch(e){}
+            });
+            const sedeLabels = Object.keys(sedeCounts);
+            const sedeData = sedeLabels.map(l=>sedeCounts[l]);
+
+            // USERS SEDE CHART (bar)
+            if(hasSede){
+                try{
+                    const cSede = document.getElementById('users_sede_chart');
+                    const ctxS = cSede && cSede.getContext && cSede.getContext('2d');
+                    if(ctxS){
+                        if(usersSedeChart){
+                            usersSedeChart.data.labels = sedeLabels;
+                            usersSedeChart.data.datasets[0].data = sedeData;
+                            usersSedeChart.update();
+                        } else {
+                            usersSedeChart = new Chart(ctxS, {
+                                type:'bar',
+                                data:{
+                                    labels: sedeLabels,
+                                    datasets:[{
+                                        label:'Usuarios',
+                                        data: sedeData,
+                                        backgroundColor:'rgba(59,130,246,0.85)'
+                                    }]
+                                },
+                                options:{
+                                    responsive:true,
+                                    maintainAspectRatio:false,
+                                    plugins:{ legend:{ display:false } },
+                                    onClick: (e, elements) => {
+                                        if (elements.length > 0) {
+                                            const index = elements[0].index;
+                                            const label = sedeLabels[index];
+                                            const filterSede = $ (sel.filterSede);
+                                            if (filterSede) {
+                                                const sedeId = Object.keys(sedeLookup).find(key => sedeLookup[key] === label);
+                                                if (sedeId) {
+                                                    filterSede.value = sedeId;
+                                                    applyFilters();
+                                                } else if (label === "Sin Sede") {
+                                                    filterSede.value = "all";
+                                                    applyFilters();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }catch(e){ console.error('usersSedeChart error', e); }
+            }
+
+            // ACTIVE / INACTIVE (doughnut)
+            if(hasActive){ 
+                try{ 
+                    const cActive = document.getElementById('active_status_chart'); 
+                    const ctxA = cActive && cActive.getContext && cActive.getContext('2d'); 
+                    if(ctxA){ 
+                        if(activeStatusChart){ 
+                            activeStatusChart.data.datasets[0].data = [active, inactive]; 
+                            activeStatusChart.update(); 
+                        } else { 
+                            activeStatusChart = new Chart(ctxA, { 
+                                type:'doughnut', 
+                                data:{ 
+                                    labels:['Activos','Inactivos'], 
+                                    datasets:[{ data:[active, inactive], backgroundColor:['#10B981','#EF4444'] }] 
+                                }, 
+                                options:{ 
+                                    responsive:true, 
+                                    maintainAspectRatio:false, 
+                                    onClick: (e, elements) => { 
+                                        if (elements.length > 0) { 
+                                            const index = elements[0].index; 
+                                            const status = index === 0; // True for Activos
+                                            const rows = $$(sel.userRows).concat($$(sel.userCards));
+                                            rows.forEach(el => {
+                                                const isActiveEl = el.querySelector('.admin-edit-active');
+                                                if (isActiveEl && isActiveEl.checked !== status) {
+                                                    el.style.display = 'none';
+                                                }
+                                            });
+                                        } 
+                                    } 
+                                } 
+                            }); 
+                        } 
+                    } 
+                }catch(e){ console.error('activeStatusChart error', e); } 
+            }
+
+            // ROLE (Pacientes vs Terapeutas)
+            if(hasRole){
+                try{
+                    const cRole = document.getElementById('user_role_chart');
+                    const ctxR = cRole && cRole.getContext && cRole.getContext('2d');
+                    if(ctxR){
+                        if(userRoleChart){
+                            userRoleChart.data.datasets[0].data = [patients, therapists];
+                            userRoleChart.update();
+                        } else {
+                            userRoleChart = new Chart(ctxR, {
+                                type:'doughnut',
+                                data:{
+                                    labels:['Pacientes','Terapeutas'],
+                                    datasets:[{
+                                        data:[patients, therapists],
+                                        backgroundColor:['#8B5CF6','#FB923C']
+                                    }]
+                                },
+                                options:{
+                                    responsive:true,
+                                    maintainAspectRatio:false,
+                                    onClick: (e, elements) => {
+                                        if (elements.length > 0) {
+                                            const index = elements[0].index;
+                                            const role = index === 0 ? 'jugador' : 'terapista';
+                                            setFilterButtonActive(role);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }catch(e){ console.error('userRoleChart error', e); }
+            }
+        }catch(err){ console.error('updateCharts failed', err); }
+    }
+
+    function applyFilters(){
+        try{
+        const searchTerm = ($(sel.searchInput)?.value || '').toLowerCase();
+        const filterTherapist = $ (sel.filterTherapist)?.value || 'all';
+        const filterSede = $ (sel.filterSede)?.value || 'all';
+
+        const visible = [];
+
+        const check = (el) => {
+            const role = el.dataset.role || '';
+            const name = (el.querySelector('.admin-edit-name')?.value || '').toLowerCase();
+            let rowSedeIds = [];
+            try { if (el.dataset.sedeIds) rowSedeIds = JSON.parse(el.dataset.sedeIds); } catch(e){}
+            // extract sede names from the 4th td (desktop) or from inline spans
+            let sedeNames = [];
+            try{
+                const sedeCell = el.querySelector('td:nth-child(4)');
+                if(sedeCell){ const raw = sedeCell.innerText || sedeCell.textContent || ''; sedeNames = raw.split('\n').map(s=>s.trim()).filter(Boolean); }
+            }catch(e){}
+
+            let email = (el.querySelector('td:nth-child(2)')?.textContent || el.querySelector('p.text-gray-500')?.textContent || '').toLowerCase();
+            const select = el.querySelector(sel.assignSelect);
+            const assignedTherapists = select ? Array.from(select.selectedOptions).map(o=>o.text.trim()) : [];
+
+            const isDebtor = el.dataset.isDebtor === 'true';
+            const isRetired = el.dataset.isRetired === 'true';
+            const isActiveUser = el.dataset.active === 'true';
+
+            // Apply conditional colors to the row
+            if (isDesktop && el.classList.contains('user-row')) {
+                el.classList.remove('bg-red-50/50', 'bg-gray-100/50', 'bg-orange-50/50');
+                if (isRetired) el.classList.add('bg-gray-100/50');
+                else if (isDebtor) el.classList.add('bg-red-50/50');
+                else if (!isActiveUser) el.classList.add('bg-orange-50/50');
+            }
+
+            let matchesRole = false;
+            if (currentFilter === 'all') matchesRole = true;
+            else if (currentFilter === 'deudores') matchesRole = isDebtor;
+            else if (currentFilter === 'retirados') matchesRole = isRetired;
+            else matchesRole = (role === currentFilter);
+
+            const matchesSearch = (name.includes(searchTerm) || email.includes(searchTerm));
+            let matchesTherapist = true; if (filterTherapist !== 'all') { matchesTherapist = assignedTherapists.includes(filterTherapist); if (!select) matchesTherapist = false; }
+            let matchesSede = true; if (filterSede !== 'all') matchesSede = (rowSedeIds.map(String).includes(filterSede));
+            const visibleNow = (matchesRole && matchesSearch && matchesTherapist && matchesSede);
+
+            // Deduplicate: If we are in desktop view, only process .user-row. 
+            // If we are in mobile view, only process .user-card.
+            const isCorrectElement = isDesktop ? el.classList.contains('user-row') : el.classList.contains('user-card');
+            
+            if (!isCorrectElement) {
+                el.style.display = 'none';
+                return;
+            }
+
+            el.style.display = visibleNow ? '' : 'none';
+
+            if(visibleNow){ const isActiveEl = el.querySelector('.admin-edit-active'); const isActive = isActiveEl ? !!isActiveEl.checked : true; visible.push({ role, sedeNames: sedeNames, isActive }); }
+        };
+
+        $$(sel.userRows).forEach(check); $$(sel.userCards).forEach(check);
+
+        // update charts with aggregated visible items
+        try{ updateCharts(visible); } catch(e){ console.error('Chart update failed', e); }
+        }catch(err){ console.error('applyFilters failed', err); }
+    }
+
+    function setFilterButtonActive(filter){ currentFilter = filter; $$(sel.filterButtons).forEach(btn=>{ if(btn.dataset.filter===filter){ btn.classList.remove('bg-gray-100','text-gray-600','hover:bg-gray-200'); btn.classList.add('bg-primary','text-white'); } else { btn.classList.add('bg-gray-100','text-gray-600','hover:bg-gray-200'); btn.classList.remove('bg-primary','text-white'); } }); applyFilters(); }
+
+    // Dropdown logic (user action menus)
+    function toggleDropdown(targetId){ 
+        // Hide all other menus
+        $$('.user-action-menu').forEach(d=>{ 
+            if(d.id!==targetId) {
+                d.classList.add('hidden');
+                d.classList.remove('absolute-top');
+            }
+        }); 
+        
+        const el = document.getElementById(targetId); 
+        if(!el) return;
+        
+        el.classList.toggle('hidden');
+        
+        // If being shown, adjust position if needed
+        if(!el.classList.contains('hidden')) {
+            setTimeout(() => {
+                const rect = el.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                
+                // If menu is going off-screen, flip it to appear above instead of below
+                if(rect.bottom > viewportHeight - 20) {
+                    el.classList.add('absolute-top');
+                    el.classList.remove('mt-2');
+                    el.style.bottom = '100%';
+                    el.style.marginBottom = '0.5rem';
+                } else {
+                    el.classList.remove('absolute-top');
+                    el.style.bottom = 'auto';
+                    el.style.marginBottom = '0';
+                }
+            }, 0);
+        }
+    }
+
+    // Modal helpers
+    function openModal(selector){ 
+        const m=$(selector); 
+        if(!m) return; 
+        const backdrop = document.getElementById('drawerBackdrop');
+        if(backdrop) {
+            document.body.appendChild(m);
+            document.body.appendChild(backdrop);
+            backdrop.style.pointerEvents = 'auto';
+            backdrop.classList.add('active');
+        }
+        m.classList.remove('hidden');
+        setTimeout(() => {
+            m.classList.add('drawer-open');
+            document.body.style.overflow = 'hidden';
+        }, 10);
+    }
+    
+    function closeModal(selector){ 
+        const m=$(selector); 
+        if(!m) return; 
+        m.classList.remove('drawer-open');
+        setTimeout(() => m.classList.add('hidden'), 400);
+        const backdrop = document.getElementById('drawerBackdrop');
+        if(backdrop) {
+            backdrop.classList.remove('active');
+            backdrop.style.pointerEvents = 'none';
+        }
+        document.body.style.overflow=''; 
+    }
+    function closeEditUserModal(){ closeModal(sel.editModal); }
+
+    // Create user
+    async function handleCreateUser() {
+        try {
+            const btn = $(sel.createBtn);
+            const status = $(sel.createStatus);
+            
+            if (!btn) {
+                showToast('Botón no encontrado', 'error');
+                return;
+            }
+            
+            // Step 1: Validate required fields
+            const email = ($(sel.newEmail)?.value || '').trim();
+            const username = ($(sel.newUsername)?.value || '').trim();
+            const role = $(sel.newRole)?.value || 'jugador';
+            
+            if (!role) {
+                showToast('Selecciona un rol', 'warn');
+                return;
+            }
+            
+            if (role !== 'jugador' && !email) {
+                showToast('Email requerido para admin y terapeutas', 'warn');
+                return;
+            }
+            
+            if (role === 'jugador' && !email && !username) {
+                showToast('Ingresa nombre o email del paciente', 'warn');
+                return;
+            }
+            
+            // Step 2: Build payload
+            const payload = { email, username, role };
+            
+            if (role === 'jugador') {
+                payload.sede_id = $(sel.newSede)?.value || null;
+                payload.modality = $(sel.newModality)?.value || 0;
+                payload.payment_frequency = $(sel.newFrequency)?.value || 'monthly';
+                payload.payment_amount = $(sel.newAmount)?.value || 0;
+                payload.plan_type = $(sel.newPlanType)?.value || 'individual';
+                payload.generate_schedule = $(sel.generateSchedule)?.checked || false;
+                
+                if (payload.generate_schedule) {
+                    payload.start_date = $(sel.startDate)?.value;
+                    payload.start_time = $(sel.startTime)?.value;
+                    payload.therapist_id = $(sel.scheduleTherapist)?.value;
+                    payload.days_of_week = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => cb.value);
+                }
+            }
+            
+            if (role === 'terapista') {
+                const opts = $(sel.newSedesMulti);
+                if (opts) {
+                    payload.sede_ids = Array.from(opts.selectedOptions).map(o => o.value);
+                }
+                payload.salary_base = $('#new-salary')?.value || 0;
+                payload.contract_hours = $('#new-hours')?.value || 0;
+            }
+            
+            // Step 3: Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            if (status) status.textContent = 'Procesando...';
+            
+            // Step 4: Make API call
+            const response = await apiFetch(urls.create, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            console.log('✅ Usuario creado:', response);
+            
+            // Step 5: Success handling
+            showToast('👤 Usuario creado exitosamente', 'success', 4000);
+            
+            // Close modal after success
+            const modal = $(sel.createModal);
+            if (modal) {
+                modal.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+                modal.classList.remove('flex', 'opacity-100');
+                document.body.style.overflow = '';
+            }
+            
+            // Reset form
+            $(sel.newEmail).value = '';
+            $(sel.newUsername).value = '';
+            $(sel.newRole).value = 'jugador';
+            
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('❌ Error creando usuario:', err);
+            const status = $(sel.createStatus);
+            if (status) status.textContent = err.error || err.message || 'Error desconocido';
+            showToast(err.error || err.message || 'Error al crear usuario', 'error', 5000);
+        } finally {
+            const btn = $(sel.createBtn);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Usuario';
+            }
+        }
+    }
+
+    // ===== ASSIGN THERAPISTS - REWRITTEN FOR CLARITY =====
+    async function handleAssign(btn) {
+        try {
+            // Step 1: Get the row containing this button
+            const row = btn.closest('tr') || btn.closest('.user-row') || btn.closest('.user-card');
+            if (!row) {
+                console.error('❌ No row encontrado para el botón');
+                showToast('Error: No se encontró la fila', 'error');
+                return;
+            }
+
+            // Step 2: Find the select element in THIS row
+            const select = row.querySelector('select.assign-select');
+            if (!select) {
+                console.error('❌ No select encontrado en la fila');
+                showToast('Error: Select de terapeutas no encontrado', 'error');
+                return;
+            }
+
+            // Step 3: Get patient ID from button dataset
+            const patientId = Number(btn.dataset.patientId);
+            if (!patientId || patientId < 1) {
+                console.error('❌ Patient ID inválido:', btn.dataset.patientId);
+                showToast('Error: ID de paciente inválido', 'error');
+                return;
+            }
+
+            // Step 4: Get selected therapist IDs
+            const therapistIds = Array.from(select.selectedOptions).map(o => Number(o.value));
+            console.log('✅ Terapeutas seleccionados:', therapistIds);
+
+            if (therapistIds.length === 0) {
+                showToast('Selecciona al menos 1 terapeuta', 'warn');
+                return;
+            }
+
+            if (therapistIds.length > 3) {
+                showToast('Máximo 3 terapeutas', 'error');
+                return;
+            }
+
+            // Step 5: Make API call
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const response = await apiFetch(urls.assign, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: patientId, therapist_ids: therapistIds })
+            });
+
+            console.log('✅ Respuesta del servidor:', response);
+
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error desconocido');
+            }
+
+            showToast('✅ Asignación guardada');
+            setTimeout(() => window.location.reload(), 600);
+
+        } catch (err) {
+            console.error('❌ Error en handleAssign:', err);
+            showToast(err.message || 'Error al asignar terapeutas', 'error');
+            btn.disabled = false;
+            btn.innerHTML = prev;
+        }
+    }
+
+    // Open edit modal: populate fields from button dataset
+    function openEdit(btn){ const id = btn.dataset.id; const modal = $ (sel.editModal); if(!modal) return; // populate
+        $ ('#edit-id').value = id; $ ('#edit-username').value = btn.dataset.username || ''; $ ('#edit-email').value = btn.dataset.email || ''; $ ('#edit-role').value = btn.dataset.role || 'jugador'; $ ('#edit-active').checked = btn.dataset.active === 'true';
+        // View details link
+        const viewBtn = $ ('#view-details-btn'); if(viewBtn){ viewBtn.classList.remove('hidden'); const dummy = "{{ url_for('admin.user_details', user_id=0) }}"; viewBtn.href = dummy.replace('/0','/'+id); }
+        // Populate patient/therapist specific fields
+        if(btn.dataset.role==='jugador'){
+            $ ('#edit-sede').value = btn.dataset.sedeId || '';
+            $ ('#edit-modality').value = btn.dataset.paymentPlan || 0; $ ('#edit-frequency').value = btn.dataset.paymentPlan || 'monthly'; $ ('#edit-amount').value = btn.dataset.paymentAmount || 0; $ ('#edit-attended').value = btn.dataset.sessionsAttended || 0; $ ('#edit-plan-type').value = btn.dataset.planType || 'individual'; const has2 = btn.dataset.hasShift2 === 'true'; $ ('#edit-has-shift2').checked = has2; if(has2){ $ ('#shift2-fields').classList.remove('hidden'); } else { $ ('#shift2-fields').classList.add('hidden'); }
+        }
+        if(btn.dataset.role==='terapista'){
+            // Sedes
+            try{ const sedeIds = JSON.parse(btn.getAttribute('data-sede-ids') || '[]'); const ms = $ ('#edit-sedes-multi'); if(ms){ for(let i=0;i<ms.options.length;i++){ ms.options[i].selected = sedeIds.includes(Number(ms.options[i].value)); } } }catch(e){}
+            $ ('#edit-salary').value = btn.dataset.salary || 0; $ ('#edit-hours').value = btn.dataset.hours || 0; $ ('#edit-start-time').value = btn.dataset.startTime || ''; $ ('#edit-end-time').value = btn.dataset.endTime || '';
+            // days
+            document.querySelectorAll('input[name="edit_days"]').forEach(cb=>cb.checked=false);
+            const workDays = btn.dataset.days || '';
+            if(workDays){ let arr = []; if(workDays.startsWith('[')){ try{ arr=JSON.parse(workDays).map(String);}catch(e){} } else { arr = workDays.split(',').map(s=>s.trim()); } arr.forEach(d=>{ const cb = document.querySelector(`input[name="edit_days"][value="${d}"]`); if(cb) cb.checked=true; }); }
+        }
+        // Toggle visibility
+        toggleEditFields();
+        openModal(sel.editModal);
+    }
+
+    function toggleEditFields(){ const role = $ ('#edit-role')?.value || 'jugador'; const patientFields = $ ('#edit-patient-fields'); const therapistFields = $ ('#edit-therapist-fields'); const patientLocation = $ ('#edit-patient-location'); if(role==='jugador'){ patientFields?.classList.remove('hidden'); patientLocation?.classList.remove('hidden'); therapistFields?.classList.add('hidden'); } else if(role==='terapista'){ patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.remove('hidden'); } else { patientFields?.classList.add('hidden'); patientLocation?.classList.add('hidden'); therapistFields?.classList.add('hidden'); } }
+
+    async function submitEditForm(e) {
+        e.preventDefault();
+        
+        // Get button and show loading state
+        const btn = e.target.querySelector('button[type=submit]');
+        const prev = btn?.innerHTML || btn?.textContent;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        
+        try {
+            // Step 1: Collect and validate form inputs
+            const id = $('#edit-id')?.value;
+            const username = $('#edit-username')?.value?.trim();
+            const role = $('#edit-role')?.value;
+            const isActive = $('#edit-active')?.checked;
+            
+            // Field validation (Gestalt: Clear requirements)
+            if (!id || !username || !role) {
+                throw new Error('ID, usuario y rol son requeridos');
+            }
+            
+            if (username.length < 3) {
+                throw new Error('El usuario debe tener al menos 3 caracteres');
+            }
+            
+            // Step 2: Build base payload
+            const payload = {
+                id: parseInt(id),
+                username,
+                role,
+                is_active: isActive,
+                sede_id: $('#edit-sede')?.value || null
+            };
+            
+            // Step 3: Collect role-specific fields
+            if (role === 'jugador') {
+                payload.modality = $('#edit-modality')?.value;
+                payload.payment_plan = $('#edit-frequency')?.value;
+                payload.payment_amount = $('#edit-amount')?.value || '0';
+                payload.sessions_attended = $('#edit-attended')?.value || '0';
+                payload.plan_type = $('#edit-plan-type')?.value;
+                
+                const has2 = $('#edit-has-shift2')?.checked;
+                payload.has_second_shift = !!has2;
+                if (has2) {
+                    payload.modality_2 = $('#edit-modality-2')?.value;
+                    payload.payment_amount_2 = $('#edit-amount-2')?.value || '0';
+                    payload.sessions_attended_2 = $('#edit-attended-2')?.value || '0';
+                    payload.plan_type_2 = $('#edit-plan-type-2')?.value;
+                }
+            }
+            
+            if (role === 'terapista') {
+                const ms = $('#edit-sedes-multi');
+                const selected = [];
+                if (ms) {
+                    for (let i = 0; i < ms.options.length; i++) {
+                        if (ms.options[i].selected) selected.push(ms.options[i].value);
+                    }
+                }
+                
+                if (selected.length === 0) {
+                    throw new Error('Debe seleccionar al menos una sede');
+                }
+                
+                payload.sede_ids = selected;
+                payload.salary_base = $('#edit-salary')?.value || '0';
+                payload.contract_hours = $('#edit-hours')?.value || '0';
+                payload.work_start_time = $('#edit-start-time')?.value || '08:00';
+                payload.work_end_time = $('#edit-end-time')?.value || '17:00';
+                payload.work_days = Array.from(
+                    document.querySelectorAll('input[name="edit_days"]:checked')
+                ).map(cb => cb.value).join(',');
+            }
+            
+            // Step 4: Send update request
+            console.log('Enviando actualización de usuario:', payload);
+            const response = await apiFetch(urls.update, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            // Step 5: Validate response
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al actualizar usuario');
+            }
+            
+            // Step 6: Show success and redirect
+            showToast('✓ Usuario actualizado exitosamente', 'success', 4000);
+            
+            // Close modal if open
+            const modal = document.querySelector('[data-modal="editUserModal"]');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            
+            // Reload after brief delay (ISO 9241: Allow user to see confirmation)
+            setTimeout(() => window.location.reload(), 1500);
+            
+        } catch (err) {
+            console.error('Error en submitEditForm:', err);
+            
+            // Show error message (Gestalt: Clear, visible feedback)
+            const errorMsg = err.message || err.error || 'Error al actualizar el usuario';
+            showToast(`✕ ${errorMsg}`, 'error', 5000);
+            
+            // Restore button state
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = prev || 'Guardar cambios';
+            }
+        }
+    }
+
+    
+    function handleResetPassword(btn) {
+        const id = Number(btn.dataset.id);
+        const count = Number(btn.dataset.count || 0);
+
+        if (!id || id < 1) {
+            showToast('✕ ID de usuario inválido', 'error');
+            return;
+        }
+        
+        // Show drawer
+        const resetDrawer = document.getElementById('resetPasswordDrawer');
+        const backdrop = document.getElementById('drawerBackdrop');
+        const contentFirstTime = document.getElementById('reset-content-first-time');
+        const contentAuto = document.getElementById('reset-content-auto');
+        
+        if (!resetDrawer || !backdrop) return;
+        
+        // Set values
+        document.getElementById('reset-user-id').value = id;
+        document.getElementById('reset-login-count').value = count;
+        document.getElementById('reset-new-password').value = '';
+        
+        // Toggle visibility
+        if (count === 0) {
+            contentFirstTime.classList.remove('hidden');
+            contentAuto.classList.add('hidden');
+        } else {
+            contentFirstTime.classList.add('hidden');
+            contentAuto.classList.remove('hidden');
+        }
+
+        // Show UI
+        resetDrawer.classList.remove('hidden');
+        setTimeout(() => resetDrawer.classList.add('drawer-open'), 10);
+        backdrop.classList.add('active');
+        
+        // Close menus if any
+        document.querySelectorAll('.user-action-menu').forEach(m => m.classList.remove('drawer-open'));
+    }
+    
+    // Add logic for Confirm button inside drawer
+    window.confirmResetAction = async function() {
+        const id = Number(document.getElementById('reset-user-id').value);
+        const count = Number(document.getElementById('reset-login-count').value);
+        let manual = null;
+        
+        if (count === 0) {
+            manual = document.getElementById('reset-new-password').value.trim();
+            if (!manual) {
+                showToast('✕ La contraseña no puede estar vacía', 'error');
+                return;
+            }
+            if (manual.length < 6) {
+                showToast('✕ Mínimo 6 caracteres', 'error');
+                return;
+            }
+        }
+        
+        const btn = document.getElementById('confirmResetBtn');
+        const prev = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        
+        try {
+            const payload = { id };
+            if (manual) payload.new_password = manual;
+            
+            const response = await apiFetch(urls.reset_pass, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response && response.success) {
+                if (manual) {
+                    showToast(`✓ Contraseña actualizada a: ${manual}`, 'success');
+                } else {
+                    const tempPass = response.temp_password || '(enviada por correo)';
+                    showToast(`✓ Contraseña generada: ${tempPass}`, 'success');
+                }
+                closeResetDrawer();
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                throw new Error((response && response.message) ? response.message : 'Error en servidor');
+            }
+        } catch (err) {
+            showToast('✕ ' + (err.message || 'Hubo un error'), 'error');
+            btn.disabled = false;
+            btn.innerHTML = prev;
+        }
+    }
+    
+    window.closeResetDrawer = function() {
+        const resetDrawer = document.getElementById('resetPasswordDrawer');
+        const backdrop = document.getElementById('drawerBackdrop');
+        if (resetDrawer) {
+            resetDrawer.classList.remove('drawer-open');
+            setTimeout(() => resetDrawer.classList.add('hidden'), 400);
+        }
+        if (backdrop) backdrop.classList.remove('active');
+    }
+    
+async function handleDelete(btn) {
+        try {
+            const id = Number(btn.dataset.id);
+            if (!id || id < 1) {
+                showToast('ID de usuario inválido', 'error');
+                return;
+            }
+            
+            // Confirmation with details (ISO 9241: Minimize user error)
+            if (!confirm('⚠️ Esta acción es PERMANENTE\n\n¿Estás seguro de eliminar este usuario?')) {
+                return;
+            }
+            
+            const prev = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+            
+            console.log('Eliminando usuario:', id);
+            
+            const response = await apiFetch(urls.delete, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            
+            console.log('✅ Respuesta del servidor:', response);
+            
+            if (!response || !response.success) {
+                throw new Error(response?.message || 'Error al eliminar usuario');
+            }
+            
+            showToast('🗑️ Usuario eliminado correctamente', 'success', 4000);
+            setTimeout(() => window.location.reload(), 1200);
+            
+        } catch (err) {
+            console.error('❌ Error eliminando usuario:', err);
+            showToast(err.error || err.message || 'Error al eliminar usuario', 'error', 5000);
+            
+            const btn = arguments[0]; // Get button from closure
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+            }
+        }
+    }
+
+    function applyAutoEdit(){
+        const params = new URLSearchParams(window.location.search);
+        const autoEditId = params.get('auto_edit');
+        if (autoEditId) {
+            console.log('Auto-edit detectado para ID:', autoEditId);
+            setTimeout(() => {
+                const editBtn = document.querySelector(`button[data-id="${autoEditId}"][onclick*="openEdit"]`);
+                if (editBtn) {
+                    openEdit(editBtn);
+                    editBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 750);
+        }
+    }
+
+    function bind(){
+        // Reset Drawer Buttons
+        const closeResetBtn = document.getElementById('closeResetDrawerBtn');
+        const cancelResetBtn = document.getElementById('cancelResetBtn');
+        const confirmResetBtn = document.getElementById('confirmResetBtn');
+        
+        if (closeResetBtn) closeResetBtn.addEventListener('click', window.closeResetDrawer);
+        if (cancelResetBtn) cancelResetBtn.addEventListener('click', window.closeResetDrawer);
+        if (confirmResetBtn) confirmResetBtn.addEventListener('click', window.confirmResetAction);
+        
+        // Toggle new password visibility
+        const toggleResetPwd = document.getElementById('toggle-reset-pwd');
+        const resetPwdInput = document.getElementById('reset-new-password');
+        if (toggleResetPwd && resetPwdInput) {
+            toggleResetPwd.addEventListener('click', () => {
+                const isPass = resetPwdInput.type === 'password';
+                resetPwdInput.type = isPass ? 'text' : 'password';
+                toggleResetPwd.innerHTML = isPass ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+            });
+        }
+
+        // Click delegation for ALL actions
+        document.addEventListener('click', (e) => {
+            // Handle assign button clicks
+            if (e.target.closest('.assign-btn')) {
+                e.preventDefault();
+                const assignBtn = e.target.closest('.assign-btn');
+                handleAssign(assignBtn);
+                return;
+            }
+
+            const btn = e.target.closest('[data-action]');
+            
+            // Handle closing drawers/menus if click is outside
+            if (!btn || (btn.dataset.action !== 'toggle-user-menu' && btn.dataset.action !== 'open-create')) {
+                const targetArea = e.target.closest('.user-action-menu') || e.target.closest('.side-panel-drawer');
+                if (!targetArea) {
+                    // Close all drawers
+                    document.querySelectorAll('.user-action-menu, .side-panel-drawer').forEach(m => {
+                        m.classList.remove('drawer-open');
+                    });
+                    document.querySelectorAll('.drawer-backdrop').forEach(bd => {
+                        bd.classList.remove('active');
+                        bd.style.pointerEvents = 'none';
+                    });
+                    document.body.style.overflow = '';
+                }
+            }
+
+            if (!btn) return;
+            const action = btn.dataset.action;
+
+            if (action === 'open-create') {
+                e.preventDefault();
+                const modal = document.getElementById('createUserModal');
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (modal && backdrop) {
+                    // Move to body level to ensure it floats above all layout clip paths
+                    document.body.appendChild(modal);
+                    document.body.appendChild(backdrop);
+                    
+                    backdrop.style.pointerEvents = 'auto';
+                    backdrop.classList.add('active');
+                    
+                    modal.classList.remove('hidden');
+                    // Small delay to allow element attachment before animating
+                    setTimeout(() => {
+                        modal.classList.add('drawer-open');
+                        document.body.style.overflow = 'hidden';
+                    }, 10);
+                    
+                    // Reset create form specific visibility
+                    const createRole = document.querySelector('#new-role');
+                    if (createRole) {
+                        createRole.value = 'jugador';
+                        createRole.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+            
+            if (action === 'close-create') {
+                e.preventDefault();
+                const modal = document.getElementById('createUserModal');
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (modal && backdrop) {
+                    modal.classList.remove('drawer-open');
+                    setTimeout(() => modal.classList.add('hidden'), 400);
+                    backdrop.classList.remove('active');
+                    backdrop.style.pointerEvents = 'none';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            if (action === 'toggle-user-menu') {
+                e.preventDefault(); e.stopPropagation();
+                
+                const targetId = btn.dataset.target;
+                const menu = document.getElementById(targetId);
+                
+                if (menu) {
+                    const isOpen = menu.classList.contains('drawer-open');
+                    document.querySelectorAll('.user-action-menu').forEach(m => {
+                        if (m !== menu) {
+                            m.classList.remove('drawer-open');
+                            setTimeout(() => m.classList.add('hidden'), 400);
+                        }
+                    });
+                    const backdrop = document.getElementById('drawerBackdrop');
+                    if (!isOpen) {
+                        menu.classList.remove('hidden');
+                        setTimeout(() => menu.classList.add('drawer-open'), 10);
+                        if(backdrop) {
+                            backdrop.classList.add('active');
+                            backdrop.style.pointerEvents = 'auto';
+                        }
+                    } else {
+                        menu.classList.remove('drawer-open');
+                        setTimeout(() => menu.classList.add('hidden'), 400);
+                        if(backdrop) {
+                            backdrop.classList.remove('active');
+                            backdrop.style.pointerEvents = 'none';
+                        }
+                    }
+                }
+            }
+            
+            // Add close drawer action
+            if (action === 'close-drawer') {
+                e.preventDefault(); e.stopPropagation();
+                const menu = btn.closest('.user-action-menu');
+                if (menu) {
+                    menu.classList.remove('drawer-open');
+                    setTimeout(() => menu.classList.add('hidden'), 400);
+                }
+                const backdrop = document.getElementById('drawerBackdrop');
+                if (backdrop) {
+                    backdrop.classList.remove('active');
+                    backdrop.style.pointerEvents = 'none';
+                }
+            }
+
+            if (action === 'edit-user') {
+                e.preventDefault();
+                openEdit(btn);
+            }
+            if (action === 'close-edit-modal' || action === 'close-edit') {
+                e.preventDefault();
+                closeEditUserModal();
+            }
+            if (action === 'reset-pass') {
+                e.preventDefault();
+                handleResetPassword(btn);
+            }
+            if (action === 'delete-user') {
+                e.preventDefault();
+                handleDelete(btn);
+            }
+        });
+
+        // filter buttons
+        document.querySelectorAll(sel.filterButtons).forEach(btn=> {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setFilterButtonActive(btn.dataset.filter);
+            });
+        });
+
+        // search and selects
+        const searchInput = document.querySelector(sel.searchInput);
+        if(searchInput) searchInput.addEventListener('input', applyFilters);
+        
+        const filterSede = document.querySelector(sel.filterSede);
+        if(filterSede) filterSede.addEventListener('change', applyFilters);
+        
+        const filterTherapist = document.querySelector(sel.filterTherapist);
+        if(filterTherapist) filterTherapist.addEventListener('change', applyFilters);
+
+        // create user button in modal
+        const confirmCreateBtn = document.querySelector(sel.createBtn);
+        if(confirmCreateBtn) {
+            confirmCreateBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                handleCreateUser();
+            });
+        }
+
+        // edit modal listeners
+        const editForm = document.querySelector(sel.editForm);
+        if(editForm) editForm.addEventListener('submit', submitEditForm);
+        
+        const editRole = document.querySelector('#edit-role');
+        if(editRole) editRole.addEventListener('change', toggleEditFields);
+
+        // create user role switch
+        const createRole = document.querySelector('#new-role');
+        if(createRole) {
+            createRole.addEventListener('change', () => {
+                const role = createRole.value;
+                const patientFields = document.querySelector('#patient-fields');
+                const therapistFields = document.querySelector('#therapist-fields');
+                const patientSede = document.querySelector('#patient-sede-div');
+                const therapistSede = document.querySelector('#therapist-sede-div');
+                
+                if(role === 'jugador') {
+                    patientFields?.classList.remove('hidden');
+                    patientSede?.classList.remove('hidden');
+                    therapistFields?.classList.add('hidden');
+                    therapistSede?.classList.add('hidden');
+                } else if(role === 'terapista') {
+                    patientFields?.classList.add('hidden');
+                    patientSede?.classList.add('hidden');
+                    therapistFields?.classList.remove('hidden');
+                    therapistSede?.classList.remove('hidden');
+                } else {
+                    patientFields?.classList.add('hidden');
+                    patientSede?.classList.add('hidden');
+                    therapistFields?.classList.add('hidden');
+                    therapistSede?.classList.add('hidden');
+                }
+            });
+        }
+
+        const editShift2 = document.querySelector('#edit-has-shift2');
+        if(editShift2) {
+            editShift2.addEventListener('change', () => {
+                const shift2Fields = document.querySelector('#shift2-fields');
+                if(editShift2.checked) shift2Fields?.classList.remove('hidden');
+                else shift2Fields?.classList.add('hidden');
+            });
+        }
+
+        // schedule calc triggers
+        document.querySelectorAll('.schedule-calc-trigger').forEach(el=>{ 
+            el.addEventListener('change', calculateContractHours); 
+            if(el.type==='time') el.addEventListener('input', calculateContractHours); 
+        });
+
+        // initial deep link from dashboard (URL query params)
+        const urlParams = new URLSearchParams(window.location.search);
+        const dashSearch = urlParams.get('search');
+        if(dashSearch && searchInput) {
+            searchInput.value = dashSearch;
+            applyFilters();
+        }
+    }
+
+    function calculateContractHours(){ const startVal = $ ('#edit-start-time')?.value; const endVal = $ ('#edit-end-time')?.value; const daysChecked = document.querySelectorAll('input[name="edit_days"]:checked').length; if(startVal && endVal && daysChecked>0){ const [h1,m1]=startVal.split(':').map(Number); const [h2,m2]=endVal.split(':').map(Number); let diff = (h2*60+m2)-(h1*60+m1); if(diff<0) diff=0; const hours = diff/60; const totalMonthly = Math.round(hours * daysChecked * 4); $ ('#edit-hours').value = totalMonthly; } }
+
+    return { init: function(){ 
+        bind(); 
+        applyFilters(); 
+        applyAutoEdit(); 
+        
+        const bd = document.getElementById('drawerBackdrop');
+        if(bd) {
+            bd.addEventListener('click', () => {
+                document.querySelectorAll('.side-panel-drawer').forEach(m => {
+                    m.classList.remove('drawer-open');
+                    setTimeout(() => m.classList.add('hidden'), 400);
+                });
+                document.querySelectorAll('.user-action-menu').forEach(m => {
+                    m.classList.remove('drawer-open');
+                    setTimeout(() => m.classList.add('hidden'), 400);
+                });
+                bd.classList.remove('active');
+                bd.style.pointerEvents = 'none';
+                document.body.style.overflow = '';
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') {
+                if(bd) bd.click();
+            }
+        });
+
+        // Move all slider menus to body to break out of any transform/overflow containment
+        document.querySelectorAll('.user-action-menu').forEach(menu => {
+            document.body.appendChild(menu);
+        });
+    } };
+})();
+
+document.addEventListener('DOMContentLoaded', ()=> UsersModule.init());
+</script>
+{% endblock %}

@@ -1,0 +1,674 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_dashboard' %}
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Panel de Administración</h2>
+  <p class="text-sm text-gray-500">Control integral de terapeutas y pacientes</p>
+</div>
+{% endblock %}
+
+{% block header_action %}
+<div class="flex items-center gap-3">
+    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+        <i class="fas fa-globe text-primary"></i> {{ current_user.timezone or 'America/Lima' }}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8 space-y-8 animate-fade-in">
+
+  <!-- NEW Centro de Acción Inteligente (Automation Phase 1/2) -->
+  <div id="aiCommandCenter" class="space-y-4">
+      <div class="flex items-center justify-between px-1">
+          <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <i class="fas fa-robot"></i>
+              </div>
+              <h3 class="text-xl font-black text-textDark uppercase tracking-tighter">Centro de Acción Inteligente</h3>
+          </div>
+          {% if smart_actions|length > 0 %}
+          <div class="flex items-center gap-2">
+              <span class="bg-primary/10 text-primary text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest animate-pulse">
+                {{ smart_actions|length }} Tareas Sugeridas
+              </span>
+          </div>
+          {% endif %}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {% for action in smart_actions %}
+          <div id="action-card-{{ action.id }}" class="group bg-white rounded-3xl p-6 shadow-soft border border-transparent hover:border-primary/20 transition-all">
+              <div class="flex items-start justify-between mb-4">
+                  <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                          <i class="fas {% if action.module == 'pagos' %}fa-credit-card{% elif action.module == 'sesiones' %}fa-clock{% else %}fa-user-cog{% endif %} text-sm"></i>
+                      </div>
+                      <div>
+                          <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ action.module }}</p>
+                          <p class="text-[9px] font-bold text-primary uppercase italic">{{ action.automation_level }}</p>
+                      </div>
+                  </div>
+              </div>
+              <p class="text-xs font-bold text-gray-700 mb-6 leading-relaxed">{{ action.description }}</p>
+              
+              <div class="flex gap-2">
+                  {% if action.automation_level == 'requires_confirmation' %}
+                  <button onclick="executeAction({{ action.id }})" class="flex-1 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                      Confirmar
+                  </button>
+                  {% endif %}
+                  
+                  {% if action.module == 'pagos' %}
+                  <a href="{{ url_for('admin.deudores_page') }}" class="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all text-center">
+                      Ir a Módulo
+                  </a>
+                  {% elif action.module == 'usuarios' %}
+                  <a href="{{ url_for('admin.users', auto_edit=action.suggested_payload if action.suggested_payload else '') }}" class="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all text-center">
+                      Hacer Manualmente
+                  </a>
+                  {% elif action.module == 'sesiones' %}
+                  <a href="{{ url_for('admin.sessions_calendar') }}" class="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all text-center">
+                      Ver Agenda
+                  </a>
+                  {% endif %}
+              </div>
+          </div>
+          {% else %}
+          <div class="lg:col-span-3 p-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center">
+              <i class="fas fa-check-circle text-gray-200 text-4xl mb-4"></i>
+              <p class="text-sm font-bold text-gray-400 uppercase tracking-tight">Todas las operaciones al día</p>
+              <p class="text-[10px] text-gray-300 mt-1 uppercase tracking-widest italic">El motor de automatización está monitoreando</p>
+          </div>
+          {% endfor %}
+      </div>
+  </div>
+
+  <!-- AI Guidance: Incomplete Registrations -->
+  <div id="aiGuidanceBanner" class="hidden animate-fade-in bg-gradient-to-r from-red-500 to-orange-600 rounded-2xl shadow-lg p-5 text-white flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+          <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white shrink-0 animate-pulse">
+              <i class="fas fa-robot text-2xl"></i>
+          </div>
+          <div>
+              <h3 class="text-lg font-bold">Guía de Regularización IA</h3>
+              <p class="text-xs text-white/80 max-w-md">He detectado <span id="incompleteCount" class="font-bold underline">0</span> alumnos con datos incompletos (modalidad o pago). Esto afecta la veracidad de tus finanzas.</p>
+          </div>
+      </div>
+      <div class="flex gap-2 w-full md:w-auto">
+          <button onclick="toggleGuidanceModal()" class="flex-1 md:flex-none px-6 py-2 bg-white text-red-600 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-100 transition-all">Ver Pendientes</button>
+      </div>
+  </div>
+
+  <!-- KPIs Section -->
+  <div>
+      <h3 class="text-lg font-semibold text-on-surface mb-4 px-1">Resumen General</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <!-- Terapeutas -->
+        <a href="{{ url_for('admin.users') }}" class="group bg-surface rounded-soft shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1">
+          <div class="flex justify-between items-start">
+              <div>
+                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Terapeutas</p>
+                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-primary transition-colors">{{ overview.therapists }}</h3>
+              </div>
+              <div class="p-3 bg-blue-50 rounded-full text-blue-600 group-hover:bg-blue-100 transition-colors">
+                  <i class="fas fa-user-md text-xl"></i>
+              </div>
+          </div>
+        </a>
+
+        <!-- Pacientes -->
+        <a href="{{ url_for('admin.users') }}" class="group bg-surface rounded-soft shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1">
+           <div class="flex justify-between items-start">
+              <div>
+                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Pacientes</p>
+                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-green-600 transition-colors">{{ overview.patients }}</h3>
+              </div>
+              <div class="p-3 bg-green-50 rounded-full text-green-600 group-hover:bg-green-100 transition-colors">
+                  <i class="fas fa-users text-xl"></i>
+              </div>
+           </div>
+        </a>
+
+        <!-- Sesiones -->
+        <a href="{{ url_for('admin.sessions_calendar') }}" class="group bg-surface rounded-soft shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1">
+           <div class="flex justify-between items-start">
+              <div>
+                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Sesiones</p>
+                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-purple-600 transition-colors">{{ overview.sessions_total }}</h3>
+              </div>
+              <div class="p-3 bg-purple-50 rounded-full text-purple-600 group-hover:bg-purple-100 transition-colors">
+                  <i class="fas fa-calendar-check text-xl"></i>
+              </div>
+           </div>
+        </a>
+
+        <!-- Precisión -->
+        <div class="bg-surface rounded-soft shadow-soft p-6 border-l-4 border-yellow-500">
+           <div class="flex justify-between items-start">
+              <div>
+                  <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Precisión Promedio</p>
+                  <h3 class="text-3xl font-bold text-on-surface mt-1">{{ overview.avg_accuracy }}%</h3>
+              </div>
+              <div class="p-3 bg-yellow-50 rounded-full text-yellow-600">
+                  <i class="fas fa-bullseye text-xl"></i>
+              </div>
+           </div>
+        </div>
+
+        <!-- Deudores Alert -->
+        <a href="{{ url_for('admin.deudores_page') }}" class="group bg-surface rounded-soft shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-red-500 cursor-pointer hover:-translate-y-1">
+           <div class="flex justify-between items-start">
+              <div>
+                  <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">Deudas Pendientes</p>
+                  <h3 class="text-3xl font-bold text-textDark mt-1 group-hover:text-red-600 transition-colors">⚠️</h3>
+                  <p class="text-xs text-gray-400 mt-2">Ver deudores por sede</p>
+              </div>
+              <div class="p-3 bg-red-50 rounded-full text-red-600 group-hover:bg-red-100 transition-colors">
+                  <i class="fas fa-credit-card text-xl"></i>
+              </div>
+           </div>
+        </a>
+      </div>
+  </div>
+
+  <!-- Financial & Sedes Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Chart: Ingresos vs Pendientes -->
+      <div class="lg:col-span-2 bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                  <i class="fas fa-chart-bar text-primary"></i> Flujo de Caja (Mes Actual)
+              </h3>
+              <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 px-2 py-1 rounded">Soles (S/)</span>
+          </div>
+          <div class="relative h-64 w-full">
+              <canvas id="cashflowChart"></canvas>
+          </div>
+      </div>
+
+      <!-- Financial Summary (Small) -->
+      <div class="lg:col-span-1 bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between">
+          <h3 class="text-lg font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <i class="fas fa-coins text-yellow-500"></i> Resumen Financiero
+          </h3>
+          <div class="space-y-4">
+              <div class="p-4 bg-green-50 rounded-2xl border border-green-100">
+                  <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Ingresos Reales</p>
+                  <span class="text-2xl font-black text-green-700">S/ {{ "%.2f"|format(financials.income_real or 0) }}</span>
+              </div>
+              <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                  <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Pendiente por Cobrar</p>
+                  <span class="text-2xl font-black text-blue-700">S/ {{ "%.2f"|format((financials.income_expected or 0) - (financials.income_real or 0)) if (financials.income_expected or 0) > (financials.income_real or 0) else "0.00" }}</span>
+              </div>
+          </div>
+          <p class="text-[10px] text-gray-400 mt-4 italic text-center">Basado en planes activos registrados en el sistema.</p>
+      </div>
+  </div>
+
+  <!-- Active Users per Sede -->
+  <div class="bg-surface rounded-soft shadow-soft p-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <i class="fas fa-map-marker-alt text-red-400"></i> Usuarios Activos por Sede
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {% for s in sedes_stats %}
+          <div onclick="window.location.href='{{ url_for('admin.users', sede_id=s.id) }}'" class="group block p-4 rounded-lg bg-gray-50 border border-transparent hover:border-primary hover:bg-white transition-all shadow-sm hover:shadow-md cursor-pointer">
+              <div class="flex justify-between items-center mb-1">
+                  <h4 class="font-bold text-gray-700 group-hover:text-primary transition-colors text-sm uppercase tracking-wide truncate">{{ s.name }}</h4>
+                  <i class="fas fa-users text-gray-300 group-hover:text-primary transition-colors"></i>
+              </div>
+              <div class="flex items-end gap-2">
+                  <span class="text-2xl font-bold text-textDark group-hover:text-primary transition-colors">{{ s.count }}</span>
+                  <span class="text-xs text-gray-400 mb-1">pacientes</span>
+              </div>
+          </div>
+          {% endfor %}
+      </div>
+  </div>
+
+  <!-- Quick Actions Row -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Quick Payment -->
+      <div class="bg-gradient-to-br from-primary to-green-600 rounded-soft shadow-soft p-6 text-white relative overflow-hidden">
+          <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full"></div>
+          
+          <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
+              <i class="fas fa-comment-dollar"></i> Registrar Pago Rápido
+          </h3>
+          <p class="text-sm text-blue-100 mb-4 relative z-10">Selecciona un paciente para ir directo al formulario de pago.</p>
+          
+          <form action="{{ url_for('admin.payments') }}" method="get" class="relative z-10 flex gap-2">
+              <div class="flex-grow">
+                <input list="patients-list" name="search_patient" class="w-full rounded-lg border-0 px-3 py-2 text-gray-800 focus:ring-2 focus:ring-white bg-white/90 placeholder-gray-500" placeholder="Buscar paciente..." required>
+                <datalist id="patients-list">
+                    {% for p in all_patients %}
+                    <option value="{{ p.username }}">{{ p.email }}</option>
+                    {% endfor %}
+                </datalist>
+              </div>
+              <!-- We send 'action=register' to trigger modal in payments page if implemented, or just filter -->
+              <input type="hidden" name="action" value="register"> 
+              <button type="submit" class="bg-white text-primary font-bold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm">
+                  Ir
+              </button>
+          </form>
+      </div>
+
+      <!-- Quick Schedule Check -->
+      <div class="bg-white rounded-soft shadow-soft p-6 border border-gray-100 flex flex-col justify-center">
+          <h3 class="text-lg font-bold text-gray-700 mb-2 flex items-center gap-2">
+             <i class="far fa-calendar-alt text-blue-500"></i> Disponibilidad y Horarios
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
+          
+          <div class="flex gap-3">
+              <a href="{{ url_for('admin.sessions_calendar') }}" class="flex-1 text-center bg-blue-50 text-blue-600 font-bold py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                  Ver Calendario Global
+              </a>
+              <!-- Future: Link to a specific "Availability View" -->
+          </div>
+      </div>
+  </div>
+
+  <!-- Gestión Operativa -->
+  <div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2 px-1">
+          <i class="fas fa-briefcase text-gray-400"></i> Gestión Operativa
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <a href="{{ url_for('admin.users') }}" class="group bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-users text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-textDark">Usuarios</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Gestionar perfiles de terapeutas y pacientes.</p>
+          <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+              <span class="text-xs font-bold uppercase tracking-wider">Acceder <i class="fas fa-chevron-right ml-1"></i></span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('admin.games') }}" class="group bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+          <div class="flex items-center gap-4 mb-4">
+             <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-gamepad text-xl"></i>
+             </div>
+             <h3 class="text-lg font-bold text-textDark">Juegos</h3>
+          </div>
+          <p class="text-sm text-gray-500 mb-2">Configurar actividades y niveles disponibles.</p>
+          <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+             <span class="text-xs font-bold uppercase tracking-wider">Configurar <i class="fas fa-chevron-right ml-1"></i></span>
+          </div>
+        </a>
+
+        <a href="{{ url_for('admin.reports') }}" class="group bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+           <div class="flex items-center gap-4 mb-4">
+             <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-chart-line text-xl"></i>
+             </div>
+             <h3 class="text-lg font-bold text-textDark">Reportes</h3>
+           </div>
+           <p class="text-sm text-gray-500 mb-2">Analíticas detalladas de pacientes.</p>
+           <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+             <span class="text-xs font-bold uppercase tracking-wider">Analizar <i class="fas fa-chevron-right ml-1"></i></span>
+           </div>
+        </a>
+
+        <a href="{{ url_for('admin.messages') }}" class="group bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-gray-50 min-h-[140px]">
+           <div class="flex items-center gap-4 mb-4">
+             <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-envelope text-xl"></i>
+             </div>
+             <h3 class="text-lg font-bold text-textDark">Mensajería</h3>
+           </div>
+           <p class="text-sm text-gray-500 mb-2">Comunicación interna y avisos globales.</p>
+           <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
+             <span class="text-xs font-bold uppercase tracking-wider">Enviar <i class="fas fa-chevron-right ml-1"></i></span>
+           </div>
+        </a>
+      </div>
+  </div>
+
+  <!-- Sistema & Seguridad -->
+  <div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2 px-1">
+          <i class="fas fa-shield-alt text-gray-400"></i> Sistema & Seguridad
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <a href="{{ url_for('admin.csp_reports') }}" class="group bg-surface rounded-soft shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+           <div class="flex items-center gap-4">
+             <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                <i class="fas fa-bug"></i>
+             </div>
+             <div>
+                <h3 class="text-base font-bold text-gray-700">CSP Reports</h3>
+                <p class="text-xs text-gray-500">Monitoreo de seguridad y violaciones de contenido.</p>
+             </div>
+           </div>
+           <i class="fas fa-external-link-alt text-gray-300 text-sm group-hover:text-gray-500"></i>
+        </a>
+
+        <a href="{{ url_for('admin.admin_api_tokens') }}" class="group bg-surface rounded-soft shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-gray-100 opacity-90 hover:opacity-100">
+           <div class="flex items-center gap-4">
+             <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                <i class="fas fa-key"></i>
+             </div>
+             <div>
+                <h3 class="text-base font-bold text-gray-700">API Tokens</h3>
+                <p class="text-xs text-gray-500">Gestión de credenciales para integraciones externas.</p>
+             </div>
+           </div>
+           <i class="fas fa-external-link-alt text-gray-300 text-sm group-hover:text-gray-500"></i>
+        </a>
+      </div>
+  </div>
+
+  <!-- Guidance Modal for Dashboard -->
+  <div id="guidanceModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-xl scale-95 opacity-0 transform transition-all duration-300" id="modalContainer">
+          <div class="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <div class="flex items-center gap-5">
+                  <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-red-200">
+                      <i class="fas fa-user-clock text-2xl"></i>
+                  </div>
+                  <div>
+                      <h3 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Asignaciones Faltantes</h3>
+                      <p class="text-xs font-bold text-red-500 uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded-full inline-block mt-1">Requiere acción administrativa</p>
+                  </div>
+              </div>
+              <button onclick="toggleGuidanceModal()" class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors">
+                  <i class="fas fa-times"></i>
+              </button>
+          </div>
+          <div class="p-8">
+              <div id="incompleteList" class="space-y-4 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar mb-8">
+                  <!-- JS Fill -->
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                  <button onclick="toggleGuidanceModal()" class="py-4 bg-gray-100 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Más tarde</button>
+                  <a href="{{ url_for('admin.users') }}" class="py-4 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center">Configurar ahora</a>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <!-- Daily Pendings Guidance Modal -->
+  <div id="dailyPendingsModal" class="fixed inset-0 bg-black/60 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
+      <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl scale-95 opacity-0 transform transition-all duration-300" id="dailyModalContainer">
+          <div class="p-8 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-3xl">
+              <div class="flex items-center gap-5">
+                  <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md border border-white/30">
+                      <i class="far fa-calendar-check text-2xl"></i>
+                  </div>
+                  <div>
+                      <h3 class="text-2xl font-black uppercase tracking-tighter">Cobros del Día</h3>
+                      <p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Guía Operativa Diaria • {{ current_date_display or "Hoy" }}</p>
+                  </div>
+              </div>
+              <button onclick="toggleDailyModal()" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors">
+                  <i class="fas fa-times"></i>
+              </button>
+          </div>
+          <div class="p-8">
+              <div id="dailyList" class="space-y-4 max-h-[450px] overflow-y-auto pr-4 custom-scrollbar mb-8">
+                  <!-- JS Fill -->
+              </div>
+              <div class="flex justify-center">
+                  <button onclick="toggleDailyModal()" class="px-10 py-4 bg-gray-100 text-gray-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Entendido</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function toggleGuidanceModal() {
+    const modal = document.getElementById('guidanceModal');
+    const container = document.getElementById('modalContainer');
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            container.classList.remove('scale-95', 'opacity-0');
+            container.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    } else {
+        container.classList.remove('scale-100', 'opacity-100');
+        container.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+}
+
+function toggleDailyModal() {
+    const modal = document.getElementById('dailyPendingsModal');
+    const container = document.getElementById('dailyModalContainer');
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            container.classList.remove('scale-95', 'opacity-0');
+            container.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    } else {
+        container.classList.remove('scale-100', 'opacity-100');
+        container.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+}
+
+async function executeAction(actionId) {
+    if (!confirm('¿Confirmas la ejecución automática de esta tarea?')) return;
+    
+    try {
+        const btn = event.target;
+        const prev = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const response = await fetch(`/admin/api/workflow/execute/${actionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            const card = document.getElementById(`action-card-${actionId}`);
+            card.classList.add('opacity-0', 'scale-90');
+            setTimeout(() => {
+                card.remove();
+                if (document.querySelectorAll('#aiCommandCenter .grid > div:not(.col-span-3)').length === 0) {
+                    location.reload();
+                }
+            }, 300);
+        } else {
+            alert('Error: ' + result.message);
+            btn.disabled = false;
+            btn.textContent = prev;
+        }
+    } catch (e) {
+        console.error("Action Error:", e);
+        alert('Error de conexión con el Smart Engine.');
+    }
+}
+
+function initCashflowChart() {
+    const ctx = document.getElementById('cashflowChart').getContext('2d');
+    const incomeReal = parseFloat('{{ financials.income_real or 0 }}');
+    const incomeExpected = parseFloat('{{ financials.income_expected or 0 }}');
+    const pending = Math.max(0, incomeExpected - incomeReal);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Ingresos del Mes'],
+            datasets: [
+                {
+                    label: 'Realizado (S/)',
+                    data: [incomeReal],
+                    backgroundColor: '#10B981',
+                    borderRadius: 12,
+                    barThickness: 60
+                },
+                {
+                    label: 'Pendiente (S/)',
+                    data: [pending],
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 12,
+                    barThickness: 60
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { weight: 'bold', size: 10 } } },
+                tooltip: { backgroundColor: '#1F2937', padding: 12, titleFont: { size: 14 } }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { display: false } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function getWhatsAppLink(phone, name, amount) {
+    if (!phone) return null;
+    const cleanPhone = phone.replace(/\D/g, '');
+    const msg = encodeURIComponent(`Hola ${name}, te saludamos de Moscowle. Recordarte que el pago de tu mensualidad (S/ ${amount}) vence hoy. ¡Gracias!`);
+    return `https://wa.me/51${cleanPhone}?text=${msg}`;
+}
+
+async function auditRegistrations() {
+    try {
+        const response = await fetch('/api/admin/deudores?month=curr', {
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            console.error("Dashboard Audit HTTP Error:", response.status);
+            return;
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            console.error("Dashboard Audit non-JSON response:", contentType);
+            return;
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.data.por_sede) {
+            const incomplete = [];
+            const today = new Date();
+            const todayDay = today.getDate();
+            const dailyPendings = [];
+
+            Object.values(result.data.por_sede).forEach(sede => {
+                if (!sede.deudores) return;
+                sede.deudores.forEach(d => {
+                    // 1. Audit Incomplete Data
+                    const isPriceIncomplete = !d.monto || d.monto <= 0;
+                    const isPlanIncomplete = !d.modality || d.modality.includes('Sin Modalidad');
+                    const isDateIncomplete = !d.fecha_vencimiento || d.fecha_vencimiento === 'N/A';
+
+                    if (isPriceIncomplete || isPlanIncomplete || isDateIncomplete) {
+                        incomplete.push({ 
+                            ...d, 
+                            sede: sede.sede_name,
+                            details: [
+                                isPriceIncomplete ? 'Monto' : null,
+                                isPlanIncomplete ? 'Modalidad' : null,
+                                isDateIncomplete ? 'Fecha' : null
+                            ].filter(Boolean).join(', ')
+                        });
+                    }
+
+                    // 2. Identify Daily Pendings (Calculated by day)
+                    // d.payment_day usually comes from the User model via the API
+                    if (d.payment_day == todayDay && !isPriceIncomplete) {
+                        dailyPendings.push({ ...d, sede: sede.sede_name });
+                    }
+                });
+            });
+
+            // Handle Incomplete Alert
+            if (incomplete.length > 0) {
+                document.getElementById('aiGuidanceBanner').classList.remove('hidden');
+                document.getElementById('incompleteCount').innerText = incomplete.length;
+                
+                const list = document.getElementById('incompleteList');
+                list.innerHTML = incomplete.map(u => `
+                    <div class="group p-5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-transparent hover:border-red-200 hover:bg-white transition-all shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform border border-gray-100">${u.paciente ? u.paciente.charAt(0) : '?'}</div>
+                                <div>
+                                    <p class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">${u.paciente || u.email || 'Alumno'}</p>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest"><i class="fas fa-map-marker-alt mr-1"></i>${u.sede}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="bg-red-50 text-red-600 text-[9px] font-black px-2 py-1 rounded-full uppercase border border-red-100 italic">Falta: ${u.details}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                if (incomplete.length > 5) setTimeout(toggleGuidanceModal, 1500);
+            }
+
+            // Handle Daily Pendings Modal
+            if (dailyPendings.length > 0) {
+                const dailyList = document.getElementById('dailyList');
+                dailyList.innerHTML = dailyPendings.map(u => {
+                    const waLink = getWhatsAppLink(u.phone, u.paciente, u.monto);
+                    return `
+                    <div class="p-6 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                           <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">${u.paciente.charAt(0)}</div>
+                           <div>
+                               <p class="text-sm font-black text-gray-900 uppercase tracking-tight">${u.paciente}</p>
+                               <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Vence Hoy • S/ ${u.monto}</p>
+                           </div>
+                        </div>
+                        <div class="flex gap-2">
+                            ${waLink ? `
+                            <a href="${waLink}" target="_blank" class="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center hover:bg-green-600 transition-all shadow-lg shadow-green-200" title="Notificar por WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>` : ''}
+                            <a href="/admin/payments?search_patient=${u.username || u.paciente}&action=register" class="w-10 h-10 bg-white text-blue-600 border border-blue-100 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                <i class="fas fa-cash-register"></i>
+                            </a>
+                        </div>
+                    </div>
+                `}).join('');
+                
+                // Show Daily Modal if not already showing Incomplete
+                if (incomplete.length <= 5) {
+                    setTimeout(toggleDailyModal, 2000);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Dashboard Audit Error:", e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initCashflowChart();
+    auditRegistrations();
+});
+</script>
+{% endblock %}

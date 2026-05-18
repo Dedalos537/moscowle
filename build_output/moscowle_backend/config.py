@@ -39,7 +39,10 @@ class Config:
         }
         if 'tidbcloud.com' in _uri:
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {
-                'ssl': {}
+                'ssl': {
+                    'ca': '/etc/ssl/cert.pem',
+                    'check_hostname': True
+                }
             }
     
     # ========== SECURITY - RATE LIMITING ==========

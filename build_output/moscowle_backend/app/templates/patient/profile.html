@@ -1,0 +1,42 @@
+{% extends "patient/base.html" %}
+
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block title %}Mi Perfil - Moscowle{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-charcoal mb-2">Mi Perfil</h2>
+    <p class="text-gray-600">Administra tu información personal</p>
+</div>
+
+<div class="grid grid-cols-3 gap-8">
+    <!-- Profile Info -->
+    <div class="col-span-2 space-y-6">
+        
+        <!-- Personal Information -->
+        {% include "patient/components/_profile_form.html" %}
+
+        <!-- Change Password -->
+        {% include "patient/components/_profile_password.html" %}
+
+    </div>
+
+    <!-- Profile Summary -->
+    {% include "patient/components/_profile_summary.html" %}
+</div>
+
+<!-- Modal Alert -->
+{% include "patient/components/_profile_alert_modal.html" %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/patient/profile.js') }}"></script>
+{% endblock %}

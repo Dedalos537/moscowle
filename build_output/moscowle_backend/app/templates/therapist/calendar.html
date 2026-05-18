@@ -1,0 +1,434 @@
+{% extends "therapist/base.html" %}
+
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block title %}Calendario - Moscowle{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 md:px-6 py-8">
+    
+    <!-- Page Header -->
+    <div class="mb-4 md:mb-8">
+        <h2 class="text-2xl md:text-3xl font-bold text-charcoal mb-2">Calendario de Citas</h2>
+        <p class="text-on-surface-variant hidden md:block">Gestiona las sesiones con tus pacientes</p>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-4 w-full md:w-auto justify-center md:justify-start">
+                <button id="prev-month-btn" class="w-10 h-10 rounded-lg border border-outline flex items-center justify-center hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant">chevron_left</span>
+                </button>
+                <h3 id="current-month-display" class="text-xl font-semibold text-charcoal min-w-[200px] text-center">Diciembre 2025</h3>
+                <button id="next-month-btn" class="w-10 h-10 rounded-lg border border-outline flex items-center justify-center hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                </button>
+            </div>
+            <button id="new-appointment-btn" class="w-full md:w-auto bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
+                <span class="material-symbols-outlined mr-2">add</span>
+                Nueva Cita
+            </button>
+        </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6 mb-6 overflow-x-auto">
+        <div class="min-w-[700px]">
+            <div class="grid grid-cols-7 gap-2 mb-4">
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Domingo</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Lunes</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Martes</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Miércoles</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Jueves</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Viernes</div>
+                <div class="text-center py-2 text-sm font-semibold text-on-surface-variant">Sábado</div>
+            </div>
+            
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                <!-- Calendar days will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-6">
+        <h3 class="text-xl font-semibold text-charcoal mb-6 flex items-center">
+            <span class="material-symbols-outlined text-olive mr-3">event_available</span>
+            Próximas Citas
+        </h3>
+        
+        <div id="appointments-list" class="space-y-4">
+            <div class="text-center py-8 text-on-surface-variant">
+                <i class="fas fa-calendar-plus text-gray-300 text-4xl mb-3"></i>
+                <p>No hay citas programadas</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Appointment Modal -->
+<div id="appointment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-charcoal">Nueva Cita</h3>
+            <button id="close-modal-btn" class="text-on-surface-variant/70 hover:text-charcoal transition-colors">
+                <span class="material-symbols-outlined  text-[32px]">close</span>
+            </button>
+        </div>
+
+        <form id="appointment-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Paciente</label>
+                <select id="patient-select" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" required>
+                    <option value="">Seleccionar paciente...</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Título</label>
+                <input type="text" id="appointment-title" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" placeholder="Ej: Sesión de Evaluación" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-charcoal mb-2">Fecha</label>
+                    <input type="date" id="appointment-date" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-charcoal mb-2">Hora</label>
+                    <input type="time" id="appointment-time" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" required>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Ubicación</label>
+                <input type="text" id="appointment-location" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" placeholder="Sala de terapia, Online, etc.">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Notas</label>
+                <textarea id="appointment-notes" rows="3" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent" placeholder="Observaciones o detalles adicionales..."></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-charcoal mb-2">Juego asignado</label>
+                <select id="appointment-game" class="w-full px-4 py-3 border border-outline rounded-xl focus:ring-2 focus:ring-olive focus:border-transparent">
+                    <option value="">(Ninguno)</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 pt-4">
+                <button type="submit" class="flex-1 bg-olive text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">
+                    <span class="material-symbols-outlined mr-2">check</span>
+                    Crear Cita
+                </button>
+                <button type="button" id="cancel-modal-btn" class="flex-1 bg-surface-container-high text-charcoal px-6 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentDate = new Date();
+    let appointments = [];
+    const modal = document.getElementById('appointment-modal');
+    const appointmentForm = document.getElementById('appointment-form');
+
+    // Modal controls
+    document.getElementById('new-appointment-btn').addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        loadPatients();
+        loadGames();
+        // Set default date to today
+        document.getElementById('appointment-date').value = new Date().toISOString().split('T')[0];
+    });
+
+    document.getElementById('close-modal-btn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    document.getElementById('cancel-modal-btn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    // Load patients for select
+    function loadPatients() {
+        fetch("{{ url_for('api.api_patients') }}")
+            .then(res => res.json())
+            .then(patients => {
+                const select = document.getElementById('patient-select');
+                select.innerHTML = '<option value="">Seleccionar paciente...</option>';
+                patients.forEach(patient => {
+                    const option = document.createElement('option');
+                    option.value = patient.id;
+                    option.textContent = patient.username || patient.email;
+                    select.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Error loading patients:', err));
+    }
+
+    // Load available games for selection
+    function loadGames() {
+        fetch("{{ url_for('api.api_list_games') }}")
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('appointment-game');
+                if (!select) return;
+                select.innerHTML = '<option value="">(Ninguno)</option>';
+                const games = (data && data.games) ? data.games : [];
+                games.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g;
+                    option.textContent = g.replace(/\.html$/i, '');
+                    select.appendChild(option);
+                });
+            })
+            .catch(err => console.error('Error loading games:', err));
+    }
+
+    // Load appointments
+    function loadAppointments() {
+        fetch("{{ url_for('api.api_get_sessions') }}")
+            .then(res => res.json())
+            .then(data => {
+                appointments = data;
+                displayUpcomingAppointments();
+                renderCalendar();
+            })
+            .catch(err => console.error('Error loading appointments:', err));
+    }
+
+    // Display upcoming appointments list
+    function displayUpcomingAppointments() {
+        const container = document.getElementById('appointments-list');
+        
+        // Filter upcoming appointments
+        const now = new Date();
+        const upcoming = appointments
+            .filter(appt => new Date(appt.start_time) >= now && appt.status === 'scheduled')
+            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+            .slice(0, 5);
+        
+        if (upcoming.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-on-surface-variant">
+                    <i class="fas fa-calendar-plus text-gray-300 text-4xl mb-3"></i>
+                    <p>No hay citas programadas</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        upcoming.forEach(appt => {
+            const startDate = new Date(appt.start_time);
+            const dateStr = startDate.toLocaleDateString('es-ES', { 
+                weekday: 'short', 
+                day: 'numeric', 
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            html += `
+                <div class="flex items-center justify-between p-4 border border-outline-variant rounded-xl hover:border-olive transition-colors">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 rounded-full bg-olive bg-opacity-10 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-olive">person</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-charcoal">${appt.patient ? appt.patient.name : 'Sin paciente'}</h4>
+                            <p class="text-sm text-on-surface-variant">${appt.title || 'Sesión'}</p>
+                            <p class="text-xs text-on-surface-variant mt-1">
+                                <span class="material-symbols-outlined mr-1">schedule</span>${dateStr}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${appt.location ? `<span class="text-xs text-on-surface-variant"><i class="fas fa-location-dot mr-1"></i>${appt.location}</span>` : ''}
+                        ${appt.games && appt.games.length ? `<button class="ml-3 px-3 py-1 bg-primary text-white text-xs rounded-2xl open-game-btn" data-game="${appt.games[0]}">Abrir Juego</button>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    // Render calendar
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        document.getElementById('current-month-display').textContent = `${monthNames[month]} ${year}`;
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        // Get appointments for this month
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0);
+        
+        // Map appointments by day
+        const appointmentsByDay = {};
+        appointments.forEach(appt => {
+            const apptDate = new Date(appt.start_time);
+            if (apptDate >= monthStart && apptDate <= monthEnd) {
+                const day = apptDate.getDate();
+                if (!appointmentsByDay[day]) {
+                    appointmentsByDay[day] = [];
+                }
+                appointmentsByDay[day].push(appt);
+            }
+        });
+        
+        let html = '';
+        
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="h-24 border border-outline-variant rounded-lg bg-surface-container-low"></div>';
+        }
+        
+        const today = new Date();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const isToday = day === today.getDate() && 
+                           month === today.getMonth() && 
+                           year === today.getFullYear();
+            
+            const dayAppts = appointmentsByDay[day] || [];
+            
+            html += `
+                <div class="h-24 border border-outline-variant rounded-lg p-2 hover:bg-surface-container-low transition-colors overflow-y-auto ${isToday ? 'bg-olive bg-opacity-10 border-olive' : ''}">
+                    <div class="text-sm font-semibold mb-1 ${isToday ? 'text-olive' : 'text-on-surface'}">${day}</div>
+                    ${dayAppts.map(appt => {
+                        const time = new Date(appt.start_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        return `
+                            <div class="text-xs bg-blue-100 text-blue-700 rounded px-2 py-1 mb-1 truncate flex justify-between items-center" title="${appt.title || 'Sesión'}">
+                                <div>${time} ${appt.patient ? appt.patient.name : ''}</div>
+                                ${appt.games && appt.games.length ? `<button class="ml-2 text-xs bg-surface-container-lowest px-2 py-0.5 rounded open-game-btn" data-game="${appt.games[0]}">🎮</button>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+        
+        document.getElementById('calendar-grid').innerHTML = html;
+        // attach open-game handlers for therapist upcoming list and day cells
+        document.querySelectorAll('.open-game-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const g = btn.getAttribute('data-game');
+                if (g) window.open(`/static/games/${g}`, '_blank');
+            });
+        });
+    }
+
+    document.getElementById('prev-month-btn').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    document.getElementById('next-month-btn').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    // Form submission
+    appointmentForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const date = document.getElementById('appointment-date').value;
+        const time = document.getElementById('appointment-time').value;
+        const startDateTime = `${date}T${time}:00`;
+        
+        // Calculate end time (1 hour later by default)
+        const start = new Date(startDateTime);
+        const end = new Date(start.getTime() + 60 * 60 * 1000);
+        
+        const formData = {
+            patient_id: parseInt(document.getElementById('patient-select').value),
+            title: document.getElementById('appointment-title').value,
+            start_time: startDateTime,
+            end_time: end.toISOString().slice(0, 16),
+            location: document.getElementById('appointment-location').value,
+            notes: document.getElementById('appointment-notes').value,
+            status: 'scheduled',
+            games: (function(){
+                const g = document.getElementById('appointment-game').value;
+                return g ? [g] : [];
+            })()
+        };
+
+        const submitBtn = appointmentForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Guardando...';
+
+        fetch("{{ url_for('api.api_create_session') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.id) {
+                modal.classList.add('hidden');
+                appointmentForm.reset();
+                loadAppointments(); // Reload appointments
+                showNotification('✅ Cita creada exitosamente', 'success');
+            } else if (data.errors && Array.isArray(data.errors)) {
+                const errorList = data.errors.map(e => `• ${e}`).join('\n');
+                showNotification(`❌ Error de validación:\n${errorList}`, 'error', 5000);
+            } else {
+                showNotification('❌ Error al crear la cita: ' + (data.message || 'Error desconocido'), 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error creating appointment:', err);
+            showNotification('❌ Error al crear la cita', 'error');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        });
+    });
+
+    // Notification helper
+    function showNotification(message, type = 'info', duration = 3000) {
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        };
+        
+        const notification = document.createElement('div');
+        notification.className = `fixed bottom-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50`;
+        notification.style.whiteSpace = 'pre-line';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+
+    // Initial load
+    loadAppointments();
+</script>
+{% endblock %}

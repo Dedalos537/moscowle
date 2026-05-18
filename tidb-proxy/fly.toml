@@ -1,0 +1,16 @@
+app = "moscowle-tidb-proxy"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 4000
+  
+  [[services.ports]]
+    port = 4000
+  
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 50
+    soft_limit = 25
