@@ -3,7 +3,7 @@
   @if ((state | async) === 'starting') {
     <div class="fixed top-0 left-0 right-0 z-[60] bg-blue-600 text-white shadow-2xl">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <span class="material-symbols-outlined text-white/80 fa-spin" style="font-family: 'Material Symbols Outlined'">refresh</span>
+        <fa-icon [icon]="['fas', 'spinner']" class="text-white/80" animation="spin"></fa-icon>
         <span class="text-sm font-bold">Iniciando grabación de sesión...</span>
       </div>
     </div>
@@ -21,7 +21,7 @@
         <div class="w-px h-6 bg-white/20 shrink-0 hidden sm:block"></div>
 
         <div class="flex items-center gap-2 min-w-0 flex-1">
-          <span class="material-symbols-outlined text-white/80 text-base shrink-0 hidden sm:inline" style="font-family: 'Material Symbols Outlined'">mic</span>
+          <fa-icon [icon]="['fas', 'microphone']" class="text-white/80 text-base shrink-0 hidden sm:inline"></fa-icon>
           <div class="min-w-0">
             <p class="text-sm font-bold truncate leading-tight">{{ sessionTitle | async }}</p>
             <p class="text-[11px] text-white/70 truncate leading-tight flex items-center gap-1.5">
@@ -34,10 +34,10 @@
 
         <div class="flex items-center gap-2 shrink-0">
           <span class="text-[11px] text-white/70 hidden md:inline truncate max-w-[160px]">{{ chunkStatus | async }}</span>
-          <button (click)="goToSession()" class="h-8 px-3 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 whitespace-nowrap">
-            <span class="material-symbols-outlined text-sm" style="font-family: 'Material Symbols Outlined'">open_in_new</span>
+          <app-button variant="ghost" (clicked)="goToSession()">
+            <fa-icon [icon]="['fas', 'external-link-alt']" class="text-sm"></fa-icon>
             Abrir
-          </button>
+          </app-button>
         </div>
       </div>
     </div>
@@ -47,12 +47,12 @@
   @if ((state | async) === 'mic_error') {
     <div class="fixed top-0 left-0 right-0 z-[60] bg-amber-600 text-white shadow-2xl">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <span class="material-symbols-outlined text-white" style="font-family: 'Material Symbols Outlined'">mic_off</span>
+        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-white"></fa-icon>
         <span class="text-sm font-bold flex-1">Permiso de micrófono requerido para grabar la sesión</span>
-        <button (click)="retryMic()" class="h-8 px-4 rounded-lg bg-white text-amber-700 text-xs font-bold hover:bg-white/90 transition-all flex items-center gap-1.5">
-          <span class="material-symbols-outlined text-sm" style="font-family: 'Material Symbols Outlined'">refresh</span>
+        <app-button variant="secondary" (clicked)="retryMic()">
+          <fa-icon [icon]="['fas', 'sync']" class="text-sm"></fa-icon>
           Reintentar
-        </button>
+        </app-button>
       </div>
     </div>
   }
@@ -61,11 +61,11 @@
   @if ((state | async) === 'completed') {
     <div class="fixed top-0 left-0 right-0 z-[60] bg-emerald-600 text-white shadow-2xl">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <span class="material-symbols-outlined text-white" style="font-family: 'Material Symbols Outlined'">check_circle</span>
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-white"></fa-icon>
         <span class="text-sm font-bold flex-1">Sesión completada y registrada</span>
         @if ((auditScore | async); as score) {
           <span class="h-7 px-3 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-sm" style="font-family: 'Material Symbols Outlined'">analytics</span>
+            <fa-icon [icon]="['fas', 'chart-bar']" class="text-sm"></fa-icon>
             Audit: {{ score }}/100
           </span>
         }
@@ -78,7 +78,7 @@
     <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in">
         <div class="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-          <span class="material-symbols-outlined text-amber-600 dark:text-amber-400 text-3xl" style="font-family: 'Material Symbols Outlined'">help</span>
+          <fa-icon [icon]="['fas', 'question-circle']" class="text-amber-600 dark:text-amber-400 text-3xl"></fa-icon>
         </div>
 
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">¿El paciente asistió?</h3>
@@ -98,12 +98,8 @@
         </div>
 
         <div class="flex gap-3">
-          <button (click)="markAbsent()" class="flex-1 h-11 rounded-xl border border-outline-variant/40 text-sm font-bold text-on-surface-variant hover:bg-surface-container-high transition-all">
-            Ausente
-          </button>
-          <button (click)="markPresent()" class="flex-1 h-11 rounded-xl bg-primary text-on-primary text-sm font-bold hover:bg-primary/90 transition-all">
-            Sí, está presente
-          </button>
+          <app-button variant="secondary" label="Ausente" (clicked)="markAbsent()"></app-button>
+          <app-button variant="primary" label="Si, esta presente" (clicked)="markPresent()"></app-button>
         </div>
       </div>
     </div>

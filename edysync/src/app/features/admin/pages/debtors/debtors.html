@@ -1,6 +1,5 @@
 <div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
 
-  <!-- Header with filters -->
   <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
       <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
@@ -11,18 +10,17 @@
     <div class="flex items-center gap-3">
       <select (change)="onMonthChange($any($event.target).value)" class="pl-3 pr-8 py-2 bg-surface-container-lowest border border-outline-variant/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer">
         <option value="current">Mes Actual</option>
-        <option value="all">Histórico Total</option>
+        <option value="all">Historico Total</option>
       </select>
       <app-button variant="primary" label="Actualizar" [icon]="['fas', 'sync-alt']" (clicked)="loadData()"></app-button>
     </div>
   </div>
 
-  <!-- Daily Guide -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-blue-100 p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'tasks']" class="text-blue-500"></fa-icon> Guía de Flujo Diario
+          <fa-icon [icon]="['fas', 'tasks']" class="text-blue-500"></fa-icon> Guia de Flujo Diario
         </h3>
         <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
       </div>
@@ -33,8 +31,8 @@
               <fa-icon [icon]="['fas', 'phone-alt']" class="text-xs"></fa-icon>
             </div>
             <div>
-              <p class="text-xs font-bold text-on-surface">Contactar Morosos (>3 días)</p>
-              <p class="text-[10px] text-on-surface-variant">Prioridad: Alta. Enviar recordatorio vía WhatsApp.</p>
+              <p class="text-xs font-bold text-on-surface">Contactar Morosos (>3 dias)</p>
+              <p class="text-[10px] text-on-surface-variant">Prioridad: Alta. Enviar recordatorio via WhatsApp.</p>
             </div>
           </div>
           <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-blue-200 transition-all cursor-pointer">
@@ -53,7 +51,7 @@
               <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-xs"></fa-icon>
             </div>
             <div>
-              <p class="text-xs font-bold text-on-surface">Conciliación de Vouchers</p>
+              <p class="text-xs font-bold text-on-surface">Conciliacion de Vouchers</p>
               <p class="text-[10px] text-on-surface-variant">Hay pagos pendientes de validar en el historial.</p>
             </div>
           </div>
@@ -70,7 +68,6 @@
       </div>
     </div>
 
-    <!-- Summary Cards -->
     <div class="space-y-4">
       <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-red-100 p-5">
         <p class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Deuda Total</p>
@@ -83,7 +80,6 @@
     </div>
   </div>
 
-  <!-- Sede Groups -->
   @if (loading) {
     <div class="flex justify-center py-16">
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
@@ -130,9 +126,7 @@
                           <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
                         </a>
                       }
-                      <button (click)="openPaymentModal(d)" class="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-all cursor-pointer">
-                        Cobrar
-                      </button>
+                      <app-button variant="primary" label="Cobrar" (clicked)="openPaymentModal(d)"></app-button>
                     </div>
                   </td>
                 </tr>
@@ -145,7 +139,7 @@
       <div class="text-center py-16 text-on-surface-variant/60">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl mb-3"></fa-icon>
         <p class="text-sm font-bold">No hay deudores registrados</p>
-        <p class="text-[10px] text-on-surface-variant/40 mt-1">Todas las cuentas están al día</p>
+        <p class="text-[10px] text-on-surface-variant/40 mt-1">Todas las cuentas estan al dia</p>
       </div>
     }
   }
@@ -159,7 +153,7 @@
     </div>
     <app-input id="modal-amount" label="Monto (S/)" type="number" [(value)]="paymentForm.amount"></app-input>
     <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Método</label>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Metodo</label>
       <select [(ngModel)]="paymentForm.method" class="w-full px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl focus:border-primary outline-none">
         <option value="transfer">Transferencia</option>
         <option value="yape">Yape</option>

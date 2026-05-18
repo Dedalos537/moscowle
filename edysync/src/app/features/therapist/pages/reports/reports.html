@@ -10,7 +10,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-3xl text-primary">bar_chart</span>
+          <fa-icon [icon]="['fas', 'chart-bar']" class="text-3xl text-primary"></fa-icon>
           <div>
             <h1 class="text-h2 text-on-surface">Reportes de Sesiones</h1>
             <p class="text-body text-on-surface-variant mt-0.5">Análisis y estadísticas del período actual</p>
@@ -36,10 +36,7 @@
             class="text-xs border border-outline-variant/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
-        <button class="btn-secondary text-xs" (click)="exportCSV()">
-          <span class="material-symbols-outlined text-[16px]">file_download</span>
-          Exportar
-        </button>
+        <app-button variant="secondary" label="Exportar" [icon]="['fas', 'file-download']" (clicked)="exportCSV()"></app-button>
       </div>
     </div>
 
@@ -48,11 +45,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-emerald-700">Mejora Promedio</span>
-          <span class="material-symbols-outlined text-emerald-500 text-xl">trending_up</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ improvementRate }}%</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-emerald-500">show_chart</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-[14px]"></fa-icon>
           Tasa de mejora general
         </p>
       </div>
@@ -60,23 +57,23 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-blue-700">Sesión Promedio</span>
-          <span class="material-symbols-outlined text-blue-500 text-xl">schedule</span>
+          <fa-icon [icon]="['fas', 'clock']" class="text-blue-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ avgSessionTime }} <span class="text-sm font-normal text-on-surface-variant">min</span></p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-blue-500">timer</span>
-          Duración media por sesión
+          <fa-icon [icon]="['fas', 'stopwatch']" class="text-blue-500 text-[14px]"></fa-icon>
+          Duracion media por sesion
         </p>
       </div>
 
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-indigo-700">Objetivos</span>
-          <span class="material-symbols-outlined text-indigo-500 text-xl">checklist</span>
+          <fa-icon [icon]="['fas', 'list-check']" class="text-indigo-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ completedObjectives }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-indigo-500">flag</span>
+          <fa-icon [icon]="['fas', 'flag']" class="text-indigo-500 text-[14px]"></fa-icon>
           Objetivos completados
         </p>
       </div>
@@ -84,11 +81,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Pacientes</span>
-          <span class="material-symbols-outlined text-primary text-xl">people</span>
+          <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ activePatients }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-primary">person_add</span>
+          <fa-icon [icon]="['fas', 'user-plus']" class="text-primary text-[14px]"></fa-icon>
           Pacientes activos
         </p>
       </div>
@@ -98,7 +95,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">show_chart</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Tendencia de Precisión Semanal
         </h4>
         <div class="relative" style="height: 240px">
@@ -120,7 +117,7 @@
 
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">bar_chart</span>
+          <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
           Sesiones por Semana
         </h4>
         <div class="relative" style="height: 240px">
@@ -146,7 +143,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-emerald-500 text-lg">emoji_events</span>
+            <fa-icon [icon]="['fas', 'trophy']" class="text-emerald-500 text-lg"></fa-icon>
             Mejor Rendimiento
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ bestPatients.length }} pacientes</span>
@@ -176,10 +173,10 @@
                         [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
                         [class.bg-red-100]="p.avg_accuracy < 50"
                         [class.text-red-700]="p.avg_accuracy < 50">
-                        <span class="material-symbols-outlined text-[12px]"
+                        <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
                           [class.text-emerald-500]="p.avg_accuracy >= 80"
                           [class.text-amber-500]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-red-500]="p.avg_accuracy < 50">circle</span>
+                          [class.text-red-500]="p.avg_accuracy < 50"></fa-icon>
                         {{ p.avg_accuracy }}%
                       </span>
                     </td>
@@ -196,8 +193,8 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-red-500 text-lg">trending_down</span>
-            Requiere Atención
+            <fa-icon [icon]="['fas', 'chart-line']" class="text-red-500 text-lg" flip="vertical"></fa-icon>
+            Requiere Atencion
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ worstPatients.length }} pacientes</span>
         </div>
@@ -226,10 +223,10 @@
                         [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
                         [class.bg-red-100]="p.avg_accuracy < 50"
                         [class.text-red-700]="p.avg_accuracy < 50">
-                        <span class="material-symbols-outlined text-[12px]"
+                        <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
                           [class.text-emerald-500]="p.avg_accuracy >= 80"
                           [class.text-amber-500]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-red-500]="p.avg_accuracy < 50">circle</span>
+                          [class.text-red-500]="p.avg_accuracy < 50"></fa-icon>
                         {{ p.avg_accuracy }}%
                       </span>
                     </td>
@@ -247,10 +244,10 @@
     <!-- All Patients Summary -->
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-lg">group</span>
-          Todos los Pacientes
-        </h3>
+          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
+            Todos los Pacientes
+          </h3>
         <span class="text-xs text-on-surface-variant font-medium">{{ allPatients.length }} registros</span>
       </div>
       @if (allPatients.length > 0) {

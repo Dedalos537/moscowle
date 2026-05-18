@@ -1,37 +1,30 @@
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
 
-<div *ngIf="!loading" class="bg-surface-container-lowest rounded-2xl shadow-soft border border-outline-variant/20 overflow-hidden" [@fadeInUp]>
-  <div class="p-6 border-b border-border">
-    <h3 class="font-bold text-textDark">Conversación con tu terapeuta</h3>
-  </div>
-
-  <div class="p-6 space-y-4 max-h-[500px] overflow-y-auto">
-    <div *ngFor="let msg of messages"
-         class="flex"
-         [ngClass]="{'justify-end': msg.is_from_patient, 'justify-start': !msg.is_from_patient}">
-      <div class="max-w-[70%] p-3 rounded-2xl text-sm"
-           [ngClass]="msg.is_from_patient ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-textDark rounded-bl-sm'">
-        <p>{{ msg.body }}</p>
-        <p class="text-[10px] mt-1 opacity-70">{{ msg.created_at | date:'short' }}</p>
+<div *ngIf="!loading" [@fadeInUp]>
+  <app-card title="Conversación con tu terapeuta">
+    <div class="space-y-4 max-h-[500px] overflow-y-auto">
+      <div *ngFor="let msg of messages"
+           class="flex"
+           [ngClass]="{'justify-end': msg.is_from_patient, 'justify-start': !msg.is_from_patient}">
+        <div class="max-w-[70%] p-3 rounded-2xl text-sm"
+             [ngClass]="msg.is_from_patient ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-textDark rounded-bl-sm'">
+          <p>{{ msg.body }}</p>
+          <p class="text-[10px] mt-1 opacity-70">{{ msg.created_at | date:'short' }}</p>
+        </div>
+      </div>
+      <div *ngIf="messages.length === 0" class="text-center py-12 text-charcoal">
+        <fa-icon [icon]="['fas', 'envelope-open-text']" class="text-3xl mb-2 opacity-30"></fa-icon>
+        <p class="text-sm">No hay mensajes aún</p>
       </div>
     </div>
-    <div *ngIf="messages.length === 0" class="text-center py-12 text-charcoal">
-      <fa-icon [icon]="['fas', 'envelope-open-text']" class="text-3xl mb-2 opacity-30"></fa-icon>
-      <p class="text-sm">No hay mensajes aún</p>
-    </div>
-  </div>
 
-  <div class="p-4 border-t border-border">
-    <div class="flex gap-3">
+    <div class="flex gap-3 mt-4">
       <input [(ngModel)]="newMessage" placeholder="Escribe un mensaje..."
              class="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
              (keyup.enter)="sendMessage()">
-      <button (click)="sendMessage()" [disabled]="!newMessage.trim()"
-              class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-fixed-dim transition-colors disabled:opacity-50">
-        <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
-      </button>
+      <app-button [icon]="['fas', 'paper-plane']" [disabled]="!newMessage.trim()" (clicked)="sendMessage()"></app-button>
     </div>
-  </div>
+  </app-card>
 </div>

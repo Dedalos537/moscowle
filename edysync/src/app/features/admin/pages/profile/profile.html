@@ -3,10 +3,10 @@
     <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
       <fa-icon [icon]="['fas', 'user-circle']" class="text-primary"></fa-icon> Mi Perfil
     </h2>
-    <p class="text-sm text-on-surface-variant">Actualiza tu información personal y contraseña</p>
+    <p class="text-sm text-on-surface-variant">Actualiza tu informacion personal y contrasena</p>
   </div>
 
-  <app-card title="Información Personal">
+  <app-card title="Informacion Personal">
     <div class="space-y-4">
       <app-input id="profile-username" label="Nombre de Usuario" [(value)]="username"></app-input>
       <div>
@@ -16,10 +16,10 @@
     </div>
   </app-card>
 
-  <app-card title="Cambiar Contraseña" subtitle="Deja en blanco para mantener la actual">
+  <app-card title="Cambiar Contrasena" subtitle="Deja en blanco para mantener la actual">
     <div class="space-y-4">
-      <app-input id="profile-password" label="Nueva Contraseña" [(value)]="newPassword" type="password"></app-input>
-      <app-input id="profile-confirm" label="Confirmar Contraseña" [(value)]="confirmPassword" type="password"></app-input>
+      <app-input id="profile-password" label="Nueva Contrasena" [(value)]="newPassword" type="password"></app-input>
+      <app-input id="profile-confirm" label="Confirmar Contrasena" [(value)]="confirmPassword" type="password"></app-input>
     </div>
   </app-card>
 

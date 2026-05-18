@@ -51,8 +51,6 @@ export class TherapistPatientDetail implements OnInit {
     });
   }
 
-  // ─── Weekly Report ──────────────────────────────────────
-
   generateWeeklyReport() {
     this.weeklyReportGenerating = true;
     this.weeklyReport = null;

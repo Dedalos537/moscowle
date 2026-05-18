@@ -5,7 +5,7 @@
       <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
         <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon> API Tokens
       </h2>
-      <p class="text-sm text-on-surface-variant">Gestión de tokens de acceso para integraciones externas</p>
+      <p class="text-sm text-on-surface-variant">Gestion de tokens de acceso para integraciones externas</p>
     </div>
     <app-button variant="primary" label="Generar Token" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
   </div>
@@ -23,7 +23,7 @@
               <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">ID</th>
               <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Creado</th>
               <th class="px-5 py-4 text-center text-xs font-bold text-on-surface-variant uppercase">Estado</th>
-              <th class="px-5 py-4 text-right text-xs font-bold text-on-surface-variant uppercase">Acción</th>
+              <th class="px-5 py-4 text-right text-xs font-bold text-on-surface-variant uppercase">Accion</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
@@ -62,7 +62,7 @@
 <app-modal [isOpen]="showCreateModal" title="Generar Token" (close)="closeCreateModal()">
   @if (!newToken) {
     <div class="space-y-4">
-      <p class="text-sm text-on-surface">Se generará un nuevo token de acceso. El token solo se mostrará una vez.</p>
+      <p class="text-sm text-on-surface">Se generara un nuevo token de acceso. El token solo se mostrara una vez.</p>
       <label class="flex items-center gap-3">
         <input type="checkbox" [(ngModel)]="rotate" class="rounded text-primary focus:ring-primary">
         <span class="text-sm text-on-surface">Desactivar tokens existentes</span>
@@ -70,7 +70,7 @@
     </div>
   } @else {
     <div class="space-y-4">
-      <app-alert type="warning" message="Copia este token ahora. No se volverá a mostrar."></app-alert>
+      <app-alert type="warning" message="Copia este token ahora. No se volvera a mostrar."></app-alert>
       <div class="flex gap-2">
         <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl text-sm font-mono">
         <app-button variant="primary" label="Copiar" (clicked)="copyToken(newToken)"></app-button>

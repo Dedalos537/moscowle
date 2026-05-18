@@ -49,41 +49,36 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-charcoal mb-1">Nombre *</label>
-            <input [(ngModel)]="form.first_name" required
-                   class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+            <app-input id="contact-first-name" [(value)]="form.first_name" [error]="!form.first_name && submitted ? 'Campo obligatorio' : ''"></app-input>
           </div>
           <div>
             <label class="block text-sm font-medium text-charcoal mb-1">Apellido *</label>
-            <input [(ngModel)]="form.last_name" required
-                   class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+            <app-input id="contact-last-name" [(value)]="form.last_name" [error]="!form.last_name && submitted ? 'Campo obligatorio' : ''"></app-input>
           </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-charcoal mb-1">Email *</label>
-          <input [(ngModel)]="form.email" type="email" required
-                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          <app-input id="contact-email" type="email" [(value)]="form.email" [error]="!form.email && submitted ? 'Campo obligatorio' : ''"></app-input>
         </div>
         <div>
           <label class="block text-sm font-medium text-charcoal mb-1">Teléfono</label>
-          <input [(ngModel)]="form.phone"
-                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          <app-input id="contact-phone" [(value)]="form.phone"></app-input>
         </div>
         <div>
           <label class="block text-sm font-medium text-charcoal mb-1">Asunto</label>
-          <input [(ngModel)]="form.subject"
-                 class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+          <app-input id="contact-subject" [(value)]="form.subject"></app-input>
         </div>
         <div>
           <label class="block text-sm font-medium text-charcoal mb-1">Mensaje *</label>
-          <textarea [(ngModel)]="form.message" rows="4" required
-                    class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"></textarea>
+          <app-input id="contact-message" [(value)]="form.message" [error]="!form.message && submitted ? 'Campo obligatorio' : ''"></app-input>
         </div>
         <p *ngIf="error" class="text-sm text-red-500">{{ error }}</p>
-        <button (click)="submitForm()" [disabled]="submitting || !form.first_name || !form.last_name || !form.email || !form.message"
-                class="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-fixed-dim transition-colors disabled:opacity-50">
-          <fa-icon [icon]="['fas', 'spinner']" *ngIf="submitting" class="mr-2 fa-spin"></fa-icon>
+        <app-button variant="primary" (clicked)="submitForm()" [disabled]="submitting || !form.first_name || !form.last_name || !form.email || !form.message">
+          @if (submitting) {
+            <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
+          }
           Enviar Mensaje
-        </button>
+        </app-button>
       </div>
     </div>
   </div>

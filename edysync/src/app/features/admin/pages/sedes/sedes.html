@@ -14,7 +14,6 @@
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
-    <!-- Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       
       @for (sede of sedes; track sede.id; let i = $index) {
@@ -28,19 +27,18 @@
 
 </div>
 
-<!-- Create Sede Drawer -->
 @if (showCreateDrawer) {
   <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeCreateDrawer()"></div>
   <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
     <div class="flex-none p-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-high/50">
       <h3 class="text-xl font-bold text-on-surface flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <span class="material-symbols-outlined text-primary">business</span>
+          <fa-icon [icon]="['fas', 'building']" class="text-primary"></fa-icon>
         </div>
         Crear Nueva Sede
       </h3>
       <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <span class="material-symbols-outlined">close</span>
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
       </button>
     </div>
 
@@ -50,8 +48,8 @@
         <input [(ngModel)]="newSede.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dirección</label>
-        <input [(ngModel)]="newSede.address" type="text" class="input-field text-sm" placeholder="Dirección (opcional)">
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
+        <input [(ngModel)]="newSede.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
       </div>
     </div>
 

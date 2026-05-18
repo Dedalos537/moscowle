@@ -69,7 +69,7 @@ export class CalendarWidget implements OnInit {
     return this.rangeStart !== null && this.rangeEnd !== null;
   }
 
-  // ─── Grid Building ─────────────────────────────────────
+
 
   private dateKey(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -139,7 +139,7 @@ export class CalendarWidget implements OnInit {
     this.weeks = weeks;
   }
 
-  // ─── Month Navigation ──────────────────────────────────
+
 
   get monthLabel(): string {
     return `${this.months[this.currentMonth.getMonth()]} ${this.currentMonth.getFullYear()}`;
@@ -170,7 +170,7 @@ export class CalendarWidget implements OnInit {
     return cur.getTime() !== today.getTime();
   }
 
-  // ─── Click Handling ────────────────────────────────────
+
 
   onDayClick(cell: DayCell, event: MouseEvent) {
     if (this.clickTimer) {
@@ -261,7 +261,7 @@ export class CalendarWidget implements OnInit {
     this.rangeEnd = null;
   }
 
-  // ─── Agenda ────────────────────────────────────────────
+
 
   get selectedDayEvents(): CalendarWidgetEvent[] {
     if (this.rangeStart && this.rangeEnd) {
@@ -290,7 +290,7 @@ export class CalendarWidget implements OnInit {
     return this.selectedDayEvents.length;
   }
 
-  // ─── Helpers ───────────────────────────────────────────
+
 
   get statusColor() {
     return (status: string) => {

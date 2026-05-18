@@ -3,9 +3,9 @@
     <span class="notif-dot"></span>
   }
   @if (isOpen) {
-    <span class="material-symbols-outlined">close</span>
+    <fa-icon [icon]="['fas', 'times']"></fa-icon>
   } @else {
-    <span class="material-symbols-outlined">psychology</span>
+    <fa-icon [icon]="['fas', 'brain']"></fa-icon>
   }
 </div>
 
@@ -14,7 +14,7 @@
     <div class="chat-header">
       <div class="chat-header-left">
         <div class="chat-header-icon">
-          <span class="material-symbols-outlined">psychology</span>
+          <fa-icon [icon]="['fas', 'brain']"></fa-icon>
         </div>
         <div>
           <h3>Llama Copilot</h3>
@@ -22,14 +22,14 @@
         </div>
       </div>
       <button class="chat-close" (click)="togglePanel()">
-        <span class="material-symbols-outlined">close</span>
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
       </button>
     </div>
 
     <div class="chat-messages" #scrollContainer>
       @if (messages.length === 0 && !loading) {
         <div class="welcome-msg animate-fade-in">
-          <div class="icon">🦙</div>
+          <div class="icon"><fa-icon [icon]="['fas', 'robot']" class="text-3xl text-primary"></fa-icon></div>
           <h4>¡Hola! Soy Llama</h4>
           <p>Pregúntame sobre finanzas, sesiones, o gestiona el centro</p>
           <div class="suggestion-chips">
@@ -68,7 +68,7 @@
         #inputEl
       ></textarea>
       <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading">
-        <span class="material-symbols-outlined">send</span>
+        <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
       </button>
     </div>
   </div>

@@ -3,36 +3,36 @@
     <div class="alert-modal-card">
       @if (config.isHelp) {
         <div class="alert-modal-header">
-          <span class="material-symbols-outlined text-primary text-xl">info</span>
+          <fa-icon [icon]="['fas', 'info-circle']" class="text-primary text-xl"></fa-icon>
           <h3>{{ config.helpTitle || 'Ayuda' }}</h3>
         </div>
         <div class="alert-modal-body">
           <pre class="whitespace-pre-wrap text-sm leading-relaxed text-on-surface">{{ config.helpContent }}</pre>
         </div>
         <div class="alert-modal-footer">
-          <button class="alert-modal-btn" (click)="close()">Cerrar</button>
+          <app-button variant="ghost" label="Cerrar" (clicked)="close()"></app-button>
         </div>
       } @else {
         <div class="alert-modal-header" [class.alert-error]="config.type === 'error'">
           @switch (config.type) {
             @case ('success') {
               <span class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
-                <span class="material-symbols-outlined text-emerald-600 text-xl">check_circle</span>
+                <fa-icon [icon]="['fas', 'check-circle']" class="text-emerald-600 text-xl"></fa-icon>
               </span>
             }
             @case ('error') {
               <span class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
-                <span class="material-symbols-outlined text-red-600 text-xl">error</span>
+                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-red-600 text-xl"></fa-icon>
               </span>
             }
             @case ('warning') {
               <span class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-                <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-600 text-xl"></fa-icon>
               </span>
             }
             @default {
               <span class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
-                <span class="material-symbols-outlined text-blue-600 text-xl">info</span>
+                <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-600 text-xl"></fa-icon>
               </span>
             }
           }
@@ -42,7 +42,7 @@
           <p>{{ config.message }}</p>
         </div>
         <div class="alert-modal-footer">
-          <button class="alert-modal-btn alert-modal-btn-primary" (click)="close()">Entendido</button>
+          <app-button variant="primary" label="Entendido" (clicked)="close()"></app-button>
         </div>
       }
     </div>

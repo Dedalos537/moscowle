@@ -246,7 +246,7 @@ export class RecordingService {
     this.http.post(`/api/sessions/${this.currentSessionId}/audio`, fd).subscribe({
       next: (data: any) => {
         if (data.success) {
-          this.chunkStatus$.next(`Segmento ${this.chunkCount} transcrito ✓`);
+          this.chunkStatus$.next(`Segmento ${this.chunkCount} transcrito`);
           this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe();
         }
       },
@@ -287,14 +287,14 @@ export class RecordingService {
               const score = auditRes.report?.audit_score ?? auditRes.report?.score ?? null;
               if (score !== null) this.auditScore$.next(score);
               const msg = score !== null
-                ? `✅ Auditoría completada para "${sessionTitle}" — Puntuación: ${score}/100`
-                : `✅ Auditoría completada para "${sessionTitle}"`;
+                ? `Auditoria completada para "${sessionTitle}" — Puntuacion: ${score}/100`
+                : `Auditoria completada para "${sessionTitle}"`;
               this.http.post(`/api/notifications/create`, { message: msg }).subscribe();
             }
           },
           error: () => {
             this.http.post(`/api/notifications/create`, {
-              message: `⚠️ Auditoría disponible para "${sessionTitle}" (revisar manualmente)`,
+              message: `Auditoria disponible para "${sessionTitle}" (revisar manualmente)`,
             }).subscribe();
           },
         });

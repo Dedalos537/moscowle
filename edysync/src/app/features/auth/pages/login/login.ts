@@ -17,6 +17,8 @@ export class Login implements OnInit {
   alertMessage = '';
   alertType: 'success' | 'error' | 'warning' | 'info' = 'info';
   darkMode = false;
+  emailError = '';
+  passwordError = '';
 
   constructor(
     private authService: AuthService,
@@ -55,6 +57,14 @@ export class Login implements OnInit {
   }
 
   async doLogin() {
+    this.emailError = '';
+    this.passwordError = '';
+    if (!this.email.trim()) {
+      this.emailError = 'El correo es obligatorio';
+    }
+    if (!this.password) {
+      this.passwordError = 'La contraseña es obligatoria';
+    }
     if (!this.isFormValid) return;
     
     this.isLoading = true;

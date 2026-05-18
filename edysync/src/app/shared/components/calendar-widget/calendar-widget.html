@@ -1,9 +1,8 @@
 <div class="calendar-widget">
 
-  <!-- ═══ Header: Month Navigation ═══ -->
   <div class="calendar-header">
     <button class="nav-btn" (click)="prevMonth()" title="Mes anterior">
-      <span class="material-symbols-outlined">chevron_left</span>
+      <fa-icon [icon]="['fas', 'chevron-left']"></fa-icon>
     </button>
     <div class="month-title">
       <h3>{{ monthLabel }}</h3>
@@ -12,20 +11,18 @@
       }
     </div>
     <button class="nav-btn" (click)="nextMonth()" title="Mes siguiente">
-      <span class="material-symbols-outlined">chevron_right</span>
+      <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
     </button>
   </div>
 
-  <!-- ═══ Range hint ═══ -->
   @if (isRangeSelected) {
     <div class="range-hint">
-      <span class="material-symbols-outlined">calendar_month</span>
+      <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
       <span>{{ rangeStart!.getDate() }} {{ months[rangeStart!.getMonth()] }} — {{ rangeEnd!.getDate() }} {{ months[rangeEnd!.getMonth()] }}</span>
       <span class="range-hint-action">Doble click para crear sesiones &middot; Click en un día fuera del rango o triple click para limpiar</span>
     </div>
   }
 
-  <!-- ═══ Grid: Weekday Headers ═══ -->
   <div class="calendar-grid">
     <div class="weekday-row">
       @for (day of weekdays; track day) {
@@ -33,7 +30,6 @@
       }
     </div>
 
-    <!-- ═══ Grid: Day Cells ═══ -->
     @for (week of weeks; track week) {
       <div class="week-row">
         @for (cell of week; track cell.date.toISOString()) {
@@ -64,10 +60,9 @@
     }
   </div>
 
-  <!-- ═══ Agenda: Selected Day/Range Events ═══ -->
   <div class="agenda-panel">
     <div class="agenda-header">
-      <span class="material-symbols-outlined text-on-surface-variant/60">event</span>
+      <fa-icon [icon]="['fas', 'calendar-day']" class="text-on-surface-variant/60"></fa-icon>
       <span class="agenda-date">{{ selectedDateLabel }}</span>
       @if (eventCount > 0) {
         <span class="event-count-badge">{{ eventCount }} sesión{{ eventCount !== 1 ? 'es' : '' }}</span>
@@ -75,7 +70,7 @@
       @if (isRangeSelected) {
         <span class="range-actions">
           <button class="range-action-btn" title="Limpiar selección" (click)="today()">
-            <span class="material-symbols-outlined">close</span>
+            <fa-icon [icon]="['fas', 'times']"></fa-icon>
           </button>
         </span>
       }
@@ -118,7 +113,7 @@
       </div>
     } @else {
       <div class="agenda-empty">
-        <span class="material-symbols-outlined text-on-surface-variant/30">event_busy</span>
+        <fa-icon [icon]="['fas', 'calendar-times']" class="text-on-surface-variant/30"></fa-icon>
         <p class="agenda-empty-text">Sin sesiones para esta fecha</p>
         @if (!readonly) {
           <p class="agenda-empty-hint">Doble click en un día para crear sesión{{ isRangeSelected ? 'es' : '' }}</p>

@@ -4,7 +4,7 @@
     <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
       <fa-icon [icon]="['fas', 'brain']" class="text-primary"></fa-icon> Entrenamiento IA
     </h2>
-    <p class="text-sm text-on-surface-variant">Gestiona el modelo de inteligencia artificial para predicción de niveles</p>
+    <p class="text-sm text-on-surface-variant">Gestiona el modelo de inteligencia artificial para prediccion de niveles</p>
   </div>
 
   @if (loading) {
@@ -38,7 +38,7 @@
 
       <app-card title="Acciones">
         <div class="space-y-4">
-          <p class="text-sm text-on-surface">El modelo SVM se entrena con datos sintéticos + reales de sesiones de juego para predecir si un paciente debe mantener, avanzar o retroceder de nivel.</p>
+          <p class="text-sm text-on-surface">El modelo SVM se entrena con datos sinteticos + reales de sesiones de juego para predecir si un paciente debe mantener, avanzar o retroceder de nivel.</p>
           <app-button variant="primary" label="Entrenar Modelo" [icon]="['fas', 'play']" [disabled]="training || status.training_in_progress" (clicked)="triggerTraining()"></app-button>
           @if (statusText) {
             <app-alert [type]="statusText.includes('Error') ? 'error' : 'info'" [message]="statusText"></app-alert>
@@ -47,14 +47,14 @@
       </app-card>
     </div>
 
-    <app-card title="Información del Modelo">
+    <app-card title="Informacion del Modelo">
       <div class="prose prose-sm max-w-none text-on-surface">
         <ul class="space-y-2">
           <li><strong>Algoritmo:</strong> SVM (SVC con kernel RBF)</li>
-          <li><strong>Datos sintéticos:</strong> 300 muestras generadas</li>
-          <li><strong>Re-entrenamiento:</strong> Automático cada 5 partidas jugadas</li>
+          <li><strong>Datos sinteticos:</strong> 300 muestras generadas</li>
+          <li><strong>Re-entrenamiento:</strong> Automatico cada 5 partidas jugadas</li>
           <li><strong>Clases:</strong> Mantener (0), Avanzar (1), Retroceder (2)</li>
-          <li><strong>Características:</strong> Precisión (accuracy), Tiempo promedio (avg_time)</li>
+          <li><strong>Caracteristicas:</strong> Precision (accuracy), Tiempo promedio (avg_time)</li>
         </ul>
       </div>
     </app-card>

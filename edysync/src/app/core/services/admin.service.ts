@@ -198,7 +198,7 @@ export class AdminService {
     return this.http.get('/admin/reports/export-payments', { responseType: 'blob' });
   }
 
-  // ─── Games ───────────────────────────────────────────────
+
   getGames(): Observable<{ games: string[] }> {
     return this.http.get<{ games: string[] }>('/api/games');
   }
@@ -218,7 +218,7 @@ export class AdminService {
     return this.http.post('/api/ai/generate_game', { prompt, user_id: userId, name });
   }
 
-  // ─── CSP Reports ─────────────────────────────────────────
+
   getCSPReports(filter?: CSPReportFilter): Observable<CSPReportResponse> {
     let params = new HttpParams();
     if (filter?.directive) params = params.set('directive', filter.directive);
@@ -237,7 +237,7 @@ export class AdminService {
     return this.http.get('/admin/csp-reports/export', { params, responseType: 'blob' });
   }
 
-  // ─── API Tokens ──────────────────────────────────────────
+
   getAPITokens(): Observable<{ tokens: AdminAPIToken[] }> {
     return this.http.get<{ tokens: AdminAPIToken[] }>('/admin/api/tokens/list');
   }
@@ -250,12 +250,12 @@ export class AdminService {
     return this.http.post<{ success: boolean }>(`/admin/api/tokens/deactivate/${tokenId}`, {});
   }
 
-  // ─── Profile ─────────────────────────────────────────────
+
   updateProfile(data: { username?: string; new_password?: string }): Observable<{ success: boolean; message?: string }> {
     return this.http.post<{ success: boolean; message?: string }>('/api/admin/profile', data);
   }
 
-  // ─── Yape Import ─────────────────────────────────────────
+
   importYapeFile(file: File): Observable<{ success: boolean; stats: YapeImportStats }> {
     const formData = new FormData();
     formData.append('file', file);
@@ -286,7 +286,7 @@ export class AdminService {
     return this.http.post(`/admin/yape/${operationNumber}/attach-receipt`, formData);
   }
 
-  // ─── AI Training ─────────────────────────────────────────
+
   getAITrainingStatus(): Observable<AITrainingStatus> {
     return this.http.get<AITrainingStatus>('/admin/ai/status');
   }
@@ -318,7 +318,7 @@ export class AdminService {
     return this.http.post('/admin/generate-ia-report', {});
   }
 
-  // ─── Weekly / Daily Reports ────────────────────────────
+
   getWeeklySummary(weekStart?: string): Observable<any> {
     let params = new HttpParams();
     if (weekStart) params = params.set('week_start', weekStart);
@@ -336,7 +336,7 @@ export class AdminService {
     return this.http.post<any>('/api/reports/accumulate', {});
   }
 
-  // ─── Monthly / Quarterly Reports ───────────────────────
+
   getMonthlySummary(year?: number, month?: number): Observable<any> {
     let params = new HttpParams();
     if (year) params = params.set('year', year);

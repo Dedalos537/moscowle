@@ -39,14 +39,7 @@
           
           <div class="flex flex-col items-center space-y-2">
                <label class="text-sm font-bold text-[#334155] dark:text-[#e4e4e7] transition-colors">Correo Electrónico</label>
-               <div class="relative w-full">
-                   <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#71717a] pointer-events-none transition-colors">
-                       <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
-                   </span>
-                   <input type="email" id="email" name="email" [(ngModel)]="email"
-                       class="w-full pl-12 pr-4 py-3.5 bg-[#f9fafb] dark:bg-[#1e1f20] border border-transparent dark:border-[#373839] rounded-2xl outline-none transition-all text-[#334155] dark:text-[#e4e4e7] placeholder-[#94a3b8] dark:placeholder-[#71717a] font-medium focus:border-[#cbd5e1] dark:focus:border-[#52525b] focus:bg-white dark:focus:bg-[#242526]" 
-                       placeholder="usuario@ejemplo.com" required>
-               </div>
+               <app-input id="email" type="email" [(value)]="email" placeholder="usuario@ejemplo.com" [error]="emailError" [icon]="['fas', 'envelope']"></app-input>
            </div>
            
            <div class="flex flex-col items-center space-y-2">
@@ -60,9 +53,12 @@
                        placeholder="Ingresa tu contraseña" required>
                   
                    <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-[#94a3b8] dark:text-[#71717a] hover:text-[#334155] dark:hover:text-[#e4e4e7] focus:outline-none transition-colors border-none bg-transparent">
-                      <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
-                  </button>
-              </div>
+                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
+                   </button>
+               </div>
+               @if (passwordError) {
+                 <span class="text-xs text-red-500 mt-1">{{ passwordError }}</span>
+               }
           </div>
 
           <!-- Options -->
@@ -75,19 +71,15 @@
           </div>
 
           <!-- Submit Button -->
-          <button type="submit" 
-             [disabled]="!isFormValid || isLoading"
-             class="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2"
-             [ngClass]="(isFormValid && !isLoading) ? 'bg-[#75a83a] text-white hover:bg-opacity-90 cursor-pointer shadow-lg shadow-[#75a83a]/20' : 'bg-[#e2e8f0] text-[#94a3b8] cursor-not-allowed shadow-none'">
-             
+          <app-button type="submit" [disabled]="!isFormValid || isLoading" variant="primary" (clicked)="doLogin()">
              @if (isLoading) {
-                 <fa-icon [icon]="['fas', 'spinner']" class="mr-2 fa-spin"></fa-icon>
+                 <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
                  Verificando...
              } @else {
                  <fa-icon [icon]="['fas', 'sign-in-alt']"></fa-icon>
-                 INICIAR SESIÓN
+                 INICIAR SESION
              }
-          </button>
+          </app-button>
       </form>
 
       <!-- Footer -->

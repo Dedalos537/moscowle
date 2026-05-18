@@ -1,34 +1,28 @@
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
 
 <div *ngIf="!loading && data" class="space-y-6 animate-fade-in" [@fadeInUp]>
 
-  <!-- Toolbar -->
+
   <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
       <h2 class="text-h3 text-on-surface">Panel de Analíticas IA</h2>
       <p class="text-body text-on-surface-variant mt-0.5">Métricas de rendimiento y adaptaciones del modelo</p>
     </div>
     <div class="flex items-center gap-2">
-      <button class="btn-secondary text-sm" (click)="exportCsv()">
-        <span class="material-symbols-outlined text-lg">download</span>
-        Exportar CSV
-      </button>
-      <button class="btn-primary text-sm" (click)="refresh()">
-        <span class="material-symbols-outlined text-lg">refresh</span>
-        Actualizar
-      </button>
+      <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'download']" (clicked)="exportCsv()"></app-button>
+      <app-button variant="primary" label="Actualizar" [icon]="['fas', 'sync']" (clicked)="refresh()"></app-button>
     </div>
   </div>
 
-  <!-- KPI Cards Row -->
+
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div *ngFor="let kpi of kpiCards"
          class="stat-card flex items-start gap-4">
       <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
            [ngClass]="kpi.bgColor">
-        <span class="material-symbols-outlined" [ngClass]="kpi.color">{{ kpi.icon }}</span>
+        <fa-icon [icon]="kpi.iconFa" [ngClass]="kpi.color" class="text-lg"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-label-caps text-on-surface-variant mb-0.5">{{ kpi.label }}</p>
@@ -39,16 +33,9 @@
     </div>
   </div>
 
-  <!-- Main Grid: Difficulty Matrix + Prediction Distribution -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-    <!-- Difficulty Matrix -->
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Matriz de Dificultad</h3>
-        <span class="material-symbols-outlined text-on-surface-variant text-lg">grid_view</span>
-      </div>
-
+    <app-card title="Matriz de Dificultad" [icon]="['fas', 'th']">
       <div class="overflow-x-auto -mx-2">
         <table class="w-full text-sm">
           <thead>
@@ -74,14 +61,9 @@
           </tbody>
         </table>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Prediction Distribution -->
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Distribución de Predicciones</h3>
-        <span class="material-symbols-outlined text-on-surface-variant text-lg">bar_chart</span>
-      </div>
+    <app-card title="Distribución de Predicciones" [icon]="['fas', 'chart-bar']">
 
       <div class="h-56">
         <canvas baseChart
@@ -92,7 +74,7 @@
         </canvas>
       </div>
 
-      <!-- Legend with percentages -->
+
       <div class="flex items-center justify-center gap-6 mt-3">
         <div *ngFor="let p of data.prediction_distribution"
              class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
@@ -103,16 +85,10 @@
           <span class="text-on-surface">{{ getPredictionPercent(p.value) }}%</span>
         </div>
       </div>
-    </div>
+    </app-card>
   </div>
 
-  <!-- Model Confidence Chart (full width) -->
-  <div class="card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Confianza por Modelo</h3>
-      <span class="material-symbols-outlined text-on-surface-variant text-lg">speed</span>
-    </div>
-
+  <app-card title="Confianza por Modelo" [icon]="['fas', 'tachometer-alt']">
     <div class="h-64">
       <canvas baseChart
               #confidenceChart
@@ -121,15 +97,9 @@
               [options]="confidenceChartOptions">
       </canvas>
     </div>
-  </div>
+  </app-card>
 
-  <!-- Recent Adaptations -->
-  <div class="card p-5">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider">Adaptaciones Recientes</h3>
-      <span class="material-symbols-outlined text-on-surface-variant text-lg">history</span>
-    </div>
-
+  <app-card title="Adaptaciones Recientes" [icon]="['fas', 'history']">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
@@ -150,9 +120,9 @@
                       'bg-amber-50 text-amber-700': ad.impact === 'neutral',
                       'bg-red-50 text-red-700': ad.impact === 'negative'
                     }">
-                <span class="material-symbols-outlined text-[14px]">
-                  {{ ad.impact === 'positive' ? 'trending_up' : (ad.impact === 'neutral' ? 'remove' : 'trending_down') }}
-                </span>
+                <fa-icon
+                  [icon]="ad.impact === 'positive' ? ['fas', 'chart-line'] : (ad.impact === 'neutral' ? ['fas', 'minus'] : ['fas', 'chart-line'])"
+                  class="text-[14px]"></fa-icon>
                 {{ ad.impact === 'positive' ? 'Positivo' : (ad.impact === 'neutral' ? 'Neutral' : 'Negativo') }}
               </span>
             </td>
@@ -163,10 +133,10 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </app-card>
 </div>
 
 <div *ngIf="!loading && !data" class="text-center py-16 text-on-surface-variant">
-  <span class="material-symbols-outlined text-5xl mb-3 opacity-30">analytics</span>
+  <fa-icon [icon]="['fas', 'chart-pie']" class="text-5xl mb-3 opacity-30"></fa-icon>
   <p class="text-sm">No hay datos analíticos disponibles</p>
 </div>

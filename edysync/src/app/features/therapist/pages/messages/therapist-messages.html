@@ -103,9 +103,7 @@
           <div class="flex items-center gap-2 mb-2 px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-700">
             <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
             <span class="truncate flex-1">{{ selectedFileName }}</span>
-            <button (click)="clearFile()" class="text-gray-400 hover:text-red-500 cursor-pointer">
-              <fa-icon [icon]="['fas', 'times']"></fa-icon>
-            </button>
+            <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="clearFile()"></app-button>
           </div>
         }
         <div class="flex items-end gap-2">
@@ -115,27 +113,20 @@
               (keydown.enter)="onKeydown($event)"></textarea>
           </div>
           <div class="flex items-center gap-1">
-            <button (click)="fileInput.click()" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 cursor-pointer">
-              <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
-            </button>
+            <app-button variant="ghost" [icon]="['fas', 'paperclip']" (clicked)="fileInput.click()"></app-button>
             <input #fileInput type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" (change)="onFileSelected($event)" class="hidden">
             @if (!isRecording) {
-              <button (click)="startRecording()" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 cursor-pointer">
-                <fa-icon [icon]="['fas', 'microphone']"></fa-icon>
-              </button>
+              <app-button variant="ghost" [icon]="['fas', 'microphone']" (clicked)="startRecording()"></app-button>
             } @else {
-              <button (click)="stopRecording()" class="w-9 h-9 flex items-center justify-center rounded-full bg-red-100 text-red-600 animate-pulse cursor-pointer">
-                <fa-icon [icon]="['fas', 'stop']"></fa-icon>
-              </button>
+              <app-button variant="danger" [icon]="['fas', 'stop']" (clicked)="stopRecording()"></app-button>
             }
-            <button (click)="sendMessage()" [disabled]="sending || (!newMessage.trim() && !selectedFile)"
-              class="w-9 h-9 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 disabled:opacity-50 cursor-pointer">
+            <app-button variant="primary" [disabled]="sending || (!newMessage.trim() && !selectedFile)" (clicked)="sendMessage()">
               @if (sending) {
                 <app-spinner size="sm" colorClass="text-white"></app-spinner>
               } @else {
                 <fa-icon [icon]="['fas', 'paper-plane']" class="text-sm"></fa-icon>
               }
-            </button>
+            </app-button>
           </div>
         </div>
       </div>

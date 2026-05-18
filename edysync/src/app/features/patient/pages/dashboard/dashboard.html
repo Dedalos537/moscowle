@@ -1,5 +1,5 @@
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
 
 <div *ngIf="!loading && data" class="space-y-6" [@fadeInUp]>
@@ -52,12 +52,7 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Today's Sessions -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
-      <h2 class="text-lg font-bold text-textDark mb-4 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'calendar-day']" class="text-primary"></fa-icon>
-        Sesiones de Hoy
-      </h2>
+    <app-card title="Sesiones de Hoy" [icon]="['fas', 'calendar-day']">
       <div *ngIf="data.today_sessions.length === 0" class="text-center py-8 text-charcoal">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-green-400 text-3xl mb-2"></fa-icon>
         <p class="text-sm">No tienes sesiones programadas para hoy</p>
@@ -76,14 +71,9 @@
           {{ session.status === 'scheduled' ? 'Programada' : session.status === 'completed' ? 'Completada' : 'Cancelada' }}
         </span>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Payment Status -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
-      <h2 class="text-lg font-bold text-textDark mb-4 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-primary"></fa-icon>
-        Estado de Pagos
-      </h2>
+    <app-card title="Estado de Pagos" [icon]="['fas', 'file-invoice-dollar']">
       <div class="flex flex-col items-center justify-center py-6">
         <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4"
              [ngClass]="data.payment_status.is_overdue ? 'bg-red-50' : 'bg-green-50'">
@@ -103,6 +93,6 @@
           Ver historial de pagos
         </a>
       </div>
-    </div>
+    </app-card>
   </div>
 </div>

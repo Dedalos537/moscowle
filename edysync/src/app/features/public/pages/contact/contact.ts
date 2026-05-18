@@ -22,6 +22,7 @@ export class Contact implements OnInit {
   submitting = false;
   success = false;
   error = '';
+  submitted = false;
 
   constructor(
     private headerService: HeaderService,
@@ -37,6 +38,7 @@ export class Contact implements OnInit {
   }
 
   submitForm() {
+    this.submitted = true;
     this.submitting = true;
     this.error = '';
     this.http.post('/api/public/contact', this.form).subscribe({

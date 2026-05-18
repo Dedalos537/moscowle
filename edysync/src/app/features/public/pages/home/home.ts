@@ -1,8 +1,9 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { HeaderService } from '../../../../core/services/header.service';
 
 interface Feature {
-  icon: string;
+  icon: IconProp;
   title: string;
   description: string;
 }
@@ -11,7 +12,7 @@ interface Stat {
   value: number;
   suffix: string;
   label: string;
-  icon: string;
+  icon: IconProp;
 }
 
 interface Testimonial {
@@ -30,42 +31,42 @@ interface Testimonial {
 export class Home implements OnInit, AfterViewInit, OnDestroy {
   features: Feature[] = [
     {
-      icon: 'psychology',
+      icon: ['fas', 'brain'],
       title: 'Evaluación Inteligente',
       description: 'Evaluaciones automatizadas con IA que analizan el progreso del paciente y sugieren intervenciones personalizadas en tiempo real.',
     },
     {
-      icon: 'heart_plus',
+      icon: ['fas', 'heartbeat'],
       title: 'Terapia Personalizada',
       description: 'Planes de tratamiento adaptados a las necesidades únicas de cada paciente con herramientas interactivas y seguimiento continuo.',
     },
     {
-      icon: 'monitoring',
+      icon: ['fas', 'chart-line'],
       title: 'Seguimiento en Tiempo Real',
       description: 'Monitorea el avance de tus pacientes al instante con dashboards dinámicos, métricas clave y alertas inteligentes.',
     },
     {
-      icon: 'sports_esports',
+      icon: ['fas', 'gamepad'],
       title: 'Juegos Interactivos',
       description: 'Actividades lúdico-terapéuticas diseñadas por especialistas para estimular el desarrollo cognitivo y emocional.',
     },
     {
-      icon: 'summarize',
+      icon: ['fas', 'file-alt'],
       title: 'Reportes Automatizados',
       description: 'Genera informes detallados del progreso terapéutico con un solo clic, listos para compartir con pacientes y colegas.',
     },
     {
-      icon: 'business',
+      icon: ['fas', 'building'],
       title: 'Multi-Sede',
       description: 'Gestiona múltiples centros desde una plataforma unificada con control de acceso por rol y datos centralizados.',
     },
   ];
 
   stats: Stat[] = [
-    { value: 150, suffix: '+', label: 'Pacientes Activos', icon: 'people' },
-    { value: 20, suffix: '+', label: 'Terapeutas Certificados', icon: 'badge' },
-    { value: 5000, suffix: '+', label: 'Sesiones Completadas', icon: 'calendar_month' },
-    { value: 95, suffix: '%', label: 'Satisfacción', icon: 'star' },
+    { value: 150, suffix: '+', label: 'Pacientes Activos', icon: ['fas', 'users'] },
+    { value: 20, suffix: '+', label: 'Terapeutas Certificados', icon: ['fas', 'certificate'] },
+    { value: 5000, suffix: '+', label: 'Sesiones Completadas', icon: ['fas', 'calendar-alt'] },
+    { value: 95, suffix: '%', label: 'Satisfacción', icon: ['fas', 'star'] },
   ];
 
   testimonials: Testimonial[] = [

@@ -11,10 +11,9 @@
     </div>
   } @else {
 
-    <!-- ═══ Setup Guidance Banner ═══ -->
-    @if (incompletePlanPatients.length > 0) {
+        @if (incompletePlanPatients.length > 0) {
       <div class="flex items-start gap-4 p-4 bg-orange-50 dark:bg-amber-500/10 border border-orange-200 dark:border-amber-500/20 rounded-xl">
-        <span class="material-symbols-outlined text-orange-500 text-2xl shrink-0">notification_important</span>
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-orange-500 text-2xl shrink-0"></fa-icon>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-bold text-orange-800 dark:text-amber-400">
             {{ incompletePlanPatients.length }} pacientes sin configuración de pago
@@ -22,22 +21,21 @@
           <p class="text-xs text-orange-600 dark:text-amber-300 mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
         </div>
         <a routerLink="/admin/payments" class="btn-primary text-xs !px-4 !py-2 shrink-0">
-          <span class="material-symbols-outlined text-[16px]">settings</span>
+          <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
           Configurar Ahora
         </a>
       </div>
     }
 
-    <!-- ═══ KPI Cards ═══ -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-emerald-700 dark:text-emerald-400">Total Recaudado (Mes)</span>
-          <span class="material-symbols-outlined text-emerald-500 text-xl">payments</span>
+          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-emerald-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalIncomeReal.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-emerald-500">trending_up</span>
+          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-emerald-500"></fa-icon>
           Ingresos del período actual
         </p>
       </div>
@@ -45,11 +43,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-blue-700 dark:text-blue-400">Pendiente por Cobrar</span>
-          <span class="material-symbols-outlined text-blue-500 text-xl">account_balance_wallet</span>
+          <fa-icon [icon]="['fas', 'wallet']" class="text-blue-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalPending.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-blue-500">schedule</span>
+          <fa-icon [icon]="['fas', 'clock']" class="text-[14px] text-blue-500"></fa-icon>
           Monto total pendiente
         </p>
       </div>
@@ -57,11 +55,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-red-700 dark:text-red-400">Total Deuda</span>
-          <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-red-500">people</span>
+          <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-red-500"></fa-icon>
           {{ financials?.overdue_users_count || 0 }} pacientes morosos
         </p>
       </div>
@@ -69,22 +67,21 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Pacientes Registrados</span>
-          <span class="material-symbols-outlined text-primary text-xl">personal_health</span>
+          <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ totalPatients }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-[14px] text-primary"></fa-icon>
           En el sistema de pagos
         </p>
       </div>
     </div>
 
-    <!-- ═══ Charts Grid ═══ -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <!-- Chart 1: Payment Status Distribution (doughnut) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">donut_large</span>
+          <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
           Estado de Pagos
         </h4>
         <div class="relative" style="height: 220px">
@@ -95,7 +92,7 @@
       <!-- Chart 2: Debt by Location (horizontal bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">location_on</span>
+          <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
           Deuda por Sede
         </h4>
         <div class="relative" style="height: 220px">
@@ -106,7 +103,7 @@
       <!-- Chart 3: Last Payment Age (bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">schedule</span>
+          <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
           Antigüedad de Vencimientos
         </h4>
         <div class="relative" style="height: 220px">
@@ -117,7 +114,7 @@
       <!-- Chart 4: 6-Month Revenue History (line) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">trending_up</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Historial de Ingresos (6 Meses)
         </h4>
         <div class="relative" style="height: 220px">
@@ -128,7 +125,7 @@
       <!-- Chart 5: Revenue by Plan Type (pie) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">category</span>
+          <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
           Ingresos por Tipo de Plan
         </h4>
         <div class="relative" style="height: 220px">
@@ -139,7 +136,7 @@
       <!-- Chart 6: Monthly Projection vs Real (grouped bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+          <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
           Proyección vs Real
         </h4>
         <div class="relative" style="height: 220px">
@@ -152,7 +149,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 lg:col-start-2">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">map</span>
+          <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
           Ingresos por Sede
         </h4>
         <div class="relative" style="height: 220px">
@@ -161,8 +158,7 @@
       </div>
     </div>
 
-    <!-- ═══ Tabs ═══ -->
-    <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
+        <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
       <button
         class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
         [class.bg-surface-container-lowest]="activeTab === 'pacientes'"
@@ -171,7 +167,7 @@
         [class.shadow-sm]="activeTab === 'pacientes'"
         (click)="activeTab = 'pacientes'"
       >
-        <span class="material-symbols-outlined text-[18px]">group</span>
+        <fa-icon [icon]="['fas', 'users']" class="text-[18px]"></fa-icon>
         Pacientes
       </button>
       <button
@@ -182,7 +178,7 @@
         [class.shadow-sm]="activeTab === 'historial'"
         (click)="activeTab = 'historial'"
       >
-        <span class="material-symbols-outlined text-[18px]">history</span>
+        <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
         Historial
         @if (paymentHistory.length > 0) {
           <span class="text-[10px] bg-primary/10 text-primary font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
@@ -190,10 +186,7 @@
       </button>
     </div>
 
-    <!-- ════════════════════════════════════════════════════════ -->
-    <!-- ═══ TAB: PACIENTES ═══ -->
-    <!-- ════════════════════════════════════════════════════════ -->
-    @if (activeTab === 'pacientes') {
+        @if (activeTab === 'pacientes') {
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
         <!-- Filters -->
@@ -201,7 +194,7 @@
           <div class="flex flex-col md:flex-row gap-3">
             <!-- Search -->
             <div class="relative flex-1">
-              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+              <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
               <input
                 (input)="searchQuery = $any($event.target).value"
                 [value]="searchQuery"
@@ -250,10 +243,10 @@
             <!-- Active Filters Badge -->
             @if (activeFilterCount > 0) {
               <div class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold">
-                <span class="material-symbols-outlined text-[14px]">filter_alt</span>
+                <fa-icon [icon]="['fas', 'filter']" class="text-[14px]"></fa-icon>
                 {{ activeFilterCount }} filtro{{ activeFilterCount > 1 ? 's' : '' }} activo{{ activeFilterCount > 1 ? 's' : '' }}
                 <button (click)="clearFilters()" class="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer">
-                  <span class="material-symbols-outlined text-[14px]">close</span>
+                  <fa-icon [icon]="['fas', 'times']" class="text-[14px]"></fa-icon>
                 </button>
               </div>
             }
@@ -363,21 +356,21 @@
                         title="Registrar Pago"
                         (click)="openRegisterModal(p)"
                       >
-                        <span class="material-symbols-outlined text-[16px]">payments</span>
+                        <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[16px]"></fa-icon>
                       </button>
                       <button
                         class="btn-ghost !px-2.5 !py-1.5 text-xs"
                         title="Configurar Plan"
                         (click)="openSettingsModal(p)"
                       >
-                        <span class="material-symbols-outlined text-[16px]">settings</span>
+                        <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
                       </button>
                       <button
                         class="btn-ghost !px-2.5 !py-1.5 text-xs"
                         title="Ver Historial"
                         (click)="viewPatientHistory(p)"
                       >
-                        <span class="material-symbols-outlined text-[16px]">history</span>
+<fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
                       </button>
                     </div>
                   </td>
@@ -385,7 +378,7 @@
               } @empty {
                 <tr>
                   <td colspan="9" class="px-4 py-16 text-center">
-                    <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">payments</span>
+                    <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
                     <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
                     <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
                   </td>
@@ -467,7 +460,7 @@
               <!-- Due Date -->
               @if (p.next_due_date) {
                 <div class="flex items-center gap-2 mb-3 text-xs">
-                  <span class="material-symbols-outlined text-[14px] text-on-surface-variant">event</span>
+                  <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
                   <span class="text-on-surface-variant">Próx. venc.:</span>
                   <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                   @if (isOverdue(p)) {
@@ -478,22 +471,16 @@
 
               <!-- Action Buttons -->
               <div class="flex gap-2 pt-2 border-t border-outline-variant/20">
-                <button class="btn-primary !text-xs !px-3 !py-2 flex-1" (click)="openRegisterModal(p)">
-                  <span class="material-symbols-outlined text-[14px]">payments</span>
-                  Pagar
-                </button>
-                <button class="btn-secondary !text-xs !px-3 !py-2 flex-1" (click)="openSettingsModal(p)">
-                  <span class="material-symbols-outlined text-[14px]">settings</span>
-                  Plan
-                </button>
+                <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
+                <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
                 <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
-                  <span class="material-symbols-outlined text-[16px]">history</span>
+                  <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
                 </button>
               </div>
             </div>
           } @empty {
             <div class="text-center py-12">
-              <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">payments</span>
+              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
               <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
               <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
             </div>
@@ -503,16 +490,13 @@
       </div>
     }
 
-    <!-- ════════════════════════════════════════════════════════ -->
-    <!-- ═══ TAB: HISTORIAL ═══ -->
-    <!-- ════════════════════════════════════════════════════════ -->
-    @if (activeTab === 'historial') {
+        @if (activeTab === 'historial') {
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
         <!-- Month Filter -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-lg">receipt_long</span>
+            <fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
             Historial de Pagos
           </h3>
           <div class="flex gap-3 items-center">
@@ -553,16 +537,14 @@
                   <td class="px-4 py-3.5 text-center">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                       [class]="getMethodBadgeClass(p.method)">
-                      <span class="material-symbols-outlined text-[12px]">
-                        @switch (p.method) {
-                          @case ('yape') { smartphone }
-                          @case ('plin') { smartphone }
-                          @case ('transfer') { account_balance }
-                          @case ('cash') { payments }
-                          @case ('card') { credit_card }
-                          @default { receipt }
-                        }
-                      </span>
+                      @switch (p.method) {
+                        @case ('yape') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
+                        @case ('plin') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
+                        @case ('transfer') { <fa-icon [icon]="['fas', 'university']" class="text-[12px]"></fa-icon> }
+                        @case ('cash') { <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px]"></fa-icon> }
+                        @case ('card') { <fa-icon [icon]="['fas', 'credit-card']" class="text-[12px]"></fa-icon> }
+                        @default { <fa-icon [icon]="['fas', 'receipt']" class="text-[12px]"></fa-icon> }
+                      }
                       {{ getMethodLabel(p.method) }}
                     </span>
                   </td>
@@ -571,12 +553,12 @@
                     <div class="flex items-center justify-center gap-1.5">
                       @if (p.receipt_image_path) {
                         <a [href]="p.receipt_image_path" target="_blank" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
-                          <span class="material-symbols-outlined text-[14px]">image</span>
+                          <fa-icon [icon]="['fas', 'image']" class="text-[14px]"></fa-icon>
                         </a>
                       }
                       @if (p.document_number) {
                         <span class="text-[10px] text-on-surface-variant font-medium" title="DNI: {{ p.document_number }}">
-                          <span class="material-symbols-outlined text-[12px]">badge</span>
+                          <fa-icon [icon]="['fas', 'id-card']" class="text-[12px]"></fa-icon>
                         </span>
                       }
                       @if (!p.receipt_image_path && !p.document_number) {
@@ -587,14 +569,14 @@
                   <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
                   <td class="px-4 py-3.5 text-right">
                     <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" title="Eliminar">
-                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                      <fa-icon [icon]="['fas', 'trash-alt']" class="text-[16px]"></fa-icon>
                     </button>
                   </td>
                 </tr>
               } @empty {
                 <tr>
                   <td colspan="7" class="px-4 py-16 text-center">
-                    <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">receipt_long</span>
+                    <fa-icon [icon]="['fas', 'receipt']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
                     <p class="text-sm font-medium text-on-surface-variant">No hay historial de pagos</p>
                     <p class="text-xs text-on-surface-variant mt-1">Los pagos registrados aparecerán aquí.</p>
                   </td>
@@ -609,9 +591,6 @@
   }
 </div>
 
-<!-- ════════════════════════════════════════════════════════════ -->
-<!-- ═══ MODAL: REGISTRAR PAGO ═══ -->
-<!-- ════════════════════════════════════════════════════════════ -->
 <app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
   <div class="space-y-4">
 
@@ -655,7 +634,7 @@
     <!-- Recalculation Alert (NEW) -->
     @if (needsRecalculation) {
       <div class="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
-        <span class="material-symbols-outlined text-blue-500 text-lg shrink-0">info</span>
+        <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-500 text-lg shrink-0"></fa-icon>
         <p class="text-xs text-blue-700 dark:text-blue-400">
           <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
         </p>
@@ -665,7 +644,7 @@
     <!-- Missing Data Warning (NEW) -->
     @if (hasMissingData) {
       <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg">
-        <span class="material-symbols-outlined text-amber-500 text-lg shrink-0">warning</span>
+        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-lg shrink-0"></fa-icon>
         <div>
           <p class="text-xs font-bold text-amber-800 dark:text-amber-400">Datos faltantes</p>
           <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
@@ -694,7 +673,7 @@
     <!-- OCR Result -->
     @if (analyzeResult && !analyzingReceipt) {
       <div class="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
-        <span class="material-symbols-outlined text-green-500 text-lg shrink-0">check_circle</span>
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500 text-lg shrink-0"></fa-icon>
         <div>
           <p class="text-xs font-bold text-green-800 dark:text-green-400">OCR Completado</p>
           <p class="text-xs text-green-700 dark:text-green-300 mt-0.5">
@@ -709,19 +688,13 @@
     <div class="flex items-center justify-between w-full">
       <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
       <div class="flex gap-2">
-        <button class="btn-secondary !text-xs !px-4 !py-2" (click)="closeRegisterModal()">Cancelar</button>
-        <button class="btn-primary !text-xs !px-4 !py-2" [disabled]="!registerForm.amount" (click)="submitPayment()">
-          <span class="material-symbols-outlined text-[14px]">save</span>
-          Registrar
-        </button>
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeRegisterModal()"></app-button>
+        <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount" (clicked)="submitPayment()"></app-button>
       </div>
     </div>
   </div>
 </app-modal>
 
-<!-- ════════════════════════════════════════════════════════════ -->
-<!-- ═══ MODAL: CONFIGURAR PLAN ═══ -->
-<!-- ════════════════════════════════════════════════════════════ -->
 <app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
   <div class="space-y-4">
     <p class="text-sm text-on-surface-variant">
@@ -745,11 +718,8 @@
     <div class="flex items-center justify-between w-full">
       <span class="text-xs text-on-surface-variant">{{ settingsStatus }}</span>
       <div class="flex gap-2">
-        <button class="btn-secondary !text-xs !px-4 !py-2" (click)="closeSettingsModal()">Cancelar</button>
-        <button class="btn-primary !text-xs !px-4 !py-2" [disabled]="!settingsForm.payment_amount" (click)="submitSettings()">
-          <span class="material-symbols-outlined text-[14px]">save</span>
-          Guardar Configuración
-        </button>
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeSettingsModal()"></app-button>
+        <app-button variant="primary" label="Guardar Configuración" [icon]="['fas', 'save']" [disabled]="!settingsForm.payment_amount" (clicked)="submitSettings()"></app-button>
       </div>
     </div>
   </div>

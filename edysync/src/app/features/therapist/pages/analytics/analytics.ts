@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { Chart, registerables } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService, AnalyticsData } from '../../../../core/services/therapist.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -68,7 +69,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
   private buildKpiCards(d: AnalyticsData) {
     this.kpiCards = [
       {
-        icon: 'psychology',
+        icon: '',
+        iconFa: ['fas', 'brain'] as IconProp,
         label: 'Adaptaciones IA',
         value: d.kpi.adaptations_count.toString(),
         suffix: '',
@@ -76,7 +78,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         bgColor: 'bg-blue-50',
       },
       {
-        icon: 'trending_up',
+        icon: '',
+        iconFa: ['fas', 'chart-line'] as IconProp,
         label: 'Precisión Promedio',
         value: d.kpi.avg_accuracy.toFixed(1),
         suffix: '%',
@@ -84,7 +87,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         bgColor: 'bg-emerald-50',
       },
       {
-        icon: 'check_circle',
+        icon: '',
+        iconFa: ['fas', 'check-circle'] as IconProp,
         label: 'Tasa de Éxito',
         value: d.kpi.success_rate.toFixed(1),
         suffix: '%',
@@ -92,7 +96,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         bgColor: 'bg-primary/10',
       },
       {
-        icon: 'settings',
+        icon: '',
+        iconFa: ['fas', 'cogs'] as IconProp,
         label: 'Modelos Activos',
         value: d.kpi.active_models.toString(),
         suffix: '',
@@ -271,6 +276,7 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
 
 interface KpiCard {
   icon: string;
+  iconFa: IconProp;
   label: string;
   value: string;
   suffix: string;

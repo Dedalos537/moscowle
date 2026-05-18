@@ -12,7 +12,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-3xl text-primary">finance</span>
+          <fa-icon [icon]="['fas', 'chart-pie']" class="text-3xl text-primary"></fa-icon>
           <div>
             <h1 class="text-h2 text-on-surface">Reportes y Finanzas</h1>
             <p class="text-body text-on-surface-variant mt-0.5">Resumen operativo y financiero del período actual</p>
@@ -20,18 +20,9 @@
         </div>
       </div>
       <div class="flex gap-2 flex-wrap">
-        <button class="btn-primary" [disabled]="aiGenerating" (click)="generateAIReport()">
-          <span class="material-symbols-outlined text-[18px]">psychology</span>
-          Análisis Llama AI
-        </button>
-        <button class="btn-primary" [disabled]="reportSending" (click)="sendWeeklyReport()">
-          <span class="material-symbols-outlined text-[18px]">mail</span>
-          Reporte Semanal
-        </button>
-        <button class="btn-secondary" (click)="exportCSV()">
-          <span class="material-symbols-outlined text-[18px]">file_download</span>
-          Exportar CSV
-        </button>
+        <app-button variant="primary" label="Análisis Llama AI" [icon]="['fas', 'brain']" [disabled]="aiGenerating" (clicked)="generateAIReport()"></app-button>
+        <app-button variant="primary" label="Reporte Semanal" [icon]="['fas', 'envelope']" [disabled]="reportSending" (clicked)="sendWeeklyReport()"></app-button>
+        <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-download']" (clicked)="exportCSV()"></app-button>
       </div>
     </div>
 
@@ -41,7 +32,7 @@
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-primary">Pacientes Activos</span>
-            <span class="material-symbols-outlined text-primary text-xl">people</span>
+            <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.patients }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
@@ -50,7 +41,7 @@
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-blue-700">Terapeutas</span>
-            <span class="material-symbols-outlined text-blue-500 text-xl">badge</span>
+            <fa-icon [icon]="['fas', 'id-card']" class="text-blue-500 text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.therapists }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
@@ -59,7 +50,7 @@
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-amber-700">Sesiones Totales</span>
-            <span class="material-symbols-outlined text-amber-500 text-xl">event</span>
+            <fa-icon [icon]="['fas', 'calendar-alt']" class="text-amber-500 text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.sessions_total }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Histórico acumulado</p>
@@ -68,7 +59,7 @@
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-emerald-700">Precisión Global</span>
-            <span class="material-symbols-outlined text-emerald-500 text-xl">insights</span>
+            <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.avg_accuracy }}%</p>
           <p class="text-xs text-on-surface-variant mt-1">Promedio de precisión</p>
@@ -81,11 +72,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-emerald-700">Ingresos Reales</span>
-          <span class="material-symbols-outlined text-emerald-500 text-xl">payments</span>
+          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-emerald-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_real.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-emerald-500">trending_up</span>
+          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-emerald-500"></fa-icon>
           Recaudado este mes
         </p>
       </div>
@@ -93,11 +84,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-blue-700">Proyección</span>
-          <span class="material-symbols-outlined text-blue-500 text-xl">account_balance</span>
+          <fa-icon [icon]="['fas', 'university']" class="text-blue-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_expected.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-blue-500">event_upcoming</span>
+          <fa-icon [icon]="['fas', 'calendar-check']" class="text-[14px] text-blue-500"></fa-icon>
           Si todos pagaran a tiempo
         </p>
       </div>
@@ -105,11 +96,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-red-700">Morosidad Acumulada</span>
-          <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-red-500">people</span>
+          <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-red-500"></fa-icon>
           {{ financials.overdue_users_count }} usuarios con deuda
         </p>
       </div>
@@ -117,11 +108,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Ejecución</span>
-          <span class="material-symbols-outlined text-primary text-xl">percent</span>
+          <fa-icon [icon]="['fas', 'percent']" class="text-primary text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ executionPercent.toFixed(1) }}%</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-[14px] text-primary"></fa-icon>
           Progreso de cobro
         </p>
       </div>
@@ -133,7 +124,7 @@
       <!-- Visual Progress Bars -->
       <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-5 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">bar_chart</span>
+          <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
           Comparativa Visual
         </h4>
         <div class="space-y-5">
@@ -194,7 +185,7 @@
       <!-- Financial Chart -->
       <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">monitoring</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Comparación Financiera
         </h4>
         <div class="relative" style="height: 260px">
@@ -216,7 +207,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-lg">group</span>
+            <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
             Terapeutas
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ therapists.length }} registros</span>
@@ -259,10 +250,10 @@
                       [class.text-amber-700]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
                       [class.bg-red-100]="t.avg_accuracy < 75"
                       [class.text-red-700]="t.avg_accuracy < 75">
-                      <span class="material-symbols-outlined text-[12px]"
+                      <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
                         [class.text-emerald-500]="t.avg_accuracy >= 90"
                         [class.text-amber-500]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                        [class.text-red-500]="t.avg_accuracy < 75">circle</span>
+                        [class.text-red-500]="t.avg_accuracy < 75"></fa-icon>
                       {{ t.avg_accuracy }}%
                     </span>
                   </td>
@@ -281,7 +272,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-lg">personal_health</span>
+            <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-lg"></fa-icon>
             Pacientes
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ patients.length }} registros</span>
@@ -337,32 +328,28 @@
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 border-l-4 border-l-indigo-500">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-outline-variant/30">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-2xl text-indigo-500">psychiatry</span>
+          <fa-icon [icon]="['fas', 'brain']" class="text-2xl text-indigo-500"></fa-icon>
           <div>
             <h2 class="text-lg font-bold text-on-surface">Auditoría IA (Whisper + Llama)</h2>
             <p class="text-sm text-on-surface-variant">Mide la fidelidad de las sesiones (Programación vs Grabación)</p>
           </div>
         </div>
-        <button
-          class="btn-primary mt-4 md:mt-0"
-          [disabled]="aiGenerating"
-          (click)="generateReport()"
-        >
-          @if (aiGenerating) {
-            <span class="material-symbols-outlined text-[18px] animate-spin">refresh</span>
-            Generando Reporte...
-          } @else {
-            <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-            Generar Reporte Llama
-          }
-        </button>
+        <app-button variant="primary" class="mt-4 md:mt-0" [disabled]="aiGenerating" (clicked)="generateReport()">
+            @if (aiGenerating) {
+              <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-[18px]"></fa-icon>
+              Generando Reporte...
+            } @else {
+              <fa-icon [icon]="['fas', 'magic']" class="text-[18px]"></fa-icon>
+              Generar Reporte Llama
+            }
+          </app-button>
       </div>
 
       <!-- AI Generated Report -->
       @if (aiReport) {
         <div class="mb-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 animate-fade-in">
           <h3 class="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg text-indigo-600">auto_awesome_mosaic</span>
+            <fa-icon [icon]="['fas', 'th-large']" class="text-lg text-indigo-600"></fa-icon>
             Informe Llama
           </h3>
           <div class="prose prose-sm max-w-none text-on-surface" [innerHTML]="aiReport"></div>
@@ -374,7 +361,7 @@
         <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="flex items-center gap-4 p-4 bg-indigo-50/60 rounded-xl border border-indigo-100/50">
             <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-              <span class="material-symbols-outlined text-2xl">fact_check</span>
+              <fa-icon [icon]="['fas', 'clipboard-check']" class="text-2xl"></fa-icon>
             </div>
             <div>
               <p class="text-label-caps text-indigo-700 mb-0.5">Auditorías Totales</p>
@@ -383,7 +370,7 @@
           </div>
           <div class="flex items-center gap-4 p-4 bg-emerald-50/60 rounded-xl border border-emerald-100/50">
             <div class="p-3 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-              <span class="material-symbols-outlined text-2xl">insights</span>
+              <fa-icon [icon]="['fas', 'chart-line']" class="text-2xl"></fa-icon>
             </div>
             <div>
               <p class="text-label-caps text-emerald-700 mb-0.5">Promedio Fidelidad</p>
@@ -395,7 +382,7 @@
         <!-- Top Therapists -->
         <div class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4">
           <h3 class="text-sm font-bold text-on-surface mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg text-indigo-500">leaderboard</span>
+            <fa-icon [icon]="['fas', 'trophy']" class="text-lg text-indigo-500"></fa-icon>
             Top Terapistas
           </h3>
           <div class="space-y-2">
@@ -413,7 +400,7 @@
         <!-- Last Audits Table -->
         <div class="lg:col-span-2 bg-surface-container-low rounded-xl border border-outline-variant/30 overflow-hidden">
           <h3 class="text-sm font-bold text-on-surface p-3 border-b border-outline-variant/30 flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg text-indigo-500">history</span>
+            <fa-icon [icon]="['fas', 'history']" class="text-lg text-indigo-500"></fa-icon>
             Últimas Auditorías
           </h3>
           <table class="w-full text-left text-sm">
@@ -430,10 +417,10 @@
                       [class.text-amber-800]="r.score >= 5 && r.score < 8"
                       [class.bg-red-100]="r.score < 5"
                       [class.text-red-800]="r.score < 5">
-                      <span class="material-symbols-outlined text-[10px]"
+                      <fa-icon [icon]="['fas', 'circle']" class="text-[10px]"
                         [class.text-emerald-500]="r.score >= 8"
                         [class.text-amber-500]="r.score >= 5 && r.score < 8"
-                        [class.text-red-500]="r.score < 5">circle</span>
+                        [class.text-red-500]="r.score < 5"></fa-icon>
                       {{ r.score }}/10
                     </span>
                   </td>
@@ -458,7 +445,7 @@
                 [class.text-purple-700]="activeReportTab === 'weekly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'weekly'"
                 (click)="setReportTab('weekly')">
-          <span class="material-symbols-outlined text-[16px] align-text-bottom mr-1">calendar_view_week</span>
+          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Semanal
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
@@ -466,7 +453,7 @@
                 [class.text-blue-700]="activeReportTab === 'monthly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'monthly'"
                 (click)="setReportTab('monthly')">
-          <span class="material-symbols-outlined text-[16px] align-text-bottom mr-1">calendar_month</span>
+          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Mensual
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
@@ -474,7 +461,7 @@
                 [class.text-emerald-700]="activeReportTab === 'quarterly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'quarterly'"
                 (click)="setReportTab('quarterly')">
-          <span class="material-symbols-outlined text-[16px] align-text-bottom mr-1">calendar_clock</span>
+          <fa-icon [icon]="['fas', 'clock']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
           Trimestral
         </button>
       </div>
@@ -488,16 +475,13 @@
               <input type="date" [(ngModel)]="selectedWeekStart" (change)="loadWeeklySummary()"
                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
               <button class="btn-secondary" (click)="loadWeeklySummary()" [disabled]="weeklySummaryLoading">
-                <span class="material-symbols-outlined text-[18px]">refresh</span>
+                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
               </button>
-              <button class="btn-primary" (click)="accumulateReports()" [disabled]="reportsAccumulating">
-                <span class="material-symbols-outlined text-[18px]" [class.animate-spin]="reportsAccumulating">accumulate</span>
+              <app-button variant="primary" [disabled]="reportsAccumulating" (clicked)="accumulateReports()">
+                <fa-icon [icon]="['fas', 'layer-group']" class="text-[18px]" [animation]="reportsAccumulating ? 'spin' : undefined"></fa-icon>
                 {{ reportsAccumulating ? 'Acumulando...' : 'Acumular Reportes' }}
-              </button>
-              <button class="btn-primary" (click)="generateAllWeeklyReports()" [disabled]="weeklySummaryLoading">
-                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-                Generar Todos
-              </button>
+              </app-button>
+              <app-button variant="primary" label="Generar Todos" [icon]="['fas', 'magic']" [disabled]="weeklySummaryLoading" (clicked)="generateAllWeeklyReports()"></app-button>
             </div>
           </div>
 
@@ -593,12 +577,9 @@
                 }
               </select>
               <button class="btn-secondary" (click)="loadMonthlySummary()" [disabled]="monthlyLoading">
-                <span class="material-symbols-outlined text-[18px]">refresh</span>
+                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
               </button>
-              <button class="btn-primary" (click)="generateMonthlyReports()" [disabled]="monthlyLoading">
-                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-                Generar Mensuales
-              </button>
+              <app-button variant="primary" label="Generar Mensuales" [icon]="['fas', 'magic']" [disabled]="monthlyLoading" (clicked)="generateMonthlyReports()"></app-button>
             </div>
           </div>
 
@@ -687,12 +668,9 @@
                 }
               </select>
               <button class="btn-secondary" (click)="loadQuarterlySummary()" [disabled]="quarterlyLoading">
-                <span class="material-symbols-outlined text-[18px]">refresh</span>
+                <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
               </button>
-              <button class="btn-primary" (click)="generateQuarterlyReports()" [disabled]="quarterlyLoading">
-                <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
-                Generar Trimestrales
-              </button>
+              <app-button variant="primary" label="Generar Trimestrales" [icon]="['fas', 'magic']" [disabled]="quarterlyLoading" (clicked)="generateQuarterlyReports()"></app-button>
             </div>
           </div>
 
@@ -768,7 +746,7 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg text-blue-500">calendar_today</span>
+            <fa-icon [icon]="['fas', 'calendar-day']" class="text-lg text-blue-500"></fa-icon>
             Reportes Diarios
           </h3>
           <div class="flex gap-2 items-center">
@@ -776,7 +754,7 @@
             <span class="text-xs text-on-surface-variant">a</span>
             <input type="date" [(ngModel)]="dailyEndDate" class="h-8 px-2 bg-surface border border-outline rounded text-xs text-on-surface">
             <button class="btn-secondary h-8 text-xs" (click)="loadDailyReports()" [disabled]="dailyReportsLoading">
-              <span class="material-symbols-outlined text-[16px]">search</span>
+              <fa-icon [icon]="['fas', 'search']" class="text-[16px]"></fa-icon>
             </button>
           </div>
         </div>
@@ -826,11 +804,11 @@
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg text-emerald-500">speed</span>
+            <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-lg text-emerald-500"></fa-icon>
             Eficiencia de Terapeutas
           </h3>
           <button class="btn-secondary h-8 text-xs" (click)="loadEfficiency()" [disabled]="efficiencyLoading">
-            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            <fa-icon [icon]="['fas', 'sync-alt']" class="text-[16px]"></fa-icon>
           </button>
         </div>
         @if (efficiencyLoading) {

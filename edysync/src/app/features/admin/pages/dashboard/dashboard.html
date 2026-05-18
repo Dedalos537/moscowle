@@ -17,7 +17,7 @@
           <div class="flex items-start justify-between mb-2">
             <span class="text-label-caps text-orange-700 dark:text-orange-400">Cobros Hoy</span>
             <span class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-500/15 flex items-center justify-center">
-              <span class="material-symbols-outlined text-orange-500 text-xl">payments</span>
+              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-orange-500 text-xl"></fa-icon>
             </span>
           </div>
           <p class="text-2xl font-black text-on-surface">{{ dailyPendings.length }}</p>
@@ -29,7 +29,7 @@
           <div class="flex items-start justify-between mb-2">
             <span class="text-label-caps text-red-700 dark:text-red-400">Sin Configurar</span>
             <span class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
-              <span class="material-symbols-outlined text-red-500 text-xl">warning</span>
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
             </span>
           </div>
           <p class="text-2xl font-black text-on-surface">{{ incompletePatients.length }}</p>
@@ -41,7 +41,7 @@
           <div class="flex items-start justify-between mb-2">
             <span class="text-label-caps text-amber-700 dark:text-amber-400">Deuda Total</span>
             <span class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-              <span class="material-symbols-outlined text-amber-500 text-xl">account_balance_wallet</span>
+              <fa-icon [icon]="['fas', 'wallet']" class="text-amber-500 text-xl"></fa-icon>
             </span>
           </div>
           <p class="text-2xl font-black text-on-surface">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
@@ -50,7 +50,7 @@
       }
       @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
         <div class="lg:col-span-4 p-8 bg-surface-container-high rounded-2xl border-2 border-dashed border-outline-variant/20 flex flex-col items-center justify-center text-center">
-          <span class="material-symbols-outlined text-on-surface-variant/20 text-4xl mb-3">check_circle</span>
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-on-surface-variant/20 text-4xl mb-3"></fa-icon>
           <p class="text-sm font-bold text-on-surface-variant/60 uppercase tracking-tight">Todas las operaciones al día</p>
           <p class="text-[10px] text-on-surface-variant/40 mt-1">El motor de automatización está monitoreando</p>
         </div>

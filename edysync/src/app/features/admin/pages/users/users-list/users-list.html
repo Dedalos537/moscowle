@@ -44,7 +44,7 @@
       <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.05s">
         <div class="p-5">
           <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px] text-primary">location_on</span> Usuarios por Sede
+            <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[18px] text-primary"></fa-icon> Usuarios por Sede
           </h4>
           <div style="max-height:200px">
             <canvas baseChart [data]="chartSede" [options]="chartSedeOpt" type="bar"></canvas>
@@ -54,7 +54,7 @@
       <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.1s">
         <div class="p-5">
           <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px] text-green-500">circle</span> Activo vs Inactivo
+            <fa-icon [icon]="['fas', 'circle']" class="text-[18px] text-green-500"></fa-icon> Activo vs Inactivo
           </h4>
           <div style="max-height:200px">
             <canvas baseChart [data]="chartActive" [options]="chartActiveOpt" type="doughnut"></canvas>
@@ -64,7 +64,7 @@
       <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.15s">
         <div class="p-5">
           <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px] text-purple-500">badge</span> Roles
+            <fa-icon [icon]="['fas', 'id-badge']" class="text-[18px] text-purple-500"></fa-icon> Roles
           </h4>
           <div style="max-height:200px">
             <canvas baseChart [data]="chartRole" [options]="chartRoleOpt" type="doughnut"></canvas>
@@ -79,7 +79,7 @@
     <div class="p-6 xl:p-8">
       <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 border-b border-outline-variant/20 pb-6">
         <h3 class="text-h3 text-on-surface flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary">group</span> Directorio
+          <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
         </h3>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
@@ -180,7 +180,7 @@
                           }
                         </select>
                         <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary/10 text-primary rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all shrink-0 cursor-pointer" title="Guardar">
-                          <span class="material-symbols-outlined text-lg">check</span>
+                          <fa-icon [icon]="['fas', 'check']" class="text-lg"></fa-icon>
                         </button>
                       </div>
                     } @else {
@@ -195,14 +195,14 @@
                   </td>
                   <td class="px-5 py-3.5 text-right">
                     <button (click)="openActionDrawer(u)" class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
-                      <span class="material-symbols-outlined text-lg">more_horiz</span>
+                      <fa-icon [icon]="['fas', 'ellipsis-h']" class="text-lg"></fa-icon>
                     </button>
                   </td>
                 </tr>
               } @empty {
                 <tr>
                   <td colspan="8" class="px-5 py-16 text-center text-on-surface-variant/60">
-                    <span class="material-symbols-outlined text-3xl mb-2 block">group_off</span>
+                    <fa-icon [icon]="['fas', 'user-slash']" class="text-3xl mb-2 block"></fa-icon>
                     <p class="text-sm font-medium">No se encontraron usuarios</p>
                   </td>
                 </tr>
@@ -250,7 +250,7 @@
                 @if (u.role === 'jugador') {
                   <div class="bg-surface-container-high/50 rounded-xl p-3.5 border border-outline-variant/20">
                     <label class="text-label-caps text-secondary mb-2 flex items-center gap-1.5">
-                      <span class="material-symbols-outlined text-sm">stethoscope</span> Terapeutas Asignados
+                      <fa-icon [icon]="['fas', 'stethoscope']" class="text-sm"></fa-icon> Terapeutas Asignados
                     </label>
                     <div class="flex gap-2">
                       <select #sel2 multiple class="flex-1 bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs rounded-lg focus:ring-primary focus:border-primary p-2 h-20 custom-scrollbar">
@@ -259,7 +259,7 @@
                         }
                       </select>
                       <button (click)="assignTherapist(u.id, sel2)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-sm self-start shrink-0 cursor-pointer">
-                        <span class="material-symbols-outlined text-sm">check</span>
+                        <fa-icon [icon]="['fas', 'check']" class="text-sm"></fa-icon>
                       </button>
                     </div>
                   </div>
@@ -288,31 +288,31 @@
         </div>
       </div>
       <button (click)="closeActionDrawer()" class="w-7 h-7 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <span class="material-symbols-outlined text-lg">close</span>
+        <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
       </button>
     </div>
     <div class="flex-1 p-3 space-y-0.5 overflow-y-auto">
       <a [routerLink]="['/admin/users', selectedUser.id]" class="flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
-        <span class="material-symbols-outlined text-lg text-on-surface-variant">person</span>
+        <fa-icon [icon]="['fas', 'user']" class="text-lg text-on-surface-variant"></fa-icon>
         Ver Perfil
       </a>
       <button (click)="openEditDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
-        <span class="material-symbols-outlined text-lg text-on-surface-variant">edit</span>
+        <fa-icon [icon]="['fas', 'edit']" class="text-lg text-on-surface-variant"></fa-icon>
         Editar Usuario
       </button>
       <button (click)="openResetDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-tertiary/10 hover:text-tertiary transition-colors rounded-lg cursor-pointer">
-        <span class="material-symbols-outlined text-lg text-on-surface-variant">vpn_key</span>
+        <fa-icon [icon]="['fas', 'key']" class="text-lg text-on-surface-variant"></fa-icon>
         Reset Password
       </button>
       <hr class="my-2 mx-3.5 border-outline-variant/20">
       <button (click)="deleteUser(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-error hover:bg-error-container/30 transition-colors rounded-lg cursor-pointer">
-        <span class="material-symbols-outlined text-lg text-error/70">delete</span>
+        <fa-icon [icon]="['fas', 'trash-alt']" class="text-lg text-error/70"></fa-icon>
         Eliminar Usuario
       </button>
     </div>
     <div class="p-4 border-t border-outline-variant/20">
       <div class="p-3 bg-surface-container-high rounded-xl flex items-center gap-3">
-        <span class="material-symbols-outlined text-sm text-primary">verified</span>
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-sm text-primary"></fa-icon>
         <div>
           <p class="text-xs font-semibold text-on-surface">ID: #{{ selectedUser.id }}</p>
           <p class="text-[10px] text-on-surface-variant/60">Creado en sistema</p>
@@ -328,11 +328,11 @@
   <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
     <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
-        <span class="material-symbols-outlined text-primary">manage_accounts</span>
+        <fa-icon [icon]="['fas', 'user-cog']" class="text-primary"></fa-icon>
         Editar Usuario
       </h3>
       <button (click)="closeEditDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <span class="material-symbols-outlined text-lg">close</span>
+        <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
       </button>
     </div>
     <div class="flex-1 overflow-y-auto p-5 space-y-5">
@@ -362,7 +362,7 @@
       @if (editData.role === 'terapista') {
         <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
           <h4 class="text-sm font-bold text-primary flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg">work</span> Contrato
+            <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon> Contrato
           </h4>
           <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
             <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
@@ -421,7 +421,7 @@
 
         <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
           <h4 class="text-sm font-bold text-primary flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg">receipt_long</span> Configuración de Plan
+            <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon> Configuración de Plan
           </h4>
           <div class="grid grid-cols-3 gap-3">
             <div>
@@ -515,18 +515,18 @@
   <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
     <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
-        <span class="material-symbols-outlined text-tertiary">vpn_key</span>
+        <fa-icon [icon]="['fas', 'key']" class="text-tertiary"></fa-icon>
         Reset Password
       </h3>
       <button (click)="closeResetDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <span class="material-symbols-outlined text-lg">close</span>
+        <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
       </button>
     </div>
     <div class="flex-1 overflow-y-auto p-5 space-y-5">
       @if (resetData.firstTime) {
         <div>
           <div class="bg-tertiary/10 text-tertiary p-4 rounded-xl mb-5 text-sm flex gap-3">
-            <span class="material-symbols-outlined text-lg shrink-0">info</span>
+            <fa-icon [icon]="['fas', 'info-circle']" class="text-lg shrink-0"></fa-icon>
             <p>Este usuario nunca ha iniciado sesión. Ingrese una <strong>contraseña manual</strong> inicial (mín. 6 caracteres).</p>
           </div>
           <div>
@@ -534,7 +534,7 @@
             <div class="relative">
               <input [type]="resetData.showPassword ? 'text' : 'password'" [(ngModel)]="resetData.newPassword" class="input-field text-sm pr-12" placeholder="Ingrese la nueva clave...">
               <button (click)="toggleResetPasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-tertiary cursor-pointer">
-                <span class="material-symbols-outlined text-lg">{{ resetData.showPassword ? 'visibility_off' : 'visibility' }}</span>
+                <fa-icon [icon]="resetData.showPassword ? ['fas', 'eye-slash'] : ['fas', 'eye']" class="text-lg"></fa-icon>
               </button>
             </div>
           </div>
@@ -542,7 +542,7 @@
       } @else {
         <div class="py-8 flex flex-col items-center text-center">
           <div class="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
-            <span class="material-symbols-outlined text-2xl">mail</span>
+            <fa-icon [icon]="['fas', 'envelope']" class="text-2xl"></fa-icon>
           </div>
           <h4 class="text-lg font-bold text-on-surface mb-2">Generar nueva clave</h4>
           <p class="text-sm text-on-surface-variant max-w-xs">El sistema generará una contraseña segura aleatoriamente y borrará la actual. ¿Estás seguro?</p>
@@ -567,11 +567,11 @@
   <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
     <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
-        <span class="material-symbols-outlined text-primary">person_add</span>
+        <fa-icon [icon]="['fas', 'user-plus']" class="text-primary"></fa-icon>
         Crear Nuevo Usuario
       </h3>
       <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <span class="material-symbols-outlined text-lg">close</span>
+        <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
       </button>
     </div>
     <div class="flex-1 overflow-y-auto p-5 space-y-5">
@@ -617,7 +617,7 @@
         </div>
         <div class="bg-surface-container-high rounded-xl p-4">
           <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
-            <span class="material-symbols-outlined text-lg">work</span> Configuración de Contrato
+            <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon> Configuración de Contrato
           </h4>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -636,7 +636,7 @@
       @if (newUser.role === 'jugador') {
         <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
           <h4 class="text-sm font-bold text-primary flex items-center gap-2">
-            <span class="material-symbols-outlined text-lg">receipt_long</span> Configuración del Plan
+            <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon> Configuración del Plan
           </h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -676,7 +676,7 @@
           @if (newUser.generate_schedule) {
             <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 space-y-4">
               <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-sm">calendar_month</span> Programación de Sesiones
+                <fa-icon [icon]="['fas', 'calendar-alt']" class="text-sm"></fa-icon> Programación de Sesiones
               </h5>
               <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>

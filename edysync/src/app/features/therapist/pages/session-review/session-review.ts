@@ -170,8 +170,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     }
   }
 
-  // ═══ ATTENDANCE ═══
-
   setAttendance(state: string) {
     this.attendance = state;
     this.therapistService.updateAttendance(this.sessionId, state).subscribe();
@@ -180,8 +178,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       this.showWarningModal = false;
     }
   }
-
-  // ═══ NOTES ═══
 
   onNotesInput() {
     this.lastSavedLabel = 'Escribiendo...';
@@ -208,8 +204,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       },
     });
   }
-
-  // ═══ IMAGES ═══
 
   onImageSelected(event: any) {
     const file = event.target.files?.[0];
@@ -253,8 +247,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     });
   }
 
-  // ═══ CAMERA ═══
-
   async openCamera() {
     try {
       this.videoStream = await navigator.mediaDevices.getUserMedia({
@@ -293,8 +285,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       }
     }, 'image/jpeg', 0.85);
   }
-
-  // ═══ AUDIO RECORDING (Whisper/Groq) ═══
 
   toggleRecording() {
     if (this.isRecording) {
@@ -402,7 +392,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.uploadingChunk = false;
         if (data.success && data.transcript_text) {
           this.accumulatedTranscript += (this.accumulatedTranscript ? ' ' : '') + data.transcript_text;
-          this.chunkUploadStatus = `Segmento ${chunkNum} transcrito ✓`;
+          this.chunkUploadStatus = `Segmento ${chunkNum} transcrito`;
 
           if (!this.isRecording) {
             if (this.accumulatedTranscript) {
@@ -410,7 +400,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
               this.notes = this.notes.trimEnd() + separator + this.accumulatedTranscript;
               setTimeout(() => this.saveNotes(), 500);
             }
-            this.chunkUploadStatus = 'Grabación completa. Audio eliminado. ✓';
+            this.chunkUploadStatus = 'Grabacion completa. Audio eliminado.';
             setTimeout(() => {
               this.chunkUploadStatus = '';
               this.loadAudit();
@@ -429,8 +419,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       },
     });
   }
-
-  // ═══ NO-SHOW DETECTION ═══
 
   private checkAttendance() {
     this.therapistService.analyzeAttendance(this.sessionId).subscribe({
@@ -496,8 +484,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     const secs = this.warningCountdown % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
   }
-
-  // ═══ AUDIT PANEL ═══
 
   loadAudit() {
     this.auditLoading = true;
@@ -604,8 +590,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     return m[cls] || 'fa-question-circle text-on-surface-variant';
   }
 
-  // ═══ FEEDBACK ═══
-
   submitFeedback() {
     if (this.feedbackSubmitted) return;
     this.feedbackSaving = true;
@@ -631,8 +615,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   setProgress(val: number) {
     this.feedbackProgress = val;
   }
-
-  // ═══ PROGRAM MODAL ═══
 
   loadProgram() {
     this.therapistService.getSessionProgram(this.sessionId).subscribe({
@@ -709,8 +691,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     win!.focus();
     win!.print();
   }
-
-  // ═══ FULLSCREEN ═══
 
   openFullscreen() {
     this.showFullscreen = true;

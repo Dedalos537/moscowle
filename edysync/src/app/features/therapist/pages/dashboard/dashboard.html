@@ -1,5 +1,4 @@
 <div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in" *ngIf="!loading && data" [@fadeInUp]>
-  <!-- Top Section: Daily Summary + Compliance Badge -->
   <div class="flex justify-between items-start mb-8">
     <div>
       <p class="text-label-caps text-primary mb-2">RESUMEN DIARIO</p>
@@ -9,7 +8,7 @@
       </h1>
     </div>
 
-    <!-- Compliance SVG Ring Badge -->
+
     <div class="hidden md:flex items-center gap-4 bg-surface-container-lowest rounded-2xl px-6 py-4 shadow-soft border border-outline-variant/30 min-w-[200px]">
       <div class="relative w-[72px] h-[72px] flex-shrink-0">
         <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -29,12 +28,8 @@
     </div>
   </div>
 
-  <!-- Main Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Left Column (2/3) -->
     <div class="col-span-1 lg:col-span-2 space-y-6">
-
-      <!-- Dark Current Session Card -->
       <div class="bg-[#0f2e0f] rounded-2xl p-8 text-white relative overflow-hidden shadow-soft">
         <div class="absolute top-0 right-0 w-64 h-64 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-20 -translate-y-20"></div>
         <div class="absolute bottom-0 left-0 w-48 h-48 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-10 translate-y-10"></div>
@@ -48,14 +43,13 @@
           <h2 class="text-h3 mb-3">Sesión Actual: {{ data.next_session?.title || 'Planificación y Revisión' }}</h2>
           <p class="text-white/70 text-sm mb-12">
             Paciente: {{ data.next_session?.patient || 'N/A' }}
-            <span class="mx-2 opacity-30">•</span>
+            <span class="mx-2 opacity-30">·</span>
             {{ data.next_session?.location || 'Virtual' }}
-            <span class="mx-2 opacity-30">•</span>
+            <span class="mx-2 opacity-30">·</span>
             {{ data.total_students || 1 }} Estudiantes registrados
           </p>
 
           <div class="flex items-center gap-8 flex-wrap">
-            <!-- Circular Progress Ring -->
             <div class="relative w-32 h-32 flex-shrink-0">
               <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
@@ -70,7 +64,6 @@
               </div>
             </div>
 
-            <!-- Linear Progress -->
             <div class="flex-1 min-w-[200px]">
               <div class="flex justify-between text-sm font-medium mb-2">
                 <span>Meta Semanal</span>
@@ -85,16 +78,15 @@
         </div>
       </div>
 
-      <!-- Topics / Objectives Card -->
       <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-soft border border-outline-variant/30">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-h3 text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary">checklist</span>
+            <fa-icon [icon]="['fas', 'list-check']" class="text-primary"></fa-icon>
             Textos de la Sesión
           </h3>
           <a href="/therapist/sessions" class="text-label text-primary hover:text-primary-fixed-dim transition-colors flex items-center gap-1">
             Gestionar Plan
-            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            <fa-icon [icon]="['fas', 'arrow-right']" class="text-sm"></fa-icon>
           </a>
         </div>
 
@@ -113,9 +105,9 @@
                    'bg-amber-100 text-amber-600': topic.status === 'PARCIAL',
                    'bg-surface-container-high text-on-surface-variant/50': topic.status === 'PENDIENTE'
                  }">
-               <span class="material-symbols-outlined text-sm">
-                 {{ topic.status === 'LOGRADO' ? 'check' : (topic.status === 'PARCIAL' ? 'clock_loader_40' : 'circle') }}
-               </span>
+               <fa-icon
+                 [icon]="topic.status === 'LOGRADO' ? ['fas', 'check'] : (topic.status === 'PARCIAL' ? ['fas', 'clock'] : ['fas', 'circle'])"
+                 class="text-sm"></fa-icon>
             </div>
 
             <div class="flex-1 min-w-0">
@@ -133,7 +125,6 @@
 
     </div>
 
-    <!-- Right Column (1/3 - Agenda) -->
     <div class="col-span-1">
       <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 h-full flex flex-col">
         <div class="flex justify-between items-center mb-8">
@@ -141,7 +132,6 @@
           <span class="px-3 py-1 bg-surface-container-low text-on-surface-variant text-label-caps rounded-full">{{ '' | date:'dd MMM' }}</span>
         </div>
 
-        <!-- Timeline -->
         <div class="relative pl-8 flex-1">
           <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-outline-variant/50"></div>
 
@@ -161,13 +151,13 @@
                  }">
               <p class="text-label-caps mb-1"
                  [ngClass]="{'text-primary': item.is_current, 'text-on-surface-variant/60': !item.is_current}">
-                {{ item.is_current ? 'AHORA • ' : '' }}{{ item.start }}
+                {{ item.is_current ? 'AHORA · ' : '' }}{{ item.start }}
               </p>
               <h4 class="font-bold text-on-surface text-sm">{{ item.title }}</h4>
               <p class="text-xs text-on-surface-variant/70 mt-1">
-                <span class="material-symbols-outlined text-[14px] align-text-bottom mr-0.5">location_on</span>
+                <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[14px] align-text-bottom mr-0.5"></fa-icon>
                 {{ item.location }}
-                <span *ngIf="item.patient" class="mx-1">•</span>
+                <span *ngIf="item.patient" class="mx-1">·</span>
                 {{ item.patient }}
               </p>
             </div>
@@ -187,11 +177,10 @@
     </div>
   </div>
 
-  <!-- Bottom Stats Grid -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in">
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
       <div class="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 flex-shrink-0">
-        <span class="material-symbols-outlined text-2xl">assignment_late</span>
+        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h2 text-on-surface">08</p>
@@ -202,7 +191,7 @@
 
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
       <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
-        <span class="material-symbols-outlined text-2xl">trending_up</span>
+        <fa-icon [icon]="['fas', 'chart-line']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h2 text-on-surface">+12%</p>
@@ -213,7 +202,7 @@
 
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
       <div class="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
-        <span class="material-symbols-outlined text-2xl">psychiatry</span>
+        <fa-icon [icon]="['fas', 'brain']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h3 text-on-surface">AI Coach</p>
@@ -224,18 +213,16 @@
   </div>
 </div>
 
-<!-- Loading State -->
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
 
-<!-- Weekly Report Review Modal -->
 @if (showWeeklyReviewModal) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="dismissWeeklyReview()">
     <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
       <div class="text-center">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
-          <span class="material-symbols-outlined text-3xl text-purple-600">calendar_view_week</span>
+          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl text-purple-600"></fa-icon>
         </div>
         <h3 class="text-h3 text-on-surface mb-2">Reporte Semanal Disponible</h3>
         <p class="text-sm text-on-surface-variant mb-4">
@@ -243,13 +230,8 @@
           Tienes <strong>{{ weeklyReportsCount }} reportes</strong> pendientes de revision.
         </p>
         <div class="flex gap-3 justify-center">
-          <button class="btn-secondary" (click)="dismissWeeklyReview()">
-            Revisar Despues
-          </button>
-          <button class="btn-primary" (click)="viewWeeklyReports()">
-            <span class="material-symbols-outlined text-[18px]">visibility</span>
-            Ver Reportes
-          </button>
+          <app-button variant="ghost" label="Revisar Despues" (clicked)="dismissWeeklyReview()"></app-button>
+          <app-button variant="primary" label="Ver Reportes" [icon]="['fas', 'eye']" (clicked)="viewWeeklyReports()"></app-button>
         </div>
       </div>
     </div>

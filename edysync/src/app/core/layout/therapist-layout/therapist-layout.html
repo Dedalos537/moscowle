@@ -95,10 +95,10 @@
     </nav>
 
     <div class="p-4 border-t border-border shrink-0">
-      <button (click)="toggleDarkMode()" class="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-charcoal hover:bg-surface-container-low transition-all duration-200">
+      <app-button variant="ghost" (clicked)="toggleDarkMode()">
         <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']" class="w-5 text-center"></fa-icon>
         <span>{{ theme === 'light' ? 'Modo Oscuro' : 'Modo Claro' }}</span>
-      </button>
+      </app-button>
     </div>
   </aside>
 

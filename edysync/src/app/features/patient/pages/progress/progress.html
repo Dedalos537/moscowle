@@ -1,20 +1,14 @@
 <div *ngIf="loading" class="flex justify-center items-center h-96">
-  <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
 
 <div *ngIf="!loading && data" class="space-y-6" [@fadeInUp]>
-  <!-- Summary -->
-  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
+  <app-card>
     <p class="text-charcoal text-sm">{{ data.weekly_summary }}</p>
-  </div>
+  </app-card>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Accuracy Chart -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
-      <h3 class="text-lg font-bold text-textDark mb-4 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'bullseye']" class="text-primary"></fa-icon>
-        Precisión (7 días)
-      </h3>
+    <app-card title="Precisión (7 días)" [icon]="['fas', 'bullseye']">
       <div class="flex items-end gap-2 h-48">
         <div *ngFor="let val of data.accuracy_data; let i = index" class="flex-1 flex flex-col items-center gap-1">
           <div class="w-full rounded-t-lg transition-all duration-500"
@@ -29,14 +23,9 @@
           <span class="text-[8px] text-charcoal/60" *ngIf="data.labels[i]">{{ data.labels[i] | slice:0:3 }}</span>
         </div>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Time Chart -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
-      <h3 class="text-lg font-bold text-textDark mb-4 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'clock']" class="text-primary"></fa-icon>
-        Tiempo Promedio (7 días)
-      </h3>
+    <app-card title="Tiempo Promedio (7 días)" [icon]="['fas', 'clock']">
       <div class="flex items-end gap-2 h-48">
         <div *ngFor="let val of data.time_data; let i = index" class="flex-1 flex flex-col items-center gap-1">
           <div class="w-full bg-blue-400 rounded-t-lg transition-all duration-500"
@@ -45,15 +34,10 @@
           <span class="text-[10px] text-charcoal font-medium">{{ val }}s</span>
         </div>
       </div>
-    </div>
+    </app-card>
   </div>
 
-  <!-- Achievements -->
-  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
-    <h3 class="text-lg font-bold text-textDark mb-4 flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'trophy']" class="text-primary"></fa-icon>
-      Logros
-    </h3>
+  <app-card title="Logros" [icon]="['fas', 'trophy']">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div *ngFor="let achievement of data.achievements"
            class="p-4 rounded-xl text-center transition-all"
@@ -65,5 +49,5 @@
         <p class="text-[10px] text-charcoal mt-1" *ngIf="achievement.achieved && achievement.date">{{ achievement.date | date:'dd/MM/yyyy' }}</p>
       </div>
     </div>
-  </div>
+  </app-card>
 </div>
