@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://moscowle.pythonanywhere.com',
+  apiBaseUrl: 'https://moscowle-backend-production.up.railway.app',
 };

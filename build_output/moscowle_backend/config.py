@@ -2,8 +2,9 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
-load_dotenv()
-load_dotenv('.env.local', override=True)
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
+load_dotenv(os.path.join(basedir, '.env.local'), override=True)
 
 class Config:
     # ========== FLASK CONFIGURATION ==========
@@ -37,13 +38,8 @@ class Config:
             'pool_pre_ping': True,
             'pool_timeout': 30
         }
-        if 'tidbcloud.com' in _uri:
-            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {
-                'ssl': {
-                    'ca': '/etc/ssl/cert.pem',
-                    'check_hostname': True
-                }
-            }
+        if 'aivencloud.com' in _uri:
+            SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl': {}}
     
     # ========== SECURITY - RATE LIMITING ==========
     RATELIMIT_ENABLED = True

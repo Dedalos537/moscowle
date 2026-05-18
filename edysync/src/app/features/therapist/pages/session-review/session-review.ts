@@ -266,7 +266,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         if (video) video.srcObject = this.videoStream;
       }, 100);
     } catch {
-      alert('No se pudo acceder a la cámara. Verifica los permisos.');
+      this.alertService.show('No se pudo acceder a la cámara. Verifica los permisos.', 'error');
     }
   }
 
@@ -340,7 +340,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       .catch(() => {
         this.isRecording = false;
         this.cdr.detectChanges();
-        alert('No se pudo acceder al micrófono. Verifica los permisos.');
+        this.alertService.show('No se pudo acceder al micrófono. Verifica los permisos.', 'error');
       });
   }
 

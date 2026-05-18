@@ -19,7 +19,7 @@ export class ApiBaseInterceptor implements HttpInterceptor {
           url = base + url;
         }
 
-        const newReq = req.clone({ url, headers });
+        const newReq = req.clone({ url, headers, withCredentials: true });
         
         return new Observable<HttpEvent<any>>(observer => {
           const sub = next.handle(newReq).subscribe({
