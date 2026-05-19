@@ -8,7 +8,7 @@
     <span class="text-sm text-on-surface-variant hidden md:inline">Revisión</span>
     <div class="ml-auto flex items-center gap-2">
       <app-button variant="secondary" label="Guardar" [icon]="['fas', 'save']" (clicked)="saveNotes()"></app-button>
-      <input type="file" #fileInput class="hidden" accept="image/*,.pdf" (change)="onImageSelected($event)">
+      <input type="file" #fileInput class="hidden" accept="image/*,.doc,.docx" (change)="onImageSelected($event)">
       <app-button variant="secondary" [icon]="['fas', 'file-upload']" (clicked)="fileInput.click()"></app-button>
       <app-button [variant]="isRecording ? 'danger' : 'secondary'"
                   [label]="isRecording ? 'Detener' : 'Grabar'"

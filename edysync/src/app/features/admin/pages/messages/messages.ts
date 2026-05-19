@@ -48,9 +48,11 @@ export class Messages implements OnInit, OnDestroy {
   private loadData() {
     this.adminService.getContactMessages().subscribe({
       next: (res) => (this.contactMessages = res.data),
+      error: () => (this.contactMessages = []),
     });
     this.adminService.getUsers('terapista').subscribe({
       next: (res) => (this.therapists = res.users.map((u) => ({ id: u.id, username: u.username }))),
+      error: () => (this.therapists = []),
     });
     this.adminService.getUsers('jugador').subscribe({
       next: (res) => {

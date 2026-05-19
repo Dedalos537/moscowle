@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit } from '@angular/core';
 import { TherapistService, Conversation, MessageItem } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -11,7 +11,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   styleUrl: './therapist-messages.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
-export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
+export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
   @ViewChild('chatContainer') chatContainer!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -33,6 +33,7 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
   audioChunks: Blob[] = [];
 
   private pollInterval: any;
+  private needsScroll = false;
 
   constructor(
     private therapistService: TherapistService,
@@ -56,8 +57,8 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
     this.pollInterval = setInterval(() => this.pollNewMessages(), 5000);
   }
 
-  ngAfterViewChecked() {
-    this.scrollToBottom();
+  ngAfterViewInit() {
+    setTimeout(() => this.scrollToBottom(), 300);
   }
 
   ngOnDestroy() {
@@ -90,6 +91,8 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
         this.messages = res.messages;
         this.loadingThread = false;
         this.markConversationRead(userId);
+        this.needsScroll = true;
+        setTimeout(() => this.scrollToBottom(), 100);
       },
       error: () => (this.loadingThread = false),
     });
@@ -106,7 +109,14 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
       next: (res) => {
         if (res.messages.length > this.messages.length) {
           this.messages = res.messages;
+          this.needsScroll = true;
+          setTimeout(() => this.scrollToBottom(), 100);
         }
+      },
+    });
+    this.therapistService.getConversations().subscribe({
+      next: (res) => {
+        this.conversations = res.conversations;
       },
     });
   }
@@ -134,7 +144,7 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   sendMessage() {
-    if ((!this.newMessage.trim() && !this.selectedFile) || !this.selectedUserId) return;
+    if ((!this.newMessage.trim() && !this.selectedFile) || !this.selectedUserId || this.sending) return;
 
     this.sending = true;
     this.therapistService.sendMessage(this.selectedUserId, this.newMessage.trim(), this.selectedFile).subscribe({
@@ -144,7 +154,9 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewChecked {
         this.clearFile();
         this.refreshThread();
       },
-      error: () => (this.sending = false),
+      error: () => {
+        this.sending = false;
+      },
     });
   }
 
