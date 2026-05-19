@@ -28,6 +28,7 @@
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
+    "@sentry/angular": "^10.53.1",
     "@tailwindcss/postcss": "^4.2.2",
     "chart.js": "^4.5.1",
     "ng2-charts": "^10.0.0",

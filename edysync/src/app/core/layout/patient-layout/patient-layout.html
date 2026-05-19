@@ -1,3 +1,34 @@
+@if (routeLoading) {
+  <div class="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center">
+    <app-spinner size="lg" colorClass="text-primary"></app-spinner>
+  </div>
+}
+
+@if (confirmService.state$ | async; as confirmState) {
+  @if (confirmState.visible) {
+    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="confirmService.close(false)">
+      <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+             [class.bg-red-100]="confirmState.options.variant === 'danger'"
+             [class.bg-amber-100]="confirmState.options.variant === 'warning'"
+             [class.bg-primary/10]="confirmState.options.variant === 'primary'">
+          <fa-icon [icon]="$any(confirmState.options.icon || ['fas', 'exclamation-triangle'])"
+                   class="text-2xl"
+                   [class.text-red-600]="confirmState.options.variant === 'danger'"
+                   [class.text-amber-600]="confirmState.options.variant === 'warning'"
+                   [class.text-primary]="confirmState.options.variant === 'primary'"></fa-icon>
+        </div>
+        <h3 class="text-lg font-bold text-on-surface text-center mb-2">{{ confirmState.options.title }}</h3>
+        <p class="text-sm text-on-surface-variant text-center mb-6">{{ confirmState.options.message }}</p>
+        <div class="flex gap-3">
+          <app-button variant="secondary" class="flex-1" [label]="confirmState.options.cancelText || 'Cancelar'" (clicked)="confirmService.close(false)"></app-button>
+          <app-button [variant]="confirmState.options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="confirmState.options.confirmText || 'Confirmar'" (clicked)="confirmService.close(true)"></app-button>
+        </div>
+      </div>
+    </div>
+  }
+}
+
 <div class="flex h-screen bg-background text-textDark overflow-hidden transition-colors duration-300">
   <aside class="w-64 h-screen bg-surface border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
     <div class="h-24 flex items-center px-6 border-b border-border shrink-0">

@@ -9,6 +9,8 @@ import { User } from '../../../../core/models/user';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 Chart.register(...registerables);
 
@@ -314,13 +316,14 @@ export class Finanzas implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private route: ActivatedRoute,
     private alertService: AlertService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Finanzas',
       subtitle: 'Gestión integrada de finanzas del centro',
-      icon: ['fas', 'account_balance'],
+      icon: ['fas', 'university'],
       actionTemplate: this.headerActions,
     });
     this.loadSummaryData();
@@ -1028,13 +1031,14 @@ export class Finanzas implements OnInit, OnDestroy {
     this.registerForm.receipt = file;
     if (file) {
       this.analyzingReceipt = true;
-      this.adminService.analyzeReceipt(file).subscribe({
+      this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
         next: (res) => {
           this.analyzeResult = res;
           this.analyzingReceipt = false;
           if (res.amount) this.registerForm.amount = parseFloat(res.amount);
           if (res.reference) this.registerForm.reference = res.reference;
           if (res.method) this.registerForm.method = res.method;
+          if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
         },
         error: () => {
           this.analyzingReceipt = false;
@@ -1131,7 +1135,15 @@ export class Finanzas implements OnInit, OnDestroy {
     return this.patients.filter((p) => !p.has_plan_config);
   }
 
-  generateReport() {
+  async generateReport() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Generar Reporte',
+      message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?',
+      confirmText: 'Generar',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+    }));
+    if (!confirmed) return;
     this.adminService.exportPaymentsCsv().subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -1157,8 +1169,15 @@ export class Finanzas implements OnInit, OnDestroy {
     );
   }
 
-  deletePayment(id: number) {
-    if (!confirm('¿Eliminar este pago?')) return;
+  async deletePayment(id: number) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Pago',
+      message: '¿Eliminar este pago?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.adminService.deletePayment(id).subscribe({
       next: () => {
         this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id);

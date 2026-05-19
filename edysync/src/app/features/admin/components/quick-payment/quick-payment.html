@@ -1,0 +1,180 @@
+<div class="relative">
+  <div class="flex gap-2 w-full">
+    <div class="flex-grow relative">
+      <div class="relative">
+        <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 text-sm"></fa-icon>
+        <input
+          [(ngModel)]="searchQuery"
+          (input)="onSearchInput($any($event.target).value)"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+          (keydown)="onKeydown($event)"
+          placeholder="Buscar paciente por nombre, email o telefono..."
+          class="w-full bg-white/20 text-white placeholder-white/60 rounded-xl pl-9 pr-4 py-2.5 text-sm border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all"
+        >
+        @if (searchQuery && !searching) {
+          <button (click)="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white">
+            <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
+          </button>
+        }
+        @if (searching) {
+          <div class="absolute right-3 top-1/2 -translate-y-1/2">
+            <app-spinner size="sm" colorClass="text-white"></app-spinner>
+          </div>
+        }
+      </div>
+
+      @if (showDropdown && searchResults.length > 0) {
+        <div class="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-surface-container-high rounded-xl shadow-2xl border border-outline-variant/30 overflow-hidden">
+          @for (patient of searchResults; track patient.id; let i = $index) {
+            <button
+              type="button"
+              (click)="selectPatient(patient)"
+              (mouseenter)="selectedIndex = i"
+              class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors"
+              [class.bg-primary/10]="selectedIndex === i"
+              [class.hover:bg-surface-container-low]="selectedIndex !== i"
+            >
+              <div class="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-on-surface break-words">{{ patient.username }}</p>
+                <p class="text-xs text-on-surface-variant break-words">{{ patient.email }}{{ patient.phone ? ' | ' + patient.phone : '' }}</p>
+              </div>
+              <fa-icon [icon]="['fas', 'chevron-right']" class="text-on-surface-variant/40 text-xs"></fa-icon>
+            </button>
+          }
+        </div>
+      }
+
+      @if (showDropdown && searchResults.length === 0 && searchQuery.length >= 2 && !searching) {
+        <div class="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-surface-container-high rounded-xl shadow-2xl border border-outline-variant/30 p-4 text-center">
+          <p class="text-sm text-on-surface-variant">No se encontraron pacientes</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (showPaymentForm) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" (click)="closePaymentForm()">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 w-full max-w-lg max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+      <div class="sticky top-0 bg-surface z-10 flex items-center justify-between p-5 border-b border-outline-variant/20">
+        <div>
+          <h3 class="text-lg font-bold text-on-surface">Registrar Pago</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5" *ngIf="selectedPatient">
+            Cobrando a <strong class="text-on-surface">{{ selectedPatient.username }}</strong>
+          </p>
+        </div>
+        <button (click)="closePaymentForm()" class="w-8 h-8 rounded-full hover:bg-surface-container-high flex items-center justify-center transition-colors">
+          <fa-icon [icon]="['fas', 'times']" class="text-on-surface-variant"></fa-icon>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
+          <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
+          <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de Pago</label>
+          <input [(ngModel)]="registerForm.payment_date" type="date" class="input-field">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Monto (S/)</label>
+          <input [(ngModel)]="registerForm.amount" type="number" placeholder="0.00" class="input-field" min="0" step="0.01">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Metodo</label>
+            <select [(ngModel)]="registerForm.method" class="input-field">
+              <option value="transfer">Transferencia</option>
+              <option value="yape">Yape</option>
+              <option value="plin">Plin</option>
+              <option value="cash">Efectivo</option>
+              <option value="card">Tarjeta</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Descuento (S/)</label>
+            <input [(ngModel)]="registerForm.discount" type="number" placeholder="0" class="input-field" min="0" step="0.01">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Referencia</label>
+          <input [(ngModel)]="registerForm.reference" type="text" placeholder="N° de operacion" class="input-field">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Proximo Vencimiento</label>
+          <input [(ngModel)]="registerForm.next_due_date" type="date" class="input-field">
+        </div>
+
+        @if (needsRecalculation) {
+          <div class="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+            <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-500 text-lg shrink-0"></fa-icon>
+            <p class="text-xs text-blue-700 dark:text-blue-400">
+              <strong>Recalculo:</strong> Monto final neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
+            </p>
+          </div>
+        }
+
+        @if (hasMissingData) {
+          <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-lg shrink-0"></fa-icon>
+            <div>
+              <p class="text-xs font-bold text-amber-800 dark:text-amber-400">Datos faltantes</p>
+              <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                @if (!registerForm.document_number) { • DNI del paciente<br> }
+                @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
+                Se recomienda completar estos campos para el comprobante.
+              </p>
+            </div>
+          </div>
+        }
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
+          <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
+        </div>
+
+        @if (analyzingReceipt) {
+          <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg">
+            <app-spinner size="sm" colorClass="text-purple-500"></app-spinner>
+            <span class="text-xs font-medium text-purple-700 dark:text-purple-400">Analizando voucher con OCR...</span>
+          </div>
+        }
+
+        @if (analyzeResult && !analyzingReceipt) {
+          <div class="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
+            <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500 text-lg shrink-0"></fa-icon>
+            <div>
+              <p class="text-xs font-bold text-green-800 dark:text-green-400">OCR Completado</p>
+              <p class="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                Monto: S/ {{ analyzeResult.amount || '---' }} | Ref: {{ analyzeResult.reference || '---' }} | Metodo: {{ analyzeResult.method || '---' }}
+              </p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="sticky bottom-0 bg-surface border-t border-outline-variant/20 p-4 flex items-center justify-between">
+        <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
+        <div class="flex gap-2">
+          <app-button variant="ghost" label="Cancelar" (clicked)="closePaymentForm()"></app-button>
+          <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount" (clicked)="submitPayment()"></app-button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

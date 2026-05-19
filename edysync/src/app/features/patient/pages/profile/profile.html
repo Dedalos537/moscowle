@@ -4,32 +4,51 @@
     {{ message }}
   </div>
 
-  <app-card title="Información Personal">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
+    <h2 class="text-lg font-bold text-textDark mb-6">Informacion Personal</h2>
     <div class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-charcoal mb-1">Email</label>
         <input [value]="user?.email" disabled
                class="w-full rounded-xl bg-gray-50 border border-border px-4 py-2.5 text-sm text-gray-500">
       </div>
-      <app-input id="username" label="Nombre de usuario" [value]="username" (valueChange)="username = $any($event)"></app-input>
-      <app-input id="phone" label="Teléfono" [value]="phone" (valueChange)="phone = $any($event)"></app-input>
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1">Nombre de usuario</label>
+        <input [(ngModel)]="username"
+               class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1">Telefono</label>
+        <input [(ngModel)]="phone"
+               class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+      </div>
     </div>
-  </app-card>
+  </div>
 
-  <app-card title="Cambiar Contraseña">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20">
+    <h2 class="text-lg font-bold text-textDark mb-6">Cambiar Contrasena</h2>
     <div class="space-y-4">
-      <app-input id="newPassword" label="Nueva contraseña" type="password" [value]="newPassword" (valueChange)="newPassword = $any($event)"></app-input>
-      <app-input id="confirmPassword" label="Confirmar contraseña" type="password" [value]="confirmPassword" (valueChange)="confirmPassword = $any($event)"></app-input>
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1">Nueva contrasena</label>
+        <input [(ngModel)]="newPassword" type="password"
+               class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-charcoal mb-1">Confirmar contrasena</label>
+        <input [(ngModel)]="confirmPassword" type="password"
+               class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+      </div>
       <p *ngIf="newPassword && confirmPassword && newPassword !== confirmPassword" class="text-xs text-red-500">
-        Las contraseñas no coinciden
+        Las contrasenas no coinciden
       </p>
     </div>
-  </app-card>
+  </div>
 
   <div class="flex justify-end">
-    <app-button [disabled]="saving" (clicked)="saveProfile()">
-      <fa-icon *ngIf="saving" [icon]="['fas', 'spinner']" animation="spin" class="mr-1"></fa-icon>
+    <button (click)="saveProfile()" [disabled]="saving"
+            class="px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'spinner']" *ngIf="saving" class="fa-spin"></fa-icon>
       Guardar Cambios
-    </app-button>
+    </button>
   </div>
 </div>

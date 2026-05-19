@@ -6,6 +6,8 @@ import { TherapistStats, PatientStats } from '../../../../core/models/expense';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 Chart.register(...registerables);
 
@@ -195,6 +197,7 @@ export class Reports implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private alertService: AlertService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -332,14 +335,15 @@ export class Reports implements OnInit, OnDestroy {
     this.aiReport = null;
   }
 
-  generateReport() {
-    if (
-      !confirm(
-        'Esta operación tomará 1-2 minutos y analizará las últimas notas transcritas. ¿Continuar?',
-      )
-    ) {
-      return;
-    }
+  async generateReport() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Generar Reporte',
+      message: 'Esta operación tomará 1-2 minutos y analizará las últimas notas transcritas. ¿Continuar?',
+      confirmText: 'Generar',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+    }));
+    if (!confirmed) return;
 
     this.aiGenerating = true;
     this.aiReport = null;

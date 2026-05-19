@@ -1,6 +1,7 @@
-import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { NgModule, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import * as Sentry from '@sentry/angular';
 
 import { AppRoutingModule } from './app-routing-module';
 import { CoreModule } from './core/core-module';
@@ -19,7 +20,7 @@ import { App } from './app';
     SharedModule
   ],
   providers: [
-    provideBrowserGlobalErrorListeners()
+    { provide: ErrorHandler, useValue: Sentry.createErrorHandler() },
   ],
   bootstrap: [App]
 })

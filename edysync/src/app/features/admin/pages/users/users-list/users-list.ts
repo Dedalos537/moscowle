@@ -5,6 +5,8 @@ import { Sede } from '../../../../../core/models/sede';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 Chart.register(...registerables);
 
@@ -82,6 +84,7 @@ export class UsersList implements OnInit, OnDestroy {
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -305,9 +308,16 @@ export class UsersList implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  updateName(user: UserRow, event: Event) {
+  async updateName(user: UserRow, event: Event) {
     const input = event.target as HTMLInputElement;
-    if (!confirm(`¿Cambiar nombre de "${user.username}" a "${input.value}"?`)) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Cambiar Nombre',
+      message: `¿Cambiar nombre de "${user.username}" a "${input.value}"?`,
+      confirmText: 'Cambiar',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+    }));
+    if (!confirmed) {
       input.value = user.username;
       return;
     }
@@ -513,8 +523,15 @@ export class UsersList implements OnInit, OnDestroy {
     });
   }
 
-  deleteUser(user: UserRow) {
-    if (!confirm(`¿Eliminar a ${user.username} permanentemente?`)) return;
+  async deleteUser(user: UserRow) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Usuario',
+      message: `¿Eliminar a ${user.username} permanentemente?`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.adminService.deleteUser(user.id).subscribe({
       next: (res: any) => {
         if (res.success) {

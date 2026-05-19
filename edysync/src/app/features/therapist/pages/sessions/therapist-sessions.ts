@@ -6,8 +6,10 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
+import { firstValueFrom } from 'rxjs';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
@@ -61,6 +63,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     private therapistService: TherapistService,
     private headerService: HeaderService,
     private router: Router,
+    private confirmService: ConfirmService,
   ) {
     this.initCalendar();
   }
@@ -266,8 +269,15 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.router.navigate(['/therapist/sessions', this.editForm.id, 'review']);
   }
 
-  deleteSession() {
-    if (!confirm('¿Estás seguro de eliminar esta sesión?')) return;
+  async deleteSession() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar sesión',
+      message: '¿Estás seguro de eliminar esta sesión?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.therapistService.deleteSession(this.editForm.id).subscribe({
       next: () => {
         this.closeEditModal();

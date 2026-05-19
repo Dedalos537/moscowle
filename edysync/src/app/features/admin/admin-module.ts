@@ -24,6 +24,7 @@ import { ApiTokens } from './pages/api-tokens/api-tokens';
 import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
+import { QuickPayment } from './components/quick-payment/quick-payment';
 
 @NgModule({
   declarations: [
@@ -45,7 +46,8 @@ import { AiTraining } from './pages/ai-training/ai-training';
     ApiTokens,
     Profile,
     YapeImport,
-    AiTraining
+    AiTraining,
+    QuickPayment,
   ],
   imports: [
     CommonModule,

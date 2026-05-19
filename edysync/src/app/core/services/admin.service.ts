@@ -141,9 +141,10 @@ export class AdminService {
     return this.http.post<{ success: boolean; report: string }>('/admin/generate-ia-report', {});
   }
 
-  analyzeReceipt(file: File): Observable<any> {
+  analyzeReceipt(file: File, patientId?: number): Observable<any> {
     const formData = new FormData();
     formData.append('receipt', file);
+    if (patientId) formData.append('patient_id', String(patientId));
     return this.http.post<any>('/admin/analyze-receipt', formData);
   }
 
@@ -153,6 +154,10 @@ export class AdminService {
 
   markNotificationsRead(): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/api/notifications/mark-read', {});
+  }
+
+  markOneNotificationRead(notifId: number): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>('/api/notifications/mark-read', { id: notifId });
   }
 
   getExpenses(startDate?: string, endDate?: string, category?: string): Observable<{ success: boolean; data: Expense[] }> {
@@ -260,6 +265,12 @@ export class AdminService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<{ success: boolean; stats: YapeImportStats }>('/admin/yape/import', formData);
+  }
+
+  searchPatients(query: string): Observable<{ patients: Array<{ id: number; username: string; email: string; phone: string }> }> {
+    return this.http.get<{ patients: Array<{ id: number; username: string; email: string; phone: string }> }>('/api/v1/search/patients', {
+      params: new HttpParams().set('q', query),
+    });
   }
 
   searchYape(query: string): Observable<{ results: YapeTransaction[] }> {

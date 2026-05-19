@@ -188,6 +188,10 @@ export class Dashboard implements OnInit, OnDestroy {
     });
   }
 
+  onPaymentCompleted() {
+    this.loadAll();
+  }
+
   get pendingAmount(): number {
     return Math.max(0, (this.financials?.income_expected ?? 0) - (this.financials?.income_real ?? 0));
   }

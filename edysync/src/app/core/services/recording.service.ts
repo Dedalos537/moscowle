@@ -278,9 +278,8 @@ export class RecordingService {
     const sessionId = this.currentSessionId;
     const sessionTitle = this.sessionTitle$.value;
 
-    this.http.put(`/api/sessions/${sessionId}`, { status: 'completed' }).subscribe({
+    this.http.post(`/api/sessions/${sessionId}/complete`, {}).subscribe({
       next: () => {
-        // Trigger auto-audit after session completes
         this.http.post(`/api/sessions/${sessionId}/audit`, {}).subscribe({
           next: (auditRes: any) => {
             if (auditRes.success) {

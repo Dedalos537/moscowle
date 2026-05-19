@@ -8,7 +8,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
   styleUrl: './button.scss'
 })
 export class Button {
-  @Input() label: string = 'Button';
+  @Input() label: string = '';
   @Input() variant: 'primary' | 'secondary' | 'danger' | 'ghost' = 'primary';
   @Input() icon?: IconProp;
   @Input() disabled: boolean = false;

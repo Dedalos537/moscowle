@@ -1,9 +1,11 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { RecordingService } from '../../../../core/services/recording.service';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-therapist-session-review',
@@ -86,6 +88,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     private ngZone: NgZone,
     private alertService: AlertService,
     private recordingService: RecordingService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -234,8 +237,16 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.currentImageIndex = this.images.indexOf(img);
   }
 
-  deleteCurrentImage() {
-    if (!this.currentImage || !confirm('¿Estás seguro de eliminar esta imagen?')) return;
+  async deleteCurrentImage() {
+    if (!this.currentImage) return;
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar imagen',
+      message: '¿Estás seguro de eliminar esta imagen?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.therapistService.deleteSessionImage(this.sessionId, this.currentImage.id).subscribe({
       next: (res) => {
         if (res.success) {

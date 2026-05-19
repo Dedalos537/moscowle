@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { Payment } from '../../../../core/models/payment';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-payment-history',
@@ -21,6 +23,7 @@ export class PaymentHistory implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -50,8 +53,15 @@ export class PaymentHistory implements OnInit {
     return this.payments.reduce((sum, p) => sum + (p.discount || 0), 0);
   }
 
-  deletePayment(id: number) {
-    if (!confirm('¿Eliminar este pago?')) return;
+  async deletePayment(id: number) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Pago',
+      message: '¿Eliminar este pago?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.adminService.deletePayment(id).subscribe({
       next: () => this.loadHistory(),
     });

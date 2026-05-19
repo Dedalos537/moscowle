@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-user-detail',
@@ -23,6 +25,7 @@ export class UserDetail implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -86,13 +89,27 @@ export class UserDetail implements OnInit {
     });
   }
 
-  resetPassword() {
-    if (!confirm('¿Resetear contraseña de este usuario?')) return;
+  async resetPassword() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Resetear Contraseña',
+      message: '¿Resetear contraseña de este usuario?',
+      confirmText: 'Resetear',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.adminService.resetPassword(this.userId).subscribe();
   }
 
-  deleteUser() {
-    if (!confirm('¿Eliminar usuario permanentemente? Esta acción no se puede deshacer.')) return;
+  async deleteUser() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Usuario',
+      message: '¿Eliminar usuario permanentemente? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.adminService.deleteUser(this.userId).subscribe({
       next: (res: any) => {
         if (res.success) this.router.navigate(['/admin/users']);

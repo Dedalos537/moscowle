@@ -3,6 +3,8 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { CalendarWidgetEvent, CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-sessions',
@@ -77,6 +79,7 @@ export class Sessions implements OnInit, OnDestroy {
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -317,8 +320,15 @@ export class Sessions implements OnInit, OnDestroy {
       });
   }
 
-  deleteSession() {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta sesión? Esta acción no se puede deshacer.')) return;
+  async deleteSession() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Sesión',
+      message: '¿Estás seguro de que deseas eliminar esta sesión? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.deleting = true;
     this.adminService.deleteSession(this.editForm.id).subscribe({
       next: () => {
@@ -386,8 +396,15 @@ export class Sessions implements OnInit, OnDestroy {
     }
   }
 
-  deleteProgram() {
-    if (!confirm('¿Eliminar la programación de esta sesión?')) return;
+  async deleteProgram() {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar Programación',
+      message: '¿Eliminar la programación de esta sesión?',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.programDeleting = true;
     this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
       next: (res: any) => {

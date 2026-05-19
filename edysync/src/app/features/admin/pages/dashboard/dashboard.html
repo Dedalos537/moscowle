@@ -235,17 +235,14 @@
 
   <!-- Quick Actions Row -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative overflow-hidden">
+    <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative">
       <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full hidden sm:block"></div>
       <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
         <fa-icon [icon]="['fas', 'comment-dollar']"></fa-icon> Registrar Pago Rápido
       </h3>
       <p class="text-sm text-blue-100 mb-4 relative z-10 opacity-90">Selecciona un paciente para ir directo al formulario de pago.</p>
-      <div class="relative z-10 flex gap-2 w-full">
-        <div class="flex-grow">
-          <app-input id="search-patient" placeholder="Buscar paciente..." class="flex-grow"></app-input>
-        </div>
-        <a routerLink="/admin/payments"><app-button variant="ghost" label="Ir"></app-button></a>
+      <div class="relative z-10">
+        <app-quick-payment (paymentCompleted)="onPaymentCompleted()"></app-quick-payment>
       </div>
     </div>
 

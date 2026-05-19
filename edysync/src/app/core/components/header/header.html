@@ -34,13 +34,21 @@
         <div class="absolute right-0 mt-3 w-80 bg-surface/95 backdrop-blur-xl rounded-xl shadow-soft border border-outline-variant/50 z-50 flex flex-col max-h-[80vh] animate-fade-in">
           <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
             <h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
-            <button (click)="showNotifications = false" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-              <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
-            </button>
+            <div class="flex items-center gap-2">
+              @if (unreadCount > 0) {
+                <button (click)="markAllAsRead()" class="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-primary/10">
+                  <fa-icon [icon]="['fas', 'check-double']" class="text-xs"></fa-icon>
+                  Marcar leidas
+                </button>
+              }
+              <button (click)="showNotifications = false" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
+              </button>
+            </div>
           </div>
           <div class="p-2 overflow-y-auto flex-1 custom-scrollbar">
             @for (notif of notifications; track notif.id) {
-              <div class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-outline-variant/10 last:border-0">
+              <div (click)="markOneRead(notif.id)" class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-outline-variant/10 last:border-0 cursor-pointer">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
                        [class.bg-primary/10]="!notif.type || notif.type === 'default'"

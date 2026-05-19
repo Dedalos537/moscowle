@@ -4,7 +4,8 @@ import { AdminService } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
 import { RecordingService } from '../../services/recording.service';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../services/confirm.service';
 
 @Component({
   selector: 'app-header',
@@ -29,6 +30,7 @@ export class Header implements OnInit, OnDestroy {
     private authService: AuthService,
     private recordingService: RecordingService,
     private router: Router,
+    private confirmService: ConfirmService,
   ) {}
 
   ngOnInit() {
@@ -51,10 +53,31 @@ export class Header implements OnInit, OnDestroy {
     this.showUserMenu = false;
     if (this.showNotifications) {
       this.fetchNotifications();
-      this.adminService.markNotificationsRead().subscribe(() => {
-        this.unreadCount = 0;
-      });
     }
+  }
+
+  markAllAsRead() {
+    this.adminService.markNotificationsRead().subscribe({
+      next: () => {
+        this.unreadCount = 0;
+        this.notifications = [];
+      },
+      error: () => {
+        this.fetchNotifications();
+      },
+    });
+  }
+
+  markOneRead(notifId: number) {
+    this.adminService.markOneNotificationRead(notifId).subscribe({
+      next: () => {
+        this.notifications = this.notifications.filter(n => n.id !== notifId);
+        this.unreadCount = this.notifications.length;
+      },
+      error: () => {
+        this.fetchNotifications();
+      },
+    });
   }
 
   toggleUserMenu() {
@@ -68,6 +91,10 @@ export class Header implements OnInit, OnDestroy {
         this.notifications = data || [];
         this.unreadCount = this.notifications.length;
       },
+      error: () => {
+        this.notifications = [];
+        this.unreadCount = 0;
+      },
     });
   }
 
@@ -75,12 +102,24 @@ export class Header implements OnInit, OnDestroy {
     return typeof value === 'string';
   }
 
-  logout() {
+  async logout() {
     if (this.isRecording && !this.showLogoutWarning) {
       this.showLogoutWarning = true;
       this.showUserMenu = false;
       return;
     }
+
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Cerrar Sesion',
+      message: '¿Estas seguro de que deseas cerrar sesion?',
+      confirmText: 'Cerrar Sesion',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      icon: ['fas', 'sign-out-alt'],
+    }));
+
+    if (!confirmed) return;
+
     this.showLogoutWarning = false;
     this.recordingService.forceStopAndLogout();
     this.authService.logout().subscribe({

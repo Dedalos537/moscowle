@@ -58,7 +58,7 @@ export class TherapistDashboard implements OnInit {
   }
 
   checkPendingReports() {
-    this.http.get('/api/therapist/api/weekly-reports/pending').subscribe({
+    this.http.get('/api/therapist/weekly-reports/pending').subscribe({
       next: (res: any) => {
         if (res.success && res.has_pending) {
           this.weeklyReportsPending = true;
@@ -86,7 +86,7 @@ export class TherapistDashboard implements OnInit {
 
   parseTopics(text: string): {name: string, status: string}[] {
     if (!text) return [ {name: 'Introducción', status: 'LOGRADO'}, {name: 'Revisión General', status: 'PENDIENTE'} ];
-    const lines = text.split('\\n').filter(l => l.trim().length > 3).slice(0, 4);
+    const lines = text.split('\n').filter(l => l.trim().length > 3).slice(0, 4);
     return lines.map((l, i) => ({
       name: l.replace(/^[-\*\d\\.]+ */, '').substring(0, 30),
       status: i === 0 ? 'LOGRADO' : (i === 1 ? 'PARCIAL' : 'PENDIENTE')

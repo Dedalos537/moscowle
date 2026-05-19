@@ -2,6 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AdminAPIToken } from '../../../../core/models/api-token';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-api-tokens',
@@ -18,7 +20,10 @@ export class ApiTokens implements OnInit {
   newToken: string | null = null;
   creating = false;
 
-  constructor(private admin: AdminService) {}
+  constructor(
+    private admin: AdminService,
+    private confirmService: ConfirmService,
+  ) {}
 
   ngOnInit() {
     this.loadTokens();
@@ -48,7 +53,15 @@ export class ApiTokens implements OnInit {
     });
   }
 
-  deactivateToken(id: number) {
+  async deactivateToken(id: number) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Desactivar Token',
+      message: '¿Estas seguro de que deseas desactivar este token? Los servicios que lo usan dejaran de funcionar.',
+      confirmText: 'Desactivar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.admin.deactivateAPIToken(id).subscribe({
       next: () => { this.loadTokens(); },
     });
