@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 @Component({

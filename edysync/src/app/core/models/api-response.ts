@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;

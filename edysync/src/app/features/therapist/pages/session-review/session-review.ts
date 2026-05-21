@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -15,21 +16,18 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 })
 export class TherapistSessionReview implements OnInit, OnDestroy {
 
-  // Session
+  // DCE — Diego Centeno Estuvo Acá
   session: any = null;
   sessionId = 0;
   loading = true;
   saving = false;
 
-  // Notes
   notes = '';
   private saveTimeout: any = null;
   lastSavedLabel = 'Sin cambios pendientes';
 
-  // Attendance
   attendance: string | null = null;
 
-  // Images
   images: any[] = [];
   currentImage: any = null;
   currentImageIndex = 0;
@@ -37,7 +35,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   showCameraModal = false;
   private videoStream: MediaStream | null = null;
 
-  // Audio Recording
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private audioStream: MediaStream | null = null;
@@ -52,31 +49,28 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   chunkUploadStatus = '';
   autoStarted = false;
 
-  // No-Show Warning Timer
+  private pendingAutoAudit = false;
+
   showWarningModal = false;
   warningCountdown = 1200;
   private warningInterval: any = null;
   private lastAttendanceCheck: number | null = null;
 
-  // Audit
   audit: any = null;
   auditLoading = false;
   auditRunning = false;
 
-  // Feedback
   feedbackEngagement: number | null = null;
   feedbackProgress: number | null = null;
   feedbackNotes = '';
   feedbackSaving = false;
   feedbackSubmitted = false;
 
-  // Program Modal
   showProgramModal = false;
   programText = '';
   programUploadedAt = '';
   programLoading = false;
 
-  // Fullscreen
   showFullscreen = false;
 
   constructor(
@@ -365,7 +359,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.mediaRecorder.onstop = () => {
       this.chunkCount++;
       const blob = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' });
-      this.uploadAudioChunk(blob, this.chunkCount);
+      this.subirChunkAudio(blob, this.chunkCount);
       if (this.isRecording && this.audioStream?.active) {
         this.startNewChunk();
       }
@@ -394,7 +388,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     if (!fromDestroy) this.cdr.detectChanges();
   }
 
-  private uploadAudioChunk(blob: Blob, chunkNum: number) {
+  private subirChunkAudio(blob: Blob, chunkNum: number, retriesRemaining = 3) {
     this.uploadingChunk = true;
     this.chunkUploadStatus = `Transcribiendo segmento ${chunkNum}...`;
 
@@ -412,6 +406,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
               setTimeout(() => this.saveNotes(), 500);
             }
             this.chunkUploadStatus = 'Grabacion completa. Audio eliminado.';
+            this.pendingAutoAudit = true;
             setTimeout(() => {
               this.chunkUploadStatus = '';
               this.loadAudit();
@@ -425,8 +420,13 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         }
       },
       error: () => {
-        this.uploadingChunk = false;
-        this.chunkUploadStatus = 'Error de conexión';
+        if (retriesRemaining > 1) {
+          this.chunkUploadStatus = `Reintentando segmento ${chunkNum}...`;
+          setTimeout(() => this.subirChunkAudio(blob, chunkNum, retriesRemaining - 1), 2000);
+        } else {
+          this.uploadingChunk = false;
+          this.chunkUploadStatus = 'Error de conexión';
+        }
       },
     });
   }
@@ -486,6 +486,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.showWarningModal = false;
         this.clearWarningTimer();
         this.alertService.show('Sesión marcada como ausente.', 'info');
+        // DCE: Disparar auditoría si hay programa + transcripción
+        this.loadAudit();
       },
     });
   }
@@ -507,6 +509,18 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
           this.feedbackProgress = data.audit.feedback_progress || null;
           this.feedbackNotes = data.audit.feedback_notes || '';
           this.feedbackSubmitted = !!(data.audit.feedback_engagement || data.audit.feedback_progress);
+          // DCE: Disparar auditoría si ya terminó grabación y hay programa + transcripción
+          if (this.pendingAutoAudit && data.audit.has_program && data.audit.has_transcript && data.audit.audit_status === 'pending') {
+            this.pendingAutoAudit = false;
+            this.triggerAudit();
+          } else if (this.pendingAutoAudit) {
+            this.pendingAutoAudit = false;
+            if (!data.audit.has_program) {
+              this.alertService.show('No se puede auditar: no hay programación (.docx) subida para esta sesión.', 'warning');
+            } else if (!data.audit.has_transcript) {
+              this.alertService.show('No se puede auditar: no hay transcripción de audio disponible.', 'warning');
+            }
+          }
         } else {
           this.audit = null;
         }
@@ -533,40 +547,31 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     });
   }
 
+  downloadDocx() {
+    this.therapistService.downloadReportDocx(this.sessionId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `auditoria_${this.sessionId}.docx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.alertService.show('Error al descargar el reporte', 'error');
+      },
+    });
+  }
+
   get auditStatusText(): string {
     if (!this.audit) return 'Sin datos';
     const m: any = {
-      pending: { text: 'Pendiente', cls: 'bg-yellow-100 text-yellow-700' },
-      processing: { text: 'Procesando...', cls: 'bg-blue-100 text-blue-700' },
-      completed: { text: `Score: ${this.audit.audit_score}%`, cls: this.getScoreClass(this.audit.audit_score) },
-      error: { text: 'Error', cls: 'bg-red-100 text-red-700' },
-    };
-    return m[this.audit.audit_status]?.text || m.pending.text;
-  }
-
-  get auditStatusClass(): string {
-    if (!this.audit) return 'bg-surface-container text-on-surface-variant';
-    const m: any = {
-      pending: 'bg-yellow-100 text-yellow-700',
-      processing: 'bg-blue-100 text-blue-700',
-      completed: this.getScoreClass(this.audit.audit_score),
-      error: 'bg-red-100 text-red-700',
+      pending: 'Pendiente',
+      processing: 'Procesando...',
+      completed: `Score: ${this.audit.audit_score}%`,
+      error: 'Error',
     };
     return m[this.audit.audit_status] || m.pending;
-  }
-
-  private getScoreClass(score: number): string {
-    if (score >= 80) return 'bg-green-100 text-green-700';
-    if (score >= 50) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-red-100 text-red-700';
-  }
-
-  get gaugeColor(): string {
-    if (!this.audit?.audit_score) return '#e5e7eb';
-    const score = this.audit.audit_score;
-    if (score >= 80) return '#10b981';
-    if (score >= 50) return '#f59e0b';
-    return '#ef4444';
   }
 
   get report(): any {
@@ -576,29 +581,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   get classificationLabel(): string {
     const m: any = { cumple: 'Cumple', cumple_parcial: 'Cumple Parcial', no_cumple: 'No Cumple' };
     return m[this.report?.status] || this.report?.status || '';
-  }
-
-  get classificationColor(): string {
-    const m: any = { cumple: 'text-green-600', cumple_parcial: 'text-yellow-600', no_cumple: 'text-red-600' };
-    return m[this.report?.status] || 'text-on-surface-variant';
-  }
-
-  objectiveClass(cls: string): string {
-    const m: any = {
-      logrado: 'bg-green-50 border-green-200 text-green-800',
-      parcial: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-      no_cubierto: 'bg-red-50 border-red-200 text-red-800',
-    };
-    return m[cls] || 'bg-surface-container-low border-outline-variant';
-  }
-
-  objectiveIcon(cls: string): string {
-    const m: any = {
-      logrado: 'fa-check-circle text-green-500',
-      parcial: 'fa-exclamation-circle text-yellow-500',
-      no_cubierto: 'fa-times-circle text-red-500',
-    };
-    return m[cls] || 'fa-question-circle text-on-surface-variant';
   }
 
   submitFeedback() {

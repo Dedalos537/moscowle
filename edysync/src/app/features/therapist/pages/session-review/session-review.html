@@ -1,3 +1,4 @@
+<!-- DCE — Diego Centeno Estuvo Acá -->
 <div class="h-full flex flex-col" *ngIf="!loading && session">
   <div class="flex items-center gap-2 px-6 py-4 border-b border-outline shrink-0">
     <a routerLink="/therapist/sessions" class="text-sm text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
@@ -137,13 +138,18 @@
       </div>
     </div>
 
-    <div *ngIf="audit" class="mt-4 bg-surface rounded-2xl shadow-sm border border-outline overflow-hidden">
-      <div class="p-4 border-b border-outline flex justify-between items-center bg-gradient-to-r from-purple-50 to-blue-50">
+    <div *ngIf="audit" class="mt-4 bg-surface rounded-2xl border border-outline overflow-hidden">
+      <div class="p-4 border-b border-outline flex justify-between items-center">
         <h3 class="font-bold text-on-surface flex items-center gap-2 text-sm uppercase tracking-wide">
-          <fa-icon [icon]="['fas', 'brain']" class="text-purple-500"></fa-icon> Auditoría IA
+          <fa-icon [icon]="['fas', 'brain']" class="text-primary"></fa-icon> Auditoría IA
         </h3>
         <div class="flex items-center gap-2">
-          <span class="text-xs font-bold px-3 py-1 rounded-full" [class]="auditStatusClass">{{ auditStatusText }}</span>
+          <span class="text-xs font-bold px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant">{{ auditStatusText }}</span>
+          <app-button *ngIf="audit?.audit_status === 'completed'"
+                      variant="secondary"
+                      label="Descargar (.docx)"
+                      [icon]="['fas', 'file-word']"
+                      (clicked)="downloadDocx()"></app-button>
           <app-button *ngIf="audit?.has_program && audit?.has_transcript && audit?.audit_status !== 'completed'"
                       [label]="auditRunning ? 'Analizando...' : 'Ejecutar Auditoria'"
                       [icon]="auditRunning ? ['fas', 'spinner'] : ['fas', 'play']"
@@ -154,51 +160,39 @@
       <div class="p-5">
         <div *ngIf="audit?.audit_status === 'completed' && report" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="flex flex-col items-center justify-center p-4">
-            <div class="relative w-28 h-28">
-              <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" stroke-width="3"/>
-                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" [attr.stroke]="gaugeColor" stroke-width="3" [attr.stroke-dasharray]="(audit.audit_score || 0) + ', 100'" stroke-linecap="round"/>
-              </svg>
-              <div class="absolute inset-0 flex items-center justify-center">
-                <span class="text-2xl font-bold" [style.color]="gaugeColor">{{ audit.audit_score }}%</span>
-              </div>
-            </div>
-            <p class="mt-2 text-sm font-bold" [class]="classificationColor">{{ classificationLabel }}</p>
+            <span class="text-4xl font-bold text-primary">{{ audit.audit_score }}%</span>
+            <p class="mt-1 text-sm font-bold text-on-surface-variant">{{ classificationLabel }}</p>
           </div>
           <div class="lg:col-span-2">
             <p class="text-xs font-bold uppercase text-on-surface-variant mb-2">Objetivos Terapéuticos</p>
             <div class="space-y-2 max-h-48 overflow-y-auto">
-              <div *ngFor="let obj of report.objectives" class="p-2 rounded border text-sm" [class]="objectiveClass(obj.classification)">
-                <fa-icon [icon]="['fas', 'check-circle']" [class]="objectiveIcon(obj.classification)" class="mr-1"></fa-icon>
+              <div *ngFor="let obj of report.objectives" class="p-2 rounded border border-outline text-sm text-on-surface">
+                <fa-icon [icon]="['fas', 'check-circle']" class="text-on-surface-variant mr-1"></fa-icon>
                 <strong>{{ obj.name }}</strong><br>
                 <span class="text-xs opacity-75">{{ obj.evidence }}</span>
               </div>
             </div>
           </div>
-          <div *ngIf="report.observations" class="lg:col-span-3 mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p class="text-xs font-bold text-blue-700 mb-1"><fa-icon [icon]="['fas', 'comment-dots']" class="mr-1"></fa-icon> Observaciones IA</p>
-            <p class="text-sm text-blue-800">{{ report.observations }}</p>
+          <div *ngIf="report.observations" class="lg:col-span-3 p-3 border border-outline rounded-lg">
+            <p class="text-xs font-bold text-on-surface-variant mb-1"><fa-icon [icon]="['fas', 'comment-dots']" class="mr-1"></fa-icon> Observaciones IA</p>
+            <p class="text-sm text-on-surface">{{ report.observations }}</p>
           </div>
         </div>
         <div *ngIf="audit?.audit_status !== 'completed'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="p-3 rounded-lg" [class.bg-green-50]="audit?.has_program" [class.border]="audit?.has_program" [class.border-green-200]="audit?.has_program"
-               [class.bg-surface-container-low]="!audit?.has_program" [class.border]="!audit?.has_program" [class.border-outline]="!audit?.has_program">
-            <p class="text-xs font-bold uppercase" [class.text-green-700]="audit?.has_program" [class.text-on-surface-variant]="!audit?.has_program">
-              <fa-icon [icon]="audit?.has_program ? ['fas', 'check-circle'] : ['fas', 'file-word']" class="mr-1"></fa-icon> Programación (.docx)
+          <div class="p-3 rounded-lg border border-outline">
+            <p class="text-xs font-bold uppercase text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'file-word']" class="mr-1"></fa-icon> Programación (.docx)
             </p>
             <p class="text-sm mt-1 text-on-surface-variant">
-              <fa-icon *ngIf="audit?.has_program" [icon]="['fas', 'check-circle']" class="text-green-500 text-xs mr-1"></fa-icon>
               {{ audit?.has_program ? 'Subida' : 'Pendiente de subir' }}
             </p>
               <app-button *ngIf="audit?.has_program" variant="ghost" label="Ver Programacion" [icon]="['fas', 'eye']" (clicked)="openProgramModal()"></app-button>
           </div>
-          <div class="p-3 rounded-lg" [class.bg-green-50]="audit?.has_transcript" [class.border]="audit?.has_transcript" [class.border-green-200]="audit?.has_transcript"
-               [class.bg-surface-container-low]="!audit?.has_transcript" [class.border]="!audit?.has_transcript" [class.border-outline]="!audit?.has_transcript">
-            <p class="text-xs font-bold uppercase" [class.text-green-700]="audit?.has_transcript" [class.text-on-surface-variant]="!audit?.has_transcript">
-              <fa-icon [icon]="audit?.has_transcript ? ['fas', 'check-circle'] : ['fas', 'microphone']" class="mr-1"></fa-icon> Transcripción (Whisper)
+          <div class="p-3 rounded-lg border border-outline">
+            <p class="text-xs font-bold uppercase text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'microphone']" class="mr-1"></fa-icon> Transcripción (Whisper)
             </p>
             <p class="text-sm mt-1 text-on-surface-variant">
-              <fa-icon *ngIf="audit?.has_transcript" [icon]="['fas', 'check-circle']" class="text-green-500 text-xs mr-1"></fa-icon>
               {{ audit?.has_transcript ? 'Transcrita (' + (audit?.audio_duration_seconds || '?') + 's)' : 'Pendiente de grabar' }}
             </p>
           </div>
@@ -206,11 +200,11 @@
       </div>
     </div>
 
-    <div class="mt-4 bg-surface rounded-2xl shadow-sm border border-outline overflow-hidden">
-      <div class="p-4 border-b border-outline flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50">
-        <fa-icon [icon]="['fas', 'star']" class="text-amber-500"></fa-icon>
+    <div class="mt-4 bg-surface rounded-2xl border border-outline overflow-hidden">
+      <div class="p-4 border-b border-outline flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'star']" class="text-primary"></fa-icon>
         <h3 class="font-bold text-on-surface text-sm uppercase tracking-wide">Feedback del Terapeuta</h3>
-        <span *ngIf="feedbackSubmitted" class="ml-auto text-xs text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded-full">
+        <span *ngIf="feedbackSubmitted" class="ml-auto text-xs text-on-surface-variant font-bold bg-surface-container-high px-2 py-0.5 rounded-full">
           <fa-icon [icon]="['fas', 'check-circle']" class="text-xs mr-1"></fa-icon>Enviado
         </span>
       </div>

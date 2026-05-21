@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, OnInit, NgZone } from '@angular/core';
+// DCE — Diego Centeno Estuvo Acá
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, NgZone } from '@angular/core';
 
 export interface CalendarWidgetEvent {
   id: number;
@@ -31,7 +32,7 @@ interface DayCell {
   templateUrl: './calendar-widget.html',
   styleUrl: './calendar-widget.scss',
 })
-export class CalendarWidget implements OnInit {
+export class CalendarWidget implements OnInit, OnChanges {
   @Input() events: CalendarWidgetEvent[] = [];
   @Input() role: 'admin' | 'therapist' | 'patient' = 'admin';
   @Input() readonly = false;
@@ -54,6 +55,12 @@ export class CalendarWidget implements OnInit {
 
   ngOnInit() {
     this.buildGrid();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['events'] && !changes['events'].firstChange) {
+      this.buildGrid();
+    }
   }
 
   get rangeLabel(): string {

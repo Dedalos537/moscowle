@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 export type UserRole = 'admin' | 'terapista' | 'jugador';
 export type AccountStatus = 'active' | 'inactive' | 'retired' | 'debtor';
 

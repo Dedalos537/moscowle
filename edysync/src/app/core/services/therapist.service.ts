@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -187,6 +188,10 @@ export class TherapistService {
 
   triggerAudit(sessionId: number): Observable<any> {
     return this.http.post<any>(`/api/sessions/${sessionId}/audit`, {});
+  }
+
+  downloadReportDocx(sessionId: number): Observable<Blob> {
+    return this.http.get(`/api/sessions/${sessionId}/report-docx`, { responseType: 'blob' });
   }
 
   getSessionProgram(sessionId: number): Observable<any> {

@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -44,6 +45,8 @@ export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   summary = { therapists: 0, patients: 0, sessions_total: '-' as string | number, avg_accuracy: '-' as string | number };
+  avgAuditCompliance: number | null = null;
+  auditsCount = 0;
   therapistCount = 0;
   patientCount = 0;
   sedes: Sede[] = [];
@@ -103,6 +106,16 @@ export class Dashboard implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
+      },
+    });
+    // Fetch audit compliance stats
+    this.adminService.getAdminOverview().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.avgAuditCompliance = res.data.avg_audit_compliance;
+          this.auditsCount = res.data.audits_count;
+          this.summary.sessions_total = res.data.sessions_total;
+        }
       },
     });
   }

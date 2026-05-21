@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 export interface Payment {
   id: number;
   patient_id: number;

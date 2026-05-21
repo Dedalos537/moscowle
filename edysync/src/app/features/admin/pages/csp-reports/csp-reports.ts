@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { CSPReport, CSPReportFilter } from '../../../../core/models/csp-report';

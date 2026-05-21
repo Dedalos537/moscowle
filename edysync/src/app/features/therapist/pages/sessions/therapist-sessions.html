@@ -1,3 +1,4 @@
+<!-- DCE — Diego Centeno Estuvo Acá -->
 <ng-template #headerActions>
   <app-button variant="primary" label="Nueva Sesión" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
 </ng-template>
@@ -6,22 +7,22 @@
 
   <!-- Stat Cards -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Hoy</div>
       <div class="text-2xl font-bold text-primary mt-1">{{ stats.sessions_today }}</div>
       <div class="text-xs text-gray-400">sesiones programadas</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Completadas</div>
       <div class="text-2xl font-bold text-green-600 mt-1">{{ stats.completed_sessions }}</div>
       <div class="text-xs text-gray-400">sesiones realizadas</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pendientes</div>
       <div class="text-2xl font-bold text-amber-600 mt-1">{{ stats.pending_sessions }}</div>
       <div class="text-xs text-gray-400">próximas sesiones</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg shadow-soft p-4 border border-gray-100">
+    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
       <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pacientes</div>
       <div class="text-2xl font-bold text-blue-600 mt-1">{{ stats.active_patients }}</div>
       <div class="text-xs text-gray-400">pacientes activos</div>
@@ -130,7 +131,7 @@
   </div>
   <div modal-footer>
     <div class="flex gap-2">
-      <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash-alt']" (clicked)="deleteSession()"></app-button>
+      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
       <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
     <div class="flex gap-3">

@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 export interface Expense {
   id: number;
   category: string;

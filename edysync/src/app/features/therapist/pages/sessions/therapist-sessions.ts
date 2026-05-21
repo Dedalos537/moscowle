@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
@@ -29,6 +30,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   showEditModal = false;
   patients: { id: number; username: string }[] = [];
   submitting = false;
+  deleting = false;
 
   stats = {
     sessions_today: 0,
@@ -211,9 +213,18 @@ export class TherapistSessions implements OnInit, OnDestroy {
     };
   }
 
-  submitCreate() {
+  async submitCreate() {
     const f = this.createForm;
     if (!f.patient_id || !f.date || !f.start_time || !f.end_time) return;
+
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Guardar sesión',
+      message: '¿Estás seguro de crear esta sesión?',
+      confirmText: 'Crear',
+      cancelText: 'Cancelar',
+      variant: 'primary',
+    }));
+    if (!confirmed) return;
 
     this.submitting = true;
     const startTime = `${f.date}T${f.start_time}`;
@@ -243,8 +254,18 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.showEditModal = false;
   }
 
-  submitEdit() {
+  async submitEdit() {
     const f = this.editForm;
+
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Guardar cambios',
+      message: '¿Estás seguro de guardar los cambios?',
+      confirmText: 'Guardar',
+      cancelText: 'Cancelar',
+      variant: 'primary',
+    }));
+    if (!confirmed) return;
+
     this.submitting = true;
     this.therapistService.updateSession(f.id, {
       title: f.title,
@@ -278,11 +299,16 @@ export class TherapistSessions implements OnInit, OnDestroy {
       variant: 'danger',
     }));
     if (!confirmed) return;
+    this.deleting = true;
     this.therapistService.deleteSession(this.editForm.id).subscribe({
       next: () => {
+        this.deleting = false;
         this.closeEditModal();
         this.refreshEvents();
         this.loadStats();
+      },
+      error: () => {
+        this.deleting = false;
       },
     });
   }

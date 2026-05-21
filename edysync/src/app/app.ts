@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+// DCE — Diego Centeno Estuvo Acá
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { RecordingService } from './core/services/recording.service';
 
 @Component({
   selector: 'app-root',
@@ -6,6 +8,14 @@ import { Component } from '@angular/core';
   standalone: false,
   styleUrl: './app.scss'
 })
-export class App {
-  protected title = 'edysync';
+export class App implements OnInit, OnDestroy {
+  constructor(private recordingService: RecordingService) {}
+
+  ngOnInit() {
+    this.recordingService.iniciarPolleo();
+  }
+
+  ngOnDestroy() {
+    this.recordingService.detenerPolleo();
+  }
 }

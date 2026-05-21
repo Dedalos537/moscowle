@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 export type AttendanceStatus = 'pending' | 'present' | 'absent';
 
@@ -36,10 +37,12 @@ export interface CalendarEvent {
 export interface BatchSessionPayload {
   therapist_id: number;
   patient_id: number;
-  start_date: string;
+  start_date?: string;
   start_time: string;
   end_time: string;
-  days: number[];
+  days?: number[];
   title_prefix?: string;
   weeks?: number;
+  dates?: string[];
+  sede?: string;
 }

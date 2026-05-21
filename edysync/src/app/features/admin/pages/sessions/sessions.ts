@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -28,31 +29,20 @@ export class Sessions implements OnInit, OnDestroy {
 
   showCreateModal = false;
   showEditModal = false;
-  activeTab: 'single' | 'batch' = 'single';
 
-  singleForm = {
+  sedes = ['Piura', 'Talara'];
+
+  months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+  createForm = {
     therapist_id: '',
     patient_id: '',
     title: '',
-    dates: '',
+    sede: '',
+    dates: [] as string[],
     start_time: '',
     end_time: '',
-    status: 'scheduled',
-    location: '',
     notes: '',
-    is_past_session: false,
-  };
-
-  batchForm = {
-    therapist_id: '',
-    patient_id: '',
-    title: '',
-    start_date: '',
-    start_time: '',
-    end_time: '',
-    weeks: 4,
-    days: [] as number[],
-    is_past_session: false,
   };
 
   editForm = {
@@ -68,6 +58,10 @@ export class Sessions implements OnInit, OnDestroy {
 
   submitting = false;
 
+  // Calendar grid for date picker
+  calendarMonth: Date = new Date();
+  calendarDays: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
+
   // --- PROGRAM UPLOADS / AUDITS ---
   auditState: any = null;
   programUploading = false;
@@ -75,6 +69,8 @@ export class Sessions implements OnInit, OnDestroy {
   deleting = false;
   programError: string | null = null;
   programSuccessMessage: string | null = null;
+  createProgramFile: File | null = null;
+  programUploadingCreate = false;
 
   constructor(
     private adminService: AdminService,
@@ -91,6 +87,7 @@ export class Sessions implements OnInit, OnDestroy {
     });
     this.loadTherapists();
     this.loadSessions();
+    this.buildCalendarGrid();
   }
 
   ngOnDestroy() {
@@ -138,13 +135,13 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   onDayDblClick(date: Date) {
+    const dateStr = date.toISOString().split('T')[0];
     this.openCreateModal();
-    this.singleForm.dates = date.toISOString().split('T')[0];
+    this.toggleDate(dateStr);
   }
 
   onRangeDblClick(range: { start: Date; end: Date }) {
     this.openCreateModal();
-    this.singleForm.dates = range.start.toISOString().split('T')[0];
   }
 
   onEventClick(event: CalendarWidgetEvent) {
@@ -177,8 +174,77 @@ export class Sessions implements OnInit, OnDestroy {
     this.showEditModal = true;
   }
 
+  // --- Calendar grid for date picker ---
+  private buildCalendarGrid() {
+    const year = this.calendarMonth.getFullYear();
+    const month = this.calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startOfWeek = new Date(firstDay);
+    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const weeks: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
+    let cursor = new Date(startOfWeek);
+
+    for (let w = 0; w < 6; w++) {
+      const week: { date: Date; day: number; selected: boolean; disabled: boolean }[] = [];
+      for (let d = 0; d < 7; d++) {
+        const dateStr = cursor.toISOString().split('T')[0];
+        const isPast = cursor.getTime() < today.getTime() && cursor.getMonth() === month;
+        week.push({
+          date: new Date(cursor),
+          day: cursor.getDate(),
+          selected: this.createForm.dates.includes(dateStr),
+          disabled: isPast,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(week);
+      if (cursor.getMonth() !== month && weeks.length >= 4) break;
+    }
+
+    this.calendarDays = weeks;
+  }
+
+  prevMonth() {
+    this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() - 1, 1);
+    this.buildCalendarGrid();
+  }
+
+  nextMonth() {
+    this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + 1, 1);
+    this.buildCalendarGrid();
+  }
+
+  toggleDate(dateStr: string) {
+    const idx = this.createForm.dates.indexOf(dateStr);
+    if (idx >= 0) {
+      this.createForm.dates = this.createForm.dates.filter(d => d !== dateStr);
+    } else if (this.createForm.dates.length < 5) {
+      this.createForm.dates = [...this.createForm.dates, dateStr];
+    }
+    this.buildCalendarGrid();
+  }
+
+  toggleCalendarDate(day: { date: Date; day: number; selected: boolean; disabled: boolean }) {
+    if (day.disabled) return;
+    const dateStr = day.date.toISOString().split('T')[0];
+    this.toggleDate(dateStr);
+  }
+
+  removeDate(dateStr: string) {
+    this.createForm.dates = this.createForm.dates.filter(d => d !== dateStr);
+    this.buildCalendarGrid();
+  }
+
+  get calendarLabel(): string {
+    return `${this.months[this.calendarMonth.getMonth()]} ${this.calendarMonth.getFullYear()}`;
+  }
+
+  // --- Create ---
   openCreateModal() {
-    this.activeTab = 'single';
     this.showCreateModal = true;
     this.resetForms();
   }
@@ -187,12 +253,8 @@ export class Sessions implements OnInit, OnDestroy {
     this.showCreateModal = false;
   }
 
-  switchTab(tab: 'single' | 'batch') {
-    this.activeTab = tab;
-  }
-
-  onTherapistSelect(formType: 'single' | 'batch') {
-    const therapistId = parseInt(formType === 'single' ? this.singleForm.therapist_id : this.batchForm.therapist_id);
+  onTherapistSelectCreate() {
+    const therapistId = parseInt(this.createForm.therapist_id);
     if (!therapistId) {
       this.patients = [];
       return;
@@ -210,78 +272,70 @@ export class Sessions implements OnInit, OnDestroy {
     });
   }
 
-  toggleDay(day: number) {
-    const idx = this.batchForm.days.indexOf(day);
-    if (idx >= 0) {
-      this.batchForm.days.splice(idx, 1);
-    } else {
-      this.batchForm.days.push(day);
-    }
-  }
+  async submitCreate() {
+    const f = this.createForm;
+    if (!f.therapist_id || !f.patient_id || !f.dates.length || !f.start_time || !f.end_time) return;
 
-  submitCreate() {
-    if (this.activeTab === 'single') {
-      this.submitSingle();
-    } else {
-      this.submitBatch();
-    }
-  }
-
-  private submitSingle() {
-    const f = this.singleForm;
-    if (!f.therapist_id || !f.patient_id || !f.dates || !f.start_time || !f.end_time) return;
-
-    this.submitting = true;
-    const dObj = new Date(f.dates + 'T00:00:00');
-    const pyDay = (dObj.getDay() + 6) % 7;
-
-    const payload = {
-      therapist_id: parseInt(f.therapist_id),
-      patient_id: parseInt(f.patient_id),
-      title_prefix: f.title,
-      start_date: f.dates,
-      start_time: f.start_time,
-      end_time: f.end_time,
-      weeks: 1,
-      days: [pyDay],
-    };
-
-    this.adminService.batchCreateSessions(payload).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeCreateModal();
-        this.refreshEvents();
-      },
-      error: () => {
-        this.submitting = false;
-      },
-    });
-  }
-
-  private submitBatch() {
-    const f = this.batchForm;
-    if (!f.therapist_id || !f.patient_id || !f.start_date || !f.start_time || !f.end_time || f.days.length === 0) return;
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Programar sesiones',
+      message: `Se crearán ${f.dates.length} sesión(es). ¿Estás seguro?`,
+      confirmText: 'Crear',
+      cancelText: 'Cancelar',
+      variant: 'primary',
+    }));
+    if (!confirmed) return;
 
     this.submitting = true;
     const payload = {
       therapist_id: parseInt(f.therapist_id),
       patient_id: parseInt(f.patient_id),
       title_prefix: f.title,
-      start_date: f.start_date,
+      sede: f.sede,
+      dates: f.dates,
       start_time: f.start_time,
       end_time: f.end_time,
-      weeks: f.weeks,
-      days: f.days,
     };
 
     this.adminService.batchCreateSessions(payload).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeCreateModal();
-        this.refreshEvents();
+      next: (res: any) => {
+        const sessionIds: number[] = res?.session_ids || [];
+        if (this.createProgramFile && sessionIds.length > 0) {
+          this.programUploadingCreate = true;
+          let uploaded = 0;
+          sessionIds.forEach((id) => {
+            this.adminService.uploadSessionProgram(id, this.createProgramFile!).subscribe({
+              next: () => {
+                uploaded++;
+                if (uploaded === sessionIds.length) {
+                  this.programUploadingCreate = false;
+                  this.createProgramFile = null;
+                  this.submitting = false;
+                  this.closeCreateModal();
+                  this.refreshEvents();
+                }
+              },
+              error: () => {
+                uploaded++;
+                if (uploaded === sessionIds.length) {
+                  this.programUploadingCreate = false;
+                  this.createProgramFile = null;
+                  this.submitting = false;
+                  this.closeCreateModal();
+                  this.refreshEvents();
+                }
+              },
+            });
+          });
+        } else {
+          this.submitting = false;
+          this.createProgramFile = null;
+          this.closeCreateModal();
+          this.refreshEvents();
+        }
       },
       error: () => {
         this.submitting = false;
+        this.programUploadingCreate = false;
       },
     });
   }
@@ -298,8 +352,18 @@ export class Sessions implements OnInit, OnDestroy {
     this.programSuccessMessage = null;
   }
 
-  submitEdit() {
+  async submitEdit() {
     const f = this.editForm;
+
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Guardar cambios',
+      message: '¿Estás seguro de guardar los cambios?',
+      confirmText: 'Guardar',
+      cancelText: 'Cancelar',
+      variant: 'primary',
+    }));
+    if (!confirmed) return;
+
     this.submitting = true;
     this.adminService
       .updateSession(f.id, {
@@ -343,30 +407,20 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   private resetForms() {
-    this.singleForm = {
+    this.createForm = {
       therapist_id: '',
       patient_id: '',
       title: '',
-      dates: '',
+      sede: '',
+      dates: [],
       start_time: '',
       end_time: '',
-      status: 'scheduled',
-      location: '',
       notes: '',
-      is_past_session: false,
     };
-    this.batchForm = {
-      therapist_id: '',
-      patient_id: '',
-      title: '',
-      start_date: '',
-      start_time: '',
-      end_time: '',
-      weeks: 4,
-      days: [],
-      is_past_session: false,
-    };
+    this.createProgramFile = null;
     this.patients = [];
+    this.calendarMonth = new Date();
+    this.buildCalendarGrid();
   }
 
   onFileSelected(event: any) {
@@ -394,6 +448,10 @@ export class Sessions implements OnInit, OnDestroy {
         },
       });
     }
+  }
+
+  onCreateFileSelected(event: any) {
+    this.createProgramFile = event.target.files[0] || null;
   }
 
   async deleteProgram() {

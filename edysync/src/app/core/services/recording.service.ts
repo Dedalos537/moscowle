@@ -1,9 +1,11 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, interval, Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class RecordingService {
+  // DCE — Diego Centeno le metió mano acá
   activeSession$ = new BehaviorSubject<any>(null);
   isRecording$ = new BehaviorSubject<boolean>(false);
   recordingState$ = new BehaviorSubject<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>('idle');
@@ -29,19 +31,23 @@ export class RecordingService {
   private audioChunks: Blob[] = [];
   private checkedSessions: Set<number> = new Set();
   private currentSessionId: number | null = null;
+  private pendingUploads = 0;
+  private finishPending = false;
+  private finishSessionId: number | null = null;
+  private finishSessionTitle = '';
 
   constructor(
     private http: HttpClient,
     private zone: NgZone,
   ) {}
 
-  startPolling() {
-    this.stopPolling();
+  iniciarPolleo() {
+    this.detenerPolleo();
     this.pollSubscription = interval(30000).subscribe(() => this.checkSessions());
     this.checkSessions();
   }
 
-  stopPolling() {
+  detenerPolleo() {
     this.pollSubscription?.unsubscribe();
   }
 
@@ -59,51 +65,22 @@ export class RecordingService {
     if (!user || user.role !== 'terapista') return;
     if (this.recordingState$.value === 'recording' || this.recordingState$.value === 'starting') return;
 
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-    const tomorrowStr = `${yyyy}-${mm}-${String(today.getDate() + 1).padStart(2, '0')}`;
+    this.http.post('/api/sessions/auto-complete-expired', {}).subscribe();
 
-    this.http.get<any[]>(`/api/sessions?start=${todayStr}&end=${tomorrowStr}`).subscribe({
-      next: (sessions) => {
-        if (!sessions || sessions.length === 0) return;
-        const now = new Date();
-        for (const s of sessions) {
-          if (this.checkedSessions.has(s.id)) continue;
-          if (s.status === 'completed' || s.status === 'cancelled' || s.status === 'in_progress') {
-            this.checkedSessions.add(s.id);
-            continue;
-          }
-          if (s.attendance === 'present' || s.attendance === 'absent') {
-            this.checkedSessions.add(s.id);
-            continue;
-          }
-          const start = new Date(s.start);
-          const end = s.end ? new Date(s.end) : new Date(start.getTime() + 60 * 60 * 1000);
-          const nowMs = now.getTime();
-          const startMs = start.getTime();
-          const endMs = end.getTime();
-
-          if (nowMs >= startMs && nowMs <= endMs) {
-            this.checkedSessions.add(s.id);
-            this.currentSessionId = s.id;
-            const patientName = s.patient?.name || s.extendedProps?.patient || '';
-            this.sessionTitle$.next(s.title || 'Sesión');
-            this.patientName$.next(patientName);
-            this.activeSession$.next(s);
-            this.autoStart();
-            return;
-          }
-
-          if (nowMs > endMs + 5 * 60 * 1000 && s.status === 'scheduled') {
-            this.checkedSessions.add(s.id);
-            this.markNoShow(s.id);
-          }
-        }
+    this.http.get<any>('/api/sessions/current').subscribe({
+      next: (res) => {
+        if (!res.success || !res.has_active) return;
+        const s = res.session;
+        if (this.checkedSessions.has(s.id)) return;
+        this.checkedSessions.add(s.id);
+        this.currentSessionId = s.id;
+        const patientName = s.patient?.name || '';
+        this.sessionTitle$.next(s.title || 'Sesión');
+        this.patientName$.next(patientName);
+        this.activeSession$.next(s);
+        this.autoStart();
       },
-      error: (err) => console.warn('[RecordingService] Error fetching sessions:', err),
+      error: (err) => console.warn('[RecordingService] Error fetching current session:', err),
     });
   }
 
@@ -161,12 +138,12 @@ export class RecordingService {
       }, 5 * 60 * 1000);
     });
 
-    // Schedule attendance check 5 minutes after recording starts
+    // DCE: Control de asistencia a los 5 min de grabación
     this.attendanceCheckTimer = setTimeout(() => {
       this.runAttendanceCheck();
     }, 5 * 60 * 1000);
 
-    this.scheduleEnd();
+    this.programarFin();
   }
 
   private runAttendanceCheck() {
@@ -222,7 +199,7 @@ export class RecordingService {
     this.recorder.onstop = () => {
       this.chunkCount++;
       const blob = new Blob(this.audioChunks, { type: this.recorder?.mimeType || 'audio/webm' });
-      this.uploadChunk(blob);
+      this.subirChunk(blob);
       if (this.isRecording$.value && this.stream?.active) {
         this.startNewChunk();
       }
@@ -238,27 +215,39 @@ export class RecordingService {
     return '';
   }
 
-  private uploadChunk(blob: Blob) {
+  private subirChunk(blob: Blob, retriesRemaining = 3) {
     if (!this.currentSessionId) return;
+    this.pendingUploads++;
     this.chunkStatus$.next(`Transcribiendo segmento ${this.chunkCount}...`);
     const fd = new FormData();
     fd.append('audio_file', blob, `session_${this.currentSessionId}_chunk${this.chunkCount}_${Date.now()}.webm`);
     this.http.post(`/api/sessions/${this.currentSessionId}/audio`, fd).subscribe({
       next: (data: any) => {
+        this.pendingUploads--;
         if (data.success) {
           this.chunkStatus$.next(`Segmento ${this.chunkCount} transcrito`);
           this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe();
         }
+        this.tryFinishAfterUpload();
       },
-      error: () => this.chunkStatus$.next('Error al transcribir'),
+      error: () => {
+        this.pendingUploads--;
+        if (retriesRemaining > 1) {
+          this.chunkStatus$.next(`Reintentando segmento ${this.chunkCount}...`);
+          setTimeout(() => this.subirChunk(blob, retriesRemaining - 1), 2000);
+        } else {
+          this.chunkStatus$.next('Error al transcribir');
+          this.tryFinishAfterUpload();
+        }
+      },
     });
   }
 
-  private scheduleEnd() {
+  private programarFin() {
     if (!this.currentSessionId) return;
     const session = this.activeSession$.value;
     if (!session) return;
-    const endTime = session.end ? new Date(session.end).getTime() : new Date(session.start).getTime() + 60 * 60 * 1000;
+    const endTime = session.end ? new Date(session.end + 'Z').getTime() : new Date(session.start + 'Z').getTime() + 60 * 60 * 1000;
     const timeLeft = endTime - Date.now();
     if (timeLeft > 0) {
       this.endTimer = setTimeout(() => {
@@ -267,17 +256,33 @@ export class RecordingService {
     }
   }
 
+  private tryFinishAfterUpload() {
+    if (this.finishPending && this.pendingUploads === 0) {
+      this.finishPending = false;
+      this.doFinishSession(this.finishSessionId!, this.finishSessionTitle);
+    }
+  }
+
   private finishSession() {
+    this.finishPending = true;
+    this.finishSessionId = this.currentSessionId;
+    this.finishSessionTitle = this.sessionTitle$.value;
     this.stopRecording();
     this.recordingState$.next('completed');
-    if (!this.currentSessionId) {
+
+    if (!this.finishSessionId) {
       setTimeout(() => this.recordingState$.next('idle'), 3000);
+      this.finishPending = false;
       return;
     }
 
-    const sessionId = this.currentSessionId;
-    const sessionTitle = this.sessionTitle$.value;
+    if (this.pendingUploads === 0) {
+      this.finishPending = false;
+      this.doFinishSession(this.finishSessionId, this.finishSessionTitle);
+    }
+  }
 
+  private doFinishSession(sessionId: number, sessionTitle: string) {
     this.http.post(`/api/sessions/${sessionId}/complete`, {}).subscribe({
       next: () => {
         this.http.post(`/api/sessions/${sessionId}/audit`, {}).subscribe({

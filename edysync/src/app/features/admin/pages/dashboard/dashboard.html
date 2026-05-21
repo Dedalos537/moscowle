@@ -1,3 +1,4 @@
+<!-- DCE — Diego Centeno Estuvo Acá -->
 <div class="space-y-8" [@fadeInUp]>
 
   <!-- Centro de Acción Inteligente -->
@@ -126,7 +127,22 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500 animate-fade-in" style="animation-delay:0.2s">
+      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-emerald-500 animate-fade-in" style="animation-delay:0.2s">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Cumplimiento IA</p>
+            <h3 class="text-3xl font-bold text-on-surface mt-1">
+              @if (!loading) { {{ avgAuditCompliance ?? '—' }}% } @else { <app-spinner size="sm"></app-spinner> }
+            </h3>
+            <p class="text-xs text-on-surface-variant/60 mt-1">{{ auditsCount }} auditorías</p>
+          </div>
+          <div class="p-3 bg-emerald-50 rounded-full text-emerald-600">
+            <fa-icon [icon]="['fas', 'brain']" class="text-xl"></fa-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500 animate-fade-in" style="animation-delay:0.25s">
         <div class="flex justify-between items-start">
           <div>
             <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Precisión Promedio</p>

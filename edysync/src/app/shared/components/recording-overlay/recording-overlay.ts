@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { RecordingService } from '../../../core/services/recording.service';
@@ -10,6 +11,7 @@ import { Observable } from 'rxjs';
   styleUrl: './recording-overlay.scss',
 })
 export class RecordingOverlay implements OnInit, OnDestroy {
+  // DCE — Diego Centeno Estuvo Acá
   state: Observable<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>;
   elapsed: Observable<string>;
   chunkStatus: Observable<string>;
@@ -33,13 +35,9 @@ export class RecordingOverlay implements OnInit, OnDestroy {
     this.auditScore = this.recordingService.auditScore$;
   }
 
-  ngOnInit() {
-    this.recordingService.startPolling();
-  }
+  ngOnInit() {}
 
-  ngOnDestroy() {
-    this.recordingService.stopPolling();
-  }
+  ngOnDestroy() {}
 
   goToSession() {
     const id = this.recordingService.activeSession$.value?.id;

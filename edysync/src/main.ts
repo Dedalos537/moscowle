@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import 'zone.js';
 import { platformBrowser } from '@angular/platform-browser';
 import * as Sentry from '@sentry/angular';

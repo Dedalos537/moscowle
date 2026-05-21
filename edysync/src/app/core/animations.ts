@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import {
   trigger, transition, style, animate, query, group,
   stagger, keyframes, state, sequence, animateChild
@@ -106,16 +107,14 @@ export const routeAnimations = trigger('routeAnimations', [
     query(':enter, :leave', [
       style({ position: 'absolute', width: '100%', top: 0, left: 0 })
     ], { optional: true }),
-    group([
-      query(':leave', [
-        style({ opacity: 1, transform: 'translateY(0)' }),
-        animate(`${FAST} ${EASE}`, style({ opacity: 0, transform: 'translateY(-8px)' }))
-      ], { optional: true }),
-      query(':enter', [
-        style({ opacity: 0, transform: 'translateY(8px)' }),
-        animate(`${DURATION} ${EASE}`, style({ opacity: 1, transform: 'translateY(0)' }))
-      ], { optional: true })
-    ])
+    query(':leave', [
+      style({ opacity: 1, filter: 'blur(0px)', transform: 'translateX(0)' }),
+      animate(`180ms ${EASE}`, style({ opacity: 0, filter: 'blur(4px)', transform: 'translateX(-24px)' }))
+    ], { optional: true }),
+    query(':enter', [
+      style({ opacity: 0, filter: 'blur(6px)', transform: 'translateX(24px)' }),
+      animate(`420ms ${EASE}`, style({ opacity: 1, filter: 'blur(0px)', transform: 'translateX(0)' }))
+    ], { optional: true }),
   ])
 ]);
 

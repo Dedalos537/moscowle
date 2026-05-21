@@ -1,3 +1,4 @@
+// DCE — Diego Centeno Estuvo Acá
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -27,8 +28,8 @@ export class AdminService {
     return this.http.get<{ success: boolean; user: any }>(`/api/admin/user/${id}`);
   }
 
-  getAdminOverview(): Observable<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } }> {
-    return this.http.get<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number } }>('/admin/api/overview');
+  getAdminOverview(): Observable<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number; avg_audit_compliance: number; audits_count: number } }> {
+    return this.http.get<{ success: boolean; data: { therapists: number; patients: number; sessions_total: number; avg_accuracy: number; avg_audit_compliance: number; audits_count: number } }>('/admin/api/overview');
   }
 
   getUsers(role?: string): Observable<{ success: boolean; users: any[] }> {
