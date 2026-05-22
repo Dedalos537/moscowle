@@ -1,83 +1,124 @@
-<div class="space-y-6" [@fadeInUp]>
+<div class="space-y-4">
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
-      <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Hoy</div>
-      <div class="text-2xl font-bold text-primary mt-1">{{ stats.sessions_today }}</div>
-      <div class="text-xs text-gray-400">sesiones programadas</div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white rounded border border-gray-200 p-3">
+      <div class="text-xs font-bold text-gray-500 uppercase">Hoy</div>
+      <div class="text-xl font-bold text-blue-600 mt-1">{{ stats.sessions_today }}</div>
+      <div class="text-xs text-gray-400">sesiones</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
-      <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Completadas</div>
-      <div class="text-2xl font-bold text-green-600 mt-1">{{ stats.completed_sessions }}</div>
-      <div class="text-xs text-gray-400">sesiones realizadas</div>
+    <div class="bg-white rounded border border-gray-200 p-3">
+      <div class="text-xs font-bold text-gray-500 uppercase">Completadas</div>
+      <div class="text-xl font-bold text-green-600 mt-1">{{ stats.completed_sessions }}</div>
+      <div class="text-xs text-gray-400">realizadas</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
-      <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pendientes</div>
-      <div class="text-2xl font-bold text-amber-600 mt-1">{{ stats.pending_sessions }}</div>
-      <div class="text-xs text-gray-400">próximas sesiones</div>
+    <div class="bg-white rounded border border-gray-200 p-3">
+      <div class="text-xs font-bold text-gray-500 uppercase">Pendientes</div>
+      <div class="text-xl font-bold text-amber-600 mt-1">{{ stats.pending_sessions }}</div>
+      <div class="text-xs text-gray-400">proximas</div>
     </div>
-    <div class="bg-surface-container-lowest rounded-lg border border-gray-100 p-4">
-      <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Pacientes</div>
-      <div class="text-2xl font-bold text-blue-600 mt-1">{{ stats.active_patients }}</div>
-      <div class="text-xs text-gray-400">pacientes activos</div>
+    <div class="bg-white rounded border border-gray-200 p-3">
+      <div class="text-xs font-bold text-gray-500 uppercase">Pacientes</div>
+      <div class="text-xl font-bold text-blue-600 mt-1">{{ stats.active_patients }}</div>
+      <div class="text-xs text-gray-400">activos</div>
     </div>
   </div>
 
-  <div class="min-h-[500px]">
-    @if (loading) {
-      <div class="flex justify-center py-24">
+  <div class="flex gap-1 mb-1">
+    <button class="px-3 py-1 text-xs font-bold rounded border"
+            [class.bg-blue-600]="activeView==='timeGridDay'"
+            [class.text-white]="activeView==='timeGridDay'"
+            [class.bg-white]="activeView!=='timeGridDay'"
+            (click)="cambiarVista('timeGridDay')">Dia</button>
+    <button class="px-3 py-1 text-xs font-bold rounded border"
+            [class.bg-blue-600]="activeView==='timeGridWeek'"
+            [class.text-white]="activeView==='timeGridWeek'"
+            [class.bg-white]="activeView!=='timeGridWeek'"
+            (click)="cambiarVista('timeGridWeek')">Sem</button>
+    <button class="px-3 py-1 text-xs font-bold rounded border"
+            [class.bg-blue-600]="activeView==='dayGridMonth'"
+            [class.text-white]="activeView==='dayGridMonth'"
+            [class.bg-white]="activeView!=='dayGridMonth'"
+            (click)="cambiarVista('dayGridMonth')">Mes</button>
+  </div>
+
+  <div class="flex gap-4">
+    <div class="w-72 shrink-0">
+      <div class="bg-white rounded border border-gray-200">
+        <div class="p-2 border-b border-gray-200 bg-gray-50">
+          <div class="text-xs font-bold text-gray-600 uppercase">Agenda Hoy</div>
+        </div>
+        <div class="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
+          <div *ngIf="agendaEvents.length === 0" class="p-3 text-sm text-gray-400 text-center">Sin sesiones hoy</div>
+          <div *ngFor="let e of agendaEvents" class="p-2 hover:bg-gray-50 cursor-pointer" (click)="irSesion(e.id)">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full shrink-0" [style.background]="statusColor(e.extendedProps?.status)"></span>
+              <span class="text-xs font-bold text-gray-700">{{ e.title }}</span>
+            </div>
+            <div class="text-xs text-gray-500 ml-4">
+              {{ e.start ? (e.start | date:'HH:mm') : '??' }} -
+              {{ e.end ? (e.end | date:'HH:mm') : '??' }}
+              <span class="ml-1 text-gray-400">{{ e.extendedProps?.patient || '' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex-1 min-h-[400px]">
+      <div *ngIf="loading" class="flex justify-center py-24">
         <app-spinner size="md" colorClass="text-primary"></app-spinner>
       </div>
-    } @else {
-      <app-calendar-widget
-        [events]="widgetEvents"
-        [role]="'therapist'"
-        (eventClick)="onEventClick($event)"
-      ></app-calendar-widget>
-    }
+      <div *ngIf="!loading">
+        <app-calendar-widget
+          [events]="widgetEvents"
+          [role]="'therapist'"
+          (eventClick)="onEventClick($event)"
+        ></app-calendar-widget>
+      </div>
+    </div>
   </div>
-</div>
 
-<app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <div class="space-y-4">
-    <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
+  <app-modal [isOpen]="showEditModal" title="Editar Sesion" (close)="closeEditModal()">
+    <div class="space-y-4">
+      <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
         Paciente: {{ editForm.patient }}
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-      <input type="text" [(ngModel)]="editForm.title" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-      <input type="date" [(ngModel)]="editForm.date" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
-    </div>
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-        <input type="time" [(ngModel)]="editForm.start_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-        <input type="time" [(ngModel)]="editForm.end_time" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Titulo</label>
+        <input type="text" [(ngModel)]="editForm.title" class="w-full rounded border-gray-300 text-sm p-2 border">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+        <input type="date" [(ngModel)]="editForm.date" class="w-full rounded border-gray-300 text-sm p-2 border">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
+          <input type="time" [(ngModel)]="editForm.start_time" class="w-full rounded border-gray-300 text-sm p-2 border">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Fin</label>
+          <input type="time" [(ngModel)]="editForm.end_time" class="w-full rounded border-gray-300 text-sm p-2 border">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+        <select [(ngModel)]="editForm.status" class="w-full rounded border-gray-300 text-sm p-2 border">
+          <option value="scheduled">Programada</option>
+          <option value="completed">Completada</option>
+          <option value="cancelled">Cancelada</option>
+        </select>
       </div>
     </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-      <select [(ngModel)]="editForm.status" class="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary text-sm">
-        <option value="scheduled">Programada</option>
-        <option value="completed">Completada</option>
-        <option value="cancelled">Cancelada</option>
-      </select>
+    <div modal-footer>
+      <div class="flex gap-2">
+        <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+        <app-button variant="secondary" label="Revisar Sesion" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
+      </div>
+      <div class="flex gap-3">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
+        <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+      </div>
     </div>
-  </div>
-  <div modal-footer>
-    <div class="flex gap-2">
-      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
-      <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
-    </div>
-    <div class="flex gap-3">
-      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
-    </div>
-  </div>
-</app-modal>
+  </app-modal>
+</div>

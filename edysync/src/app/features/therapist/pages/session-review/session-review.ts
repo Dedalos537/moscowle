@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
@@ -64,6 +65,10 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   feedbackSaving = false;
   feedbackSubmitted = false;
 
+  liveScore: number | null = null;
+  liveScoreTimer: any = null;
+  liveScoreClass: string = '';
+
   showProgramModal = false;
   programText = '';
   programUploadedAt = '';
@@ -74,6 +79,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private http: HttpClient,
     private therapistService: TherapistService,
     private headerService: HeaderService,
     private cdr: ChangeDetectorRef,
@@ -96,6 +102,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.headerService.reset();
     this.stopRecording();
     this.clearWarningTimer();
+    this.detenerLiveScore();
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     if (this.videoStream) this.videoStream.getTracks().forEach(t => t.stop());
   }
@@ -125,6 +132,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
         this.loadAudit();
         this.loadProgram();
+        this.iniciarLiveScore();
         this.maybeAutoStartRecording();
       },
       error: () => {
@@ -524,6 +532,30 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.audit = null;
       },
     });
+  }
+
+  iniciarLiveScore() {
+    this.detenerLiveScore();
+    const fn = () => {
+      this.http.get(`/api/sessions/${this.sessionId}/compare-live`).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.liveScore = res.score_vectorial;
+            const s = this.liveScore || 0;
+            this.liveScoreClass = s >= 70 ? 'text-green-600' : s >= 40 ? 'text-amber-600' : 'text-red-600';
+          }
+        }
+      });
+    };
+    fn();
+    this.liveScoreTimer = setInterval(fn, 30000);
+  }
+
+  detenerLiveScore() {
+    if (this.liveScoreTimer) {
+      clearInterval(this.liveScoreTimer);
+      this.liveScoreTimer = null;
+    }
   }
 
   triggerAudit() {

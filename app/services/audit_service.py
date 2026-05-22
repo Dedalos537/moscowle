@@ -7,6 +7,19 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+_STOP_WORDS_ES = {
+    'de', 'la', 'que', 'el', 'en', 'y', 'a', 'los', 'del', 'se', 'las', 'por',
+    'un', 'para', 'con', 'no', 'una', 'su', 'al', 'lo', 'como', 'más', 'pero',
+    'sus', 'le', 'ya', 'este', 'entre', 'porque', 'este', 'esta', 'muy',
+    'todo', 'esta', 'sin', 'ello', 'cada', 'otro', 'cual', 'cuando', 'donde',
+    'quien', 'aquel', 'solo', 'allí', 'así', 'tras', 'entonces', 'tiempo',
+    'cada', 'también', 'sea', 'sido', 'han', 'ser', 'haber', 'tener', 'hacer',
+    'estar', 'poder', 'haber', 'ir', 'dar', 'ver', 'decir', 'saber', 'creer',
+    'era', 'son', 'fue', 'han', 'has', 'había', 'hay'
+}
+
+
+
 
 def extract_docx_text(file_path):
     """Extrae texto de .docx usando python-docx"""
@@ -213,7 +226,6 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
         audit.audited_at = datetime.utcnow()
         db.session.commit()
 
-        # Post-procesamiento: recalcular score según clasificación real de objetivos
         objectives = report.get('objectives', [])
         if objectives:
             weight_map = {'logrado': 1.0, 'parcial': 0.5, 'no_cubierto': 0.0}
@@ -221,7 +233,7 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
             real_score = sum(scores) / len(scores)
             real_score = round(real_score, 1)
             if abs(real_score - audit.audit_score) > 10:
-                logger.info(f"Score recalculado: {audit.audit_score} → {real_score} (basado en {len(objectives)} objetivos)")
+                logger.info(f"Score recalculado por objetivos: {audit.audit_score} → {real_score}")
                 audit.audit_score = real_score
                 report['score'] = real_score
                 if real_score >= 80:
@@ -232,7 +244,28 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
                     report['status'] = 'no_cumple'
                 audit.audit_report_json = json.dumps(report, ensure_ascii=False)
                 db.session.commit()
-        
+
+        vectorial = compute_similarity_vectorial(audit.planned_text, audit.transcript_text)
+        score_vectorial = vectorial['score_vectorial']
+
+        duracion = audit.audio_duration_seconds or 0
+        DURACION_ESPERADA = 2700
+        ratio = min(1.0, duracion / DURACION_ESPERADA)
+        factor = min(1.0, ratio / 0.1)
+
+        score_final = round((audit.audit_score * 0.5 + score_vectorial * 0.5) * factor, 1)
+        logger.info(f"Score final: LLM={audit.audit_score} vectorial={score_vectorial} factor={factor:.2f} → {score_final}")
+        audit.audit_score = score_final
+        report['score'] = score_final
+        if score_final >= 80:
+            report['status'] = 'cumple'
+        elif score_final >= 50:
+            report['status'] = 'cumple_parcial'
+        else:
+            report['status'] = 'no_cumple'
+        audit.audit_report_json = json.dumps(report, ensure_ascii=False)
+        db.session.commit()
+
         logger.info(f"Auditoría completada para sesión {appointment_id}: score={audit.audit_score}")
         return report
         
@@ -314,8 +347,51 @@ Analiza si el paciente asistió y cubrió al menos el 5% de lo planificado."""
         
     except Exception as e:
         logger.error(f"Error in analyze_attendance: {str(e)}")
-        # Fallback: if Groq fails, use simple heuristic
         if len(transcript_text.strip()) < 50:
             return {'suggested_attendance': 'absent', 'confidence': 0.8, 'coverage_pct': 0, 'reason': 'Transcripción insuficiente'}
         return {'suggested_attendance': 'present', 'confidence': 0.6, 'coverage_pct': 50, 'reason': 'Fallback: no se pudo analizar con IA'}
+
+
+def _dividir_objetivos(texto):
+    lineas = texto.strip().split('\n')
+    objetivos = []
+    for l in lineas:
+        l = l.strip()
+        if len(l) > 15 and not l.startswith('#'):
+            objetivos.append(l)
+    if not objetivos:
+        objetivos = [texto[:500]]
+    return objetivos[:20]
+
+
+def compute_similarity_vectorial(planned_text, transcript_text):
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy as np
+
+    if not transcript_text or not planned_text:
+        return {'score_vectorial': 0, 'objetivos_cubiertos': 0, 'n_objectives': 0}
+
+    objetivos = _dividir_objetivos(planned_text)
+    if not objetivos:
+        return {'score_vectorial': 0, 'objetivos_cubiertos': 0, 'n_objectives': 0}
+
+    docs = objetivos + [transcript_text]
+    try:
+        vectorizer = TfidfVectorizer(max_features=1000, stop_words=list(_STOP_WORDS_ES))
+        tfidf = vectorizer.fit_transform(docs)
+        objetivo_vecs = tfidf[:-1]
+        transcript_vec = tfidf[-1:]
+
+        sims = cosine_similarity(objetivo_vecs, transcript_vec).flatten()
+        score = float(np.mean(sims) * 100)
+        cubiertos = int(np.sum(sims > 0.15))
+        return {
+            'score_vectorial': round(min(score, 100), 1),
+            'objetivos_cubiertos': cubiertos,
+            'n_objectives': len(objetivos)
+        }
+    except Exception as e:
+        logger.error(f"Error en vectorización: {e}")
+        return {'score_vectorial': 50, 'objetivos_cubiertos': 0, 'n_objectives': len(objetivos)}
 

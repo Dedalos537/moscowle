@@ -2161,6 +2161,37 @@ def get_session_audit(appointment_id):
     })
 
 
+@api_bp.route('/sessions/<int:appointment_id>/compare-live', methods=['GET'])
+@login_required
+def compare_session_live(appointment_id):
+    if current_user.role not in ('terapista', 'admin'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionAudit
+    from app.services.audit_service import compute_similarity_vectorial
+
+    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+    if not audit:
+        return jsonify({'success': False, 'error': 'No hay auditoría'}), 404
+
+    vectorial = compute_similarity_vectorial(audit.planned_text or '', audit.transcript_text or '')
+
+    duracion = audit.audio_duration_seconds or 0
+    ratio = min(1.0, duracion / 2700)
+    factor = min(1.0, ratio / 0.1)
+
+    return jsonify({
+        'success': True,
+        'score_vectorial': vectorial['score_vectorial'],
+        'objetivos_cubiertos': vectorial['objetivos_cubiertos'],
+        'n_objectives': vectorial['n_objectives'],
+        'ratio_duracion': round(ratio, 3),
+        'factor_penalizacion': round(factor, 3),
+        'duracion_segundos': duracion,
+        'char_count': len(audit.transcript_text or '')
+    })
+
+
 @api_bp.route('/sessions/<int:appointment_id>/report-docx', methods=['GET'])
 @login_required
 def download_report_docx(appointment_id):

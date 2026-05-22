@@ -133,12 +133,12 @@ export class RecordingService {
         if (this.recorder && this.recorder.state === 'recording') {
           this.recorder.stop();
         }
-      }, 5 * 60 * 1000);
+      }, 30 * 1000);
     });
 
     this.attendanceCheckTimer = setTimeout(() => {
       this.runAttendanceCheck();
-    }, 5 * 60 * 1000);
+    }, 30 * 1000);
 
     this.programarFin();
   }
@@ -224,6 +224,13 @@ export class RecordingService {
         if (data.success) {
           this.chunkStatus$.next(`Segmento ${this.chunkCount} transcrito`);
           this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe();
+          this.http.get(`/api/sessions/${this.currentSessionId}/compare-live`).subscribe({
+            next: (cmp: any) => {
+              if (cmp.success && cmp.score_vectorial != null) {
+                this.auditScore$.next(cmp.score_vectorial);
+              }
+            }
+          });
         }
         this.tryFinishAfterUpload();
       },

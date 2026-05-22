@@ -22,9 +22,11 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 export class TherapistSessions implements OnInit, OnDestroy {
   loading = true;
   widgetEvents: CalendarWidgetEvent[] = [];
+  agendaEvents: any[] = [];
   showEditModal = false;
   submitting = false;
   deleting = false;
+  activeView: string = 'timeGridDay';
 
   stats = {
     sessions_today: 0,
@@ -57,7 +59,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   private initCalendar() {
     this.calendarOptions = {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-      initialView: 'dayGridMonth',
+      initialView: 'timeGridDay',
       locale: esLocale,
       headerToolbar: {
         left: 'prev,next today',
@@ -68,7 +70,19 @@ export class TherapistSessions implements OnInit, OnDestroy {
       events: this.loadFullCalendarEvents.bind(this),
       eventClick: this.onFullCalendarEventClick.bind(this),
       height: 'auto',
+      nowIndicator: true,
+      slotMinTime: '06:00:00',
+      slotMaxTime: '20:00:00',
+      allDaySlot: false,
     };
+  }
+
+  cambiarVista(vista: string) {
+    this.activeView = vista;
+    if ((this.calendarOptions as any).initialView !== vista) {
+      (this.calendarOptions as any).initialView = vista;
+      this.calendarOptions = { ...this.calendarOptions };
+    }
   }
 
   private loadFullCalendarEvents(fetchInfo: any, successCallback: Function, failureCallback: Function) {
@@ -106,6 +120,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
     this.loadStats();
     this.loadSessions();
+    this.cargarAgenda();
   }
 
   ngOnDestroy() {
@@ -140,6 +155,15 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.loading = false;
       },
       error: () => (this.loading = false),
+    });
+  }
+
+  cargarAgenda() {
+    const hoy = new Date().toISOString().split('T')[0];
+    this.therapistService.getSessions(hoy, hoy).subscribe({
+      next: (events) => {
+        this.agendaEvents = events;
+      }
     });
   }
 
@@ -219,8 +243,22 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
   }
 
+  irSesion(id: number) {
+    this.router.navigate(['/therapist/sessions', id, 'review']);
+  }
+
   private refreshEvents() {
     this.loading = true;
     this.loadSessions();
+  }
+
+  statusColor(status: string): string {
+    const map: any = {
+      scheduled: '#3b82f6',
+      completed: '#22c55e',
+      cancelled: '#ef4444',
+      in_progress: '#f59e0b',
+    };
+    return map[status] || '#6b7280';
   }
 }
