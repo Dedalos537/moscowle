@@ -151,6 +151,8 @@ def api_get_sessions():
         start_dt = None
         end_dt = None
     if start_dt and end_dt:
+        if start_dt.date() == end_dt.date():
+            end_dt = end_dt + timedelta(days=1)
         if current_user.role == 'terapista':
             appts = appointment_service.get_therapist_appointments(current_user.id, start_dt, end_dt)
         else:
