@@ -1,0 +1,291 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_expenses' %}
+
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-textDark">Gestión de Gastos y Terapeutas</h2>
+  <p class="text-sm text-gray-500">Pagos a personal, control de horas y gastos operativos</p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8 space-y-8">
+  
+  <!-- Flash Messages - Interactive with Animations -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-6 space-y-3">
+      {% for category, message in messages %}
+        {% if category == 'success' %}
+          {% set bg_color = 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' %}
+          {% set border_color = 'border-l-4 border-green-500' %}
+          {% set text_color = 'text-green-800 dark:text-green-200' %}
+          {% set icon = 'fa-check-circle' %}
+          {% set icon_color = 'text-green-600 dark:text-green-400' %}
+        {% elif category == 'error' %}
+          {% set bg_color = 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20' %}
+          {% set border_color = 'border-l-4 border-red-500' %}
+          {% set text_color = 'text-red-800 dark:text-red-200' %}
+          {% set icon = 'fa-exclamation-circle' %}
+          {% set icon_color = 'text-red-600 dark:text-red-400' %}
+        {% else %}
+          {% set bg_color = 'bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20' %}
+          {% set border_color = 'border-l-4 border-blue-500' %}
+          {% set text_color = 'text-blue-800 dark:text-blue-200' %}
+          {% set icon = 'fa-info-circle' %}
+          {% set icon_color = 'text-blue-600 dark:text-blue-400' %}
+        {% endif %}
+        
+        <div class="notification-alert {{ bg_color }} {{ border_color }} px-4 py-4 rounded-lg shadow-md font-medium text-sm flex items-start gap-3 transform transition-all duration-300 hover:shadow-lg hover:-translate-x-1 animate-slideInDown group cursor-pointer"
+             onclick="this.classList.add('scale-95', 'opacity-0'); setTimeout(() => this.remove(), 300)">
+          <div class="flex-shrink-0 mt-0.5">
+            <i class="fas {{ icon }} {{ icon_color }} text-lg animate-pulse"></i>
+          </div>
+          <div class="flex-1">
+            <p class="{{ text_color }}">{{ message }}</p>
+          </div>
+          <button type="button" class="flex-shrink-0 {{ text_color }} hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100"
+                  onclick="event.stopPropagation(); this.closest('.notification-alert').classList.add('scale-95', 'opacity-0'); setTimeout(() => this.closest('.notification-alert').remove(), 300)">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+      {% endfor %}
+      </div>
+      <style>
+        @keyframes slideInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slideInDown {
+          animation: slideInDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+      </style>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Therapist Payments Section -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h3 class="text-lg font-semibold text-textDark">Nómina de Terapeutas (Mes Actual)</h3>
+        <button onclick="openExpenseModal('operational')" class="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-soft hover:bg-gray-200 text-sm flex items-center">
+            <i class="fas fa-plus mr-2"></i>Registrar Gasto Operativo
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-gray-100">
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Terapeuta</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Contrato</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Horas Trab.</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">A Pagar (Est.)</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Pagado</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Pendiente</th>
+            <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for t in therapist_financials %}
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-6 py-4 font-medium text-charcoal">{{ t.therapist.username }}</td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+                {% if t.contract_hours > 0 %}
+                S/ {{ "%.2f"|format(t.rate) }}/hr
+                <div class="text-xs text-gray-400">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
+                {% else %}
+                <span class="text-xs text-orange-400 bg-orange-50 px-2 py-1 rounded">Sin contrato</span>
+                {% endif %}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">{{ "%.1f"|format(t.worked_hours) }} hrs</td>
+            <td class="px-6 py-4 text-sm font-bold text-charcoal">S/ {{ "%.2f"|format(t.projected_pay) }}</td>
+            <td class="px-6 py-4 text-sm text-green-600">S/ {{ "%.2f"|format(t.paid) }}</td>
+            <td class="px-6 py-4 text-sm {{ 'text-red-500 font-bold' if t.balance > 0 else 'text-green-500' }}">
+                S/ {{ "%.2f"|format(t.balance) }}
+            </td>
+            <td class="px-6 py-4 text-right">
+                <button onclick="openExpenseModal('therapist_payment', '{{ t.therapist.id }}', '{{ t.therapist.username }}', '{{ t.balance if t.balance > 0 else 0 }}')" 
+                        class="px-3 py-1.5 bg-primary text-white text-xs rounded-soft hover:bg-opacity-90">
+                    <i class="fas fa-hand-holding-usd mr-1"></i> Pagar
+                </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="px-6 py-8 text-center text-gray-400">No hay terapeutas activos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent Expenses History -->
+  <div class="bg-surface rounded-soft shadow-soft p-6 overflow-hidden">
+    <h3 class="text-lg font-semibold text-textDark mb-6">Historial de Gastos Recientes</h3>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-gray-100">
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Fecha</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Categoría</th>
+            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase">Descripción</th>
+            <th class="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase">Monto</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for e in recent_expenses %}
+          <tr class="hover:bg-gray-50/50">
+            <td class="px-6 py-4 text-sm text-gray-500">{{ e.date.strftime('%Y-%m-%d') }}</td>
+            <td class="px-6 py-4 text-sm capitalize">
+                <span class="px-2 py-1 rounded text-xs font-bold 
+                {% if e.category == 'therapist_payment' %}bg-blue-100 text-blue-700
+                {% elif e.category == 'operational' %}bg-gray-100 text-gray-700
+                {% elif e.category == 'bonus' %}bg-green-100 text-green-700
+                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                {{ e.category|replace('_', ' ') }}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-600">
+                {{ e.description }}
+                {% if e.therapist %}
+                <span class="text-gray-400 text-xs block">Destino: {{ e.therapist.username }}</span>
+                {% endif %}
+                <!-- Receipt & Method Info -->
+                <div class="mt-1 flex items-center gap-2">
+                    {% if e.method %}
+                    <span class="text-xs border px-1 rounded text-gray-500 bg-white">
+                        {% if e.method == 'transfer' %}Transferencia
+                        {% elif e.method == 'yape_plin' %}Yape/Plin
+                        {% elif e.method == 'cash' %}Efectivo
+                        {% else %}{{ e.method }}{% endif %}
+                    </span>
+                    {% endif %}
+                    {% if e.receipt_image_path %}
+                    <a href="{{ url_for('uploads.protected_file', filename=e.receipt_image_path) }}" target="_blank" class="text-primary hover:text-green-700" title="Ver Comprobante">
+                        <i class="fas fa-paperclip"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </td>
+            <td class="px-6 py-4 text-right font-mono font-bold text-charcoal">S/ {{ "%.2f"|format(e.amount) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Register Expense Modal -->
+<div id="expenseModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-soft shadow-soft w-full max-w-md p-6 relative">
+        <button onclick="document.getElementById('expenseModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-charcoal mb-4" id="modal-title">Registrar Gasto</h3>
+        
+        <form id="expenseForm" method="POST" action="{{ url_for('admin.create_expense_route') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="exp-therapist-id" name="therapist_id">
+            
+            <div class="mb-4">
+
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Categoría</label>
+                <select id="exp-category" name="category" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="therapist_payment">Pago a Terapeuta</option>
+                    <option value="operational">Gasto Operativo</option>
+                    <option value="bonus">Bonificación</option>
+                    <option value="other">Otro</option>
+                </select>
+            </div>
+            
+            <div class="mb-4 hidden" id="therapist-info-field">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destinatario</label>
+                <input type="text" id="exp-therapist-name" readonly class="w-full px-3 py-2 bg-gray-100 border rounded-soft text-gray-500">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto (S/)</label>
+                <input type="number" step="0.01" id="exp-amount" name="amount" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Método de Pago</label>
+                <select id="exp-method" name="method" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary">
+                    <option value="transfer">Transferencia Bancaria</option>
+                    <option value="yape_plin">Yape / Plin</option>
+                    <option value="cash">Efectivo</option>
+                    <option value="other">Otro</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Comprobante (Imagen)</label>
+                <input type="file" name="receipt" accept="image/*" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-lightGreen file:text-primary hover:file:bg-green-100">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha</label>
+                <input type="date" id="exp-date" name="date" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" required value="{{ current_date }}">
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Notas / Descripción</label>
+                <textarea name="description" rows="2" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
+            </div>
+            
+            <button type="submit" class="w-full py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90">Registrar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openExpenseModal(type, therapistId = null, therapistName = null, suggestedAmount = null) {
+    const modal = document.getElementById('expenseModal');
+    const catSelect = document.getElementById('exp-category');
+    const tField = document.getElementById('therapist-info-field');
+    const tInput = document.getElementById('exp-therapist-id');
+    const tNameDisplay = document.getElementById('exp-therapist-name');
+    const amtInput = document.getElementById('exp-amount');
+    
+    catSelect.value = type;
+    tInput.value = therapistId || '';
+    
+    if (therapistId) {
+        tField.classList.remove('hidden');
+        tNameDisplay.value = therapistName;
+    } else {
+        tField.classList.add('hidden');
+    }
+    
+    if (suggestedAmount) {
+        amtInput.value = parseFloat(suggestedAmount).toFixed(2);
+    } else {
+        amtInput.value = '';
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+document.getElementById('exp-category').addEventListener('change', function(e) {
+    // If switched away from therapist types and no ID set initially or handled...
+    // Actually simplicity is key: if therapist_id is hidden, user can't remove it easily unless they close modal. 
+    // That's fine for MVP.
+});
+</script>
+{% endblock %}

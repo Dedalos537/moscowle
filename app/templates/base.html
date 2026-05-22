@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- CSRF Protection Middleware -->
+    <script>
+        (function() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                const originalFetch = window.fetch;
+                window.fetch = function(input, init) {
+                    init = init || {};
+                    init.headers = init.headers || {};
+                    if (init.headers instanceof Headers) {
+                        if (!init.headers.has('X-CSRFToken')) init.headers.append('X-CSRFToken', csrfToken);
+                    } else {
+                        if (!init.headers['X-CSRFToken']) init.headers['X-CSRFToken'] = csrfToken;
+                    }
+                    return originalFetch(input, init);
+                };
+            }
+        })();
+    </script>
+    
+    <title>{% block title %}Centro de Terapias{% endblock %}</title>
+    <!-- Tailwind CSS - Config MUST be defined before or handled correctly -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "var(--color-primary)",
+                        olive: "var(--color-primary)",
+                        background: "var(--color-background)",
+                        surface: "var(--color-surface)",
+                        textDark: "var(--color-text-main)",
+                        charcoal: "var(--color-text-muted)",
+                        lightGreen: "#ecfccb", 
+                        accent: "#3b82f6",
+                        error: "#ef4444",
+                    },
+                    fontFamily: {
+                        sans: ["Poppins", "sans-serif"],
+                    },
+                    borderRadius: {
+                        soft: "1.5rem",
+                    },
+                    boxShadow: {
+                         soft: "var(--shadow-soft)",
+                    },
+                },
+            },
+        };
+    </script>
+    
+    <!-- Anti-FOUC Script for Login Page -->
+    <script>
+        (function() {
+          try {
+            const localTheme = localStorage.getItem('theme');
+            const sysTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (localTheme === 'dark' || (!localTheme && sysTheme)) {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+          } catch (e) {}
+        })();
+    </script>
+
+    <!-- FontAwesome -->
+    <script>window.FontAwesomeConfig = { autoReplaceSvg: 'nest' };</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Light Mode */
+            --color-primary: #75a83a;
+            --color-background: #f9fcf8;
+            --color-surface: #ffffff;
+            --color-text-main: #374151;
+            --color-text-muted: #6b7280;
+            --color-border: #e5e7eb;
+            --shadow-soft: 0 10px 30px -5px rgba(117, 168, 58, 0.15);
+        }
+
+        .dark {
+            /* Dark Mode */
+            --color-primary: #86c246;
+            --color-background: #0f172a; /* Slate 900 */
+            --color-surface: #1e293b; /* Slate 800 */
+            --color-text-main: #f3f4f6; /* Gray 100 */
+            --color-text-muted: #9ca3af; /* Gray 400 */
+            --color-border: #374151; /* Gray 700 */
+            --shadow-soft: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Global Dark Mode Overrides for Login & Public Pages (Base) */
+        html.dark .bg-white, .dark .bg-white { 
+            background-color: var(--color-surface) !important; 
+            color: var(--color-text-main) !important;
+            border-color: var(--color-border) !important;
+        }
+        
+        /* Ensure logo container doesn't force white */
+        .dark .bg-white img { filter: brightness(0) invert(1); opacity: 0.9; } /* Monochrome white logo for dark mode */
+
+        .dark .bg-gray-50 { background-color: var(--color-background) !important; }
+        .dark .bg-gray-100 { background-color: #334155 !important; } 
+        .dark .bg-gray-200 { background-color: #374151 !important; color: #9ca3af !important; }
+        .dark .border-gray-300 { border-color: #4b5563 !important; }
+
+        /* Icon Colors */
+        .dark .text-gray-400 { color: #6b7280 !important; }
+        .dark .group-focus-within\:text-primary { color: var(--color-primary) !important; }
+
+        /* Alert/Toast Specific Overrides */
+        .dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.2) !important; color: #fca5a5 !important; border-color: rgba(239, 68, 68, 0.3) !important; }
+        .dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.2) !important; color: #86efac !important; border-color: rgba(34, 197, 94, 0.3) !important; }
+        .dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.2) !important; color: #fde047 !important; border-color: rgba(234, 179, 8, 0.3) !important; }
+        .dark .text-red-600 { color: #fca5a5 !important; }
+        .dark .text-green-600 { color: #86efac !important; }
+        .dark .text-yellow-600 { color: #fde047 !important; }
+
+        /* Text Overrides */
+        .dark .text-gray-500 { color: var(--color-text-muted) !important; }
+        .dark .text-gray-400 { color: #6b7280 !important; }
+        .dark .text-textDark { color: var(--color-text-main) !important; }
+        
+        /* Input Overrides specifically for Login */
+        .dark input {
+            background-color: var(--color-background) !important; /* Contrasting input inside surface card */
+            color: var(--color-text-main) !important;
+            border-color: var(--color-border) !important;
+        }
+
+        .dark input::placeholder {
+            color: #6b7280 !important;
+        }
+        
+        /* Button overrides if needed */
+        .dark button.bg-gray-200 { /* Example for secondary buttons */
+             background-color: #4b5563 !important; 
+             color: #f3f4f6 !important;
+        }
+
+        /* ===== ENHANCED DARK MODE STYLES ===== */
+        
+        /* Headers & Cards */
+        .dark header { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; }
+        .dark .shadow-soft { box-shadow: var(--shadow-soft) !important; }
+        .dark .bg-white, .dark .rounded-2xl { background-color: var(--color-surface) !important; color: var(--color-text-main) !important; }
+        .dark .border-gray-100 { border-color: var(--color-border) !important; }
+        .dark .border-gray-50 { border-color: var(--color-border) !important; }
+        
+        /* Sidebar & Navigation */
+        .dark aside { background-color: var(--color-surface) !important; }
+        .dark nav { background-color: var(--color-surface) !important; }
+        .dark .sticky { background-color: var(--color-surface) !important; }
+        
+        /* Tables */
+        .dark table { color: var(--color-text-main) !important; }
+        .dark th { background-color: #1e293b !important; color: var(--color-text-main) !important; border-color: var(--color-border) !important; }
+        .dark td { border-color: var(--color-border) !important; }
+        .dark tr:hover { background-color: #334155 !important; }
+        
+        /* Forms & Inputs */
+        .dark textarea { background-color: var(--color-background) !important; color: var(--color-text-main) !important; border-color: var(--color-border) !important; }
+        .dark select { background-color: var(--color-background) !important; color: var(--color-text-main) !important; border-color: var(--color-border) !important; }
+        .dark label { color: var(--color-text-main) !important; }
+        
+        /* Modal & Dropdown */
+        .dark .divide-gray-50 { border-color: var(--color-border) !important; }
+        .dark .divide-y { border-color: var(--color-border) !important; }
+        
+        /* Badges & Pills */
+        .dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.2) !important; color: #93c5fd !important; }
+        .dark .bg-purple-100 { background-color: rgba(168, 85, 247, 0.2) !important; color: #e9d5ff !important; }
+        .dark .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.2) !important; color: #c7d2fe !important; }
+        
+        /* Hover States */
+        .dark .hover\:bg-gray-50:hover { background-color: #334155 !important; }
+        .dark .hover\:bg-gray-100:hover { background-color: #1e293b !important; }
+        
+        /* Links */
+        .dark a { color: #3b82f6 !important; }
+        .dark a:hover { color: #60a5fa !important; }
+        
+        body { transition: background-color 0.3s ease, color 0.3s ease; }
+    </style>
+    
+    <!-- Legacy Style for backward compatibility if needed -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_styles %}{% endblock %}
+</head>
+<body class="bg-background text-textDark font-sans min-h-screen flex flex-col">
+    {% block content %}{% endblock %}
+    
+    {% block scripts %}{% endblock %}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{{ url_for('main.service_worker') }}")
+                    .then(registration => console.log('SW registered'))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+{% extends 'therapist/base.html' %}
+{% set active_page = 'admin_reports' %}
+
+{% import 'components/atoms/badges.html' as atoms %}
+{% import 'components/atoms/buttons.html' as btn %}
+{% import 'components/atoms/inputs.html' as inputs %}
+{% import 'components/molecules/cards.html' as cards %}
+{% import 'components/organisms/tables.html' as tables %}
+{% import 'components/molecules/forms.html' as forms %}
+
+{% block header_content %}
+<div>
+  <h2 class="text-2xl font-bold text-on-surface">Reportes y Finanzas</h2>
+  <p class="text-sm text-on-surface-variant">Resumen operativo y financiero</p>
+</div>
+{% endblock %}
+{% block header_action %}{% endblock %}
+{% block content %}
+<div class="p-4 md:p-8 space-y-6">
+
+  <!-- Financial Section (Ticket 5) -->
+  <div class="bg-surface rounded-2xl shadow-sm shadow-slate-200/50 p-6 overflow-hidden border-l-4 border-olive">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-on-surface">Resumen Financiero (Mes Actual)</h3>
+            <p class="text-on-surface-variant text-sm">Proyección de caja y ejecución.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap sm:flex-nowrap">
+            <button onclick="generateIAReport(this)" title="Generar análisis estratégico con Llama 3.1" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-sm">
+                <span class="material-symbols-outlined fas fa-brain">circle</span> <span>Análisis Llama AI</span>
+            </button>
+            <button onclick="sendWeeklyReport(this)" title="Enviar ahora el resumen de deudores" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-sm">
+                <span class="material-symbols-outlined fas fa-envelope">circle</span> <span>Reporte Semanal</span>
+            </button>
+            <a href="{{ url_for('admin.export_payments_csv') }}" class="px-6 py-2.5 rounded-xl text-white font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-900 text-sm">
+                <span class="material-symbols-outlined fas fa-file-csv">circle</span> <span>Exportar CSV</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Real Income -->
+        {{ cards.stat_card(
+            id='card-income-real', 
+            title='Ingresos Reales', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.income_real)), 
+            subtext='Recaudado este mes', 
+            bg_color_class='bg-green-500/10', 
+            text_color_class='text-green-600'
+        ) }}
+        
+        <!-- Expected Income -->
+        {{ cards.stat_card(
+            id='card-income-exp', 
+            title='Proyección', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.income_expected)), 
+            subtext='Si todos pagaran a tiempo', 
+            bg_color_class='bg-blue-500/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
+
+        <!-- Overdue -->
+        {{ cards.stat_card(
+            id='card-income-overdue', 
+            title='Morosidad Acumulada', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.overdue_amount)), 
+            subtext=financials.overdue_users_count ~ ' usuarios con deuda', 
+            bg_color_class='bg-red-500/10', 
+            text_color_class='text-red-500'
+        ) }}
+        
+        <!-- Completion Rate -->
+        {% set percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+        {{ cards.stat_card(
+            id='card-income-percent', 
+            title='Ejecución', 
+            initial_value=("%.1f"|format(percent)) ~ '%', 
+            subtext='Progreso de cobro', 
+            bg_color_class='bg-olive/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
+    </div>
+
+    <!-- Expenses and Net Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {{ cards.stat_card(
+            id='card-expenses', 
+            title='Gastos Totales', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.expenses or 0)), 
+            subtext='Nómina + Operativos', 
+            bg_color_class='bg-gray-500/10', 
+            text_color_class='text-charcoal dark:text-white'
+        ) }}
+        
+        {{ cards.stat_card(
+            id='card-net', 
+            title='Utilidad Neta (Caja)', 
+            initial_value='S/ ' ~ ("%.2f"|format(financials.net_profit or 0)), 
+            subtext='Ingresos Reales - Gastos', 
+            bg_color_class='bg-indigo-500/10', 
+            text_color_class='text-indigo-600'
+        ) }}
+    </div>
+
+    <!-- Charts Area -->
+    <!-- Note: Adding simple CSS bar chart to avoid heavy JS libs if not present, but using Chart.js structure if desired later. 
+         For MVP, clean HTML CSS bars are safer and faster. -->
+    <div class="border-t border-outline-variant pt-6">
+        <h4 class="text-sm font-bold text-on-surface-variant uppercase mb-4">Comparativa Visual</h4>
+        <div class="space-y-4">
+            <!-- Bar: Expected -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-on-surface-variant">Proyectado (Total)</span>
+                    <span class="font-bold text-on-surface">S/ {{ "%.2f"|format(financials.income_expected) }}</span>
+                </div>
+                <div class="w-full bg-surface-container rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-blue-400 h-full rounded-full" style="width: 100%"></div>
+                </div>
+            </div>
+             <!-- Bar: Real -->
+             <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-on-surface-variant">Recaudado (Real)</span>
+                    <span class="font-bold text-green-700">S/ {{ "%.2f"|format(financials.income_real) }}</span>
+                </div>
+                {% set real_percent = (financials.income_real / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-surface-container rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-green-500 h-full rounded-full" style="width: {{ real_percent if real_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+            <!-- Bar: Overdue -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-medium text-on-surface-variant">Deuda (Morosidad)</span>
+                    <span class="font-bold text-red-600">S/ {{ "%.2f"|format(financials.overdue_amount) }}</span>
+                </div>
+                 {% set overdue_percent = (financials.overdue_amount / financials.income_expected * 100) if financials.income_expected > 0 else 0 %}
+                <div class="w-full bg-surface-container rounded-full h-4 relative overflow-hidden">
+                    <div class="bg-red-400 h-full rounded-full" style="width: {{ overdue_percent if overdue_percent <= 100 else 100 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- Auditoria IA Section (HU-06) -->
+  <div class="bg-surface rounded-2xl shadow-sm shadow-slate-200/50 p-6 overflow-hidden border-l-4 border-purple-500">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-on-surface">Auditoria IA - Cumplimiento Terapeutico</h3>
+            <p class="text-on-surface-variant text-sm">Resultados de la comparacion automatica: Programacion vs Ejecucion</p>
+        </div>
+    </div>
+
+    <!-- Audit KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Global Score Gauge -->
+        <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant flex flex-col items-center justify-center">
+            {% set score_color = 'text-green-600' if audit_stats.avg_score >= 80 else ('text-yellow-600' if audit_stats.avg_score >= 50 else 'text-red-600') %}
+            {% set bg_color = 'bg-green-50' if audit_stats.avg_score >= 80 else ('bg-yellow-50' if audit_stats.avg_score >= 50 else 'bg-red-50') %}
+            <div class="relative w-24 h-24 mb-3">
+                <svg viewBox="0 0 36 36" class="w-full h-full transform -rotate-90">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none" stroke="{{ 'rgb(34,197,94)' if audit_stats.avg_score >= 80 else ('rgb(234,179,8)' if audit_stats.avg_score >= 50 else 'rgb(239,68,68)') }}" 
+                        stroke-width="3" stroke-dasharray="{{ audit_stats.avg_score }}, 100" stroke-linecap="round"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-2xl font-bold {{ score_color }}">{{ audit_stats.avg_score }}%</span>
+                </div>
+            </div>
+            <p class="text-xs font-bold uppercase text-on-surface-variant tracking-wide">Precision Global</p>
+        </div>
+
+        <!-- Total Audits -->
+        <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant flex flex-col items-center justify-center">
+            <span class="text-4xl font-bold text-purple-600 mb-2">{{ audit_stats.total }}</span>
+            <p class="text-xs font-bold uppercase text-on-surface-variant tracking-wide">Auditorias Completadas</p>
+        </div>
+
+        <!-- Scores by Therapist -->
+        <div class="bg-surface-container-lowest rounded-xl p-4 border border-outline-variant">
+            <p class="text-xs font-bold uppercase text-on-surface-variant tracking-wide mb-3">Por Terapista</p>
+            <div class="space-y-3">
+                {% for t in audit_stats.by_therapist %}
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium text-on-surface">{{ t.name }}</span>
+                        <span class="font-bold {% if t.avg_score >= 80 %}text-green-600{% elif t.avg_score >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ t.avg_score }}% ({{ t.count }})</span>
+                    </div>
+                    <div class="w-full bg-surface-container rounded-full h-2">
+                        <div class="h-full rounded-full {% if t.avg_score >= 80 %}bg-green-500{% elif t.avg_score >= 50 %}bg-yellow-500{% else %}bg-red-500{% endif %}" style="width: {{ t.avg_score }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-on-surface-variant/70 italic text-center">Sin auditorias aun</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Audits Table -->
+    {% if audit_stats.recent %}
+    <div class="border-t border-outline-variant pt-6">
+        <h4 class="text-sm font-bold text-on-surface-variant uppercase mb-4">Auditorias Recientes</h4>
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full min-w-[600px]">
+                <thead>
+                    <tr class="text-left text-xs font-bold text-on-surface-variant/70 uppercase">
+                        <th class="px-4 py-3">Fecha</th>
+                        <th class="px-4 py-3">Terapista</th>
+                        <th class="px-4 py-3">Paciente</th>
+                        <th class="px-4 py-3">Score</th>
+                        <th class="px-4 py-3">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in audit_stats.recent %}
+                    <tr class="border-t border-gray-50 hover:bg-surface-container-low transition-colors">
+                        <td class="px-4 py-3 text-sm text-on-surface-variant">{{ a.date }}</td>
+                        <td class="px-4 py-3 text-sm font-medium text-on-surface">{{ a.therapist }}</td>
+                        <td class="px-4 py-3 text-sm text-on-surface-variant">{{ a.patient }}</td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm font-bold {% if a.score >= 80 %}text-green-600{% elif a.score >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">{{ a.score }}%</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 text-xs font-bold rounded-full {% if a.status == 'completed' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ 'Completada' if a.status == 'completed' else a.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div class="md:hidden space-y-3">
+            {% for a in audit_stats.recent %}
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="font-semibold text-on-surface text-sm">{{ a.therapist }}</p>
+                        <p class="text-xs text-on-surface-variant">{{ a.patient }} - {{ a.date }}</p>
+                    </div>
+                    <span class="text-sm font-bold px-2 py-1 rounded-full {% if a.score >= 80 %}bg-green-100 text-green-700{% elif a.score >= 50 %}bg-yellow-100 text-yellow-700{% else %}bg-red-100 text-red-700{% endif %}">{{ a.score }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+  </div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Therapists Section -->
+  <div class="bg-surface rounded-2xl shadow-sm shadow-slate-200/50 p-6 overflow-hidden">
+    <h3 class="text-lg font-semibold text-on-surface mb-3">Terapeutas</h3>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        {{ tables.table_header([
+          {'label': 'Nombre'},
+          {'label': 'Email'},
+          {'label': 'Sesiones'},
+          {'label': 'Precisión'}
+        ]) }}
+        <tbody>
+          {% for t in therapists %}
+          <tr class="border-t">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ t.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ t.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ t.sessions }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ t.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for t in therapists %}
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-on-surface">{{ t.name }}</p>
+            <p class="text-xs text-on-surface-variant">{{ t.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ t.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-on-surface-variant">
+          <span class="font-medium">{{ t.sessions }}</span> sesiones completadas
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Patients Section -->
+  <div class="bg-surface rounded-2xl shadow-sm shadow-slate-200/50 p-6 overflow-hidden">
+    <h3 class="text-lg font-semibold text-on-surface mb-3">Pacientes</h3>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full min-w-[500px]">
+        {{ tables.table_header([
+          {'label': 'Nombre'},
+          {'label': 'Email'},
+          {'label': 'Juegos'},
+          {'label': 'Precisión'}
+        ]) }}
+        <tbody>
+          {% for p in patients %}
+          <tr class="border-t">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ p.name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ p.email }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ p.plays }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-on-surface dark:text-gray-300">{{ p.avg_accuracy }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-3">
+      {% for p in patients %}
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <p class="font-semibold text-on-surface">{{ p.name }}</p>
+            <p class="text-xs text-on-surface-variant">{{ p.email }}</p>
+          </div>
+          <span class="bg-lightGreen text-primary text-xs px-2 py-1 rounded-full font-bold">{{ p.avg_accuracy }}%</span>
+        </div>
+        <div class="text-sm text-on-surface-variant">
+          <span class="font-medium">{{ p.plays }}</span> juegos jugados
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function generateIAReport(btn) {
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined fas fa-spinner fa-spin">circle</span> Llama analizando...';
+        
+        try {
+            const res = await fetch('/admin/generate-ia-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Inyectar el reporte en un modal o área nueva
+                alert('Reporte Estratégico Generado:\n\n' + data.report.substring(0, 500) + '...');
+                console.log(data.report);
+                // Aquí podrías abrir un modal con Markdown renderizado
+            } else {
+                alert('Error IA: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (e) {
+            alert('Error al conectar con Llama: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    async function sendWeeklyReport(btn) {
+        if (!confirm('¿Desea generar y enviar el reporte de deudores ahora mismo al administrador?')) {
+            return;
+        }
+        
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined fas fa-spinner fa-spin">circle</span> Enviando...';
+        
+        try {
+            const res = await fetch("{{ url_for('admin.send_weekly_summary_manual') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({})
+            });
+            
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(`Server error: ${text}`);
+            }
+
+            const data = await res.json();
+            
+            if (data.success) {
+                alert('Reporte enviado correctamente. Revise su bandeja de entrada (y spam).');
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+            
+        } catch (e) {
+            console.error(e);
+            alert('Error al enviar reporte: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
+  </div>
+</div>
+</div> <!-- End Wrapper -->
+{% endblock %}

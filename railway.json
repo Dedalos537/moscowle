@@ -1,0 +1,6 @@
+{
+  "build": null,
+  "deploy": null,
+  "healthcheckPath": "/api/health",
+  "healthcheckTimeout": 100
+}
