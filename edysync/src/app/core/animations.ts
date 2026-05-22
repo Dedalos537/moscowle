@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import {
   trigger, transition, style, animate, query, group,
   stagger, keyframes, state, sequence, animateChild

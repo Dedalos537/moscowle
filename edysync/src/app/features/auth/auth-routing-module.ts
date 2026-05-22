@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { Login } from './pages/login/login';

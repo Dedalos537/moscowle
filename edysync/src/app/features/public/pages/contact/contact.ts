@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { HeaderService } from '../../../../core/services/header.service';

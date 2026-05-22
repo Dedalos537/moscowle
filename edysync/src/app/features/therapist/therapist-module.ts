@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { TherapistDashboard } from './pages/dashboard/dashboard';
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';

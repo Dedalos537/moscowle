@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 export type AttendanceStatus = 'pending' | 'present' | 'absent';
 

@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { AlertService, AlertConfig } from '../../../core/services/alert.service';

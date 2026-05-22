@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 import { routeAnimations } from '../../animations';

@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -108,7 +107,6 @@ export class Dashboard implements OnInit, OnDestroy {
         this.loading = false;
       },
     });
-    // Fetch audit compliance stats
     this.adminService.getAdminOverview().subscribe({
       next: (res) => {
         if (res.success && res.data) {

@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService } from '../../../../core/services/patient.service';

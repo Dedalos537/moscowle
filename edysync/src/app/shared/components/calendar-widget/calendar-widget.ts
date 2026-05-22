@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, NgZone } from '@angular/core';
 
 export interface CalendarWidgetEvent {
@@ -194,7 +193,6 @@ export class CalendarWidget implements OnInit, OnChanges {
       this.lastClickedKey = key;
     }
 
-    // Triple click: clear everything
     if (this.clickCount >= 3) {
       this.clickCount = 0;
       this.lastClickedKey = '';
@@ -202,7 +200,6 @@ export class CalendarWidget implements OnInit, OnChanges {
       return;
     }
 
-    // Double click: emit creation event
     if (this.clickCount === 2) {
       this.clickCount = 0;
       this.lastClickedKey = '';
@@ -210,7 +207,6 @@ export class CalendarWidget implements OnInit, OnChanges {
       return;
     }
 
-    // Single click: wait 300ms then handle
     const isModifier = event.metaKey || event.ctrlKey;
     this.clickTimer = setTimeout(() => {
       this.clickCount = 0;
@@ -222,7 +218,6 @@ export class CalendarWidget implements OnInit, OnChanges {
 
   private handleSingleClick(cell: DayCell, isModifier: boolean) {
     if (isModifier) {
-      // Range selection with Cmd/Ctrl
       if (!this.rangeStart) {
         this.rangeStart = new Date(cell.date);
         this.rangeEnd = null;
@@ -236,7 +231,6 @@ export class CalendarWidget implements OnInit, OnChanges {
       return;
     }
 
-    // Normal single click: select day, clear range
     this.clearRange();
     this.selectedDate = new Date(cell.date);
     if (!cell.isCurrentMonth) {
@@ -247,7 +241,6 @@ export class CalendarWidget implements OnInit, OnChanges {
 
   private handleDblClick(cell: DayCell) {
     if (this.isRangeSelected) {
-      // Double click on any cell in range → emit range
       this.rangeDblClick.emit({ start: this.rangeStart!, end: this.rangeEnd! });
     } else {
       this.selectedDate = new Date(cell.date);

@@ -1,11 +1,9 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, interval, Subscription } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class RecordingService {
-  // DCE — Diego Centeno le metió mano acá
   activeSession$ = new BehaviorSubject<any>(null);
   isRecording$ = new BehaviorSubject<boolean>(false);
   recordingState$ = new BehaviorSubject<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>('idle');
@@ -138,7 +136,6 @@ export class RecordingService {
       }, 5 * 60 * 1000);
     });
 
-    // DCE: Control de asistencia a los 5 min de grabación
     this.attendanceCheckTimer = setTimeout(() => {
       this.runAttendanceCheck();
     }, 5 * 60 * 1000);

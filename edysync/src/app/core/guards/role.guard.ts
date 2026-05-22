@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Injectable } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -23,7 +22,6 @@ export class RoleGuard implements CanActivate {
         } else if (user.role === requiredRole) {
           return true;
         }
-        // Admin can access therapist routes
         if (user.role === 'admin' && (requiredRole === 'terapista' || (Array.isArray(requiredRole) && requiredRole.includes('terapista')))) {
           return true;
         }

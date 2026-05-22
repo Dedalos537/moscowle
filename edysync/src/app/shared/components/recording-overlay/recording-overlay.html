@@ -1,4 +1,3 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <ng-container>
   @if ((state | async) === 'starting') {
     <div class="fixed top-0 left-0 right-0 z-[60] bg-blue-600 text-white">
@@ -70,7 +69,6 @@
     </div>
   }
 
-  <!-- DCE: Modal de asistencia -->
   @if ((showAttendanceCheck | async)) {
     <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div class="bg-surface rounded-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in">
@@ -81,7 +79,6 @@
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">¿El paciente asistió?</h3>
         <p class="text-sm text-on-surface-variant text-center mb-2">Luego de analizar los primeros minutos, no se detectó contenido relevante de la programación.</p>
 
-        <!-- Countdown bar -->
         <div class="mb-5">
           <div class="flex justify-between text-xs text-on-surface-variant mb-1.5">
             <span>Se marcará como ausente automáticamente</span>

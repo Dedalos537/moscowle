@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RecordingService } from './core/services/recording.service';
 

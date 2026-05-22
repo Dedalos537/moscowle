@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -89,12 +88,10 @@ export class Finanzas implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  // DCE: Dashboard resumen
   summaryTotalDeuda = 0;
   summaryIngresos = 0;
   summaryGastos = 0;
 
-  // DCE: Deudores
   groups: DebtGroup[] = [];
   debtorsLoading = true;
   debtorMonth = 'current';
@@ -104,7 +101,6 @@ export class Finanzas implements OnInit, OnDestroy {
   paymentForm = { patient_id: 0, patient_name: '', amount: 0, method: 'transfer', reference: '' };
   paymentStatus = '';
 
-  // DCE: Pagos
   patients: PatientRow[] = [];
   paymentHistory: PaymentHistoryRow[] = [];
   sedes: Sede[] = [];
@@ -249,7 +245,6 @@ export class Finanzas implements OnInit, OnDestroy {
   };
   readonly chartRevenueByLocationType = 'pie' as const;
 
-  // DCE: Gráficos del dashboard
   dashIncomeExpenseChart: ChartData<'line'> = { labels: [], datasets: [] };
   dashIncomeExpenseOpt: ChartConfiguration<'line'>['options'] = {
     responsive: true,
@@ -292,7 +287,6 @@ export class Finanzas implements OnInit, OnDestroy {
   };
   readonly dashExpenseCategoryType = 'doughnut' as const;
 
-  // DCE: Gastos
   therapistFinancials: TherapistFinancial[] = [];
   recentExpenses: Expense[] = [];
   expenseTherapists: User[] = [];
@@ -338,7 +332,6 @@ export class Finanzas implements OnInit, OnDestroy {
     this.headerService.reset();
   }
 
-  // DCE: Resumen
 
   private loadSummaryData() {
     this.adminService.getDebtReport('all').subscribe({
@@ -504,7 +497,6 @@ export class Finanzas implements OnInit, OnDestroy {
     return { total, therapistPayments, operational, other: total - therapistPayments - operational };
   }
 
-  // DCE: DEUDORES
 
   loadDebtorsData() {
     this.debtorsLoading = true;
@@ -603,7 +595,6 @@ export class Finanzas implements OnInit, OnDestroy {
     this.loadDebtorsData();
   }
 
-  // DCE: PAGOS
 
   private checkDeepLinks() {
     const params = this.route.snapshot.queryParams;
@@ -1209,7 +1200,6 @@ export class Finanzas implements OnInit, OnDestroy {
     return item.id || item.patient_id;
   }
 
-  // DCE: GASTOS
 
   private loadExpensesData() {
     this.expensesLoading = true;

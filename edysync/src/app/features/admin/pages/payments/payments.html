@@ -1,4 +1,3 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <ng-template #headerActions>
   <app-button variant="ghost" label="Ayuda" [icon]="['fas', 'question-circle']" (clicked)="showHelp()"></app-button>
   <app-button variant="primary" label="Generar Reporte" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
@@ -79,7 +78,6 @@
     </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <!-- Chart 1: Payment Status Distribution (doughnut) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
@@ -90,7 +88,6 @@
         </div>
       </div>
 
-      <!-- Chart 2: Debt by Location (horizontal bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
@@ -101,7 +98,6 @@
         </div>
       </div>
 
-      <!-- Chart 3: Last Payment Age (bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
@@ -112,7 +108,6 @@
         </div>
       </div>
 
-      <!-- Chart 4: 6-Month Revenue History (line) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
@@ -123,7 +118,6 @@
         </div>
       </div>
 
-      <!-- Chart 5: Revenue by Plan Type (pie) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
@@ -134,7 +128,6 @@
         </div>
       </div>
 
-      <!-- Chart 6: Monthly Projection vs Real (grouped bar) -->
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
@@ -146,7 +139,6 @@
       </div>
     </div>
 
-    <!-- Chart 7: Revenue by Location (pie) - second row -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 lg:col-start-2">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
@@ -190,10 +182,8 @@
         @if (activeTab === 'pacientes') {
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
-        <!-- Filters -->
         <div class="flex flex-col gap-4 mb-6">
           <div class="flex flex-col md:flex-row gap-3">
-            <!-- Search -->
             <div class="relative flex-1">
               <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
               <input
@@ -205,7 +195,6 @@
               >
             </div>
 
-            <!-- Sede Filter -->
             <select (change)="selectedSedeId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
               <option value="">Todas las Sedes</option>
               @for (s of sedes; track s.id) {
@@ -213,7 +202,6 @@
               }
             </select>
 
-            <!-- Therapist Filter -->
             <select (change)="selectedTherapistId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
               <option value="">Todos los Terapeutas</option>
               @for (t of therapists; track t.id) {
@@ -223,7 +211,6 @@
           </div>
 
           <div class="flex flex-col md:flex-row gap-3">
-            <!-- Status Filter -->
             <select (change)="selectedStatus = $any($event.target).value" class="input-field min-w-[160px]">
               <option value="">Todos los Estados</option>
               <option value="al_dia">Al Día</option>
@@ -232,7 +219,6 @@
               <option value="inactivo">Inactivos</option>
             </select>
 
-            <!-- Sort Filter -->
             <select (change)="selectedSort = $any($event.target).value" class="input-field min-w-[180px]">
               <option value="">Ordenar por...</option>
               <option value="nombre">Nombre</option>
@@ -241,7 +227,6 @@
               <option value="mayor_deuda">Mayor deuda</option>
             </select>
 
-            <!-- Active Filters Badge -->
             @if (activeFilterCount > 0) {
               <div class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold">
                 <fa-icon [icon]="['fas', 'filter']" class="text-[14px]"></fa-icon>
@@ -254,7 +239,6 @@
           </div>
         </div>
 
-        <!-- Desktop Table (hidden on mobile) -->
         <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/30">
           <table class="w-full min-w-[1000px]">
             <thead>
@@ -273,7 +257,6 @@
             <tbody class="divide-y divide-outline-variant/20">
               @for (p of filteredPatients; track p.id) {
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
-                  <!-- Name/Email -->
                   <td class="px-4 py-3.5">
                     <div class="flex items-center gap-3">
                       <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -285,18 +268,14 @@
                       </div>
                     </div>
                   </td>
-                  <!-- Sede -->
                   <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
-                  <!-- Terapeuta -->
                   <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
-                  <!-- Plan / Frecuencia -->
                   <td class="px-4 py-3.5">
                     <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
                     @if (p.plan_frequency) {
                       <span class="text-xs text-on-surface-variant block">{{ p.plan_frequency }}</span>
                     }
                   </td>
-                  <!-- Progreso -->
                   <td class="px-4 py-3.5">
                     <div class="flex items-center gap-2 justify-center">
                       <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
@@ -313,7 +292,6 @@
                       </span>
                     </div>
                   </td>
-                  <!-- Deuda Est. -->
                   <td class="px-4 py-3.5 text-right">
                     @if (p.payment_amount <= 0) {
                       <span class="text-sm text-on-surface-variant">—</span>
@@ -328,7 +306,6 @@
                       </span>
                     }
                   </td>
-                  <!-- Próx. Vencimiento -->
                   <td class="px-4 py-3.5 text-center">
                     @if (p.next_due_date) {
                       <div class="flex flex-col items-center">
@@ -341,7 +318,6 @@
                       <span class="text-sm text-on-surface-variant">—</span>
                     }
                   </td>
-                  <!-- Status -->
                   <td class="px-4 py-3.5 text-center">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
                       [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
@@ -349,7 +325,6 @@
                       {{ getStatusInfo(p).label }}
                     </span>
                   </td>
-                  <!-- Acciones -->
                   <td class="px-4 py-3.5 text-right">
                     <div class="flex items-center justify-end gap-1">
                       <button
@@ -389,7 +364,6 @@
           </table>
         </div>
 
-        <!-- Mobile Card Layout (shown on mobile) -->
         <div class="md:hidden space-y-3">
           @for (p of filteredPatients; track p.id) {
             <div
@@ -397,7 +371,6 @@
               [class.border-l-4]="isOverdue(p)"
               [class.border-l-red-500]="isOverdue(p)"
             >
-              <!-- Header: Avatar + Name -->
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3 min-w-0">
                   <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
@@ -408,7 +381,6 @@
                     <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
                   </div>
                 </div>
-                <!-- Status Badge -->
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
                   [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
                   <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
@@ -416,7 +388,6 @@
                 </span>
               </div>
 
-              <!-- Detail Grid -->
               <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mb-3">
                 <div>
                   <span class="text-label-caps text-on-surface-variant">Sede</span>
@@ -441,7 +412,6 @@
                 </div>
               </div>
 
-              <!-- Progress Bar -->
               <div class="mb-3">
                 <div class="flex justify-between text-xs text-on-surface-variant mb-1">
                   <span>Progreso</span>
@@ -458,7 +428,6 @@
                 </div>
               </div>
 
-              <!-- Due Date -->
               @if (p.next_due_date) {
                 <div class="flex items-center gap-2 mb-3 text-xs">
                   <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
@@ -470,7 +439,6 @@
                 </div>
               }
 
-              <!-- Action Buttons -->
               <div class="flex gap-2 pt-2 border-t border-outline-variant/20">
                 <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
                 <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
@@ -494,7 +462,6 @@
         @if (activeTab === 'historial') {
       <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
-        <!-- Month Filter -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
@@ -511,7 +478,6 @@
           </div>
         </div>
 
-        <!-- History Table -->
         <div class="overflow-x-auto rounded-xl border border-outline-variant/30">
           <table class="w-full min-w-[800px]">
             <thead>
@@ -595,19 +561,16 @@
 <app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
   <div class="space-y-4">
 
-    <!-- DNI Field (NEW) -->
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
       <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
     </div>
 
-    <!-- Guardian Name (NEW) -->
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
       <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
     </div>
 
-    <!-- Payment Date (NEW) -->
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de Pago</label>
       <input [(ngModel)]="registerForm.payment_date" type="date" class="input-field">
@@ -632,7 +595,6 @@
     <app-input id="reference" label="Referencia" [(value)]="registerForm.reference" placeholder="N° de operación"></app-input>
     <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
 
-    <!-- Recalculation Alert (NEW) -->
     @if (needsRecalculation) {
       <div class="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
         <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-500 text-lg shrink-0"></fa-icon>
@@ -642,7 +604,6 @@
       </div>
     }
 
-    <!-- Missing Data Warning (NEW) -->
     @if (hasMissingData) {
       <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg">
         <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-lg shrink-0"></fa-icon>
@@ -657,13 +618,11 @@
       </div>
     }
 
-    <!-- Voucher Upload -->
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
       <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
     </div>
 
-    <!-- OCR Spinner (NEW) -->
     @if (analyzingReceipt) {
       <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg">
         <app-spinner size="sm" colorClass="text-purple-500"></app-spinner>
@@ -671,7 +630,6 @@
       </div>
     }
 
-    <!-- OCR Result -->
     @if (analyzeResult && !analyzingReceipt) {
       <div class="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500 text-lg shrink-0"></fa-icon>

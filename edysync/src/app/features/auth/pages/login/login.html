@@ -1,7 +1,5 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <div class="flex min-h-screen items-center justify-center p-4 bg-[#F8FAFC] dark:bg-[#0f0f10] transition-colors duration-300">
   
-  <!-- Dark Mode Toggle -->
   <button (click)="toggleDarkMode()"
     class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-lg border z-50 cursor-pointer"
     [ngClass]="darkMode ? 'bg-[#1e1f20] text-[#fbbf24] border-[#373839] hover:bg-[#2a2b2d]' : 'bg-white text-[#64748b] border-[#e2e8f0] hover:bg-[#f8fafc]'"
@@ -15,10 +13,8 @@
 
   <div class="w-full max-w-md bg-white dark:bg-[#18191a] rounded-[32px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] p-10 relative overflow-hidden transition-colors duration-300">
       
-      <!-- Decorational Line top -->
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#86c246] to-[#b7e477]"></div>
 
-      <!-- Logo Section -->
       <div class="text-center mb-8">
           <div class="w-20 h-20 mx-auto mb-4">
               <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
@@ -28,14 +24,12 @@
           <p class="text-sm text-[#94a3b8] dark:text-[#71717a] mt-2 transition-colors">Acceso a Plataforma Digital</p>
       </div>
 
-      <!-- Flash Messages / Alert Component -->
       @if (alertMessage) {
          <div class="mb-6">
             <app-alert [type]="alertType" [message]="alertMessage"></app-alert>
          </div>
       }
 
-      <!-- Login Form -->
       <form (ngSubmit)="doLogin()" class="space-y-5">
           
           <div>
@@ -72,7 +66,6 @@
               }
           </div>
 
-          <!-- Options -->
           <div class="flex items-center justify-between pt-2">
                <label class="flex items-center gap-2 cursor-pointer group">
                    <input type="checkbox" class="custom-checkbox">
@@ -81,7 +74,6 @@
               <a routerLink="/auth/reset-password" class="text-sm font-bold text-[#75a83a] hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
           </div>
 
-          <!-- Submit Button -->
            <button type="submit" 
               [disabled]="!isFormValid || isLoading"
               class="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2"
@@ -98,7 +90,6 @@
            </button>
       </form>
 
-      <!-- Footer -->
        <div class="mt-8 pt-6 border-t border-[#f1f5f9] dark:border-[#2a2b2d] text-center">
            <p class="text-xs font-medium text-[#94a3b8] dark:text-[#71717a] transition-colors">
                ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-[#75a83a] dark:text-[#a5d087] font-bold hover:underline">Soporte Técnico</a>

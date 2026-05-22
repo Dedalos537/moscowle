@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 export interface AdminAPIToken {
   id: number;
   created_at: string;

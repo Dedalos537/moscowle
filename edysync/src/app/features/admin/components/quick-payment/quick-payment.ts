@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, Output, EventEmitter } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AlertService } from '../../../../core/services/alert.service';

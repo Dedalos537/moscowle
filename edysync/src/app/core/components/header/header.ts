@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HeaderService } from '../../services/header.service';
 import { AdminService } from '../../services/admin.service';

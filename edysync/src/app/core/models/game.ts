@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 export interface Game {
   id: number;
   title: string;

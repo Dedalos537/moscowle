@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component } from '@angular/core';
 import { routeAnimations } from '../../animations';
 

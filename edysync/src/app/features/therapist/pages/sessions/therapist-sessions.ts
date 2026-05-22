@@ -1,8 +1,6 @@
-// DCE — Diego Centeno Estuvo Acá
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CalendarOptions, EventClickArg } from '@fullcalendar/core';
-import { FullCalendarComponent } from '@fullcalendar/angular';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -22,13 +20,9 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class TherapistSessions implements OnInit, OnDestroy {
-  @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
-
   loading = true;
   widgetEvents: CalendarWidgetEvent[] = [];
-  showCreateModal = false;
   showEditModal = false;
-  patients: { id: number; username: string }[] = [];
   submitting = false;
   deleting = false;
 
@@ -40,16 +34,6 @@ export class TherapistSessions implements OnInit, OnDestroy {
   };
 
   calendarOptions: CalendarOptions = {};
-
-  createForm = {
-    patient_id: '',
-    title: '',
-    date: '',
-    start_time: '',
-    end_time: '',
-    status: 'scheduled',
-    notes: '',
-  };
 
   editForm = {
     id: 0,
@@ -119,10 +103,8 @@ export class TherapistSessions implements OnInit, OnDestroy {
       title: 'Mis Sesiones',
       subtitle: 'Gestiona tus sesiones con pacientes',
       icon: ['fas', 'calendar-alt'],
-      actionTemplate: this.headerActions,
     });
     this.loadStats();
-    this.loadPatients();
     this.loadSessions();
   }
 
@@ -133,14 +115,6 @@ export class TherapistSessions implements OnInit, OnDestroy {
   private loadStats() {
     this.therapistService.getDashboardStats().subscribe({
       next: (res) => (this.stats = res),
-    });
-  }
-
-  private loadPatients() {
-    this.therapistService.getPatients().subscribe({
-      next: (list) => {
-        this.patients = list.map((p) => ({ id: p.id, username: p.username }));
-      },
     });
   }
 
@@ -169,16 +143,6 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
   }
 
-  onDayDblClick(date: Date) {
-    this.createForm.date = date.toISOString().split('T')[0];
-    this.openCreateModal();
-  }
-
-  onRangeDblClick(range: { start: Date; end: Date }) {
-    this.createForm.date = range.start.toISOString().split('T')[0];
-    this.openCreateModal();
-  }
-
   onEventClick(event: CalendarWidgetEvent) {
     this.editForm = {
       id: event.id,
@@ -190,64 +154,6 @@ export class TherapistSessions implements OnInit, OnDestroy {
       patient: event.patient || '',
     };
     this.showEditModal = true;
-  }
-
-  openCreateModal() {
-    this.showCreateModal = true;
-    this.resetForm();
-  }
-
-  closeCreateModal() {
-    this.showCreateModal = false;
-  }
-
-  private resetForm() {
-    this.createForm = {
-      patient_id: '',
-      title: '',
-      date: '',
-      start_time: '',
-      end_time: '',
-      status: 'scheduled',
-      notes: '',
-    };
-  }
-
-  async submitCreate() {
-    const f = this.createForm;
-    if (!f.patient_id || !f.date || !f.start_time || !f.end_time) return;
-
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Guardar sesión',
-      message: '¿Estás seguro de crear esta sesión?',
-      confirmText: 'Crear',
-      cancelText: 'Cancelar',
-      variant: 'primary',
-    }));
-    if (!confirmed) return;
-
-    this.submitting = true;
-    const startTime = `${f.date}T${f.start_time}`;
-    const endTime = `${f.date}T${f.end_time}`;
-
-    this.therapistService.createSession({
-      patient_id: parseInt(f.patient_id),
-      title: f.title || 'Sesión',
-      start_time: startTime,
-      end_time: endTime,
-      status: f.status,
-      notes: f.notes,
-    }).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeCreateModal();
-        this.refreshEvents();
-        this.loadStats();
-      },
-      error: () => {
-        this.submitting = false;
-      },
-    });
   }
 
   closeEditModal() {

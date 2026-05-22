@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -16,7 +15,6 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 })
 export class TherapistSessionReview implements OnInit, OnDestroy {
 
-  // DCE — Diego Centeno Estuvo Acá
   session: any = null;
   sessionId = 0;
   loading = true;
@@ -139,7 +137,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   private maybeAutoStartRecording() {
     if (!this.session || this.autoStarted) return;
 
-    // Already recording globally via RecordingService
     if (this.recordingService.isRecording$.value && this.recordingService.activeSession$.value?.id === this.sessionId) {
       this.autoStarted = true;
       this.isRecording = true;
@@ -160,7 +157,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
             this.startRecording();
           },
           error: () => {
-            // Silently fail - user can still click record
           }
         });
       }
@@ -486,7 +482,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.showWarningModal = false;
         this.clearWarningTimer();
         this.alertService.show('Sesión marcada como ausente.', 'info');
-        // DCE: Disparar auditoría si hay programa + transcripción
         this.loadAudit();
       },
     });
@@ -509,7 +504,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
           this.feedbackProgress = data.audit.feedback_progress || null;
           this.feedbackNotes = data.audit.feedback_notes || '';
           this.feedbackSubmitted = !!(data.audit.feedback_engagement || data.audit.feedback_progress);
-          // DCE: Disparar auditoría si ya terminó grabación y hay programa + transcripción
           if (this.pendingAutoAudit && data.audit.has_program && data.audit.has_transcript && data.audit.audit_status === 'pending') {
             this.pendingAutoAudit = false;
             this.triggerAudit();

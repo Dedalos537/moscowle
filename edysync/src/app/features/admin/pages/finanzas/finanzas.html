@@ -1,4 +1,3 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <ng-template #headerActions>
   <app-button variant="ghost" label="Ayuda" [icon]="['fas', 'question-circle']" (clicked)="showHelp()"></app-button>
 </ng-template>
@@ -244,7 +243,6 @@
   @if (activeTab === 'deudores') {
     <div class="space-y-6 animate-fade-in-up" [@fadeInUp]>
 
-      <!-- Header with filters -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
@@ -261,7 +259,6 @@
         </div>
       </div>
 
-      <!-- Daily Guide -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-blue-100 p-5">
           <div class="flex items-center justify-between mb-4">
@@ -314,7 +311,6 @@
           </div>
         </div>
 
-        <!-- Summary Cards -->
         <div class="space-y-4">
           <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-red-100 p-5">
             <p class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Deuda Total</p>
@@ -327,7 +323,6 @@
         </div>
       </div>
 
-      <!-- Sede Groups -->
       @if (debtorsLoading) {
         <div class="flex justify-center py-16">
           <app-spinner size="md" colorClass="text-primary"></app-spinner>
@@ -431,7 +426,6 @@
         </div>
       } @else {
 
-        <!-- Setup Guidance Banner -->
         @if (incompletePlanPatients.length > 0) {
           <div class="flex items-start gap-4 p-4 bg-orange-50 dark:bg-amber-500/10 border border-orange-200 dark:border-amber-500/20 rounded-xl">
             <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-orange-500 text-2xl shrink-0"></fa-icon>
@@ -444,7 +438,6 @@
           </div>
         }
 
-        <!-- KPI Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
             <div class="flex items-start justify-between mb-3">
@@ -495,7 +488,6 @@
           </div>
         </div>
 
-        <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
@@ -558,7 +550,6 @@
           </div>
         </div>
 
-        <!-- Chart 7: Revenue by Location -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 lg:col-start-2">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
@@ -571,7 +562,6 @@
           </div>
         </div>
 
-        <!-- Tabs -->
         <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
           <button
             class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
@@ -600,7 +590,6 @@
           </button>
         </div>
 
-        <!-- Pacientes Subtab -->
         @if (pagosTab === 'pacientes') {
           <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
@@ -661,7 +650,6 @@
               </div>
             </div>
 
-            <!-- Desktop Table -->
             <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/30">
               <table class="w-full min-w-[1000px]">
                 <thead>
@@ -787,7 +775,6 @@
               </table>
             </div>
 
-            <!-- Mobile Card Layout -->
             <div class="md:hidden space-y-3">
               @for (p of filteredPatients; track p.id) {
                 <div
@@ -883,7 +870,6 @@
           </div>
         }
 
-        <!-- Historial Subtab -->
         @if (pagosTab === 'historial') {
           <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
 
@@ -982,7 +968,6 @@
       }
     </div>
 
-    <!-- Register Payment Modal -->
     <app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
       <div class="space-y-4">
         <div>
@@ -1073,7 +1058,6 @@
       </div>
     </app-modal>
 
-    <!-- Settings Modal -->
     <app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
       <div class="space-y-4">
         <p class="text-sm text-on-surface-variant">
@@ -1109,7 +1093,6 @@
           <app-spinner size="md" colorClass="text-primary"></app-spinner>
         </div>
       } @else {
-        <!-- Therapist Payroll -->
         <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
           <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <h3 class="text-lg font-semibold text-on-surface">Nómina de Terapeutas (Mes Actual)</h3>
@@ -1160,7 +1143,6 @@
           </div>
         </div>
 
-        <!-- Recent Expenses -->
         <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
           <h3 class="text-lg font-semibold text-on-surface mb-6">Historial de Gastos Recientes</h3>
           <div class="overflow-x-auto">
@@ -1217,7 +1199,6 @@
       }
     </div>
 
-    <!-- Expense Modal -->
     <app-modal [isOpen]="showExpenseModal" [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'" (close)="closeExpenseModal()">
       <div class="space-y-4">
         <div>

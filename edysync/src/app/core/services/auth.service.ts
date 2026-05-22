@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';

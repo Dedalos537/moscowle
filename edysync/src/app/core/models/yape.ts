@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 export interface YapeTransaction {
   id: number;
   operation_number: string;

@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -58,11 +57,9 @@ export class Sessions implements OnInit, OnDestroy {
 
   submitting = false;
 
-  // Calendar grid for date picker
   calendarMonth: Date = new Date();
   calendarDays: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
 
-  // --- PROGRAM UPLOADS / AUDITS ---
   auditState: any = null;
   programUploading = false;
   programDeleting = false;
@@ -174,7 +171,6 @@ export class Sessions implements OnInit, OnDestroy {
     this.showEditModal = true;
   }
 
-  // --- Calendar grid for date picker ---
   private buildCalendarGrid() {
     const year = this.calendarMonth.getFullYear();
     const month = this.calendarMonth.getMonth();
@@ -243,7 +239,6 @@ export class Sessions implements OnInit, OnDestroy {
     return `${this.months[this.calendarMonth.getMonth()]} ${this.calendarMonth.getFullYear()}`;
   }
 
-  // --- Create ---
   openCreateModal() {
     this.showCreateModal = true;
     this.resetForms();

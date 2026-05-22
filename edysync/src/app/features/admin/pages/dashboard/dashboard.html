@@ -1,7 +1,5 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <div class="space-y-8" [@fadeInUp]>
 
-  <!-- Centro de Acción Inteligente -->
   <div class="space-y-4">
     <div class="flex items-center justify-between px-1">
       <div class="flex items-center gap-2">
@@ -59,7 +57,6 @@
     </div>
   </div>
 
-  <!-- AI Guidance Banner -->
   @if (incompletePatients.length > 0) {
     <div class="bg-gradient-to-r from-red-500 to-orange-600 rounded-2xl shadow-lg p-5 text-white flex flex-col md:flex-row items-center justify-between gap-4">
       <div class="flex items-center gap-4">
@@ -80,7 +77,6 @@
     </div>
   }
 
-  <!-- KPIs Section -->
   <div>
     <h3 class="text-lg font-semibold text-on-surface-variant mb-4 px-1">Resumen General</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -173,7 +169,6 @@
     </div>
   </div>
 
-  <!-- Financial & Sedes Row -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between">
@@ -226,7 +221,6 @@
     </div>
   </div>
 
-  <!-- Active Users per Sede -->
   <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6">
     <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2">
       <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-red-400"></fa-icon> Usuarios por Sede
@@ -249,7 +243,6 @@
     </div>
   </div>
 
-  <!-- Quick Actions Row -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative">
       <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full hidden sm:block"></div>
@@ -273,7 +266,6 @@
     </div>
   </div>
 
-  <!-- Gestión Operativa -->
   <div>
     <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
       <fa-icon [icon]="['fas', 'briefcase']" class="text-on-surface-variant/60"></fa-icon> Gestión Operativa
@@ -341,7 +333,6 @@
     </div>
   </div>
 
-  <!-- Sistema & Seguridad -->
   <div>
     <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
       <fa-icon [icon]="['fas', 'shield-alt']" class="text-on-surface-variant/60"></fa-icon> Sistema & Seguridad
@@ -377,7 +368,6 @@
 
 </div>
 
-<!-- Guidance Modal -->
 @if (showGuidanceModal) {
   <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showGuidanceModal = false">
     <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
@@ -425,7 +415,6 @@
   </div>
 }
 
-<!-- Daily Pendings Modal -->
 @if (showDailyModal) {
   <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showDailyModal = false">
     <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">

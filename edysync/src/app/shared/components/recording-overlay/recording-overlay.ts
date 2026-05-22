@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { RecordingService } from '../../../core/services/recording.service';
@@ -11,7 +10,6 @@ import { Observable } from 'rxjs';
   styleUrl: './recording-overlay.scss',
 })
 export class RecordingOverlay implements OnInit, OnDestroy {
-  // DCE — Diego Centeno Estuvo Acá
   state: Observable<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>;
   elapsed: Observable<string>;
   chunkStatus: Observable<string>;

@@ -1,11 +1,9 @@
-<!-- DCE — Diego Centeno Estuvo Acá -->
 <ng-template #headerActions>
   <app-button variant="primary" label="Nueva Programación" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
 </ng-template>
 
 <div class="p-4 md:p-8 space-y-6" [@fadeInUp]>
 
-  <!-- Therapist Filter -->
   <div class="card p-4 flex flex-wrap gap-4 items-center">
     <label class="text-sm font-semibold text-on-surface">Filtrar por Terapeuta:</label>
     <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="input-field text-sm w-full md:w-64">
@@ -16,7 +14,6 @@
     </select>
   </div>
 
-  <!-- Calendar Widget -->
   <div class="min-h-[500px]">
     @if (loading) {
       <div class="flex justify-center py-24">
@@ -34,11 +31,9 @@
   </div>
 </div>
 
-<!-- Create Session Modal -->
 <app-modal [isOpen]="showCreateModal" title="Programar Sesiones" (close)="closeCreateModal()">
   <div class="space-y-5">
 
-    <!-- Therapist -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta <span class="text-error">*</span></label>
       <select [(ngModel)]="createForm.therapist_id" (change)="onTherapistSelectCreate()" class="input-field text-sm">
@@ -49,7 +44,6 @@
       </select>
     </div>
 
-    <!-- Patient -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
       <div class="relative">
@@ -68,13 +62,11 @@
       }
     </div>
 
-    <!-- Title -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre de la Sesión</label>
       <input type="text" [(ngModel)]="createForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
     </div>
 
-    <!-- Sede -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede <span class="text-error">*</span></label>
       <select [(ngModel)]="createForm.sede" class="input-field text-sm">
@@ -85,13 +77,11 @@
       </select>
     </div>
 
-    <!-- Date Picker -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-error">*</span></label>
       <p class="text-xs text-on-surface-variant/60 mb-2">Selecciona hasta 5 días en el calendario. El mismo título, comentarios y documento se asignarán a todas las fechas.</p>
 
       <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/30">
-        <!-- Month nav -->
         <div class="flex items-center justify-between mb-3">
           <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
@@ -102,14 +92,12 @@
           </button>
         </div>
 
-        <!-- Weekday headers -->
         <div class="grid grid-cols-7 mb-1">
           @for (wd of ['Lu','Ma','Mi','Ju','Vi','Sa','Do']; track wd) {
             <div class="text-center text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider py-1">{{ wd }}</div>
           }
         </div>
 
-        <!-- Day grid -->
         @for (week of calendarDays; track week) {
           <div class="grid grid-cols-7">
             @for (day of week; track day.date) {
@@ -128,7 +116,6 @@
         }
       </div>
 
-      <!-- Selected dates list -->
       @if (createForm.dates.length > 0) {
         <div class="mt-2 space-y-1">
           <p class="text-xs font-semibold text-on-surface-variant">{{ createForm.dates.length }}/5 fechas seleccionadas</p>
@@ -144,7 +131,6 @@
       }
     </div>
 
-    <!-- Time -->
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio <span class="text-error">*</span></label>
@@ -156,13 +142,11 @@
       </div>
     </div>
 
-    <!-- Notes -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Comentarios</label>
       <textarea [(ngModel)]="createForm.notes" class="input-field text-sm" rows="2" placeholder="Notas opcionales para las sesiones"></textarea>
     </div>
 
-    <!-- Program upload -->
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Programación (.docx opcional)</label>
       <label for="createProgramFileInput" class="flex items-center gap-3 p-3 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
@@ -183,9 +167,7 @@
   </div>
 </app-modal>
 
-<!-- Edit Session Modal -->
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
-  <!-- Session Info Header -->
   <div class="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl border border-outline mb-4">
     <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
       <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary text-lg"></fa-icon>
@@ -206,7 +188,6 @@
   </div>
 
   <div class="space-y-5">
-    <!-- Basic Info -->
     <div>
       <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Información General</p>
       <div class="space-y-3">
@@ -239,11 +220,9 @@
       </div>
     </div>
 
-    <!-- Document Upload Section -->
     <div class="border-t border-outline pt-5">
       <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación de Sesión (.docx)</p>
 
-      <!-- Existing Program -->
       <div *ngIf="auditState" class="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-green-600 shrink-0 mt-0.5"></fa-icon>
         <div class="flex-1 min-w-0">
@@ -256,7 +235,6 @@
         </app-button>
       </div>
 
-      <!-- Upload Area (empty state) -->
       <div *ngIf="!auditState" class="mt-1">
         <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
           <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
@@ -268,7 +246,6 @@
         <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
       </div>
 
-      <!-- Status Messages -->
       <div *ngIf="programUploading" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm">
         <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon> Procesando documento...
       </div>

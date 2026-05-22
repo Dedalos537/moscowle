@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 export interface CSPReport {
   id: number;
   received_at: string;

@@ -1,4 +1,3 @@
-// DCE — Diego Centeno Estuvo Acá
 import { NgModule, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
