@@ -2150,6 +2150,8 @@ def get_session_audit(appointment_id):
             'has_transcript': bool(audit.transcript_text),
             'planned_text_preview': (audit.planned_text[:300] + '...') if audit.planned_text and len(audit.planned_text) > 300 else audit.planned_text,
             'transcript_preview': (audit.transcript_text[:300] + '...') if audit.transcript_text and len(audit.transcript_text) > 300 else audit.transcript_text,
+            'planned_text': audit.planned_text,
+            'transcript_text': audit.transcript_text,
             'audio_duration_seconds': audit.audio_duration_seconds,
             'audit_status': audit.audit_status,
             'audit_score': audit.audit_score,

@@ -1,124 +1,122 @@
-<div class="space-y-4">
-
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="bg-white rounded border border-gray-200 p-3">
-      <div class="text-xs font-bold text-gray-500 uppercase">Hoy</div>
-      <div class="text-xl font-bold text-blue-600 mt-1">{{ stats.sessions_today }}</div>
-      <div class="text-xs text-gray-400">sesiones</div>
+<div class="p-4 max-w-5xl mx-auto">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex gap-3">
+      <div class="bg-white rounded border p-2 min-w-[64px] text-center">
+        <div class="text-xs font-bold text-gray-500 uppercase">Hoy</div>
+        <div class="text-lg font-bold" style="color:var(--color-primary)">{{ stats.sessions_today }}</div>
+      </div>
+      <div class="bg-white rounded border p-2 min-w-[64px] text-center">
+        <div class="text-xs font-bold text-gray-500 uppercase">Comple</div>
+        <div class="text-lg font-bold text-green-600">{{ stats.completed_sessions }}</div>
+      </div>
+      <div class="bg-white rounded border p-2 min-w-[64px] text-center">
+        <div class="text-xs font-bold text-gray-500 uppercase">Pend</div>
+        <div class="text-lg font-bold text-amber-600">{{ stats.pending_sessions }}</div>
+      </div>
+      <div class="bg-white rounded border p-2 min-w-[64px] text-center">
+        <div class="text-xs font-bold text-gray-500 uppercase">Pac</div>
+        <div class="text-lg font-bold text-blue-600">{{ stats.active_patients }}</div>
+      </div>
     </div>
-    <div class="bg-white rounded border border-gray-200 p-3">
-      <div class="text-xs font-bold text-gray-500 uppercase">Completadas</div>
-      <div class="text-xl font-bold text-green-600 mt-1">{{ stats.completed_sessions }}</div>
-      <div class="text-xs text-gray-400">realizadas</div>
-    </div>
-    <div class="bg-white rounded border border-gray-200 p-3">
-      <div class="text-xs font-bold text-gray-500 uppercase">Pendientes</div>
-      <div class="text-xl font-bold text-amber-600 mt-1">{{ stats.pending_sessions }}</div>
-      <div class="text-xs text-gray-400">proximas</div>
-    </div>
-    <div class="bg-white rounded border border-gray-200 p-3">
-      <div class="text-xs font-bold text-gray-500 uppercase">Pacientes</div>
-      <div class="text-xl font-bold text-blue-600 mt-1">{{ stats.active_patients }}</div>
-      <div class="text-xs text-gray-400">activos</div>
-    </div>
+    <button class="text-xs font-bold px-3 py-1.5 rounded border bg-white hover:bg-gray-50" (click)="irHoy()">Hoy</button>
   </div>
 
-  <div class="flex gap-1 mb-1">
-    <button class="px-3 py-1 text-xs font-bold rounded border"
-            [class.bg-blue-600]="activeView==='timeGridDay'"
-            [class.text-white]="activeView==='timeGridDay'"
-            [class.bg-white]="activeView!=='timeGridDay'"
-            (click)="cambiarVista('timeGridDay')">Dia</button>
-    <button class="px-3 py-1 text-xs font-bold rounded border"
-            [class.bg-blue-600]="activeView==='timeGridWeek'"
-            [class.text-white]="activeView==='timeGridWeek'"
-            [class.bg-white]="activeView!=='timeGridWeek'"
-            (click)="cambiarVista('timeGridWeek')">Sem</button>
-    <button class="px-3 py-1 text-xs font-bold rounded border"
-            [class.bg-blue-600]="activeView==='dayGridMonth'"
-            [class.text-white]="activeView==='dayGridMonth'"
-            [class.bg-white]="activeView!=='dayGridMonth'"
-            (click)="cambiarVista('dayGridMonth')">Mes</button>
+  <div class="flex gap-1 overflow-x-auto pb-2 mb-4 hide-scrollbar">
+    <button *ngFor="let d of diasSemana"
+            class="flex-shrink-0 flex flex-col items-center justify-center w-12 h-16 rounded-lg text-xs font-bold border transition-all"
+            [class.text-white]="esSeleccionado(d)"
+            [style.borderColor]="esSeleccionado(d) ? 'var(--color-primary)' : '#e5e7eb'"
+            [style.background]="esSeleccionado(d) ? 'var(--color-primary)' : 'white'"
+            (click)="cambiarFecha(d)">
+      <span class="text-[10px] uppercase opacity-70">{{ diaSemana(d) }}</span>
+      <span class="text-sm">{{ d.getDate() }}</span>
+    </button>
   </div>
 
-  <div class="flex gap-4">
-    <div class="w-72 shrink-0">
-      <div class="bg-white rounded border border-gray-200">
-        <div class="p-2 border-b border-gray-200 bg-gray-50">
-          <div class="text-xs font-bold text-gray-600 uppercase">Agenda Hoy</div>
-        </div>
-        <div class="divide-y divide-gray-100 max-h-[calc(100vh-320px)] overflow-y-auto">
-          <div *ngIf="agendaEvents.length === 0" class="p-3 text-sm text-gray-400 text-center">Sin sesiones hoy</div>
-          <div *ngFor="let e of agendaEvents" class="p-2 hover:bg-gray-50 cursor-pointer" (click)="irSesion(e.id)">
-            <div class="flex items-center gap-2">
+  <div class="relative">
+    <div class="absolute left-[18px] top-0 bottom-0 w-0.5 bg-gray-200"></div>
+
+    <div *ngIf="loading" class="flex justify-center py-16">
+      <div class="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
+    </div>
+
+    <div *ngIf="!loading && agendaEvents.length === 0" class="text-center py-16 text-gray-400 text-sm">
+      Sin sesiones para esta fecha
+    </div>
+
+    <div *ngFor="let e of agendaEvents; let i = index" class="relative pl-10 pb-6 last:pb-0">
+      <div class="absolute left-[13px] top-1 w-[12px] h-[12px] rounded-full border-2 bg-white z-10"
+           [style.borderColor]="statusColor(e.extendedProps?.status)"
+           [class.animate-pulse]="e.extendedProps?.status === 'in_progress'">
+      </div>
+
+      <div class="ml-2 bg-white rounded border hover:shadow-md transition-shadow cursor-pointer"
+           (click)="onEventClick(e)">
+        <div class="p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
               <span class="w-2 h-2 rounded-full shrink-0" [style.background]="statusColor(e.extendedProps?.status)"></span>
-              <span class="text-xs font-bold text-gray-700">{{ e.title }}</span>
+              <span class="text-sm font-bold truncate">{{ e.title }}</span>
             </div>
-            <div class="text-xs text-gray-500 ml-4">
+            <span class="text-xs text-gray-500 shrink-0">
               {{ e.start ? (e.start | date:'HH:mm') : '??' }} -
               {{ e.end ? (e.end | date:'HH:mm') : '??' }}
-              <span class="ml-1 text-gray-400">{{ e.extendedProps?.patient || '' }}</span>
-            </div>
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs text-gray-500">{{ e.extendedProps?.patient || '' }}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
+                  [style.background]="statusColor(e.extendedProps?.status) + '20'"
+                  [style.color]="statusColor(e.extendedProps?.status)">
+              {{ statusLabel(e.extendedProps?.status) }}
+            </span>
           </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="flex-1 min-h-[400px]">
-      <div *ngIf="loading" class="flex justify-center py-24">
-        <app-spinner size="md" colorClass="text-primary"></app-spinner>
+<app-modal [isOpen]="showEditModal" title="Editar Sesion" (close)="closeEditModal()">
+  <div class="space-y-4">
+    <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
+      Paciente: {{ editForm.patient }}
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Titulo</label>
+      <input type="text" [(ngModel)]="editForm.title" class="w-full rounded border-gray-300 text-sm p-2 border">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+      <input type="date" [(ngModel)]="editForm.date" class="w-full rounded border-gray-300 text-sm p-2 border">
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
+        <input type="time" [(ngModel)]="editForm.start_time" class="w-full rounded border-gray-300 text-sm p-2 border">
       </div>
-      <div *ngIf="!loading">
-        <app-calendar-widget
-          [events]="widgetEvents"
-          [role]="'therapist'"
-          (eventClick)="onEventClick($event)"
-        ></app-calendar-widget>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Fin</label>
+        <input type="time" [(ngModel)]="editForm.end_time" class="w-full rounded border-gray-300 text-sm p-2 border">
       </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+      <select [(ngModel)]="editForm.status" class="w-full rounded border-gray-300 text-sm p-2 border">
+        <option value="scheduled">Programada</option>
+        <option value="completed">Completada</option>
+        <option value="cancelled">Cancelada</option>
+      </select>
     </div>
   </div>
-
-  <app-modal [isOpen]="showEditModal" title="Editar Sesion" (close)="closeEditModal()">
-    <div class="space-y-4">
-      <div class="bg-blue-50 p-3 rounded text-sm text-blue-700">
-        Paciente: {{ editForm.patient }}
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Titulo</label>
-        <input type="text" [(ngModel)]="editForm.title" class="w-full rounded border-gray-300 text-sm p-2 border">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-        <input type="date" [(ngModel)]="editForm.date" class="w-full rounded border-gray-300 text-sm p-2 border">
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
-          <input type="time" [(ngModel)]="editForm.start_time" class="w-full rounded border-gray-300 text-sm p-2 border">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-          <input type="time" [(ngModel)]="editForm.end_time" class="w-full rounded border-gray-300 text-sm p-2 border">
-        </div>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-        <select [(ngModel)]="editForm.status" class="w-full rounded border-gray-300 text-sm p-2 border">
-          <option value="scheduled">Programada</option>
-          <option value="completed">Completada</option>
-          <option value="cancelled">Cancelada</option>
-        </select>
-      </div>
+  <div modal-footer>
+    <div class="flex gap-2">
+      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+      <app-button variant="secondary" label="Revisar Sesion" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
-    <div modal-footer>
-      <div class="flex gap-2">
-        <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
-        <app-button variant="secondary" label="Revisar Sesion" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
-      </div>
-      <div class="flex gap-3">
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-        <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
-      </div>
+    <div class="flex gap-3">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
+      <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
     </div>
-  </app-modal>
-</div>
+  </div>
+</app-modal>

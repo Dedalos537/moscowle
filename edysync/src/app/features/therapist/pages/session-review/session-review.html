@@ -1,379 +1,326 @@
 <div class="h-full flex flex-col" *ngIf="!loading && session">
-  <div class="flex items-center gap-2 px-6 py-4 border-b border-outline shrink-0">
-    <a routerLink="/therapist/sessions" class="text-sm text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
+  <div class="flex items-center gap-2 px-4 py-3 border-b shrink-0 bg-white z-10">
+    <a routerLink="/therapist/sessions" class="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1">
       <fa-icon [icon]="['fas', 'arrow-left']" class="text-xs"></fa-icon>
-      <span class="hidden md:inline">Volver a Sesiones</span>
+      <span class="hidden md:inline">Volver</span>
     </a>
-    <span class="text-gray-300 hidden md:inline">/</span>
-    <span class="text-sm text-on-surface-variant hidden md:inline">Revisión</span>
+    <span class="text-gray-300">/</span>
+    <span class="text-sm font-medium truncate">{{ session.title }}</span>
     <div class="ml-auto flex items-center gap-2">
-      <app-button variant="secondary" label="Guardar" [icon]="['fas', 'save']" (clicked)="saveNotes()"></app-button>
       <input type="file" #fileInput class="hidden" accept="image/*,.doc,.docx" (change)="onImageSelected($event)">
-      <app-button variant="secondary" [icon]="['fas', 'file-upload']" (clicked)="fileInput.click()"></app-button>
-      <app-button [variant]="isRecording ? 'danger' : 'secondary'"
-                  [label]="isRecording ? 'Detener' : 'Grabar'"
-                  [icon]="isRecording ? ['fas', 'stop'] : ['fas', 'microphone']"
-                  (clicked)="toggleRecording()"></app-button>
-      <app-button variant="primary" label="Camara" [icon]="['fas', 'camera']" (clicked)="openCamera()"></app-button>
+      <button class="text-xs font-bold px-2 py-1.5 rounded border bg-white hover:bg-gray-50" (click)="fileInput.click()">Subir</button>
+      <button class="text-xs font-bold px-2 py-1.5 rounded border"
+              [class.bg-red-500]="isRecording"
+              [class.text-white]="isRecording"
+              [class.bg-white]="!isRecording"
+              (click)="toggleRecording()">
+        {{ isRecording ? 'Detener' : 'Grabar' }}
+      </button>
+      <button class="text-xs font-bold px-2 py-1.5 rounded border bg-white" (click)="openCamera()">Camara</button>
     </div>
   </div>
 
-  <div class="flex-1 overflow-y-auto p-6">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+  <div class="flex-1 overflow-y-auto bg-[#f8f9ff]">
+    <div class="max-w-6xl mx-auto p-4 flex gap-4">
+      <div class="w-64 shrink-0 space-y-3">
+        <div class="bg-white rounded border p-3">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Sesion</div>
+          <div class="text-sm font-bold">{{ session.title }}</div>
+          <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase"
+                [class.bg-red-100]="session.attendance === 'absent'"
+                [class.text-red-700]="session.attendance === 'absent'"
+                [class.bg-green-100]="session.status === 'completed'"
+                [class.text-green-700]="session.status === 'completed'"
+                [class.bg-blue-100]="session.status === 'scheduled'"
+                [class.text-blue-700]="session.status === 'scheduled'">
+            {{ session.status }}
+          </span>
+        </div>
 
-      <div class="lg:col-span-4 flex flex-col gap-6">
-
-        <div class="bg-surface rounded-2xl shadow-sm border border-outline p-5">
-          <div class="flex justify-between items-start mb-4">
-            <div>
-              <h3 class="font-bold text-on-surface text-lg">{{ session.title }}</h3>
-              <span class="inline-block mt-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide"
-                    [class.bg-red-100]="session.attendance === 'absent'"
-                    [class.text-red-700]="session.attendance === 'absent'"
-                    [class.bg-green-100]="session.status === 'completed'"
-                    [class.text-green-700]="session.status === 'completed'"
-                    [class.bg-blue-100]="session.status === 'scheduled'"
-                    [class.text-blue-700]="session.status === 'scheduled'"
-                    [class.bg-surface-container]="session.status !== 'completed' && session.status !== 'scheduled' && session.attendance !== 'absent'">
-                {{ session.status }}
-              </span>
+        <div class="bg-white rounded border p-3">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-3">Fases</div>
+          <div class="relative pl-6">
+            <div class="absolute left-[7px] top-1 bottom-1 w-0.5 bg-gray-200"></div>
+            <div class="relative pb-4 last:pb-0">
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 bg-white z-10" style="border-color:var(--color-primary)"></div>
+              <div class="text-xs font-bold" style="color:var(--color-primary)">Apertura</div>
+              <div class="text-[10px] text-gray-500">Inicio de sesion</div>
             </div>
-          </div>
-          <div class="space-y-3 pt-3 border-t border-gray-100">
-            <div>
-              <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold mb-2">Juegos Asignados</p>
-              <div class="flex flex-wrap gap-2">
-                <span *ngFor="let game of session.games"
-                      class="px-3 py-1.5 bg-surface-container-low border border-outline rounded-lg text-xs font-medium text-on-surface-variant flex items-center gap-1">
-                  <fa-icon [icon]="['fas', 'gamepad']" class="text-primary opacity-70"></fa-icon> {{ game }}
-                </span>
-                <span *ngIf="!session.games?.length" class="text-sm text-on-surface-variant italic">Sin juegos asignados</span>
-              </div>
+            <div class="relative pb-4 last:pb-0">
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full bg-white border-2 z-10 animate-pulse" style="border-color:var(--color-primary)"></div>
+              <div class="text-xs font-bold text-gray-700">Exploracion</div>
+              <div class="text-[10px] text-gray-500">En curso</div>
             </div>
-            <div class="pt-3 border-t border-gray-100">
-              <p class="text-xs text-on-surface-variant uppercase tracking-wider font-bold mb-2">Asistencia</p>
-              <div class="grid grid-cols-2 gap-2">
-                <app-button [variant]="attendance === 'present' ? 'primary' : 'secondary'"
-                            label="Asistio" [icon]="['fas', 'check-circle']"
-                            (clicked)="setAttendance('present')"></app-button>
-                <app-button [variant]="attendance === 'absent' ? 'danger' : 'secondary'"
-                            label="No Asistio" [icon]="['fas', 'times-circle']"
-                            (clicked)="setAttendance('absent')"></app-button>
-              </div>
+            <div class="relative pb-0">
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 bg-white z-10" style="border-color:#d1d5db"></div>
+              <div class="text-xs font-bold text-gray-400">Cierre</div>
+              <div class="text-[10px] text-gray-400">Pendiente</div>
             </div>
           </div>
         </div>
 
-        <div class="bg-surface rounded-2xl shadow-sm border border-outline flex flex-col flex-grow overflow-hidden min-h-[300px] lg:min-h-0">
-          <div class="p-4 border-b border-outline flex justify-between items-center bg-surface-container-low/50">
-            <h3 class="font-bold text-on-surface flex items-center gap-2 text-sm uppercase tracking-wide">
-              <fa-icon [icon]="['fas', 'sticky-note']" class="text-yellow-500"></fa-icon> Notas Clínicas
-            </h3>
-            <span class="text-xs text-on-surface-variant italic">{{ lastSavedLabel }}</span>
+        <div class="bg-white rounded border p-3">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Asistencia</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="text-xs font-bold px-2 py-1.5 rounded border"
+                    [class.bg-green-500]="attendance === 'present'"
+                    [class.text-white]="attendance === 'present'"
+                    [class.bg-white]="attendance !== 'present'"
+                    (click)="setAttendance('present')">Presente</button>
+            <button class="text-xs font-bold px-2 py-1.5 rounded border"
+                    [class.bg-red-500]="attendance === 'absent'"
+                    [class.text-white]="attendance === 'absent'"
+                    [class.bg-white]="attendance !== 'absent'"
+                    (click)="setAttendance('absent')">Ausente</button>
           </div>
-          <div class="flex-grow relative">
-            <textarea [(ngModel)]="notes" (input)="onNotesInput()"
-                      class="w-full h-full p-5 resize-none focus:outline-none text-on-surface leading-relaxed bg-transparent min-h-[200px]"
-                      placeholder="Escribe aquí las observaciones detalladas de la sesión, progreso del paciente, y recomendaciones..."></textarea>
-            <div class="absolute bottom-4 right-4 opacity-0 hover:opacity-100 transition-opacity">
-              <span class="text-xs text-gray-300 bg-surface px-2 py-1 rounded shadow-sm border border-outline">Auto-guardado habilitado</span>
+        </div>
+
+        <div *ngIf="audit" class="bg-white rounded border p-3">
+          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Auditoria IA
+            <span *ngIf="liveScore !== null" class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                  [class.text-green-600]="liveScore >= 70"
+                  [class.text-amber-600]="liveScore >= 40 && liveScore < 70"
+                  [class.text-red-600]="liveScore < 40"
+                  style="background:rgba(0,0,0,0.04)">{{ liveScore }}%</span>
+          </div>
+          <div *ngIf="audit?.audit_status === 'completed' && report" class="text-center py-2">
+            <div class="text-2xl font-bold" style="color:var(--color-primary)">{{ audit.audit_score }}%</div>
+            <div class="text-[10px] text-gray-500 uppercase">{{ classificationLabel }}</div>
+          </div>
+          <div *ngIf="audit?.audit_status !== 'completed'">
+            <div class="text-[10px] mb-1">
+              <span class="text-gray-500">Programacion:</span>
+              <span class="font-bold" [class.text-green-600]="audit?.has_program" [class.text-gray-400]="!audit?.has_program">{{ audit?.has_program ? 'Subida' : 'Pendiente' }}</span>
             </div>
+            <div class="text-[10px] mb-2">
+              <span class="text-gray-500">Transcripcion:</span>
+              <span class="font-bold" [class.text-green-600]="audit?.has_transcript" [class.text-gray-400]="!audit?.has_transcript">{{ audit?.has_transcript ? (audit?.audio_duration_seconds || '?') + 's' : 'Pendiente' }}</span>
+            </div>
+            <button *ngIf="audit?.has_program && audit?.has_transcript"
+                    class="text-[10px] font-bold px-2 py-1 rounded w-full"
+                    [class.bg-gray-200]="auditRunning"
+                    [style.background]="!auditRunning ? 'var(--color-primary)' : ''"
+                    [class.text-white]="!auditRunning"
+                    (click)="triggerAudit()"
+                    [disabled]="auditRunning">
+              {{ auditRunning ? 'Analizando...' : 'Ejecutar Auditoria' }}
+            </button>
           </div>
+        </div>
+
+        <div *ngIf="hasProgram" class="bg-white rounded border p-3 cursor-pointer hover:shadow-sm transition-shadow" (click)="openProgramModal()">
+          <div class="text-xs font-bold text-gray-500 uppercase">Programacion</div>
+          <div class="text-xs mt-1 text-gray-700 line-clamp-2">{{ programPreview || 'Ver documento' }}</div>
         </div>
       </div>
 
-      <div class="lg:col-span-8 flex flex-col h-full bg-surface rounded-2xl shadow-sm border border-outline overflow-hidden max-w-full">
-        <div class="p-4 border-b border-outline flex justify-between items-center bg-surface z-10">
-          <h3 class="font-bold text-on-surface flex items-center gap-2 text-sm uppercase tracking-wide">
-            <fa-icon [icon]="['fas', 'images']" class="text-purple-500"></fa-icon> Evidencia Visual
-          </h3>
-          <span class="text-xs font-medium bg-surface-container text-on-surface-variant px-2 py-1 rounded-md">{{ images.length }} archivos</span>
+      <div class="flex-1 space-y-3 min-w-0">
+        <div class="bg-white rounded border">
+          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+            <div class="text-xs font-bold text-gray-500 uppercase">Notas Clinicas</div>
+            <span class="text-[10px] text-gray-400 italic">{{ lastSavedLabel }}</span>
+          </div>
+          <textarea [(ngModel)]="notes" (input)="onNotesInput()"
+                    class="w-full p-3 resize-none text-sm focus:outline-none min-h-[140px] bg-white leading-relaxed"
+                    placeholder="Escribe tus observaciones..."></textarea>
         </div>
 
-        <div class="flex-grow bg-surface-container-low relative flex items-center justify-center overflow-hidden p-4 min-h-[300px] group select-none">
-          <div *ngIf="currentImage" class="relative w-full h-full flex items-center justify-center">
-            <img [src]="currentImage.url" class="max-w-full max-h-full object-contain shadow-lg rounded-lg transition-transform duration-300">
-            <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-              <app-button variant="ghost" [icon]="['fas', 'expand']" (clicked)="openFullscreen()"></app-button>
-              <app-button variant="ghost" [icon]="['fas', 'trash-alt']" (clicked)="deleteCurrentImage()"></app-button>
-            </div>
+        <div *ngIf="audit?.transcript_text" class="bg-white rounded border">
+          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+            <div class="text-xs font-bold text-gray-500 uppercase">Transcripcion</div>
+            <span class="text-[10px] text-gray-400">{{ audit?.audio_duration_seconds || 0 }}s grabados</span>
           </div>
-          <div *ngIf="!images.length" class="text-center p-8 border-2 border-dashed border-outline rounded-2xl hover:border-primary hover:bg-green-50/20 transition-all cursor-pointer flex flex-col items-center justify-center h-64 w-full max-w-md mx-auto" (click)="fileInput.click()">
-            <div class="w-16 h-16 bg-surface text-on-surface-variant hover:text-primary rounded-full flex items-center justify-center mb-4 shadow-sm transition-colors">
-              <fa-icon [icon]="['fas', 'cloud-upload-alt']" size="3x"></fa-icon>
-            </div>
-            <h4 class="text-lg font-bold text-on-surface mb-1">Sin evidencia visual</h4>
-            <p class="text-sm text-on-surface-variant mb-6 px-4">Documenta el progreso subiendo fotos o documentos.</p>
-            <app-button variant="secondary" label="Subir Archivos" (clicked)="fileInput.click()"></app-button>
+          <div class="p-3 text-sm text-gray-700 leading-relaxed max-h-48 overflow-y-auto">
+            {{ audit.transcript_text }}
           </div>
         </div>
 
-        <div *ngIf="images.length" class="h-24 border-t border-outline p-3 bg-surface overflow-x-auto flex gap-3 items-center">
-          <div *ngFor="let img of images; let i = index"
-               class="relative cursor-pointer shrink-0 h-16 w-20 rounded-lg overflow-hidden border-2 transition-all"
-               [class.border-primary]="currentImage?.id === img.id"
-               [class.border-transparent]="currentImage?.id !== img.id"
-               (click)="selectImage(img)">
-            <img [src]="img.url" class="w-full h-full object-cover"
-                 [class.opacity-60]="currentImage?.id !== img.id">
+        <div *ngIf="audit?.audit_status === 'completed' && report" class="bg-white rounded border">
+          <div class="px-3 py-2 border-b bg-gray-50">
+            <div class="text-xs font-bold text-gray-500 uppercase">Objetivos</div>
           </div>
-          <app-button variant="ghost" [icon]="['fas', 'plus']" (clicked)="fileInput.click()"></app-button>
+          <div class="p-3 space-y-2 max-h-48 overflow-y-auto">
+            <div *ngFor="let obj of report.objectives" class="text-xs p-2 rounded bg-gray-50 border">
+              <span class="font-bold block">{{ obj.name }}</span>
+              <span class="text-gray-500">{{ obj.evidence }}</span>
+              <span class="ml-1 text-[10px] font-bold uppercase"
+                    [class.text-green-600]="obj.classification === 'logrado'"
+                    [class.text-amber-600]="obj.classification === 'parcial'"
+                    [class.text-red-600]="obj.classification === 'no_cubierto'">({{ obj.classification }})</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded border overflow-hidden">
+          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+            <div class="text-xs font-bold text-gray-500 uppercase">Evidencia</div>
+            <span class="text-[10px] text-gray-400">{{ images.length }} archivos</span>
+          </div>
+          <div class="p-3">
+            <div *ngIf="currentImage" class="mb-3">
+              <img [src]="currentImage.url" class="w-full max-h-64 object-contain rounded border bg-gray-50">
+              <div class="flex gap-1 mt-1">
+                <button class="text-[10px] px-1.5 py-0.5 rounded border bg-white hover:bg-gray-50" (click)="openFullscreen()">Ampliar</button>
+                <button class="text-[10px] px-1.5 py-0.5 rounded border bg-white hover:bg-red-50 text-red-600" (click)="deleteCurrentImage()">Eliminar</button>
+              </div>
+            </div>
+            <div *ngIf="!images.length" class="text-center py-6">
+              <div class="text-sm text-gray-400 mb-2">Sin evidencia visual</div>
+              <button class="text-xs font-bold px-3 py-1.5 border rounded bg-white hover:bg-gray-50" (click)="fileInput.click()">Subir foto</button>
+            </div>
+            <div *ngIf="images.length" class="flex gap-2 overflow-x-auto">
+              <div *ngFor="let img of images; let i = index"
+                   class="shrink-0 w-16 h-12 rounded border-2 overflow-hidden cursor-pointer"
+                   [class.border-blue-500]="currentImage?.id === img.id"
+                   [class.border-transparent]="currentImage?.id !== img.id"
+                   (click)="selectImage(img)">
+                <img [src]="img.url" class="w-full h-full object-cover" [class.opacity-50]="currentImage?.id !== img.id">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded border">
+          <div class="px-3 py-2 border-b bg-gray-50">
+            <div class="text-xs font-bold text-gray-500 uppercase">Feedback</div>
+          </div>
+          <div class="p-3 space-y-3">
+            <div class="flex gap-4">
+              <div>
+                <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Compromiso</div>
+                <div class="flex gap-1">
+                  <button *ngFor="let val of [1,2,3,4,5]" (click)="setEngagement(val)" [disabled]="feedbackSubmitted"
+                          class="w-7 h-7 text-xs font-bold rounded-full border transition-all"
+                          [class.bg-amber-400]="feedbackEngagement === val"
+                          [class.text-white]="feedbackEngagement === val"
+                          [class.border-amber-400]="feedbackEngagement === val"
+                          [class.bg-white]="feedbackEngagement !== val"
+                          [class.text-gray-600]="feedbackEngagement !== val"
+                          [class.border-gray-300]="feedbackEngagement !== val">{{ val }}</button>
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Progreso</div>
+                <div class="flex gap-1">
+                  <button *ngFor="let val of [1,2,3,4,5]" (click)="setProgress(val)" [disabled]="feedbackSubmitted"
+                          class="w-7 h-7 text-xs font-bold rounded-full border transition-all"
+                          [class.bg-orange-400]="feedbackProgress === val"
+                          [class.text-white]="feedbackProgress === val"
+                          [class.border-orange-400]="feedbackProgress === val"
+                          [class.bg-white]="feedbackProgress !== val"
+                          [class.text-gray-600]="feedbackProgress !== val"
+                          [class.border-gray-300]="feedbackProgress !== val">{{ val }}</button>
+                </div>
+              </div>
+            </div>
+            <textarea [(ngModel)]="feedbackNotes" [disabled]="feedbackSubmitted"
+                      class="w-full p-2 text-xs border rounded resize-none focus:outline-none"
+                      rows="2" placeholder="Comentarios..."></textarea>
+            <button class="text-xs font-bold px-3 py-1.5 rounded w-full"
+                    [class.bg-gray-200]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress"
+                    [style.background]="!feedbackSubmitted && feedbackEngagement && feedbackProgress ? 'var(--color-primary)' : ''"
+                    [class.text-white]="!feedbackSubmitted && feedbackEngagement && feedbackProgress"
+                    [disabled]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress || feedbackSaving"
+                    (click)="submitFeedback()">
+              {{ feedbackSaving ? 'Enviando...' : feedbackSubmitted ? 'Enviado' : 'Enviar Feedback' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div *ngIf="hasProgram" class="mt-4 bg-surface rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
-      <div class="p-4 flex justify-between items-start gap-3">
-        <div class="flex items-start gap-3 flex-1 min-w-0">
-          <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
-            <fa-icon [icon]="['fas', 'file-alt']" class="text-purple-600"></fa-icon>
-          </div>
-          <div class="min-w-0">
-            <h4 class="font-bold text-sm text-purple-800 uppercase tracking-wide">Programación de Sesión</h4>
-            <p class="text-xs text-on-surface-variant mt-1 line-clamp-2">{{ programPreview || 'Cargando...' }}</p>
-          </div>
-        </div>
-        <app-button variant="ghost" label="Ver completo" [icon]="['fas', 'eye']" (clicked)="openProgramModal()"></app-button>
-      </div>
-    </div>
-
-    <div *ngIf="audit" class="mt-4 bg-surface rounded-2xl border border-outline overflow-hidden">
-      <div class="p-4 border-b border-outline flex justify-between items-center">
-        <h3 class="font-bold text-on-surface flex items-center gap-2 text-sm uppercase tracking-wide">
-          <fa-icon [icon]="['fas', 'brain']" class="text-primary"></fa-icon> Auditoría IA
-          <span *ngIf="liveScore !== null" class="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100" [class.text-green-600]="liveScore >= 70" [class.text-amber-600]="liveScore >= 40 && liveScore < 70" [class.text-red-600]="liveScore < 40">En vivo: {{ liveScore }}%</span>
-        </h3>
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-bold px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant">{{ auditStatusText }}</span>
-          <app-button *ngIf="audit?.audit_status === 'completed'"
-                      variant="secondary"
-                      label="Descargar (.docx)"
-                      [icon]="['fas', 'file-word']"
-                      (clicked)="downloadDocx()"></app-button>
-          <app-button *ngIf="audit?.has_program && audit?.has_transcript && audit?.audit_status !== 'completed'"
-                      [label]="auditRunning ? 'Analizando...' : 'Ejecutar Auditoria'"
-                      [icon]="auditRunning ? ['fas', 'spinner'] : ['fas', 'play']"
-                      [disabled]="auditRunning"
-                      (clicked)="triggerAudit()"></app-button>
-        </div>
-      </div>
-      <div class="p-5">
-        <div *ngIf="audit?.audit_status === 'completed' && report" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="flex flex-col items-center justify-center p-4">
-            <span class="text-4xl font-bold text-primary">{{ audit.audit_score }}%</span>
-            <p class="mt-1 text-sm font-bold text-on-surface-variant">{{ classificationLabel }}</p>
-          </div>
-          <div class="lg:col-span-2">
-            <p class="text-xs font-bold uppercase text-on-surface-variant mb-2">Objetivos Terapéuticos</p>
-            <div class="space-y-2 max-h-48 overflow-y-auto">
-              <div *ngFor="let obj of report.objectives" class="p-2 rounded border border-outline text-sm text-on-surface">
-                <fa-icon [icon]="['fas', 'check-circle']" class="text-on-surface-variant mr-1"></fa-icon>
-                <strong>{{ obj.name }}</strong><br>
-                <span class="text-xs opacity-75">{{ obj.evidence }}</span>
-              </div>
-            </div>
-          </div>
-          <div *ngIf="report.observations" class="lg:col-span-3 p-3 border border-outline rounded-lg">
-            <p class="text-xs font-bold text-on-surface-variant mb-1"><fa-icon [icon]="['fas', 'comment-dots']" class="mr-1"></fa-icon> Observaciones IA</p>
-            <p class="text-sm text-on-surface">{{ report.observations }}</p>
-          </div>
-        </div>
-        <div *ngIf="audit?.audit_status !== 'completed'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="p-3 rounded-lg border border-outline">
-            <p class="text-xs font-bold uppercase text-on-surface-variant">
-              <fa-icon [icon]="['fas', 'file-word']" class="mr-1"></fa-icon> Programación (.docx)
-            </p>
-            <p class="text-sm mt-1 text-on-surface-variant">
-              {{ audit?.has_program ? 'Subida' : 'Pendiente de subir' }}
-            </p>
-              <app-button *ngIf="audit?.has_program" variant="ghost" label="Ver Programacion" [icon]="['fas', 'eye']" (clicked)="openProgramModal()"></app-button>
-          </div>
-          <div class="p-3 rounded-lg border border-outline">
-            <p class="text-xs font-bold uppercase text-on-surface-variant">
-              <fa-icon [icon]="['fas', 'microphone']" class="mr-1"></fa-icon> Transcripción (Whisper)
-            </p>
-            <p class="text-sm mt-1 text-on-surface-variant">
-              {{ audit?.has_transcript ? 'Transcrita (' + (audit?.audio_duration_seconds || '?') + 's)' : 'Pendiente de grabar' }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-4 bg-surface rounded-2xl border border-outline overflow-hidden">
-      <div class="p-4 border-b border-outline flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'star']" class="text-primary"></fa-icon>
-        <h3 class="font-bold text-on-surface text-sm uppercase tracking-wide">Feedback del Terapeuta</h3>
-        <span *ngIf="feedbackSubmitted" class="ml-auto text-xs text-on-surface-variant font-bold bg-surface-container-high px-2 py-0.5 rounded-full">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-xs mr-1"></fa-icon>Enviado
-        </span>
-      </div>
-      <div class="p-5 space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Compromiso (1-5)</p>
-            <div class="flex gap-2">
-              <button *ngFor="let val of [1,2,3,4,5]" (click)="setEngagement(val)" [disabled]="feedbackSubmitted"
-                      class="w-10 h-10 rounded-full text-sm font-bold transition-all border"
-                      [class.bg-amber-400]="feedbackEngagement === val"
-                      [class.text-white]="feedbackEngagement === val"
-                      [class.border-amber-400]="feedbackEngagement === val"
-                      [class.bg-surface-container-low]="feedbackEngagement !== val"
-                      [class.text-on-surface-variant]="feedbackEngagement !== val"
-                      [class.border-outline]="feedbackEngagement !== val"
-                      [class.hover:bg-amber-100]="!feedbackSubmitted"
-                      [class.cursor-not-allowed]="feedbackSubmitted">
-                {{ val }}
-              </button>
-            </div>
-          </div>
-          <div>
-            <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Progreso (1-5)</p>
-            <div class="flex gap-2">
-              <button *ngFor="let val of [1,2,3,4,5]" (click)="setProgress(val)" [disabled]="feedbackSubmitted"
-                      class="w-10 h-10 rounded-full text-sm font-bold transition-all border"
-                      [class.bg-orange-400]="feedbackProgress === val"
-                      [class.text-white]="feedbackProgress === val"
-                      [class.border-orange-400]="feedbackProgress === val"
-                      [class.bg-surface-container-low]="feedbackProgress !== val"
-                      [class.text-on-surface-variant]="feedbackProgress !== val"
-                      [class.border-outline]="feedbackProgress !== val"
-                      [class.hover:bg-orange-100]="!feedbackSubmitted"
-                      [class.cursor-not-allowed]="feedbackSubmitted">
-                {{ val }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div>
-          <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Notas de Feedback</p>
-          <textarea [(ngModel)]="feedbackNotes" [disabled]="feedbackSubmitted"
-                    class="w-full p-3 rounded-lg border border-outline bg-surface-container-low text-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
-                    rows="2" placeholder="Comentarios adicionales sobre el progreso del paciente..."></textarea>
-        </div>
-        <div class="flex justify-end">
-          <app-button [label]="feedbackSaving ? 'Enviando...' : 'Enviar Feedback'"
-                      [icon]="feedbackSaving ? ['fas', 'spinner'] : ['fas', 'paper-plane']"
-                      [disabled]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress || feedbackSaving"
-                      (clicked)="submitFeedback()"></app-button>
-        </div>
+    <div *ngIf="report?.observations" class="max-w-6xl mx-auto px-4 pb-4">
+      <div class="bg-white rounded border p-3">
+        <div class="text-xs font-bold text-gray-500 uppercase mb-1">Observaciones IA</div>
+        <p class="text-sm text-gray-700">{{ report.observations }}</p>
       </div>
     </div>
   </div>
 </div>
 
-<div class="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-6 transition-opacity duration-300"
+<div class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 transition-opacity duration-300"
      *ngIf="isRecording"
-     style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
-  <div class="relative">
-    <div class="w-28 h-28 rounded-full flex items-center justify-center" style="background: rgba(239,68,68,0.2); animation: pulse 2s infinite;">
-      <div class="w-20 h-20 rounded-full flex items-center justify-center" style="background: rgba(239,68,68,0.4);">
-        <fa-icon [icon]="['fas', 'microphone']" class="text-white text-3xl"></fa-icon>
-      </div>
+     style="background:rgba(0,0,0,0.85);backdrop-filter:blur(4px)">
+  <div class="w-24 h-24 rounded-full flex items-center justify-center" style="background:rgba(239,68,68,0.2);animation:pulse 2s infinite">
+    <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:rgba(239,68,68,0.4)">
+      <fa-icon [icon]="['fas', 'microphone']" class="text-white text-2xl"></fa-icon>
     </div>
   </div>
   <div class="text-center">
-    <p class="text-white text-2xl font-bold font-mono">{{ recordingElapsed }}</p>
-    <p class="text-white/70 text-sm mt-1">Grabando sesión...</p>
-    <p class="text-white/50 text-xs mt-1">Segmento {{ chunkCount + 1 }} (cada 5 min)</p>
+    <p class="text-white text-xl font-bold font-mono">{{ recordingElapsed }}</p>
+    <p class="text-white/70 text-sm">Grabando...</p>
+    <p class="text-white/50 text-xs mt-1">Segmento {{ chunkCount + 1 }}</p>
   </div>
-  <div *ngIf="chunkUploadStatus" class="px-4 py-2 rounded-full text-white text-sm font-medium"
-      [class.bg-green-500]="chunkUploadStatus.includes('completa') || chunkUploadStatus.includes('transcrito')"
-      [class.bg-red-500]="chunkUploadStatus.includes('Error')"
-      [class.bg-purple-600]="!chunkUploadStatus.includes('completa') && !chunkUploadStatus.includes('transcrito') && !chunkUploadStatus.includes('Error')">
-    <fa-icon *ngIf="chunkUploadStatus.includes('Transcribiendo')" [icon]="['fas', 'spinner']" animation="spin" class="mr-2"></fa-icon>
+  <div *ngIf="chunkUploadStatus" class="px-3 py-1 rounded-full text-white text-xs font-bold"
+       [class.bg-green-500]="chunkUploadStatus.includes('completa') || chunkUploadStatus.includes('transcrito')"
+       [class.bg-red-500]="chunkUploadStatus.includes('Error')"
+       [class.bg-purple-600]="!chunkUploadStatus.includes('completa') && !chunkUploadStatus.includes('transcrito') && !chunkUploadStatus.includes('Error')">
     {{ chunkUploadStatus }}
   </div>
-  <app-button variant="danger" label="Detener y Transcribir" [icon]="['fas', 'stop']" (clicked)="toggleRecording()"></app-button>
+  <button class="text-sm font-bold px-4 py-2 rounded bg-red-500 text-white" (click)="toggleRecording()">Detener</button>
 </div>
 
-<div class="fixed inset-0 z-[95] flex flex-col items-center justify-center gap-4 p-4 transition-opacity duration-300"
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300"
      *ngIf="showWarningModal"
-     style="background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);">
-  <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
-    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
-      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-2xl"></fa-icon>
+     style="background:rgba(0,0,0,0.75);backdrop-filter:blur(4px)">
+  <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
+      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-xl"></fa-icon>
     </div>
-    <h3 class="text-lg font-bold text-on-surface mb-2">Posible Inasistencia</h3>
-    <p class="text-sm text-on-surface-variant mb-6">El paciente no ha hablado sobre la programación. Si no hay interacción en:</p>
-    <div class="text-5xl font-black font-mono text-amber-600 mb-6">{{ warningTimeLeft }}</div>
-    <div class="w-full bg-surface-container-high rounded-full h-2 mb-6 overflow-hidden">
-      <div class="h-full rounded-full bg-gradient-to-r from-amber-400 to-red-500 transition-all duration-1000"
-           [style.width.%]="(warningCountdown / 1200) * 100"></div>
-    </div>
-    <div class="flex gap-3 justify-center">
-      <app-button variant="primary" label="Paciente Presente" [icon]="['fas', 'check']" (clicked)="dismissWarning()"></app-button>
-      <app-button variant="danger" label="Marcar Ausente" [icon]="['fas', 'times']" (clicked)="markAbsent()"></app-button>
+    <h3 class="text-base font-bold mb-2">Posible Inasistencia</h3>
+    <p class="text-sm text-gray-500 mb-4">Si no hay interaccion en:</p>
+    <div class="text-4xl font-black font-mono text-amber-600 mb-4">{{ warningTimeLeft }}</div>
+    <div class="flex gap-2 justify-center">
+      <button class="text-xs font-bold px-3 py-1.5 rounded" style="background:var(--color-primary);color:white" (click)="dismissWarning()">Presente</button>
+      <button class="text-xs font-bold px-3 py-1.5 rounded bg-red-500 text-white" (click)="markAbsent()">Ausente</button>
     </div>
   </div>
 </div>
 
-<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-300"
-     *ngIf="showProgramModal"
-     style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);"
-     (click)="closeProgramModal()">
-  <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" (click)="$event.stopPropagation()">
-    <div class="px-6 py-4 border-b border-outline flex justify-between items-center bg-gradient-to-r from-purple-50 to-blue-50 shrink-0">
-      <h3 class="font-bold text-purple-800 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'file-alt']"></fa-icon> Programación de Sesión
-      </h3>
-      <div class="flex items-center gap-2">
-        <app-button variant="primary" label="Imprimir" [icon]="['fas', 'print']" (clicked)="printProgram()"></app-button>
-        <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="closeProgramModal()"></app-button>
+<ng-template #programModal>
+  <div class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+       style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px)"
+       (click)="closeProgramModal()">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" (click)="$event.stopPropagation()">
+      <div class="px-4 py-3 border-b flex justify-between items-center bg-purple-50 shrink-0">
+        <h3 class="text-sm font-bold text-purple-800">Programacion</h3>
+        <button class="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-50" (click)="closeProgramModal()">Cerrar</button>
       </div>
+      <div class="p-4 overflow-y-auto text-sm leading-relaxed" *ngIf="programText else progLoading">
+        {{ programText }}
+      </div>
+      <ng-template #progLoading>
+        <div class="p-8 text-center text-gray-400" *ngIf="programLoading">Cargando...</div>
+      </ng-template>
     </div>
-    <div class="p-6 overflow-y-auto" [class.flex]="programLoading" [class.items-center]="programLoading" [class.justify-center]="programLoading" [class.min-h-[200px]]="programLoading">
-      <div *ngIf="programLoading">
-        <app-spinner size="md" colorClass="text-purple-500"></app-spinner>
-      </div>
-      <div *ngIf="!programLoading && programText" class="text-sm text-on-surface leading-relaxed" id="programPrintContent">
-        <div class="mb-4 pb-3 border-b border-outline">
-          <p class="text-xs text-on-surface-variant">Subida: {{ programUploadedAt | date:'dd/MM/yyyy HH:mm' }}</p>
-        </div>
-        <div [innerHTML]="formatProgramText(programText)"></div>
-      </div>
-      <div *ngIf="!programLoading && !programText" class="text-center text-on-surface-variant py-8">
-        No hay programación disponible.
-      </div>
+  </div>
+</ng-template>
+
+<div *ngIf="loading" class="flex justify-center items-center h-64">
+  <div class="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
+</div>
+
+<div class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 transition-all duration-300"
+     *ngIf="showCameraModal"
+     style="background:rgba(0,0,0,0.95);backdrop-filter:blur(4px)">
+  <div class="relative w-full max-w-lg bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
+    <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center min-h-[350px]">
+      <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+    </div>
+    <div class="py-6 px-6 bg-black/90 border-t border-white/10 flex justify-between items-center shrink-0">
+      <button class="text-white text-xs px-2 py-1 border border-white/30 rounded" (click)="closeCamera()">Cancelar</button>
+      <button (click)="takePhoto()" class="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
+        <div class="w-12 h-12 bg-white rounded-full active:scale-90 transition-transform"></div>
+      </button>
+      <div class="w-14"></div>
     </div>
   </div>
 </div>
 
 <div class="fixed inset-0 z-[100] flex items-center justify-center p-4"
      *ngIf="showFullscreen"
-     style="background: rgba(0,0,0,0.95); backdrop-filter: blur(4px);"
+     style="background:rgba(0,0,0,0.95);backdrop-filter:blur(4px)"
      (click)="closeFullscreen()">
-  <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="closeFullscreen()" class="absolute top-6 right-6 z-50"></app-button>
+  <button class="absolute top-4 right-4 text-white text-xs px-2 py-1 border border-white/30 rounded z-10" (click)="closeFullscreen()">Cerrar</button>
   <img [src]="currentImage?.url" class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm">
-</div>
-
-<div class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 transition-all duration-300"
-     *ngIf="showCameraModal"
-     style="background: rgba(0,0,0,0.95); backdrop-filter: blur(4px);">
-  <div class="relative w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
-    <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center min-h-[400px]">
-      <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
-      <div class="absolute inset-0 border border-white/20 pointer-events-none m-6 rounded-2xl opacity-50">
-        <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-lg"></div>
-        <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-lg"></div>
-        <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-lg"></div>
-        <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-lg"></div>
-        <div class="absolute top-1/2 left-1/2 w-2 h-2 bg-white/50 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-      </div>
-      <div class="absolute top-4 left-0 right-0 text-center">
-        <span class="px-3 py-1 bg-black/50 backdrop-blur-md text-white/90 text-xs font-medium rounded-full border border-white/10">Alinea el documento</span>
-      </div>
-    </div>
-    <div class="py-8 px-8 bg-black/90 backdrop-blur-xl border-t border-white/10 flex justify-between items-center shrink-0 z-20">
-      <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="closeCamera()"></app-button>
-      <button (click)="takePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-transparent hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg group">
-        <div class="w-16 h-16 bg-white rounded-full group-active:scale-90 transition-transform duration-150"></div>
-      </button>
-      <div class="w-12 h-12"></div>
-    </div>
-  </div>
-</div>
-
-<div *ngIf="loading" class="flex justify-center items-center h-96">
-  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
