@@ -497,7 +497,7 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
         
         elif intent == 'navigation':
             # Navegar a sección
-            from app.services.enhanced_llm_service_v3 import get_navigation_url, get_tutorial_steps
+            from app.services.enhanced_llm_service_v5 import get_navigation_url, get_tutorial_steps
             target_section = params.get('target_section', 'dashboard')
             redirect_url = get_navigation_url(target_section, uid)
             
@@ -632,3 +632,94 @@ RESPUESTAS:
             'confidence': 0,
             'action': 'error'
         }
+
+
+def save_chat_message(conversation_id, role, content, intent=None, parameters=None, action_status=None):
+    from app.extensions import db
+    from app.models import AIChatMessage
+    msg = AIChatMessage(
+        conversation_id=conversation_id,
+        role=role,
+        content=content,
+        intent=intent,
+        parameters=parameters if isinstance(parameters, dict) else {},
+        action_status=action_status
+    )
+    db.session.add(msg)
+    db.session.commit()
+    return msg.id
+
+
+def get_navigation_url(section, user_id):
+    from flask import url_for
+    mapping = {
+        'dashboard': 'admin.dashboard',
+        'pacientes': 'admin.users',
+        'patients': 'admin.users',
+        'cobros': 'admin.dashboard',
+        'payments': 'admin.dashboard',
+        'reportes': 'admin.reports',
+        'reports': 'admin.reports',
+        'sesiones': 'admin.dashboard',
+        'sessions': 'admin.dashboard',
+        'juegos': 'admin.games',
+        'games': 'admin.games',
+        'gastos': 'admin.expenses',
+        'expenses': 'admin.expenses',
+        'sedes': 'admin.sedes',
+    }
+    ep = mapping.get(section.lower(), 'admin.dashboard')
+    try:
+        return url_for(ep)
+    except Exception:
+        return url_for('admin.dashboard')
+
+
+def get_tutorial_steps(action, section=None):
+    if action == 'navigation':
+        return [{'step': 1, 'action': f'navegar_a_{section}', 'description': f'Ir a {section}'}]
+    if action == 'register_payment':
+        return [
+            {'step': 1, 'action': 'buscar_paciente', 'description': 'Buscar paciente'},
+            {'step': 2, 'action': 'registrar_pago', 'description': 'Registrar pago'},
+        ]
+    return []
+
+
+def extract_payment_details(message):
+    import re
+    result = {}
+    m_patient = re.search(r'(?:para|de|paciente)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)', message, re.I)
+    if m_patient:
+        result['patient_name'] = m_patient.group(1).strip()
+    m_amount = re.search(r'(?:S/?\.?\s*)?(\d+[\.,]?\d*)\s*(?:soles)?', message)
+    if m_amount:
+        result['amount'] = m_amount.group(1).replace(',', '.')
+    m_ref = re.search(r'(?:ref|referencia|voucher)\s*[:\s]+([A-Za-z0-9]+)', message, re.I)
+    if m_ref:
+        result['reference'] = m_ref.group(1).strip()
+    return result
+
+
+def validate_payment_parameters(params):
+    if not params.get('patient_name'):
+        return False, 'Falta nombre del paciente'
+    if not params.get('amount'):
+        return False, 'Falta monto del pago'
+    try:
+        float(params['amount'])
+    except (ValueError, TypeError):
+        return False, 'Monto invalido'
+    return True, ''
+
+
+def validate_expense_parameters(params):
+    if not params.get('amount'):
+        return False, 'Falta monto del gasto'
+    if not params.get('category'):
+        return False, 'Falta categoria del gasto'
+    try:
+        float(params['amount'])
+    except (ValueError, TypeError):
+        return False, 'Monto invalido'
+    return True, ''

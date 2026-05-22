@@ -12,7 +12,7 @@ from app.models import User, Payment, AIConversation, AIChatMessage
 from app.services.enhanced_llm_service_v5 import (
     process_chat_enhanced_v5,
 )
-from app.services.enhanced_llm_service_v3 import (
+from app.services.enhanced_llm_service_v5 import (
     validate_payment_parameters,
     validate_expense_parameters,
     save_chat_message,
@@ -147,7 +147,7 @@ def send_message():
         elif intent == 'register_payment':
             payment_params = dict(params)
             if not payment_params.get('patient_name') or not payment_params.get('amount'):
-                from app.services.enhanced_llm_service_v3 import extract_payment_details
+                from app.services.enhanced_llm_service_v5 import extract_payment_details
                 extracted = extract_payment_details(user_message)
                 payment_params.update(extracted)
 
