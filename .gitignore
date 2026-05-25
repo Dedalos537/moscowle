@@ -66,6 +66,10 @@ htmlcov/
 instance/
 .webassets-cache
 
+# Backup folders
+app_back/
+* 2.scss
+
 # Secret keys
 secret_key.txt
 credentials.json
