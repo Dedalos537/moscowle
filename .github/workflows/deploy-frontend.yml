@@ -28,7 +28,7 @@ jobs:
           path: edysync/.angular/cache
           key: angular-cache-${{ runner.os }}-${{ hashFiles('edysync/package-lock.json') }}
 
-      - run: npm ci
+      - run: npm ci --legacy-peer-deps
       - run: npm run build
 
       - name: Deploy to cPanel via FTP
