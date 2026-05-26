@@ -121,12 +121,12 @@ export class TherapistSessions implements OnInit, OnDestroy {
 
   statusColor(status: string): string {
     const map: any = {
-      scheduled: '#3b82f6',
-      completed: '#22c55e',
-      cancelled: '#ef4444',
-      in_progress: '#f59e0b',
+      scheduled: 'var(--color-info)',
+      completed: 'var(--color-success)',
+      cancelled: 'var(--color-error)',
+      in_progress: 'var(--color-warning)',
     };
-    return map[status] || '#6b7280';
+    return map[status] || 'var(--color-on-surface-variant)';
   }
 
   statusLabel(status: string): string {

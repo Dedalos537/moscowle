@@ -1,106 +1,100 @@
 <div class="h-full flex flex-col" *ngIf="!loading && session">
-  <div class="flex items-center gap-2 px-4 py-3 border-b shrink-0 bg-white z-10">
-    <a routerLink="/therapist/sessions" class="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center gap-1">
+  <div class="flex items-center gap-2 px-4 py-3 border-b shrink-0" style="background:var(--color-surface);z-index:10">
+    <a routerLink="/therapist/sessions" class="text-sm text-charcoal hover:text-textDark transition-colors flex items-center gap-1">
       <fa-icon [icon]="['fas', 'arrow-left']" class="text-xs"></fa-icon>
       <span class="hidden md:inline">Volver</span>
     </a>
-    <span class="text-gray-300">/</span>
-    <span class="text-sm font-medium truncate">{{ session.title }}</span>
+    <span class="text-charcoal">/</span>
+    <span class="text-sm font-medium text-textDark truncate">{{ session.title }}</span>
     <div class="ml-auto flex items-center gap-2">
       <input type="file" #fileInput class="hidden" accept="image/*,.doc,.docx" (change)="onImageSelected($event)">
-      <button class="text-xs font-bold px-2 py-1.5 rounded border bg-white hover:bg-gray-50" (click)="fileInput.click()">Subir</button>
-      <button class="text-xs font-bold px-2 py-1.5 rounded border"
-              [class.bg-red-500]="isRecording"
-              [class.text-white]="isRecording"
-              [class.bg-white]="!isRecording"
+      <button class="btn-secondary text-xs !px-2 !py-1.5" (click)="fileInput.click()">Subir</button>
+      <button class="text-xs font-bold px-2 py-1.5 rounded border transition-all"
+              [style.background]="isRecording ? 'var(--color-error)' : 'var(--color-surface)'"
+              [style.color]="isRecording ? 'var(--color-on-error)' : 'var(--color-textDark)'"
+              [style.borderColor]="isRecording ? 'var(--color-error)' : 'var(--color-border)'"
               (click)="toggleRecording()">
         {{ isRecording ? 'Detener' : 'Grabar' }}
       </button>
-      <button class="text-xs font-bold px-2 py-1.5 rounded border bg-white" (click)="openCamera()">Camara</button>
+      <button class="btn-secondary text-xs !px-2 !py-1.5" (click)="openCamera()">Camara</button>
     </div>
   </div>
 
-  <div class="flex-1 overflow-y-auto bg-[#f8f9ff]">
+  <div class="flex-1 overflow-y-auto" style="background:var(--color-surface-variant/30)">
     <div class="max-w-6xl mx-auto p-4 flex gap-4">
       <div class="w-64 shrink-0 space-y-3">
-        <div class="bg-white rounded border p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Sesion</div>
-          <div class="text-sm font-bold">{{ session.title }}</div>
+        <div class="card p-3">
+          <div class="text-label text-charcoal mb-2">Sesion</div>
+          <div class="text-sm font-bold text-textDark">{{ session.title }}</div>
           <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase"
-                [class.bg-red-100]="session.attendance === 'absent'"
-                [class.text-red-700]="session.attendance === 'absent'"
-                [class.bg-green-100]="session.status === 'completed'"
-                [class.text-green-700]="session.status === 'completed'"
-                [class.bg-blue-100]="session.status === 'scheduled'"
-                [class.text-blue-700]="session.status === 'scheduled'">
+                [style.background]="session.attendance === 'absent' ? 'var(--color-error-container)' : session.status === 'completed' ? 'var(--color-primary-container)' : 'var(--color-info-container)'"
+                [style.color]="session.attendance === 'absent' ? 'var(--color-on-error-container)' : session.status === 'completed' ? 'var(--color-on-primary-container)' : 'var(--color-info)'">
             {{ session.status }}
           </span>
         </div>
 
-        <div class="bg-white rounded border p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-3">Fases</div>
+        <div class="card p-3">
+          <div class="text-label text-charcoal mb-3">Fases</div>
           <div class="relative pl-6">
-            <div class="absolute left-[7px] top-1 bottom-1 w-0.5 bg-gray-200"></div>
+            <div class="absolute left-[7px] top-1 bottom-1 w-0.5" style="background:var(--color-outline-variant)"></div>
             <div class="relative pb-4 last:pb-0">
-              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 bg-white z-10" style="border-color:var(--color-primary)"></div>
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 z-10"
+                   style="border-color:var(--color-primary);background:var(--color-surface)"></div>
               <div class="text-xs font-bold" style="color:var(--color-primary)">Apertura</div>
-              <div class="text-[10px] text-gray-500">Inicio de sesion</div>
+              <div class="text-[10px] text-charcoal">Inicio de sesion</div>
             </div>
             <div class="relative pb-4 last:pb-0">
-              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full bg-white border-2 z-10 animate-pulse" style="border-color:var(--color-primary)"></div>
-              <div class="text-xs font-bold text-gray-700">Exploracion</div>
-              <div class="text-[10px] text-gray-500">En curso</div>
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 z-10 animate-pulse"
+                   style="border-color:var(--color-primary);background:var(--color-surface)"></div>
+              <div class="text-xs font-bold text-textDark">Exploracion</div>
+              <div class="text-[10px] text-charcoal">En curso</div>
             </div>
             <div class="relative pb-0">
-              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 bg-white z-10" style="border-color:#d1d5db"></div>
-              <div class="text-xs font-bold text-gray-400">Cierre</div>
-              <div class="text-[10px] text-gray-400">Pendiente</div>
+              <div class="absolute left-[3px] top-1 w-[10px] h-[10px] rounded-full border-2 z-10"
+                   style="border-color:var(--color-outline-variant);background:var(--color-surface)"></div>
+              <div class="text-xs font-bold" style="color:var(--color-on-surface-variant)">Cierre</div>
+              <div class="text-[10px]" style="color:var(--color-on-surface-variant)">Pendiente</div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded border p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Asistencia</div>
+        <div class="card p-3">
+          <div class="text-label text-charcoal mb-2">Asistencia</div>
           <div class="grid grid-cols-2 gap-2">
-            <button class="text-xs font-bold px-2 py-1.5 rounded border"
-                    [class.bg-green-500]="attendance === 'present'"
-                    [class.text-white]="attendance === 'present'"
-                    [class.bg-white]="attendance !== 'present'"
+            <button class="text-xs font-bold px-2 py-1.5 rounded border transition-all"
+                    [style.background]="attendance === 'present' ? 'var(--color-success)' : 'var(--color-surface)'"
+                    [style.color]="attendance === 'present' ? 'var(--color-on-primary)' : 'var(--color-textDark)'"
+                    [style.borderColor]="attendance === 'present' ? 'var(--color-success)' : 'var(--color-border)'"
                     (click)="setAttendance('present')">Presente</button>
-            <button class="text-xs font-bold px-2 py-1.5 rounded border"
-                    [class.bg-red-500]="attendance === 'absent'"
-                    [class.text-white]="attendance === 'absent'"
-                    [class.bg-white]="attendance !== 'absent'"
+            <button class="text-xs font-bold px-2 py-1.5 rounded border transition-all"
+                    [style.background]="attendance === 'absent' ? 'var(--color-error)' : 'var(--color-surface)'"
+                    [style.color]="attendance === 'absent' ? 'var(--color-on-error)' : 'var(--color-textDark)'"
+                    [style.borderColor]="attendance === 'absent' ? 'var(--color-error)' : 'var(--color-border)'"
                     (click)="setAttendance('absent')">Ausente</button>
           </div>
         </div>
 
-        <div *ngIf="audit" class="bg-white rounded border p-3">
-          <div class="text-xs font-bold text-gray-500 uppercase mb-2">Auditoria IA
+        <div *ngIf="audit" class="card p-3">
+          <div class="text-label text-charcoal mb-2">Auditoria IA
             <span *ngIf="liveScore !== null" class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                  [class.text-green-600]="liveScore >= 70"
-                  [class.text-amber-600]="liveScore >= 40 && liveScore < 70"
-                  [class.text-red-600]="liveScore < 40"
-                  style="background:rgba(0,0,0,0.04)">{{ liveScore }}%</span>
+                  [style.background]="'var(--color-surface-container-high)'"
+                  [style.color]="liveScore >= 70 ? 'var(--color-success)' : liveScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">{{ liveScore }}%</span>
           </div>
           <div *ngIf="audit?.audit_status === 'completed' && report" class="text-center py-2">
             <div class="text-2xl font-bold" style="color:var(--color-primary)">{{ audit.audit_score }}%</div>
-            <div class="text-[10px] text-gray-500 uppercase">{{ classificationLabel }}</div>
+            <div class="text-[10px] text-charcoal uppercase">{{ classificationLabel }}</div>
           </div>
           <div *ngIf="audit?.audit_status !== 'completed'">
             <div class="text-[10px] mb-1">
-              <span class="text-gray-500">Programacion:</span>
-              <span class="font-bold" [class.text-green-600]="audit?.has_program" [class.text-gray-400]="!audit?.has_program">{{ audit?.has_program ? 'Subida' : 'Pendiente' }}</span>
+              <span class="text-charcoal">Programacion:</span>
+              <span class="font-bold" [style.color]="audit?.has_program ? 'var(--color-success)' : 'var(--color-charcoal)'">{{ audit?.has_program ? 'Subida' : 'Pendiente' }}</span>
             </div>
             <div class="text-[10px] mb-2">
-              <span class="text-gray-500">Transcripcion:</span>
-              <span class="font-bold" [class.text-green-600]="audit?.has_transcript" [class.text-gray-400]="!audit?.has_transcript">{{ audit?.has_transcript ? (audit?.audio_duration_seconds || '?') + 's' : 'Pendiente' }}</span>
+              <span class="text-charcoal">Transcripcion:</span>
+              <span class="font-bold" [style.color]="audit?.has_transcript ? 'var(--color-success)' : 'var(--color-charcoal)'">{{ audit?.has_transcript ? (audit?.audio_duration_seconds || '?') + 's' : 'Pendiente' }}</span>
             </div>
             <button *ngIf="audit?.has_program && audit?.has_transcript"
-                    class="text-[10px] font-bold px-2 py-1 rounded w-full"
-                    [class.bg-gray-200]="auditRunning"
-                    [style.background]="!auditRunning ? 'var(--color-primary)' : ''"
-                    [class.text-white]="!auditRunning"
+                    class="text-[10px] font-bold px-2 py-1 rounded w-full btn-primary !text-xs !px-2"
                     (click)="triggerAudit()"
                     [disabled]="auditRunning">
               {{ auditRunning ? 'Analizando...' : 'Ejecutar Auditoria' }}
@@ -108,71 +102,74 @@
           </div>
         </div>
 
-        <div *ngIf="hasProgram" class="bg-white rounded border p-3 cursor-pointer hover:shadow-sm transition-shadow" (click)="openProgramModal()">
-          <div class="text-xs font-bold text-gray-500 uppercase">Programacion</div>
-          <div class="text-xs mt-1 text-gray-700 line-clamp-2">{{ programPreview || 'Ver documento' }}</div>
+        <div *ngIf="hasProgram" class="card p-3 cursor-pointer hover:shadow-hover transition-shadow" (click)="openProgramModal()">
+          <div class="text-label text-charcoal">Programacion</div>
+          <div class="text-xs mt-1 text-charcoal line-clamp-2">{{ programPreview || 'Ver documento' }}</div>
         </div>
       </div>
 
       <div class="flex-1 space-y-3 min-w-0">
-        <div class="bg-white rounded border">
-          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
-            <div class="text-xs font-bold text-gray-500 uppercase">Notas Clinicas</div>
-            <span class="text-[10px] text-gray-400 italic">{{ lastSavedLabel }}</span>
+        <div class="card">
+          <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
+            <div class="text-label text-charcoal">Notas Clinicas</div>
+            <span class="text-[10px] text-charcoal italic">{{ lastSavedLabel }}</span>
           </div>
           <textarea [(ngModel)]="notes" (input)="onNotesInput()"
-                    class="w-full p-3 resize-none text-sm focus:outline-none min-h-[140px] bg-white leading-relaxed"
+                    class="w-full p-3 resize-none text-sm focus:outline-none min-h-[140px] leading-relaxed"
+                    style="background:var(--color-surface);color:var(--color-textDark)"
                     placeholder="Escribe tus observaciones..."></textarea>
         </div>
 
-        <div *ngIf="audit?.transcript_text" class="bg-white rounded border">
-          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
-            <div class="text-xs font-bold text-gray-500 uppercase">Transcripcion</div>
-            <span class="text-[10px] text-gray-400">{{ audit?.audio_duration_seconds || 0 }}s grabados</span>
+        <div *ngIf="audit?.transcript_text" class="card">
+          <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
+            <div class="text-label text-charcoal">Transcripcion</div>
+            <span class="text-[10px] text-charcoal">{{ audit?.audio_duration_seconds || 0 }}s grabados</span>
           </div>
-          <div class="p-3 text-sm text-gray-700 leading-relaxed max-h-48 overflow-y-auto">
+          <div class="p-3 text-sm leading-relaxed max-h-48 overflow-y-auto"
+               style="color:var(--color-textDark)">
             {{ audit.transcript_text }}
           </div>
         </div>
 
-        <div *ngIf="audit?.audit_status === 'completed' && report" class="bg-white rounded border">
-          <div class="px-3 py-2 border-b bg-gray-50">
-            <div class="text-xs font-bold text-gray-500 uppercase">Objetivos</div>
+        <div *ngIf="audit?.audit_status === 'completed' && report" class="card">
+          <div class="px-3 py-2 border-b" style="background:var(--color-surface-container-low)">
+            <div class="text-label text-charcoal">Objetivos</div>
           </div>
           <div class="p-3 space-y-2 max-h-48 overflow-y-auto">
-            <div *ngFor="let obj of report.objectives" class="text-xs p-2 rounded bg-gray-50 border">
-              <span class="font-bold block">{{ obj.name }}</span>
-              <span class="text-gray-500">{{ obj.evidence }}</span>
+            <div *ngFor="let obj of report.objectives" class="text-xs p-2 rounded"
+                 style="background:var(--color-surface-container-low);border-color:var(--color-border)">
+              <span class="font-bold block text-textDark">{{ obj.name }}</span>
+              <span class="text-charcoal">{{ obj.evidence }}</span>
               <span class="ml-1 text-[10px] font-bold uppercase"
-                    [class.text-green-600]="obj.classification === 'logrado'"
-                    [class.text-amber-600]="obj.classification === 'parcial'"
-                    [class.text-red-600]="obj.classification === 'no_cubierto'">({{ obj.classification }})</span>
+                    [style.color]="obj.classification === 'logrado' ? 'var(--color-success)' : obj.classification === 'parcial' ? 'var(--color-warning)' : 'var(--color-error)'">({{ obj.classification }})</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-white rounded border overflow-hidden">
-          <div class="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
-            <div class="text-xs font-bold text-gray-500 uppercase">Evidencia</div>
-            <span class="text-[10px] text-gray-400">{{ images.length }} archivos</span>
+        <div class="card overflow-hidden">
+          <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
+            <div class="text-label text-charcoal">Evidencia</div>
+            <span class="text-[10px] text-charcoal">{{ images.length }} archivos</span>
           </div>
-          <div class="p-3">
+          <div class="p-3" style="background:var(--color-surface)">
             <div *ngIf="currentImage" class="mb-3">
-              <img [src]="currentImage.url" class="w-full max-h-64 object-contain rounded border bg-gray-50">
+              <img [src]="currentImage.url" class="w-full max-h-64 object-contain rounded border"
+                   style="background:var(--color-surface-container-low);border-color:var(--color-border)">
               <div class="flex gap-1 mt-1">
-                <button class="text-[10px] px-1.5 py-0.5 rounded border bg-white hover:bg-gray-50" (click)="openFullscreen()">Ampliar</button>
-                <button class="text-[10px] px-1.5 py-0.5 rounded border bg-white hover:bg-red-50 text-red-600" (click)="deleteCurrentImage()">Eliminar</button>
+                <button class="text-[10px] px-1.5 py-0.5 rounded border btn-ghost !text-xs" (click)="openFullscreen()">Ampliar</button>
+                <button class="text-[10px] px-1.5 py-0.5 rounded border"
+                        style="border-color:var(--color-error);color:var(--color-error)"
+                        (click)="deleteCurrentImage()">Eliminar</button>
               </div>
             </div>
             <div *ngIf="!images.length" class="text-center py-6">
-              <div class="text-sm text-gray-400 mb-2">Sin evidencia visual</div>
-              <button class="text-xs font-bold px-3 py-1.5 border rounded bg-white hover:bg-gray-50" (click)="fileInput.click()">Subir foto</button>
+              <div class="text-sm text-charcoal mb-2">Sin evidencia visual</div>
+              <button class="btn-secondary text-xs !px-3 !py-1.5" (click)="fileInput.click()">Subir foto</button>
             </div>
             <div *ngIf="images.length" class="flex gap-2 overflow-x-auto">
               <div *ngFor="let img of images; let i = index"
                    class="shrink-0 w-16 h-12 rounded border-2 overflow-hidden cursor-pointer"
-                   [class.border-blue-500]="currentImage?.id === img.id"
-                   [class.border-transparent]="currentImage?.id !== img.id"
+                   [style.borderColor]="currentImage?.id === img.id ? 'var(--color-primary)' : 'transparent'"
                    (click)="selectImage(img)">
                 <img [src]="img.url" class="w-full h-full object-cover" [class.opacity-50]="currentImage?.id !== img.id">
               </div>
@@ -180,48 +177,39 @@
           </div>
         </div>
 
-        <div class="bg-white rounded border">
-          <div class="px-3 py-2 border-b bg-gray-50">
-            <div class="text-xs font-bold text-gray-500 uppercase">Feedback</div>
+        <div class="card">
+          <div class="px-3 py-2 border-b" style="background:var(--color-surface-container-low)">
+            <div class="text-label text-charcoal">Feedback</div>
           </div>
-          <div class="p-3 space-y-3">
+          <div class="p-3 space-y-3" style="background:var(--color-surface)">
             <div class="flex gap-4">
               <div>
-                <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Compromiso</div>
+                <div class="text-[10px] text-charcoal uppercase font-bold mb-1">Compromiso</div>
                 <div class="flex gap-1">
                   <button *ngFor="let val of [1,2,3,4,5]" (click)="setEngagement(val)" [disabled]="feedbackSubmitted"
-                          class="w-7 h-7 text-xs font-bold rounded-full border transition-all"
-                          [class.bg-amber-400]="feedbackEngagement === val"
-                          [class.text-white]="feedbackEngagement === val"
-                          [class.border-amber-400]="feedbackEngagement === val"
-                          [class.bg-white]="feedbackEngagement !== val"
-                          [class.text-gray-600]="feedbackEngagement !== val"
-                          [class.border-gray-300]="feedbackEngagement !== val">{{ val }}</button>
+                          class="w-8 h-8 text-xs font-bold rounded-full border transition-all"
+                          [style.background]="feedbackEngagement === val ? 'var(--color-warning)' : 'var(--color-surface)'"
+                          [style.color]="feedbackEngagement === val ? 'var(--color-on-primary)' : 'var(--color-charcoal)'"
+                          [style.borderColor]="feedbackEngagement === val ? 'var(--color-warning)' : 'var(--color-border)'">{{ val }}</button>
                 </div>
               </div>
               <div>
-                <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Progreso</div>
+                <div class="text-[10px] text-charcoal uppercase font-bold mb-1">Progreso</div>
                 <div class="flex gap-1">
                   <button *ngFor="let val of [1,2,3,4,5]" (click)="setProgress(val)" [disabled]="feedbackSubmitted"
-                          class="w-7 h-7 text-xs font-bold rounded-full border transition-all"
-                          [class.bg-orange-400]="feedbackProgress === val"
-                          [class.text-white]="feedbackProgress === val"
-                          [class.border-orange-400]="feedbackProgress === val"
-                          [class.bg-white]="feedbackProgress !== val"
-                          [class.text-gray-600]="feedbackProgress !== val"
-                          [class.border-gray-300]="feedbackProgress !== val">{{ val }}</button>
+                          class="w-8 h-8 text-xs font-bold rounded-full border transition-all"
+                          [style.background]="feedbackProgress === val ? 'var(--color-primary)' : 'var(--color-surface)'"
+                          [style.color]="feedbackProgress === val ? 'var(--color-on-primary)' : 'var(--color-charcoal)'"
+                          [style.borderColor]="feedbackProgress === val ? 'var(--color-primary)' : 'var(--color-border)'">{{ val }}</button>
                 </div>
               </div>
             </div>
             <textarea [(ngModel)]="feedbackNotes" [disabled]="feedbackSubmitted"
                       class="w-full p-2 text-xs border rounded resize-none focus:outline-none"
+                      style="background:var(--color-surface);color:var(--color-textDark);border-color:var(--color-border)"
                       rows="2" placeholder="Comentarios..."></textarea>
-            <button class="text-xs font-bold px-3 py-1.5 rounded w-full"
-                    [class.bg-gray-200]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress"
-                    [style.background]="!feedbackSubmitted && feedbackEngagement && feedbackProgress ? 'var(--color-primary)' : ''"
-                    [class.text-white]="!feedbackSubmitted && feedbackEngagement && feedbackProgress"
-                    [disabled]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress || feedbackSaving"
-                    (click)="submitFeedback()">
+            <button class="text-xs font-bold px-3 py-1.5 rounded w-full btn-primary"
+                    [disabled]="feedbackSubmitted || !feedbackEngagement || !feedbackProgress || feedbackSaving">
               {{ feedbackSaving ? 'Enviando...' : feedbackSubmitted ? 'Enviado' : 'Enviar Feedback' }}
             </button>
           </div>
@@ -230,9 +218,9 @@
     </div>
 
     <div *ngIf="report?.observations" class="max-w-6xl mx-auto px-4 pb-4">
-      <div class="bg-white rounded border p-3">
-        <div class="text-xs font-bold text-gray-500 uppercase mb-1">Observaciones IA</div>
-        <p class="text-sm text-gray-700">{{ report.observations }}</p>
+      <div class="card p-3">
+        <div class="text-label text-charcoal mb-1">Observaciones IA</div>
+        <p class="text-sm text-textDark">{{ report.observations }}</p>
       </div>
     </div>
   </div>
@@ -252,27 +240,27 @@
     <p class="text-white/50 text-xs mt-1">Segmento {{ chunkCount + 1 }}</p>
   </div>
   <div *ngIf="chunkUploadStatus" class="px-3 py-1 rounded-full text-white text-xs font-bold"
-       [class.bg-green-500]="chunkUploadStatus.includes('completa') || chunkUploadStatus.includes('transcrito')"
-       [class.bg-red-500]="chunkUploadStatus.includes('Error')"
-       [class.bg-purple-600]="!chunkUploadStatus.includes('completa') && !chunkUploadStatus.includes('transcrito') && !chunkUploadStatus.includes('Error')">
+       [style.background]="chunkUploadStatus.includes('Error') ? 'var(--color-error)' : chunkUploadStatus.includes('completa') || chunkUploadStatus.includes('transcrito') ? 'var(--color-success)' : 'var(--color-info)'">
     {{ chunkUploadStatus }}
   </div>
-  <button class="text-sm font-bold px-4 py-2 rounded bg-red-500 text-white" (click)="toggleRecording()">Detener</button>
+  <button class="text-sm font-bold px-4 py-2 rounded" style="background:var(--color-error);color:var(--color-on-error)" (click)="toggleRecording()">Detener</button>
 </div>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300"
      *ngIf="showWarningModal"
      style="background:rgba(0,0,0,0.75);backdrop-filter:blur(4px)">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
-    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-100 flex items-center justify-center">
-      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-xl"></fa-icon>
+  <div class="rounded-xl shadow-2xl w-full max-w-sm p-6 text-center"
+       style="background:var(--color-surface);color:var(--color-textDark)">
+    <div class="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
+         style="background:var(--color-warning-container, #fef3c7)">
+      <fa-icon [icon]="['fas', 'exclamation-triangle']" style="color:var(--color-warning);font-size:1.25rem"></fa-icon>
     </div>
     <h3 class="text-base font-bold mb-2">Posible Inasistencia</h3>
-    <p class="text-sm text-gray-500 mb-4">Si no hay interaccion en:</p>
-    <div class="text-4xl font-black font-mono text-amber-600 mb-4">{{ warningTimeLeft }}</div>
+    <p class="text-sm text-charcoal mb-4">Si no hay interaccion en:</p>
+    <div class="text-4xl font-black font-mono mb-4" style="color:var(--color-warning)">{{ warningTimeLeft }}</div>
     <div class="flex gap-2 justify-center">
-      <button class="text-xs font-bold px-3 py-1.5 rounded" style="background:var(--color-primary);color:white" (click)="dismissWarning()">Presente</button>
-      <button class="text-xs font-bold px-3 py-1.5 rounded bg-red-500 text-white" (click)="markAbsent()">Ausente</button>
+      <button class="text-xs font-bold px-3 py-1.5 rounded btn-primary" (click)="dismissWarning()">Presente</button>
+      <button class="text-xs font-bold px-3 py-1.5 rounded" style="background:var(--color-error);color:var(--color-on-error)" (click)="markAbsent()">Ausente</button>
     </div>
   </div>
 </div>
@@ -281,16 +269,19 @@
   <div class="fixed inset-0 z-[100] flex items-center justify-center p-4"
        style="background:rgba(0,0,0,0.8);backdrop-filter:blur(4px)"
        (click)="closeProgramModal()">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" (click)="$event.stopPropagation()">
-      <div class="px-4 py-3 border-b flex justify-between items-center bg-purple-50 shrink-0">
-        <h3 class="text-sm font-bold text-purple-800">Programacion</h3>
-        <button class="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-50" (click)="closeProgramModal()">Cerrar</button>
+    <div class="rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+         style="background:var(--color-surface)"
+         (click)="$event.stopPropagation()">
+      <div class="px-4 py-3 border-b flex justify-between items-center shrink-0"
+           style="background:var(--color-surface-container-low)">
+        <h3 class="text-sm font-bold text-textDark">Programacion</h3>
+        <button class="btn-ghost text-xs" (click)="closeProgramModal()">Cerrar</button>
       </div>
-      <div class="p-4 overflow-y-auto text-sm leading-relaxed" *ngIf="programText else progLoading">
+      <div class="p-4 overflow-y-auto text-sm leading-relaxed text-textDark" *ngIf="programText else progLoading">
         {{ programText }}
       </div>
       <ng-template #progLoading>
-        <div class="p-8 text-center text-gray-400" *ngIf="programLoading">Cargando...</div>
+        <div class="p-8 text-center text-charcoal" *ngIf="programLoading">Cargando...</div>
       </ng-template>
     </div>
   </div>
@@ -303,11 +294,13 @@
 <div class="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 transition-all duration-300"
      *ngIf="showCameraModal"
      style="background:rgba(0,0,0,0.95);backdrop-filter:blur(4px)">
-  <div class="relative w-full max-w-lg bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[90vh]">
-    <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center min-h-[350px]">
+  <div class="relative w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+       style="background:#000;border-color:rgba(255,255,255,0.1)">
+    <div class="relative w-full flex-grow overflow-hidden flex items-center justify-center min-h-[350px]" style="background:#000">
       <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
     </div>
-    <div class="py-6 px-6 bg-black/90 border-t border-white/10 flex justify-between items-center shrink-0">
+    <div class="py-6 px-6 flex justify-between items-center shrink-0"
+         style="background:rgba(0,0,0,0.9);border-color:rgba(255,255,255,0.1)">
       <button class="text-white text-xs px-2 py-1 border border-white/30 rounded" (click)="closeCamera()">Cancelar</button>
       <button (click)="takePhoto()" class="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
         <div class="w-12 h-12 bg-white rounded-full active:scale-90 transition-transform"></div>

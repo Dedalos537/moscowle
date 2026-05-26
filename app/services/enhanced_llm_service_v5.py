@@ -565,19 +565,13 @@ Contexto actualizado""",
                 'tutorial_steps': []
             }
         
-        else:  # general_chat o chat con Llama (via Groq)
-            try:
-                from groq import Groq
-                api_key = os.getenv('GROQ_API_KEY')
-                if not api_key:
-                    response = "GROQ_API_KEY no configurada"
-                else:
-                    groq_client = Groq(api_key=api_key)
+        else:  # general_chat o chat con Llama — fallback chain: Groq → Gemini → Ollama
+            response = None
 
-                    from app.services.functions_trainer_service import functions_trainer
-                    functions_info = functions_trainer.get_functions_prompt()
+            from app.services.functions_trainer_service import functions_trainer
+            functions_info = functions_trainer.get_functions_prompt()
 
-                    system_prompt = f"""Eres asistente inteligente del Centro de Terapias Juan Pablo II.
+            system_prompt = f"""Eres asistente inteligente del Centro de Terapias Juan Pablo II.
 
 {context_text}
 
@@ -589,22 +583,62 @@ RESPUESTAS:
 - Se practico, conciso y util
 - Siempre usa los datos reales proporcionados"""
 
-                    resp = groq_client.chat.completions.create(
+            def _build_messages():
+                return [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': msg}]
+
+            # 1) Groq
+            try:
+                from groq import Groq
+                groq_key = os.getenv('GROQ_API_KEY')
+                if groq_key:
+                    client = Groq(api_key=groq_key)
+                    resp = client.chat.completions.create(
                         model='llama-3.1-8b-instant',
-                        messages=[{
-                            'role': 'system',
-                            'content': system_prompt
-                        }, {
-                            'role': 'user',
-                            'content': msg
-                        }],
+                        messages=_build_messages(),
                         temperature=0.3,
                         max_tokens=2000
                     )
                     response = resp.choices[0].message.content or ''
             except Exception as e:
-                logger.error(f"Groq error: {e}")
-                response = f"Error consultando IA: {str(e)[:50]}"
+                logger.warning(f"Groq falló, intentando Gemini: {e}")
+
+            # 2) Gemini (fallback si Groq falló)
+            if not response:
+                try:
+                    import google.generativeai as genai
+                    gemini_key = os.getenv('GEMINI_API_KEY')
+                    if gemini_key:
+                        genai.configure(api_key=gemini_key)
+                        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+                        gemini_resp = gemini_model.generate_content(
+                            f"{system_prompt}\n\nUsuario: {msg}"
+                        )
+                        response = gemini_resp.text or ''
+                except Exception as e:
+                    logger.warning(f"Gemini falló: {e}")
+
+            # 3) Ollama local (último recurso)
+            if not response:
+                try:
+                    import requests
+                    ollama_payload = {
+                        'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'),
+                        'messages': _build_messages(),
+                        'stream': False
+                    }
+                    ollama_resp = requests.post(
+                        'http://127.0.0.1:11434/api/chat',
+                        json=ollama_payload,
+                        timeout=30
+                    )
+                    if ollama_resp.ok:
+                        response = ollama_resp.json().get('message', {}).get('content', '')
+                except Exception as e:
+                    logger.error(f"Ollama falló: {e}")
+
+            # Si ningún proveedor respondió
+            if not response:
+                response = "Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet."
             
             result = {
                 'intent': intent,

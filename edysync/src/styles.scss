@@ -98,6 +98,10 @@ body { font-size: 14px; }
 
   --color-textDark: var(--color-on-surface);
   --color-charcoal: var(--color-on-surface-variant);
+  --color-border: var(--color-outline-variant);
+  --color-success: var(--color-primary);
+  --color-warning: #d97706;
+  --color-info: #2563eb;
 
   --font-headline: Manrope, sans-serif;
   --font-body: Manrope, sans-serif;

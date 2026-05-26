@@ -50,8 +50,11 @@ class Config:
     # ========== TIMEZONE (Peru = UTC-5, no DST) ==========
     TIMEZONE = 'America/Lima'
     
-    # ========== GEMINI API_KEY ==========
+    # ========== LLM API KEYS ==========
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+    LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
+    OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
     
     # ========== FILE UPLOADS ==========
     basedir = os.path.abspath(os.path.dirname(__file__))

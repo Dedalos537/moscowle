@@ -70,6 +70,10 @@ instance/
 app_back/
 * 2.scss
 
+# Generated documents
+documento_proyecto.md
+generar_docx.py
+
 # Secret keys
 secret_key.txt
 credentials.json
