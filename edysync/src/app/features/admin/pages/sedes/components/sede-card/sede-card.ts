@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { Sede } from '../../../../../core/models/sede';
+import { Sede } from '../../../../../../core/models/sede';
 
 @Component({
   selector: 'app-sede-card',

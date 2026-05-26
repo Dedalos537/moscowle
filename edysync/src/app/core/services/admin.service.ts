@@ -69,8 +69,8 @@ export class AdminService {
     return this.http.put<ApiResponse>(`/api/admin/sedes/${id}`, data);
   }
 
-  getSedeAnalytics(id: number): Observable<ApiResponse<SedeAnalytics>> {
-    return this.http.get<ApiResponse<SedeAnalytics>>(`/api/admin/sedes/${id}/analytics`);
+  getSedeAnalytics(id: number): Observable<any> {
+    return this.http.get<any>(`/api/admin/sedes/${id}/analytics`);
   }
 
   getDebtReport(month?: string): Observable<{ success: boolean; data: DebtReport; error?: string }> {
