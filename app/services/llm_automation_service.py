@@ -2,8 +2,11 @@ import os
 import json
 import base64
 import time
+import warnings
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+
+warnings.filterwarnings('ignore', message='.*google.generativeai.*has ended.*')
 
 try:
     import google.generativeai as genai

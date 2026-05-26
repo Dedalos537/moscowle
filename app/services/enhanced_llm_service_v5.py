@@ -2,7 +2,10 @@ import json
 import logging
 import os
 import re
+import warnings
 from datetime import datetime, timedelta
+
+warnings.filterwarnings('ignore', message='.*google.generativeai.*has ended.*')
 from app.extensions import db
 from app.models import User, Payment, Appointment, Expense
 from app.services.context_cache_service import get_cached_context, get_cached_context_text
