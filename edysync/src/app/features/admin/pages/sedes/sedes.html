@@ -3,25 +3,53 @@
     <div class="text-2xl font-bold text-primary leading-none">{{ activeCount }}</div>
     <p class="text-label-caps text-on-surface-variant mt-1">activas</p>
   </div>
-  
+
   <app-button variant="primary" label="Nueva Sede" [icon]="['fas', 'plus']" (clicked)="openCreateDrawer()"></app-button>
 </ng-template>
 
-<div class="p-1 animate-fade-in-up space-y-8" [@fadeInUp]>
-  
+<div class="p-1 animate-fade-in-up space-y-6" [@fadeInUp]>
+
+  @if (!loading && sedes.length > 1) {
+    <div class="relative max-w-md">
+      <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm"></fa-icon>
+      <input [(ngModel)]="searchQuery" type="text" class="input-field text-sm pl-9" placeholder="Buscar sede...">
+    </div>
+  }
+
   @if (loading) {
     <div class="flex justify-center py-20">
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      
-      @for (sede of sedes; track sede.id; let i = $index) {
+
+      @for (sede of filteredSedes; track sede.id; let i = $index) {
         <div class="animate-fade-in" [style.animation-delay]="i * 0.08 + 's'">
-          <app-sede-card [sede]="sede"></app-sede-card>
+          <app-sede-card
+            [sede]="sede"
+            (edit)="openEditDrawer($event)"
+            (delete)="deleteSede($event)"
+            (toggle)="toggleActive($event)"
+          ></app-sede-card>
         </div>
       }
-      
+
+      @empty {
+        <div class="col-span-full py-16 text-center">
+          <fa-icon [icon]="['fas', 'building']" class="text-4xl text-on-surface-variant/30 mb-4"></fa-icon>
+          <p class="text-on-surface-variant text-lg font-medium">
+            @if (searchQuery) {
+              No se encontraron sedes con ese nombre
+            } @else {
+              No hay sedes registradas
+            }
+          </p>
+          @if (!searchQuery) {
+            <app-button variant="primary" label="Crear primera sede" [icon]="['fas', 'plus']" class="mt-4" (clicked)="openCreateDrawer()"></app-button>
+          }
+        </div>
+      }
+
     </div>
   }
 
@@ -60,6 +88,44 @@
       </div>
       @if (createStatus) {
         <span class="text-right text-sm text-on-surface-variant font-medium">{{ createStatus }}</span>
+      }
+    </div>
+  </div>
+}
+
+@if (showEditDrawer) {
+  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeEditDrawer()"></div>
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
+    <div class="flex-none p-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-high/50">
+      <h3 class="text-xl font-bold text-on-surface flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'pencil']" class="text-primary"></fa-icon>
+        </div>
+        Editar Sede
+      </h3>
+      <button (click)="closeEditDrawer()" class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
+        <input [(ngModel)]="editSedeData.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
+      </div>
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
+        <input [(ngModel)]="editSedeData.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
+      </div>
+    </div>
+
+    <div class="flex-none p-6 border-t border-outline-variant/20 bg-surface-container-high/50 flex flex-col gap-2">
+      <div class="flex justify-end gap-3">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
+        <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="updateSede()"></app-button>
+      </div>
+      @if (editStatus) {
+        <span class="text-right text-sm text-on-surface-variant font-medium">{{ editStatus }}</span>
       }
     </div>
   </div>

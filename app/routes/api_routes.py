@@ -1597,56 +1597,6 @@ def admin_sedes_analytics(sede_id):
     except Exception as e:
         current_app.logger.error(f"Error in admin_sedes_analytics: {str(e)}")
         return jsonify({"error": str(e), "data": []}), 500
-    payments = Payment.query.filter(
-        Payment.patient_id.in_(patient_ids)
-    ).all() if patient_ids else []
-    
-    total_patients = len(patient_ids)
-    active_patients = len([pid for pid in patient_ids if User.query.get(pid) and User.query.get(pid).is_active])
-    
-    total_revenue = sum([p.amount for p in payments if p.status == 'completed']) if payments else 0
-    total_sessions = len([a for a in appointments_at_sede if a.status == 'completed'])
-    pending_sessions = len([a for a in appointments_at_sede if a.status == 'scheduled'])
-    
-    today = datetime.utcnow()
-    month_start = datetime(today.year, today.month, 1)
-    sessions_this_month = len([a for a in appointments_at_sede if a.status == 'completed' and a.start_time and a.start_time >= month_start])
-    payments_this_month = sum([p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start]) if payments else 0
-    
-    therapists_assigned = User.query.filter(
-        User.assigned_sedes.any(Sede.id == sede_id),
-        User.role == 'terapista'
-    ).all()
-    
-    return jsonify({
-        'success': True,
-        'sede': {
-            'id': sede.id,
-            'name': sede.name,
-            'address': sede.address,
-        },
-        'analytics': {
-            'patients': {
-                'total': total_patients,
-                'active': active_patients,
-            },
-            'payments': {
-                'total_revenue': round(total_revenue, 2),
-                'this_month': round(payments_this_month, 2),
-                'transactions': len(payments),
-            },
-            'sessions': {
-                'total_completed': total_sessions,
-                'pending': pending_sessions,
-                'this_month': sessions_this_month,
-                'total': len(appointments_at_sede),
-            },
-            'therapists': {
-                'count': len(therapists_assigned),
-                'names': [t.email for t in therapists_assigned],
-            }
-        }
-    })
 
 @api_bp.route('/admin/deudores', methods=['GET'])
 @login_required

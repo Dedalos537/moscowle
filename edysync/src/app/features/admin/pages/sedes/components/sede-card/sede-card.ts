@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Sede } from '../../../../../core/models/sede';
 
 @Component({
   selector: 'app-sede-card',
@@ -7,5 +8,8 @@ import { Component, Input } from '@angular/core';
   styleUrl: './sede-card.scss',
 })
 export class SedeCard {
-  @Input() sede: any;
+  @Input({ required: true }) sede!: Sede;
+  @Output() edit = new EventEmitter<Sede>();
+  @Output() delete = new EventEmitter<Sede>();
+  @Output() toggle = new EventEmitter<Sede>();
 }

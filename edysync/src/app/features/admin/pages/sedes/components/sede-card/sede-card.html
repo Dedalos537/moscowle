@@ -1,44 +1,66 @@
-<div class="group bg-surface-container-lowest rounded-3xl shadow-sm hover:shadow-md transition-all border border-outline-variant/20 overflow-hidden flex flex-col h-[380px] cursor-pointer hover:border-primary/30 animate-fade-in">
-  
-  <div class="p-6 flex-1 flex flex-col">
+<div class="group bg-surface-container-lowest rounded-3xl shadow-sm hover:shadow-md transition-all border border-outline-variant/20 overflow-hidden flex flex-col">
+
+  <div class="p-6 flex-1 flex flex-col cursor-pointer" (click)="edit.emit(sede)">
     <div class="flex items-start justify-between mb-4">
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
           <fa-icon [icon]="['fas', 'home']" class="text-primary text-xl"></fa-icon>
         </div>
-        <span class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full">
+        <span class="px-3 py-1 text-xs font-bold rounded-full"
+          [class.bg-green-100]="sede.active"
+          [class.text-green-700]="sede.active"
+          [class.bg-red-100]="!sede.active"
+          [class.text-red-700]="!sede.active"
+        >
           {{ sede.active ? 'Activa' : 'Inactiva' }}
         </span>
       </div>
+      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button (click)="$event.stopPropagation(); toggle.emit(sede)"
+          class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+          [title]="sede.active ? 'Desactivar' : 'Activar'">
+          <fa-icon [icon]="sede.active ? ['fas', 'pause'] : ['fas', 'play']" class="text-sm"></fa-icon>
+        </button>
+        <button (click)="$event.stopPropagation(); edit.emit(sede)"
+          class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+          title="Editar">
+          <fa-icon [icon]="['fas', 'pencil']" class="text-sm"></fa-icon>
+        </button>
+        <button (click)="$event.stopPropagation(); delete.emit(sede)"
+          class="w-8 h-8 rounded-full hover:bg-error/10 text-on-surface-variant hover:text-error flex items-center justify-center transition-colors cursor-pointer"
+          title="Eliminar">
+          <fa-icon [icon]="['fas', 'trash']" class="text-sm"></fa-icon>
+        </button>
+      </div>
     </div>
-    
+
     <h3 class="text-xl font-bold text-on-surface truncate mb-1">{{ sede.name }}</h3>
     <p class="text-sm text-on-surface-variant line-clamp-2">{{ sede.address || 'Sin direccion' }}</p>
   </div>
-  
+
   <div class="border-t border-outline-variant/20 p-6 space-y-4 bg-surface-container-high/30 group-hover:bg-primary/[0.02] transition-colors">
-    
+
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'users']" class="text-blue-500"></fa-icon> Pacientes
       </span>
       <span class="font-bold text-on-surface">{{ sede.stats?.patients?.total ?? '—' }}</span>
     </div>
-    
+
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'calendar-alt']" class="text-green-500"></fa-icon> Sesiones
       </span>
       <span class="font-bold text-on-surface">{{ sede.stats?.sessions?.total_completed ?? '—' }}</span>
     </div>
-    
+
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-amber-500"></fa-icon> Ingresos
       </span>
       <span class="font-bold text-on-surface">S/. {{ sede.stats?.payments?.total_revenue ?? '—' }}</span>
     </div>
-    
+
   </div>
-  
+
 </div>
