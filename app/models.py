@@ -280,7 +280,7 @@ class Message(db.Model):
     def file_url(self):
         if self.attachment_path:
             from flask import url_for
-            return url_for('static', filename=f'uploads/messages/{self.attachment_path}', _external=False)
+            return url_for('uploads.protected_file', filename=f'messages/{self.attachment_path}', _external=False)
         return None
 
 

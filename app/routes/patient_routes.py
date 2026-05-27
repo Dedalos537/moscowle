@@ -1,13 +1,15 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user
 from app.models import SessionMetrics, db, User, Message, Appointment, Payment
 from app.services.dashboard_service import DashboardService
 from app.services.appointment_service import AppointmentService
 from app.services.notification_service import NotificationService
+from app.services.email_service import EmailService
 from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone
 from app.extensions import csrf
 from sqlalchemy import func, or_
-import json
+from werkzeug.utils import secure_filename
+import os, json, uuid
 from datetime import datetime, timedelta, timezone
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
@@ -631,21 +633,54 @@ def api_patient_send_message():
     if current_user.role != 'jugador':
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
-    data = request.get_json(silent=True) or {}
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+
     receiver_id = data.get('receiver_id')
     body = data.get('body', '')
 
-    if not receiver_id or not body:
-        return jsonify({'success': False, 'error': 'receiver_id y body son requeridos'}), 400
+    if not receiver_id:
+        return jsonify({'success': False, 'error': 'receiver_id requerido'}), 400
+
+    if not body and 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'El mensaje no puede estar vacío'}), 400
 
     receiver = User.query.get(receiver_id)
     if not receiver:
         return jsonify({'success': False, 'error': 'Destinatario no encontrado'}), 404
 
+    attachment_path = None
+    attachment_type = None
+
+    if 'file' in request.files:
+        file = request.files['file']
+        if file and file.filename:
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                attachment_type = 'image'
+            elif ext in ['mp4', 'mov', 'webm']:
+                attachment_type = 'video'
+            elif ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                attachment_type = 'audio'
+            else:
+                attachment_type = 'file'
+
+            upload_folder = os.path.join(current_app.instance_path, 'uploads', 'messages')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, unique_filename))
+            attachment_path = unique_filename
+
     msg = Message(
         sender_id=current_user.id,
         receiver_id=receiver_id,
         body=body,
+        attachment_path=attachment_path,
+        attachment_type=attachment_type,
     )
     db.session.add(msg)
     db.session.commit()
@@ -653,11 +688,27 @@ def api_patient_send_message():
     notification_service.create_notification(
         user_id=receiver_id,
         title=f'Nuevo mensaje de {current_user.username}',
-        message=body,
+        message=body or 'Has recibido un archivo adjunto',
         notif_type='message',
     )
 
-    return jsonify({'success': True, 'message_id': msg.id})
+    try:
+        email_service = EmailService()
+        email_service.send_new_message_email(
+            receiver.email,
+            receiver.username,
+            current_user.username,
+            (body or "Has recibido un archivo adjunto")[:100] + ('...' if body and len(body) > 100 else '')
+        )
+    except Exception:
+        pass
+
+    return jsonify({
+        'success': True,
+        'message_id': msg.id,
+        'created_at': msg.created_at.isoformat() if msg.created_at else None,
+        'attachment_type': attachment_type,
+    })
 
 
 @patient_bp.route('/api/profile/update', methods=['POST'])

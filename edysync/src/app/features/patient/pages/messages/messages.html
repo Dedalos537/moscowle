@@ -59,19 +59,35 @@
     </div>
 
     <div class="p-4 border-t border-border">
+      @if (selectedFileName) {
+        <div class="flex items-center gap-2 mb-2 px-3 py-1.5 bg-surface-container-high rounded-lg text-xs text-on-surface">
+          <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+          <span class="truncate flex-1">{{ selectedFileName }}</span>
+          <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="clearFile()"></app-button>
+        </div>
+      }
       <div class="flex items-end gap-2">
         <div class="flex-1 relative">
           <textarea [(ngModel)]="newMessage" placeholder="Escribe un mensaje..." rows="1"
             class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:ring-primary focus:border-primary resize-none"
             (keydown.enter)="onKeydown($event)"></textarea>
         </div>
-        <app-button variant="primary" [disabled]="sending || !newMessage.trim()" (clicked)="sendMessage()">
-          @if (sending) {
-            <app-spinner size="sm" colorClass="text-white"></app-spinner>
+        <div class="flex items-center gap-1">
+          <app-button variant="ghost" [icon]="['fas', 'paperclip']" (clicked)="fileInput.click()"></app-button>
+          <input #fileInput type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" (change)="onFileSelected($event)" class="hidden">
+          @if (!isRecording) {
+            <app-button variant="ghost" [icon]="['fas', 'microphone']" (clicked)="startRecording()"></app-button>
           } @else {
-            <fa-icon [icon]="['fas', 'paper-plane']" class="text-sm"></fa-icon>
+            <app-button variant="danger" [icon]="['fas', 'stop']" (clicked)="stopRecording()"></app-button>
           }
-        </app-button>
+          <app-button variant="primary" [disabled]="sending || (!newMessage.trim() && !selectedFile)" (clicked)="sendMessage()">
+            @if (sending) {
+              <app-spinner size="sm" colorClass="text-white"></app-spinner>
+            } @else {
+              <fa-icon [icon]="['fas', 'paper-plane']" class="text-sm"></fa-icon>
+            }
+          </app-button>
+        </div>
       </div>
     </div>
   </div>

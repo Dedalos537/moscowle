@@ -1208,7 +1208,7 @@ def api_conversation_thread(user_id):
                 'receiver_id': m.receiver_id,
                 'body': m.body,
                 'file_url': m.file_url,
-                'file_type': m.file_type,
+                'file_type': m.attachment_type,
                 'created_at': m.created_at.isoformat() if m.created_at else None,
                 'is_read': m.is_read,
             } for m in messages]

@@ -89,11 +89,14 @@ export class PatientService {
     return this.http.get<{ success: boolean; messages: any[] }>('/patient/api/messages');
   }
 
-  sendMessage(therapistId: number, body: string): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>('/patient/api/messages/send', {
-      receiver_id: therapistId,
-      body,
-    });
+  sendMessage(therapistId: number, body: string, file?: File | null): Observable<ApiResponse> {
+    const formData = new FormData();
+    formData.append('receiver_id', String(therapistId));
+    formData.append('body', body);
+    if (file) {
+      formData.append('file', file);
+    }
+    return this.http.post<ApiResponse>('/patient/api/messages/send', formData);
   }
 
   updateProfile(data: { username?: string; phone?: string; new_password?: string }): Observable<ApiResponse> {

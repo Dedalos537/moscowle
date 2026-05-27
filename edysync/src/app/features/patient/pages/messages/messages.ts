@@ -13,6 +13,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 })
 export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('chatContainer') chatContainer!: ElementRef;
+  @ViewChild('fileInput') fileInput!: ElementRef;
 
   loading = true;
   messages: any[] = [];
@@ -21,6 +22,11 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   therapistName = '';
   sending = false;
   currentUserId = 0;
+  selectedFile: File | null = null;
+  selectedFileName = '';
+  isRecording = false;
+  mediaRecorder: MediaRecorder | null = null;
+  audioChunks: Blob[] = [];
 
   private pollInterval: any;
   private needsScroll = false;
@@ -103,6 +109,20 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
     return msg.sender_id === this.currentUserId;
   }
 
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.selectedFile = file;
+      this.selectedFileName = file.name;
+    }
+  }
+
+  clearFile() {
+    this.selectedFile = null;
+    this.selectedFileName = '';
+    if (this.fileInput) this.fileInput.nativeElement.value = '';
+  }
+
   onKeydown(event: Event) {
     const kbEvent = event as KeyboardEvent;
     if (!kbEvent.shiftKey) {
@@ -112,19 +132,57 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   }
 
   sendMessage() {
-    if (!this.newMessage.trim() || !this.therapistId || this.sending) return;
+    if ((!this.newMessage.trim() && !this.selectedFile) || !this.therapistId || this.sending) return;
 
     this.sending = true;
-    this.patientService.sendMessage(this.therapistId, this.newMessage).subscribe({
+    this.patientService.sendMessage(this.therapistId, this.newMessage.trim(), this.selectedFile).subscribe({
       next: () => {
         this.sending = false;
         this.newMessage = '';
+        this.clearFile();
         this.loadMessages();
       },
       error: () => {
         this.sending = false;
       },
     });
+  }
+
+  startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    this.isRecording = true;
+    this.audioChunks = [];
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) this.audioChunks.push(event.data);
+      };
+      this.mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        this.selectedFile = new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
+        this.selectedFileName = this.selectedFile.name;
+      };
+      this.mediaRecorder.start();
+    }).catch(() => {
+      this.isRecording = false;
+    });
+  }
+
+  stopRecording() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+    }
+  }
+
+  getFileIcon(fileType: string | null): string {
+    if (!fileType) return 'fas fa-file';
+    if (fileType.startsWith('image/')) return 'fas fa-image';
+    if (fileType.startsWith('video/')) return 'fas fa-video';
+    if (fileType.startsWith('audio/')) return 'fas fa-music';
+    return 'fas fa-file';
   }
 
   private scrollToBottom() {
