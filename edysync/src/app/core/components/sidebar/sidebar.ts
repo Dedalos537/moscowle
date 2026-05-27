@@ -22,7 +22,7 @@ export class Sidebar implements OnInit {
     { path: '/admin/users', label: 'Admin Usuarios', icon: ['fas', 'users'] },
     { path: '/admin/sedes', label: 'Sedes', icon: ['fas', 'building'] },
     { path: '/admin/finanzas', label: 'Finanzas', icon: ['fas', 'university'] },
-    { path: '/admin/yape', label: 'Importar Yape', icon: ['fas', 'qrcode'] },
+    { path: '/admin/yape-import', label: 'Importar Yape', icon: ['fas', 'qrcode'] },
     { path: '/admin/games', label: 'Admin Juegos', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', icon: ['fas', 'chart-bar'] },
     { path: '/admin/messages', label: 'Admin Mensajes', icon: ['fas', 'envelope'] },
