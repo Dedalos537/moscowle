@@ -79,7 +79,7 @@ class Config:
     MAIL_TIMEOUT = 10  # segundos
     
     # ========== CORS ==========
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com http://localhost:4200')
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200')
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
     # These settings help prevent session leaking and improve security

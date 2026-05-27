@@ -174,7 +174,7 @@ def register_request_handlers(app):
         if request.method == 'OPTIONS':
             response = app.make_default_options_response()
             origin = request.headers.get('Origin', '')
-            allowed_origins = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com http://localhost:4200').replace(',', ' ').split()
+            allowed_origins = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200').replace(',', ' ').split()
             if origin in allowed_origins:
                 response.headers['Access-Control-Allow-Origin'] = origin
             elif allowed_origins:
@@ -253,7 +253,7 @@ def register_request_handlers(app):
     @app.after_request
     def after_request(response):
         origin = request.headers.get('Origin', '')
-        allowed_origins = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com http://localhost:4200').replace(',', ' ').split()
+        allowed_origins = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200').replace(',', ' ').split()
         if origin in allowed_origins:
             response.headers['Access-Control-Allow-Origin'] = origin
         elif allowed_origins:
