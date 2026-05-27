@@ -8,6 +8,22 @@ from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.dashboard_service import DashboardService
 from app.services.report_service import ReportService
+import json, os, time, warnings
+warnings.filterwarnings('ignore', message='.*google.generativeai.*ended.*')
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+try:
+    import ollama
+    _ollama_client = ollama.Client(host='http://127.0.0.1:11434')
+    _ollama_client.list()
+except Exception:
+    _ollama_client = None
 from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, start_async_training
 from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone
@@ -36,6 +52,48 @@ dashboard_service = DashboardService()
 report_service = ReportService()
 drive_service = GoogleDriveService()
 fs = FinancialService()
+
+def _parse_json(raw):
+    if '```json' in raw: raw = raw.split('```json')[1].split('```')[0]
+    elif '```' in raw: raw = raw.split('```')[1].split('```')[0]
+    start = raw.find('{'); end = raw.rfind('}')
+    if start != -1 and end != -1: raw = raw[start:end+1]
+    try: return json.loads(raw)
+    except Exception: return None
+
+def analyze_contact_message_ai(name, email, message, service_interest):
+    result = {'sentiment': 'neutral', 'detected_intent': 'consulta', 'suggested_response': '', 'confidence': 'media', 'provider': None}
+
+    prompt = f"""Analiza este mensaje de contacto de un cliente potencial y responde SOLO con JSON válido:
+Nombre: {name}
+Email: {email}
+Mensaje: {message}
+Servicio de interés: {service_interest or 'No especificado'}
+Responde con este JSON exacto (sin markdown):
+{{"sentiment": "positivo"|"neutral"|"negativo", "detected_intent": "agendar_cita"|"informacion"|"consulta"|"queja"|"seguimiento", "suggested_response": "texto cortés de respuesta sugerida", "confidence": "alta"|"media"|"baja"}}"""
+
+    providers = []
+    if _ollama_client:
+        providers.append(('ollama', lambda: _ollama_client.chat(model='llama3.2', messages=[{'role': 'user', 'content': prompt}], options={'temperature': 0.0})['message']['content']))
+    if genai and os.environ.get('GEMINI_API_KEY'):
+        providers.append(('gemini', lambda: (genai.configure(api_key=os.environ['GEMINI_API_KEY']), genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text)[1]))
+    if Groq and os.environ.get('GROQ_API_KEY'):
+        providers.append(('groq', lambda: Groq(api_key=os.environ['GROQ_API_KEY']).chat.completions.create(model='llama-3.2-3b-preview', messages=[{'role': 'user', 'content': prompt}], temperature=0.0, max_tokens=300).choices[0].message.content))
+
+    for name, fn in providers:
+        try:
+            t0 = time.time()
+            raw = fn()
+            parsed = _parse_json(raw)
+            if parsed:
+                parsed['provider'] = name
+                parsed['response_time'] = round(time.time() - t0, 2)
+                result.update(parsed)
+                break
+        except Exception:
+            continue
+
+    return json.dumps(result, ensure_ascii=False)
 
 LIMA_TZ = timezone(timedelta(hours=-5))
 
@@ -508,36 +566,6 @@ def api_delete_session(session_id):
     if not success:
         return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
     return jsonify({'success': True})
-
-@api_bp.route('/sessions/<int:session_id>/complete', methods=['POST'])
-@login_required
-def api_complete_session(session_id):
-
-    if current_user.role not in ['terapista', 'admin']:
-        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-    
-    try:
-        appt = appointment_service.transition_status(
-            session_id=session_id,
-            new_status='completed',
-            changed_by_user_id=current_user.id,
-            notify=True
-        )
-        
-        return jsonify({
-            'success': True,
-            'message': 'Sesión completada, ¡buen trabajo!',
-            'session': {
-                'id': appt.id,
-                'status': appt.status,
-                'status_changed_at': appt.status_changed_at.isoformat() if appt.status_changed_at else None
-            }
-        })
-    except ValueError as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-    except Exception as e:
-        current_app.logger.error(f"Error completing session {session_id}: {str(e)}")
-        return jsonify({'success': False, 'message': 'No se pudo completar la sesión'}), 500
 
 @api_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
 @login_required
@@ -1806,8 +1834,34 @@ def contact_message():
     )
     
     try:
+        analysis = analyze_contact_message_ai(
+            f"{data.get('first_name')} {data.get('last_name')}",
+            data.get('email', ''),
+            data.get('message', ''),
+            data.get('service_interest')
+        )
+        new_msg.ai_analysis = analysis
+    except Exception as e:
+        current_app.logger.warning(f"AI analysis failed for contact message: {e}")
+        new_msg.ai_analysis = json.dumps({'sentiment': 'neutral', 'detected_intent': 'consulta', 'error': str(e)[:100]})
+
+    try:
         db.session.add(new_msg)
         db.session.commit()
+
+        admins = User.query.filter_by(role='admin', is_active=True).all()
+        for admin in admins:
+            try:
+                notification_service.create_notification(
+                    admin.id,
+                    f"Nuevo contacto: {data.get('first_name')} {data.get('last_name')} - {data.get('subject', 'Consulta Web')[:80]}",
+                    title='Nuevo mensaje de contacto',
+                    notif_type='message',
+                    link=''
+                )
+            except Exception:
+                pass
+
         return jsonify({'message': '¡Mensaje recibido! Te contactamos pronto.'}), 201
     except Exception as e:
         db.session.rollback()
@@ -1822,9 +1876,11 @@ def get_capacity_metrics():
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
-        capacity_data = admin_metrics_service.get_capacity_metrics()
-        therapist_load = admin_metrics_service.get_therapist_load()
-        user_health = admin_metrics_service.get_user_health_kpi()
+        from app.services.dashboard_service import DashboardService
+        ds = DashboardService()
+        capacity_data = ds.get_capacity_metrics() if hasattr(ds, 'get_capacity_metrics') else {}
+        therapist_load = ds.get_therapist_load() if hasattr(ds, 'get_therapist_load') else []
+        user_health = ds.get_user_health_kpi() if hasattr(ds, 'get_user_health_kpi') else {}
         
         return jsonify({
             'success': True,
@@ -1930,6 +1986,7 @@ def upload_session_program(appointment_id):
 
 @api_bp.route('/sessions/auto-complete-expired', methods=['POST'])
 @login_required
+@csrf.exempt
 def completar_sesiones_vencidas():
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
     expired = Appointment.query.filter(
@@ -2500,27 +2557,6 @@ def submit_session_feedback(session_id):
     return jsonify({'success': True, 'message': 'Feedback guardado'})
 
 
-@api_bp.route('/therapist/efficiency', methods=['GET'])
-@login_required
-def get_therapist_efficiency():
-    """Eficiencia del terapeuta"""
-    if current_user.role not in ('terapista', 'admin'):
-        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
-
-    therapist_id = current_user.id
-    if current_user.role == 'admin':
-        therapist_id = request.args.get('therapist_id', type=int) or current_user.id
-
-    try:
-        from app.services.dashboard_service import DashboardService
-        ds = DashboardService()
-        efficiency = ds.get_therapist_efficiency(therapist_id)
-        return jsonify({'success': True, 'data': efficiency})
-    except Exception as e:
-        current_app.logger.error(f"Error getting efficiency: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 @api_bp.route('/admin/audit-stats', methods=['GET'])
 @login_required
 def get_audit_stats():
@@ -2840,3 +2876,74 @@ def get_therapist_dashboard():
             'total_students': len(set([s.patient_id for s in today_sessions]))
         }
     })
+
+
+# ─── Monthly/Quarterly Reports (aliases for frontend compatibility) ───
+@api_bp.route('/reports/monthly', methods=['GET'])
+@login_required
+def api_reports_monthly():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    try:
+        year = request.args.get('year', type=int, default=datetime.utcnow().year)
+        month = request.args.get('month', type=int, default=datetime.utcnow().month)
+        summary = report_service.get_monthly_summary(year, month)
+        return jsonify({'success': True, 'summary': summary})
+    except Exception as e:
+        current_app.logger.error(f"Error in reports/monthly: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al obtener reporte mensual'}), 500
+
+
+@api_bp.route('/reports/quarterly', methods=['GET'])
+@login_required
+def api_reports_quarterly():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    try:
+        year = request.args.get('year', type=int, default=datetime.utcnow().year)
+        quarter = request.args.get('quarter', type=int, default=(datetime.utcnow().month - 1) // 3 + 1)
+        summary = report_service.get_quarterly_summary(year, quarter)
+        return jsonify({'success': True, 'summary': summary})
+    except Exception as e:
+        current_app.logger.error(f"Error in reports/quarterly: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al obtener reporte trimestral'}), 500
+
+
+@api_bp.route('/reports/generate-monthly', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_reports_generate_monthly():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    try:
+        year = request.args.get('year', type=int, default=datetime.utcnow().year)
+        month = request.args.get('month', type=int, default=datetime.utcnow().month)
+        generated = report_service.generate_all_monthly_reports(year, month)
+        return jsonify({
+            'success': True,
+            'message': f'{len(generated)} reportes mensuales generados',
+            'count': len(generated)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in reports/generate-monthly: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al generar reportes mensuales'}), 500
+
+
+@api_bp.route('/reports/generate-quarterly', methods=['POST'])
+@login_required
+@csrf.exempt
+def api_reports_generate_quarterly():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    try:
+        year = request.args.get('year', type=int, default=datetime.utcnow().year)
+        quarter = request.args.get('quarter', type=int, default=(datetime.utcnow().month - 1) // 3 + 1)
+        generated = report_service.generate_all_quarterly_reports(year, quarter)
+        return jsonify({
+            'success': True,
+            'message': f'{len(generated)} reportes trimestrales generados',
+            'count': len(generated)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in reports/generate-quarterly: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al generar reportes trimestrales'}), 500

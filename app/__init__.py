@@ -39,7 +39,8 @@ def register_auth_loader(app):
             
     @login_manager.unauthorized_handler
     def unauthorized():
-        if request.path.startswith('/api/') or request.path.startswith('/admin/api/') or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
+        path = request.path or ''
+        if '/api/' in path or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
             return jsonify({'success': False, 'message': 'Unauthorized - Please log in'}), 401
         from flask import redirect, url_for
         return redirect(url_for('auth.login', next=request.url))
@@ -89,6 +90,22 @@ def setup_logging(app):
         }
     )
 
+def _is_api_request():
+    """Check if the current request targets an API endpoint."""
+    path = request.path or ''
+    if '/api/' in path:
+        return True
+    if getattr(g, 'is_api', False):
+        return True
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return True
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return True
+    if request.is_json:
+        return True
+    return False
+
+
 def register_error_handlers(app):
     """Manejadores de errores globales"""
     # CSRF errors should return JSON for API calls
@@ -99,7 +116,7 @@ def register_error_handlers(app):
         @app.errorhandler(CSRFError)
         def handle_csrf_error(e):
             app.logger.warning(f"CSRFError: {e}")
-            if getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
+            if _is_api_request():
                 return api_response(False, error={'message': str(e)}, status=400)
             return render_template('errors/csrf.html', reason=str(e)), 400
     except Exception:
@@ -109,25 +126,28 @@ def register_error_handlers(app):
     @app.errorhandler(400)
     def bad_request(error):
         app.logger.warning(f"400 Bad Request: {error}")
-        return jsonify({'error': 'Bad request', 'message': str(error)}), 400
+        if _is_api_request():
+            return jsonify({'error': 'Bad request', 'message': str(error)}), 400
+        return render_template('errors/400.html', error=error), 400
     
     @app.errorhandler(403)
     def forbidden(error):
         app.logger.warning(f"403 Forbidden: {error}")
-        return jsonify({'error': 'Access denied'}), 403
+        if _is_api_request():
+            return jsonify({'error': 'Access denied'}), 403
+        return render_template('errors/403.html'), 403
     
     @app.errorhandler(404)
     def not_found(error):
-        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        if _is_api_request():
             return jsonify({'error': 'Not found'}), 404
         return render_template('errors/404.html'), 404
     
     @app.errorhandler(429)
     def ratelimit_handler(e):
         app.logger.warning(f"429 Rate Limited: {e}")
-        # Return JSON for API calls, HTML for browser
-        if request.path.startswith('/api/') or request.accept_mimetypes.accept_json:
-             return jsonify({'error': 'Rate limit exceeded', 'description': str(e.description)}), 429
+        if _is_api_request():
+            return jsonify({'error': 'Rate limit exceeded', 'description': str(e.description)}), 429
         return render_template('errors/429.html', error=e), 429
     
     @app.errorhandler(500)
@@ -139,7 +159,7 @@ def register_error_handlers(app):
             exc_info=True,
             extra={'request_id': request_id}
         )
-        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        if _is_api_request():
             return jsonify({
                 'error': 'Internal server error',
                 'request_id': request_id
@@ -158,7 +178,7 @@ def register_error_handlers(app):
                 'error_type': type(error).__name__
             }
         )
-        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        if _is_api_request():
             return jsonify({
                 'error': 'Server error',
                 'request_id': request_id
@@ -485,6 +505,19 @@ def create_app(config_class=Config):
                     conn.commit()
             except Exception:
                 app.logger.warning("Auto-migration for notification table skipped or failed", exc_info=True)
+
+            # Auto-migrate contact_message table: add ai_analysis column if missing
+            try:
+                from sqlalchemy import inspect as sa_inspect, text
+                inspector = sa_inspect(db.engine)
+                columns = [c['name'] for c in inspector.get_columns('contact_message')]
+                if 'ai_analysis' not in columns:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE contact_message ADD COLUMN ai_analysis TEXT DEFAULT NULL"))
+                        conn.commit()
+                        app.logger.info("Auto-migration: added contact_message.ai_analysis")
+            except Exception:
+                app.logger.warning("Auto-migration for contact_message.ai_analysis skipped or failed", exc_info=True)
 
             app.logger.info("Database tables created/verified")
         except Exception as e:

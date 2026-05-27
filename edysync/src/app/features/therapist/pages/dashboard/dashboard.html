@@ -9,7 +9,7 @@
     </div>
 
 
-    <div class="hidden md:flex items-center gap-4 bg-surface-container-lowest rounded-2xl px-6 py-4 shadow-soft border border-outline-variant/30 min-w-[200px]">
+    <div class="hidden md:flex items-center gap-4 bg-surface-container-lowest rounded-2xl px-6 py-4 shadow-soft border border-border/30 min-w-[200px]">
       <div class="relative w-[72px] h-[72px] flex-shrink-0">
         <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="8" class="text-outline-variant/30"/>
@@ -30,13 +30,13 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="col-span-1 lg:col-span-2 space-y-6">
-      <div class="bg-[#0f2e0f] rounded-2xl p-8 text-white relative overflow-hidden shadow-soft">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-20 -translate-y-20"></div>
-        <div class="absolute bottom-0 left-0 w-48 h-48 bg-[#1a4a1a] rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-10 translate-y-10"></div>
+      <div class="bg-primary-container/20 rounded-2xl p-8 text-white relative overflow-hidden shadow-soft">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/30 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-20 -translate-y-20"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-primary-container/30 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-10 translate-y-10"></div>
 
         <div class="relative z-10">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-label-caps mb-6 backdrop-blur-sm">
-            <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+            <span class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
             Sesión en Vivo
           </span>
 
@@ -52,8 +52,8 @@
           <div class="flex items-center gap-8 flex-wrap">
             <div class="relative w-32 h-32 flex-shrink-0">
               <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
-                <circle cx="50" cy="50" r="45" fill="none" stroke="#a3e635" stroke-width="10" stroke-linecap="round"
+                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border)" stroke-width="10"/>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-primary-container)" stroke-width="10" stroke-linecap="round"
                         [attr.stroke-dasharray]="283"
                         [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"
                         class="transition-all duration-1000"/>
@@ -67,10 +67,10 @@
             <div class="flex-1 min-w-[200px]">
               <div class="flex justify-between text-sm font-medium mb-2">
                 <span>Meta Semanal</span>
-                <span class="text-[#a3e635]">85%</span>
+                <span class="text-primary-container">85%</span>
               </div>
               <div class="w-full bg-white/10 rounded-full h-2.5 mb-3">
-                <div class="bg-[#a3e635] h-2.5 rounded-full transition-all duration-1000" style="width: 85%"></div>
+                <div class="bg-primary-container h-2.5 rounded-full transition-all duration-1000" style="width: 85%"></div>
               </div>
               <p class="text-xs text-white/50 italic">Faltan 15 puntos porcentuales para completar el módulo estadístico.</p>
             </div>
@@ -78,7 +78,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-soft border border-outline-variant/30">
+      <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-soft border border-border/30">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-h3 text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'list-check']" class="text-primary"></fa-icon>
@@ -94,15 +94,15 @@
           <div *ngFor="let topic of data.topics"
                [ngClass]="{
                  'bg-primary/5 border-primary/20': topic.status === 'LOGRADO',
-                 'bg-amber-50 border-amber-200': topic.status === 'PARCIAL',
-                 'bg-surface-container-low border-outline-variant/30': topic.status === 'PENDIENTE'
+                 'bg-warning-container border-warning-container': topic.status === 'PARCIAL',
+                 'bg-surface-container-low border-border/30': topic.status === 'PENDIENTE'
                }"
                class="rounded-xl p-4 border flex items-start gap-3 transition-all hover:shadow-hover">
 
             <div class="rounded-full flex-shrink-0 mt-0.5 w-8 h-8 flex items-center justify-center"
                  [ngClass]="{
                    'bg-primary/20 text-primary': topic.status === 'LOGRADO',
-                   'bg-amber-100 text-amber-600': topic.status === 'PARCIAL',
+                   'bg-warning-container text-warning': topic.status === 'PARCIAL',
                    'bg-surface-container-high text-on-surface-variant/50': topic.status === 'PENDIENTE'
                  }">
                <fa-icon
@@ -115,7 +115,7 @@
               <p class="text-label-caps"
                  [ngClass]="{
                    'text-primary': topic.status === 'LOGRADO',
-                   'text-amber-600': topic.status === 'PARCIAL',
+                   'text-warning': topic.status === 'PARCIAL',
                    'text-on-surface-variant/50': topic.status === 'PENDIENTE'
                  }">{{ topic.status }}</p>
             </div>
@@ -126,7 +126,7 @@
     </div>
 
     <div class="col-span-1">
-      <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 h-full flex flex-col">
+      <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 h-full flex flex-col">
         <div class="flex justify-between items-center mb-8">
           <h3 class="text-h3 text-on-surface">Agenda de Hoy</h3>
           <span class="px-3 py-1 bg-surface-container-low text-on-surface-variant text-label-caps rounded-full">{{ '' | date:'dd MMM' }}</span>
@@ -139,7 +139,7 @@
             <div class="absolute -left-8 top-1 w-[22px] h-[22px] rounded-full border-[3px] z-10 flex items-center justify-center"
                  [ngClass]="{
                    'bg-primary border-surface': item.is_current,
-                   'bg-surface-container-lowest border-outline-variant/50': !item.is_current
+                   'bg-surface-container-lowest border-border/50': !item.is_current
                  }">
               <span *ngIf="item.is_current" class="w-2 h-2 bg-white rounded-full"></span>
             </div>
@@ -168,7 +168,7 @@
           </div>
         </div>
 
-        <div class="mt-6 pt-4 border-t border-outline-variant/20">
+        <div class="mt-6 pt-4 border-t border-border/20">
           <a href="/therapist/sessions" class="btn-secondary w-full justify-center">
             Ver Calendario Completo
           </a>
@@ -178,36 +178,36 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in">
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 flex-shrink-0">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-warning-container flex items-center justify-center text-warning flex-shrink-0">
         <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h2 text-on-surface">08</p>
         <p class="text-sm text-on-surface-variant font-medium">Reportes Pendientes</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-orange-600 bg-orange-50">Prioridad Alta</span>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-warning bg-warning-container">Prioridad Alta</span>
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-green-50 flex items-center justify-center text-green-600 flex-shrink-0">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-success-container flex items-center justify-center text-success flex-shrink-0">
         <fa-icon [icon]="['fas', 'chart-line']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h2 text-on-surface">+12%</p>
         <p class="text-sm text-on-surface-variant font-medium">Progreso Académico</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-green-600 bg-green-50">Este Mes</span>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">Este Mes</span>
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-outline-variant/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
+      <div class="w-14 h-14 rounded-xl bg-success-container flex items-center justify-center text-success flex-shrink-0">
         <fa-icon [icon]="['fas', 'brain']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
         <p class="text-h3 text-on-surface">AI Coach</p>
         <p class="text-sm text-on-surface-variant font-medium">Nuevas sugerencias</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-emerald-600 bg-emerald-50">3 Tips Listos</span>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">3 Tips Listos</span>
       </div>
     </div>
   </div>
@@ -219,10 +219,10 @@
 
 @if (showWeeklyReviewModal) {
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="dismissWeeklyReview()">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-border/30 p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
       <div class="text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl text-purple-600"></fa-icon>
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-info-container flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl text-info"></fa-icon>
         </div>
         <h3 class="text-h3 text-on-surface mb-2">Reporte Semanal Disponible</h3>
         <p class="text-sm text-on-surface-variant mb-4">

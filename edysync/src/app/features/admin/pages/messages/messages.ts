@@ -15,6 +15,8 @@ export class Messages implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   contactMessages: ContactMessage[] = [];
+  selectedMessage: ContactMessage | null = null;
+  showAnalysisModal = false;
   therapists: { id: number; username: string }[] = [];
   patients: { id: number; username: string }[] = [];
   loading = true;
@@ -75,6 +77,43 @@ export class Messages implements OnInit, OnDestroy {
 
   sanitizePhone(phone: string): string {
     return phone.replace(/[\s\+]/g, '');
+  }
+
+  viewAnalysis(msg: ContactMessage) {
+    this.selectedMessage = msg;
+    this.showAnalysisModal = true;
+  }
+
+  closeAnalysis() {
+    this.showAnalysisModal = false;
+    this.selectedMessage = null;
+  }
+
+  get selectedAnalysis(): Record<string, any> | null {
+    return this.selectedMessage?.ai_analysis ?? null;
+  }
+
+  getSentimentIcon(sentiment?: string): string {
+    const icons: Record<string, string> = { 'positivo': 'smile', 'neutral': 'meh', 'negativo': 'frown' };
+    return icons[sentiment || ''] || 'meh';
+  }
+
+  getSentimentColor(sentiment?: string): string {
+    const colors: Record<string, string> = { 'positivo': 'text-green-600', 'neutral': 'text-yellow-600', 'negativo': 'text-red-600' };
+    return colors[sentiment || ''] || 'text-gray-500';
+  }
+
+  getIntentLabel(intent?: string): string {
+    const labels: Record<string, string> = {
+      'agendar_cita': 'Agendar Cita', 'informacion': 'Información', 'consulta': 'Consulta',
+      'queja': 'Queja / Reclamo', 'seguimiento': 'Seguimiento'
+    };
+    return labels[intent || ''] || intent || '—';
+  }
+
+  getConfidenceBadge(conf?: string): string {
+    const badges: Record<string, string> = { 'alta': 'bg-green-100 text-green-700', 'media': 'bg-yellow-100 text-yellow-700', 'baja': 'bg-red-100 text-red-700' };
+    return badges[conf || ''] || 'bg-gray-100 text-gray-600';
   }
 
   sendMessage() {

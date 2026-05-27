@@ -1,3 +1,54 @@
-:host > div {
-  will-change: transform, box-shadow;
+:host {
+  display: block;
+}
+
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--color-outline);
+  background-color: color-mix(in srgb, var(--color-surface-container-lowest) 98%, var(--color-primary));
+}
+
+.card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.card__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0;
+}
+
+.card__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  margin-top: 0.125rem;
+}
+
+.card__body--md {
+  padding: 1.25rem;
+}
+
+.card__body--lg {
+  padding: 1.5rem;
+}
+
+.card__footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  background-color: color-mix(in srgb, var(--color-surface-container-low) 30%, transparent);
 }

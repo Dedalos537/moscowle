@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/c
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { Sede } from '../../../../core/models/sede';
-import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 interface SedeStat {
   id: number;
@@ -38,7 +37,7 @@ interface DailyPending {
   standalone: false,
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: []
 })
 export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

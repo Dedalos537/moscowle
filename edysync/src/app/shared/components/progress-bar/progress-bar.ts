@@ -18,7 +18,7 @@ export class ProgressBar {
 
   get trackClass(): string {
     const heights = { sm: 'h-1', md: 'h-2', lg: 'h-3' };
-    return `${heights[this.size]} bg-border rounded-full`;
+    return `${heights[this.size]} bg-border/50 rounded-full`;
   }
 
   get fillClass(): string {

@@ -12,13 +12,13 @@
   } @else {
 
         @if (incompletePlanPatients.length > 0) {
-      <div class="flex items-start gap-4 p-4 bg-orange-50 dark:bg-amber-500/10 border border-orange-200 dark:border-amber-500/20 rounded-xl">
-        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-orange-500 text-2xl shrink-0"></fa-icon>
+      <div class="flex items-start gap-4 p-4 bg-orange-50 border border-warning-container rounded-xl">
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold text-orange-800 dark:text-amber-400">
+          <p class="text-sm font-bold text-orange-800">
             {{ incompletePlanPatients.length }} pacientes sin configuración de pago
           </p>
-          <p class="text-xs text-orange-600 dark:text-amber-300 mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
+          <p class="text-xs text-warning mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
         </div>
         <a routerLink="/admin/payments" class="btn-primary text-xs !px-4 !py-2 shrink-0">
           <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
@@ -28,19 +28,19 @@
     }
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-emerald-700 dark:text-emerald-400">Total Recaudado (Mes)</span>
-          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-emerald-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-success">Total Recaudado (Mes)</span>
+          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalIncomeReal.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-emerald-500"></fa-icon>
+          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-success"></fa-icon>
           Ingresos del período actual
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-blue-700 dark:text-blue-400">Pendiente por Cobrar</span>
           <fa-icon [icon]="['fas', 'wallet']" class="text-blue-500 text-xl"></fa-icon>
@@ -52,9 +52,9 @@
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-red-700 dark:text-red-400">Total Deuda</span>
+          <span class="text-label-caps text-red-700">Total Deuda</span>
           <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
@@ -64,7 +64,7 @@
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Pacientes Registrados</span>
           <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-xl"></fa-icon>
@@ -78,7 +78,7 @@
     </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
           Estado de Pagos
@@ -88,7 +88,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
           Deuda por Sede
@@ -98,7 +98,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
           Antigüedad de Vencimientos
@@ -108,7 +108,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Historial de Ingresos (6 Meses)
@@ -118,7 +118,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
           Ingresos por Tipo de Plan
@@ -128,7 +128,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
           Proyección vs Real
@@ -140,7 +140,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 lg:col-start-2">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 lg:col-start-2">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
           Ingresos por Sede
@@ -174,13 +174,13 @@
         <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
         Historial
         @if (paymentHistory.length > 0) {
-          <span class="text-[10px] bg-primary/10 text-primary font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
+          <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
         }
       </button>
     </div>
 
         @if (activeTab === 'pacientes') {
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 md:p-6">
 
         <div class="flex flex-col gap-4 mb-6">
           <div class="flex flex-col md:flex-row gap-3">
@@ -228,7 +228,7 @@
             </select>
 
             @if (activeFilterCount > 0) {
-              <div class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold">
+              <div class="flex items-center gap-2 px-3 py-1.5 bg-primary-container/15 text-primary-container rounded-lg text-xs font-bold">
                 <fa-icon [icon]="['fas', 'filter']" class="text-[14px]"></fa-icon>
                 {{ activeFilterCount }} filtro{{ activeFilterCount > 1 ? 's' : '' }} activo{{ activeFilterCount > 1 ? 's' : '' }}
                 <button (click)="clearFilters()" class="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer">
@@ -239,7 +239,7 @@
           </div>
         </div>
 
-        <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/30">
+        <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
           <table class="w-full min-w-[1000px]">
             <thead>
               <tr class="bg-surface-container-high/50">
@@ -254,12 +254,12 @@
                 <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-outline-variant/20">
+            <tbody class="divide-y divide-border/20">
               @for (p of filteredPatients; track p.id) {
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
                   <td class="px-4 py-3.5">
                     <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                      <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
                         {{ getInitials(p.username) }}
                       </div>
                       <div class="min-w-0">
@@ -281,7 +281,7 @@
                       <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                         <div
                           class="h-full rounded-full transition-all duration-700"
-                          [class.bg-emerald-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                          [class.bg-success-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
                           [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
                           [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
                           [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
@@ -311,7 +311,7 @@
                       <div class="flex flex-col items-center">
                         <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                         @if (isOverdue(p)) {
-                          <span class="text-[10px] font-black text-red-600 bg-red-100 dark:bg-red-500/10 dark:text-red-400 px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+                          <span class="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
                         }
                       </div>
                     } @else {
@@ -367,13 +367,13 @@
         <div class="md:hidden space-y-3">
           @for (p of filteredPatients; track p.id) {
             <div
-              class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4 transition-all duration-200"
+              class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200"
               [class.border-l-4]="isOverdue(p)"
               [class.border-l-red-500]="isOverdue(p)"
             >
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-3 min-w-0">
-                  <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                  <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
                     {{ getInitials(p.username) }}
                   </div>
                   <div class="min-w-0">
@@ -420,7 +420,7 @@
                 <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                   <div
                     class="h-full rounded-full transition-all"
-                    [class.bg-emerald-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                    [class.bg-success-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
                     [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
                     [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
                     [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
@@ -434,12 +434,12 @@
                   <span class="text-on-surface-variant">Próx. venc.:</span>
                   <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                   @if (isOverdue(p)) {
-                    <span class="text-[10px] font-black text-red-600 bg-red-100 dark:bg-red-500/10 dark:text-red-400 px-1.5 py-0.5 rounded-full">VENCIDO</span>
+                    <span class="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">VENCIDO</span>
                   }
                 </div>
               }
 
-              <div class="flex gap-2 pt-2 border-t border-outline-variant/20">
+              <div class="flex gap-2 pt-2 border-t border-border/20">
                 <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
                 <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
                 <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
@@ -460,7 +460,7 @@
     }
 
         @if (activeTab === 'historial') {
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 md:p-6">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 md:p-6">
 
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
@@ -478,7 +478,7 @@
           </div>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border border-outline-variant/30">
+        <div class="overflow-x-auto rounded-xl border border-border/30">
           <table class="w-full min-w-[800px]">
             <thead>
               <tr class="bg-surface-container-high/50">
@@ -491,7 +491,7 @@
                 <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acción</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-outline-variant/20">
+            <tbody class="divide-y divide-border/20">
               @for (p of filteredHistory; track p.id) {
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
                   <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name || '—' }}</td>
@@ -596,7 +596,7 @@
     <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
 
     @if (needsRecalculation) {
-      <div class="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+      <div class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-500 text-lg shrink-0"></fa-icon>
         <p class="text-xs text-blue-700 dark:text-blue-400">
           <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
@@ -605,11 +605,11 @@
     }
 
     @if (hasMissingData) {
-      <div class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg">
+      <div class="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
         <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-lg shrink-0"></fa-icon>
         <div>
-          <p class="text-xs font-bold text-amber-800 dark:text-amber-400">Datos faltantes</p>
-          <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+          <p class="text-xs font-bold text-amber-800">Datos faltantes</p>
+          <p class="text-xs text-amber-700 mt-0.5">
             @if (!registerForm.document_number) { • DNI del paciente<br> }
             @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
             Se recomienda completar estos campos para el comprobante.
@@ -620,18 +620,18 @@
 
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
-      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
+      <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
     </div>
 
     @if (analyzingReceipt) {
-      <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg">
-        <app-spinner size="sm" colorClass="text-purple-500"></app-spinner>
-        <span class="text-xs font-medium text-purple-700 dark:text-purple-400">Analizando voucher con OCR...</span>
+      <div class="flex items-center gap-3 p-3 bg-secondary/5 dark:bg-secondary/50/10 border border-purple-200 rounded-lg">
+        <app-spinner size="sm" colorClass="text-secondary"></app-spinner>
+        <span class="text-xs font-medium text-secondary dark:text-purple-400">Analizando voucher con OCR...</span>
       </div>
     }
 
     @if (analyzeResult && !analyzingReceipt) {
-      <div class="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
+      <div class="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500 text-lg shrink-0"></fa-icon>
         <div>
           <p class="text-xs font-bold text-green-800 dark:text-green-400">OCR Completado</p>

@@ -4,47 +4,47 @@
 
 <div *ngIf="!loading && data" class="space-y-6" [@fadeInUp]>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-outline-variant/20">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+        <div class="w-12 h-12 rounded-xl bg-primary-container/15 flex items-center justify-center">
           <fa-icon [icon]="['fas', 'gamepad']" class="text-primary text-lg"></fa-icon>
         </div>
         <div>
-          <p class="text-2xl font-bold text-textDark">{{ data.player_stats.games_played }}</p>
-          <p class="text-xs text-charcoal font-medium">Juegos Realizados</p>
+          <p class="text-2xl font-bold text-on-surface">{{ data.player_stats.games_played }}</p>
+          <p class="text-xs text-on-surface-variant font-medium">Juegos Realizados</p>
         </div>
       </div>
     </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-outline-variant/20">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'calendar-check']" class="text-blue-500 text-lg"></fa-icon>
+        <div class="w-12 h-12 rounded-xl bg-info-container flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'calendar-check']" class="text-info text-lg"></fa-icon>
         </div>
         <div>
-          <p class="text-2xl font-bold text-textDark">{{ data.player_stats.total_sessions }}</p>
-          <p class="text-xs text-charcoal font-medium">Sesiones Totales</p>
+          <p class="text-2xl font-bold text-on-surface">{{ data.player_stats.total_sessions }}</p>
+          <p class="text-xs text-on-surface-variant font-medium">Sesiones Totales</p>
         </div>
       </div>
     </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-outline-variant/20">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'bullseye']" class="text-green-500 text-lg"></fa-icon>
+        <div class="w-12 h-12 rounded-xl bg-success-container flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'bullseye']" class="text-success text-lg"></fa-icon>
         </div>
         <div>
-          <p class="text-2xl font-bold text-textDark">{{ data.player_stats.avg_accuracy }}%</p>
-          <p class="text-xs text-charcoal font-medium">Precisión Promedio</p>
+          <p class="text-2xl font-bold text-on-surface">{{ data.player_stats.avg_accuracy }}%</p>
+          <p class="text-xs text-on-surface-variant font-medium">Precisión Promedio</p>
         </div>
       </div>
     </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-outline-variant/20">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'clock']" class="text-amber-500 text-lg"></fa-icon>
+        <div class="w-12 h-12 rounded-xl bg-warning-container flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'clock']" class="text-warning text-lg"></fa-icon>
         </div>
         <div>
-          <p class="text-2xl font-bold text-textDark">{{ data.player_stats.avg_time }}s</p>
-          <p class="text-xs text-charcoal font-medium">Tiempo Promedio</p>
+          <p class="text-2xl font-bold text-on-surface">{{ data.player_stats.avg_time }}s</p>
+          <p class="text-xs text-on-surface-variant font-medium">Tiempo Promedio</p>
         </div>
       </div>
     </div>
@@ -52,20 +52,20 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <app-card title="Sesiones de Hoy" [icon]="['fas', 'calendar-day']">
-      <div *ngIf="data.today_sessions.length === 0" class="text-center py-8 text-charcoal">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-green-400 text-3xl mb-2"></fa-icon>
+      <div *ngIf="data.today_sessions.length === 0" class="text-center py-8 text-on-surface-variant">
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-3xl mb-2"></fa-icon>
         <p class="text-sm">No tienes sesiones programadas para hoy</p>
       </div>
       <div *ngFor="let session of data.today_sessions" class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-container-low transition-colors">
         <div>
-          <p class="font-semibold text-textDark text-sm">{{ session.title }}</p>
-          <p class="text-xs text-charcoal">{{ session.start_time | date:'shortTime' }} - {{ session.therapist }}</p>
+          <p class="font-semibold text-on-surface text-sm">{{ session.title }}</p>
+          <p class="text-xs text-on-surface-variant">{{ session.start_time | date:'shortTime' }} - {{ session.therapist }}</p>
         </div>
         <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
               [ngClass]="{
-                'bg-green-100 text-green-700': session.status === 'scheduled',
-                'bg-blue-100 text-blue-700': session.status === 'completed',
-                'bg-gray-100 text-gray-500': session.status === 'cancelled'
+                'bg-success-container text-success': session.status === 'scheduled',
+                'bg-info-container text-info': session.status === 'completed',
+                'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
               }">
           {{ session.status === 'scheduled' ? 'Programada' : session.status === 'completed' ? 'Completada' : 'Cancelada' }}
         </span>
@@ -75,19 +75,19 @@
     <app-card title="Estado de Pagos" [icon]="['fas', 'file-invoice-dollar']">
       <div class="flex flex-col items-center justify-center py-6">
         <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-             [ngClass]="data.payment_status.is_overdue ? 'bg-red-50' : 'bg-green-50'">
+             [ngClass]="data.payment_status.is_overdue ? 'bg-error-container' : 'bg-success-container'">
           <fa-icon [icon]="data.payment_status.is_overdue ? ['fas', 'exclamation-circle'] : ['fas', 'check-circle']"
-                   [ngClass]="data.payment_status.is_overdue ? 'text-red-500' : 'text-green-500'"
+                   [ngClass]="data.payment_status.is_overdue ? 'text-error' : 'text-success'"
                    class="text-3xl"></fa-icon>
         </div>
-        <p class="text-lg font-bold text-textDark" *ngIf="!data.payment_status.is_overdue">Al día</p>
-        <p class="text-lg font-bold text-red-600" *ngIf="data.payment_status.is_overdue">
+        <p class="text-lg font-bold text-on-surface" *ngIf="!data.payment_status.is_overdue">Al día</p>
+        <p class="text-lg font-bold text-error" *ngIf="data.payment_status.is_overdue">
           {{ data.payment_status.days_overdue }} días de atraso
         </p>
-        <p class="text-sm text-charcoal mt-1" *ngIf="data.payment_status.pending_amount">
+        <p class="text-sm text-on-surface-variant mt-1" *ngIf="data.payment_status.pending_amount">
           Monto pendiente: S/ {{ data.payment_status.pending_amount }}
         </p>
-        <p class="text-xs text-charcoal mt-1">Próximo vencimiento: {{ data.payment_status.next_due_date }}</p>
+        <p class="text-xs text-on-surface-variant mt-1">Próximo vencimiento: {{ data.payment_status.next_due_date }}</p>
         <a routerLink="/patient/payments" class="mt-4 text-sm font-bold text-primary hover:text-primary-fixed-dim transition-colors">
           Ver historial de pagos
         </a>

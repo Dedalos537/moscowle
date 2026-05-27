@@ -1,41 +1,41 @@
-<header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
+<header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-3">
     @if (headerService.icon$ | async; as icon) {
       @if (icon && icon.length && icon.length === 2) {
-        <fa-icon [icon]="icon" class="text-primary text-2xl"></fa-icon>
+        <fa-icon [icon]="icon" class="text-primary-container text-xl"></fa-icon>
       }
     }
     <div class="flex flex-col">
       <h1 class="text-xl font-bold text-on-surface">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
-      <p class="text-sm text-on-surface-variant">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
+      <p class="text-body-sm text-on-surface-variant">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
     </div>
   </div>
 
-  <div class="flex items-center gap-4">
+  <div class="flex items-center gap-3">
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
 
     @if (isRecording) {
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200">
         <span class="w-2 h-2 rounded-full bg-red-500 recording-dot"></span>
-        <span class="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider hidden sm:inline">Grabando</span>
+        <span class="text-label-caps text-red-600 hidden sm:inline">Grabando</span>
       </div>
     }
 
     <div class="relative">
-      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none">
-        <fa-icon [icon]="['fas', 'bell']" [class.text-primary]="unreadCount > 0"></fa-icon>
+      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
+        <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0"></fa-icon>
         @if (unreadCount > 0) {
-          <span class="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-error rounded-full text-on-error text-[10px] md:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          <span class="absolute -top-1 -right-1 w-5 h-5 bg-error rounded-full text-on-error text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
         }
       </button>
 
       @if (showNotifications) {
-        <div class="absolute right-0 mt-3 w-80 bg-surface/95 backdrop-blur-xl rounded-xl shadow-soft border border-outline-variant/50 z-50 flex flex-col max-h-[80vh] animate-fade-in">
-          <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
+        <div class="absolute right-0 mt-3 w-80 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col max-h-[80vh] animate-fade-in">
+          <div class="p-4 border-b border-border/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
             <h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
             <div class="flex items-center gap-2">
               @if (unreadCount > 0) {
-                <button (click)="markAllAsRead()" class="text-xs font-semibold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-primary/10">
+                <button (click)="markAllAsRead()" class="text-label-caps text-primary-container hover:text-primary-container/80 transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-primary-container/10">
                   <fa-icon [icon]="['fas', 'check-double']" class="text-xs"></fa-icon>
                   Marcar leidas
                 </button>
@@ -47,22 +47,22 @@
           </div>
           <div class="p-2 overflow-y-auto flex-1 custom-scrollbar">
             @for (notif of notifications; track notif.id) {
-              <div (click)="markOneRead(notif.id)" class="p-3 hover:bg-primary/5 rounded-lg transition-colors border-b border-outline-variant/10 last:border-0 cursor-pointer">
+              <div (click)="markOneRead(notif.id)" class="p-3 hover:bg-primary-container/5 rounded-xl transition-colors border-b border-border/10 last:border-0 cursor-pointer">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                       [class.bg-primary/10]="!notif.type || notif.type === 'default'"
+                       [class.bg-primary-container/15]="!notif.type || notif.type === 'default'"
                        [class.bg-amber-100]="notif.type === 'debt'"
-                       [class.bg-blue-100]="notif.type === 'activity'">
+                       [class.bg-info/10]="notif.type === 'activity'">
                     @if (notif.type === 'debt') {
                       <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-amber-600 text-sm"></fa-icon>
                     } @else if (notif.type === 'activity') {
-                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-blue-600 text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info text-sm"></fa-icon>
                     } @else {
-                      <fa-icon [icon]="['fas', 'bell']" class="text-primary text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'bell']" class="text-primary-container text-sm"></fa-icon>
                     }
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
+                    <p class="text-body-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
                     <p class="text-label-caps text-on-surface-variant mt-1 flex items-center gap-1">
                       <fa-icon [icon]="['fas', 'clock']" class="text-xs leading-none"></fa-icon> {{ notif.timestamp }}
                     </p>
@@ -74,7 +74,7 @@
                 <div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-3 text-outline">
                   <fa-icon [icon]="['fas', 'bell-slash']" class="text-2xl"></fa-icon>
                 </div>
-                <p class="text-on-surface-variant text-sm">No tienes notificaciones nuevas</p>
+                <p class="text-body-sm text-on-surface-variant">No tienes notificaciones nuevas</p>
               </div>
             }
           </div>
@@ -83,24 +83,24 @@
     </div>
 
     <div class="relative">
-      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-outline-variant/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
-        <div class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-lg uppercase shadow-sm">
+      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
+        <div class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-lg uppercase">
           {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
         </div>
         <div class="hidden md:flex flex-col">
           <span class="font-bold text-on-surface text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
-          <span class="text-on-surface-variant text-label-caps capitalize">{{ user?.role || 'User' }}</span>
+          <span class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</span>
         </div>
         <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-sm transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
       </div>
 
       @if (showUserMenu) {
-        <div class="absolute right-0 mt-3 w-56 bg-surface/95 backdrop-blur-xl rounded-xl shadow-soft border border-outline-variant/50 py-2 z-50 animate-fade-in">
-          <div class="px-4 py-3 border-b border-outline-variant/30 md:hidden bg-surface-container-low/80">
+        <div class="absolute right-0 mt-3 w-56 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 py-2 z-50 animate-fade-in">
+          <div class="px-4 py-3 border-b border-border/30 md:hidden bg-surface-container-low/80">
             <p class="text-sm font-bold text-on-surface truncate">{{ user?.username || 'Usuario' }}</p>
             <p class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</p>
           </div>
-          <button class="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors" (click)="logout()">
+          <button class="w-full flex items-center gap-3 px-4 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors" (click)="logout()">
             <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-base"></fa-icon>
             Cerrar Sesión
           </button>
@@ -112,12 +112,12 @@
 
 @if (showLogoutWarning) {
   <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="cancelLogout()">
-    <div class="bg-surface rounded-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
-      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-red-600 dark:text-red-400 text-2xl"></fa-icon>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-red-600 text-2xl"></fa-icon>
       </div>
       <h3 class="text-lg font-bold text-on-surface text-center mb-2">Grabación en curso</h3>
-      <p class="text-sm text-on-surface-variant text-center mb-6">Hay una sesión grabándose en este momento. Si cierras sesión, la grabación se detendrá y la sesión quedará incompleta.</p>
+      <p class="text-body-sm text-on-surface-variant text-center mb-6">Hay una sesión grabándose en este momento. Si cierras sesión, la grabación se detendrá y la sesión quedará incompleta.</p>
       <div class="flex gap-3">
         <app-button variant="secondary" label="Cancelar" (clicked)="cancelLogout()"></app-button>
         <app-button variant="danger" label="Detener y Salir" (clicked)="logout()"></app-button>

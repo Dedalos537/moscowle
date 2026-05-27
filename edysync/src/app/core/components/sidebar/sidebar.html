@@ -1,70 +1,39 @@
-<aside class="w-64 h-screen bg-surface border-r border-outline-variant flex flex-col transition-colors duration-300">
-  <div class="h-24 flex items-center px-6 border-b border-outline-variant shrink-0">
-    <div class="flex items-center gap-3">
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">
       <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
-      <div class="flex flex-col">
-        <span class="font-extrabold text-primary tracking-tight text-xl">EdySync</span>
-        <span class="text-label-caps text-on-surface-variant">Centro Juan Pablo II</span>
+      <div>
+        <span class="sidebar-brand-name">EdySync</span>
+        <span class="sidebar-brand-sub">Centro Juan Pablo II</span>
       </div>
     </div>
   </div>
 
-  <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-0.5 custom-scrollbar">
-    <a routerLink="/admin/dashboard" routerLinkActive="active" #rla1="routerLinkActive"
-       class="nav-link" [class.active]="rla1.isActive">
-      <fa-icon [icon]="['fas', 'tachometer-alt']" [class.text-primary]="rla1.isActive"></fa-icon>
-      <span>Panel Admin</span>
-    </a>
-    <a routerLink="/admin/sessions" routerLinkActive="active" #rla2="routerLinkActive"
-       class="nav-link" [class.active]="rla2.isActive">
-      <fa-icon [icon]="['fas', 'calendar-alt']" [class.text-primary]="rla2.isActive"></fa-icon>
-      <span>Sesiones Globales</span>
-    </a>
-    <a routerLink="/admin/users" routerLinkActive="active" #rla3="routerLinkActive"
-       class="nav-link" [class.active]="rla3.isActive">
-      <fa-icon [icon]="['fas', 'users']" [class.text-primary]="rla3.isActive"></fa-icon>
-      <span>Admin Usuarios</span>
-    </a>
-    <a routerLink="/admin/sedes" routerLinkActive="active" #rla4="routerLinkActive"
-       class="nav-link" [class.active]="rla4.isActive">
-      <fa-icon [icon]="['fas', 'building']" [class.text-primary]="rla4.isActive"></fa-icon>
-      <span>Sedes</span>
-    </a>
-    <a routerLink="/admin/finanzas" routerLinkActive="active" #rla5="routerLinkActive"
-       class="nav-link" [class.active]="rla5.isActive">
-      <fa-icon [icon]="['fas', 'university']" [class.text-primary]="rla5.isActive"></fa-icon>
-      <span>Finanzas</span>
-    </a>
-    <a routerLink="/admin/yape" routerLinkActive="active" #rla8="routerLinkActive"
-       class="nav-link" [class.active]="rla8.isActive">
-      <fa-icon [icon]="['fas', 'qrcode']" [class.text-primary]="rla8.isActive"></fa-icon>
-      <span>Importar Yape</span>
-    </a>
-    <a routerLink="/admin/games" routerLinkActive="active" #rla9="routerLinkActive"
-       class="nav-link" [class.active]="rla9.isActive">
-      <fa-icon [icon]="['fas', 'gamepad']" [class.text-primary]="rla9.isActive"></fa-icon>
-      <span>Admin Juegos</span>
-    </a>
-    <a routerLink="/admin/reports" routerLinkActive="active" #rla10="routerLinkActive"
-       class="nav-link" [class.active]="rla10.isActive">
-      <fa-icon [icon]="['fas', 'chart-bar']" [class.text-primary]="rla10.isActive"></fa-icon>
-      <span>Admin Reportes</span>
-    </a>
-    <a routerLink="/admin/messages" routerLinkActive="active" #rla11="routerLinkActive"
-       class="nav-link" [class.active]="rla11.isActive">
-      <fa-icon [icon]="['fas', 'envelope']" [class.text-primary]="rla11.isActive"></fa-icon>
-      <span>Admin Mensajes</span>
-    </a>
+  <div class="sidebar-section-label">Navegación</div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="nav-link--active"
+        #rla="routerLinkActive"
+        class="nav-link"
+        [class.nav-link--active]="rla.isActive"
+      >
+        <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    }
   </nav>
 
-  <div class="p-4 border-t border-outline-variant shrink-0">
+  <div class="sidebar-footer">
     <app-button variant="ghost" (clicked)="toggleDarkMode()">
       @if (theme === 'light') {
-        <fa-icon [icon]="['fas', 'moon']"></fa-icon>
-        <span>Modo Oscuro</span>
+        <fa-icon [icon]="['fas', 'moon']" class="text-sm"></fa-icon>
+        <span class="text-sm">Modo Oscuro</span>
       } @else {
-        <fa-icon [icon]="['fas', 'sun']"></fa-icon>
-        <span>Modo Claro</span>
+        <fa-icon [icon]="['fas', 'sun']" class="text-sm"></fa-icon>
+        <span class="text-sm">Modo Claro</span>
       }
     </app-button>
   </div>

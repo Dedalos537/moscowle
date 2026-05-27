@@ -17,7 +17,7 @@
   } @else {
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (game of games; track game) {
-        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 overflow-hidden group hover:shadow-lg transition-all">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border/20 overflow-hidden group hover:shadow-lg transition-all">
           <div class="aspect-video bg-gradient-to-br from-primary/5 to-gray-100 flex items-center justify-center">
             <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl text-primary/30 group-hover:text-primary/50 transition-colors"></fa-icon>
           </div>
@@ -46,7 +46,7 @@
     <app-input id="game-name" label="Nombre del Juego" [(value)]="uploadName" placeholder="Ej: memoria_animales"></app-input>
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Archivo HTML</label>
-      <input type="file" (change)="onFileSelected($event)" accept=".html" class="w-full px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl text-sm">
+      <input type="file" (change)="onFileSelected($event)" accept=".html" class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm">
     </div>
     @if (statusText) {
       <app-alert [type]="statusText.includes('Error') ? 'error' : 'success'" [message]="statusText"></app-alert>

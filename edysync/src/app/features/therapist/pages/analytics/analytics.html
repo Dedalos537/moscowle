@@ -48,7 +48,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let entry of difficultyMatrix" class="border-t border-outline-variant/30">
+            <tr *ngFor="let entry of difficultyMatrix" class="border-t border-border/30">
               <td class="py-2.5 pr-4 font-semibold text-on-surface text-sm truncate">{{ entry.game }}</td>
               <td *ngFor="let lvl of entry.levels" class="text-center py-2.5 px-2">
                 <div class="flex flex-col items-center gap-1.5">
@@ -79,7 +79,7 @@
         <div *ngFor="let p of data.prediction_distribution"
              class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
           <span class="w-2.5 h-2.5 rounded-sm"
-                [style.background]="p.label === 'Avanzar' ? '#75a83a' : (p.label === 'Apoyar' ? '#3e6837' : '#a5d087')">
+                [style.background]="p.label === 'Avanzar' ? 'var(--color-primary-container)' : (p.label === 'Apoyar' ? 'var(--color-primary)' : 'var(--color-primary-fixed)')">
           </span>
           {{ p.label }}
           <span class="text-on-surface">{{ getPredictionPercent(p.value) }}%</span>
@@ -103,22 +103,22 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-outline-variant/30">
+          <tr class="border-b border-border/30">
             <th class="text-left py-3 text-label-caps text-on-surface-variant">Fecha</th>
             <th class="text-left py-3 text-label-caps text-on-surface-variant">Descripción</th>
             <th class="text-left py-3 text-label-caps text-on-surface-variant">Impacto</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let ad of adaptations" class="border-b border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+          <tr *ngFor="let ad of adaptations" class="border-b border-border/20 hover:bg-surface-container-low transition-colors">
             <td class="py-3 pr-4 text-sm text-on-surface whitespace-nowrap">{{ ad.date | date:'dd/MM/yyyy' }}</td>
             <td class="py-3 pr-4 text-sm text-on-surface-variant">{{ ad.description }}</td>
             <td class="py-3">
               <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                     [ngClass]="{
-                      'bg-emerald-50 text-emerald-700': ad.impact === 'positive',
-                      'bg-amber-50 text-amber-700': ad.impact === 'neutral',
-                      'bg-red-50 text-red-700': ad.impact === 'negative'
+                      'bg-success-container text-success': ad.impact === 'positive',
+                      'bg-warning-container text-warning': ad.impact === 'neutral',
+                      'bg-error-container text-error': ad.impact === 'negative'
                     }">
                 <fa-icon
                   [icon]="ad.impact === 'positive' ? ['fas', 'chart-line'] : (ad.impact === 'neutral' ? ['fas', 'minus'] : ['fas', 'chart-line'])"

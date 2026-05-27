@@ -20,7 +20,7 @@
       </div>
       <div class="stat-card animate-fade-in" style="animation-delay:0.18s">
         <p class="text-label-caps text-on-surface-variant">Terapeutas</p>
-        <p class="text-h3 text-blue-600 mt-1">{{ stats.therapists }}</p>
+        <p class="text-h3 text-info mt-1">{{ stats.therapists }}</p>
       </div>
       <div class="stat-card animate-fade-in" style="animation-delay:0.22s">
         <p class="text-label-caps text-on-surface-variant">Deudores</p>
@@ -32,7 +32,7 @@
       </div>
       <div class="stat-card animate-fade-in" style="animation-delay:0.3s">
         <p class="text-label-caps text-on-surface-variant">Admins</p>
-        <p class="text-h3 text-amber-600 mt-1">{{ stats.admins }}</p>
+        <p class="text-h3 text-warning mt-1">{{ stats.admins }}</p>
       </div>
     </div>
   }
@@ -52,7 +52,7 @@
       <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.1s">
         <div class="p-5">
           <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'circle']" class="text-[18px] text-green-500"></fa-icon> Activo vs Inactivo
+            <fa-icon [icon]="['fas', 'circle']" class="text-[18px] text-primary-container"></fa-icon> Activo vs Inactivo
           </h4>
           <div style="max-height:200px">
             <canvas baseChart [data]="chartActive" [options]="chartActiveOpt" type="doughnut"></canvas>
@@ -62,7 +62,7 @@
       <div class="card animate-fade-in" style="max-height:280px;animation-delay:0.15s">
         <div class="p-5">
           <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'id-badge']" class="text-[18px] text-purple-500"></fa-icon> Roles
+            <fa-icon [icon]="['fas', 'id-badge']" class="text-[18px] text-info"></fa-icon> Roles
           </h4>
           <div style="max-height:200px">
             <canvas baseChart [data]="chartRole" [options]="chartRoleOpt" type="doughnut"></canvas>
@@ -74,7 +74,7 @@
 
   <div class="card animate-fade-in" style="animation-delay:0.2s">
     <div class="p-6 xl:p-8">
-      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 border-b border-outline-variant/20 pb-6">
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 border-b border-border/20 pb-6">
         <h3 class="text-h3 text-on-surface flex items-center gap-2">
           <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
         </h3>
@@ -112,7 +112,7 @@
           <app-spinner size="md" colorClass="text-primary"></app-spinner>
         </div>
       } @else {
-        <div class="hidden md:block overflow-x-auto rounded-xl border border-outline-variant/20 shadow-card">
+        <div class="hidden md:block overflow-x-auto rounded-xl border border-border/20 shadow-card">
           <table class="w-full min-w-[1100px]">
             <thead>
               <tr class="bg-surface-container-high">
@@ -126,20 +126,20 @@
                 <th class="px-5 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
               </tr>
             </thead>
-            <tbody class="bg-surface-container-lowest divide-y divide-outline-variant/20">
+            <tbody class="bg-surface-container-lowest divide-y divide-border/20">
               @for (u of filteredUsers; track u.id; let i = $index) {
-                <tr class="animate-fade-in transition-colors duration-150" [style.animation-delay]="i * 0.04 + 's'" [class.bg-surface-container-high/30]="i % 2 === 1 && u.account_status === 'active' && u.is_active" [class.bg-error-container/20]="u.account_status === 'debtor'" [class.bg-surface-container-highest/40]="u.account_status === 'retired'" [class.bg-orange-50/40]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'" [class.hover:bg-surface-container-highest/50]="u.account_status === 'active' && u.is_active">
+                <tr class="animate-fade-in transition-colors duration-150" [style.animation-delay]="i * 0.04 + 's'" [class.bg-surface-container-high/30]="i % 2 === 1 && u.account_status === 'active' && u.is_active" [class.bg-error-container/20]="u.account_status === 'debtor'" [class.bg-surface-container-highest/40]="u.account_status === 'retired'" [class.bg-warning-container/30]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'" [class.hover:bg-surface-container-highest/50]="u.account_status === 'active' && u.is_active">
                   <td class="px-5 py-3.5">
                     <div class="flex items-center gap-3">
-                      <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      <div class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
                         {{ getInitials(u.username) }}
                       </div>
-                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:outline-none w-full transition-colors py-0.5 text-sm">
+                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none w-full transition-colors py-0.5 text-sm">
                     </div>
                   </td>
                   <td class="px-5 py-3.5 text-sm text-on-surface-variant max-w-[160px] truncate" [title]="u.email">{{ u.email }}</td>
                   <td class="px-5 py-3.5">
-                    <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg text-sm font-medium py-1.5 pl-3 pr-8 cursor-pointer transition-all text-on-surface">
+                    <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-surface-container-high hover:bg-surface-container-highest border border-border/30 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg text-sm font-medium py-1.5 pl-3 pr-8 cursor-pointer transition-all text-on-surface">
                       <option value="terapista">Terapeuta</option>
                       <option value="jugador">Paciente</option>
                       <option value="admin">Admin</option>
@@ -147,11 +147,11 @@
                   </td>
                   <td class="px-5 py-3.5">
                     @if (u.role === 'jugador') {
-                      <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-primary/10 text-primary">{{ getSedeName(u) }}</span>
+                      <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-primary-container/15 text-primary-container">{{ getSedeName(u) }}</span>
                     } @else if (u.role === 'terapista') {
                       <div class="flex flex-wrap gap-1">
                         @for (s of u.assigned_sedes; track s.id) {
-                          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-secondary/10 text-secondary">{{ s.name }}</span>
+                          <span class="inline-block px-2.5 py-0.5 text-xs font-semibold rounded-md bg-secondary-container/15 text-secondary-container">{{ s.name }}</span>
                         }
                         @if (!u.assigned_sedes?.length) {
                           <span class="text-xs text-on-surface-variant/60">—</span>
@@ -162,7 +162,7 @@
                     }
                   </td>
                   <td class="px-5 py-3.5">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md" [class.bg-primary/10]="u.account_status === 'active'" [class.text-primary]="u.account_status === 'active'" [class.bg-tertiary/10]="u.account_status === 'inactive'" [class.text-tertiary]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md" [class.bg-primary-container/15]="u.account_status === 'active'" [class.text-primary-container]="u.account_status === 'active'" [class.bg-tertiary-container/15]="u.account_status === 'inactive'" [class.text-tertiary-container]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
                       <span class="w-1.5 h-1.5 rounded-full" [class.bg-primary]="u.account_status === 'active'" [class.bg-tertiary]="u.account_status === 'inactive'" [class.bg-on-surface-variant]="u.account_status === 'retired'" [class.bg-error]="u.account_status === 'debtor'"></span>
                       {{ getStatusLabel(u.account_status) }}
                     </span>
@@ -170,12 +170,12 @@
                   <td class="px-5 py-3.5">
                     @if (u.role === 'jugador') {
                       <div class="flex items-center gap-2">
-                        <select #sel multiple class="w-44 bg-surface-container-high border border-outline-variant/30 text-on-surface text-xs font-medium rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary py-1.5 pl-3 pr-2 h-20 custom-scrollbar">
+                        <select #sel multiple class="w-44 bg-surface-container-high border border-border/30 text-on-surface text-xs font-medium rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary py-1.5 pl-3 pr-2 h-20 custom-scrollbar">
                           @for (t of therapists; track t.id) {
                             <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)" class="py-0.5">{{ t.username }}</option>
                           }
                         </select>
-                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary/10 text-primary rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all shrink-0 cursor-pointer" title="Guardar">
+                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all shrink-0 cursor-pointer" title="Guardar">
                           <fa-icon [icon]="['fas', 'check']" class="text-lg"></fa-icon>
                         </button>
                       </div>
@@ -186,7 +186,7 @@
                   <td class="px-5 py-3.5 text-center">
                     <label class="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
-                      <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                      <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </td>
                   <td class="px-5 py-3.5 text-right">
@@ -209,21 +209,21 @@
 
         <div class="md:hidden space-y-3 mt-4">
           @for (u of filteredUsers; track u.id; let i = $index) {
-            <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'" [class.bg-error-container/10]="u.account_status === 'debtor'" [class.bg-surface-container-highest/30]="u.account_status === 'retired'" [class.bg-orange-50/30]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
-              <div class="p-4 border-b border-outline-variant/15 bg-surface-container-high/30">
+            <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'" [class.bg-error-container/10]="u.account_status === 'debtor'" [class.bg-surface-container-highest/30]="u.account_status === 'retired'" [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
+              <div class="p-4 border-b border-border/15 bg-surface-container-high/30">
                 <div class="flex justify-between items-start gap-3">
                   <div class="flex items-center gap-3 flex-1 min-w-0">
-                    <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    <div class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
                       {{ getInitials(u.username) }}
                     </div>
                     <div class="min-w-0">
-                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-outline-variant focus:border-primary focus:outline-none w-full transition-colors text-base">
+                      <input [value]="u.username" (change)="updateName(u, $event)" class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none w-full transition-colors text-base">
                       <p class="text-xs text-on-surface-variant truncate mt-0.5">{{ u.email }}</p>
                     </div>
                   </div>
                   <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
                     <input type="checkbox" class="sr-only peer" [checked]="u.is_active" (change)="toggleActive(u, $event)">
-                    <div class="w-8 h-4.5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
+                    <div class="w-8 h-4.5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
               </div>
@@ -233,7 +233,7 @@
                     <span class="text-label-caps text-on-surface-variant">{{ getRoleBadge(u.role) }}</span>
                     <span class="text-on-surface-variant/30">|</span>
                     <span class="text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md" [class.bg-primary/10]="u.account_status === 'active'" [class.text-primary]="u.account_status === 'active'" [class.bg-tertiary/10]="u.account_status === 'inactive'" [class.text-tertiary]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md" [class.bg-primary-container/15]="u.account_status === 'active'" [class.text-primary-container]="u.account_status === 'active'" [class.bg-tertiary-container/15]="u.account_status === 'inactive'" [class.text-tertiary-container]="u.account_status === 'inactive'" [class.bg-surface-container-highest]="u.account_status === 'retired'" [class.text-on-surface-variant]="u.account_status === 'retired'" [class.bg-error-container/30]="u.account_status === 'debtor'" [class.text-error]="u.account_status === 'debtor'">
                       {{ getStatusLabel(u.account_status) }}
                     </span>
                   </div>
@@ -243,12 +243,12 @@
                 </div>
 
                 @if (u.role === 'jugador') {
-                  <div class="bg-surface-container-high/50 rounded-xl p-3.5 border border-outline-variant/20">
+                  <div class="bg-surface-container-high/50 rounded-xl p-3.5 border border-border/20">
                     <label class="text-label-caps text-secondary mb-2 flex items-center gap-1.5">
                       <fa-icon [icon]="['fas', 'stethoscope']" class="text-sm"></fa-icon> Terapeutas Asignados
                     </label>
                     <div class="flex gap-2">
-                      <select #sel2 multiple class="flex-1 bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs rounded-lg focus:ring-primary focus:border-primary p-2 h-20 custom-scrollbar">
+                      <select #sel2 multiple class="flex-1 bg-surface-container-lowest border border-border/30 text-on-surface text-xs rounded-lg focus:ring-primary focus:border-primary p-2 h-20 custom-scrollbar">
                         @for (t of therapists; track t.id) {
                           <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)">{{ t.username }}</option>
                         }
@@ -270,10 +270,10 @@
 
 @if (showActionDrawer && selectedUser) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeActionDrawer()"></div>
-  <div class="fixed top-0 right-0 w-[280px] h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
-    <div class="p-5 border-b border-outline-variant/20 flex justify-between items-center">
+  <div class="fixed top-0 right-0 w-[280px] h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+    <div class="p-5 border-b border-border/20 flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+        <div class="w-9 h-9 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center font-bold text-sm">
           {{ getInitials(selectedUser.username) }}
         </div>
         <div>
@@ -294,17 +294,17 @@
         <fa-icon [icon]="['fas', 'edit']" class="text-lg text-on-surface-variant"></fa-icon>
         Editar Usuario
       </button>
-      <button (click)="openResetDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-tertiary/10 hover:text-tertiary transition-colors rounded-lg cursor-pointer">
+      <button (click)="openResetDrawer(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-tertiary-container/15 hover:text-tertiary-container transition-colors rounded-lg cursor-pointer">
         <fa-icon [icon]="['fas', 'key']" class="text-lg text-on-surface-variant"></fa-icon>
         Reset Password
       </button>
-      <hr class="my-2 mx-3.5 border-outline-variant/20">
+      <hr class="my-2 mx-3.5 border-border/20">
       <button (click)="deleteUser(selectedUser)" class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-error hover:bg-error-container/30 transition-colors rounded-lg cursor-pointer">
         <fa-icon [icon]="['fas', 'trash-alt']" class="text-lg text-error/70"></fa-icon>
         Eliminar Usuario
       </button>
     </div>
-    <div class="p-4 border-t border-outline-variant/20">
+    <div class="p-4 border-t border-border/20">
       <div class="p-3 bg-surface-container-high rounded-xl flex items-center gap-3">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-sm text-primary"></fa-icon>
         <div>
@@ -318,8 +318,8 @@
 
 @if (showEditDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeEditDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
-    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+    <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'user-cog']" class="text-primary"></fa-icon>
         Editar Usuario
@@ -357,7 +357,7 @@
           <h4 class="text-sm font-bold text-primary flex items-center gap-2">
             <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon> Contrato
           </h4>
-          <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
+          <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
             <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
             <p class="text-[10px] text-on-surface-variant/60 mb-1">Ctrl+Click para múltiples</p>
             <select multiple [(ngModel)]="editData.sede_ids" class="input-field h-24 text-sm">
@@ -366,7 +366,7 @@
               }
             </select>
           </div>
-          <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20">
+          <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
             <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horario Regular</label>
             <div class="grid grid-cols-2 gap-3 mb-3">
               <div>
@@ -381,7 +381,7 @@
             <span class="text-[10px] text-on-surface-variant/60 block mb-1.5">Días Laborales</span>
             <div class="flex flex-wrap gap-1.5">
               @for (day of [{v:0,l:'L'},{v:1,l:'M'},{v:2,l:'X'},{v:3,l:'J'},{v:4,l:'V'},{v:5,l:'S'}]; track day.v) {
-                <label class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary/10]="editData.days.includes(day.v)" [class.border-primary/30]="editData.days.includes(day.v)">
+                <label class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary-container/15]="editData.days.includes(day.v)" [class.border-primary/30]="editData.days.includes(day.v)">
                   <input type="checkbox" [value]="day.v" [checked]="editData.days.includes(day.v)" (change)="editData.days.includes(day.v) ? editData.days.splice(editData.days.indexOf(day.v),1) : editData.days.push(day.v)" class="sr-only">
                   {{ day.l }}
                 </label>
@@ -453,16 +453,16 @@
             </div>
           </div>
 
-          <div class="border-t border-outline-variant/20 pt-3">
+          <div class="border-t border-border/20 pt-3">
             <label class="inline-flex items-center gap-3 cursor-pointer">
               <input type="checkbox" [(ngModel)]="editData.has_shift2" class="sr-only peer">
-              <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-outline-variant after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary relative"></div>
+              <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary relative"></div>
               <span class="text-sm font-medium text-on-surface">2do Turno / Plan Diferenciado</span>
             </label>
           </div>
 
           @if (editData.has_shift2) {
-            <div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/20 space-y-3">
+            <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20 space-y-3">
               <h5 class="text-label-caps text-on-surface-variant">Turno 2</h5>
               <div class="grid grid-cols-3 gap-3">
                 <div>
@@ -495,7 +495,7 @@
         </div>
       }
     </div>
-    <div class="flex-none p-5 border-t border-outline-variant/20 flex justify-end gap-3">
+    <div class="flex-none p-5 border-t border-border/20 flex justify-end gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
       <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="saveEditUser()"></app-button>
     </div>
@@ -504,8 +504,8 @@
 
 @if (showResetDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeResetDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
-    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+  <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+    <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'key']" class="text-tertiary"></fa-icon>
         Reset Password
@@ -517,7 +517,7 @@
     <div class="flex-1 overflow-y-auto p-5 space-y-5">
       @if (resetData.firstTime) {
         <div>
-          <div class="bg-tertiary/10 text-tertiary p-4 rounded-xl mb-5 text-sm flex gap-3">
+          <div class="bg-tertiary-container/15 text-tertiary-container p-4 rounded-xl mb-5 text-sm flex gap-3">
             <fa-icon [icon]="['fas', 'info-circle']" class="text-lg shrink-0"></fa-icon>
             <p>Este usuario nunca ha iniciado sesión. Ingrese una <strong>contraseña manual</strong> inicial (mín. 6 caracteres).</p>
           </div>
@@ -533,7 +533,7 @@
         </div>
       } @else {
         <div class="py-8 flex flex-col items-center text-center">
-          <div class="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
+          <div class="w-14 h-14 bg-primary-container/15 text-primary-container rounded-full flex items-center justify-center mb-4">
             <fa-icon [icon]="['fas', 'envelope']" class="text-2xl"></fa-icon>
           </div>
           <h4 class="text-lg font-bold text-on-surface mb-2">Generar nueva clave</h4>
@@ -541,12 +541,12 @@
         </div>
       }
       @if (resetData.status) {
-        <div class="p-4 rounded-xl text-sm font-medium text-center" [class.bg-primary/10]="resetData.status.includes('reseteada')" [class.text-primary]="resetData.status.includes('reseteada')" [class.bg-error-container/30]="resetData.status.includes('Error')" [class.text-error]="resetData.status.includes('Error')">
+        <div class="p-4 rounded-xl text-sm font-medium text-center" [class.bg-primary-container/15]="resetData.status.includes('reseteada')" [class.text-primary-container]="resetData.status.includes('reseteada')" [class.bg-error-container/30]="resetData.status.includes('Error')" [class.text-error]="resetData.status.includes('Error')">
           {{ resetData.status }}
         </div>
       }
     </div>
-    <div class="flex-none p-5 border-t border-outline-variant/20 flex justify-end gap-3">
+    <div class="flex-none p-5 border-t border-border/20 flex justify-end gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
       <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'exchange-alt']" (clicked)="confirmResetPassword()"></app-button>
     </div>
@@ -555,8 +555,8 @@
 
 @if (showCreateDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeCreateDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-outline-variant/20">
-    <div class="flex-none p-5 border-b border-outline-variant/20 flex justify-between items-center">
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+    <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'user-plus']" class="text-primary"></fa-icon>
         Crear Nuevo Usuario
@@ -665,7 +665,7 @@
           </label>
 
           @if (newUser.generate_schedule) {
-            <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/20 space-y-4">
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-border/20 space-y-4">
               <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
                 <fa-icon [icon]="['fas', 'calendar-alt']" class="text-sm"></fa-icon> Programación de Sesiones
               </h5>
@@ -692,7 +692,7 @@
                 <label class="text-label-caps text-on-surface-variant mb-1.5 block">Días de Sesión</label>
                 <div class="flex gap-2 flex-wrap">
                   @for (day of [{v:0,l:'Lun'},{v:1,l:'Mar'},{v:2,l:'Mié'},{v:3,l:'Jue'},{v:4,l:'Vie'},{v:5,l:'Sáb'}]; track day.v) {
-                    <label class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-outline-variant/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary/10]="newUser.days.includes(day.v)" [class.border-primary/30]="newUser.days.includes(day.v)">
+                    <label class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors" [class.bg-primary-container/15]="newUser.days.includes(day.v)" [class.border-primary/30]="newUser.days.includes(day.v)">
                       <input type="checkbox" [value]="day.v" [checked]="newUser.days.includes(day.v)" (change)="newUser.days.includes(day.v) ? newUser.days.splice(newUser.days.indexOf(day.v),1) : newUser.days.push(day.v)" class="sr-only">
                       {{ day.l }}
                     </label>
@@ -704,7 +704,7 @@
         </div>
       }
     </div>
-    <div class="flex-none p-5 border-t border-outline-variant/20 flex flex-col gap-2">
+    <div class="flex-none p-5 border-t border-border/20 flex flex-col gap-2">
       <div class="flex justify-end gap-3">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
         <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'save']" (clicked)="createUser()"></app-button>

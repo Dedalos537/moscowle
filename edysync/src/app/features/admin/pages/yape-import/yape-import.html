@@ -15,9 +15,9 @@
       <p class="text-[10px] font-black text-green-600 uppercase tracking-widest">Total Transacciones</p>
       <p class="text-2xl font-black text-green-700">{{ dashboard.total }}</p>
     </div>
-    <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl p-5 border border-yellow-100">
-      <p class="text-[10px] font-black text-yellow-600 uppercase tracking-widest">Pendientes</p>
-      <p class="text-2xl font-black text-yellow-700">{{ dashboard.pending }}</p>
+    <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl p-5 border border-warning-container">
+      <p class="text-[10px] font-black text-warning uppercase tracking-widest">Pendientes</p>
+      <p class="text-2xl font-black text-warning">{{ dashboard.pending }}</p>
     </div>
     <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100">
       <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Buscar</p>
@@ -28,9 +28,9 @@
   </div>
 
   @if (pendingTransactions.length > 0) {
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-orange-100 p-6">
-      <h3 class="text-sm font-bold text-orange-700 mb-4 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'clock']" class="text-orange-500"></fa-icon> Transacciones sin Comprobante
+    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-warning-container p-6">
+      <h3 class="text-sm font-bold text-warning mb-4 flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'clock']" class="text-warning"></fa-icon> Transacciones sin Comprobante
       </h3>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[500px]">
@@ -42,7 +42,7 @@
               <th class="px-4 py-3 text-left text-[10px] font-bold text-on-surface-variant uppercase">Mensaje</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-outline-variant/20">
+          <tbody class="divide-y divide-border/20">
             @for (t of pendingTransactions; track t.id) {
               <tr class="text-sm">
                 <td class="px-4 py-3 text-on-surface">{{ t.transaction_date }}</td>
@@ -57,7 +57,7 @@
     </div>
   }
 
-  <div class="bg-surface-container-lowest rounded-3xl shadow-sm border-outline-variant/20 p-6">
+  <div class="bg-surface-container-lowest rounded-3xl shadow-sm border-border/20 p-6">
     <h3 class="text-lg font-bold text-on-surface mb-6 flex items-center gap-2">
       <fa-icon [icon]="['fas', 'history']" class="text-primary"></fa-icon> Historial de Importaciones
     </h3>
@@ -77,7 +77,7 @@
               <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Categoria</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
+          <tbody class="divide-y divide-border/20 bg-surface-container-lowest">
             @for (t of history; track t.id) {
               <tr class="hover:bg-surface-container-high/80 text-sm">
                 <td class="px-5 py-4 text-on-surface whitespace-nowrap">{{ t.transaction_date }}</td>
@@ -108,7 +108,7 @@
     <p class="text-sm text-on-surface">Selecciona un archivo CSV o Excel con las transacciones Yape.</p>
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Archivo</label>
-      <input type="file" (change)="onFileSelected($event)" accept=".csv,.xlsx,.xls" class="w-full px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl text-sm">
+      <input type="file" (change)="onFileSelected($event)" accept=".csv,.xlsx,.xls" class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm">
     </div>
     @if (statusText) {
       <app-alert [type]="statusText.includes('Error') ? 'error' : 'success'" [message]="statusText"></app-alert>

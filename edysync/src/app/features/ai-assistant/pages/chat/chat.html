@@ -1,31 +1,31 @@
-<div class="flex flex-col h-[calc(100vh-12rem)] bg-surface-container-lowest rounded-2xl shadow-soft border border-outline-variant/20 overflow-hidden">
+<div class="flex flex-col h-[calc(100vh-12rem)] bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 overflow-hidden">
   <div class="p-4 border-b border-border bg-primary/5">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+      <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
         <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
       </div>
       <div>
-        <p class="font-bold text-textDark">Asistente IA EduSync</p>
-        <p class="text-xs text-charcoal">Copiloto inteligente para gestión terapéutica</p>
+        <p class="font-bold text-on-surface">Asistente IA EduSync</p>
+        <p class="text-xs text-on-surface-variant">Copiloto inteligente para gestión terapéutica</p>
       </div>
     </div>
   </div>
 
   <div #chatContainer class="flex-1 overflow-y-auto p-4 space-y-4">
     <div *ngIf="messages.length === 0" class="text-center py-12">
-      <fa-icon [icon]="['fas', 'comment-dots']" class="text-4xl text-charcoal/20 mb-3"></fa-icon>
-      <p class="text-sm text-charcoal">Pregúntame sobre:</p>
+      <fa-icon [icon]="['fas', 'comment-dots']" class="text-4xl text-on-surface-variant/20 mb-3"></fa-icon>
+      <p class="text-sm text-on-surface-variant">Pregúntame sobre:</p>
       <div class="flex flex-wrap justify-center gap-2 mt-4">
-        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-charcoal">Registrar pagos</span>
-        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-charcoal">Reportes de sesiones</span>
-        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-charcoal">Análisis de deudores</span>
-        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-charcoal">Optimizar agenda</span>
+        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Registrar pagos</span>
+        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Reportes de sesiones</span>
+        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Análisis de deudores</span>
+        <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Optimizar agenda</span>
       </div>
     </div>
 
     <div *ngFor="let msg of messages" class="flex" [ngClass]="{'justify-end': msg.role === 'user', 'justify-start': msg.role === 'assistant'}">
       <div class="max-w-[75%] p-3 rounded-2xl text-sm"
-           [ngClass]="msg.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-textDark rounded-bl-sm'">
+           [ngClass]="msg.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-on-surface rounded-bl-sm'">
         <p class="whitespace-pre-wrap">{{ msg.content }}</p>
         <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
       </div>

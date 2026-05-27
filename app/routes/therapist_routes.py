@@ -1142,33 +1142,36 @@ def api_dashboard_stats():
 def api_conversations():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Acceso denegado'}), 403
+    try:
+        unread_expr = func.sum(case(
+            ((Message.is_read == False) & (Message.receiver_id == current_user.id), 1),
+            else_=0
+        ))
 
-    unread_expr = func.sum(case(
-        ((Message.is_read == False) & (Message.receiver_id == current_user.id), 1),
-        else_=0
-    ))
+        conv_query = db.session.query(
+            User.id, User.username, User.email,
+            func.max(Message.created_at).label('last_message'),
+            unread_expr.label('unread_count')
+        ).join(
+            Message,
+            or_(
+                (Message.sender_id == User.id) & (Message.receiver_id == current_user.id),
+                (Message.receiver_id == User.id) & (Message.sender_id == current_user.id)
+            )
+        ).group_by(User.id).order_by(func.max(Message.created_at).desc()).all()
 
-    conv_query = db.session.query(
-        User.id, User.username, User.email,
-        func.max(Message.created_at).label('last_message'),
-        unread_expr.label('unread_count')
-    ).join(
-        Message,
-        or_(
-            (Message.sender_id == User.id) & (Message.receiver_id == current_user.id),
-            (Message.receiver_id == User.id) & (Message.sender_id == current_user.id)
-        )
-    ).group_by(User.id).order_by(func.max(Message.created_at).desc()).all()
+        conversations = [{
+            'user_id': c[0],
+            'username': c[1],
+            'email': c[2],
+            'last_message': c[3].isoformat() if c[3] else None,
+            'unread_count': c[4] or 0
+        } for c in conv_query]
 
-    conversations = [{
-        'user_id': c[0],
-        'username': c[1],
-        'email': c[2],
-        'last_message': c[3].isoformat() if c[3] else None,
-        'unread_count': c[4] or 0
-    } for c in conv_query]
-
-    return jsonify({'conversations': conversations})
+        return jsonify({'conversations': conversations})
+    except Exception as e:
+        current_app.logger.error(f"Error in therapist conversations: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al cargar conversaciones'}), 500
 
 
 @therapist_bp.route('/api/messages/<int:user_id>')
@@ -1176,40 +1179,43 @@ def api_conversations():
 def api_conversation_thread(user_id):
     if current_user.role != 'terapista':
         return jsonify({'error': 'Acceso denegado'}), 403
+    try:
+        other_user = User.query.get_or_404(user_id)
 
-    other_user = User.query.get_or_404(user_id)
+        messages = Message.query.filter(
+            or_(
+                (Message.sender_id == current_user.id) & (Message.receiver_id == user_id),
+                (Message.sender_id == user_id) & (Message.receiver_id == current_user.id)
+            )
+        ).order_by(Message.created_at.asc()).all()
 
-    messages = Message.query.filter(
-        or_(
-            (Message.sender_id == current_user.id) & (Message.receiver_id == user_id),
-            (Message.sender_id == user_id) & (Message.receiver_id == current_user.id)
-        )
-    ).order_by(Message.created_at.asc()).all()
-
-    Message.query.filter(
-        Message.receiver_id == current_user.id,
-        Message.sender_id == user_id,
-        Message.is_read == False
-    ).update({'is_read': True})
-    db.session.commit()
-    
-    return jsonify({
-        'other_user': {
-            'id': other_user.id,
-            'username': other_user.username,
-            'email': other_user.email,
-        },
-        'messages': [{
-            'id': m.id,
-            'sender_id': m.sender_id,
-            'receiver_id': m.receiver_id,
-            'body': m.body,
-            'file_url': m.file_url,
-            'file_type': m.file_type,
-            'created_at': m.created_at.isoformat() if m.created_at else None,
-            'is_read': m.is_read,
-        } for m in messages]
-    })
+        Message.query.filter(
+            Message.receiver_id == current_user.id,
+            Message.sender_id == user_id,
+            Message.is_read == False
+        ).update({'is_read': True})
+        db.session.commit()
+        
+        return jsonify({
+            'other_user': {
+                'id': other_user.id,
+                'username': other_user.username,
+                'email': other_user.email,
+            },
+            'messages': [{
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'receiver_id': m.receiver_id,
+                'body': m.body,
+                'file_url': m.file_url,
+                'file_type': m.file_type,
+                'created_at': m.created_at.isoformat() if m.created_at else None,
+                'is_read': m.is_read,
+            } for m in messages]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in therapist messages for user {user_id}: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al cargar mensajes'}), 500
 
 
 @therapist_bp.route('/api/profile')

@@ -1,5 +1,14 @@
-input {
-  &::placeholder {
-    opacity: 0.5;
-  }
+input:focus {
+  border-color: var(--color-primary-container) !important;
+  box-shadow: 0 0 0 2px rgba(117, 168, 58, 0.2);
+}
+
+input::placeholder {
+  color: var(--color-outline);
+  opacity: 0.6;
+}
+
+input.\!border-error:focus {
+  border-color: var(--color-error) !important;
+  box-shadow: 0 0 0 2px rgba(186, 26, 26, 0.2);
 }

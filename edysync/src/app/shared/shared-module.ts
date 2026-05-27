@@ -20,11 +20,12 @@ import { AiChat } from './components/ai-chat/ai-chat';
 import { CalendarWidget } from './components/calendar-widget/calendar-widget';
 import { AlertModal } from './components/alert-modal/alert-modal.component';
 import { RecordingOverlay } from './components/recording-overlay/recording-overlay';
+import { ConfirmDialog } from './components/confirm-dialog/confirm-dialog';
 
 @NgModule({
   declarations: [
     Button, Card, Input, Spinner, Alert, Modal, Chip,
-    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay, ConfirmDialog,
   ],
   imports: [
     CommonModule, FormsModule, FontAwesomeModule
@@ -32,7 +33,7 @@ import { RecordingOverlay } from './components/recording-overlay/recording-overl
   exports: [
     CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip,
-    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay,
+    ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay, ConfirmDialog,
   ]
 })
 export class SharedModule {

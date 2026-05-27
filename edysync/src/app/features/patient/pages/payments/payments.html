@@ -8,19 +8,19 @@
       <table class="w-full">
         <thead class="bg-surface-container-low">
           <tr>
-            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Fecha</th>
-            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Monto</th>
-            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Método</th>
-            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Referencia</th>
-            <th class="text-left px-6 py-4 text-xs font-bold text-charcoal uppercase tracking-wider">Estado</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Fecha</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Monto</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Método</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Referencia</th>
+            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
           <tr *ngFor="let payment of payments" class="hover:bg-surface-container-low transition-colors">
-            <td class="px-6 py-4 text-sm text-textDark">{{ payment.date | date:'dd/MM/yyyy' }}</td>
-            <td class="px-6 py-4 text-sm font-bold text-textDark">S/ {{ payment.amount | number:'1.2-2' }}</td>
-            <td class="px-6 py-4 text-sm text-charcoal">{{ payment.method }}</td>
-            <td class="px-6 py-4 text-sm text-charcoal">{{ payment.reference || '—' }}</td>
+            <td class="px-6 py-4 text-sm text-on-surface">{{ payment.date | date:'dd/MM/yyyy' }}</td>
+            <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ payment.amount | number:'1.2-2' }}</td>
+            <td class="px-6 py-4 text-sm text-on-surface-variant">{{ payment.method }}</td>
+            <td class="px-6 py-4 text-sm text-on-surface-variant">{{ payment.reference || '—' }}</td>
             <td class="px-6 py-4">
               <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                     [ngClass]="getStatusClass(payment.status)">
@@ -29,7 +29,7 @@
             </td>
           </tr>
           <tr *ngIf="payments.length === 0">
-            <td colspan="5" class="px-6 py-12 text-center text-charcoal">
+            <td colspan="5" class="px-6 py-12 text-center text-on-surface-variant">
               <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-3xl mb-2 opacity-30"></fa-icon>
               <p class="text-sm">No tienes pagos registrados</p>
             </td>

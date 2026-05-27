@@ -2,14 +2,14 @@
   class="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_left,_var(--color-primary)_0%,_transparent_60%),radial-gradient(ellipse_at_bottom_right,_var(--color-primary-fixed)_0%,_transparent_50%)]"
 >
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary/10 blur-3xl"></div>
+    <div class="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-primary-container/15 blur-3xl"></div>
     <div class="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary-fixed-dim/10 blur-3xl"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/[0.03] blur-3xl"></div>
   </div>
 
   <div class="relative max-w-7xl mx-auto px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:pt-32 lg:pb-36">
     <div class="max-w-3xl">
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-8 animate-fade-up delay-1">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container/15 text-primary-container text-sm font-semibold mb-8 animate-fade-up delay-1">
         <fa-icon [icon]="['fas', 'magic']" class="text-[18px]"></fa-icon>
         Plataforma Integral de Terapias
       </div>
@@ -35,7 +35,7 @@
         </a>
       </div>
 
-      <div class="flex flex-wrap items-center gap-6 mt-12 pt-8 border-t border-outline-variant/30 animate-fade-up delay-5">
+      <div class="flex flex-wrap items-center gap-6 mt-12 pt-8 border-t border-border/30 animate-fade-up delay-5">
         <div class="flex items-center gap-2 text-sm text-on-surface-variant">
           <fa-icon [icon]="['fas', 'check-circle']" class="text-primary text-xl"></fa-icon>
           Sin compromiso
@@ -90,7 +90,7 @@
 
 <section #statsSection class="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 py-16 sm:py-20">
   <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute top-0 left-1/4 w-[300px] h-[300px] rounded-full bg-primary/10 blur-3xl"></div>
+    <div class="absolute top-0 left-1/4 w-[300px] h-[300px] rounded-full bg-primary-container/15 blur-3xl"></div>
     <div class="absolute bottom-0 right-1/4 w-[250px] h-[250px] rounded-full bg-primary-fixed-dim/20 blur-3xl"></div>
   </div>
 
@@ -98,7 +98,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
       @for (stat of stats; track stat.label; let i = $index) {
         <div class="text-center animate-fade-up" [class.delay-1]="i === 0" [class.delay-2]="i === 1" [class.delay-3]="i === 2" [class.delay-4]="i === 3">
-          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 text-primary mb-4 mx-auto">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-container/15 text-primary-container mb-4 mx-auto">
             <fa-icon [icon]="stat.icon" class="text-2xl"></fa-icon>
           </div>
           <div class="text-4xl sm:text-5xl font-extrabold text-primary mb-1 tabular-nums">

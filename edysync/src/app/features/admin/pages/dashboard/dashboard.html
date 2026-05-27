@@ -1,414 +1,325 @@
-<div class="space-y-8" [@fadeInUp]>
+<div class="dashboard">
 
-  <div class="space-y-4">
-    <div class="flex items-center justify-between px-1">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-          <fa-icon [icon]="['fas', 'robot']"></fa-icon>
+  <section class="dashboard-section">
+    <div class="dashboard-section__header">
+      <div class="dashboard-section__title">
+        <div class="icon-box icon-box--primary">
+          <fa-icon [icon]="['fas', 'robot']" class="text-sm"></fa-icon>
         </div>
-        <h3 class="text-xl font-black text-on-surface uppercase tracking-tighter">Centro de Acción Inteligente</h3>
+        <h3>Centro de Acción Inteligente</h3>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid-4">
       @if (dailyPendings.length > 0) {
-        <div class="bg-surface-container-lowest rounded-2xl border border-orange-200 dark:border-orange-500/20 shadow-card p-5">
-          <div class="flex items-start justify-between mb-2">
-            <span class="text-label-caps text-orange-700 dark:text-orange-400">Cobros Hoy</span>
-            <span class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-500/15 flex items-center justify-center">
-              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-orange-500 text-xl"></fa-icon>
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__top">
+            <span class="label-caps text-warning">Cobros Hoy</span>
+            <span class="icon-badge icon-badge--warning">
+              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-lg"></fa-icon>
             </span>
           </div>
-          <p class="text-2xl font-black text-on-surface">{{ dailyPendings.length }}</p>
-          <p class="text-xs text-on-surface-variant">Pacientes con vencimiento hoy</p>
+          <p class="stat-card__value">{{ dailyPendings.length }}</p>
+          <p class="stat-card__desc">Pacientes con vencimiento hoy</p>
         </div>
       }
       @if (financials && incompletePatients.length > 0) {
-        <div class="bg-surface-container-lowest rounded-2xl border border-red-200 dark:border-red-500/20 shadow-card p-5">
-          <div class="flex items-start justify-between mb-2">
-            <span class="text-label-caps text-red-700 dark:text-red-400">Sin Configurar</span>
-            <span class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
-              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
+        <div class="stat-card stat-card--error">
+          <div class="stat-card__top">
+            <span class="label-caps text-error">Sin Configurar</span>
+            <span class="icon-badge icon-badge--error">
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-lg"></fa-icon>
             </span>
           </div>
-          <p class="text-2xl font-black text-on-surface">{{ incompletePatients.length }}</p>
-          <p class="text-xs text-on-surface-variant">Pacientes sin plan de pago</p>
+          <p class="stat-card__value">{{ incompletePatients.length }}</p>
+          <p class="stat-card__desc">Pacientes sin plan de pago</p>
         </div>
       }
       @if (financials && financials.overdue_amount > 0) {
-        <div class="bg-surface-container-lowest rounded-2xl border border-amber-200 dark:border-amber-500/20 shadow-card p-5">
-          <div class="flex items-start justify-between mb-2">
-            <span class="text-label-caps text-amber-700 dark:text-amber-400">Deuda Total</span>
-            <span class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-              <fa-icon [icon]="['fas', 'wallet']" class="text-amber-500 text-xl"></fa-icon>
+        <div class="stat-card stat-card--warning">
+          <div class="stat-card__top">
+            <span class="label-caps text-warning">Deuda Total</span>
+            <span class="icon-badge icon-badge--warning">
+              <fa-icon [icon]="['fas', 'wallet']" class="text-lg"></fa-icon>
             </span>
           </div>
-          <p class="text-2xl font-black text-on-surface">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
-          <p class="text-xs text-on-surface-variant">{{ financials.overdue_users_count }} pacientes morosos</p>
+          <p class="stat-card__value">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
+          <p class="stat-card__desc">{{ financials.overdue_users_count }} pacientes morosos</p>
         </div>
       }
       @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
-        <div class="lg:col-span-4 p-8 bg-surface-container-high rounded-2xl border-2 border-dashed border-outline-variant/20 flex flex-col items-center justify-center text-center">
-          <fa-icon [icon]="['fas', 'check-circle']" class="text-on-surface-variant/20 text-4xl mb-3"></fa-icon>
-          <p class="text-sm font-bold text-on-surface-variant/60 uppercase tracking-tight">Todas las operaciones al día</p>
-          <p class="text-[10px] text-on-surface-variant/40 mt-1">El motor de automatización está monitoreando</p>
+        <div class="empty-state lg\:col-span-4">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl mb-3" style="color: var(--color-outline); opacity: 0.3;"></fa-icon>
+          <p class="label-caps" style="color: var(--color-on-surface-variant); opacity: 0.5;">Todas las operaciones al día</p>
         </div>
       }
     </div>
-  </div>
+  </section>
 
   @if (incompletePatients.length > 0) {
-    <div class="bg-gradient-to-r from-red-500 to-orange-600 rounded-2xl shadow-lg p-5 text-white flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <div class="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-white shrink-0">
-          <fa-icon [icon]="['fas', 'robot']" class="text-2xl" animation="spin" *ngIf="false"></fa-icon>
-          <fa-icon [icon]="['fas', 'robot']" class="text-2xl"></fa-icon>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold">Guía de Regularización IA</h3>
-          <p class="text-xs text-white/80 max-w-md">
-            He detectado <span class="font-bold underline">{{ incompletePatients.length }}</span> alumnos con datos incompletos (modalidad o pago). Esto afecta la veracidad de tus finanzas.
-          </p>
-        </div>
+    <div class="guidance-banner">
+      <div class="guidance-banner__icon">
+        <fa-icon [icon]="['fas', 'robot']" class="text-2xl"></fa-icon>
       </div>
-      <div class="flex gap-2 w-full md:w-auto">
-        <app-button class="flex-1 md:flex-none" variant="ghost" label="Ver Pendientes" (clicked)="showGuidanceModal = true"></app-button>
+      <div class="guidance-banner__text">
+        <h3>Guía de Regularización IA</h3>
+        <p>He detectado <strong>{{ incompletePatients.length }}</strong> alumnos con datos incompletos (modalidad o pago). Esto afecta la veracidad de tus finanzas.</p>
       </div>
+      <app-button variant="secondary" label="Ver Pendientes" (clicked)="showGuidanceModal = true"></app-button>
     </div>
   }
 
-  <div>
-    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 px-1">Resumen General</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-
-      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-primary cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.05s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Terapeutas</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-primary transition-colors">
-              @if (!loading) { {{ summary.therapists }} } @else { <app-spinner size="sm"></app-spinner> }
-            </h3>
-          </div>
-          <div class="p-3 bg-blue-50 rounded-full text-blue-600 group-hover:bg-blue-100 transition-colors">
-            <fa-icon [icon]="['fas', 'user-md']" class="text-xl"></fa-icon>
-          </div>
+  <section class="dashboard-section">
+    <h3 class="section-label">Resumen General</h3>
+    <div class="grid-4">
+      <div class="summary-card summary-card--stagger" style="--i:0">
+        <div class="summary-card__body">
+          <p class="label-caps">Terapeutas</p>
+          <h3 class="summary-card__value">
+            @if (!loading) { {{ summary.therapists }} } @else { <app-spinner size="sm"></app-spinner> }
+          </h3>
+        </div>
+        <div class="icon-circle icon-circle--primary">
+          <fa-icon [icon]="['fas', 'user-md']" class="text-lg"></fa-icon>
         </div>
       </div>
 
-      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-green-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.1s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Pacientes</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-green-600 transition-colors">
-              @if (!loading) { {{ summary.patients }} } @else { <app-spinner size="sm"></app-spinner> }
-            </h3>
-          </div>
-          <div class="p-3 bg-green-50 rounded-full text-green-600 group-hover:bg-green-100 transition-colors">
-            <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
-          </div>
+      <div class="summary-card summary-card--stagger" style="--i:1">
+        <div class="summary-card__body">
+          <p class="label-caps">Pacientes</p>
+          <h3 class="summary-card__value">
+            @if (!loading) { {{ summary.patients }} } @else { <app-spinner size="sm"></app-spinner> }
+          </h3>
+        </div>
+        <div class="icon-circle icon-circle--secondary">
+          <fa-icon [icon]="['fas', 'users']" class="text-lg"></fa-icon>
         </div>
       </div>
 
-      <div class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-purple-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.15s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Sesiones</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-purple-600 transition-colors">
-              @if (!loading) { {{ summary.sessions_total }} } @else { <app-spinner size="sm"></app-spinner> }
-            </h3>
-          </div>
-          <div class="p-3 bg-purple-50 rounded-full text-purple-600 group-hover:bg-purple-100 transition-colors">
-            <fa-icon [icon]="['fas', 'calendar-check']" class="text-xl"></fa-icon>
-          </div>
+      <div class="summary-card summary-card--stagger" style="--i:2">
+        <div class="summary-card__body">
+          <p class="label-caps">Sesiones</p>
+          <h3 class="summary-card__value">
+            @if (!loading) { {{ summary.sessions_total }} } @else { <app-spinner size="sm"></app-spinner> }
+          </h3>
+        </div>
+        <div class="icon-circle icon-circle--info">
+          <fa-icon [icon]="['fas', 'calendar-check']" class="text-lg"></fa-icon>
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-emerald-500 animate-fade-in" style="animation-delay:0.2s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Cumplimiento IA</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1">
-              @if (!loading) { {{ avgAuditCompliance ?? '—' }}% } @else { <app-spinner size="sm"></app-spinner> }
-            </h3>
-            <p class="text-xs text-on-surface-variant/60 mt-1">{{ auditsCount }} auditorías</p>
+      <div class="summary-card summary-card--stagger" style="--i:3">
+        <div class="summary-card__body">
+          <p class="label-caps">Cumplimiento IA</p>
+          <h3 class="summary-card__value">
+            @if (!loading) { {{ avgAuditCompliance ?? '—' }}% } @else { <app-spinner size="sm"></app-spinner> }
+          </h3>
+          <p class="summary-card__sub">{{ auditsCount }} auditorías</p>
+        </div>
+        <div class="icon-circle icon-circle--primary">
+          <fa-icon [icon]="['fas', 'brain']" class="text-lg"></fa-icon>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-3">
+    <div class="card card--span-2">
+      <div class="card__header">
+        <div class="card__header-left">
+          <fa-icon [icon]="['fas', 'chart-bar']" class="text-primary"></fa-icon>
+          <span class="label-caps">Flujo de Caja (Mes Actual)</span>
+        </div>
+        <span class="pill-label">Soles (S/)</span>
+      </div>
+      <div class="card__body card__body--chart">
+        <div class="chart-bars">
+          <div class="chart-bar-col">
+            <span class="chart-bar-value">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
+            <div class="chart-bar chart-bar--primary" [style.height.px]="barHeight(financials?.income_real || 0)"></div>
+            <span class="chart-bar-label">Realizado</span>
           </div>
-          <div class="p-3 bg-emerald-50 rounded-full text-emerald-600">
-            <fa-icon [icon]="['fas', 'brain']" class="text-xl"></fa-icon>
+          <div class="chart-bar-col">
+            <span class="chart-bar-value">S/ {{ pendingAmount.toFixed(2) }}</span>
+            <div class="chart-bar chart-bar--info" [style.height.px]="barHeight(pendingAmount)"></div>
+            <span class="chart-bar-label">Pendiente</span>
+          </div>
+          <div class="chart-bar-col">
+            <span class="chart-bar-value">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</span>
+            <div class="chart-bar chart-bar--primary-dim" [style.height.px]="barHeight(financials?.income_expected || 0)"></div>
+            <span class="chart-bar-label">Esperado</span>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border-l-4 border-yellow-500 animate-fade-in" style="animation-delay:0.25s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Precisión Promedio</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1">
-              @if (!loading) { {{ summary.avg_accuracy }} } @else { <app-spinner size="sm"></app-spinner> }
-            </h3>
-          </div>
-          <div class="p-3 bg-yellow-50 rounded-full text-yellow-600">
-            <fa-icon [icon]="['fas', 'bullseye']" class="text-xl"></fa-icon>
-          </div>
+    <div class="card">
+      <div class="card__header">
+        <fa-icon [icon]="['fas', 'coins']" class="text-warning"></fa-icon>
+        <span class="label-caps">Resumen Financiero</span>
+      </div>
+      <div class="card__body">
+        <div class="finance-box finance-box--primary">
+          <span class="label-caps text-primary">Ingresos Reales</span>
+          <span class="text-xl font-extrabold text-primary">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
+        </div>
+        <div class="finance-box finance-box--info">
+          <span class="label-caps text-info">Pendiente por Cobrar</span>
+          <span class="text-xl font-extrabold text-info">S/ {{ pendingAmount.toFixed(2) }}</span>
         </div>
       </div>
-
-      <a routerLink="/admin/debtors" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 hover:shadow-lg transition-all border-l-4 border-red-500 cursor-pointer hover:-translate-y-1 animate-fade-in" style="animation-delay:0.25s">
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Deudas Pendientes</p>
-            <h3 class="text-3xl font-bold text-on-surface mt-1 group-hover:text-red-600 transition-colors">
-              @if (financials) { S/ {{ financials.overdue_amount.toFixed(2) }} } @else { -- }
-            </h3>
-            <p class="text-xs text-on-surface-variant/60 mt-2">{{ financials?.overdue_users_count || 0 }} pacientes</p>
-          </div>
-          <div class="p-3 bg-red-50 rounded-full text-red-600 group-hover:bg-red-100 transition-colors">
-            <fa-icon [icon]="['fas', 'credit-card']" class="text-xl"></fa-icon>
-          </div>
-        </div>
-      </a>
+      <p class="finance-note">Basado en planes activos registrados en el sistema.</p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold text-on-surface-variant flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'chart-bar']" class="text-primary"></fa-icon> Flujo de Caja (Mes Actual)
-        </h3>
-        <span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 bg-surface-container-high px-2 py-1 rounded">Soles (S/)</span>
-      </div>
-      <div class="flex-1 flex items-end justify-around gap-4 h-64">
-        <div class="flex flex-col items-center gap-2 flex-1">
-          <span class="text-sm font-bold text-green-700">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
-          <div class="w-full bg-green-100 rounded-t-lg relative" [style.height.px]="barHeight(financials?.income_real || 0)">
-            <div class="absolute inset-0 bg-green-500 rounded-t-lg opacity-80"></div>
-          </div>
-          <span class="text-[10px] font-black text-green-600 uppercase tracking-widest">Realizado</span>
-        </div>
-        <div class="flex flex-col items-center gap-2 flex-1">
-          <span class="text-sm font-bold text-blue-700">S/ {{ pendingAmount.toFixed(2) }}</span>
-          <div class="w-full bg-blue-100 rounded-t-lg relative" [style.height.px]="barHeight(pendingAmount)">
-            <div class="absolute inset-0 bg-blue-500 rounded-t-lg opacity-80"></div>
-          </div>
-          <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pendiente</span>
-        </div>
-        <div class="flex flex-col items-center gap-2 flex-1">
-          <span class="text-sm font-bold text-purple-700">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</span>
-          <div class="w-full bg-purple-100 rounded-t-lg relative" [style.height.px]="barHeight(financials?.income_expected || 0)">
-            <div class="absolute inset-0 bg-purple-500 rounded-t-lg opacity-80"></div>
-          </div>
-          <span class="text-[10px] font-black text-purple-600 uppercase tracking-widest">Esperado</span>
-        </div>
-      </div>
+  <div class="card">
+    <div class="card__header">
+      <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm" style="color: var(--color-error);"></fa-icon>
+      <span class="label-caps">Usuarios por Sede</span>
     </div>
-
-    <div class="lg:col-span-1 bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between">
-      <h3 class="text-lg font-semibold text-on-surface-variant mb-2 flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'coins']" class="text-yellow-500"></fa-icon> Resumen Financiero
-      </h3>
-      <div class="space-y-4">
-        <div class="p-4 bg-green-50 rounded-2xl border border-green-100">
-          <p class="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1">Ingresos Reales</p>
-          <span class="text-2xl font-black text-green-700">S/ {{ financials?.income_real?.toFixed(2) || '0.00' }}</span>
-        </div>
-        <div class="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-          <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Pendiente por Cobrar</p>
-          <span class="text-2xl font-black text-blue-700">S/ {{ pendingAmount.toFixed(2) }}</span>
-        </div>
+    <div class="card__body">
+      <div class="sedes-grid">
+        @for (s of sedesStats; track s.id) {
+          <a [routerLink]="'/admin/users'" [queryParams]="{ sede: s.id }" class="sede-card">
+            <div class="sede-card__top">
+              <span class="sede-card__name">{{ s.name }}</span>
+              <fa-icon [icon]="['fas', 'users']" class="sede-card__icon"></fa-icon>
+            </div>
+            <div class="sede-card__bottom">
+              <span class="sede-card__count">{{ s.count }}</span>
+              <span class="sede-card__label">pacientes</span>
+            </div>
+          </a>
+        } @empty {
+          <div class="sede-card__empty">No hay sedes registradas</div>
+        }
       </div>
-      <p class="text-[10px] text-on-surface-variant/60 mt-4 italic text-center">Basado en planes activos registrados en el sistema.</p>
     </div>
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6">
-    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-red-400"></fa-icon> Usuarios por Sede
-    </h3>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-      @for (s of sedesStats; track s.id) {
-        <div class="group block p-4 rounded-lg bg-surface-container-high border border-transparent hover:border-primary hover:bg-surface-container-lowest transition-all shadow-sm hover:shadow-md cursor-pointer">
-          <div class="flex justify-between items-center mb-1">
-            <h4 class="font-bold text-on-surface group-hover:text-primary transition-colors text-sm uppercase tracking-wide truncate">{{ s.name }}</h4>
-            <fa-icon [icon]="['fas', 'users']" class="text-on-surface-variant/40 group-hover:text-primary transition-colors text-xs"></fa-icon>
-          </div>
-          <div class="flex items-end gap-2">
-            <span class="text-2xl font-bold text-on-surface group-hover:text-primary transition-colors">{{ s.count }}</span>
-            <span class="text-xs text-on-surface-variant/60 mb-1">pacientes</span>
-          </div>
-        </div>
-      } @empty {
-        <div class="lg:col-span-6 text-sm text-on-surface-variant/60 py-6 text-center">No hay sedes registradas</div>
-      }
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="bg-gradient-to-br from-primary to-green-600 rounded-2xl shadow-soft p-6 text-white relative">
-      <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full hidden sm:block"></div>
-      <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
+  <div class="grid-2">
+    <div class="quick-payment-card">
+      <div class="quick-payment-card__bg"></div>
+      <h3 class="quick-payment-card__title">
         <fa-icon [icon]="['fas', 'comment-dollar']"></fa-icon> Registrar Pago Rápido
       </h3>
-      <p class="text-sm text-blue-100 mb-4 relative z-10 opacity-90">Selecciona un paciente para ir directo al formulario de pago.</p>
-      <div class="relative z-10">
-        <app-quick-payment (paymentCompleted)="onPaymentCompleted()"></app-quick-payment>
-      </div>
+      <p class="quick-payment-card__desc">Selecciona un paciente para ir directo al formulario de pago.</p>
+      <app-quick-payment (paymentCompleted)="onPaymentCompleted()"></app-quick-payment>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-outline-variant/20 flex flex-col justify-center">
-      <h3 class="text-lg font-bold text-on-surface-variant mb-2 flex items-center gap-2">
-        <fa-icon [icon]="['far', 'calendar-alt']" class="text-blue-500"></fa-icon> Disponibilidad y Horarios
+    <div class="card card--center">
+      <h3 class="label-caps" style="margin-bottom: 0.75rem;">
+        <fa-icon [icon]="['far', 'calendar-alt']" class="text-info mr-2"></fa-icon> Disponibilidad y Horarios
       </h3>
-      <p class="text-sm text-on-surface-variant mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
-      <div class="flex gap-3">
-        <a routerLink="/admin/sessions"><app-button variant="ghost" label="Ver Calendario Global"></app-button></a>
-      </div>
+      <p class="text-sm" style="color: var(--color-on-surface-variant); margin-bottom: 1rem;">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
+      <a routerLink="/admin/sessions"><app-button variant="ghost" label="Ver Calendario Global"></app-button></a>
     </div>
   </div>
 
-  <div>
-    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
-      <fa-icon [icon]="['fas', 'briefcase']" class="text-on-surface-variant/60"></fa-icon> Gestión Operativa
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-      <a routerLink="/admin/users" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
-        <div>
-          <div class="flex items-center gap-4 mb-4">
-            <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-              <fa-icon [icon]="['fas', 'users']" class="text-xl"></fa-icon>
-            </div>
-            <h3 class="text-lg font-bold text-on-surface">Usuarios</h3>
-          </div>
-          <p class="text-sm text-on-surface-variant mb-2">Gestionar perfiles de terapeutas y pacientes.</p>
+  <section class="dashboard-section">
+    <h3 class="section-label">Gestión Operativa</h3>
+    <div class="grid-4">
+      <a routerLink="/admin/users" class="action-card">
+        <div class="action-card__icon action-card__icon--primary">
+          <fa-icon [icon]="['fas', 'users']" class="text-lg"></fa-icon>
         </div>
-        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
-          <span class="text-xs font-bold uppercase tracking-wider">Acceder <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
-        </div>
+        <h3 class="action-card__title">Usuarios</h3>
+        <p class="action-card__desc">Gestionar perfiles de terapeutas y pacientes.</p>
+        <span class="action-card__action">Acceder <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1 text-xs"></fa-icon></span>
       </a>
 
-      <a routerLink="/admin/games" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
-        <div>
-          <div class="flex items-center gap-4 mb-4">
-            <div class="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
-              <fa-icon [icon]="['fas', 'gamepad']" class="text-xl"></fa-icon>
-            </div>
-            <h3 class="text-lg font-bold text-on-surface">Juegos</h3>
-          </div>
-          <p class="text-sm text-on-surface-variant mb-2">Configurar actividades y niveles disponibles.</p>
+      <a routerLink="/admin/games" class="action-card">
+        <div class="action-card__icon action-card__icon--primary">
+          <fa-icon [icon]="['fas', 'gamepad']" class="text-lg"></fa-icon>
         </div>
-        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
-          <span class="text-xs font-bold uppercase tracking-wider">Configurar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
-        </div>
+        <h3 class="action-card__title">Juegos</h3>
+        <p class="action-card__desc">Configurar actividades y niveles disponibles.</p>
+        <span class="action-card__action">Configurar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1 text-xs"></fa-icon></span>
       </a>
 
-      <a routerLink="/admin/reports" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
-        <div>
-          <div class="flex items-center gap-4 mb-4">
-            <div class="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
-              <fa-icon [icon]="['fas', 'chart-line']" class="text-xl"></fa-icon>
-            </div>
-            <h3 class="text-lg font-bold text-on-surface">Reportes</h3>
-          </div>
-          <p class="text-sm text-on-surface-variant mb-2">Analíticas detalladas de pacientes.</p>
+      <a routerLink="/admin/reports" class="action-card">
+        <div class="action-card__icon action-card__icon--info">
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-lg"></fa-icon>
         </div>
-        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
-          <span class="text-xs font-bold uppercase tracking-wider">Analizar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
-        </div>
+        <h3 class="action-card__title">Reportes</h3>
+        <p class="action-card__desc">Analíticas detalladas de pacientes.</p>
+        <span class="action-card__action">Analizar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1 text-xs"></fa-icon></span>
       </a>
 
-      <a routerLink="/admin/messages" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-6 flex flex-col justify-between hover:shadow-lg transition-all hover:bg-surface-container-high min-h-[140px]">
-        <div>
-          <div class="flex items-center gap-4 mb-4">
-            <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 group-hover:scale-110 transition-transform">
-              <fa-icon [icon]="['fas', 'envelope']" class="text-xl"></fa-icon>
-            </div>
-            <h3 class="text-lg font-bold text-on-surface">Mensajería</h3>
-          </div>
-          <p class="text-sm text-on-surface-variant mb-2">Comunicación interna y avisos globales.</p>
+      <a routerLink="/admin/messages" class="action-card">
+        <div class="action-card__icon action-card__icon--warning">
+          <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
         </div>
-        <div class="flex justify-end text-primary group-hover:translate-x-1 transition-transform">
-          <span class="text-xs font-bold uppercase tracking-wider">Enviar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1"></fa-icon></span>
-        </div>
+        <h3 class="action-card__title">Mensajería</h3>
+        <p class="action-card__desc">Comunicación interna y avisos globales.</p>
+        <span class="action-card__action">Enviar <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1 text-xs"></fa-icon></span>
       </a>
     </div>
-  </div>
+  </section>
 
-  <div>
-    <h3 class="text-lg font-semibold text-on-surface-variant mb-4 flex items-center gap-2 px-1">
-      <fa-icon [icon]="['fas', 'shield-alt']" class="text-on-surface-variant/60"></fa-icon> Sistema & Seguridad
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-      <a routerLink="/admin/csp-reports" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-outline-variant/20 opacity-90 hover:opacity-100">
-        <div class="flex items-center gap-4">
-          <div class="h-10 w-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'bug']"></fa-icon>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-on-surface">CSP Reports</h3>
-            <p class="text-xs text-on-surface-variant">Monitoreo de seguridad y violaciones de contenido.</p>
-          </div>
+  <section class="dashboard-section">
+    <h3 class="section-label">Sistema & Seguridad</h3>
+    <div class="grid-2">
+      <a routerLink="/admin/csp-reports" class="link-card">
+        <div class="link-card__icon">
+          <fa-icon [icon]="['fas', 'bug']"></fa-icon>
         </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-on-surface-variant/40 text-sm group-hover:text-on-surface-variant"></fa-icon>
+        <div class="link-card__text">
+          <h3 class="link-card__title">CSP Reports</h3>
+          <p class="link-card__desc">Monitoreo de seguridad y violaciones de contenido.</p>
+        </div>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
       </a>
 
-      <a routerLink="/admin/api-tokens" class="group bg-surface-container-lowest rounded-2xl shadow-soft p-4 flex items-center justify-between hover:shadow-md transition-all border border-outline-variant/20 opacity-90 hover:opacity-100">
-        <div class="flex items-center gap-4">
-          <div class="h-10 w-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'key']"></fa-icon>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-on-surface">API Tokens</h3>
-            <p class="text-xs text-on-surface-variant">Gestión de credenciales para integraciones externas.</p>
-          </div>
+      <a routerLink="/admin/api-tokens" class="link-card">
+        <div class="link-card__icon">
+          <fa-icon [icon]="['fas', 'key']"></fa-icon>
         </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-on-surface-variant/40 text-sm group-hover:text-on-surface-variant"></fa-icon>
+        <div class="link-card__text">
+          <h3 class="link-card__title">API Tokens</h3>
+          <p class="link-card__desc">Gestión de credenciales para integraciones externas.</p>
+        </div>
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
       </a>
     </div>
-  </div>
-
+  </section>
 </div>
 
 @if (showGuidanceModal) {
-  <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showGuidanceModal = false">
-    <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
-      <div class="p-8 border-b border-outline-variant/20 flex items-center justify-between">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-red-200">
-            <fa-icon [icon]="['fas', 'user-clock']" class="text-2xl"></fa-icon>
+  <div class="modal-overlay" (click)="showGuidanceModal = false">
+    <div class="modal-panel modal-panel--lg" (click)="$event.stopPropagation()">
+      <div class="modal-header modal-header--gradient">
+        <div class="modal-header__left">
+          <div class="icon-box icon-box--gradient">
+            <fa-icon [icon]="['fas', 'user-clock']" class="text-xl"></fa-icon>
           </div>
           <div>
-            <h3 class="text-2xl font-black text-on-surface uppercase tracking-tighter">Asignaciones Faltantes</h3>
-            <span class="text-xs font-bold text-red-500 uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded-full inline-block mt-1">Requiere acción administrativa</span>
+            <h3 class="text-lg font-extrabold text-on-primary">Asignaciones Faltantes</h3>
+            <span class="modal-badge">Requiere acción administrativa</span>
           </div>
         </div>
-        <button (click)="showGuidanceModal = false" class="w-10 h-10 rounded-full hover:bg-surface-container-highest flex items-center justify-center text-on-surface-variant/60 transition-colors cursor-pointer">
+        <button (click)="showGuidanceModal = false" class="modal-close-btn">
           <fa-icon [icon]="['fas', 'times']"></fa-icon>
         </button>
       </div>
-      <div class="p-8">
-        <div class="space-y-4 max-h-[400px] overflow-y-auto pr-4 mb-8">
+      <div class="modal-body">
+        <div class="modal-list">
           @for (p of incompletePatients; track $index) {
-            <div class="group p-5 bg-surface-container-high rounded-2xl border border-transparent hover:border-red-200 hover:bg-surface-container-lowest transition-all shadow-sm">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform border border-outline-variant/20">
-                    {{ p.paciente.charAt(0) }}
-                  </div>
-                  <div>
-                    <p class="text-xs font-black text-on-surface uppercase tracking-tight">{{ p.paciente }}</p>
-                    <p class="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest">
-                      <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ p.sede }}
-                    </p>
-                  </div>
-                </div>
-                <span class="bg-red-50 text-red-600 text-[9px] font-black px-2 py-1 rounded-full uppercase border border-red-100 italic">Falta: {{ p.details }}</span>
+            <div class="modal-list__item modal-list__item--error-hover">
+              <div class="modal-list__avatar">{{ p.paciente.charAt(0) }}</div>
+              <div>
+                <p class="font-bold text-sm" style="color: var(--color-on-surface);">{{ p.paciente }}</p>
+                <p class="text-xs" style="color: var(--color-on-surface-variant); margin-top: 0.125rem;">
+                  <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1" style="font-size: 0.75rem;"></fa-icon>{{ p.sede }}
+                </p>
               </div>
+              <span class="modal-tag modal-tag--error">Falta: {{ p.details }}</span>
             </div>
           }
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="modal-actions">
           <app-button variant="ghost" label="Más tarde" (clicked)="showGuidanceModal = false"></app-button>
-          <a routerLink="/admin/users" class="block"><app-button variant="primary" label="Configurar ahora"></app-button></a>
+          <a routerLink="/admin/users"><app-button variant="primary" label="Configurar ahora"></app-button></a>
         </div>
       </div>
     </div>
@@ -416,54 +327,50 @@
 }
 
 @if (showDailyModal) {
-  <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" (click)="showDailyModal = false">
-    <div class="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 opacity-100" (click)="$event.stopPropagation()">
-      <div class="p-8 border-b border-outline-variant/20 flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-3xl">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white backdrop-blur-md border border-white/30">
-            <fa-icon [icon]="['far', 'calendar-check']" class="text-2xl"></fa-icon>
+  <div class="modal-overlay" (click)="showDailyModal = false">
+    <div class="modal-panel modal-panel--xl" (click)="$event.stopPropagation()">
+      <div class="modal-header modal-header--daily">
+        <div class="modal-header__left">
+          <div class="icon-box icon-box--glass">
+            <fa-icon [icon]="['far', 'calendar-check']" class="text-xl"></fa-icon>
           </div>
           <div>
-            <h3 class="text-2xl font-black uppercase tracking-tighter">Cobros del Día</h3>
-            <p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mt-1">Guía Operativa Diaria • {{ today | date:'dd/MM/yyyy' }}</p>
+            <h3 class="text-lg font-extrabold" style="color: var(--color-on-primary);">Cobros del Día</h3>
+            <p class="text-sm" style="color: var(--color-on-primary); opacity: 0.7;">Guía Operativa Diaria • {{ today | date:'dd/MM/yyyy' }}</p>
           </div>
         </div>
-        <button (click)="showDailyModal = false" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors cursor-pointer">
+        <button (click)="showDailyModal = false" class="modal-close-btn modal-close-btn--light">
           <fa-icon [icon]="['fas', 'times']"></fa-icon>
         </button>
       </div>
-      <div class="p-8">
-        <div class="space-y-4 max-h-[450px] overflow-y-auto pr-4 mb-8">
+      <div class="modal-body">
+        <div class="modal-list">
           @for (item of dailyPendings; track $index) {
-            <div class="p-6 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center justify-between gap-4">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-surface-container-lowest rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm">
-                  {{ item.paciente.charAt(0) }}
-                </div>
-                <div>
-                  <p class="text-sm font-black text-on-surface uppercase tracking-tight">{{ item.paciente }}</p>
-                  <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Vence Hoy • S/ {{ item.monto }}</p>
-                </div>
+            <div class="modal-list__item modal-list__item--primary">
+              <div class="modal-list__avatar modal-list__avatar--primary">{{ item.paciente.charAt(0) }}</div>
+              <div>
+                <p class="font-bold text-sm" style="color: var(--color-on-surface);">{{ item.paciente }}</p>
+                <p class="text-xs font-bold" style="color: var(--color-primary); margin-top: 0.125rem;">Vence Hoy • S/ {{ item.monto }}</p>
               </div>
-              <div class="flex gap-2">
+              <div class="modal-list__actions">
                 @if (getWhatsAppLink(item.phone, item.paciente, item.monto)) {
-                  <a [href]="getWhatsAppLink(item.phone, item.paciente, item.monto)" target="_blank" class="w-10 h-10 bg-green-500 text-white rounded-xl flex items-center justify-center hover:bg-green-600 transition-all shadow-lg shadow-green-200" title="Notificar por WhatsApp">
+                  <a [href]="getWhatsAppLink(item.phone, item.paciente, item.monto)" target="_blank" class="icon-btn icon-btn--success" title="Notificar por WhatsApp">
                     <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
                   </a>
                 }
-                <a [routerLink]="'/admin/payments'" [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }" class="w-10 h-10 bg-surface-container-lowest text-blue-600 border border-blue-100 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                <a [routerLink]="'/admin/payments'" [queryParams]="{ search_patient: item.username || item.paciente, action: 'register' }" class="icon-btn icon-btn--primary">
                   <fa-icon [icon]="['fas', 'cash-register']"></fa-icon>
                 </a>
               </div>
             </div>
           } @empty {
-            <div class="text-center py-8 text-on-surface-variant/60">
+            <div class="modal-empty">
               <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl mb-2"></fa-icon>
-              <p class="text-sm font-bold">No hay cobros pendientes para hoy</p>
+              <p class="font-bold" style="color: var(--color-on-surface-variant);">No hay cobros pendientes para hoy</p>
             </div>
           }
         </div>
-        <div class="flex justify-center">
+        <div class="flex justify-center pt-2">
           <app-button variant="ghost" label="Entendido" (clicked)="showDailyModal = false"></app-button>
         </div>
       </div>

@@ -17,17 +17,23 @@ def mark_request_api():
     """
     try:
         is_api = False
-        # Explicit API blueprint or path
-        if request.blueprint == 'api' or (request.path and request.path.startswith('/api/')):
+        path = request.path or ''
+
+        # Path contains /api/ at any level (e.g., /api/*, /therapist/api/*, /admin/api/*)
+        if '/api/' in path:
+            is_api = True
+
+        # Explicit API blueprint
+        if request.blueprint == 'api':
             is_api = True
 
         # Ajax / XHR
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             is_api = True
 
-        # Accept header prefers json
+        # Accept header prefers json (including */* from Angular)
         accept = request.headers.get('Accept', '')
-        if 'application/json' in accept:
+        if 'application/json' in accept or '*/json' in accept or '*/*' in accept:
             is_api = True
 
         # JSON body

@@ -1,3 +1,63 @@
+:host {
+  display: inline-block;
+}
+
+.btn--primary {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn--primary:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
+}
+.btn--primary:active {
+  background-color: color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+
+.btn--secondary {
+  border: 1px solid var(--color-border);
+  color: var(--color-on-surface);
+}
+.btn--secondary:hover {
+  background-color: var(--color-surface-container-high);
+}
+
+.btn--danger {
+  background-color: var(--color-error);
+  color: var(--color-on-error);
+}
+.btn--danger:hover {
+  background-color: color-mix(in srgb, var(--color-error) 90%, transparent);
+}
+
+.btn--ghost {
+  color: var(--color-on-surface-variant);
+}
+.btn--ghost:hover {
+  background-color: var(--color-surface-container-high);
+}
+
+.btn--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 button {
-  will-change: transform, box-shadow;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius);
+  font-family: var(--font-label);
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  letter-spacing: 0.01em;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

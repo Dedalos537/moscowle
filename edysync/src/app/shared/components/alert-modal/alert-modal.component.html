@@ -16,23 +16,23 @@
         <div class="alert-modal-header" [class.alert-error]="config.type === 'error'">
           @switch (config.type) {
             @case ('success') {
-              <span class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'check-circle']" class="text-emerald-600 text-xl"></fa-icon>
+              <span class="w-10 h-10 rounded-full bg-success-container flex items-center justify-center">
+                <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-xl"></fa-icon>
               </span>
             }
             @case ('error') {
-              <span class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-red-600 text-xl"></fa-icon>
+              <span class="w-10 h-10 rounded-full bg-error-container flex items-center justify-center">
+                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-xl"></fa-icon>
               </span>
             }
             @case ('warning') {
-              <span class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-600 text-xl"></fa-icon>
+              <span class="w-10 h-10 rounded-full bg-warning-container flex items-center justify-center">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-xl"></fa-icon>
               </span>
             }
             @default {
-              <span class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/15 flex items-center justify-center">
-                <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-600 text-xl"></fa-icon>
+              <span class="w-10 h-10 rounded-full bg-info-container flex items-center justify-center">
+                <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-xl"></fa-icon>
               </span>
             }
           }

@@ -11,4 +11,5 @@ export class Card {
   @Input() title?: string;
   @Input() subtitle?: string;
   @Input() icon?: IconProp;
+  @Input() padding: 'md' | 'lg' = 'md';
 }

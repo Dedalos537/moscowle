@@ -10,7 +10,7 @@
     <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-csv']" (clicked)="exportCsv()"></app-button>
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/20 p-4 flex flex-wrap gap-4 items-center">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border/20 p-4 flex flex-wrap gap-4 items-center">
     <app-input id="filter-directive" placeholder="Directiva" [(value)]="filter.directive" (valueChange)="onFilterChange()"></app-input>
     <app-input id="filter-uri" placeholder="URI Bloqueada" [(value)]="filter.blocked_uri" (valueChange)="onFilterChange()"></app-input>
     <app-input id="filter-since" type="date" [(value)]="filter.since" (valueChange)="onFilterChange()"></app-input>
@@ -21,7 +21,7 @@
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/20 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-border/20 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[800px]">
           <thead>
@@ -33,7 +33,7 @@
               <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">IP</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
+          <tbody class="divide-y divide-border/20 bg-surface-container-lowest">
             @for (r of reports; track r.id) {
               <tr class="hover:bg-surface-container-high/80 text-sm">
                 <td class="px-5 py-4 text-on-surface whitespace-nowrap">{{ r.received_at }}</td>

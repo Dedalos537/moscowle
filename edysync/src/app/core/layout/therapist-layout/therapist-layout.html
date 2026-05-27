@@ -12,16 +12,16 @@
 @if (confirmService.state$ | async; as confirmState) {
   @if (confirmState.visible) {
     <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="confirmService.close(false)">
-      <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="bg-surface-container-lowest rounded-2xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
         <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
              [class.bg-red-100]="confirmState.options.variant === 'danger'"
              [class.bg-amber-100]="confirmState.options.variant === 'warning'"
-             [class.bg-primary/10]="confirmState.options.variant === 'primary'">
+             [class.bg-primary-container/15]="confirmState.options.variant === 'primary'">
           <fa-icon [icon]="$any(confirmState.options.icon || ['fas', 'exclamation-triangle'])"
                    class="text-2xl"
                    [class.text-red-600]="confirmState.options.variant === 'danger'"
                    [class.text-amber-600]="confirmState.options.variant === 'warning'"
-                   [class.text-primary]="confirmState.options.variant === 'primary'"></fa-icon>
+                   [class.text-primary-container]="confirmState.options.variant === 'primary'"></fa-icon>
         </div>
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">{{ confirmState.options.title }}</h3>
         <p class="text-sm text-on-surface-variant text-center mb-6">{{ confirmState.options.message }}</p>
@@ -34,106 +34,74 @@
   }
 }
 
-<div class="flex h-screen bg-background text-textDark overflow-hidden transition-colors duration-300">
-  <aside class="w-64 h-screen bg-surface border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
-    <div class="h-24 flex items-center px-6 border-b border-border shrink-0">
+<div class="flex h-screen bg-background text-on-surface overflow-hidden transition-colors duration-300">
+  <aside class="w-64 h-screen bg-surface-container-lowest border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
+    <div class="h-24 flex items-center px-6 border-b border-border/50 shrink-0">
       <div class="flex items-center gap-3">
         <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
         <div class="flex flex-col">
           <span class="font-extrabold text-primary tracking-tight text-xl">EdySync</span>
-          <span class="text-label-caps text-charcoal">Terapeuta</span>
+          <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
         </div>
       </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto py-6 px-3 space-y-0.5 custom-scrollbar">
-      <a routerLink="/therapist/dashboard" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rld.isActive" [class.text-primary]="rld.isActive"
-         [class.border-l-primary]="rld.isActive" #rld="routerLinkActive">
-        <fa-icon [icon]="['fas', 'desktop']" class="w-5 text-center"></fa-icon>
+    <div class="px-3 pt-4 pb-2">
+      <span class="text-label-caps text-outline px-4">Navegación</span>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
+      <a routerLink="/therapist/dashboard" routerLinkActive="active" #rld="routerLinkActive"
+         class="nav-link" [class.active]="rld.isActive">
+        <fa-icon [icon]="['fas', 'desktop']" [class.!text-primary-container]="rld.isActive"></fa-icon>
         <span>Dashboard</span>
       </a>
-      <a routerLink="/therapist/patients" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlpt.isActive" [class.text-primary]="rlpt.isActive"
-         [class.border-l-primary]="rlpt.isActive" #rlpt="routerLinkActive">
-        <fa-icon [icon]="['fas', 'user-friends']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/patients" routerLinkActive="active" #rlpt="routerLinkActive"
+         class="nav-link" [class.active]="rlpt.isActive">
+        <fa-icon [icon]="['fas', 'user-friends']" [class.!text-primary-container]="rlpt.isActive"></fa-icon>
         <span>Mis Pacientes</span>
       </a>
-      <a routerLink="/therapist/sessions" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rls.isActive" [class.text-primary]="rls.isActive"
-         [class.border-l-primary]="rls.isActive" #rls="routerLinkActive">
-        <fa-icon [icon]="['fas', 'calendar-alt']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/sessions" routerLinkActive="active" #rls="routerLinkActive"
+         class="nav-link" [class.active]="rls.isActive">
+        <fa-icon [icon]="['fas', 'calendar-alt']" [class.!text-primary-container]="rls.isActive"></fa-icon>
         <span>Mis Sesiones</span>
       </a>
-      <a routerLink="/therapist/calendar" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlcl.isActive" [class.text-primary]="rlcl.isActive"
-         [class.border-l-primary]="rlcl.isActive" #rlcl="routerLinkActive">
-        <fa-icon [icon]="['fas', 'calendar-day']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/calendar" routerLinkActive="active" #rlcl="routerLinkActive"
+         class="nav-link" [class.active]="rlcl.isActive">
+        <fa-icon [icon]="['fas', 'calendar-day']" [class.!text-primary-container]="rlcl.isActive"></fa-icon>
         <span>Calendario</span>
       </a>
-      <a routerLink="/therapist/games" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlg.isActive" [class.text-primary]="rlg.isActive"
-         [class.border-l-primary]="rlg.isActive" #rlg="routerLinkActive">
-        <fa-icon [icon]="['fas', 'gamepad']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/games" routerLinkActive="active" #rlg="routerLinkActive"
+         class="nav-link" [class.active]="rlg.isActive">
+        <fa-icon [icon]="['fas', 'gamepad']" [class.!text-primary-container]="rlg.isActive"></fa-icon>
         <span>Juegos</span>
       </a>
-      <a routerLink="/therapist/reports" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlr.isActive" [class.text-primary]="rlr.isActive"
-         [class.border-l-primary]="rlr.isActive" #rlr="routerLinkActive">
-        <fa-icon [icon]="['fas', 'chart-bar']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/reports" routerLinkActive="active" #rlr="routerLinkActive"
+         class="nav-link" [class.active]="rlr.isActive">
+        <fa-icon [icon]="['fas', 'chart-bar']" [class.!text-primary-container]="rlr.isActive"></fa-icon>
         <span>Reportes</span>
       </a>
-      <a routerLink="/therapist/analytics" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rla.isActive" [class.text-primary]="rla.isActive"
-         [class.border-l-primary]="rla.isActive" #rla="routerLinkActive">
-        <fa-icon [icon]="['fas', 'brain']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/analytics" routerLinkActive="active" #rla="routerLinkActive"
+         class="nav-link" [class.active]="rla.isActive">
+        <fa-icon [icon]="['fas', 'brain']" [class.!text-primary-container]="rla.isActive"></fa-icon>
         <span>Analíticas IA</span>
       </a>
-      <a routerLink="/therapist/messages" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlm.isActive" [class.text-primary]="rlm.isActive"
-         [class.border-l-primary]="rlm.isActive" #rlm="routerLinkActive">
-        <fa-icon [icon]="['fas', 'envelope']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/messages" routerLinkActive="active" #rlm="routerLinkActive"
+         class="nav-link" [class.active]="rlm.isActive">
+        <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlm.isActive"></fa-icon>
         <span>Mensajes</span>
       </a>
-      <a routerLink="/therapist/profile" routerLinkActive="active"
-         class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-charcoal
-                hover:bg-primary/5 hover:text-primary transition-all duration-200 relative
-                border-l-[3px] border-transparent"
-         [class.bg-primary/5]="rlpf.isActive" [class.text-primary]="rlpf.isActive"
-         [class.border-l-primary]="rlpf.isActive" #rlpf="routerLinkActive">
-        <fa-icon [icon]="['fas', 'user-circle']" class="w-5 text-center"></fa-icon>
+      <a routerLink="/therapist/profile" routerLinkActive="active" #rlpf="routerLinkActive"
+         class="nav-link" [class.active]="rlpf.isActive">
+        <fa-icon [icon]="['fas', 'user-circle']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>
         <span>Mi Perfil</span>
       </a>
     </nav>
 
-    <div class="p-4 border-t border-border shrink-0">
+    <div class="p-4 border-t border-border/50 shrink-0">
       <app-button variant="ghost" (clicked)="toggleDarkMode()">
-        <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']" class="w-5 text-center"></fa-icon>
-        <span>{{ theme === 'light' ? 'Modo Oscuro' : 'Modo Claro' }}</span>
+        <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']" class="text-sm"></fa-icon>
+        <span class="text-sm">{{ theme === 'light' ? 'Modo Oscuro' : 'Modo Claro' }}</span>
       </app-button>
     </div>
   </aside>

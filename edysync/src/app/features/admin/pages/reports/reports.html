@@ -27,7 +27,7 @@
 
     @if (overview) {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-primary">Pacientes Activos</span>
             <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
@@ -36,7 +36,7 @@
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-blue-700">Terapeutas</span>
             <fa-icon [icon]="['fas', 'id-card']" class="text-blue-500 text-xl"></fa-icon>
@@ -45,7 +45,7 @@
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-amber-700">Sesiones Totales</span>
             <fa-icon [icon]="['fas', 'calendar-alt']" class="text-amber-500 text-xl"></fa-icon>
@@ -54,10 +54,10 @@
           <p class="text-xs text-on-surface-variant mt-1">Histórico acumulado</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-emerald-700">Precisión Global</span>
-            <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-xl"></fa-icon>
+            <span class="text-label-caps text-success">Precisión Global</span>
+            <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.avg_accuracy }}%</p>
           <p class="text-xs text-on-surface-variant mt-1">Promedio de precisión</p>
@@ -66,19 +66,19 @@
     }
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-emerald-700">Ingresos Reales</span>
-          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-emerald-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-success">Ingresos Reales</span>
+          <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_real.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-emerald-500"></fa-icon>
+          <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-success"></fa-icon>
           Recaudado este mes
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-blue-700">Proyección</span>
           <fa-icon [icon]="['fas', 'university']" class="text-blue-500 text-xl"></fa-icon>
@@ -90,7 +90,7 @@
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-red-700">Morosidad Acumulada</span>
           <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
@@ -102,7 +102,7 @@
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Ejecución</span>
           <fa-icon [icon]="['fas', 'percent']" class="text-primary text-xl"></fa-icon>
@@ -117,7 +117,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-      <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-5 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
           Comparativa Visual
@@ -135,7 +135,7 @@
           <div>
             <div class="flex justify-between text-sm mb-1.5">
               <span class="font-semibold text-on-surface">Recaudado</span>
-              <span class="font-bold text-emerald-700">S/ {{ financials.income_real.toFixed(2) }}</span>
+              <span class="font-bold text-success">S/ {{ financials.income_real.toFixed(2) }}</span>
             </div>
             <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
               <div
@@ -160,14 +160,14 @@
           </div>
         </div>
 
-        <div class="mt-5 pt-4 border-t border-outline-variant/30 grid grid-cols-3 gap-3 text-center">
+        <div class="mt-5 pt-4 border-t border-border/30 grid grid-cols-3 gap-3 text-center">
           <div>
             <p class="text-label-caps text-on-surface-variant">Gastos</p>
             <p class="text-sm font-bold text-on-surface">S/ {{ financials.expenses.toFixed(2) }}</p>
           </div>
           <div>
             <p class="text-label-caps text-on-surface-variant">Neto</p>
-            <p class="text-sm font-bold text-emerald-700">S/ {{ (financials.income_real - financials.expenses).toFixed(2) }}</p>
+            <p class="text-sm font-bold text-success">S/ {{ (financials.income_real - financials.expenses).toFixed(2) }}</p>
           </div>
           <div>
             <p class="text-label-caps text-on-surface-variant">Ejec.</p>
@@ -176,7 +176,7 @@
         </div>
       </div>
 
-      <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Comparación Financiera
@@ -195,7 +195,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
@@ -219,7 +219,7 @@
         <div class="overflow-x-auto">
           <table class="w-full min-w-[480px]">
             <thead>
-              <tr class="border-b border-outline-variant/40">
+              <tr class="border-b border-border/40">
                 <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Nombre</th>
                 <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Email</th>
                 <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -228,20 +228,20 @@
             </thead>
             <tbody>
               @for (t of therapists; track t.id) {
-                <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                   <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ t.name }}</td>
                   <td class="px-4 py-3 text-sm text-on-surface-variant">{{ t.email }}</td>
                   <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ t.sessions }}</td>
                   <td class="px-4 py-3 text-right">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                      [class.bg-emerald-100]="t.avg_accuracy >= 90"
-                      [class.text-emerald-700]="t.avg_accuracy >= 90"
+                      [class.bg-success-container]="t.avg_accuracy >= 90"
+                      [class.text-success]="t.avg_accuracy >= 90"
                       [class.bg-amber-100]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
                       [class.text-amber-700]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
                       [class.bg-red-100]="t.avg_accuracy < 75"
                       [class.text-red-700]="t.avg_accuracy < 75">
                       <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                        [class.text-emerald-500]="t.avg_accuracy >= 90"
+                        [class.text-success]="t.avg_accuracy >= 90"
                         [class.text-amber-500]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
                         [class.text-red-500]="t.avg_accuracy < 75"></fa-icon>
                       {{ t.avg_accuracy }}%
@@ -258,7 +258,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-lg"></fa-icon>
@@ -269,7 +269,7 @@
         <div class="overflow-x-auto">
           <table class="w-full min-w-[480px]">
             <thead>
-              <tr class="border-b border-outline-variant/40">
+              <tr class="border-b border-border/40">
                 <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Nombre</th>
                 <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Email</th>
                 <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Juegos</th>
@@ -278,7 +278,7 @@
             </thead>
             <tbody>
               @for (p of patients; track p.id) {
-                <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                   <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ p.name }}</td>
                   <td class="px-4 py-3 text-sm text-on-surface-variant">{{ p.email }}</td>
                   <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.plays }}</td>
@@ -287,14 +287,14 @@
                       <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                         <div
                           class="h-full rounded-full transition-all duration-700"
-                          [class.bg-emerald-500]="p.avg_accuracy >= 90"
+                          [class.bg-success-container0]="p.avg_accuracy >= 90"
                           [class.bg-amber-500]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
                           [class.bg-red-500]="p.avg_accuracy < 75"
                           [style.width.%]="p.avg_accuracy"
                         ></div>
                       </div>
                       <span class="text-xs font-bold"
-                        [class.text-emerald-700]="p.avg_accuracy >= 90"
+                        [class.text-success]="p.avg_accuracy >= 90"
                         [class.text-amber-700]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
                         [class.text-red-700]="p.avg_accuracy < 75">
                         {{ p.avg_accuracy }}%
@@ -313,10 +313,10 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5 border-l-4 border-l-indigo-500">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-outline-variant/30">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 border-l-4 border-l-primary">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-border/30">
         <div class="flex items-center gap-3">
-          <fa-icon [icon]="['fas', 'brain']" class="text-2xl text-indigo-500"></fa-icon>
+          <fa-icon [icon]="['fas', 'brain']" class="text-2xl text-primary"></fa-icon>
           <div>
             <h2 class="text-lg font-bold text-on-surface">Auditoría IA (Whisper + Llama)</h2>
             <p class="text-sm text-on-surface-variant">Mide la fidelidad de las sesiones (Programación vs Grabación)</p>
@@ -334,9 +334,9 @@
       </div>
 
       @if (aiReport) {
-        <div class="mb-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 animate-fade-in">
-          <h3 class="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'th-large']" class="text-lg text-indigo-600"></fa-icon>
+        <div class="mb-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-primary-container/30 animate-fade-in">
+          <h3 class="text-sm font-bold text-primary mb-3 flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'th-large']" class="text-lg text-primary"></fa-icon>
             Informe Llama
           </h3>
           <div class="prose prose-sm max-w-none text-on-surface" [innerHTML]="aiReport"></div>
@@ -345,36 +345,36 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="flex items-center gap-4 p-4 bg-indigo-50/60 rounded-xl border border-indigo-100/50">
-            <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+          <div class="flex items-center gap-4 p-4 bg-primary/5 rounded-xl border border-primary-container/30">
+            <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
               <fa-icon [icon]="['fas', 'clipboard-check']" class="text-2xl"></fa-icon>
             </div>
             <div>
-              <p class="text-label-caps text-indigo-700 mb-0.5">Auditorías Totales</p>
+              <p class="text-label-caps text-primary mb-0.5">Auditorías Totales</p>
               <p class="text-2xl font-black text-on-surface">{{ auditStats?.total || 0 }}</p>
             </div>
           </div>
-          <div class="flex items-center gap-4 p-4 bg-emerald-50/60 rounded-xl border border-emerald-100/50">
-            <div class="p-3 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+          <div class="flex items-center gap-4 p-4 bg-success-container/60 rounded-xl border border-success-container/50">
+            <div class="p-3 bg-success-container text-success rounded-xl flex items-center justify-center">
               <fa-icon [icon]="['fas', 'chart-line']" class="text-2xl"></fa-icon>
             </div>
             <div>
-              <p class="text-label-caps text-emerald-700 mb-0.5">Promedio Fidelidad</p>
+              <p class="text-label-caps text-success mb-0.5">Promedio Fidelidad</p>
               <p class="text-2xl font-black text-on-surface">{{ auditStats?.avg_score || 0 }} <span class="text-sm font-normal text-on-surface-variant">/ 10</span></p>
             </div>
           </div>
         </div>
 
-        <div class="bg-surface-container-low rounded-xl border border-outline-variant/30 p-4">
+        <div class="bg-surface-container-low rounded-xl border border-border/30 p-4">
           <h3 class="text-sm font-bold text-on-surface mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'trophy']" class="text-lg text-indigo-500"></fa-icon>
+            <fa-icon [icon]="['fas', 'trophy']" class="text-lg text-primary"></fa-icon>
             Top Terapistas
           </h3>
           <div class="space-y-2">
             @for (t of auditStats?.by_therapist; track $index) {
               <div class="flex justify-between items-center text-sm p-2 hover:bg-surface-container rounded-lg transition-colors">
                 <span class="font-medium text-on-surface">{{ t.name }}</span>
-                <span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}/10</span>
+                <span class="bg-success-container text-success font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}/10</span>
               </div>
             } @empty {
               <p class="text-xs text-center text-on-surface-variant py-4">No hay datos</p>
@@ -382,27 +382,27 @@
           </div>
         </div>
 
-        <div class="lg:col-span-2 bg-surface-container-low rounded-xl border border-outline-variant/30 overflow-hidden">
-          <h3 class="text-sm font-bold text-on-surface p-3 border-b border-outline-variant/30 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'history']" class="text-lg text-indigo-500"></fa-icon>
+        <div class="lg:col-span-2 bg-surface-container-low rounded-xl border border-border/30 overflow-hidden">
+          <h3 class="text-sm font-bold text-on-surface p-3 border-b border-border/30 flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'history']" class="text-lg text-primary"></fa-icon>
             Últimas Auditorías
           </h3>
           <table class="w-full text-left text-sm">
             <tbody>
               @for (r of auditStats?.recent; track $index) {
-                <tr class="border-b border-outline-variant/20 last:border-b-0 hover:bg-surface-container transition-colors">
+                <tr class="border-b border-border/20 last:border-b-0 hover:bg-surface-container transition-colors">
                   <td class="p-3 font-semibold text-on-surface">{{ r.title }}</td>
                   <td class="p-3 text-on-surface-variant text-xs">{{ r.therapist }}</td>
                   <td class="p-3 text-right">
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold"
-                      [class.bg-emerald-100]="r.score >= 8"
-                      [class.text-emerald-800]="r.score >= 8"
+                      [class.bg-success-container]="r.score >= 8"
+                      [class.text-success]="r.score >= 8"
                       [class.bg-amber-100]="r.score >= 5 && r.score < 8"
                       [class.text-amber-800]="r.score >= 5 && r.score < 8"
                       [class.bg-red-100]="r.score < 5"
                       [class.text-red-800]="r.score < 5">
                       <fa-icon [icon]="['fas', 'circle']" class="text-[10px]"
-                        [class.text-emerald-500]="r.score >= 8"
+                        [class.text-success]="r.score >= 8"
                         [class.text-amber-500]="r.score >= 5 && r.score < 8"
                         [class.text-red-500]="r.score < 5"></fa-icon>
                       {{ r.score }}/10
@@ -420,11 +420,11 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
-      <div class="flex gap-1 mb-4 pb-3 border-b border-outline-variant/30">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="flex gap-1 mb-4 pb-3 border-b border-border/30">
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-purple-100]="activeReportTab === 'weekly'"
-                [class.text-purple-700]="activeReportTab === 'weekly'"
+                [class.bg-secondary/10]="activeReportTab === 'weekly'"
+                [class.text-secondary]="activeReportTab === 'weekly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'weekly'"
                 (click)="setReportTab('weekly')">
           <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
@@ -439,8 +439,8 @@
           Mensual
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-emerald-100]="activeReportTab === 'quarterly'"
-                [class.text-emerald-700]="activeReportTab === 'quarterly'"
+                [class.bg-success-container]="activeReportTab === 'quarterly'"
+                [class.text-success]="activeReportTab === 'quarterly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'quarterly'"
                 (click)="setReportTab('quarterly')">
           <fa-icon [icon]="['fas', 'clock']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
@@ -468,13 +468,13 @@
 
           @if (weeklySummaryLoading) {
             <div class="flex justify-center py-8">
-              <app-spinner size="sm" colorClass="text-purple-500"></app-spinner>
+              <app-spinner size="sm" colorClass="text-secondary"></app-spinner>
             </div>
           } @else if (therapistWeeklyPatients.length > 0) {
             <div class="overflow-x-auto">
               <table class="w-full min-w-[600px]">
                 <thead>
-                  <tr class="border-b border-outline-variant/40">
+                  <tr class="border-b border-border/40">
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                     <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -486,14 +486,14 @@
                 <tbody>
                   @for (t of therapistWeeklyPatients; track t.therapist_id) {
                     @for (p of t.patients || [t]; track p.patient_id || $index) {
-                      <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                      <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                         <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ t.therapist_name }}</td>
                         <td class="px-4 py-3 text-sm text-on-surface-variant">{{ p.patient_name || '—' }}</td>
                         <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                         <td class="px-4 py-3 text-center">
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                [class.bg-emerald-100]="(p.avg_score || 0) >= 80"
-                                [class.text-emerald-700]="(p.avg_score || 0) >= 80"
+                                [class.bg-success-container]="(p.avg_score || 0) >= 80"
+                                [class.text-success]="(p.avg_score || 0) >= 80"
                                 [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.bg-red-100]="(p.avg_score || 0) < 50"
@@ -507,8 +507,8 @@
                         <td class="px-4 py-3 text-right">
                           @if (p.efficiency !== undefined) {
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                  [class.bg-emerald-100]="p.efficiency >= 80"
-                                  [class.text-emerald-700]="p.efficiency >= 80"
+                                  [class.bg-success-container]="p.efficiency >= 80"
+                                  [class.text-success]="p.efficiency >= 80"
                                   [class.bg-amber-100]="p.efficiency >= 50 && p.efficiency < 80"
                                   [class.text-amber-700]="p.efficiency >= 50 && p.efficiency < 80"
                                   [class.bg-red-100]="p.efficiency < 50"
@@ -565,13 +565,13 @@
 
           @if (monthlyLoading) {
             <div class="flex justify-center py-8">
-              <app-spinner size="sm" colorClass="text-blue-500"></app-spinner>
+              <app-spinner size="sm" colorClass="text-info"></app-spinner>
             </div>
           } @else if (monthlyTherapistPatients.length > 0) {
             <div class="overflow-x-auto">
               <table class="w-full min-w-[600px]">
                 <thead>
-                  <tr class="border-b border-outline-variant/40">
+                  <tr class="border-b border-border/40">
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                     <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -583,14 +583,14 @@
                 <tbody>
                   @for (entry of monthlyTherapistPatients; track $index) {
                     @for (p of entry.patients; track p.patient_id) {
-                      <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                      <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                         <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ $index === 0 ? ($any(entry).therapist_name || 'Terapeuta') : '' }}</td>
                         <td class="px-4 py-3 text-sm text-on-surface-variant">{{ p.patient_name || '—' }}</td>
                         <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                         <td class="px-4 py-3 text-center">
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                [class.bg-emerald-100]="(p.avg_score || 0) >= 80"
-                                [class.text-emerald-700]="(p.avg_score || 0) >= 80"
+                                [class.bg-success-container]="(p.avg_score || 0) >= 80"
+                                [class.text-success]="(p.avg_score || 0) >= 80"
                                 [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.bg-red-100]="(p.avg_score || 0) < 50"
@@ -603,7 +603,7 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                           <span class="text-xs font-bold"
-                                [class.text-emerald-600]="(entry.avg_score || 0) >= 80"
+                                [class.text-success]="(entry.avg_score || 0) >= 80"
                                 [class.text-amber-600]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
                                 [class.text-red-600]="(entry.avg_score || 0) < 50">
                             {{ entry.avg_score || 0 }}%
@@ -655,13 +655,13 @@
 
           @if (quarterlyLoading) {
             <div class="flex justify-center py-8">
-              <app-spinner size="sm" colorClass="text-emerald-500"></app-spinner>
+              <app-spinner size="sm" colorClass="text-success"></app-spinner>
             </div>
           } @else if (quarterlyTherapistPatients.length > 0) {
             <div class="overflow-x-auto">
               <table class="w-full min-w-[600px]">
                 <thead>
-                  <tr class="border-b border-outline-variant/40">
+                  <tr class="border-b border-border/40">
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
                     <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                     <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -673,14 +673,14 @@
                 <tbody>
                   @for (entry of quarterlyTherapistPatients; track $index) {
                     @for (p of entry.patients; track p.patient_id) {
-                      <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                      <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                         <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ $index === 0 ? ($any(entry).therapist_name || 'Terapeuta') : '' }}</td>
                         <td class="px-4 py-3 text-sm text-on-surface-variant">{{ p.patient_name || '—' }}</td>
                         <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count || 0 }}</td>
                         <td class="px-4 py-3 text-center">
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
-                                [class.bg-emerald-100]="(p.avg_score || 0) >= 80"
-                                [class.text-emerald-700]="(p.avg_score || 0) >= 80"
+                                [class.bg-success-container]="(p.avg_score || 0) >= 80"
+                                [class.text-success]="(p.avg_score || 0) >= 80"
                                 [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
                                 [class.bg-red-100]="(p.avg_score || 0) < 50"
@@ -693,7 +693,7 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                           <span class="text-xs font-bold"
-                                [class.text-emerald-600]="(entry.avg_score || 0) >= 80"
+                                [class.text-success]="(entry.avg_score || 0) >= 80"
                                 [class.text-amber-600]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
                                 [class.text-red-600]="(entry.avg_score || 0) < 50">
                             {{ entry.avg_score || 0 }}%
@@ -721,7 +721,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'calendar-day']" class="text-lg text-blue-500"></fa-icon>
@@ -738,13 +738,13 @@
         </div>
         @if (dailyReportsLoading) {
           <div class="flex justify-center py-4">
-            <app-spinner size="sm" colorClass="text-blue-500"></app-spinner>
+            <app-spinner size="sm" colorClass="text-info"></app-spinner>
           </div>
         } @else if (dailyReports.length > 0) {
           <div class="overflow-x-auto max-h-64 overflow-y-auto">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-outline-variant/40">
+                <tr class="border-b border-border/40">
                   <th class="px-3 py-2 text-left text-label-caps text-on-surface-variant">Fecha</th>
                   <th class="px-3 py-2 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
                   <th class="px-3 py-2 text-left text-label-caps text-on-surface-variant">Paciente</th>
@@ -754,14 +754,14 @@
               </thead>
               <tbody>
                 @for (d of dailyReports; track d.id) {
-                  <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                  <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                     <td class="px-3 py-2 text-xs text-on-surface">{{ d.date | date:'dd/MM' }}</td>
                     <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.therapist_name }}</td>
                     <td class="px-3 py-2 text-xs text-on-surface-variant">{{ d.patient_name }}</td>
                     <td class="px-3 py-2 text-xs text-center font-medium text-on-surface">{{ d.sessions_count }}</td>
                     <td class="px-3 py-2 text-xs text-right">
                       <span class="font-bold"
-                            [class.text-emerald-600]="(d.avg_score || 0) >= 80"
+                            [class.text-success]="(d.avg_score || 0) >= 80"
                             [class.text-amber-600]="(d.avg_score || 0) >= 50 && (d.avg_score || 0) < 80"
                             [class.text-red-600]="(d.avg_score || 0) < 50">
                         {{ d.avg_score || 0 }}%
@@ -779,10 +779,10 @@
         }
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-lg text-emerald-500"></fa-icon>
+            <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-lg text-success"></fa-icon>
             Eficiencia de Terapeutas
           </h3>
           <button class="btn-secondary h-8 text-xs" (click)="loadEfficiency()" [disabled]="efficiencyLoading">
@@ -791,7 +791,7 @@
         </div>
         @if (efficiencyLoading) {
           <div class="flex justify-center py-4">
-            <app-spinner size="sm" colorClass="text-emerald-500"></app-spinner>
+            <app-spinner size="sm" colorClass="text-success"></app-spinner>
           </div>
         } @else if (therapistEfficiency?.breakdown?.length > 0) {
           <div class="space-y-3">
@@ -807,13 +807,13 @@
                 <div class="flex items-center gap-2 shrink-0 ml-3">
                   <div class="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                     <div class="h-full rounded-full transition-all duration-700"
-                         [class.bg-emerald-500]="(e.efficiency || 0) >= 80"
+                         [class.bg-success-container0]="(e.efficiency || 0) >= 80"
                          [class.bg-amber-500]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
                          [class.bg-red-500]="(e.efficiency || 0) < 50"
                          [style.width.%]="e.efficiency || 0"></div>
                   </div>
                   <span class="text-xs font-bold min-w-[3rem] text-right"
-                        [class.text-emerald-700]="(e.efficiency || 0) >= 80"
+                        [class.text-success]="(e.efficiency || 0) >= 80"
                         [class.text-amber-700]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
                         [class.text-red-700]="(e.efficiency || 0) < 50">
                     {{ e.efficiency || 0 }}%

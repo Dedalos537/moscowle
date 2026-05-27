@@ -295,7 +295,8 @@ class ContactMessage(db.Model):
     message = db.Column(db.Text, nullable=False)
     service_interest = db.Column(db.String(100), nullable=True)
     urgency = db.Column(db.String(50), default='medium')
-    status = db.Column(db.String(50), default='unread') # unread, read, replied, archived
+    status = db.Column(db.String(50), default='unread')
+    ai_analysis = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class SmartAction(db.Model):

@@ -81,7 +81,7 @@
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-error">*</span></label>
       <p class="text-xs text-on-surface-variant/60 mb-2">Selecciona hasta 5 días en el calendario. El mismo título, comentarios y documento se asignarán a todas las fechas.</p>
 
-      <div class="bg-surface-container-low rounded-xl p-3 border border-outline-variant/30">
+      <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
         <div class="flex items-center justify-between mb-3">
           <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
@@ -121,7 +121,7 @@
           <p class="text-xs font-semibold text-on-surface-variant">{{ createForm.dates.length }}/5 fechas seleccionadas</p>
           <div class="flex flex-wrap gap-1.5">
             @for (d of createForm.dates; track d) {
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-container/15 text-primary-container text-xs font-semibold">
                 {{ d }}
                 <button (click)="removeDate(d)" class="hover:text-error transition-colors">&times;</button>
               </span>
@@ -149,7 +149,7 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Programación (.docx opcional)</label>
-      <label for="createProgramFileInput" class="flex items-center gap-3 p-3 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
+      <label for="createProgramFileInput" class="flex items-center gap-3 p-3 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
         <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-2xl text-on-surface-variant/50"></fa-icon>
         <div class="text-left">
           <p class="text-sm font-medium text-on-surface">{{ createProgramFile ? createProgramFile.name : 'Subir documento Word' }}</p>
@@ -169,7 +169,7 @@
 
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
   <div class="flex items-center gap-3 px-4 py-3 bg-surface-container-low rounded-xl border border-outline mb-4">
-    <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+    <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center shrink-0">
       <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary text-lg"></fa-icon>
     </div>
     <div class="min-w-0">
@@ -236,7 +236,7 @@
       </div>
 
       <div *ngIf="!auditState" class="mt-1">
-        <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-outline-variant/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
+        <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
           <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
           <div class="text-center">
             <p class="text-sm font-medium text-on-surface">Subir documento Word</p>

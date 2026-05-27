@@ -31,6 +31,15 @@ export interface TherapistFinancial {
   balance: number;
 }
 
+export interface ContactMessageAI {
+  sentiment?: string;
+  detected_intent?: string;
+  suggested_response?: string;
+  confidence?: string;
+  provider?: string;
+  [key: string]: any;
+}
+
 export interface ContactMessage {
   id: number;
   first_name: string;
@@ -42,6 +51,7 @@ export interface ContactMessage {
   service_interest?: string;
   urgency: string;
   status: string;
+  ai_analysis?: ContactMessageAI;
   created_at: string;
 }
 

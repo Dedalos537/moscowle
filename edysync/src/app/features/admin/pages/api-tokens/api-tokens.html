@@ -15,7 +15,7 @@
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
   } @else {
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-outline-variant/20 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-border/20 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[600px]">
           <thead>
@@ -26,7 +26,7 @@
               <th class="px-5 py-4 text-right text-xs font-bold text-on-surface-variant uppercase">Accion</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
+          <tbody class="divide-y divide-border/20 bg-surface-container-lowest">
             @for (t of tokens; track t.id) {
               <tr class="hover:bg-surface-container-high/80 text-sm">
                 <td class="px-5 py-4 font-mono text-on-surface">#{{ t.id }}</td>
@@ -72,7 +72,7 @@
     <div class="space-y-4">
       <app-alert type="warning" message="Copia este token ahora. No se volvera a mostrar."></app-alert>
       <div class="flex gap-2">
-        <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-surface-container-high border border-outline-variant/30 rounded-xl text-sm font-mono">
+        <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
         <app-button variant="primary" label="Copiar" (clicked)="copyToken(newToken)"></app-button>
       </div>
     </div>

@@ -1,11 +1,11 @@
 <ng-template #headerActions></ng-template>
 
-<div class="h-[calc(100vh-12rem)] flex gap-0 bg-surface-container-lowest rounded-lg shadow-soft border border-gray-100 overflow-hidden" [@fadeInUp]>
+<div class="h-[calc(100vh-12rem)] flex gap-0 bg-surface-container-lowest rounded-lg shadow-soft border border-border overflow-hidden" [@fadeInUp]>
 
-  <div class="w-80 border-r border-gray-200 flex flex-col shrink-0">
-    <div class="p-4 border-b border-gray-100">
-      <h3 class="text-sm font-bold text-gray-800">Conversaciones</h3>
-      <p class="text-xs text-gray-500">Tus pacientes</p>
+  <div class="w-80 border-r border-border flex flex-col shrink-0">
+    <div class="p-4 border-b border-border">
+      <h3 class="text-sm font-bold text-on-surface">Conversaciones</h3>
+      <p class="text-xs text-on-surface-variant">Tus pacientes</p>
     </div>
 
     <div class="flex-1 overflow-y-auto">
@@ -16,23 +16,23 @@
       } @else {
         @for (conv of conversations; track conv.user_id) {
           <div (click)="selectConversation(conv.user_id, conv.username)"
-            class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50"
+            class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-surface-container-low border-b border-border/50"
             [class.bg-primary/5]="selectedUserId === conv.user_id">
             <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0">
               {{ conv.username.charAt(0).toUpperCase() }}
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-bold text-gray-800 truncate">{{ conv.username }}</span>
+                <span class="text-sm font-bold text-on-surface truncate">{{ conv.username }}</span>
                 @if (conv.unread_count > 0) {
-                  <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ conv.unread_count }}</span>
+                  <span class="bg-error text-on-error text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ conv.unread_count }}</span>
                 }
               </div>
-              <div class="text-xs text-gray-500 truncate">{{ conv.last_message ? (conv.last_message | date:'dd/MM HH:mm') : 'Sin mensajes' }}</div>
+              <div class="text-xs text-on-surface-variant truncate">{{ conv.last_message ? (conv.last_message | date:'dd/MM HH:mm') : 'Sin mensajes' }}</div>
             </div>
           </div>
         } @empty {
-          <div class="text-center py-8 text-gray-400 text-sm">No hay conversaciones</div>
+          <div class="text-center py-8 text-on-surface-variant/60 text-sm">No hay conversaciones</div>
         }
       }
     </div>
@@ -40,14 +40,14 @@
 
   <div class="flex-1 flex flex-col">
     @if (selectedUserId) {
-      <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+      <div class="p-4 border-b border-border flex items-center gap-3">
         <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
           {{ selectedUserName.charAt(0).toUpperCase() }}
         </div>
-        <span class="text-sm font-bold text-gray-800">{{ selectedUserName }}</span>
+        <span class="text-sm font-bold text-on-surface">{{ selectedUserName }}</span>
       </div>
 
-      <div #chatContainer class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+      <div #chatContainer class="flex-1 overflow-y-auto p-4 space-y-3 bg-surface-container-low/50">
         @if (loadingThread) {
           <div class="flex justify-center py-8">
             <app-spinner size="sm" colorClass="text-primary"></app-spinner>
@@ -57,8 +57,8 @@
             <div class="flex" [class.justify-end]="isOwnMessage(msg)" [class.justify-start]="!isOwnMessage(msg)">
               <div class="max-w-[70%] rounded-2xl px-4 py-2 text-sm"
                 [class.bg-primary]="isOwnMessage(msg)" [class.text-white]="isOwnMessage(msg)"
-                [class.bg-white]="!isOwnMessage(msg)" [class.text-gray-800]="!isOwnMessage(msg)"
-                [class.shadow-sm]="!isOwnMessage(msg)" [class.border]="!isOwnMessage(msg)" [class.border-gray-200]="!isOwnMessage(msg)">
+                [class.bg-surface-container-lowest]="!isOwnMessage(msg)" [class.text-on-surface]="!isOwnMessage(msg)"
+                [class.shadow-sm]="!isOwnMessage(msg)" [class.border]="!isOwnMessage(msg)" [class.border-border]="!isOwnMessage(msg)">
                 @if (msg.body) {
                   <p>{{ msg.body }}</p>
                 }
@@ -88,14 +88,14 @@
               </div>
             </div>
           } @empty {
-            <div class="text-center py-8 text-gray-400 text-sm">No hay mensajes aún. Envía el primero.</div>
+            <div class="text-center py-8 text-on-surface-variant/60 text-sm">No hay mensajes aún. Envía el primero.</div>
           }
         }
       </div>
 
-      <div class="p-4 border-t border-gray-100">
+      <div class="p-4 border-t border-border">
         @if (selectedFileName) {
-          <div class="flex items-center gap-2 mb-2 px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-700">
+          <div class="flex items-center gap-2 mb-2 px-3 py-1.5 bg-surface-container-high rounded-lg text-xs text-on-surface">
             <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
             <span class="truncate flex-1">{{ selectedFileName }}</span>
             <app-button variant="ghost" [icon]="['fas', 'times']" (clicked)="clearFile()"></app-button>
@@ -104,7 +104,7 @@
         <div class="flex items-end gap-2">
           <div class="flex-1 relative">
             <textarea [(ngModel)]="newMessage" placeholder="Escribe un mensaje..." rows="1"
-              class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-primary focus:border-primary resize-none"
+              class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:ring-primary focus:border-primary resize-none"
               (keydown.enter)="onKeydown($event)"></textarea>
           </div>
           <div class="flex items-center gap-1">
@@ -126,7 +126,7 @@
         </div>
       </div>
     } @else {
-      <div class="flex-1 flex items-center justify-center text-gray-400">
+      <div class="flex-1 flex items-center justify-center text-on-surface-variant/60">
         <div class="text-center">
           <fa-icon [icon]="['fas', 'envelope-open-text']" class="text-4xl mb-3"></fa-icon>
           <p class="text-sm font-medium">Selecciona una conversación</p>

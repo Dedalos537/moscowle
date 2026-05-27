@@ -7,13 +7,13 @@
   </div>
 
   <div class="flex items-center gap-4">
-    <button (click)="toggleTheme()" class="p-2 rounded-full hover:bg-surface-container-low transition text-charcoal">
+    <button (click)="toggleTheme()" class="p-2 rounded-full hover:bg-surface-container-low transition text-on-surface-variant">
        <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']"></fa-icon>
     </button>
 
     @if (user$ | async; as user) {
       <div class="flex items-center gap-4 border-l pl-4 border-border">
-        <span class="text-body-sm font-medium text-textDark">{{ user.email }}</span>
+        <span class="text-body-sm font-medium text-on-surface">{{ user.email }}</span>
         <button (click)="logout()" class="text-sm px-4 py-2 bg-error-container text-on-error-container rounded-lg hover:brightness-90 transition-all">
           <fa-icon [icon]="['fas', 'sign-out-alt']" class="mr-1"></fa-icon> Salir
         </button>

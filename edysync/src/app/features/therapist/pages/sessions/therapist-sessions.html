@@ -2,19 +2,19 @@
   <div class="flex items-center justify-between mb-3">
     <div class="flex gap-3">
       <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-charcoal">Hoy</div>
+        <div class="text-label text-on-surface-variant">Hoy</div>
         <div class="text-xl font-bold" style="color:var(--color-primary)">{{ stats.sessions_today }}</div>
       </div>
       <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-charcoal">Comple</div>
+        <div class="text-label text-on-surface-variant">Comple</div>
         <div class="text-xl font-bold" style="color:var(--color-success)">{{ stats.completed_sessions }}</div>
       </div>
       <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-charcoal">Pend</div>
+        <div class="text-label text-on-surface-variant">Pend</div>
         <div class="text-xl font-bold" style="color:var(--color-warning)">{{ stats.pending_sessions }}</div>
       </div>
       <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-charcoal">Pac</div>
+        <div class="text-label text-on-surface-variant">Pac</div>
         <div class="text-xl font-bold" style="color:var(--color-info)">{{ stats.active_patients }}</div>
       </div>
     </div>
@@ -27,7 +27,7 @@
             [class.text-on-primary]="esSeleccionado(d)"
             [class.text-on-surface]="!esSeleccionado(d)"
             [style.borderColor]="esSeleccionado(d) ? 'var(--color-primary)' : 'var(--color-border)'"
-            [style.background]="esSeleccionado(d) ? 'var(--color-primary)' : 'var(--color-surface)'"
+            [style.background]="esSeleccionado(d) ? 'var(--color-primary)' : 'var(--color-surface-container-lowest)'"
             (click)="cambiarFecha(d)">
       <span class="text-[10px] uppercase opacity-70">{{ diaSemana(d) }}</span>
       <span class="text-sm">{{ d.getDate() }}</span>
@@ -35,19 +35,19 @@
   </div>
 
   <div class="relative">
-    <div class="absolute left-[18px] top-0 bottom-0 w-0.5" style="background:var(--color-outline-variant)"></div>
+    <div class="absolute left-[18px] top-0 bottom-0 w-0.5" style="background:var(--color-border)"></div>
 
     <div *ngIf="loading" class="flex justify-center py-16">
       <div class="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
     </div>
 
-    <div *ngIf="!loading && agendaEvents.length === 0" class="text-center py-16 text-charcoal text-sm">
+    <div *ngIf="!loading && agendaEvents.length === 0" class="text-center py-16 text-on-surface-variant text-sm">
       Sin sesiones para esta fecha
     </div>
 
     <div *ngFor="let e of agendaEvents; let i = index" class="relative pl-10 pb-6 last:pb-0">
       <div class="absolute left-[13px] top-1 w-[12px] h-[12px] rounded-full border-2 z-10"
-           [style.background]="'var(--color-surface)'"
+           [style.background]="'var(--color-surface-container-lowest)'"
            [style.borderColor]="statusColor(e.extendedProps?.status)"
            [class.animate-pulse]="e.extendedProps?.status === 'in_progress'">
       </div>
@@ -58,15 +58,15 @@
           <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2 min-w-0">
               <span class="w-2 h-2 rounded-full shrink-0" [style.background]="statusColor(e.extendedProps?.status)"></span>
-              <span class="text-sm font-bold text-textDark truncate">{{ e.title }}</span>
+              <span class="text-sm font-bold text-on-surface truncate">{{ e.title }}</span>
             </div>
-            <span class="text-xs text-charcoal shrink-0">
+            <span class="text-xs text-on-surface-variant shrink-0">
               {{ e.start ? (e.start | date:'HH:mm') : '??' }} -
               {{ e.end ? (e.end | date:'HH:mm') : '??' }}
             </span>
           </div>
           <div class="flex items-center gap-2 mt-1">
-            <span class="text-xs text-charcoal">{{ e.extendedProps?.patient || '' }}</span>
+            <span class="text-xs text-on-surface-variant">{{ e.extendedProps?.patient || '' }}</span>
             <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
                   [style.background]="'color-mix(in srgb, ' + statusColor(e.extendedProps?.status) + ' 15%, transparent)'"
                   [style.color]="statusColor(e.extendedProps?.status)">
@@ -86,25 +86,25 @@
       Paciente: {{ editForm.patient }}
     </div>
     <div>
-      <label class="block text-sm font-medium text-textDark mb-1">Titulo</label>
+      <label class="block text-sm font-medium text-on-surface mb-1">Titulo</label>
       <input type="text" [(ngModel)]="editForm.title" class="input-field">
     </div>
     <div>
-      <label class="block text-sm font-medium text-textDark mb-1">Fecha</label>
+      <label class="block text-sm font-medium text-on-surface mb-1">Fecha</label>
       <input type="date" [(ngModel)]="editForm.date" class="input-field">
     </div>
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-textDark mb-1">Inicio</label>
+        <label class="block text-sm font-medium text-on-surface mb-1">Inicio</label>
         <input type="time" [(ngModel)]="editForm.start_time" class="input-field">
       </div>
       <div>
-        <label class="block text-sm font-medium text-textDark mb-1">Fin</label>
+        <label class="block text-sm font-medium text-on-surface mb-1">Fin</label>
         <input type="time" [(ngModel)]="editForm.end_time" class="input-field">
       </div>
     </div>
     <div>
-      <label class="block text-sm font-medium text-textDark mb-1">Estado</label>
+      <label class="block text-sm font-medium text-on-surface mb-1">Estado</label>
       <select [(ngModel)]="editForm.status" class="input-field">
         <option value="scheduled">Programada</option>
         <option value="completed">Completada</option>

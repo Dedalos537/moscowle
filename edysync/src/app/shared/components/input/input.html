@@ -1,12 +1,12 @@
-<div class="flex flex-col gap-1 w-full relative">
+<div class="flex flex-col gap-1.5 w-full relative">
   @if (label) {
-    <label [for]="id" class="text-sm font-medium text-textDark">{{ label }}</label>
+    <label [for]="id" class="text-sm font-medium text-on-surface">{{ label }}</label>
   }
 
   <div class="relative w-full">
     @if (icon) {
-      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-charcoal">
-        <fa-icon [icon]="icon"></fa-icon>
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+        <fa-icon [icon]="icon" class="text-sm"></fa-icon>
       </div>
     }
 
@@ -16,16 +16,14 @@
       [value]="value"
       (input)="onInput($event)"
       [placeholder]="placeholder"
-      class="w-full bg-background text-textDark border border-border rounded-lg outline-none transition-colors
-             focus:border-primary focus:ring-1 focus:ring-primary px-4 py-2"
+      class="w-full bg-surface-container-lowest text-on-surface border border-border rounded-lg px-4 py-2.5 text-sm outline-none transition-all duration-200"
       [class.pl-10]="icon"
-      [class.border-error]="error"
-      [class.focus:border-error]="error"
-      [class.focus:ring-error]="error"
+      [class.!border-error]="error"
+      #inputEl
     >
   </div>
 
   @if (error) {
-    <span class="text-xs text-error mt-1">{{ error }}</span>
+    <span class="text-xs font-medium text-error mt-0.5">{{ error }}</span>
   }
 </div>

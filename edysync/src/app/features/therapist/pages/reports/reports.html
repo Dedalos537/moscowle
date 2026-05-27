@@ -23,7 +23,7 @@
             type="date"
             [ngModel]="startDate"
             (ngModelChange)="startDate = $event; onFilterChange()"
-            class="text-xs border border-outline-variant/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+            class="text-xs border border-border/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
         <div class="flex items-center gap-2">
@@ -32,7 +32,7 @@
             type="date"
             [ngModel]="endDate"
             (ngModelChange)="endDate = $event; onFilterChange()"
-            class="text-xs border border-outline-variant/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+            class="text-xs border border-border/50 rounded-lg px-2.5 py-1.5 bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
         <app-button variant="secondary" label="Exportar" [icon]="['fas', 'file-download']" (clicked)="exportCSV()"></app-button>
@@ -40,43 +40,43 @@
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-emerald-700">Mejora Promedio</span>
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-success">Mejora Promedio</span>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ improvementRate }}%</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'chart-line']" class="text-emerald-500 text-[14px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-[14px]"></fa-icon>
           Tasa de mejora general
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-blue-700">Sesión Promedio</span>
-          <fa-icon [icon]="['fas', 'clock']" class="text-blue-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-info">Sesión Promedio</span>
+          <fa-icon [icon]="['fas', 'clock']" class="text-info text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ avgSessionTime }} <span class="text-sm font-normal text-on-surface-variant">min</span></p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'stopwatch']" class="text-blue-500 text-[14px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'stopwatch']" class="text-info text-[14px]"></fa-icon>
           Duracion media por sesion
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-indigo-700">Objetivos</span>
-          <fa-icon [icon]="['fas', 'list-check']" class="text-indigo-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-info">Objetivos</span>
+          <fa-icon [icon]="['fas', 'list-check']" class="text-info text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">{{ completedObjectives }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'flag']" class="text-indigo-500 text-[14px]"></fa-icon>
+          <fa-icon [icon]="['fas', 'flag']" class="text-info text-[14px]"></fa-icon>
           Objetivos completados
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Pacientes</span>
           <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
@@ -90,7 +90,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Tendencia de Precisión Semanal
@@ -112,7 +112,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
           Sesiones por Semana
@@ -136,10 +136,10 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'trophy']" class="text-emerald-500 text-lg"></fa-icon>
+            <fa-icon [icon]="['fas', 'trophy']" class="text-success text-lg"></fa-icon>
             Mejor Rendimiento
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ bestPatients.length }} pacientes</span>
@@ -148,7 +148,7 @@
           <div class="overflow-x-auto">
             <table class="w-full min-w-[400px]">
               <thead>
-                <tr class="border-b border-outline-variant/40">
+                <tr class="border-b border-border/40">
                   <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">#</th>
                   <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                   <th class="px-3 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -157,22 +157,22 @@
               </thead>
               <tbody>
                 @for (p of bestPatients; track p.patient_id; let i = $index) {
-                  <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                  <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                     <td class="px-3 py-3 text-sm text-on-surface-variant font-medium">{{ i + 1 }}</td>
                     <td class="px-3 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
                     <td class="px-3 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
                     <td class="px-3 py-3 text-right">
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                        [class.bg-emerald-100]="p.avg_accuracy >= 80"
-                        [class.text-emerald-700]="p.avg_accuracy >= 80"
-                        [class.bg-amber-100]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.bg-red-100]="p.avg_accuracy < 50"
-                        [class.text-red-700]="p.avg_accuracy < 50">
+                        [class.bg-success-container]="p.avg_accuracy >= 80"
+                        [class.text-success]="p.avg_accuracy >= 80"
+                        [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                        [class.bg-error-container]="p.avg_accuracy < 50"
+                        [class.text-error]="p.avg_accuracy < 50">
                         <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                          [class.text-emerald-500]="p.avg_accuracy >= 80"
-                          [class.text-amber-500]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-red-500]="p.avg_accuracy < 50"></fa-icon>
+                          [class.text-success]="p.avg_accuracy >= 80"
+                          [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                          [class.text-error]="p.avg_accuracy < 50"></fa-icon>
                         {{ p.avg_accuracy }}%
                       </span>
                     </td>
@@ -186,10 +186,10 @@
         }
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'chart-line']" class="text-red-500 text-lg" flip="vertical"></fa-icon>
+            <fa-icon [icon]="['fas', 'chart-line']" class="text-error text-lg" flip="vertical"></fa-icon>
             Requiere Atencion
           </h3>
           <span class="text-xs text-on-surface-variant font-medium">{{ worstPatients.length }} pacientes</span>
@@ -198,7 +198,7 @@
           <div class="overflow-x-auto">
             <table class="w-full min-w-[400px]">
               <thead>
-                <tr class="border-b border-outline-variant/40">
+                <tr class="border-b border-border/40">
                   <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">#</th>
                   <th class="px-3 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                   <th class="px-3 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
@@ -207,22 +207,22 @@
               </thead>
               <tbody>
                 @for (p of worstPatients; track p.patient_id; let i = $index) {
-                  <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                  <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                     <td class="px-3 py-3 text-sm text-on-surface-variant font-medium">{{ i + 1 }}</td>
                     <td class="px-3 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
                     <td class="px-3 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
                     <td class="px-3 py-3 text-right">
                       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                        [class.bg-emerald-100]="p.avg_accuracy >= 80"
-                        [class.text-emerald-700]="p.avg_accuracy >= 80"
-                        [class.bg-amber-100]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.bg-red-100]="p.avg_accuracy < 50"
-                        [class.text-red-700]="p.avg_accuracy < 50">
+                        [class.bg-success-container]="p.avg_accuracy >= 80"
+                        [class.text-success]="p.avg_accuracy >= 80"
+                        [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                        [class.bg-error-container]="p.avg_accuracy < 50"
+                        [class.text-error]="p.avg_accuracy < 50">
                         <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
-                          [class.text-emerald-500]="p.avg_accuracy >= 80"
-                          [class.text-amber-500]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.text-red-500]="p.avg_accuracy < 50"></fa-icon>
+                          [class.text-success]="p.avg_accuracy >= 80"
+                          [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                          [class.text-error]="p.avg_accuracy < 50"></fa-icon>
                         {{ p.avg_accuracy }}%
                       </span>
                     </td>
@@ -237,7 +237,7 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-card p-5">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
       <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
@@ -249,7 +249,7 @@
         <div class="overflow-x-auto">
           <table class="w-full min-w-[500px]">
             <thead>
-              <tr class="border-b border-outline-variant/40">
+              <tr class="border-b border-border/40">
                 <th class="px-4 py-3 text-left text-label-caps text-on-surface-variant">Paciente</th>
                 <th class="px-4 py-3 text-center text-label-caps text-on-surface-variant">Sesiones</th>
                 <th class="px-4 py-3 text-right text-label-caps text-on-surface-variant">Precisión</th>
@@ -258,17 +258,17 @@
             </thead>
             <tbody>
               @for (p of allPatients; track p.patient_id) {
-                <tr class="border-t border-outline-variant/20 hover:bg-surface-container-low transition-colors">
+                <tr class="border-t border-border/20 hover:bg-surface-container-low transition-colors">
                   <td class="px-4 py-3 text-sm font-semibold text-on-surface">{{ p.patient_name }}</td>
                   <td class="px-4 py-3 text-sm text-center font-medium text-on-surface">{{ p.sessions_count }}</td>
                   <td class="px-4 py-3 text-right">
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
-                      [class.bg-emerald-100]="p.avg_accuracy >= 80"
-                      [class.text-emerald-700]="p.avg_accuracy >= 80"
-                      [class.bg-amber-100]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                      [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                      [class.bg-red-100]="p.avg_accuracy < 50"
-                      [class.text-red-700]="p.avg_accuracy < 50">
+                      [class.bg-success-container]="p.avg_accuracy >= 80"
+                      [class.text-success]="p.avg_accuracy >= 80"
+                      [class.bg-warning-container]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                      [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                      [class.bg-error-container]="p.avg_accuracy < 50"
+                      [class.text-error]="p.avg_accuracy < 50">
                       {{ p.avg_accuracy }}%
                     </span>
                   </td>
@@ -277,16 +277,16 @@
                       <div class="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                         <div
                           class="h-full rounded-full transition-all duration-700"
-                          [class.bg-emerald-500]="p.avg_accuracy >= 80"
-                          [class.bg-amber-500]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                          [class.bg-red-500]="p.avg_accuracy < 50"
+                          [class.bg-success-container0]="p.avg_accuracy >= 80"
+                          [class.bg-warning-container0]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                          [class.bg-error-container0]="p.avg_accuracy < 50"
                           [style.width.%]="p.avg_accuracy"
                         ></div>
                       </div>
                       <span class="text-xs font-bold"
-                        [class.text-emerald-700]="p.avg_accuracy >= 80"
-                        [class.text-amber-700]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
-                        [class.text-red-700]="p.avg_accuracy < 50">
+                        [class.text-success]="p.avg_accuracy >= 80"
+                        [class.text-warning]="p.avg_accuracy >= 50 && p.avg_accuracy < 80"
+                        [class.text-error]="p.avg_accuracy < 50">
                         {{ p.avg_accuracy }}%
                       </span>
                     </div>

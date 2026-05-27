@@ -1,6 +1,6 @@
 <ng-container>
   @if ((state | async) === 'starting') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-blue-600 text-white">
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-info text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
         <fa-icon [icon]="['fas', 'spinner']" class="text-white/80" animation="spin"></fa-icon>
         <span class="text-sm font-bold">Iniciando grabación de sesión...</span>
@@ -9,7 +9,7 @@
   }
 
   @if ((state | async) === 'recording') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-red-600 text-white">
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-error text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3 md:gap-5">
         <div class="flex items-center gap-2.5 shrink-0">
           <span class="w-3 h-3 rounded-full bg-white recording-pulse"></span>
@@ -42,7 +42,7 @@
   }
 
   @if ((state | async) === 'mic_error') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-amber-600 text-white">
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-warning text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
         <fa-icon [icon]="['fas', 'microphone-slash']" class="text-white"></fa-icon>
         <span class="text-sm font-bold flex-1">Permiso de micrófono requerido para grabar la sesión</span>
@@ -55,7 +55,7 @@
   }
 
   @if ((state | async) === 'completed') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-emerald-600 text-white">
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-success text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-white"></fa-icon>
         <span class="text-sm font-bold flex-1">Sesión completada y registrada</span>
@@ -71,9 +71,9 @@
 
   @if ((showAttendanceCheck | async)) {
     <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div class="bg-surface rounded-2xl border border-outline-variant/30 max-w-sm w-full p-6 animate-fade-in">
-        <div class="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-          <fa-icon [icon]="['fas', 'question-circle']" class="text-amber-600 dark:text-amber-400 text-3xl"></fa-icon>
+      <div class="bg-surface rounded-2xl border border-border/30 max-w-sm w-full p-6 animate-fade-in">
+        <div class="w-14 h-14 rounded-full bg-warning-container flex items-center justify-center mx-auto mb-4">
+          <fa-icon [icon]="['fas', 'question-circle']" class="text-warning text-3xl"></fa-icon>
         </div>
 
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">¿El paciente asistió?</h3>

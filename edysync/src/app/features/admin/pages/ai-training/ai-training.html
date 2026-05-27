@@ -26,8 +26,8 @@
           <div class="flex items-center justify-between p-4 bg-surface-container-high rounded-xl">
             <span class="text-sm font-medium text-on-surface">Entrenando</span>
             @if (status.training_in_progress) {
-              <span class="flex items-center gap-2 px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700">
-                <app-spinner size="sm" colorClass="text-yellow-600"></app-spinner> En progreso
+              <span class="flex items-center gap-2 px-3 py-1 text-xs font-bold rounded-full bg-warning-container text-warning">
+                <app-spinner size="sm" colorClass="text-warning"></app-spinner> En progreso
               </span>
             } @else {
               <span class="px-3 py-1 text-xs font-bold rounded-full bg-surface-container-high text-on-surface-variant">Inactivo</span>

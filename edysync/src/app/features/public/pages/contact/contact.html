@@ -1,76 +1,76 @@
 <div class="max-w-4xl mx-auto py-12">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
     <div>
-      <h1 class="text-3xl font-extrabold text-textDark mb-4">Contáctanos</h1>
-      <p class="text-charcoal mb-8">Estamos aquí para resolver tus dudas y mostrarte cómo EduSync AI puede transformar tu centro terapéutico.</p>
+      <h1 class="text-3xl font-extrabold text-on-surface mb-4">Contáctanos</h1>
+      <p class="text-on-surface-variant mb-8">Estamos aquí para resolver tus dudas y mostrarte cómo EduSync AI puede transformar tu centro terapéutico.</p>
       
       <div class="space-y-6">
         <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center flex-shrink-0">
             <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon>
           </div>
           <div>
-            <p class="font-bold text-textDark">Dirección</p>
-            <p class="text-sm text-charcoal">Centro de Terapias Juan Pablo II<br>Piura, Perú</p>
+            <p class="font-bold text-on-surface">Dirección</p>
+            <p class="text-sm text-on-surface-variant">Centro de Terapias Juan Pablo II<br>Piura, Perú</p>
           </div>
         </div>
         <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center flex-shrink-0">
             <fa-icon [icon]="['fas', 'envelope']" class="text-primary"></fa-icon>
           </div>
           <div>
-            <p class="font-bold text-textDark">Email</p>
-            <p class="text-sm text-charcoal">contacto@edusync.ai</p>
+            <p class="font-bold text-on-surface">Email</p>
+            <p class="text-sm text-on-surface-variant">contacto@edusync.ai</p>
           </div>
         </div>
         <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center flex-shrink-0">
             <fa-icon [icon]="['fas', 'phone']" class="text-primary"></fa-icon>
           </div>
           <div>
-            <p class="font-bold text-textDark">Teléfono</p>
-            <p class="text-sm text-charcoal">+51 999 888 777</p>
+            <p class="font-bold text-on-surface">Teléfono</p>
+            <p class="text-sm text-on-surface-variant">+51 999 888 777</p>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-8 border border-outline-variant/20">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-8 border border-border/20">
       <div *ngIf="success" class="text-center py-8">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl text-green-500 mb-3"></fa-icon>
-        <p class="text-lg font-bold text-textDark">¡Mensaje enviado!</p>
-        <p class="text-sm text-charcoal">Te contactaremos pronto.</p>
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-4xl text-success mb-3"></fa-icon>
+        <p class="text-lg font-bold text-on-surface">¡Mensaje enviado!</p>
+        <p class="text-sm text-on-surface-variant">Te contactaremos pronto.</p>
         <button (click)="success = false" class="mt-4 text-sm font-bold text-primary hover:underline">Enviar otro mensaje</button>
       </div>
 
       <div *ngIf="!success" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-charcoal mb-1">Nombre *</label>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Nombre *</label>
             <app-input id="contact-first-name" [(value)]="form.first_name" [error]="!form.first_name && submitted ? 'Campo obligatorio' : ''"></app-input>
           </div>
           <div>
-            <label class="block text-sm font-medium text-charcoal mb-1">Apellido *</label>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Apellido *</label>
             <app-input id="contact-last-name" [(value)]="form.last_name" [error]="!form.last_name && submitted ? 'Campo obligatorio' : ''"></app-input>
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-charcoal mb-1">Email *</label>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Email *</label>
           <app-input id="contact-email" type="email" [(value)]="form.email" [error]="!form.email && submitted ? 'Campo obligatorio' : ''"></app-input>
         </div>
         <div>
-          <label class="block text-sm font-medium text-charcoal mb-1">Teléfono</label>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Teléfono</label>
           <app-input id="contact-phone" [(value)]="form.phone"></app-input>
         </div>
         <div>
-          <label class="block text-sm font-medium text-charcoal mb-1">Asunto</label>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Asunto</label>
           <app-input id="contact-subject" [(value)]="form.subject"></app-input>
         </div>
         <div>
-          <label class="block text-sm font-medium text-charcoal mb-1">Mensaje *</label>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Mensaje *</label>
           <app-input id="contact-message" [(value)]="form.message" [error]="!form.message && submitted ? 'Campo obligatorio' : ''"></app-input>
         </div>
-        <p *ngIf="error" class="text-sm text-red-500">{{ error }}</p>
+        <p *ngIf="error" class="text-sm text-error">{{ error }}</p>
         <app-button variant="primary" (clicked)="submitForm()" [disabled]="submitting || !form.first_name || !form.last_name || !form.email || !form.message">
           @if (submitting) {
             <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>

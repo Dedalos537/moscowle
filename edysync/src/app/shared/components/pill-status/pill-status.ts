@@ -13,8 +13,8 @@ export class PillStatus {
   get pillClasses() {
     const base = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-caps';
     const variants = {
-      active: 'bg-primary/10 text-primary',
-      completed: 'bg-primary/10 text-primary',
+      active: 'bg-primary-container/15 text-primary-container',
+      completed: 'bg-primary-container/15 text-primary-container',
       pending: 'bg-surface-container-high text-on-surface-variant',
       error: 'bg-error-container text-on-error-container',
       warning: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
@@ -24,8 +24,8 @@ export class PillStatus {
 
   get dotClass() {
     const variants = {
-      active: 'bg-primary',
-      completed: 'bg-primary',
+      active: 'bg-primary-container',
+      completed: 'bg-primary-container',
       pending: 'bg-outline',
       error: 'bg-error',
       warning: 'bg-amber-500'
