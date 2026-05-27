@@ -217,6 +217,7 @@ def register_request_handlers(app):
                 or 'webhook' in request.path
                 or request.path.startswith('/api/auth/')
                 or request.path.startswith('/api/health')
+                or request.path.startswith('/api/public/')
                 or current_user.is_authenticated
             )
             if not skip_appkey:
