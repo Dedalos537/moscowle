@@ -63,7 +63,6 @@ def _parse_json(raw):
 
 def analyze_contact_message_ai(name, email, message, service_interest):
     result = {'sentiment': 'neutral', 'detected_intent': 'consulta', 'suggested_response': '', 'confidence': 'media', 'provider': None}
-
     prompt = f"""Analiza este mensaje de contacto de un cliente potencial y responde SOLO con JSON válido:
 Nombre: {name}
 Email: {email}
@@ -71,7 +70,6 @@ Mensaje: {message}
 Servicio de interés: {service_interest or 'No especificado'}
 Responde con este JSON exacto (sin markdown):
 {{"sentiment": "positivo"|"neutral"|"negativo", "detected_intent": "agendar_cita"|"informacion"|"consulta"|"queja"|"seguimiento", "suggested_response": "texto cortés de respuesta sugerida", "confidence": "alta"|"media"|"baja"}}"""
-
     providers = []
     if _ollama_client:
         providers.append(('ollama', lambda: _ollama_client.chat(model='llama3.2', messages=[{'role': 'user', 'content': prompt}], options={'temperature': 0.0})['message']['content']))
@@ -79,7 +77,6 @@ Responde con este JSON exacto (sin markdown):
         providers.append(('gemini', lambda: (genai.configure(api_key=os.environ['GEMINI_API_KEY']), genai.GenerativeModel('gemini-1.5-flash').generate_content(prompt).text)[1]))
     if Groq and os.environ.get('GROQ_API_KEY'):
         providers.append(('groq', lambda: Groq(api_key=os.environ['GROQ_API_KEY']).chat.completions.create(model='llama-3.2-3b-preview', messages=[{'role': 'user', 'content': prompt}], temperature=0.0, max_tokens=300).choices[0].message.content))
-
     for name, fn in providers:
         try:
             t0 = time.time()
@@ -92,7 +89,6 @@ Responde con este JSON exacto (sin markdown):
                 break
         except Exception:
             continue
-
     return json.dumps(result, ensure_ascii=False)
 
 LIMA_TZ = timezone(timedelta(hours=-5))
