@@ -10,7 +10,7 @@ import { Debtors } from './pages/debtors/debtors';
 import { PaymentHistory } from './pages/payment-history/payment-history';
 import { Sessions } from './pages/sessions/sessions';
 import { Expenses } from './pages/expenses/expenses';
-import { Messages } from './pages/messages/messages';
+import { ChatComponent } from '../../shared/components/chat/chat.component';
 import { Reports } from './pages/reports/reports';
 import { Games } from './pages/games/games';
 import { CspReports } from './pages/csp-reports/csp-reports';
@@ -35,7 +35,7 @@ const routes: Routes = [
       { path: 'payments/history/:userId', component: PaymentHistory },
       { path: 'sessions', component: Sessions },
       { path: 'expenses', component: Expenses },
-      { path: 'messages', component: Messages },
+      { path: 'messages', component: ChatComponent },
       { path: 'reports', component: Reports },
       { path: 'games', component: Games },
       { path: 'csp-reports', component: CspReports },

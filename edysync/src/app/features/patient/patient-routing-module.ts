@@ -7,7 +7,7 @@ import { PatientSessions } from './pages/sessions/sessions';
 import { PatientPayments } from './pages/payments/payments';
 import { PatientProgressPage } from './pages/progress/progress';
 import { PatientCalendar } from './pages/calendar/calendar';
-import { PatientMessages } from './pages/messages/messages';
+import { ChatComponent } from '../../shared/components/chat/chat.component';
 import { PatientProfile } from './pages/profile/profile';
 import { PatientMyTherapist } from './pages/my-therapist/my-therapist';
 
@@ -23,7 +23,7 @@ const routes: Routes = [
       { path: 'payments', component: PatientPayments },
       { path: 'progress', component: PatientProgressPage },
       { path: 'calendar', component: PatientCalendar },
-      { path: 'messages', component: PatientMessages },
+      { path: 'messages', component: ChatComponent },
       { path: 'profile', component: PatientProfile },
       { path: 'my-therapist', component: PatientMyTherapist },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

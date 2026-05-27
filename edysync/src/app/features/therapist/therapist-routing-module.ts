@@ -5,7 +5,7 @@ import { RoleGuard } from '../../core/guards/role.guard';
 import { TherapistLayout } from '../../core/layout/therapist-layout/therapist-layout';
 import { TherapistSessions } from './pages/sessions/therapist-sessions';
 import { TherapistSessionReview } from './pages/session-review/session-review';
-import { TherapistMessages } from './pages/messages/therapist-messages';
+import { ChatComponent } from '../../shared/components/chat/chat.component';
 import { TherapistProfile } from './pages/profile/therapist-profile';
 import { TherapistGames } from './pages/games/therapist-games';
 import { TherapistPatients } from './pages/patients/patients';
@@ -24,7 +24,7 @@ const routes: Routes = [
       { path: 'dashboard', component: TherapistDashboard },
       { path: 'sessions', component: TherapistSessions },
       { path: 'sessions/:id/review', component: TherapistSessionReview },
-      { path: 'messages', component: TherapistMessages },
+      { path: 'messages', component: ChatComponent },
       { path: 'profile', component: TherapistProfile },
       { path: 'games', component: TherapistGames },
       { path: 'patients', component: TherapistPatients },

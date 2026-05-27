@@ -8,10 +8,12 @@ from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
 from flask_caching import Cache
 from flask_cors import CORS
+from flask_socketio import SocketIO
 
 db = SQLAlchemy()
 cors = CORS()
 bcrypt = Bcrypt()
+socketio = SocketIO()
 mail = Mail()
 oauth = OAuth()
 

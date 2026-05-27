@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, g, has_request_context, render_template
 from config import Config
-from app.extensions import db, bcrypt, mail, oauth, login_manager, limiter, csrf, cache, cors
+from app.extensions import db, bcrypt, mail, oauth, login_manager, limiter, csrf, cache, cors, socketio
 from flask_talisman import Talisman
 from flask_login import current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -8,6 +8,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pythonjsonlogger import jsonlogger
 import os
+import click
 from uuid import uuid4
 from datetime import datetime
 import hashlib
@@ -408,7 +409,9 @@ def create_app(config_class=Config):
                 "'self'",
                 "https://cdn.jsdelivr.net",
                 "https://cdnjs.cloudflare.com",
-                "https://api.github.com"
+                "https://api.github.com",
+                "wss://moscowle-backend-production.up.railway.app",
+                "https://moscowle-backend-production.up.railway.app"
             ],
             'frame-ancestors': ["'self'"]
         }
@@ -454,6 +457,14 @@ def create_app(config_class=Config):
         # If flask-wtf isn't available, templates calling csrf_token() will fail gracefully elsewhere
         pass
     cache.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
+    
+    # ========== IMPORT SOCKETIO EVENTS ==========
+    try:
+        import app.socketio_events
+        app.logger.info("SocketIO event handlers registered")
+    except Exception as e:
+        app.logger.warning(f"SocketIO event registration failed: {e}")
     
     # ========== RATE LIMITING ==========
     try:
@@ -553,6 +564,55 @@ def create_app(config_class=Config):
     # Register Yape/Financial Integration Blueprint
     from app.routes.yape_routes import yape_bp
     app.register_blueprint(yape_bp)
+    
+    # Register Chat Blueprint (Telegram-style messaging)
+    from app.routes.chat_routes import chat_bp
+    app.register_blueprint(chat_bp)
+    
+    # ========== CLI COMMANDS ==========
+    @app.cli.command('migrate-messages')
+    def migrate_messages_command():
+        """Backfill Chat records for existing messages without a chat_id"""
+        from app.models import User, Message, Chat, ChatParticipant
+        pairs = db.session.query(
+            Message.sender_id, Message.receiver_id
+        ).filter(
+            Message.chat_id.is_(None)
+        ).distinct().all()
+        count = 0
+        for sender_id, receiver_id in pairs:
+            existing = Chat.query.join(
+                ChatParticipant, ChatParticipant.chat_id == Chat.id
+            ).filter(
+                ChatParticipant.user_id == sender_id
+            ).filter(
+                Chat.id.in_(
+                    db.session.query(ChatParticipant.chat_id).filter(
+                        ChatParticipant.user_id == receiver_id
+                    )
+                )
+            ).first()
+            if existing:
+                chat_id = existing.id
+            else:
+                chat = Chat(created_by_id=sender_id)
+                db.session.add(chat)
+                db.session.flush()
+                for uid in [sender_id, receiver_id]:
+                    db.session.add(ChatParticipant(chat_id=chat.id, user_id=uid))
+                chat_id = chat.id
+            updated = Message.query.filter(
+                Message.sender_id == sender_id,
+                Message.receiver_id == receiver_id,
+                Message.chat_id.is_(None)
+            ).update({'chat_id': chat_id}, synchronize_session=False)
+            count += updated
+            for op_id in [sender_id, receiver_id]:
+                ChatParticipant.query.filter_by(chat_id=chat_id, user_id=op_id).update(
+                    {'last_read_at': db.func.now()}, synchronize_session=False
+                )
+        db.session.commit()
+        click.echo(f"Migrated {count} messages into {len(pairs)} chat(s).")
 
     # ========== IA OLLAMA MANAGEMENT ==========
     # Solo ejecutar en el proceso principal de Flask para evitar duplicidad al usar el reloader de Werkzeug

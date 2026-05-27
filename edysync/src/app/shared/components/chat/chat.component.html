@@ -1,0 +1,213 @@
+<div class="h-[calc(100vh-12rem)] flex gap-0 bg-surface-container-lowest rounded-lg shadow-soft border border-border overflow-hidden">
+
+  <div class="w-80 border-r border-border flex flex-col shrink-0">
+    <div class="p-3 border-b border-border">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-bold text-on-surface">Chats</h3>
+        <span class="text-xs text-on-surface-variant">{{ chats.length }} conversaciones</span>
+      </div>
+      <div class="relative">
+        <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-xs"></fa-icon>
+        <input [(ngModel)]="searchQuery" placeholder="Buscar..."
+          class="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-lg bg-surface-container-high focus:ring-primary focus:border-primary outline-none">
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+      @if (loading) {
+        <div class="flex justify-center py-8">
+          <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+        @for (chat of filteredChats; track chat.id) {
+          <div (click)="selectChat(chat)"
+            class="flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors hover:bg-surface-container-low border-b border-border/30"
+            [class.bg-primary/5]="selectedChatId === chat.id">
+            <div class="relative shrink-0">
+              <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+                {{ (chat.other_user?.username || '?').charAt(0).toUpperCase() }}
+              </div>
+              @if (chat.other_user && isOnline(chat.other_user.id)) {
+                <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+              }
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-semibold text-on-surface truncate">{{ chat.other_user?.username || 'Usuario' }}</span>
+                @if (chat.last_message?.created_at) {
+                  <span class="text-[10px] text-on-surface-variant/60 shrink-0 ml-2">{{ chat.last_message!.created_at | date:'HH:mm' }}</span>
+                }
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-on-surface-variant truncate">
+                  @if (chat.last_message) {
+                    {{ chat.last_message.sender_id === currentUserId ? 'Tú: ' : '' }}{{ chat.last_message.body || (chat.last_message.attachment_type ? '📎 Archivo' : '') }}
+                  } @else {
+                    Sin mensajes
+                  }
+                </span>
+                @if (chat.unread_count > 0) {
+                  <span class="bg-primary text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full shrink-0 ml-2 px-1">
+                    {{ chat.unread_count > 99 ? '99+' : chat.unread_count }}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="text-center py-8 text-on-surface-variant/60 text-sm">No hay conversaciones</div>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="flex-1 flex flex-col">
+    @if (selectedChatId && selectedContact) {
+      <div class="px-4 py-3 border-b border-border flex items-center gap-3 shrink-0">
+        <div class="relative">
+          <div class="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+            {{ selectedContact.username.charAt(0).toUpperCase() }}
+          </div>
+          @if (isOnline(selectedContact.id)) {
+            <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+          }
+        </div>
+        <div>
+          <div class="text-sm font-bold text-on-surface">{{ selectedContact.username }}</div>
+          <div class="text-[10px]" [class.text-success]="isOnline(selectedContact.id)" [class.text-on-surface-variant/50]="!isOnline(selectedContact.id)">
+            {{ isOnline(selectedContact.id) ? 'En línea' : 'Desconectado' }}
+          </div>
+        </div>
+      </div>
+
+      <div #chatMessages class="flex-1 overflow-y-auto px-4 py-3 space-y-1 bg-surface-container-low/30">
+        @if (loadingMessages) {
+          <div class="flex justify-center py-8">
+            <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+          </div>
+        } @else if (messages.length === 0) {
+          <div class="flex items-center justify-center h-full text-on-surface-variant/50 text-sm">
+            <div class="text-center">
+              <fa-icon [icon]="['fas', 'comment']" class="text-3xl mb-2 opacity-30"></fa-icon>
+              <p>No hay mensajes aún</p>
+              <p class="text-xs">Envía el primer mensaje</p>
+            </div>
+          </div>
+        } @else {
+          @for (msg of messages; track msg.id) {
+            <div class="flex" [class.justify-end]="isOwnMessage(msg)" [class.justify-start]="!isOwnMessage(msg)">
+              <div class="max-w-[75%] min-w-[80px]"
+                [class]="isOwnMessage(msg)
+                  ? 'bg-primary text-white rounded-2xl rounded-br-md px-3.5 py-2'
+                  : 'bg-surface-container-lowest text-on-surface rounded-2xl rounded-bl-md px-3.5 py-2 shadow-sm border border-border/40'">
+                @if (msg.body) {
+                  <p class="text-sm whitespace-pre-wrap break-words">{{ msg.body }}</p>
+                }
+                @if (msg.file_url) {
+                  <div class="mt-1.5">
+                    @if (msg.attachment_type === 'image') {
+                      <img [src]="msg.file_url" class="max-w-full max-h-60 rounded-lg cursor-pointer" (click)="openFile(msg.file_url!)">
+                    } @else if (msg.attachment_type === 'audio') {
+                      <audio controls class="w-full max-w-[220px] h-8">
+                        <source [src]="msg.file_url">
+                      </audio>
+                    } @else if (msg.attachment_type === 'video') {
+                      <video controls class="w-full max-w-[220px] rounded-lg">
+                        <source [src]="msg.file_url">
+                      </video>
+                    } @else {
+                      <a [href]="msg.file_url" target="_blank"
+                        class="flex items-center gap-2 text-xs underline opacity-80 hover:opacity-100">
+                        <fa-icon [icon]="['fas', 'file']"></fa-icon>
+                        Ver archivo
+                      </a>
+                    }
+                  </div>
+                }
+                <div class="flex items-center justify-end gap-1 mt-0.5">
+                  <span class="text-[10px]" [class.text-white/60]="isOwnMessage(msg)" [class.text-on-surface-variant/50]="!isOwnMessage(msg)">
+                    {{ msg.created_at | date:'HH:mm' }}
+                  </span>
+                  @if (isOwnMessage(msg) && statusIcon(msg)) {
+                    <fa-icon [icon]="statusIcon(msg)" [class]="statusColor(msg)" class="text-[10px]"></fa-icon>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+          @if (typingChatId === selectedChatId && typingUsers.size > 0) {
+            <div class="flex justify-start">
+              <div class="bg-surface-container-lowest rounded-2xl rounded-bl-md px-3.5 py-2 shadow-sm border border-border/40">
+                <div class="flex items-center gap-1">
+                  <span class="text-xs text-on-surface-variant/60">escribiendo</span>
+                  <span class="typing-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="px-4 py-3 border-t border-border shrink-0 bg-surface-container-lowest">
+        @if (selectedFileName) {
+          <div class="flex items-center gap-2 mb-2 px-3 py-1.5 bg-surface-container-high rounded-lg text-xs text-on-surface">
+            <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+            <span class="truncate flex-1">{{ selectedFileName }}</span>
+            <button (click)="clearFile()" class="w-5 h-5 flex items-center justify-center rounded-full hover:bg-surface-container-highest">
+              <fa-icon [icon]="['fas', 'times']" class="text-[10px]"></fa-icon>
+            </button>
+          </div>
+        }
+        <div class="flex items-end gap-2">
+          <div class="flex-1 relative">
+            <textarea [(ngModel)]="newMessageText" placeholder="Escribe un mensaje..." rows="1"
+              class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:ring-primary focus:border-primary resize-none outline-none bg-surface-container-high"
+              (keydown.enter)="onKeydown($event)" (input)="onInput()"></textarea>
+          </div>
+          <div class="flex items-center gap-1">
+            <button (click)="fileInput.click()"
+              class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'paperclip']" class="text-sm"></fa-icon>
+            </button>
+            <input #fileInput type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" (change)="onFileSelected($event)" class="hidden">
+            @if (!isRecording) {
+              <button (click)="startRecording()"
+                class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+                <fa-icon [icon]="['fas', 'microphone']" class="text-sm"></fa-icon>
+              </button>
+            } @else {
+              <button (click)="stopRecording()"
+                class="w-9 h-9 flex items-center justify-center rounded-full bg-error/10 text-error hover:bg-error/20 transition-colors">
+                <fa-icon [icon]="['fas', 'stop']" class="text-sm"></fa-icon>
+              </button>
+            }
+            @if (sending) {
+              <div class="w-9 h-9 flex items-center justify-center">
+                <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+              </div>
+            } @else {
+              <button (click)="sendMessage()" [disabled]="!newMessageText.trim() && !selectedFile"
+                class="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+                [class.bg-primary]="!!(newMessageText.trim() || selectedFile)" [class.text-white]="!!(newMessageText.trim() || selectedFile)"
+                [class.bg-surface-container-high]="!newMessageText.trim() && !selectedFile" [class.text-on-surface-variant/50]="!newMessageText.trim() && !selectedFile">
+                <fa-icon [icon]="['fas', 'paper-plane']" class="text-sm"></fa-icon>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="flex-1 flex items-center justify-center text-on-surface-variant/60">
+        <div class="text-center">
+          <fa-icon [icon]="['fas', 'comment-dots']" class="text-5xl mb-4 opacity-30"></fa-icon>
+          <p class="text-sm font-medium">Selecciona una conversación</p>
+          <p class="text-xs">Elige un chat del listado para empezar</p>
+        </div>
+      </div>
+    }
+  </div>
+</div>
