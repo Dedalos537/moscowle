@@ -811,9 +811,16 @@ def api_contact_messages():
     if current_user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import ContactMessage
+    import json
     messages = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
     result = []
     for m in messages:
+        analysis = None
+        if m.ai_analysis:
+            try:
+                analysis = json.loads(m.ai_analysis)
+            except Exception:
+                analysis = {'raw': m.ai_analysis[:200]}
         result.append({
             'id': m.id,
             'first_name': m.first_name,
@@ -825,6 +832,7 @@ def api_contact_messages():
             'service_interest': m.service_interest,
             'urgency': m.urgency,
             'status': m.status,
+            'ai_analysis': analysis,
             'created_at': m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else None,
         })
     return jsonify({'success': True, 'data': result})

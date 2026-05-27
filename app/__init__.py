@@ -486,6 +486,19 @@ def create_app(config_class=Config):
             except Exception:
                 app.logger.warning("Auto-migration for notification table skipped or failed", exc_info=True)
 
+            # Auto-migrate contact_message table: add ai_analysis column if missing
+            try:
+                from sqlalchemy import inspect as sa_inspect, text
+                inspector = sa_inspect(db.engine)
+                columns = [c['name'] for c in inspector.get_columns('contact_message')]
+                if 'ai_analysis' not in columns:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE contact_message ADD COLUMN ai_analysis TEXT DEFAULT NULL"))
+                        conn.commit()
+                        app.logger.info("Auto-migration: added contact_message.ai_analysis")
+            except Exception:
+                app.logger.warning("Auto-migration for contact_message.ai_analysis skipped or failed", exc_info=True)
+
             app.logger.info("Database tables created/verified")
         except Exception as e:
             app.logger.error("Database connection/creation failed", exc_info=True)
