@@ -58,6 +58,8 @@ def migrate_legacy_messages():
     ).distinct().all()
 
     for (other_id,) in legacy_other_ids:
+        if other_id is None:
+            continue
         other_id = int(other_id)
         chat = Chat(created_by_id=current_user.id)
         db.session.add(chat)
@@ -361,7 +363,7 @@ def mark_read(chat_id):
     if chat_id == -1:
         if current_user.role == 'admin':
             from app.models import ContactMessage
-            ContactMessage.query.filter_by(is_read=False).update({'is_read': True})
+            ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
             db.session.commit()
         return jsonify({'success': True})
 
