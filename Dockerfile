@@ -8,4 +8,4 @@ RUN mkdir -p /app/backups && pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "-k", "eventlet", "-w", "1", "wsgi_entry:application"]
+CMD ["python", "start_server.py"]
