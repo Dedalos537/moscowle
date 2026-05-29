@@ -6,15 +6,29 @@
     </a>
     <span class="text-on-surface-variant">/</span>
     <span class="text-sm font-medium text-on-surface truncate">{{ session.title }}</span>
+    @if (isRecording) {
+      <div class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold"
+           style="background:var(--color-error);color:var(--color-on-error)">
+        <span class="w-2 h-2 rounded-full bg-white recording-pulse"></span>
+        <span class="font-mono tabular-nums">{{ recordingElapsed }}</span>
+        <span class="opacity-70">Seg.{{ chunkCount }}</span>
+      </div>
+    }
     <div class="ml-auto flex items-center gap-2">
       <input type="file" #fileInput class="hidden" accept="image/*,.doc,.docx" (change)="onImageSelected($event)">
       <button class="btn-secondary text-xs !px-2 !py-1.5" (click)="fileInput.click()">Subir</button>
-      <button class="text-xs font-bold px-2 py-1.5 rounded border transition-all"
+      <button class="text-xs font-bold px-2 py-1.5 rounded border transition-all flex items-center gap-1.5"
               [style.background]="isRecording ? 'var(--color-error)' : 'var(--color-surface-container-lowest)'"
               [style.color]="isRecording ? 'var(--color-on-error)' : 'var(--color-on-surface)'"
               [style.borderColor]="isRecording ? 'var(--color-error)' : 'var(--color-border)'"
               (click)="toggleRecording()">
-        {{ isRecording ? 'Detener' : 'Grabar' }}
+        @if (isRecording) {
+          <fa-icon [icon]="['fas', 'stop']" class="text-xs"></fa-icon>
+          Detener
+        } @else {
+          <fa-icon [icon]="['fas', 'microphone']" class="text-xs"></fa-icon>
+          Grabar
+        }
       </button>
       <button class="btn-secondary text-xs !px-2 !py-1.5" (click)="openCamera()">Camara</button>
     </div>
@@ -33,27 +47,30 @@
           </span>
         </div>
 
-        <div class="card p-4">
-          <div class="text-label text-on-surface-variant mb-4">Fases</div>
-          <div class="relative pl-8">
-            <div class="absolute left-[11px] top-1 bottom-1 w-0.5" style="background:var(--color-border)"></div>
-            <div class="relative pb-6 last:pb-0">
-              <div class="absolute left-[7px] top-1.5 w-2.5 h-2.5 rounded-full border-2 z-10"
-                   style="border-color:var(--color-primary);background:var(--color-surface-container-lowest)"></div>
-              <div class="text-xs font-bold mb-0.5" style="color:var(--color-primary)">Apertura</div>
-              <div class="text-[11px] text-on-surface-variant">Inicio de sesion</div>
+        <div class="card p-3">
+          <div class="text-label text-on-surface-variant mb-3">Sesion</div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-on-surface-variant">Estado</span>
+              <span class="font-bold px-2 py-0.5 rounded text-[10px] uppercase"
+                    [style.background]="session.status === 'in_progress' ? 'var(--color-warning-container)' : session.status === 'completed' ? 'var(--color-success-container)' : 'var(--color-info-container)'"
+                    [style.color]="session.status === 'in_progress' ? 'var(--color-warning)' : session.status === 'completed' ? 'var(--color-success)' : 'var(--color-info)'">
+                {{ session.status === 'in_progress' ? 'En curso' : session.status === 'completed' ? 'Completada' : session.status === 'scheduled' ? 'Programada' : session.status }}
+              </span>
             </div>
-            <div class="relative pb-6 last:pb-0">
-              <div class="absolute left-[7px] top-1.5 w-2.5 h-2.5 rounded-full border-2 z-10 animate-pulse"
-                   style="border-color:var(--color-primary);background:var(--color-surface-container-lowest)"></div>
-              <div class="text-xs font-bold mb-0.5 text-on-surface">Exploracion</div>
-              <div class="text-[11px] text-on-surface-variant">En curso</div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-on-surface-variant">Asistencia</span>
+              <span class="font-bold" [style.color]="attendance === 'present' ? 'var(--color-success)' : attendance === 'absent' ? 'var(--color-error)' : 'var(--color-on-surface-variant)'">
+                {{ attendance === 'present' ? 'Presente' : attendance === 'absent' ? 'Ausente' : 'Sin registrar' }}
+              </span>
             </div>
-            <div class="relative pb-0">
-              <div class="absolute left-[7px] top-1.5 w-2.5 h-2.5 rounded-full border-2 z-10"
-                   style="border-color:var(--color-border);background:var(--color-surface-container-lowest)"></div>
-              <div class="text-xs font-bold mb-0.5" style="color:var(--color-on-surface-variant)">Cierre</div>
-              <div class="text-[11px]" style="color:var(--color-on-surface-variant)">Pendiente</div>
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-on-surface-variant">Duracion</span>
+              <span class="font-bold text-on-surface">{{ session.duration_minutes || session.duration || '60' }} min</span>
+            </div>
+            <div class="flex items-center justify-between text-xs" *ngIf="session.location">
+              <span class="text-on-surface-variant">Ubicacion</span>
+              <span class="font-bold text-on-surface">{{ session.location }}</span>
             </div>
           </div>
         </div>
@@ -226,24 +243,20 @@
   </div>
 </div>
 
-<div class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 transition-opacity duration-300"
+<div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-2xl transition-all"
      *ngIf="isRecording"
-     style="background:var(--color-surface-container-lowest);backdrop-filter:blur(4px)">
-  <div class="w-24 h-24 rounded-full flex items-center justify-center" style="background:var(--color-error-container);animation:pulse 2s infinite">
-    <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:var(--color-error-container)">
-      <fa-icon [icon]="['fas', 'microphone']" class="text-white text-2xl"></fa-icon>
-    </div>
-  </div>
-  <div class="text-center">
-    <p class="text-white text-xl font-bold font-mono">{{ recordingElapsed }}</p>
-    <p class="text-white/70 text-sm">Grabando...</p>
-    <p class="text-white/50 text-xs mt-1">Segmento {{ chunkCount + 1 }}</p>
-  </div>
-  <div *ngIf="chunkUploadStatus" class="px-3 py-1 rounded-full text-white text-xs font-bold"
-       [style.background]="chunkUploadStatus.includes('Error') ? 'var(--color-error)' : chunkUploadStatus.includes('completa') || chunkUploadStatus.includes('transcrito') ? 'var(--color-success)' : 'var(--color-info)'">
+     style="background:var(--color-error);color:var(--color-on-error)">
+  <span class="w-2.5 h-2.5 rounded-full bg-white" style="animation:pulse 2s infinite"></span>
+  <span class="text-xs font-bold uppercase tracking-widest">En vivo</span>
+  <span class="text-sm font-mono font-bold tabular-nums">{{ recordingElapsed }}</span>
+  <span class="text-xs opacity-70">Seg.{{ chunkCount }}</span>
+  <div class="w-px h-5 bg-white/20"></div>
+  <div *ngIf="chunkUploadStatus" class="text-xs" [style.color]="chunkUploadStatus.includes('Error') ? 'var(--color-warning)' : chunkUploadStatus.includes('transcrito') || chunkUploadStatus.includes('completa') ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'">
     {{ chunkUploadStatus }}
   </div>
-  <button class="text-sm font-bold px-4 py-2 rounded" style="background:var(--color-error);color:var(--color-on-error)" (click)="toggleRecording()">Detener</button>
+  <button class="text-xs font-bold px-2.5 py-1 rounded" style="background:var(--color-error-container);color:var(--color-on-error-container)" (click)="toggleRecording()">
+    <fa-icon [icon]="['fas', 'stop']" class="text-xs mr-1"></fa-icon>Detener
+  </button>
 </div>
 
 <div class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300"

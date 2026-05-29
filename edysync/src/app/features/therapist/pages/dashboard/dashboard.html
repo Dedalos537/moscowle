@@ -49,32 +49,38 @@
             {{ data.total_students || 1 }} Estudiantes registrados
           </p>
 
-          <div class="flex items-center gap-8 flex-wrap">
-            <div class="relative w-32 h-32 flex-shrink-0">
-              <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border)" stroke-width="10"/>
-                <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-primary-container)" stroke-width="10" stroke-linecap="round"
-                        [attr.stroke-dasharray]="283"
-                        [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"
-                        class="transition-all duration-1000"/>
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-2xl font-black leading-none">{{ data.session_progress || 0 }}%</span>
-                <span class="text-label-caps text-white/70">Cobertura</span>
+            <div class="flex items-center gap-8 flex-wrap">
+              <div class="relative w-32 h-32 flex-shrink-0">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border)" stroke-width="10"/>
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-primary-container)" stroke-width="10" stroke-linecap="round"
+                          [attr.stroke-dasharray]="283"
+                          [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"
+                          class="transition-all duration-1000"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="text-2xl font-black leading-none">{{ data.session_progress || 0 }}%</span>
+                  <span class="text-label-caps text-white/70">Cobertura</span>
+                </div>
               </div>
-            </div>
 
-            <div class="flex-1 min-w-[200px]">
-              <div class="flex justify-between text-sm font-medium mb-2">
-                <span>Meta Semanal</span>
-                <span class="text-primary-container">85%</span>
+              <div class="flex-1 min-w-[200px]">
+                <div class="flex justify-between text-sm font-medium mb-2">
+                  <span>Cumplimiento Global</span>
+                  <span class="text-primary-container">{{ data.avg_compliance || 0 }}%</span>
+                </div>
+                <div class="w-full bg-white/10 rounded-full h-2.5 mb-3">
+                  <div class="bg-primary-container h-2.5 rounded-full transition-all duration-1000"
+                       [style.width.%]="data.avg_compliance || 0"></div>
+                </div>
+                <p class="text-xs text-white/50 italic" *ngIf="data.avg_compliance > 0">
+                  {{ data.avg_compliance < 70 ? 'Por debajo del objetivo del 70%' : data.avg_compliance < 85 ? 'Buen progreso, sigue as&iacute;' : 'Excelente cumplimiento' }}
+                </p>
+                <p class="text-xs text-white/50 italic" *ngIf="!data.avg_compliance || data.avg_compliance === 0">
+                  Sin auditor&iacute;as previas para calcular cumplimiento
+                </p>
               </div>
-              <div class="w-full bg-white/10 rounded-full h-2.5 mb-3">
-                <div class="bg-primary-container h-2.5 rounded-full transition-all duration-1000" style="width: 85%"></div>
-              </div>
-              <p class="text-xs text-white/50 italic">Faltan 15 puntos porcentuales para completar el módulo estadístico.</p>
             </div>
-          </div>
         </div>
       </div>
 
@@ -179,35 +185,35 @@
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in">
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-warning-container flex items-center justify-center text-warning flex-shrink-0">
-        <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
+      <div class="w-14 h-14 rounded-xl bg-info-container flex items-center justify-center text-info flex-shrink-0">
+        <fa-icon [icon]="['fas', 'calendar-day']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
-        <p class="text-h2 text-on-surface">08</p>
-        <p class="text-sm text-on-surface-variant font-medium">Reportes Pendientes</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-warning bg-warning-container">Prioridad Alta</span>
+        <p class="text-h2 text-on-surface">{{ data.agenda?.length || 0 }}</p>
+        <p class="text-sm text-on-surface-variant font-medium">Sesiones Hoy</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps" style="background:var(--color-info-container);color:var(--color-info)">{{ data.next_session?.status === 'in_progress' ? 'En curso' : data.next_session?.status === 'scheduled' ? 'Programadas' : 'Finalizadas' }}</span>
       </div>
     </div>
 
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
       <div class="w-14 h-14 rounded-xl bg-success-container flex items-center justify-center text-success flex-shrink-0">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-2xl"></fa-icon>
+        <fa-icon [icon]="['fas', 'users']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
-        <p class="text-h2 text-on-surface">+12%</p>
-        <p class="text-sm text-on-surface-variant font-medium">Progreso Académico</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">Este Mes</span>
+        <p class="text-h2 text-on-surface">{{ data.total_students || 0 }}</p>
+        <p class="text-sm text-on-surface-variant font-medium">Pacientes Hoy</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">Registrados</span>
       </div>
     </div>
 
     <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-success-container flex items-center justify-center text-success flex-shrink-0">
-        <fa-icon [icon]="['fas', 'brain']" class="text-2xl"></fa-icon>
+      <div class="w-14 h-14 rounded-xl bg-primary-container flex items-center justify-center text-primary flex-shrink-0">
+        <fa-icon [icon]="['fas', 'chart-pie']" class="text-2xl"></fa-icon>
       </div>
       <div class="min-w-0">
-        <p class="text-h3 text-on-surface">AI Coach</p>
-        <p class="text-sm text-on-surface-variant font-medium">Nuevas sugerencias</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">3 Tips Listos</span>
+        <p class="text-h2 text-on-surface">{{ data.avg_compliance || 0 }}%</p>
+        <p class="text-sm text-on-surface-variant font-medium">Cumplimiento</p>
+        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps" style="background:var(--color-primary-container);color:var(--color-primary)">{{ data.avg_compliance >= 70 ? 'Meta alcanzada' : 'En progreso' }}</span>
       </div>
     </div>
   </div>

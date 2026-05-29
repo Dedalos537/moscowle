@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { AlertService } from '../../../../core/services/alert.service';
@@ -66,8 +66,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   feedbackSubmitted = false;
 
   liveScore: number | null = null;
-  liveScoreTimer: any = null;
-  liveScoreClass: string = '';
+  private liveScoreSub: Subscription | null = null;
 
   showProgramModal = false;
   programText = '';
@@ -102,7 +101,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.headerService.reset();
     this.stopRecording();
     this.clearWarningTimer();
-    this.detenerLiveScore();
+    this.liveScoreSub?.unsubscribe();
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     if (this.videoStream) this.videoStream.getTracks().forEach(t => t.stop());
   }
@@ -132,7 +131,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
         this.loadAudit();
         this.loadProgram();
-        this.iniciarLiveScore();
+        this.initLiveScore();
         this.maybeAutoStartRecording();
       },
       error: () => {
@@ -534,28 +533,16 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     });
   }
 
-  iniciarLiveScore() {
-    this.detenerLiveScore();
-    const fn = () => {
-      this.http.get(`/api/sessions/${this.sessionId}/compare-live`).subscribe({
-        next: (res: any) => {
-          if (res.success) {
-            this.liveScore = res.score_vectorial;
-            const s = this.liveScore || 0;
-            this.liveScoreClass = s >= 70 ? 'text-green-600' : s >= 40 ? 'text-amber-600' : 'text-red-600';
-          }
-        }
-      });
-    };
-    fn();
-    this.liveScoreTimer = setInterval(fn, 30000);
-  }
-
-  detenerLiveScore() {
-    if (this.liveScoreTimer) {
-      clearInterval(this.liveScoreTimer);
-      this.liveScoreTimer = null;
-    }
+  private initLiveScore() {
+    this.liveScoreSub?.unsubscribe();
+    this.http.get(`/api/sessions/${this.sessionId}/compare-live`).subscribe({
+      next: (res: any) => {
+        if (res.success) this.liveScore = res.score_vectorial;
+      }
+    });
+    this.liveScoreSub = this.recordingService.auditScore$.subscribe(score => {
+      this.liveScore = score;
+    });
   }
 
   triggerAudit() {

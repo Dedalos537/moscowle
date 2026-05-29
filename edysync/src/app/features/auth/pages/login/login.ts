@@ -72,21 +72,12 @@ export class Login implements OnInit {
 
     this.authService.login(this.email, this.password).subscribe({
       next: (res) => {
-        this.alertType = 'success';
-        this.alertMessage = 'Inicio de sesión exitoso. Redirigiendo...';
-        
-        setTimeout(() => {
-           if (res.user && res.user.role === 'admin') {
-               this.router.navigate(['/admin/dashboard']);
-           } else if (res.user && res.user.role === 'terapista') {
-               this.router.navigate(['/therapist/dashboard']);
-           } else if (res.user && res.user.role === 'jugador') {
-               this.router.navigate(['/patient/dashboard']);
-           } else {
-               this.router.navigate(['/']);
-           }
-           this.isLoading = false;
-        }, 1000);
+        this.isLoading = false;
+        const route = res.user?.role === 'admin' ? '/admin/dashboard'
+                    : res.user?.role === 'terapista' ? '/therapist/dashboard'
+                    : res.user?.role === 'jugador' ? '/patient/dashboard'
+                    : '/';
+        this.router.navigate([route]);
       },
       error: (err) => {
         this.isLoading = false;
