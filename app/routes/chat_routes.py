@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, Message, Chat, ChatParticipant
-from sqlalchemy import func
+from sqlalchemy import case
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
 from datetime import datetime
@@ -48,7 +48,7 @@ def list_contacts():
 
 def migrate_legacy_messages():
     legacy_other_ids = db.session.query(
-        func.case(
+        case(
             (Message.sender_id == current_user.id, Message.receiver_id),
             else_=Message.sender_id
         ).label('other_id')
