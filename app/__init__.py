@@ -460,8 +460,9 @@ def create_app(config_class=Config):
     socketio.init_app(app, cors_allowed_origins="*")
     
     # ========== IMPORT SOCKETIO EVENTS ==========
+    from importlib import import_module
     try:
-        import app.socketio_events
+        import_module('app.socketio_events')
         app.logger.info("SocketIO event handlers registered")
     except Exception as e:
         app.logger.warning(f"SocketIO event registration failed: {e}")
