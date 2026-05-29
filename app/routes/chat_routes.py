@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models import User, Message, Chat, ChatParticipant
+from sqlalchemy import func
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
 from datetime import datetime
@@ -45,11 +46,44 @@ def list_contacts():
     } for u in contacts])
 
 
+def migrate_legacy_messages():
+    existing = db.session.query(ChatParticipant.chat_id).filter(ChatParticipant.user_id == current_user.id).subquery()
+    legacy_other_ids = db.session.query(
+        func.case(
+            (Message.sender_id == current_user.id, Message.receiver_id),
+            else_=Message.sender_id
+        ).label('other_id')
+    ).filter(
+        (Message.sender_id == current_user.id) | (Message.receiver_id == current_user.id),
+        Message.chat_id.is_(None)
+    ).filter(
+        ~Message.sender_id.in_(db.session.query(existing.c.chat_id))
+    ).distinct().all()
+
+    for (other_id,) in legacy_other_ids:
+        other_id = int(other_id)
+        chat = Chat(created_by_id=current_user.id)
+        db.session.add(chat)
+        db.session.flush()
+        for uid in [current_user.id, other_id]:
+            cp = ChatParticipant(chat_id=chat.id, user_id=uid)
+            db.session.add(cp)
+        Message.query.filter(
+            ((Message.sender_id == current_user.id) & (Message.receiver_id == other_id)) |
+            ((Message.sender_id == other_id) & (Message.receiver_id == current_user.id))
+        ).update({'chat_id': chat.id}, synchronize_session=False)
+    if legacy_other_ids:
+        db.session.commit()
+
+
 @chat_bp.route('/api/chats', methods=['GET'])
 @login_required
 def list_chats():
-    chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == current_user.id).order_by(Chat.created_at.desc()).all()
     online = set(online_users.keys())
+
+    migrate_legacy_messages()
+
+    chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == current_user.id).order_by(Chat.created_at.desc()).all()
     result = []
     for chat in chats:
         last_msg = chat.last_message
