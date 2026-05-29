@@ -124,7 +124,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
-    if (this.selectedChatId) this.chatService.leaveChat(this.selectedChatId);
+    if (this.selectedChatId && this.selectedChatId > 0) this.chatService.leaveChat(this.selectedChatId);
     this.subs.forEach((s) => s.unsubscribe());
   }
 
@@ -176,7 +176,10 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.selectedChatId = chat.id;
     this.selectedContact = chat.other_user;
     this.loadingMessages = true;
-    this.chatService.joinChat(chat.id);
+
+    if (chat.id > 0) {
+      this.chatService.joinChat(chat.id);
+    }
 
     if (chat.unread_count > 0) {
       this.chatService.markRead(chat.id).subscribe();
@@ -246,6 +249,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   sendMessage() {
     if ((!this.newMessageText.trim() && !this.selectedFile) || !this.selectedChatId || this.sending) return;
+    if (this.selectedChatId < 0) return;
     this.sending = true;
     this.chatService.stopTyping(this.selectedChatId);
     this.chatService.sendMessage(this.selectedChatId, this.newMessageText.trim() || undefined, this.selectedFile).subscribe({
@@ -260,7 +264,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   onInput() {
-    if (!this.selectedChatId) return;
+    if (!this.selectedChatId || this.selectedChatId < 0) return;
     if (this.newMessageText.length === 1) {
       this.chatService.startTyping(this.selectedChatId);
     }

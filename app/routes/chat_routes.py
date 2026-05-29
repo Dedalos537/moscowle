@@ -47,7 +47,6 @@ def list_contacts():
 
 
 def migrate_legacy_messages():
-    existing = db.session.query(ChatParticipant.chat_id).filter(ChatParticipant.user_id == current_user.id).subquery()
     legacy_other_ids = db.session.query(
         func.case(
             (Message.sender_id == current_user.id, Message.receiver_id),
@@ -56,8 +55,6 @@ def migrate_legacy_messages():
     ).filter(
         (Message.sender_id == current_user.id) | (Message.receiver_id == current_user.id),
         Message.chat_id.is_(None)
-    ).filter(
-        ~Message.sender_id.in_(db.session.query(existing.c.chat_id))
     ).distinct().all()
 
     for (other_id,) in legacy_other_ids:
@@ -109,6 +106,32 @@ def list_chats():
                 'attachment_type': last_msg.attachment_type
             } if last_msg else None
         })
+
+    if current_user.role == 'admin':
+        from app.models import ContactMessage
+        last_contact = ContactMessage.query.order_by(ContactMessage.created_at.desc()).first()
+        unread_contact = ContactMessage.query.filter_by(status='unread').count()
+        result.append({
+            'id': -1,
+            'is_group': False,
+            'created_at': last_contact.created_at.isoformat() if last_contact else None,
+            'other_user': {
+                'id': -1,
+                'username': 'Mensajes de la Web',
+                'role': 'system',
+                'avatar': None,
+                'is_online': False
+            },
+            'unread_count': unread_contact,
+            'last_message': {
+                'id': 0,
+                'body': last_contact.message[:100] if last_contact else 'Sin mensajes',
+                'sender_id': -1,
+                'created_at': last_contact.created_at.isoformat() if last_contact else None,
+                'attachment_type': None
+            } if last_contact else None
+        })
+
     return jsonify(result)
 
 
@@ -150,6 +173,35 @@ def create_chat():
 @chat_bp.route('/api/chats/<int:chat_id>/messages', methods=['GET'])
 @login_required
 def get_messages(chat_id):
+    if chat_id == -1:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+        from app.models import ContactMessage
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 50, type=int)
+        limit = min(limit, 100)
+        msgs = ContactMessage.query.order_by(ContactMessage.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+        msgs.reverse()
+        total = ContactMessage.query.count()
+        ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
+        db.session.commit()
+        return jsonify({
+            'messages': [{
+                'id': m.id,
+                'sender_id': -1,
+                'receiver_id': current_user.id,
+                'body': f"{m.first_name} {m.last_name} ({m.email}){(' - ' + m.phone) if m.phone else ''}:\n{m.message}",
+                'status': 'read',
+                'is_read': m.status != 'unread',
+                'file_url': None,
+                'attachment_type': None,
+                'created_at': m.created_at.isoformat() if m.created_at else None
+            } for m in msgs],
+            'total': total,
+            'page': page,
+            'has_more': (page * limit) < total
+        })
+
     chat = Chat.query.get(chat_id)
     if not chat:
         return jsonify({'success': False, 'message': 'Chat no encontrado'}), 404
@@ -306,6 +358,13 @@ def send_message(chat_id):
 @chat_bp.route('/api/chats/<int:chat_id>/read', methods=['PUT'])
 @login_required
 def mark_read(chat_id):
+    if chat_id == -1:
+        if current_user.role == 'admin':
+            from app.models import ContactMessage
+            ContactMessage.query.filter_by(is_read=False).update({'is_read': True})
+            db.session.commit()
+        return jsonify({'success': True})
+
     participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
     if not participant:
         return jsonify({'success': False, 'message': 'No eres participante'}), 403
