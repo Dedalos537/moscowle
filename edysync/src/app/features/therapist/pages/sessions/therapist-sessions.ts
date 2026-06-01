@@ -19,6 +19,8 @@ export class TherapistSessions implements OnInit, OnDestroy {
   loading = true;
   agendaEvents: any[] = [];
   showEditModal = false;
+  showNotesModal = false;
+  selectedNote = '';
   submitting = false;
   deleting = false;
   error: string | null = null;
@@ -75,23 +77,49 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
+  get monthYearLabel(): string {
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return meses[this.fechaSeleccionada.getMonth()] + ' ' + this.fechaSeleccionada.getFullYear();
+  }
+
   generarDias() {
     this.diasSemana = [];
-    const hoy = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(hoy);
-      d.setDate(hoy.getDate() - i);
+    const hoy = new Date(this.fechaSeleccionada);
+    const diaSem = hoy.getDay();
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - ((diaSem + 6) % 7));
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lunes);
+      d.setDate(lunes.getDate() + i);
       this.diasSemana.push(d);
     }
   }
 
+  prevWeek() {
+    const d = new Date(this.fechaSeleccionada);
+    d.setDate(d.getDate() - 7);
+    this.fechaSeleccionada = d;
+    this.generarDias();
+    this.cargarSesiones();
+  }
+
+  nextWeek() {
+    const d = new Date(this.fechaSeleccionada);
+    d.setDate(d.getDate() + 7);
+    this.fechaSeleccionada = d;
+    this.generarDias();
+    this.cargarSesiones();
+  }
+
   cambiarFecha(d: Date) {
     this.fechaSeleccionada = d;
+    this.generarDias();
     this.cargarSesiones();
   }
 
   irHoy() {
     this.fechaSeleccionada = new Date();
+    this.generarDias();
     this.cargarSesiones();
   }
 
@@ -100,12 +128,30 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   esHoy(d: Date): boolean {
-    const hoy = new Date();
-    return d.toDateString() === hoy.toDateString();
+    return d.toDateString() === new Date().toDateString();
   }
 
   esSeleccionado(d: Date): boolean {
     return d.toDateString() === this.fechaSeleccionada.toDateString();
+  }
+
+  initials(name: string): string {
+    if (!name) return '?';
+    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  formatTime(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  duration(start: string, end: string): string {
+    if (!start || !end) return '';
+    const diff = new Date(end).getTime() - new Date(start).getTime();
+    const mins = Math.round(diff / 60000);
+    if (mins < 60) return mins + ' min';
+    return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
   }
 
   private loadStats() {
@@ -141,8 +187,31 @@ export class TherapistSessions implements OnInit, OnDestroy {
     }));
   }
 
+  openCreateModal() {
+    const today = new Date().toISOString().split('T')[0];
+    this.editForm = {
+      id: 0,
+      title: '',
+      date: today,
+      start_time: '',
+      end_time: '',
+      status: 'scheduled',
+      patient: '',
+    };
+    this.showEditModal = true;
+  }
+
   irSesion(id: number) {
     this.router.navigate(['/therapist/sessions', id, 'review']);
+  }
+
+  viewNotes(e: any) {
+    this.selectedNote = e.notes || e.extendedProps?.notes || '';
+    this.showNotesModal = true;
+  }
+
+  closeNotesModal() {
+    this.showNotesModal = false;
   }
 
   statusColor(status: string): string {
@@ -172,7 +241,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       date: new Date(event.start).toISOString().split('T')[0],
       start_time: event.start ? new Date(event.start).toTimeString().substring(0, 5) : '',
       end_time: event.end ? new Date(event.end).toTimeString().substring(0, 5) : '',
-      status: event.extendedProps?.status || 'scheduled',
+      status: event.status || 'scheduled',
       patient: event.extendedProps?.patient || '',
     };
     this.showEditModal = true;

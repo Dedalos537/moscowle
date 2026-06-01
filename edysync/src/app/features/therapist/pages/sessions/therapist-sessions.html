@@ -1,84 +1,166 @@
-<div class="p-4 max-w-5xl mx-auto">
-  <div class="flex items-center justify-between mb-3">
-    <div class="flex gap-3">
-      <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-on-surface-variant">Hoy</div>
-        <div class="text-xl font-bold" style="color:var(--color-primary)">{{ stats.sessions_today }}</div>
-      </div>
-      <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-on-surface-variant">Comple</div>
-        <div class="text-xl font-bold" style="color:var(--color-success)">{{ stats.completed_sessions }}</div>
-      </div>
-      <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-on-surface-variant">Pend</div>
-        <div class="text-xl font-bold" style="color:var(--color-warning)">{{ stats.pending_sessions }}</div>
-      </div>
-      <div class="stat-card py-3 px-4 min-w-[72px] text-center">
-        <div class="text-label text-on-surface-variant">Pac</div>
-        <div class="text-xl font-bold" style="color:var(--color-info)">{{ stats.active_patients }}</div>
-      </div>
+<div class="p-8 max-w-7xl mx-auto">
+  <div class="flex items-end justify-between mb-8">
+    <div>
+      <h2 class="text-h2 font-h2 text-on-surface">Mis Sesiones</h2>
+      <p class="text-body-md text-on-surface-variant/70">Gestiona tus sesiones con pacientes</p>
     </div>
-    <button class="btn-secondary text-xs !px-3 !py-1.5" (click)="irHoy()">Hoy</button>
+    <button class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg hover:scale-[1.02] transition-all" (click)="openCreateModal()">
+      <fa-icon [icon]="['fas', 'plus']" class="text-sm"></fa-icon>
+      Nueva Sesión
+    </button>
   </div>
 
-  <div class="flex gap-1 overflow-x-auto pb-2 mb-4 hide-scrollbar">
-    @for (d of diasSemana; track $index) {
-      <button class="flex-shrink-0 flex flex-col items-center justify-center w-12 h-16 rounded-lg text-xs font-bold border transition-all"
-              [class.text-on-primary]="esSeleccionado(d)"
-              [class.text-on-surface]="!esSeleccionado(d)"
-              [style.borderColor]="esSeleccionado(d) ? 'var(--color-primary)' : 'var(--color-border)'"
-              [style.background]="esSeleccionado(d) ? 'var(--color-primary)' : 'var(--color-surface-container-lowest)'"
-              (click)="cambiarFecha(d)">
-        <span class="text-[10px] uppercase opacity-70">{{ diaSemana(d) }}</span>
-        <span class="text-sm">{{ d.getDate() }}</span>
-      </button>
-    }
+  <div class="grid grid-cols-12 gap-6 mb-8">
+    <div class="col-span-12 lg:col-span-8 glass-card rounded-2xl p-6 signature-shadow">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary"></fa-icon>
+          <h3 class="font-bold">{{ monthYearLabel }}</h3>
+        </div>
+        <div class="flex gap-2">
+          <button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors" (click)="prevWeek()"><fa-icon [icon]="['fas', 'chevron-left']"></fa-icon></button>
+          <button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors" (click)="nextWeek()"><fa-icon [icon]="['fas', 'chevron-right']"></fa-icon></button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center overflow-x-auto pb-2">
+        @for (d of diasSemana; track $index) {
+          <button class="flex flex-col items-center gap-2 min-w-[60px] p-3 rounded-2xl transition-all cursor-pointer"
+                  [class.bg-primary]="esSeleccionado(d)"
+                  [class.text-on-primary]="esSeleccionado(d)"
+                  [class.scale-110]="esSeleccionado(d)"
+                  [class.shadow-lg]="esSeleccionado(d)"
+                  [class.hover:bg-surface-container-low]="!esSeleccionado(d)"
+                  [class.text-on-surface]="!esSeleccionado(d)"
+                  (click)="cambiarFecha(d)">
+            <span class="text-xs font-bold text-on-surface-variant/70 uppercase">{{ diaSemana(d) }}</span>
+            <span class="text-lg font-bold">{{ d.getDate() }}</span>
+            @if (esSeleccionado(d)) {
+              <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+            }
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="col-span-12 lg:col-span-4 grid grid-cols-2 gap-4">
+      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Hoy</p>
+        <p class="text-3xl font-black text-primary">{{ stats.sessions_today }}</p>
+      </div>
+      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Completas</p>
+        <p class="text-3xl font-black text-success">{{ stats.completed_sessions }}</p>
+      </div>
+      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pendientes</p>
+        <p class="text-3xl font-black text-warning">{{ stats.pending_sessions }}</p>
+      </div>
+      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between border-2 border-primary/10">
+        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pacientes</p>
+        <p class="text-3xl font-black text-primary">{{ stats.active_patients }}</p>
+      </div>
+    </div>
   </div>
 
   <div class="relative">
-    <div class="absolute left-[18px] top-0 bottom-0 w-0.5" style="background:var(--color-border)"></div>
+    <div class="absolute left-[39px] top-4 bottom-4 w-0.5 bg-border hidden md:block"></div>
 
     @if (loading) {
-      <div class="flex justify-center py-16">
-        <div class="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
+      <div class="flex justify-center py-24">
+        <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
       </div>
     }
 
     @if (!loading && agendaEvents.length === 0) {
-      <div class="text-center py-16 text-on-surface-variant text-sm">
-        Sin sesiones para esta fecha
+      <div class="flex flex-col items-center justify-center py-24 text-center">
+        <div class="w-32 h-32 bg-surface-container-low rounded-full flex items-center justify-center mb-6">
+          <fa-icon [icon]="['fas', 'calendar-times']" class="text-5xl text-on-surface-variant/30"></fa-icon>
+        </div>
+        <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
+        <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
+        <button class="bg-primary text-on-primary px-8 py-4 rounded-full font-bold shadow-xl hover:scale-105 transition-all" (click)="openCreateModal()">
+          Agendar Primera Sesión
+        </button>
       </div>
     }
 
-    @for (e of agendaEvents; track $index; let i = $index) {
-      <div class="relative pl-10 pb-6 last:pb-0">
-        <div class="absolute left-[13px] top-1 w-[12px] h-[12px] rounded-full border-2 z-10"
-             [style.background]="'var(--color-surface-container-lowest)'"
-             [style.borderColor]="statusColor(e.extendedProps?.status)"
-             [class.animate-pulse]="e.extendedProps?.status === 'in_progress'">
+    @for (e of agendaEvents; track e.id; let last = $last) {
+      <div class="relative flex flex-col md:flex-row items-start gap-6 mb-6">
+        <div class="hidden md:flex flex-col items-center z-10 pt-4">
+          <div class="w-5 h-5 rounded-full border-4 border-white"
+               [style.background]="statusColor(e.status)"
+               [style.boxShadow]="'0 0 0 4px ' + statusColor(e.status) + '33'"
+               [class.animate-pulse]="e.status === 'in_progress'">
+          </div>
         </div>
 
-        <div class="ml-2 card p-0 hover:shadow-hover transition-shadow cursor-pointer"
-             (click)="onEventClick(e)">
-          <div class="p-3">
-            <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="w-2 h-2 rounded-full shrink-0" [style.background]="statusColor(e.extendedProps?.status)"></span>
-                <span class="text-sm font-bold text-on-surface truncate">{{ e.title }}</span>
+        <div class="flex-1 w-full bg-surface p-6 rounded-3xl signature-shadow border border-border/50 hover:border-primary-container/30 transition-all group"
+             [class.border-2]="e.status === 'in_progress'"
+             [class.border-amber-200]="e.status === 'in_progress'">
+          @if (e.status === 'in_progress') {
+            <div class="flex justify-end -mt-2 -mr-2 mb-2">
+              <span class="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 bg-amber-600 rounded-full animate-ping"></span> EN CURSO
+              </span>
+            </div>
+          }
+
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-secondary-container flex items-center justify-center text-xl font-bold text-secondary shrink-0">
+                {{ initials(e.title) }}
               </div>
-              <span class="text-xs text-on-surface-variant shrink-0">
-                {{ e.start ? (e.start | date:'HH:mm') : '??' }} -
-                {{ e.end ? (e.end | date:'HH:mm') : '??' }}
-              </span>
+              <div>
+                <h4 class="text-lg font-bold text-on-surface">{{ e.title }}</h4>
+                <p class="text-sm text-on-surface-variant/70 flex items-center gap-2">
+                  <fa-icon [icon]="['fas', 'clock']" class="text-xs"></fa-icon>
+                  {{ formatTime(e.start) }}{{ e.end ? ' - ' + formatTime(e.end) : '' }}
+                  @if (e.start && e.end) {
+                    <span class="text-on-surface-variant/50">({{ duration(e.start, e.end) }})</span>
+                  }
+                </p>
+              </div>
             </div>
-            <div class="flex items-center gap-2 mt-1">
-              <span class="text-xs text-on-surface-variant">{{ e.extendedProps?.patient || '' }}</span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
-                    [style.background]="'color-mix(in srgb, ' + statusColor(e.extendedProps?.status) + ' 15%, transparent)'"
-                    [style.color]="statusColor(e.extendedProps?.status)">
-                {{ statusLabel(e.extendedProps?.status) }}
+            <div class="flex items-center gap-3">
+              <span class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide"
+                    [style.background]="statusColor(e.status) + '1A'"
+                    [style.color]="statusColor(e.status)">
+                {{ statusLabel(e.status) }}
               </span>
+              <div class="flex gap-1">
+                <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-v']" class="text-on-surface-variant"></fa-icon></button>
+              </div>
             </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-y border-border/30">
+            @if (e.location) {
+              <div class="flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                <span class="text-sm text-on-surface-variant/70">{{ e.location }}</span>
+              </div>
+            }
+            <div class="flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
+              <span class="text-sm text-on-surface-variant/70">Auditoría IA: {{ e.extendedProps?.audit_score || '—' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'sticky-note']" class="text-sm text-on-surface-variant/70"></fa-icon>
+              <span class="text-sm italic text-on-surface-variant/70 truncate">{{ e.notes ? ('"' + e.notes + '"') : 'Sin notas' }}</span>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-3 justify-end">
+            @if (e.notes) {
+              <button class="px-5 py-2.5 rounded-xl border border-border hover:bg-surface-container-low transition-colors text-sm font-bold" (click)="viewNotes(e)">
+                Ver Notas
+              </button>
+            }
+            <button class="px-5 py-2.5 rounded-xl bg-primary text-on-primary flex items-center gap-2 shadow-md hover:translate-y-[-2px] active:scale-95 transition-all text-sm font-bold"
+                    (click)="irSesion(e.id)">
+              <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
+              Revisar Sesión
+            </button>
           </div>
         </div>
       </div>
@@ -86,14 +168,14 @@
   </div>
 </div>
 
-<app-modal [isOpen]="showEditModal" title="Editar Sesion" (close)="closeEditModal()">
+<app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
   <div class="space-y-4">
     <div class="p-3 rounded text-sm font-medium"
          style="background:var(--color-primary-container);color:var(--color-on-primary-container)">
       Paciente: {{ editForm.patient }}
     </div>
     <div>
-      <label class="block text-sm font-medium text-on-surface mb-1">Titulo</label>
+      <label class="block text-sm font-medium text-on-surface mb-1">Título</label>
       <input type="text" [(ngModel)]="editForm.title" class="input-field">
     </div>
     <div>
@@ -118,11 +200,20 @@
   <div modal-footer>
     <div class="flex gap-2">
       <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
-      <app-button variant="secondary" label="Revisar Sesion" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
+      <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
     <div class="flex gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
       <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
     </div>
+  </div>
+</app-modal>
+
+<app-modal [isOpen]="showNotesModal" title="Notas de la Sesión" (close)="closeNotesModal()">
+  <div class="p-4 whitespace-pre-wrap text-sm text-on-surface leading-relaxed">
+    {{ selectedNote }}
+  </div>
+  <div modal-footer>
+    <app-button variant="primary" label="Cerrar" (clicked)="closeNotesModal()"></app-button>
   </div>
 </app-modal>
