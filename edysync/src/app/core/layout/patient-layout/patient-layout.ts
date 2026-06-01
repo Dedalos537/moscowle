@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { SidebarService } from '../../services/sidebar.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-patient-layout',
@@ -28,10 +29,15 @@ export class PatientLayout implements OnInit, OnDestroy {
     private router: Router,
     public confirmService: ConfirmService,
     public sidebarService: SidebarService,
+    private themeService: ThemeService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
+    this.subs.add(this.themeService.theme$.subscribe(t => {
+      this.theme = t;
+      this.cdr.markForCheck();
+    }));
     this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {
         this.routeLoading = true;
@@ -45,14 +51,6 @@ export class PatientLayout implements OnInit, OnDestroy {
         setTimeout(() => { this.routeLoading = false; this.cdr.markForCheck(); }, 350);
       }
     }));
-    const saved = localStorage.getItem('theme');
-    const isDark = document.documentElement.classList.contains('dark');
-    if (saved === 'dark' || (!saved && isDark)) {
-      this.theme = 'dark';
-      document.documentElement.classList.add('dark');
-    } else if (saved !== 'dark') {
-      document.documentElement.classList.remove('dark');
-    }
     this.subs.add(this.sidebarService.open$.subscribe(open => {
       this.sidebarOpen = open;
       this.cdr.markForCheck();
@@ -68,14 +66,6 @@ export class PatientLayout implements OnInit, OnDestroy {
   }
 
   toggleDarkMode() {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-    if (this.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-    this.cdr.markForCheck();
+    this.themeService.toggle();
   }
 }

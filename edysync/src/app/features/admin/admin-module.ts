@@ -12,7 +12,6 @@ import { UsersList } from './pages/users/users-list/users-list';
 import { UserDetail } from './pages/users/user-detail/user-detail';
 import { Finanzas } from './pages/finanzas/finanzas';
 import { Payments } from './pages/payments/payments';
-import { Debtors } from './pages/debtors/debtors';
 import { PaymentHistory } from './pages/payment-history/payment-history';
 import { Sessions } from './pages/sessions/sessions';
 import { Expenses } from './pages/expenses/expenses';
@@ -36,7 +35,6 @@ import { Logs } from './pages/logs/logs';
     UserDetail,
     Finanzas,
     Payments,
-    Debtors,
     PaymentHistory,
     Sessions,
     Expenses,

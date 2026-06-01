@@ -1,4 +1,7 @@
-<aside class="sidebar">
+@if (isOpen) {
+  <div class="sidebar-overlay" (click)="sidebarService.close()"></div>
+}
+<aside class="sidebar" [class.sidebar--open]="isOpen">
   <div class="sidebar-brand">
     <div class="sidebar-logo">
       <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
@@ -19,6 +22,7 @@
         #rla="routerLinkActive"
         class="nav-link"
         [class.nav-link--active]="rla.isActive"
+        (click)="sidebarService.close()"
       >
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
         <span>{{ item.label }}</span>
