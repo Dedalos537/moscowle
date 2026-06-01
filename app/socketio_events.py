@@ -15,11 +15,14 @@ def handle_connect():
             online_users[user_id] = set()
         online_users[user_id].add(request.sid)
 
+        # Enviar lista completa de usuarios online al que se conecta
+        emit('users:online', {'user_ids': list(online_users.keys())})
+
         chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == user_id).all()
         for chat in chats:
             join_room(f'chat_{chat.id}')
 
-        emit('presence:online', {
+        emit('user:online', {
             'user_id': user_id,
             'username': current_user.username
         }, broadcast=True, include_self=False)
@@ -35,7 +38,7 @@ def handle_disconnect():
             online_users[user_id].discard(request.sid)
             if not online_users[user_id]:
                 del online_users[user_id]
-                emit('presence:offline', {
+                emit('user:offline', {
                     'user_id': user_id,
                     'last_seen': datetime.utcnow().isoformat()
                 }, broadcast=True, include_self=False)
@@ -52,7 +55,7 @@ def handle_chat_join(data):
 def handle_typing_start(data):
     chat_id = data.get('chat_id')
     if current_user.is_authenticated and chat_id:
-        emit('typing:start', {
+        emit('user:typing', {
             'user_id': current_user.id,
             'username': current_user.username,
             'chat_id': chat_id
@@ -62,7 +65,7 @@ def handle_typing_start(data):
 def handle_typing_stop(data):
     chat_id = data.get('chat_id')
     if current_user.is_authenticated and chat_id:
-        emit('typing:stop', {
+        emit('user:stop_typing', {
             'user_id': current_user.id,
             'chat_id': chat_id
         }, room=f'chat_{chat_id}', include_self=False)
