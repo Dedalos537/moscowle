@@ -540,6 +540,41 @@ def create_app(config_class=Config):
             except Exception:
                 app.logger.warning("Auto-migration for contact_message.ai_analysis skipped or failed", exc_info=True)
 
+            # Auto-migrate message table: add chat columns if missing
+            try:
+                from sqlalchemy import inspect as sa_inspect, text
+                inspector = sa_inspect(db.engine)
+                columns = [c['name'] for c in inspector.get_columns('message')]
+                with db.engine.connect() as conn:
+                    if 'chat_id' not in columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN chat_id INTEGER REFERENCES chat(id) DEFAULT NULL"))
+                        app.logger.info("Auto-migration: added message.chat_id")
+                    if 'status' not in columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN status VARCHAR(20) DEFAULT 'sent'"))
+                        app.logger.info("Auto-migration: added message.status")
+                    if 'attachment_path' not in columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN attachment_path VARCHAR(500) DEFAULT NULL"))
+                        app.logger.info("Auto-migration: added message.attachment_path")
+                    if 'attachment_type' not in columns:
+                        conn.execute(text("ALTER TABLE message ADD COLUMN attachment_type VARCHAR(50) DEFAULT NULL"))
+                        app.logger.info("Auto-migration: added message.attachment_type")
+                    conn.commit()
+            except Exception:
+                app.logger.warning("Auto-migration for message table skipped or failed", exc_info=True)
+
+            # Auto-migrate chat_participant table: add last_read_at column if missing
+            try:
+                from sqlalchemy import inspect as sa_inspect, text
+                inspector = sa_inspect(db.engine)
+                columns = [c['name'] for c in inspector.get_columns('chat_participant')]
+                if 'last_read_at' not in columns:
+                    with db.engine.connect() as conn:
+                        conn.execute(text("ALTER TABLE chat_participant ADD COLUMN last_read_at TIMESTAMP DEFAULT NULL"))
+                        conn.commit()
+                        app.logger.info("Auto-migration: added chat_participant.last_read_at")
+            except Exception:
+                app.logger.warning("Auto-migration for chat_participant.last_read_at skipped or failed", exc_info=True)
+
             app.logger.info("Database tables created/verified")
         except Exception as e:
             app.logger.error("Database connection/creation failed", exc_info=True)

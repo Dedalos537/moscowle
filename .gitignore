@@ -51,7 +51,7 @@ ai_models/
 
 # Logs
 *.log
-logs/
+/logs/
 
 # Backup files
 *.backup
