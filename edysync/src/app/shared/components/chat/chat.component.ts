@@ -18,7 +18,17 @@ export class ChatComponent implements OnInit, OnDestroy {
   chats: ChatItem[] = [];
   messages: MessageData[] = [];
   currentUserId = 0;
+  userRole = '';
   searchQuery = '';
+  roleFilter = 'todos';
+  showContacts = false;
+  roleLabels: Record<string, string> = {
+    admin: 'Admin',
+    supervisor: 'Supervisor',
+    terapista: 'Terapista',
+    paciente: 'Paciente',
+  };
+  roleOrder = ['admin', 'supervisor', 'terapista', 'paciente'];
 
   selectedChatId: number | null = null;
   selectedContact: ContactUser | null = null;
@@ -56,6 +66,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.auth.currentUser$.subscribe((user) => {
       if (user) {
         this.currentUserId = user.id;
+        this.userRole = user.role;
         this.chatService.connect();
         this.loadData();
       }
@@ -133,29 +144,62 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.chatService.getChats().subscribe({
       next: (chats) => {
         this.chats = chats;
-        this.chatService.getContacts().subscribe({
-          next: (contacts) => {
-            this.contacts = contacts;
-            this.loading = false;
-            this.cdr.markForCheck();
-          },
-          error: () => (this.loading = false),
-        });
+        this.loadContacts();
       },
       error: () => (this.loading = false),
     });
   }
 
+  private loadContacts() {
+    this.chatService.getContacts(this.roleFilter !== 'todos' ? this.roleFilter : undefined).subscribe({
+      next: (contacts) => {
+        this.contacts = contacts;
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => (this.loading = false),
+    });
+  }
+
+  setRoleFilter(role: string) {
+    this.roleFilter = role;
+    this.loadContacts();
+  }
+
   get filteredContacts(): ContactUser[] {
-    if (!this.searchQuery.trim()) return this.contacts;
-    const q = this.searchQuery.toLowerCase();
-    return this.contacts.filter((c) => c.username.toLowerCase().includes(q));
+    let list = [...this.contacts];
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.toLowerCase();
+      list = list.filter((c) => c.username.toLowerCase().includes(q));
+    }
+    return list;
+  }
+
+  get canFilterByRole(): boolean {
+    return this.userRole === 'admin' || this.userRole === 'supervisor';
+  }
+
+  get groupedContacts(): { role: string; users: ContactUser[] }[] {
+    const groups: { role: string; users: ContactUser[] }[] = [];
+    for (const role of this.roleOrder) {
+      const users = this.filteredContacts.filter((c) => c.role === role);
+      if (users.length > 0) {
+        groups.push({ role, users });
+      }
+    }
+    return groups;
   }
 
   get filteredChats(): ChatItem[] {
-    if (!this.searchQuery.trim()) return this.chats;
+    let list = [...this.chats];
+    list.sort((a, b) => {
+      const ta = a.last_message?.created_at || a.created_at || '';
+      const tb = b.last_message?.created_at || b.created_at || '';
+      return tb.localeCompare(ta);
+    });
+    if (!this.searchQuery.trim()) return list;
     const q = this.searchQuery.toLowerCase();
-    return this.chats.filter((c) => c.other_user?.username.toLowerCase().includes(q));
+    return list.filter((c) => c.other_user?.username.toLowerCase().includes(q));
   }
 
   selectContact(contact: ContactUser) {

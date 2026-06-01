@@ -4,7 +4,19 @@
     <div class="p-3 border-b border-border">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-bold text-on-surface">Chats</h3>
-        <span class="text-xs text-on-surface-variant">{{ chats.length }} conversaciones</span>
+        <div class="flex items-center gap-2">
+          @if (canFilterByRole) {
+            <button (click)="showContacts = !showContacts"
+              class="text-[10px] px-2 py-1 rounded-full transition-colors"
+              [class.bg-primary/10]="showContacts" [class.text-primary]="showContacts"
+              [class.text-on-surface-variant/60]="!showContacts"
+              [class.hover:bg-surface-container-high]="!showContacts">
+              <fa-icon [icon]="['fas', showContacts ? 'times' : 'user-plus']" class="mr-1"></fa-icon>
+              {{ showContacts ? 'Cerrar' : 'Nuevo' }}
+            </button>
+          }
+          <span class="text-xs text-on-surface-variant">{{ chats.length }} conversaciones</span>
+        </div>
       </div>
       <div class="relative">
         <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-xs"></fa-icon>
@@ -12,6 +24,72 @@
           class="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-lg bg-surface-container-high focus:ring-primary focus:border-primary outline-none">
       </div>
     </div>
+
+    @if (showContacts && canFilterByRole) {
+      <div class="px-3 py-2 border-b border-border">
+        <div class="flex gap-1 flex-wrap">
+          @for (opt of ['todos', 'admin', 'supervisor', 'terapista', 'paciente']; track opt) {
+            <button (click)="setRoleFilter(opt)"
+              class="text-[10px] px-2 py-1 rounded-full transition-colors font-medium"
+              [class.bg-primary]="roleFilter === opt" [class.text-white]="roleFilter === opt"
+              [class.bg-surface-container-high]="roleFilter !== opt" [class.text-on-surface-variant]="roleFilter !== opt"
+              [class.hover:bg-surface-container-higher]="roleFilter !== opt">
+              {{ opt === 'todos' ? 'Todos' : roleLabels[opt] || opt }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    @if (showContacts) {
+      <div class="overflow-y-auto max-h-48 border-b border-border/50">
+        @if (loading) {
+          <div class="flex justify-center py-4">
+            <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+          </div>
+        } @else if (canFilterByRole) {
+          @for (group of groupedContacts; track group.role) {
+            <div class="px-3 pt-2 pb-1">
+              <span class="text-[10px] font-bold text-on-surface-variant/50 uppercase tracking-wider">{{ roleLabels[group.role] || group.role }}</span>
+            </div>
+            @for (contact of group.users; track contact.id) {
+              <div (click)="selectContact(contact)"
+                class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-surface-container-low"
+                [class.bg-primary/5]="selectedContact?.id === contact.id">
+                <div class="relative shrink-0">
+                  <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                    {{ contact.username.charAt(0).toUpperCase() }}
+                  </div>
+                  @if (isOnline(contact.id)) {
+                    <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+                  }
+                </div>
+                <span class="text-xs font-medium text-on-surface truncate">{{ contact.username }}</span>
+              </div>
+            }
+          }
+        } @else {
+          @for (contact of filteredContacts; track contact.id) {
+            <div (click)="selectContact(contact)"
+              class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-surface-container-low"
+              [class.bg-primary/5]="selectedContact?.id === contact.id">
+              <div class="relative shrink-0">
+                <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">
+                  {{ contact.username.charAt(0).toUpperCase() }}
+                </div>
+                @if (isOnline(contact.id)) {
+                  <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success border-2 border-surface-container-lowest rounded-full"></div>
+                }
+              </div>
+              <span class="text-xs font-medium text-on-surface truncate">{{ contact.username }}</span>
+            </div>
+          }
+        }
+        @if (!loading && contacts.length === 0) {
+          <div class="text-center py-4 text-on-surface-variant/50 text-xs">No hay contactos disponibles</div>
+        }
+      </div>
+    }
 
     <div class="flex-1 overflow-y-auto">
       @if (loading) {
@@ -33,7 +111,14 @@
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold text-on-surface truncate">{{ chat.other_user?.username || 'Usuario' }}</span>
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="text-sm font-semibold text-on-surface truncate">{{ chat.other_user?.username || 'Usuario' }}</span>
+                  @if (chat.other_user?.role) {
+                    <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant/70 font-medium shrink-0">
+                      {{ roleLabels[chat.other_user!.role] || chat.other_user!.role }}
+                    </span>
+                  }
+                </div>
                 @if (chat.last_message?.created_at) {
                   <span class="text-[10px] text-on-surface-variant/60 shrink-0 ml-2">{{ chat.last_message!.created_at | date:'HH:mm' }}</span>
                 }
@@ -41,7 +126,7 @@
               <div class="flex items-center justify-between">
                 <span class="text-xs text-on-surface-variant truncate">
                   @if (chat.last_message) {
-                    {{ chat.last_message.sender_id === currentUserId ? 'Tú: ' : '' }}{{ chat.last_message.body || (chat.last_message.attachment_type ? '📎 Archivo' : '') }}
+                    {{ chat.last_message.sender_id === currentUserId ? 'Tú: ' : '' }}{{ chat.last_message.body || (chat.last_message.attachment_type ? 'Archivo' : '') }}
                   } @else {
                     Sin mensajes
                   }
@@ -73,7 +158,14 @@
           }
         </div>
         <div>
-          <div class="text-sm font-bold text-on-surface">{{ selectedContact.username }}</div>
+          <div class="flex items-center gap-2">
+            <div class="text-sm font-bold text-on-surface">{{ selectedContact.username }}</div>
+            @if (selectedContact.role) {
+              <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant/70 font-medium">
+                {{ roleLabels[selectedContact.role] || selectedContact.role }}
+              </span>
+            }
+          </div>
           <div class="text-[10px]" [class.text-success]="isOnline(selectedContact.id)" [class.text-on-surface-variant/50]="!isOnline(selectedContact.id)">
             {{ isOnline(selectedContact.id) ? 'En línea' : 'Desconectado' }}
           </div>

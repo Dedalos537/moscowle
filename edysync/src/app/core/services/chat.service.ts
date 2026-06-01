@@ -151,8 +151,9 @@ export class ChatService {
     return this.socket?.connected ?? false;
   }
 
-  getContacts(): Observable<ContactUser[]> {
-    return this.http.get<ContactUser[]>('/api/contacts');
+  getContacts(role?: string): Observable<ContactUser[]> {
+    const params = role ? `?role=${role}` : '';
+    return this.http.get<ContactUser[]>(`/api/contacts${params}`);
   }
 
   getChats(): Observable<ChatItem[]> {

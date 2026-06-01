@@ -14,32 +14,46 @@ notification_service = NotificationService()
 logger = logging.getLogger(__name__)
 
 
-def get_contact_list():
-    if current_user.role == 'admin':
-        return User.query.filter(User.id != current_user.id, User.is_active == True).order_by(User.role, User.username).all()
+def get_contact_list(role_filter=None):
+    if current_user.role in ('admin', 'supervisor'):
+        q = User.query.filter(User.id != current_user.id, User.is_active == True)
+        if role_filter and role_filter != 'todos':
+            q = q.filter(User.role == role_filter)
+        return q.order_by(User.role, User.username).all()
     elif current_user.role == 'terapista':
         patient_ids = [p.id for p in current_user.assigned_patients if p.is_active]
-        admin_ids = [u.id for u in User.query.filter_by(role='admin', is_active=True).all()]
-        ids = set(patient_ids + admin_ids)
+        admin_super_ids = [u.id for u in User.query.filter(
+            User.role.in_(['admin', 'supervisor']), User.is_active == True
+        ).all()]
+        ids = set(patient_ids + admin_super_ids)
         ids.discard(current_user.id)
         if not ids:
             return []
-        return User.query.filter(User.id.in_(ids)).all()
+        q = User.query.filter(User.id.in_(ids), User.is_active == True)
+        if role_filter and role_filter != 'todos':
+            q = q.filter(User.role == role_filter)
+        return q.order_by(User.role, User.username).all()
     else:
-        admin_ids = [u.id for u in User.query.filter_by(role='admin', is_active=True).all()]
-        ids = set(admin_ids)
+        admin_super_ids = [u.id for u in User.query.filter(
+            User.role.in_(['admin', 'supervisor']), User.is_active == True
+        ).all()]
+        ids = set(admin_super_ids)
         if current_user.assigned_therapist_id:
             ids.add(current_user.assigned_therapist_id)
         ids.discard(current_user.id)
         if not ids:
             return []
-        return User.query.filter(User.id.in_(ids)).all()
+        q = User.query.filter(User.id.in_(ids), User.is_active == True)
+        if role_filter and role_filter != 'todos':
+            q = q.filter(User.role == role_filter)
+        return q.order_by(User.role, User.username).all()
 
 
 @chat_bp.route('/api/contacts')
 @login_required
 def list_contacts():
-    contacts = get_contact_list()
+    role_filter = request.args.get('role')
+    contacts = get_contact_list(role_filter)
     online = set(online_users.keys())
     return jsonify([{
         'id': u.id,
@@ -229,38 +243,48 @@ def create_chat():
         return jsonify({'success': False, 'message': 'Error al crear conversación'}), 500
 
 
+@chat_bp.route('/api/chats/-1/messages', methods=['GET'])
+@login_required
+def get_contact_messages():
+    try:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+        from app.models import ContactMessage
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 50, type=int)
+        limit = min(limit, 100)
+        msgs = ContactMessage.query.order_by(ContactMessage.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+        msgs.reverse()
+        total = ContactMessage.query.count()
+        ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
+        db.session.commit()
+        return jsonify({
+            'messages': [{
+                'id': m.id,
+                'sender_id': -1,
+                'receiver_id': current_user.id,
+                'body': f"{m.first_name} {m.last_name} ({m.email}){(' - ' + m.phone) if m.phone else ''}:\n{m.message}",
+                'status': 'read',
+                'is_read': m.status != 'unread',
+                'file_url': None,
+                'attachment_type': None,
+                'created_at': m.created_at.isoformat() if m.created_at else None
+            } for m in msgs],
+            'total': total,
+            'page': page,
+            'has_more': (page * limit) < total
+        })
+    except Exception as e:
+        logger.error(f"Error getting contact messages: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error al cargar mensajes de la web'}), 500
+
+
 @chat_bp.route('/api/chats/<int:chat_id>/messages', methods=['GET'])
 @login_required
 def get_messages(chat_id):
     try:
         if chat_id == -1:
-            if current_user.role != 'admin':
-                return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-            from app.models import ContactMessage
-            page = request.args.get('page', 1, type=int)
-            limit = request.args.get('limit', 50, type=int)
-            limit = min(limit, 100)
-            msgs = ContactMessage.query.order_by(ContactMessage.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
-            msgs.reverse()
-            total = ContactMessage.query.count()
-            ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
-            db.session.commit()
-            return jsonify({
-                'messages': [{
-                    'id': m.id,
-                    'sender_id': -1,
-                    'receiver_id': current_user.id,
-                    'body': f"{m.first_name} {m.last_name} ({m.email}){(' - ' + m.phone) if m.phone else ''}:\n{m.message}",
-                    'status': 'read',
-                    'is_read': m.status != 'unread',
-                    'file_url': None,
-                    'attachment_type': None,
-                    'created_at': m.created_at.isoformat() if m.created_at else None
-                } for m in msgs],
-                'total': total,
-                'page': page,
-                'has_more': (page * limit) < total
-            })
+            return get_contact_messages()
 
         chat = Chat.query.get(chat_id)
         if not chat:
@@ -413,16 +437,27 @@ def send_message(chat_id):
         return jsonify({'success': False, 'message': 'Error al enviar mensaje'}), 500
 
 
+@chat_bp.route('/api/chats/-1/read', methods=['PUT'])
+@login_required
+def mark_contact_read():
+    try:
+        if current_user.role == 'admin':
+            from app.models import ContactMessage
+            ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
+            db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error marking contact messages read: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'message': 'Error al marcar como leído'}), 500
+
+
 @chat_bp.route('/api/chats/<int:chat_id>/read', methods=['PUT'])
 @login_required
 def mark_read(chat_id):
     try:
         if chat_id == -1:
-            if current_user.role == 'admin':
-                from app.models import ContactMessage
-                ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
-                db.session.commit()
-            return jsonify({'success': True})
+            return mark_contact_read()
 
         participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
         if not participant:

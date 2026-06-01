@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ApiResponse } from '../models/api-response';
-import { CalendarEvent } from '../models/appointment';
+import { ApiResponse } from '../../models/api-response';
+import { CalendarEvent } from '../../models/appointment';
 
 export interface TherapistProfileData {
   id: number;
