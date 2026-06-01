@@ -1,0 +1,117 @@
+@if (routeLoading) {
+  <div class="fixed inset-0 z-[60] bg-background/60 backdrop-blur-sm flex items-center justify-center">
+    <div class="flex flex-col items-center gap-3">
+      <app-spinner size="lg" colorClass="text-primary"></app-spinner>
+      @if (loadElapsed) {
+        <span class="text-xs text-on-surface-variant font-mono tabular-nums">{{ loadElapsed }}</span>
+      }
+    </div>
+  </div>
+}
+
+@if (confirmService.state$ | async; as confirmState) {
+  @if (confirmState.visible) {
+    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="confirmService.close(false)">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+             [class.bg-error-container]="confirmState.options.variant === 'danger'"
+             [class.bg-warning-container]="confirmState.options.variant === 'warning'"
+             [class.bg-primary-container/15]="confirmState.options.variant === 'primary'">
+          <fa-icon [icon]="$any(confirmState.options.icon || ['fas', 'exclamation-triangle'])"
+                   class="text-2xl"
+                   [class.text-error]="confirmState.options.variant === 'danger'"
+                   [class.text-warning]="confirmState.options.variant === 'warning'"
+                   [class.text-primary-container]="confirmState.options.variant === 'primary'"></fa-icon>
+        </div>
+        <h3 class="text-lg font-bold text-on-surface text-center mb-2">{{ confirmState.options.title }}</h3>
+        <p class="text-sm text-on-surface-variant text-center mb-6">{{ confirmState.options.message }}</p>
+        <div class="flex gap-3">
+          <app-button variant="secondary" class="flex-1" [label]="confirmState.options.cancelText || 'Cancelar'" (clicked)="confirmService.close(false)"></app-button>
+          <app-button [variant]="confirmState.options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="confirmState.options.confirmText || 'Confirmar'" (clicked)="confirmService.close(true)"></app-button>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<div class="flex h-screen bg-background text-on-surface overflow-hidden transition-colors duration-300">
+  <aside class="w-64 h-screen bg-surface-container-lowest border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
+    <div class="h-24 flex items-center px-6 border-b border-border/50 shrink-0">
+      <div class="flex items-center gap-3">
+        <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
+        <div class="flex flex-col">
+          <span class="font-extrabold text-primary tracking-tight text-xl">EdySync</span>
+          <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-3 pt-4 pb-2">
+      <span class="text-label-caps text-outline px-4">Navegación</span>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
+      <a routerLink="/therapist/dashboard" routerLinkActive="active" #rld="routerLinkActive"
+         class="nav-link" [class.active]="rld.isActive">
+        <fa-icon [icon]="['fas', 'desktop']" [class.!text-primary-container]="rld.isActive"></fa-icon>
+        <span>Dashboard</span>
+      </a>
+      <a routerLink="/therapist/patients" routerLinkActive="active" #rlpt="routerLinkActive"
+         class="nav-link" [class.active]="rlpt.isActive">
+        <fa-icon [icon]="['fas', 'user-friends']" [class.!text-primary-container]="rlpt.isActive"></fa-icon>
+        <span>Mis Pacientes</span>
+      </a>
+      <a routerLink="/therapist/sessions" routerLinkActive="active" #rls="routerLinkActive"
+         class="nav-link" [class.active]="rls.isActive">
+        <fa-icon [icon]="['fas', 'calendar-alt']" [class.!text-primary-container]="rls.isActive"></fa-icon>
+        <span>Mis Sesiones</span>
+      </a>
+      <a routerLink="/therapist/calendar" routerLinkActive="active" #rlcl="routerLinkActive"
+         class="nav-link" [class.active]="rlcl.isActive">
+        <fa-icon [icon]="['fas', 'calendar-day']" [class.!text-primary-container]="rlcl.isActive"></fa-icon>
+        <span>Calendario</span>
+      </a>
+      <a routerLink="/therapist/games" routerLinkActive="active" #rlg="routerLinkActive"
+         class="nav-link" [class.active]="rlg.isActive">
+        <fa-icon [icon]="['fas', 'gamepad']" [class.!text-primary-container]="rlg.isActive"></fa-icon>
+        <span>Juegos</span>
+      </a>
+      <a routerLink="/therapist/reports" routerLinkActive="active" #rlr="routerLinkActive"
+         class="nav-link" [class.active]="rlr.isActive">
+        <fa-icon [icon]="['fas', 'chart-bar']" [class.!text-primary-container]="rlr.isActive"></fa-icon>
+        <span>Reportes</span>
+      </a>
+      <a routerLink="/therapist/analytics" routerLinkActive="active" #rla="routerLinkActive"
+         class="nav-link" [class.active]="rla.isActive">
+        <fa-icon [icon]="['fas', 'brain']" [class.!text-primary-container]="rla.isActive"></fa-icon>
+        <span>Analíticas IA</span>
+      </a>
+      <a routerLink="/therapist/messages" routerLinkActive="active" #rlm="routerLinkActive"
+         class="nav-link" [class.active]="rlm.isActive">
+        <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlm.isActive"></fa-icon>
+        <span>Mensajes</span>
+      </a>
+      <a routerLink="/therapist/profile" routerLinkActive="active" #rlpf="routerLinkActive"
+         class="nav-link" [class.active]="rlpf.isActive">
+        <fa-icon [icon]="['fas', 'user-circle']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>
+        <span>Mi Perfil</span>
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-border/50 shrink-0">
+      <app-button variant="ghost" (clicked)="toggleDarkMode()">
+        <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']" class="text-sm"></fa-icon>
+        <span class="text-sm">{{ theme === 'light' ? 'Modo Oscuro' : 'Modo Claro' }}</span>
+      </app-button>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
+    <app-header class="z-10"></app-header>
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar relative">
+      <div [@routeAnimations]="prepareRoute()">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+</div>
