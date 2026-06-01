@@ -546,19 +546,28 @@ def create_app(config_class=Config):
                 inspector = sa_inspect(db.engine)
                 columns = [c['name'] for c in inspector.get_columns('message')]
                 with db.engine.connect() as conn:
-                    if 'chat_id' not in columns:
-                        conn.execute(text("ALTER TABLE message ADD COLUMN chat_id INTEGER REFERENCES chat(id) DEFAULT NULL"))
-                        app.logger.info("Auto-migration: added message.chat_id")
-                    if 'status' not in columns:
-                        conn.execute(text("ALTER TABLE message ADD COLUMN status VARCHAR(20) DEFAULT 'sent'"))
-                        app.logger.info("Auto-migration: added message.status")
-                    if 'attachment_path' not in columns:
-                        conn.execute(text("ALTER TABLE message ADD COLUMN attachment_path VARCHAR(500) DEFAULT NULL"))
-                        app.logger.info("Auto-migration: added message.attachment_path")
-                    if 'attachment_type' not in columns:
-                        conn.execute(text("ALTER TABLE message ADD COLUMN attachment_type VARCHAR(50) DEFAULT NULL"))
-                        app.logger.info("Auto-migration: added message.attachment_type")
-                    conn.commit()
+                    tx = conn.begin()
+                    try:
+                        if 'chat_id' not in columns:
+                            conn.execute(text("ALTER TABLE message ADD COLUMN chat_id INTEGER DEFAULT NULL"))
+                            app.logger.info("Auto-migration: added message.chat_id")
+                        if 'status' not in columns:
+                            conn.execute(text("ALTER TABLE message ADD COLUMN status VARCHAR(20) DEFAULT 'sent'"))
+                            app.logger.info("Auto-migration: added message.status")
+                        if 'attachment_path' not in columns:
+                            conn.execute(text("ALTER TABLE message ADD COLUMN attachment_path VARCHAR(500) DEFAULT NULL"))
+                            app.logger.info("Auto-migration: added message.attachment_path")
+                        if 'attachment_type' not in columns:
+                            conn.execute(text("ALTER TABLE message ADD COLUMN attachment_type VARCHAR(50) DEFAULT NULL"))
+                            app.logger.info("Auto-migration: added message.attachment_type")
+                        if 'is_read' not in columns:
+                            conn.execute(text("ALTER TABLE message ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
+                            app.logger.info("Auto-migration: added message.is_read")
+                        tx.commit()
+                    except Exception:
+                        tx.rollback()
+                        app.logger.warning("Auto-migration for message table failed, rolling back", exc_info=True)
+                        raise
             except Exception:
                 app.logger.warning("Auto-migration for message table skipped or failed", exc_info=True)
 
@@ -569,9 +578,14 @@ def create_app(config_class=Config):
                 columns = [c['name'] for c in inspector.get_columns('chat_participant')]
                 if 'last_read_at' not in columns:
                     with db.engine.connect() as conn:
-                        conn.execute(text("ALTER TABLE chat_participant ADD COLUMN last_read_at TIMESTAMP DEFAULT NULL"))
-                        conn.commit()
-                        app.logger.info("Auto-migration: added chat_participant.last_read_at")
+                        tx = conn.begin()
+                        try:
+                            conn.execute(text("ALTER TABLE chat_participant ADD COLUMN last_read_at TIMESTAMP DEFAULT NULL"))
+                            tx.commit()
+                            app.logger.info("Auto-migration: added chat_participant.last_read_at")
+                        except Exception:
+                            tx.rollback()
+                            raise
             except Exception:
                 app.logger.warning("Auto-migration for chat_participant.last_read_at skipped or failed", exc_info=True)
 

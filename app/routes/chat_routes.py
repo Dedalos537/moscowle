@@ -341,7 +341,7 @@ def send_message(chat_id):
         attachment_type = None
 
         if request.is_json:
-            data = request.get_json()
+            data = request.get_json(silent=True) or {}
             body = (data.get('body') or '').strip()
         else:
             data = request.form.to_dict()

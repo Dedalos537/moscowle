@@ -82,7 +82,7 @@ def handle_message_read(data):
         Message.query.filter(
             Message.chat_id == chat_id,
             Message.receiver_id == current_user.id,
-            Message.status == 'delivered'
+            Message.status.in_(['delivered', 'sent'])
         ).update({'status': 'read', 'is_read': True})
         db.session.commit()
 
