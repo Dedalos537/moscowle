@@ -1,0 +1,98 @@
+<div class="logs-page" @fadeInUp>
+  <div class="logs__toolbar">
+    <div class="logs__filters">
+      @for (l of levels; track l) {
+        <button
+          class="logs__level-btn"
+          [class.logs__level-btn--active]="levelFilter === l"
+          (click)="setLevel(l)"
+        >
+          {{ l || 'Todos' }}
+        </button>
+      }
+    </div>
+    <div class="logs__actions">
+      <div class="logs__search">
+        <fa-icon [icon]="['fas', 'search']" size="sm"></fa-icon>
+        <input
+          type="text"
+          placeholder="Buscar en logs..."
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="search()"
+        />
+      </div>
+      <button class="logs__refresh-btn" (click)="loadLogs()" [title]="'Refrescar'">
+        <fa-icon [icon]="['fas', 'sync']" [class.fa-spin]="loading"></fa-icon>
+      </button>
+      <button
+        class="logs__auto-btn"
+        [class.logs__auto-btn--active]="autoRefresh"
+        (click)="toggleAutoRefresh()"
+      >
+        <fa-icon [icon]="['fas', 'play-circle']"></fa-icon>
+        Auto
+      </button>
+    </div>
+  </div>
+
+  <div class="logs__count">
+    {{ logs.length }} entradas
+    @if (levelFilter) {
+      <span>· filtrado por {{ levelFilter }}</span>
+    }
+    @if (autoRefresh) {
+      <span>· actualizando cada 5s</span>
+    }
+  </div>
+
+  @if (loading) {
+    <div class="logs__skeleton">
+      @for (_ of [1,2,3,4,5]; track $index) {
+        <div class="log-skeleton-row"></div>
+      }
+    </div>
+  } @else if (error) {
+    <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
+      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <p class="text-error font-semibold text-lg">{{ error }}</p>
+      <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadLogs()">
+        Reintentar
+      </button>
+    </div>
+  } @else {
+    <div class="logs__list" @listStagger>
+      @for (log of logs; track log; let i = $index) {
+        <div
+          class="log-entry"
+          (click)="toggleExpand(i)"
+          [class.log-entry--expanded]="expandedIndex === i"
+        >
+          <div class="log-entry__main">
+            <span class="log-entry__level" [style.color]="levelColor(log.level)">
+              {{ log.level }}
+            </span>
+            <span class="log-entry__time">{{ log.timestamp }}</span>
+            <span class="log-entry__msg">{{ log.short_message }}</span>
+            @if (log.exc_info) {
+              <fa-icon
+                [icon]="['fas', 'chevron-down']"
+                class="log-entry__chevron"
+                [class.log-entry__chevron--open]="expandedIndex === i"
+              ></fa-icon>
+            }
+          </div>
+          @if (expandedIndex === i && log.exc_info) {
+            <div class="log-entry__detail">
+              <pre>{{ log.message }}</pre>
+            </div>
+          }
+        </div>
+      } @empty {
+        <div class="logs__empty">
+          <fa-icon [icon]="['fas', 'check-circle']" size="3x"></fa-icon>
+          <p>Sin registros</p>
+        </div>
+      }
+    </div>
+  }
+</div>
