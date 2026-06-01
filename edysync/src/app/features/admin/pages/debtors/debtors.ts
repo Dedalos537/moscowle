@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -25,6 +26,7 @@ interface DebtorItem {
   standalone: false,
   templateUrl: './debtors.html',
   styleUrl: './debtors.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Debtors implements OnInit, OnDestroy {
@@ -38,10 +40,12 @@ export class Debtors implements OnInit, OnDestroy {
   showPaymentModal = false;
   paymentForm = { patient_id: 0, patient_name: '', amount: 0, method: 'transfer', reference: '' };
   paymentStatus = '';
+  private subscriptions: Subscription = new Subscription();
 
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -55,33 +59,37 @@ export class Debtors implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.subscriptions.unsubscribe();
     this.headerService.reset();
   }
 
   loadData() {
     this.loading = true;
-    this.adminService.getDebtReport(this.selectedMonth).subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const porSede: Record<string, any> = res.data.por_sede || {};
-          this.groups = Object.values(porSede).map((g: any) => ({
-            sede_name: g.sede_name || 'Sin sede',
-            deudores: (g.deudores || []).map((d: any) => ({
-              paciente: d.paciente || d.email || 'Desconocido',
-              email: d.email || '',
-              phone: d.phone,
-              monto: d.monto || 0,
-              modality: d.modality || 'Sin Modalidad',
-              fecha_vencimiento: d.fecha_vencimiento || 'N/A',
-              payment_day: d.payment_day,
-            })),
-            total_deuda: g.deudores ? g.deudores.reduce((sum: number, d: any) => sum + (d.monto || 0), 0) : 0,
-          }));
-        }
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getDebtReport(this.selectedMonth).subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            const porSede: Record<string, any> = res.data.por_sede || {};
+            this.groups = Object.values(porSede).map((g: any) => ({
+              sede_name: g.sede_name || 'Sin sede',
+              deudores: (g.deudores || []).map((d: any) => ({
+                paciente: d.paciente || d.email || 'Desconocido',
+                email: d.email || '',
+                phone: d.phone,
+                monto: d.monto || 0,
+                modality: d.modality || 'Sin Modalidad',
+                fecha_vencimiento: d.fecha_vencimiento || 'N/A',
+                payment_day: d.payment_day,
+              })),
+              total_deuda: g.deudores ? g.deudores.reduce((sum: number, d: any) => sum + (d.monto || 0), 0) : 0,
+            }));
+          }
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.loading = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   get filteredGroups(): DebtGroup[] {
@@ -121,22 +129,26 @@ export class Debtors implements OnInit, OnDestroy {
     formData.append('method', this.paymentForm.method);
     formData.append('reference', this.paymentForm.reference);
 
-    this.adminService.registerPayment(formData).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.paymentStatus = 'Pago registrado';
-          setTimeout(() => {
-            this.closePaymentModal();
-            this.loadData();
-          }, 1500);
-        } else {
-          this.paymentStatus = 'Error: ' + (res.message || '');
-        }
-      },
-      error: () => {
-        this.paymentStatus = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.registerPayment(formData).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.paymentStatus = 'Pago registrado';
+            setTimeout(() => {
+              this.closePaymentModal();
+              this.loadData();
+            }, 1500);
+          } else {
+            this.paymentStatus = 'Error: ' + (res.message || '');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.paymentStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   getWhatsAppLink(phone: string | undefined, name: string, amount: number): string | null {

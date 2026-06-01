@@ -17,17 +17,17 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-blue-100 p-5">
+    <div class="lg:col-span-2 bg-surface-container-lowest rounded-lg shadow-soft border border-info-container p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'tasks']" class="text-blue-500"></fa-icon> Guia de Flujo Diario
+          <fa-icon [icon]="['fas', 'tasks']" class="text-info"></fa-icon> Guia de Flujo Diario
         </h3>
-        <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
+        <span class="text-[10px] bg-info-container text-info px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="space-y-3">
           <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-info-container transition-all cursor-pointer">
-            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-error shrink-0">
               <fa-icon [icon]="['fas', 'phone-alt']" class="text-xs"></fa-icon>
             </div>
             <div>
@@ -47,7 +47,7 @@
         </div>
         <div class="space-y-3">
           <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-info-container transition-all cursor-pointer">
-            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-success-container flex items-center justify-center text-success shrink-0">
               <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-xs"></fa-icon>
             </div>
             <div>
@@ -69,11 +69,11 @@
     </div>
 
     <div class="space-y-4">
-      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-red-100 p-5">
-        <p class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Deuda Total</p>
-        <p class="text-2xl font-black text-red-700">S/ {{ totalDeuda.toFixed(2) }}</p>
+      <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-error-container p-5">
+        <p class="text-[10px] font-black text-error uppercase tracking-widest mb-1">Deuda Total</p>
+        <p class="text-2xl font-black text-error">S/ {{ totalDeuda.toFixed(2) }}</p>
       </div>
-      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-warning-container p-5">
+      <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-warning-container p-5">
         <p class="text-[10px] font-black text-warning uppercase tracking-widest mb-1">Deudores</p>
         <p class="text-2xl font-black text-warning">{{ totalDeudores }}</p>
       </div>
@@ -86,12 +86,12 @@
     </div>
   } @else {
     @for (group of filteredGroups; track group.sede_name) {
-      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-border/20 overflow-hidden">
+      <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 overflow-hidden">
         <div class="px-6 py-4 bg-surface-container-high border-b border-border/20 flex justify-between items-center">
           <h3 class="font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon> {{ group.sede_name }}
           </h3>
-          <span class="text-sm font-bold text-red-600">S/ {{ group.total_deuda.toFixed(2) }}</span>
+          <span class="text-sm font-bold text-error">S/ {{ group.total_deuda.toFixed(2) }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full">
@@ -109,7 +109,7 @@
                 <tr class="hover:bg-surface-container-high/80 transition-colors">
                   <td class="px-5 py-3">
                     <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold text-xs">{{ getInitials(d.paciente) }}</div>
+                      <div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-error font-bold text-xs">{{ getInitials(d.paciente) }}</div>
                       <div>
                         <p class="text-sm font-medium text-on-surface">{{ d.paciente }}</p>
                         <p class="text-[10px] text-on-surface-variant/60">{{ d.email }}</p>
@@ -117,12 +117,12 @@
                     </div>
                   </td>
                   <td class="px-5 py-3 text-sm text-on-surface">{{ d.modality }}</td>
-                  <td class="px-5 py-3 text-right text-sm font-bold text-red-600">S/ {{ d.monto.toFixed(2) }}</td>
+                  <td class="px-5 py-3 text-right text-sm font-bold text-error">S/ {{ d.monto.toFixed(2) }}</td>
                   <td class="px-5 py-3 text-center text-sm text-on-surface">{{ d.fecha_vencimiento }}</td>
                   <td class="px-5 py-3 text-right">
                     <div class="flex justify-end gap-2">
                       @if (getWhatsAppLink(d.phone, d.paciente, d.monto)) {
-                        <a [href]="getWhatsAppLink(d.phone, d.paciente, d.monto)" target="_blank" class="w-8 h-8 rounded-lg bg-green-500 text-white flex items-center justify-center hover:bg-success transition-all text-xs" title="WhatsApp">
+                        <a [href]="getWhatsAppLink(d.phone, d.paciente, d.monto)" target="_blank" class="w-8 h-8 rounded-lg bg-success text-on-primary flex items-center justify-center hover:bg-success transition-all text-xs" title="WhatsApp">
                           <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
                         </a>
                       }

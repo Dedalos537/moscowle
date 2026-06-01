@@ -1,4 +1,20 @@
-<div class="dashboard">
+@if (loading) {
+  <div class="flex items-center justify-center min-h-[60vh]">
+    <div class="flex flex-col items-center gap-3">
+      <app-spinner size="lg" colorClass="text-primary"></app-spinner>
+      <p class="text-on-surface-variant text-sm">Cargando dashboard...</p>
+    </div>
+  </div>
+} @else if (error) {
+  <div class="flex flex-col items-center justify-center min-h-[60vh] text-center" role="alert">
+    <i class="fas fa-exclamation-circle text-error text-5xl mb-4"></i>
+    <p class="text-error font-semibold text-lg">{{ error }}</p>
+    <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadData()">
+      Reintentar
+    </button>
+  </div>
+} @else {
+<div class="dashboard" [@fadeInUp]>
 
   <section class="dashboard-section">
     <div class="dashboard-section__header">
@@ -10,9 +26,9 @@
       </div>
     </div>
 
-    <div class="grid-4">
+    <div class="grid-4" [@listStagger]="dailyPendings.length">
       @if (dailyPendings.length > 0) {
-        <div class="stat-card stat-card--warning">
+        <div class="stat-card stat-card--warning" [@cardEnter]>
           <div class="stat-card__top">
             <span class="label-caps text-warning">Cobros Hoy</span>
             <span class="icon-badge icon-badge--warning">
@@ -66,8 +82,8 @@
         <p>He detectado <strong>{{ incompletePatients.length }}</strong> alumnos con datos incompletos (modalidad o pago). Esto afecta la veracidad de tus finanzas.</p>
       </div>
       <app-button variant="secondary" label="Ver Pendientes" (clicked)="showGuidanceModal = true"></app-button>
-    </div>
-  }
+  </div>
+}
 
   <section class="dashboard-section">
     <h3 class="section-label">Resumen General</h3>
@@ -287,7 +303,7 @@
 
 @if (showGuidanceModal) {
   <div class="modal-overlay" (click)="showGuidanceModal = false">
-    <div class="modal-panel modal-panel--lg" (click)="$event.stopPropagation()">
+    <div class="modal-panel modal-panel--lg" [@scaleIn] (click)="$event.stopPropagation()">
       <div class="modal-header modal-header--gradient">
         <div class="modal-header__left">
           <div class="icon-box icon-box--gradient">
@@ -328,7 +344,7 @@
 
 @if (showDailyModal) {
   <div class="modal-overlay" (click)="showDailyModal = false">
-    <div class="modal-panel modal-panel--xl" (click)="$event.stopPropagation()">
+    <div class="modal-panel modal-panel--xl" [@scaleIn] (click)="$event.stopPropagation()">
       <div class="modal-header modal-header--daily">
         <div class="modal-header__left">
           <div class="icon-box icon-box--glass">
@@ -376,4 +392,5 @@
       </div>
     </div>
   </div>
+}
 }

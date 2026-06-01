@@ -1,10 +1,12 @@
 <div class="max-w-2xl mx-auto space-y-6" [@fadeInUp]>
-  <div *ngIf="message" class="p-4 rounded-xl text-sm font-bold"
-       [ngClass]="messageType === 'success' ? 'bg-success-container text-success border border-success-container' : 'bg-error-container text-error border border-error-container'">
-    {{ message }}
-  </div>
+  @if (message) {
+    <div class="p-4 rounded-xl text-sm font-bold"
+         [ngClass]="messageType === 'success' ? 'bg-success-container text-success border border-success-container' : 'bg-error-container text-error border border-error-container'">
+      {{ message }}
+    </div>
+  }
 
-  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-border/20">
+  <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20">
     <h2 class="text-lg font-bold text-on-surface mb-6">Informacion Personal</h2>
     <div class="space-y-4">
       <div>
@@ -25,7 +27,7 @@
     </div>
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-6 border border-border/20">
+  <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 border border-border/20">
     <h2 class="text-lg font-bold text-on-surface mb-6">Cambiar Contrasena</h2>
     <div class="space-y-4">
       <div>
@@ -38,16 +40,20 @@
         <input [(ngModel)]="confirmPassword" type="password"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>
-      <p *ngIf="newPassword && confirmPassword && newPassword !== confirmPassword" class="text-xs text-error">
-        Las contrasenas no coinciden
-      </p>
+      @if (newPassword && confirmPassword && newPassword !== confirmPassword) {
+        <p class="text-xs text-error">
+          Las contrasenas no coinciden
+        </p>
+      }
     </div>
   </div>
 
   <div class="flex justify-end">
     <button (click)="saveProfile()" [disabled]="saving"
             class="px-6 py-3 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-      <fa-icon [icon]="['fas', 'spinner']" *ngIf="saving" class="fa-spin"></fa-icon>
+      @if (saving) {
+        <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
+      }
       Guardar Cambios
     </button>
   </div>

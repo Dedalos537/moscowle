@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 import { Router } from '@angular/router';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, Subscription } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 
 @Component({
@@ -10,27 +11,30 @@ import { ConfirmService } from '../../services/confirm.service';
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
 })
-export class Navbar implements OnInit {
+export class Navbar implements OnInit, OnDestroy {
   user$: Observable<any>;
   theme: string = 'light';
+  private subs = new Subscription();
 
   constructor(
     private authService: AuthService,
+    private themeService: ThemeService,
     private router: Router,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {
     this.user$ = this.authService.currentUser$;
   }
 
   ngOnInit() {
-    const saved = localStorage.getItem('theme');
-    const isDark = document.documentElement.classList.contains('dark');
-    if (saved === 'dark' || (!saved && isDark)) {
-      this.theme = 'dark';
-      document.documentElement.classList.add('dark');
-    } else if (saved !== 'dark') {
-      document.documentElement.classList.remove('dark');
-    }
+    this.subs.add(this.themeService.theme$.subscribe(t => {
+      this.theme = t;
+      this.cdr.markForCheck();
+    }));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   async logout() {
@@ -52,13 +56,6 @@ export class Navbar implements OnInit {
   }
 
   toggleTheme() {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-    if (this.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    this.themeService.toggle();
   }
 }

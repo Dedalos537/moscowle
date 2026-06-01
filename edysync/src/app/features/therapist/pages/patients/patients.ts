@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService, PatientInfo } from '../../../../core/services/therapist.service';
-import { HttpClient } from '@angular/common/http';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
@@ -9,16 +9,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './patients.html',
   styleUrl: './patients.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TherapistPatients implements OnInit {
+export class TherapistPatients implements OnInit, OnDestroy {
   loading = true;
+  error: string | null = null;
   patients: (PatientInfo & { status_label?: string; status_color?: string })[] = [];
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
     private therapistService: TherapistService,
-    private http: HttpClient
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -30,17 +34,26 @@ export class TherapistPatients implements OnInit {
     this.loadPatients();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadPatients() {
-    this.therapistService.getPatients().subscribe({
+    this.subs.add(this.therapistService.getPatients().subscribe({
       next: (list) => {
         this.patients = list.map((p) => ({
           ...p,
           status_label: 'Activo',
-          status_color: 'bg-green-100 text-green-700',
+          status_color: 'bg-success-container text-success',
         }));
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 }

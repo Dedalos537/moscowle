@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -13,6 +13,7 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
   standalone: false,
   templateUrl: './session-review.html',
   styleUrl: './session-review.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistSessionReview implements OnInit, OnDestroy {
 
@@ -20,6 +21,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   sessionId = 0;
   loading = true;
   saving = false;
+  error: string | null = null;
 
   notes = '';
   private saveTimeout: any = null;
@@ -75,6 +77,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   showFullscreen = false;
 
+  private subs = new Subscription();
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -102,19 +106,21 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.stopRecording();
     this.clearWarningTimer();
     this.liveScoreSub?.unsubscribe();
+    this.subs.unsubscribe();
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     if (this.videoStream) this.videoStream.getTracks().forEach(t => t.stop());
   }
 
   private loadSession() {
     this.loading = true;
+    this.cdr.markForCheck();
     this.headerService.setConfig({
       title: 'Revisión de Sesión',
       subtitle: 'Cargando...',
       icon: ['fas', 'clipboard-check'],
     });
 
-    this.therapistService.getSession(this.sessionId).subscribe({
+    this.subs.add(this.therapistService.getSession(this.sessionId).subscribe({
       next: (data) => {
         this.session = data;
         this.notes = data.notes || '';
@@ -122,6 +128,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.images = data.images || [];
         if (this.images.length > 0) this.currentImage = this.images[0];
         this.loading = false;
+        this.cdr.markForCheck();
 
         this.headerService.setConfig({
           title: 'Revisión de Sesión',
@@ -134,11 +141,13 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.initLiveScore();
         this.maybeAutoStartRecording();
       },
-      error: () => {
+      error: (err) => {
         this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
         this.router.navigate(['/therapist/sessions']);
       },
-    });
+    }));
   }
 
   private maybeAutoStartRecording() {
@@ -147,8 +156,14 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     if (this.recordingService.isRecording$.value && this.recordingService.activeSession$.value?.id === this.sessionId) {
       this.autoStarted = true;
       this.isRecording = true;
-      this.recordingService.elapsedTime$.subscribe(t => this.recordingElapsed = t);
-      this.recordingService.chunkStatus$.subscribe(s => this.chunkUploadStatus = s);
+      this.subs.add(this.recordingService.elapsedTime$.subscribe(t => {
+        this.recordingElapsed = t;
+        this.cdr.markForCheck();
+      }));
+      this.subs.add(this.recordingService.chunkStatus$.subscribe(s => {
+        this.chunkUploadStatus = s;
+        this.cdr.markForCheck();
+      }));
       return;
     }
 
@@ -159,20 +174,28 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
       if (start <= now && now <= end && this.attendance !== 'absent') {
         this.autoStarted = true;
-        this.therapistService.startRecording(this.sessionId).subscribe({
+        this.subs.add(this.therapistService.startRecording(this.sessionId).subscribe({
           next: () => {
             this.startRecording();
           },
-          error: () => {
+          error: (err) => {
+            this.error = err.message;
+            this.cdr.markForCheck();
           }
-        });
+        }));
       }
     }
   }
 
   setAttendance(state: string) {
     this.attendance = state;
-    this.therapistService.updateAttendance(this.sessionId, state).subscribe();
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.updateAttendance(this.sessionId, state).subscribe({
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      }
+    }));
     if (state === 'present') {
       this.clearWarningTimer();
       this.showWarningModal = false;
@@ -188,21 +211,26 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   saveNotes() {
     this.saving = true;
-    this.therapistService.saveNotes(this.sessionId, this.notes).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.saveNotes(this.sessionId, this.notes).subscribe({
       next: () => {
         this.saving = false;
         this.lastSavedLabel = 'Guardado a las ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        this.cdr.markForCheck();
         setTimeout(() => {
           if (this.lastSavedLabel.includes('Guardado')) {
             this.lastSavedLabel = 'Sin cambios pendientes';
+            this.cdr.markForCheck();
           }
         }, 3000);
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
+        this.error = err.message;
         this.lastSavedLabel = 'Error al guardar';
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   onImageSelected(event: any) {
@@ -214,7 +242,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   uploadImage(file: File) {
     this.uploadingImage = true;
-    this.therapistService.uploadSessionImage(this.sessionId, file).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.uploadSessionImage(this.sessionId, file).subscribe({
       next: (res) => {
         this.uploadingImage = false;
         if (res.success) {
@@ -222,11 +251,14 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
           this.currentImage = res.image;
           this.clearWarningTimer();
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.uploadingImage = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   selectImage(img: any) {
@@ -244,15 +276,20 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.therapistService.deleteSessionImage(this.sessionId, this.currentImage.id).subscribe({
+    this.subs.add(this.therapistService.deleteSessionImage(this.sessionId, this.currentImage.id).subscribe({
       next: (res) => {
         if (res.success) {
           const idx = this.images.indexOf(this.currentImage);
           this.images = this.images.filter((i: any) => i.id !== this.currentImage.id);
           this.currentImage = this.images.length > 0 ? this.images[Math.min(idx, this.images.length - 1)] : null;
+          this.cdr.markForCheck();
         }
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   async openCamera() {
@@ -261,6 +298,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         video: { facingMode: 'environment' },
       });
       this.showCameraModal = true;
+      this.cdr.markForCheck();
       setTimeout(() => {
         const video = document.getElementById('cameraVideo') as HTMLVideoElement;
         if (video) video.srcObject = this.videoStream;
@@ -300,7 +338,12 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     } else {
       this.startRecording();
       if (!this.autoStarted) {
-        this.therapistService.startRecording(this.sessionId).subscribe();
+        this.subs.add(this.therapistService.startRecording(this.sessionId).subscribe({
+          error: (err) => {
+            this.error = err.message;
+            this.cdr.markForCheck();
+          }
+        }));
       }
     }
   }
@@ -394,8 +437,9 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   private subirChunkAudio(blob: Blob, chunkNum: number, retriesRemaining = 3) {
     this.uploadingChunk = true;
     this.chunkUploadStatus = `Transcribiendo segmento ${chunkNum}...`;
+    this.cdr.markForCheck();
 
-    this.therapistService.uploadAudioChunk(this.sessionId, blob, chunkNum).subscribe({
+    this.subs.add(this.therapistService.uploadAudioChunk(this.sessionId, blob, chunkNum).subscribe({
       next: (data) => {
         this.uploadingChunk = false;
         if (data.success && data.transcript_text) {
@@ -412,37 +456,45 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
             this.pendingAutoAudit = true;
             setTimeout(() => {
               this.chunkUploadStatus = '';
+              this.cdr.markForCheck();
               this.loadAudit();
             }, 3000);
           } else {
-            setTimeout(() => { this.chunkUploadStatus = ''; }, 2000);
+            setTimeout(() => { this.chunkUploadStatus = ''; this.cdr.markForCheck(); }, 2000);
             this.checkAttendance();
           }
         } else {
           this.chunkUploadStatus = `Error: ${data.error || 'desconocido'}`;
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         if (retriesRemaining > 1) {
           this.chunkUploadStatus = `Reintentando segmento ${chunkNum}...`;
+          this.cdr.markForCheck();
           setTimeout(() => this.subirChunkAudio(blob, chunkNum, retriesRemaining - 1), 2000);
         } else {
           this.uploadingChunk = false;
+          this.error = err.message;
           this.chunkUploadStatus = 'Error de conexión';
+          this.cdr.markForCheck();
         }
       },
-    });
+    }));
   }
 
   private checkAttendance() {
-    this.therapistService.analyzeAttendance(this.sessionId).subscribe({
+    this.subs.add(this.therapistService.analyzeAttendance(this.sessionId).subscribe({
       next: (data) => {
         if (data.success && data.suggested_attendance === 'absent' && this.attendance !== 'present') {
           this.startWarningTimer(data.reason || 'Sin actividad detectada');
         }
       },
-      error: () => {}
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      }
+    }));
   }
 
   private startWarningTimer(reason: string) {
@@ -451,6 +503,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.showWarningModal = true;
     this.warningCountdown = 1200;
     this.lastAttendanceCheck = Date.now();
+    this.cdr.markForCheck();
 
     setTimeout(() => {
       if (this.showWarningModal && this.warningCountdown <= 0) {
@@ -481,17 +534,22 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   }
 
   markAbsent() {
-    this.therapistService.markAbsent(this.sessionId).subscribe({
+    this.subs.add(this.therapistService.markAbsent(this.sessionId).subscribe({
       next: () => {
         this.attendance = 'absent';
         this.session.status = 'completed';
         this.stopRecording();
         this.showWarningModal = false;
         this.clearWarningTimer();
+        this.cdr.markForCheck();
         this.alertService.show('Sesión marcada como ausente.', 'info');
         this.loadAudit();
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   get warningTimeLeft(): string {
@@ -502,7 +560,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   loadAudit() {
     this.auditLoading = true;
-    this.therapistService.getSessionAudit(this.sessionId).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getSessionAudit(this.sessionId).subscribe({
       next: (data) => {
         this.auditLoading = false;
         if (data.success && data.exists) {
@@ -525,43 +584,56 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         } else {
           this.audit = null;
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.auditLoading = false;
+        this.error = err.message;
         this.audit = null;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   private initLiveScore() {
     this.liveScoreSub?.unsubscribe();
-    this.http.get(`/api/sessions/${this.sessionId}/compare-live`).subscribe({
+    this.subs.add(this.http.get(`/api/sessions/${this.sessionId}/compare-live`).subscribe({
       next: (res: any) => {
         if (res.success) this.liveScore = res.score_vectorial;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
       }
-    });
+    }));
     this.liveScoreSub = this.recordingService.auditScore$.subscribe(score => {
       this.liveScore = score;
+      this.cdr.markForCheck();
     });
   }
 
   triggerAudit() {
     this.auditRunning = true;
-    this.therapistService.triggerAudit(this.sessionId).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.triggerAudit(this.sessionId).subscribe({
       next: (data) => {
         this.auditRunning = false;
         if (data.success) {
           this.loadAudit();
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.auditRunning = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   downloadDocx() {
-    this.therapistService.downloadReportDocx(this.sessionId).subscribe({
+    this.subs.add(this.therapistService.downloadReportDocx(this.sessionId).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -570,10 +642,12 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         a.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => {
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
         this.alertService.show('Error al descargar el reporte', 'error');
       },
-    });
+    }));
   }
 
   get auditStatusText(): string {
@@ -599,7 +673,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   submitFeedback() {
     if (this.feedbackSubmitted) return;
     this.feedbackSaving = true;
-    this.therapistService.submitFeedback(this.sessionId, {
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.submitFeedback(this.sessionId, {
       engagement: this.feedbackEngagement,
       progress: this.feedbackProgress,
       notes: this.feedbackNotes,
@@ -607,11 +682,14 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       next: () => {
         this.feedbackSaving = false;
         this.feedbackSubmitted = true;
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.feedbackSaving = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   setEngagement(val: number) {
@@ -623,20 +701,26 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   }
 
   loadProgram() {
-    this.therapistService.getSessionProgram(this.sessionId).subscribe({
+    this.subs.add(this.therapistService.getSessionProgram(this.sessionId).subscribe({
       next: (data) => {
         if (data.success && data.exists) {
           this.programText = data.planned_text;
           this.programUploadedAt = data.uploaded_at;
+          this.cdr.markForCheck();
         }
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   openProgramModal() {
     this.showProgramModal = true;
     this.programLoading = true;
-    this.therapistService.getSessionProgram(this.sessionId).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getSessionProgram(this.sessionId).subscribe({
       next: (data) => {
         this.programLoading = false;
         if (data.success && data.exists) {
@@ -645,12 +729,15 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         } else {
           this.programText = '';
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.programLoading = false;
+        this.error = err.message;
         this.programText = '';
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   closeProgramModal() {
@@ -689,7 +776,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         @media print { body { padding: 1rem; } }
       </style></head>
       <body>
-        <h2 style="color:#6b21a8;border-bottom:2px solid #6b21a8;padding-bottom:0.5rem;">Programación de Sesión</h2>
+        <h2 style="color:var(--color-accent);border-bottom:2px solid var(--color-accent);padding-bottom:0.5rem;">Programación de Sesión</h2>
         ${content.innerHTML}
       </body></html>
     `);

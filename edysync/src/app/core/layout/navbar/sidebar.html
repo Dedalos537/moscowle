@@ -1,0 +1,40 @@
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">
+      <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
+      <div>
+        <span class="sidebar-brand-name">EdySync</span>
+        <span class="sidebar-brand-sub">Centro Juan Pablo II</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-section-label">Navegación</div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="nav-link--active"
+        #rla="routerLinkActive"
+        class="nav-link"
+        [class.nav-link--active]="rla.isActive"
+      >
+        <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <app-button variant="ghost" (clicked)="toggleDarkMode()">
+      @if (theme === 'light') {
+        <fa-icon [icon]="['fas', 'moon']" class="text-sm"></fa-icon>
+        <span class="text-sm">Modo Oscuro</span>
+      } @else {
+        <fa-icon [icon]="['fas', 'sun']" class="text-sm"></fa-icon>
+        <span class="text-sm">Modo Claro</span>
+      }
+    </app-button>
+  </div>
+</aside>

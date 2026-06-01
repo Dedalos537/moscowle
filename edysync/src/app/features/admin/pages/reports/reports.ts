@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AlertService } from '../../../../core/services/alert.service';
@@ -25,7 +26,8 @@ interface FinancialSummary {
   standalone: false,
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Reports implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -193,11 +195,14 @@ export class Reports implements OnInit, OnDestroy {
 
   readonly therapistChartType = 'bar' as const;
 
+  private subscriptions = new Subscription();
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
     private alertService: AlertService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -212,49 +217,74 @@ export class Reports implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subscriptions.unsubscribe();
   }
 
   private loadData() {
-    this.adminService.getAdminOverview().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.overview = res.data;
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getAdminOverview().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.overview = res.data;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
 
-    this.adminService.getAuditStats().subscribe({
-      next: (res: any) => {
-        if (res.success && res.data) {
-          this.auditStats = res.data;
-        }
-      },
-      error: (err) => console.error('Error cargando Stats Auditoria', err),
-    });
+    this.subscriptions.add(
+      this.adminService.getAuditStats().subscribe({
+        next: (res: any) => {
+          if (res.success && res.data) {
+            this.auditStats = res.data;
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Error cargando Stats Auditoria', err);
+          this.cdr.markForCheck();
+        },
+      }),
+    );
 
-    this.adminService.getFinancialSummary().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.financials = res.data;
-          this.updateFinancialChart();
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getFinancialSummary().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.financials = res.data;
+            this.updateFinancialChart();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
 
-    this.adminService.getTherapistStats().subscribe({
-      next: (res) => {
-        this.therapists = res.data;
-        this.updateTherapistChart();
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getTherapistStats().subscribe({
+        next: (res) => {
+          this.therapists = res.data;
+          this.updateTherapistChart();
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
 
-    this.adminService.getPatientStats().subscribe({
-      next: (res) => {
-        this.patients = res.data;
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getPatientStats().subscribe({
+        next: (res) => {
+          this.patients = res.data;
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   private updateFinancialChart() {
@@ -301,34 +331,52 @@ export class Reports implements OnInit, OnDestroy {
 
   generateAIReport() {
     this.aiGenerating = true;
-    this.adminService.generateAIReport().subscribe({
-      next: (res) => {
-        this.aiGenerating = false;
-        this.aiReport = res.report;
-      },
-      error: () => (this.aiGenerating = false),
-    });
+    this.subscriptions.add(
+      this.adminService.generateAIReport().subscribe({
+        next: (res) => {
+          this.aiGenerating = false;
+          this.aiReport = res.report;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.aiGenerating = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   sendWeeklyReport() {
     this.reportSending = true;
-    this.adminService.sendWeeklyReport().subscribe({
-      next: () => (this.reportSending = false),
-      error: () => (this.reportSending = false),
-    });
+    this.subscriptions.add(
+      this.adminService.sendWeeklyReport().subscribe({
+        next: () => {
+          this.reportSending = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.reportSending = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   exportCSV() {
-    this.adminService.exportPaymentsCsv().subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'pagos_export.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.exportPaymentsCsv().subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'pagos_export.csv';
+          a.click();
+          window.URL.revokeObjectURL(url);
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   closeAIReport() {
@@ -348,21 +396,25 @@ export class Reports implements OnInit, OnDestroy {
     this.aiGenerating = true;
     this.aiReport = null;
 
-    this.adminService.generateIAReport().subscribe({
-      next: (res: any) => {
-        this.aiGenerating = false;
-        if (res.success) {
-          this.aiReport = res.report;
-        } else {
-          this.alertService.show('Error: ' + res.error, 'error');
-        }
-      },
-      error: (err) => {
-        this.aiGenerating = false;
-        this.alertService.show('Error de conexión al generar el reporte.', 'error');
-        console.error(err);
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.generateIAReport().subscribe({
+        next: (res: any) => {
+          this.aiGenerating = false;
+          if (res.success) {
+            this.aiReport = res.report;
+          } else {
+            this.alertService.show('Error: ' + res.error, 'error');
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.aiGenerating = false;
+          this.alertService.show('Error de conexión al generar el reporte.', 'error');
+          console.error(err);
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   get barMaxValue(): number {
@@ -378,65 +430,81 @@ export class Reports implements OnInit, OnDestroy {
 
   loadWeeklySummary() {
     this.weeklySummaryLoading = true;
-    this.adminService.getWeeklySummary(this.selectedWeekStart || undefined).subscribe({
-      next: (res) => {
-        this.weeklySummaryLoading = false;
-        if (res.success) {
-          this.weeklySummary = res.data;
-        }
-      },
-      error: () => {
-        this.weeklySummaryLoading = false;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getWeeklySummary(this.selectedWeekStart || undefined).subscribe({
+        next: (res) => {
+          this.weeklySummaryLoading = false;
+          if (res.success) {
+            this.weeklySummary = res.data;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.weeklySummaryLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   loadDailyReports() {
     this.dailyReportsLoading = true;
-    this.adminService.getDailyReports(this.dailyStartDate || undefined, this.dailyEndDate || undefined).subscribe({
-      next: (res) => {
-        this.dailyReportsLoading = false;
-        if (res.success) {
-          this.dailyReports = res.data || [];
-        }
-      },
-      error: () => {
-        this.dailyReportsLoading = false;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getDailyReports(this.dailyStartDate || undefined, this.dailyEndDate || undefined).subscribe({
+        next: (res) => {
+          this.dailyReportsLoading = false;
+          if (res.success) {
+            this.dailyReports = res.data || [];
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.dailyReportsLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   accumulateReports() {
     this.reportsAccumulating = true;
-    this.adminService.accumulateReports().subscribe({
-      next: (res) => {
-        this.reportsAccumulating = false;
-        if (res.success) {
-          this.alertService.show('Reportes acumulados correctamente.', 'success');
-          this.loadWeeklySummary();
-          this.loadDailyReports();
-        }
-      },
-      error: () => {
-        this.reportsAccumulating = false;
-        this.alertService.show('Error al acumular reportes.', 'error');
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.accumulateReports().subscribe({
+        next: (res) => {
+          this.reportsAccumulating = false;
+          if (res.success) {
+            this.alertService.show('Reportes acumulados correctamente.', 'success');
+            this.loadWeeklySummary();
+            this.loadDailyReports();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.reportsAccumulating = false;
+          this.alertService.show('Error al acumular reportes.', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   loadEfficiency(therapistId?: number) {
     this.efficiencyLoading = true;
-    this.adminService.getTherapistEfficiency(therapistId).subscribe({
-      next: (res) => {
-        this.efficiencyLoading = false;
-        if (res.success) {
-          this.therapistEfficiency = res;
-        }
-      },
-      error: () => {
-        this.efficiencyLoading = false;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getTherapistEfficiency(therapistId).subscribe({
+        next: (res) => {
+          this.efficiencyLoading = false;
+          if (res.success) {
+            this.therapistEfficiency = res;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.efficiencyLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   setWeekStart(date: string) {
@@ -445,9 +513,9 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   accuracyColor(avg: number): string {
-    if (avg >= 90) return 'text-emerald-600 bg-emerald-100';
-    if (avg >= 75) return 'text-amber-600 bg-amber-100';
-    return 'text-red-600 bg-red-100';
+    if (avg >= 90) return 'text-success bg-success-container';
+    if (avg >= 75) return 'text-warning bg-warning-container';
+    return 'text-error bg-error-container';
   }
 
   get therapistWeeklyPatients(): any[] {
@@ -465,72 +533,96 @@ export class Reports implements OnInit, OnDestroy {
 
   loadMonthlySummary() {
     this.monthlyLoading = true;
-    this.adminService.getMonthlySummary(this.selectedYear, this.selectedMonth).subscribe({
-      next: (res) => {
-        this.monthlyLoading = false;
-        if (res.success) this.monthlySummary = res.summary;
-      },
-      error: () => this.monthlyLoading = false,
-    });
+    this.subscriptions.add(
+      this.adminService.getMonthlySummary(this.selectedYear, this.selectedMonth).subscribe({
+        next: (res) => {
+          this.monthlyLoading = false;
+          if (res.success) this.monthlySummary = res.summary;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.monthlyLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   loadQuarterlySummary() {
     this.quarterlyLoading = true;
-    this.adminService.getQuarterlySummary(this.selectedYear, this.selectedQuarter).subscribe({
-      next: (res) => {
-        this.quarterlyLoading = false;
-        if (res.success) this.quarterlySummary = res.summary;
-      },
-      error: () => this.quarterlyLoading = false,
-    });
+    this.subscriptions.add(
+      this.adminService.getQuarterlySummary(this.selectedYear, this.selectedQuarter).subscribe({
+        next: (res) => {
+          this.quarterlyLoading = false;
+          if (res.success) this.quarterlySummary = res.summary;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.quarterlyLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   generateMonthlyReports() {
     this.monthlyLoading = true;
-    this.adminService.generateMonthlyReports(this.selectedYear, this.selectedMonth).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.alertService.show(`${res.count} reportes mensuales generados`, 'success');
-          this.loadMonthlySummary();
-        }
-      },
-      error: () => {
-        this.monthlyLoading = false;
-        this.alertService.show('Error al generar reportes mensuales', 'error');
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.generateMonthlyReports(this.selectedYear, this.selectedMonth).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.alertService.show(`${res.count} reportes mensuales generados`, 'success');
+            this.loadMonthlySummary();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.monthlyLoading = false;
+          this.alertService.show('Error al generar reportes mensuales', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   generateQuarterlyReports() {
     this.quarterlyLoading = true;
-    this.adminService.generateQuarterlyReports(this.selectedYear, this.selectedQuarter).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.alertService.show(`${res.count} reportes trimestrales generados`, 'success');
-          this.loadQuarterlySummary();
-        }
-      },
-      error: () => {
-        this.quarterlyLoading = false;
-        this.alertService.show('Error al generar reportes trimestrales', 'error');
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.generateQuarterlyReports(this.selectedYear, this.selectedQuarter).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.alertService.show(`${res.count} reportes trimestrales generados`, 'success');
+            this.loadQuarterlySummary();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.quarterlyLoading = false;
+          this.alertService.show('Error al generar reportes trimestrales', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   generateAllWeeklyReports() {
     this.weeklySummaryLoading = true;
-    this.adminService.generateAllWeeklyReports(this.selectedWeekStart).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.alertService.show(`${res.count} reportes semanales generados`, 'success');
-          this.loadWeeklySummary();
-        }
-      },
-      error: () => {
-        this.weeklySummaryLoading = false;
-        this.alertService.show('Error al generar reportes', 'error');
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.generateAllWeeklyReports(this.selectedWeekStart).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.alertService.show(`${res.count} reportes semanales generados`, 'success');
+            this.loadWeeklySummary();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.weeklySummaryLoading = false;
+          this.alertService.show('Error al generar reportes', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   get monthlyTherapistPatients(): any[] {

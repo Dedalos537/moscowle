@@ -137,6 +137,6 @@ export const pulse = trigger('pulse', [
 export const shimmerBar = trigger('shimmerBar', [
   transition(':enter', [
     style({ width: '0%' }),
-    animate('800ms ease-out', style({ width: '100%' }))
+    animate(`${DURATION} ${EASE}`, style({ width: '100%' }))
   ])
 ]);

@@ -1,14 +1,17 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-spinner',
   standalone: false,
   templateUrl: './spinner.html',
-  styleUrl: './spinner.scss'
+  styleUrl: './spinner.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Spinner {
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
   @Input() colorClass: string = 'text-primary';
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   get sizeClass() {
     return {

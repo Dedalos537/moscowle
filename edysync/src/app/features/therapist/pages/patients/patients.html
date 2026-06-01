@@ -1,8 +1,11 @@
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-<div *ngIf="!loading" class="space-y-4" [@fadeInUp]>
+@if (!loading) {
+<div class="space-y-4" [@fadeInUp]>
   <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -15,37 +18,42 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          <tr *ngFor="let patient of patients" class="hover:bg-surface-container-low transition-colors">
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center">
-                  <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
+          @for (patient of patients; track $index) {
+            <tr class="hover:bg-surface-container-low transition-colors">
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center">
+                    <fa-icon [icon]="['fas', 'user']" class="text-primary text-sm"></fa-icon>
+                  </div>
+                  <span class="font-medium text-on-surface">{{ patient.username }}</span>
                 </div>
-                <span class="font-medium text-on-surface">{{ patient.username }}</span>
-              </div>
-            </td>
-            <td class="px-6 py-4 text-sm text-on-surface-variant">{{ patient.email }}</td>
-            <td class="px-6 py-4">
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    [ngClass]="patient.status_color || 'bg-surface-container-high text-on-surface-variant'">
-                {{ patient.status_label || 'Activo' }}
-              </span>
-            </td>
-            <td class="px-6 py-4">
-              <a [routerLink]="['/therapist/patients', patient.id]"
-                 class="text-sm font-bold text-primary hover:text-primary-fixed-dim transition-colors">
-                Ver Detalle
-              </a>
-            </td>
-          </tr>
-          <tr *ngIf="patients.length === 0">
-            <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
-              <fa-icon [icon]="['fas', 'user-friends']" class="text-3xl mb-2 opacity-30"></fa-icon>
-              <p class="text-sm">No tienes pacientes asignados</p>
-            </td>
-          </tr>
+              </td>
+              <td class="px-6 py-4 text-sm text-on-surface-variant">{{ patient.email }}</td>
+              <td class="px-6 py-4">
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                      [ngClass]="patient.status_color || 'bg-surface-container-high text-on-surface-variant'">
+                  {{ patient.status_label || 'Activo' }}
+                </span>
+              </td>
+              <td class="px-6 py-4">
+                <a [routerLink]="['/therapist/patients', patient.id]"
+                   class="text-sm font-bold text-primary hover:text-primary-fixed-dim transition-colors">
+                  Ver Detalle
+                </a>
+              </td>
+            </tr>
+          }
+          @if (patients.length === 0) {
+            <tr>
+              <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
+                <fa-icon [icon]="['fas', 'user-friends']" class="text-3xl mb-2 opacity-30"></fa-icon>
+                <p class="text-sm">No tienes pacientes asignados</p>
+              </td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>
   </div>
 </div>
+}

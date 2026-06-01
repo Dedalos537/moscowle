@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HeaderService } from '../../../../core/services/header.service';
 
 @Component({
@@ -6,9 +6,13 @@ import { HeaderService } from '../../../../core/services/header.service';
   standalone: false,
   templateUrl: './about.html',
   styleUrl: './about.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class About implements OnInit {
-  constructor(private headerService: HeaderService) {}
+  constructor(
+    private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit() {
     this.headerService.setConfig({

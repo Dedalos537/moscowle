@@ -106,7 +106,7 @@
                 [disabled]="day.disabled"
                 class="relative h-9 text-sm font-medium rounded-lg transition-all duration-150 mx-0.5 my-[1px]
                   {{ day.disabled ? 'text-on-surface-variant/20 cursor-not-allowed' : '' }}
-                  {{ !day.disabled && day.selected ? 'bg-primary text-on-primary shadow-sm' : '' }}
+                  {{ !day.disabled && day.selected ? 'bg-primary text-on-primary shadow-soft' : '' }}
                   {{ !day.disabled && !day.selected && day.date.getMonth() !== calendarMonth.getMonth() ? 'text-on-surface-variant/30' : '' }}
                   {{ !day.disabled && !day.selected && day.date.getMonth() === calendarMonth.getMonth() ? 'text-on-surface hover:bg-surface-container-high' : '' }}">
                 {{ day.day }}
@@ -177,12 +177,12 @@
       <p class="text-xs text-on-surface-variant truncate">{{ editForm.therapist }} &middot; {{ editForm.patient }} &middot; {{ editForm.date }}</p>
     </div>
     <span class="ml-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0"
-          [class.bg-green-100]="editForm.status === 'completed'"
-          [class.text-green-700]="editForm.status === 'completed'"
-          [class.bg-blue-100]="editForm.status === 'scheduled'"
-          [class.text-blue-700]="editForm.status === 'scheduled'"
-          [class.bg-red-100]="editForm.status === 'cancelled'"
-          [class.text-red-700]="editForm.status === 'cancelled'">
+          [class.bg-success-container]="editForm.status === 'completed'"
+          [class.text-on-success-container]="editForm.status === 'completed'"
+          [class.bg-info-container]="editForm.status === 'scheduled'"
+          [class.text-info]="editForm.status === 'scheduled'"
+          [class.bg-error-container]="editForm.status === 'cancelled'"
+          [class.text-error]="editForm.status === 'cancelled'">
       {{ editForm.status }}
     </span>
   </div>
@@ -223,38 +223,52 @@
     <div class="border-t border-outline pt-5">
       <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación de Sesión (.docx)</p>
 
-      <div *ngIf="auditState" class="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-green-600 shrink-0 mt-0.5"></fa-icon>
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-bold text-green-800">Programación subida</p>
-          <p class="text-xs text-green-600 mt-0.5 truncate">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
-        </div>
-        <app-button variant="danger" [disabled]="programDeleting" (clicked)="deleteProgram()">
-          <fa-icon *ngIf="!programDeleting" [icon]="['fas', 'trash-alt']" class="text-lg"></fa-icon>
-          <fa-icon *ngIf="programDeleting" [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon>
-        </app-button>
-      </div>
-
-      <div *ngIf="!auditState" class="mt-1">
-        <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
-          <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
-          <div class="text-center">
-            <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
-            <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
+      @if (auditState) {
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-success-container border border-success-container">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-success shrink-0 mt-0.5"></fa-icon>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-on-success-container">Programación subida</p>
+            <p class="text-xs text-success mt-0.5 truncate">{{ auditState.planned_text_preview || 'Documento adjunto exitosamente' }}</p>
           </div>
-        </label>
-        <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
-      </div>
+          <app-button variant="danger" [disabled]="programDeleting" (clicked)="deleteProgram()">
+            @if (!programDeleting) {
+              <fa-icon [icon]="['fas', 'trash-alt']" class="text-lg"></fa-icon>
+            }
+            @if (programDeleting) {
+              <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon>
+            }
+          </app-button>
+        </div>
+      }
 
-      <div *ngIf="programUploading" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm">
-        <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon> Procesando documento...
-      </div>
-      <div *ngIf="programError" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-red-50 text-red-700 text-sm">
-        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-lg"></fa-icon> {{ programError }}
-      </div>
-      <div *ngIf="programSuccessMessage" class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-green-50 text-green-700 text-sm">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-lg"></fa-icon> {{ programSuccessMessage }}
-      </div>
+      @if (!auditState) {
+        <div class="mt-1">
+          <label for="programFileInput" class="flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
+            <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
+            <div class="text-center">
+              <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
+              <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
+            </div>
+          </label>
+          <input type="file" id="programFileInput" class="hidden" accept=".docx" (change)="onFileSelected($event)">
+        </div>
+      }
+
+      @if (programUploading) {
+        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-info-container text-info text-sm">
+          <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-lg"></fa-icon> Procesando documento...
+        </div>
+      }
+      @if (programError) {
+        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-lg"></fa-icon> {{ programError }}
+        </div>
+      }
+      @if (programSuccessMessage) {
+        <div class="mt-2 flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-lg"></fa-icon> {{ programSuccessMessage }}
+        </div>
+      }
     </div>
   </div>
 

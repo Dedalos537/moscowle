@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
@@ -11,7 +11,8 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistSessions implements OnInit, OnDestroy {
   loading = true;
@@ -19,6 +20,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   showEditModal = false;
   submitting = false;
   deleting = false;
+  error: string | null = null;
 
   fechaSeleccionada: Date = new Date();
   diasSemana: Date[] = [];
@@ -40,11 +42,14 @@ export class TherapistSessions implements OnInit, OnDestroy {
     patient: '',
   };
 
+  private subs = new Subscription();
+
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
     private router: Router,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -60,6 +65,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subs.unsubscribe();
   }
 
   generarDias() {
@@ -96,23 +102,36 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   private loadStats() {
-    this.therapistService.getDashboardStats().subscribe({
-      next: (res) => (this.stats = res),
-    });
+    this.subs.add(this.therapistService.getDashboardStats().subscribe({
+      next: (res) => {
+        this.stats = res;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   cargarSesiones() {
     this.loading = true;
+    this.cdr.markForCheck();
     const f = this.fechaSeleccionada.toISOString().split('T')[0];
-    this.therapistService.getSessions(f, f).subscribe({
+    this.subs.add(this.therapistService.getSessions(f, f).subscribe({
       next: (events) => {
         this.agendaEvents = [...events].sort((a: any, b: any) => {
           return new Date(a.start).getTime() - new Date(b.start).getTime();
         });
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   irSesion(id: number) {
@@ -169,7 +188,8 @@ export class TherapistSessions implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     this.submitting = true;
-    this.therapistService.updateSession(f.id, {
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.updateSession(f.id, {
       title: f.title,
       start_time: `${f.date}T${f.start_time}`,
       end_time: `${f.date}T${f.end_time}`,
@@ -178,13 +198,16 @@ export class TherapistSessions implements OnInit, OnDestroy {
       next: () => {
         this.submitting = false;
         this.closeEditModal();
+        this.cdr.markForCheck();
         this.cargarSesiones();
         this.loadStats();
       },
-      error: () => {
+      error: (err) => {
         this.submitting = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   navigateToReview() {
@@ -202,16 +225,20 @@ export class TherapistSessions implements OnInit, OnDestroy {
     }));
     if (!confirmed) return;
     this.deleting = true;
-    this.therapistService.deleteSession(this.editForm.id).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.deleteSession(this.editForm.id).subscribe({
       next: () => {
         this.deleting = false;
         this.closeEditModal();
+        this.cdr.markForCheck();
         this.cargarSesiones();
         this.loadStats();
       },
-      error: () => {
+      error: (err) => {
         this.deleting = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 }

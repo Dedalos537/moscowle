@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AdminAPIToken } from '../../../../core/models/api-token';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -10,31 +11,40 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
   standalone: false,
   templateUrl: './api-tokens.html',
   styleUrl: './api-tokens.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
-export class ApiTokens implements OnInit {
+export class ApiTokens implements OnInit, OnDestroy {
   tokens: AdminAPIToken[] = [];
   loading = false;
   showCreateModal = false;
   rotate = false;
   newToken: string | null = null;
   creating = false;
+  private subscriptions: Subscription = new Subscription();
 
   constructor(
     private admin: AdminService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
     this.loadTokens();
   }
 
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
+  }
+
   loadTokens() {
     this.loading = true;
-    this.admin.getAPITokens().subscribe({
-      next: (res) => { this.tokens = res.tokens; this.loading = false; },
-      error: () => { this.loading = false; }
-    });
+    this.subscriptions.add(
+      this.admin.getAPITokens().subscribe({
+        next: (res) => { this.tokens = res.tokens; this.loading = false; this.cdr.markForCheck(); },
+        error: () => { this.loading = false; this.cdr.markForCheck(); }
+      })
+    );
   }
 
   openCreateModal() { this.showCreateModal = true; this.rotate = false; this.newToken = null; }
@@ -43,14 +53,17 @@ export class ApiTokens implements OnInit {
 
   createToken() {
     this.creating = true;
-    this.admin.createAPIToken(this.rotate).subscribe({
-      next: (res) => {
-        this.newToken = res.token;
-        this.creating = false;
-        this.loadTokens();
-      },
-      error: () => { this.creating = false; }
-    });
+    this.subscriptions.add(
+      this.admin.createAPIToken(this.rotate).subscribe({
+        next: (res) => {
+          this.newToken = res.token;
+          this.creating = false;
+          this.loadTokens();
+          this.cdr.markForCheck();
+        },
+        error: () => { this.creating = false; this.cdr.markForCheck(); }
+      })
+    );
   }
 
   async deactivateToken(id: number) {
@@ -62,9 +75,12 @@ export class ApiTokens implements OnInit {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.admin.deactivateAPIToken(id).subscribe({
-      next: () => { this.loadTokens(); },
-    });
+    this.subscriptions.add(
+      this.admin.deactivateAPIToken(id).subscribe({
+        next: () => { this.loadTokens(); this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); }
+      })
+    );
   }
 
   copyToken(token: string) {

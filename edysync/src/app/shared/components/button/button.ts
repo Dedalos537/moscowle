@@ -1,11 +1,12 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-button',
   standalone: false,
   templateUrl: './button.html',
-  styleUrl: './button.scss'
+  styleUrl: './button.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Button {
   @Input() label: string = '';
@@ -22,6 +23,8 @@ export class Button {
     danger: { 'btn--danger': true },
     ghost: { 'btn--ghost': true }
   };
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   get btnClass(): Record<string, boolean> {
     return {

@@ -1,245 +1,100 @@
-<div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in" *ngIf="!loading && data" [@fadeInUp]>
-  <div class="flex justify-between items-start mb-8">
-    <div>
-      <p class="text-label-caps text-primary mb-2">RESUMEN DIARIO</p>
-      <h1 class="text-h2 text-on-surface">
-        Hola, {{ currentUser?.username || 'Usuario' }}. Tu próxima sesión es<br>
-        <span class="text-primary">{{ data.next_session?.title || 'Terapia General' }}</span> a las {{ data.next_session?.start || '10:00 AM' }}.
-      </h1>
-    </div>
-
-
-    <div class="hidden md:flex items-center gap-4 bg-surface-container-lowest rounded-2xl px-6 py-4 shadow-soft border border-border/30 min-w-[200px]">
-      <div class="relative w-[72px] h-[72px] flex-shrink-0">
-        <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="8" class="text-outline-variant/30"/>
-          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round"
-                  stroke-dasharray="264"
-                  [attr.stroke-dashoffset]="264 - (264 * data.avg_compliance) / 100" class="text-primary transition-all duration-1000"/>
-        </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-xl font-black text-on-surface leading-none">{{ data.avg_compliance | number:'1.0-0' }}%</span>
-        </div>
-      </div>
-      <div>
-        <p class="text-xs text-on-surface-variant font-semibold leading-tight">Cumplimiento</p>
-        <p class="text-label-caps text-on-surface-variant">Global</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="col-span-1 lg:col-span-2 space-y-6">
-      <div class="bg-primary-container/20 rounded-2xl p-8 text-white relative overflow-hidden shadow-soft">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/30 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-20 -translate-y-20"></div>
-        <div class="absolute bottom-0 left-0 w-48 h-48 bg-primary-container/30 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -translate-x-10 translate-y-10"></div>
-
-        <div class="relative z-10">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 rounded-full text-label-caps mb-6 backdrop-blur-sm">
-            <span class="w-1.5 h-1.5 bg-success rounded-full animate-pulse"></span>
-            Sesión en Vivo
-          </span>
-
-          <h2 class="text-h3 mb-3">Sesión Actual: {{ data.next_session?.title || 'Planificación y Revisión' }}</h2>
-          <p class="text-white/70 text-sm mb-12">
-            Paciente: {{ data.next_session?.patient || 'N/A' }}
-            <span class="mx-2 opacity-30">·</span>
-            {{ data.next_session?.location || 'Virtual' }}
-            <span class="mx-2 opacity-30">·</span>
-            {{ data.total_students || 1 }} Estudiantes registrados
-          </p>
-
-            <div class="flex items-center gap-8 flex-wrap">
-              <div class="relative w-32 h-32 flex-shrink-0">
-                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border)" stroke-width="10"/>
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-primary-container)" stroke-width="10" stroke-linecap="round"
-                          [attr.stroke-dasharray]="283"
-                          [attr.stroke-dashoffset]="283 - (283 * (data.session_progress || 0)) / 100"
-                          class="transition-all duration-1000"/>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="text-2xl font-black leading-none">{{ data.session_progress || 0 }}%</span>
-                  <span class="text-label-caps text-white/70">Cobertura</span>
-                </div>
-              </div>
-
-              <div class="flex-1 min-w-[200px]">
-                <div class="flex justify-between text-sm font-medium mb-2">
-                  <span>Cumplimiento Global</span>
-                  <span class="text-primary-container">{{ data.avg_compliance || 0 }}%</span>
-                </div>
-                <div class="w-full bg-white/10 rounded-full h-2.5 mb-3">
-                  <div class="bg-primary-container h-2.5 rounded-full transition-all duration-1000"
-                       [style.width.%]="data.avg_compliance || 0"></div>
-                </div>
-                <p class="text-xs text-white/50 italic" *ngIf="data.avg_compliance > 0">
-                  {{ data.avg_compliance < 70 ? 'Por debajo del objetivo del 70%' : data.avg_compliance < 85 ? 'Buen progreso, sigue as&iacute;' : 'Excelente cumplimiento' }}
-                </p>
-                <p class="text-xs text-white/50 italic" *ngIf="!data.avg_compliance || data.avg_compliance === 0">
-                  Sin auditor&iacute;as previas para calcular cumplimiento
-                </p>
-              </div>
-            </div>
-        </div>
-      </div>
-
-      <div class="bg-surface-container-lowest rounded-2xl p-8 shadow-soft border border-border/30">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-h3 text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'list-check']" class="text-primary"></fa-icon>
-            Textos de la Sesión
-          </h3>
-          <a href="/therapist/sessions" class="text-label text-primary hover:text-primary-fixed-dim transition-colors flex items-center gap-1">
-            Gestionar Plan
-            <fa-icon [icon]="['fas', 'arrow-right']" class="text-sm"></fa-icon>
-          </a>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div *ngFor="let topic of data.topics"
-               [ngClass]="{
-                 'bg-primary/5 border-primary/20': topic.status === 'LOGRADO',
-                 'bg-warning-container border-warning-container': topic.status === 'PARCIAL',
-                 'bg-surface-container-low border-border/30': topic.status === 'PENDIENTE'
-               }"
-               class="rounded-xl p-4 border flex items-start gap-3 transition-all hover:shadow-hover">
-
-            <div class="rounded-full flex-shrink-0 mt-0.5 w-8 h-8 flex items-center justify-center"
-                 [ngClass]="{
-                   'bg-primary/20 text-primary': topic.status === 'LOGRADO',
-                   'bg-warning-container text-warning': topic.status === 'PARCIAL',
-                   'bg-surface-container-high text-on-surface-variant/50': topic.status === 'PENDIENTE'
-                 }">
-               <fa-icon
-                 [icon]="topic.status === 'LOGRADO' ? ['fas', 'check'] : (topic.status === 'PARCIAL' ? ['fas', 'clock'] : ['fas', 'circle'])"
-                 class="text-sm"></fa-icon>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <p class="font-bold text-on-surface text-sm mb-0.5 truncate">{{ topic.name }}</p>
-              <p class="text-label-caps"
-                 [ngClass]="{
-                   'text-primary': topic.status === 'LOGRADO',
-                   'text-warning': topic.status === 'PARCIAL',
-                   'text-on-surface-variant/50': topic.status === 'PENDIENTE'
-                 }">{{ topic.status }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="col-span-1">
-      <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 h-full flex flex-col">
-        <div class="flex justify-between items-center mb-8">
-          <h3 class="text-h3 text-on-surface">Agenda de Hoy</h3>
-          <span class="px-3 py-1 bg-surface-container-low text-on-surface-variant text-label-caps rounded-full">{{ '' | date:'dd MMM' }}</span>
-        </div>
-
-        <div class="relative pl-8 flex-1">
-          <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-outline-variant/50"></div>
-
-          <div *ngFor="let item of data.agenda" class="relative pb-8 last:pb-0">
-            <div class="absolute -left-8 top-1 w-[22px] h-[22px] rounded-full border-[3px] z-10 flex items-center justify-center"
-                 [ngClass]="{
-                   'bg-primary border-surface': item.is_current,
-                   'bg-surface-container-lowest border-border/50': !item.is_current
-                 }">
-              <span *ngIf="item.is_current" class="w-2 h-2 bg-white rounded-full"></span>
-            </div>
-
-            <div class="p-4 rounded-xl transition-all"
-                 [ngClass]="{
-                   'bg-primary/5 border border-primary/20 shadow-sm': item.is_current,
-                   'bg-surface-container-low border border-transparent hover:bg-surface-container-high': !item.is_current
-                 }">
-              <p class="text-label-caps mb-1"
-                 [ngClass]="{'text-primary': item.is_current, 'text-on-surface-variant/60': !item.is_current}">
-                {{ item.is_current ? 'AHORA · ' : '' }}{{ item.start }}
-              </p>
-              <h4 class="font-bold text-on-surface text-sm">{{ item.title }}</h4>
-              <p class="text-xs text-on-surface-variant/70 mt-1">
-                <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[14px] align-text-bottom mr-0.5"></fa-icon>
-                {{ item.location }}
-                <span *ngIf="item.patient" class="mx-1">·</span>
-                {{ item.patient }}
-              </p>
-            </div>
-          </div>
-
-          <div *ngIf="!data.agenda?.length" class="text-center text-sm text-on-surface-variant/60 py-8">
-            No tienes sesiones agendadas para hoy.
-          </div>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-border/20">
-          <a href="/therapist/sessions" class="btn-secondary w-full justify-center">
-            Ver Calendario Completo
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 animate-fade-in">
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-info-container flex items-center justify-center text-info flex-shrink-0">
-        <fa-icon [icon]="['fas', 'calendar-day']" class="text-2xl"></fa-icon>
-      </div>
-      <div class="min-w-0">
-        <p class="text-h2 text-on-surface">{{ data.agenda?.length || 0 }}</p>
-        <p class="text-sm text-on-surface-variant font-medium">Sesiones Hoy</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps" style="background:var(--color-info-container);color:var(--color-info)">{{ data.next_session?.status === 'in_progress' ? 'En curso' : data.next_session?.status === 'scheduled' ? 'Programadas' : 'Finalizadas' }}</span>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-success-container flex items-center justify-center text-success flex-shrink-0">
-        <fa-icon [icon]="['fas', 'users']" class="text-2xl"></fa-icon>
-      </div>
-      <div class="min-w-0">
-        <p class="text-h2 text-on-surface">{{ data.total_students || 0 }}</p>
-        <p class="text-sm text-on-surface-variant font-medium">Pacientes Hoy</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps text-success bg-success-container">Registrados</span>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-2xl p-6 shadow-soft border border-border/30 flex items-center gap-6">
-      <div class="w-14 h-14 rounded-xl bg-primary-container flex items-center justify-center text-primary flex-shrink-0">
-        <fa-icon [icon]="['fas', 'chart-pie']" class="text-2xl"></fa-icon>
-      </div>
-      <div class="min-w-0">
-        <p class="text-h2 text-on-surface">{{ data.avg_compliance || 0 }}%</p>
-        <p class="text-sm text-on-surface-variant font-medium">Cumplimiento</p>
-        <span class="inline-block mt-2 px-2 py-0.5 rounded text-label-caps" style="background:var(--color-primary-container);color:var(--color-primary)">{{ data.avg_compliance >= 70 ? 'Meta alcanzada' : 'En progreso' }}</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-@if (showWeeklyReviewModal) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" (click)="dismissWeeklyReview()">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-border/30 p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
-      <div class="text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-info-container flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl text-info"></fa-icon>
-        </div>
-        <h3 class="text-h3 text-on-surface mb-2">Reporte Semanal Disponible</h3>
-        <p class="text-sm text-on-surface-variant mb-4">
-          Tus reportes semanales del {{ weeklyReportWeekStart }} al {{ weeklyReportWeekEnd }} ya estan listos.
-          Tienes <strong>{{ weeklyReportsCount }} reportes</strong> pendientes de revision.
-        </p>
-        <div class="flex gap-3 justify-center">
-          <app-button variant="ghost" label="Revisar Despues" (clicked)="dismissWeeklyReview()"></app-button>
-          <app-button variant="primary" label="Ver Reportes" [icon]="['fas', 'eye']" (clicked)="viewWeeklyReports()"></app-button>
-        </div>
-      </div>
+@if (!loading && data) {
+<div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
+      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Pacientes Activos</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.active_patients }}</p>
+    </div>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
+      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Sesiones Hoy</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.today_sessions_count }}</p>
+    </div>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
+      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Cumplimiento</p>
+      <p class="text-3xl font-bold text-on-surface">
+        @if (data.avg_compliance > 0) {
+          {{ data.avg_compliance }}%
+        }
+        @if (!data.avg_compliance || data.avg_compliance === 0) {
+          —
+        }
+      </p>
+    </div>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
+      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Juegos Asignados</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.total_games_assigned }}</p>
     </div>
   </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2">
+      <app-card title="Progreso por Programa" [icon]="['fas', 'chart-simple']">
+        @if (data.topics?.length) {
+          <div class="space-y-4">
+            @for (topic of data.topics; track $index) {
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-on-surface">{{ topic.name }}</span>
+                  <span class="text-on-surface-variant">{{ topic.completed }}/{{ topic.total }} pacientes</span>
+                </div>
+                <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+                  <div class="h-full rounded-full bg-primary"
+                       [style.width.%]="topic.total > 0 ? (topic.completed / topic.total * 100) : 0">
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </app-card>
+    </div>
+
+    <div>
+      <app-card title="Próximas Sesiones" [icon]="['fas', 'calendar']">
+        @if (data.agenda?.length) {
+          <div class="space-y-3">
+            @for (item of data.agenda; track $index) {
+              <div class="p-3 rounded-xl transition-colors"
+                   [ngClass]="item.is_current ? 'bg-primary-container/20 border border-primary-container' : 'hover:bg-surface-container-low'">
+                <div class="flex items-center justify-between">
+                  <p class="font-semibold text-sm text-on-surface">{{ item.title }}</p>
+                  @if (item.is_current) {
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-on-primary">Ahora</span>
+                  }
+                </div>
+                <p class="text-xs text-on-surface-variant mt-1">{{ item.start_time | date:'shortTime' }}</p>
+                @if (item.patient) {
+                  <p class="text-xs text-primary mt-1">{{ item.patient }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+        @if (!data.agenda?.length) {
+          <div class="text-center py-6 text-on-surface-variant">
+            <fa-icon [icon]="['fas', 'calendar-check']" class="text-2xl mb-2 opacity-30"></fa-icon>
+            <p class="text-sm">No hay sesiones programadas</p>
+          </div>
+        }
+      </app-card>
+    </div>
+  </div>
+
+  <div class="flex justify-end">
+    <app-button
+      [label]="weeklyReportsPending ? 'Generando...' : 'Generar Reporte Semanal General'"
+      [icon]="weeklyReportsPending ? ['fas', 'spinner'] : ['fas', 'file-alt']"
+      [disabled]="weeklyReportsPending"
+      (clicked)="generateWeeklyReport()"
+      variant="primary">
+    </app-button>
+  </div>
+
+</div>
 }

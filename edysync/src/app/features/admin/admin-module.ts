@@ -25,6 +25,7 @@ import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
 import { QuickPayment } from './components/quick-payment/quick-payment';
+import { Logs } from './pages/logs/logs';
 
 @NgModule({
   declarations: [
@@ -48,6 +49,7 @@ import { QuickPayment } from './components/quick-payment/quick-payment';
     YapeImport,
     AiTraining,
     QuickPayment,
+    Logs,
   ],
   imports: [
     CommonModule,

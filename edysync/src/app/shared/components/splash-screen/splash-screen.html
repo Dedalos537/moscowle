@@ -1,0 +1,15 @@
+<div class="splash" [class.splash--hidden]="isReady">
+  <div class="splash__inner">
+    <div class="splash__logo">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" class="text-primary">
+        <rect width="64" height="64" rx="16" fill="currentColor"/>
+        <path d="M20 44V28L32 20L44 28V44H36V34H28V44H20Z" fill="white"/>
+      </svg>
+    </div>
+    <h1 class="splash__title">Juan Pablo II</h1>
+    <p class="splash__subtitle">Centro de Terapias</p>
+    <div class="splash__bar">
+      <div class="splash__bar-fill" [class.splash__bar-fill--done]="isReady"></div>
+    </div>
+  </div>
+</div>

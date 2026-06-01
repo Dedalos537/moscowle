@@ -11,16 +11,16 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-100">
-      <p class="text-[10px] font-black text-green-600 uppercase tracking-widest">Total Transacciones</p>
-      <p class="text-2xl font-black text-green-700">{{ dashboard.total }}</p>
+    <div class="bg-gradient-to-br from-success-container to-success-container rounded-lg p-5 border border-success-container">
+      <p class="text-[10px] font-black text-success uppercase tracking-widest">Total Transacciones</p>
+      <p class="text-2xl font-black text-on-success-container">{{ dashboard.total }}</p>
     </div>
-    <div class="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl p-5 border border-warning-container">
+    <div class="bg-gradient-to-br from-warning-container to-warning-container rounded-lg p-5 border border-warning-container">
       <p class="text-[10px] font-black text-warning uppercase tracking-widest">Pendientes</p>
       <p class="text-2xl font-black text-warning">{{ dashboard.pending }}</p>
     </div>
-    <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100">
-      <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Buscar</p>
+    <div class="bg-gradient-to-br from-info-container to-info-container rounded-lg p-5 border border-info-container">
+      <p class="text-[10px] font-black text-info uppercase tracking-widest">Buscar</p>
       <div class="flex gap-2 mt-1">
         <app-input id="yape-search" placeholder="Nombre o monto..." [(value)]="searchQuery" (valueChange)="searchYape()"></app-input>
       </div>
@@ -28,14 +28,14 @@
   </div>
 
   @if (pendingTransactions.length > 0) {
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-warning-container p-6">
+    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-warning-container p-6">
       <h3 class="text-sm font-bold text-warning mb-4 flex items-center gap-2">
         <fa-icon [icon]="['fas', 'clock']" class="text-warning"></fa-icon> Transacciones sin Comprobante
       </h3>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[500px]">
           <thead>
-            <tr class="bg-orange-50/50">
+            <tr class="bg-warning-container/50">
               <th class="px-4 py-3 text-left text-[10px] font-bold text-on-surface-variant uppercase">Fecha</th>
               <th class="px-4 py-3 text-left text-[10px] font-bold text-on-surface-variant uppercase">Remitente</th>
               <th class="px-4 py-3 text-right text-[10px] font-bold text-on-surface-variant uppercase">Monto</th>
@@ -47,7 +47,7 @@
               <tr class="text-sm">
                 <td class="px-4 py-3 text-on-surface">{{ t.transaction_date }}</td>
                 <td class="px-4 py-3 font-medium text-on-surface">{{ t.sender_name }}</td>
-                <td class="px-4 py-3 text-right font-bold text-green-700">S/ {{ t.amount.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-right font-bold text-on-success-container">S/ {{ t.amount.toFixed(2) }}</td>
                 <td class="px-4 py-3 text-on-surface-variant max-w-[200px] truncate">{{ t.message || '—' }}</td>
               </tr>
             }
@@ -57,7 +57,7 @@
     </div>
   }
 
-  <div class="bg-surface-container-lowest rounded-3xl shadow-sm border-border/20 p-6">
+  <div class="bg-surface-container-lowest rounded-xl shadow-soft border-border/20 p-6">
     <h3 class="text-lg font-bold text-on-surface mb-6 flex items-center gap-2">
       <fa-icon [icon]="['fas', 'history']" class="text-primary"></fa-icon> Historial de Importaciones
     </h3>
@@ -85,7 +85,7 @@
                 <td class="px-5 py-4 text-right font-bold text-on-surface">S/ {{ t.amount.toFixed(2) }}</td>
                 <td class="px-5 py-4 text-on-surface-variant max-w-[200px] truncate">{{ t.message || '—' }}</td>
                 <td class="px-5 py-4">
-                  <span class="px-2 py-1 text-[10px] font-bold rounded bg-blue-50 text-blue-700">{{ t.category || 'Sin categoria' }}</span>
+                  <span class="px-2 py-1 text-[10px] font-bold rounded bg-info-container text-info">{{ t.category || 'Sin categoria' }}</span>
                 </td>
               </tr>
             } @empty {

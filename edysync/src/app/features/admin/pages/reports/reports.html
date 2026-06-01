@@ -27,7 +27,7 @@
 
     @if (overview) {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-primary">Pacientes Activos</span>
             <fa-icon [icon]="['fas', 'users']" class="text-primary text-xl"></fa-icon>
@@ -36,25 +36,25 @@
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-blue-700">Terapeutas</span>
-            <fa-icon [icon]="['fas', 'id-card']" class="text-blue-500 text-xl"></fa-icon>
+            <span class="text-label-caps text-info">Terapeutas</span>
+            <fa-icon [icon]="['fas', 'id-card']" class="text-info text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.therapists }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Registrados en el sistema</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-amber-700">Sesiones Totales</span>
-            <fa-icon [icon]="['fas', 'calendar-alt']" class="text-amber-500 text-xl"></fa-icon>
+            <span class="text-label-caps text-warning">Sesiones Totales</span>
+            <fa-icon [icon]="['fas', 'calendar-alt']" class="text-warning text-xl"></fa-icon>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">{{ overview.sessions_total }}</p>
           <p class="text-xs text-on-surface-variant mt-1">Histórico acumulado</p>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-success">Precisión Global</span>
             <fa-icon [icon]="['fas', 'chart-line']" class="text-success text-xl"></fa-icon>
@@ -66,7 +66,7 @@
     }
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-success">Ingresos Reales</span>
           <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
@@ -78,31 +78,31 @@
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-blue-700">Proyección</span>
-          <fa-icon [icon]="['fas', 'university']" class="text-blue-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-info">Proyección</span>
+          <fa-icon [icon]="['fas', 'university']" class="text-info text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.income_expected.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'calendar-check']" class="text-[14px] text-blue-500"></fa-icon>
+          <fa-icon [icon]="['fas', 'calendar-check']" class="text-[14px] text-info"></fa-icon>
           Si todos pagaran a tiempo
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
-          <span class="text-label-caps text-red-700">Morosidad Acumulada</span>
-          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
+          <span class="text-label-caps text-error">Morosidad Acumulada</span>
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
         </div>
         <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
         <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-          <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-red-500"></fa-icon>
+          <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-error"></fa-icon>
           {{ financials.overdue_users_count }} usuarios con deuda
         </p>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-start justify-between mb-3">
           <span class="text-label-caps text-primary">Ejecución</span>
           <fa-icon [icon]="['fas', 'percent']" class="text-primary text-xl"></fa-icon>
@@ -117,7 +117,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-      <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-5 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-bar']" class="text-[16px]"></fa-icon>
           Comparativa Visual
@@ -129,7 +129,7 @@
               <span class="font-bold text-on-surface">S/ {{ financials.income_expected.toFixed(2) }}</span>
             </div>
             <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
-              <div class="h-full rounded-full" style="width: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa)"></div>
+              <div class="h-full rounded-full" style="width: 100%; background: linear-gradient(90deg, var(--color-info), var(--color-info-container))"></div>
             </div>
           </div>
           <div>
@@ -141,20 +141,20 @@
               <div
                 class="h-full rounded-full animate-gradient"
                 [style.width.%]="executionPercent > 100 ? 100 : executionPercent"
-                style="background: linear-gradient(90deg, #75a83a, #a5d087)"
+                style="background: linear-gradient(90deg, var(--color-success), var(--color-success-container))"
               ></div>
             </div>
           </div>
           <div>
             <div class="flex justify-between text-sm mb-1.5">
               <span class="font-semibold text-on-surface">Deuda (Morosidad)</span>
-              <span class="font-bold text-red-600">S/ {{ financials.overdue_amount.toFixed(2) }}</span>
+              <span class="font-bold text-error">S/ {{ financials.overdue_amount.toFixed(2) }}</span>
             </div>
             <div class="w-full bg-surface-container-high rounded-full h-5 relative overflow-hidden">
               <div
                 class="h-full rounded-full"
                 [style.width.%]="overduePercent > 100 ? 100 : overduePercent"
-                style="background: linear-gradient(90deg, #dc2626, #f87171)"
+                style="background: linear-gradient(90deg, var(--color-error), var(--color-error-container))"
               ></div>
             </div>
           </div>
@@ -176,7 +176,7 @@
         </div>
       </div>
 
-      <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="lg:col-span-3 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Comparación Financiera
@@ -195,7 +195,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'users']" class="text-primary text-lg"></fa-icon>
@@ -236,14 +236,14 @@
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
                       [class.bg-success-container]="t.avg_accuracy >= 90"
                       [class.text-success]="t.avg_accuracy >= 90"
-                      [class.bg-amber-100]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                      [class.text-amber-700]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                      [class.bg-red-100]="t.avg_accuracy < 75"
-                      [class.text-red-700]="t.avg_accuracy < 75">
+                      [class.bg-warning-container]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
+                      [class.text-warning]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
+                      [class.bg-error-container]="t.avg_accuracy < 75"
+                      [class.text-error]="t.avg_accuracy < 75">
                       <fa-icon [icon]="['fas', 'circle']" class="text-[12px]"
                         [class.text-success]="t.avg_accuracy >= 90"
-                        [class.text-amber-500]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
-                        [class.text-red-500]="t.avg_accuracy < 75"></fa-icon>
+                        [class.text-warning]="t.avg_accuracy >= 75 && t.avg_accuracy < 90"
+                        [class.text-error]="t.avg_accuracy < 75"></fa-icon>
                       {{ t.avg_accuracy }}%
                     </span>
                   </td>
@@ -258,7 +258,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-lg"></fa-icon>
@@ -288,15 +288,15 @@
                         <div
                           class="h-full rounded-full transition-all duration-700"
                           [class.bg-success-container0]="p.avg_accuracy >= 90"
-                          [class.bg-amber-500]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
-                          [class.bg-red-500]="p.avg_accuracy < 75"
+                          [class.bg-warning]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
+                          [class.bg-error]="p.avg_accuracy < 75"
                           [style.width.%]="p.avg_accuracy"
                         ></div>
                       </div>
                       <span class="text-xs font-bold"
                         [class.text-success]="p.avg_accuracy >= 90"
-                        [class.text-amber-700]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
-                        [class.text-red-700]="p.avg_accuracy < 75">
+                        [class.text-warning]="p.avg_accuracy >= 75 && p.avg_accuracy < 90"
+                        [class.text-error]="p.avg_accuracy < 75">
                         {{ p.avg_accuracy }}%
                       </span>
                     </div>
@@ -313,7 +313,7 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 border-l-4 border-l-primary">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 border-l-4 border-l-primary">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-border/30">
         <div class="flex items-center gap-3">
           <fa-icon [icon]="['fas', 'brain']" class="text-2xl text-primary"></fa-icon>
@@ -334,7 +334,7 @@
       </div>
 
       @if (aiReport) {
-        <div class="mb-6 p-5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-primary-container/30 animate-fade-in">
+        <div class="mb-6 p-5 bg-gradient-to-r from-accent-container to-accent-container rounded-xl border border-primary-container/30 animate-fade-in">
           <h3 class="text-sm font-bold text-primary mb-3 flex items-center gap-2">
             <fa-icon [icon]="['fas', 'th-large']" class="text-lg text-primary"></fa-icon>
             Informe Llama
@@ -397,14 +397,14 @@
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold"
                       [class.bg-success-container]="r.score >= 8"
                       [class.text-success]="r.score >= 8"
-                      [class.bg-amber-100]="r.score >= 5 && r.score < 8"
-                      [class.text-amber-800]="r.score >= 5 && r.score < 8"
-                      [class.bg-red-100]="r.score < 5"
-                      [class.text-red-800]="r.score < 5">
+                      [class.bg-warning-container]="r.score >= 5 && r.score < 8"
+                      [class.text-warning]="r.score >= 5 && r.score < 8"
+                      [class.bg-error-container]="r.score < 5"
+                      [class.text-error]="r.score < 5">
                       <fa-icon [icon]="['fas', 'circle']" class="text-[10px]"
                         [class.text-success]="r.score >= 8"
-                        [class.text-amber-500]="r.score >= 5 && r.score < 8"
-                        [class.text-red-500]="r.score < 5"></fa-icon>
+                        [class.text-warning]="r.score >= 5 && r.score < 8"
+                        [class.text-error]="r.score < 5"></fa-icon>
                       {{ r.score }}/10
                     </span>
                   </td>
@@ -420,7 +420,7 @@
       </div>
     </div>
 
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
       <div class="flex gap-1 mb-4 pb-3 border-b border-border/30">
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
                 [class.bg-secondary/10]="activeReportTab === 'weekly'"
@@ -431,8 +431,8 @@
           Semanal
         </button>
         <button class="px-4 py-2 text-sm font-bold rounded-lg transition-colors"
-                [class.bg-blue-100]="activeReportTab === 'monthly'"
-                [class.text-blue-700]="activeReportTab === 'monthly'"
+                [class.bg-info-container]="activeReportTab === 'monthly'"
+                [class.text-info]="activeReportTab === 'monthly'"
                 [class.text-on-surface-variant]="activeReportTab !== 'monthly'"
                 (click)="setReportTab('monthly')">
           <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[16px] align-text-bottom mr-1"></fa-icon>
@@ -494,10 +494,10 @@
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                 [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                 [class.text-success]="(p.avg_score || 0) >= 80"
-                                [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.bg-red-100]="(p.avg_score || 0) < 50"
-                                [class.text-red-700]="(p.avg_score || 0) < 50">
+                                [class.bg-warning-container]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.text-warning]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.bg-error-container]="(p.avg_score || 0) < 50"
+                                [class.text-error]="(p.avg_score || 0) < 50">
                             {{ p.avg_score || 0 }}%
                           </span>
                         </td>
@@ -509,10 +509,10 @@
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                   [class.bg-success-container]="p.efficiency >= 80"
                                   [class.text-success]="p.efficiency >= 80"
-                                  [class.bg-amber-100]="p.efficiency >= 50 && p.efficiency < 80"
-                                  [class.text-amber-700]="p.efficiency >= 50 && p.efficiency < 80"
-                                  [class.bg-red-100]="p.efficiency < 50"
-                                  [class.text-red-700]="p.efficiency < 50">
+                                  [class.bg-warning-container]="p.efficiency >= 50 && p.efficiency < 80"
+                                  [class.text-warning]="p.efficiency >= 50 && p.efficiency < 80"
+                                  [class.bg-error-container]="p.efficiency < 50"
+                                  [class.text-error]="p.efficiency < 50">
                               {{ p.efficiency }}%
                             </span>
                           } @else {
@@ -591,10 +591,10 @@
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                 [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                 [class.text-success]="(p.avg_score || 0) >= 80"
-                                [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.bg-red-100]="(p.avg_score || 0) < 50"
-                                [class.text-red-700]="(p.avg_score || 0) < 50">
+                                [class.bg-warning-container]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.text-warning]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.bg-error-container]="(p.avg_score || 0) < 50"
+                                [class.text-error]="(p.avg_score || 0) < 50">
                             {{ p.avg_score || 0 }}%
                           </span>
                         </td>
@@ -604,8 +604,8 @@
                         <td class="px-4 py-3 text-right">
                           <span class="text-xs font-bold"
                                 [class.text-success]="(entry.avg_score || 0) >= 80"
-                                [class.text-amber-600]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
-                                [class.text-red-600]="(entry.avg_score || 0) < 50">
+                                [class.text-warning]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
+                                [class.text-error]="(entry.avg_score || 0) < 50">
                             {{ entry.avg_score || 0 }}%
                           </span>
                         </td>
@@ -681,10 +681,10 @@
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold"
                                 [class.bg-success-container]="(p.avg_score || 0) >= 80"
                                 [class.text-success]="(p.avg_score || 0) >= 80"
-                                [class.bg-amber-100]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.text-amber-700]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
-                                [class.bg-red-100]="(p.avg_score || 0) < 50"
-                                [class.text-red-700]="(p.avg_score || 0) < 50">
+                                [class.bg-warning-container]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.text-warning]="(p.avg_score || 0) >= 50 && (p.avg_score || 0) < 80"
+                                [class.bg-error-container]="(p.avg_score || 0) < 50"
+                                [class.text-error]="(p.avg_score || 0) < 50">
                             {{ p.avg_score || 0 }}%
                           </span>
                         </td>
@@ -694,8 +694,8 @@
                         <td class="px-4 py-3 text-right">
                           <span class="text-xs font-bold"
                                 [class.text-success]="(entry.avg_score || 0) >= 80"
-                                [class.text-amber-600]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
-                                [class.text-red-600]="(entry.avg_score || 0) < 50">
+                                [class.text-warning]="(entry.avg_score || 0) >= 50 && (entry.avg_score || 0) < 80"
+                                [class.text-error]="(entry.avg_score || 0) < 50">
                             {{ entry.avg_score || 0 }}%
                           </span>
                         </td>
@@ -721,10 +721,10 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'calendar-day']" class="text-lg text-blue-500"></fa-icon>
+            <fa-icon [icon]="['fas', 'calendar-day']" class="text-lg text-info"></fa-icon>
             Reportes Diarios
           </h3>
           <div class="flex gap-2 items-center">
@@ -762,8 +762,8 @@
                     <td class="px-3 py-2 text-xs text-right">
                       <span class="font-bold"
                             [class.text-success]="(d.avg_score || 0) >= 80"
-                            [class.text-amber-600]="(d.avg_score || 0) >= 50 && (d.avg_score || 0) < 80"
-                            [class.text-red-600]="(d.avg_score || 0) < 50">
+                            [class.text-warning]="(d.avg_score || 0) >= 50 && (d.avg_score || 0) < 80"
+                            [class.text-error]="(d.avg_score || 0) < 50">
                         {{ d.avg_score || 0 }}%
                       </span>
                     </td>
@@ -779,7 +779,7 @@
         }
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-lg text-success"></fa-icon>
@@ -808,14 +808,14 @@
                   <div class="w-20 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                     <div class="h-full rounded-full transition-all duration-700"
                          [class.bg-success-container0]="(e.efficiency || 0) >= 80"
-                         [class.bg-amber-500]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
-                         [class.bg-red-500]="(e.efficiency || 0) < 50"
+                         [class.bg-warning]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
+                         [class.bg-error]="(e.efficiency || 0) < 50"
                          [style.width.%]="e.efficiency || 0"></div>
                   </div>
                   <span class="text-xs font-bold min-w-[3rem] text-right"
                         [class.text-success]="(e.efficiency || 0) >= 80"
-                        [class.text-amber-700]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
-                        [class.text-red-700]="(e.efficiency || 0) < 50">
+                        [class.text-warning]="(e.efficiency || 0) >= 50 && (e.efficiency || 0) < 80"
+                        [class.text-error]="(e.efficiency || 0) < 50">
                     {{ e.efficiency || 0 }}%
                   </span>
                 </div>

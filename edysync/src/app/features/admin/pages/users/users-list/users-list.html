@@ -112,7 +112,7 @@
           <app-spinner size="md" colorClass="text-primary"></app-spinner>
         </div>
       } @else {
-        <div class="hidden md:block overflow-x-auto rounded-xl border border-border/20 shadow-card">
+        <div class="hidden md:block overflow-x-auto rounded-xl border border-border/20 shadow-soft">
           <table class="w-full min-w-[1100px]">
             <thead>
               <tr class="bg-surface-container-high">
@@ -175,7 +175,7 @@
                             <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)" class="py-0.5">{{ t.username }}</option>
                           }
                         </select>
-                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-md transition-all shrink-0 cursor-pointer" title="Guardar">
+                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-soft transition-all shrink-0 cursor-pointer" title="Guardar">
                           <fa-icon [icon]="['fas', 'check']" class="text-lg"></fa-icon>
                         </button>
                       </div>
@@ -253,7 +253,7 @@
                           <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)">{{ t.username }}</option>
                         }
                       </select>
-                      <button (click)="assignTherapist(u.id, sel2)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-sm self-start shrink-0 cursor-pointer">
+                      <button (click)="assignTherapist(u.id, sel2)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-soft self-start shrink-0 cursor-pointer">
                         <fa-icon [icon]="['fas', 'check']" class="text-sm"></fa-icon>
                       </button>
                     </div>
@@ -270,7 +270,7 @@
 
 @if (showActionDrawer && selectedUser) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeActionDrawer()"></div>
-  <div class="fixed top-0 right-0 w-[280px] h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+  <div class="fixed top-0 right-0 w-[280px] h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
     <div class="p-5 border-b border-border/20 flex justify-between items-center">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center font-bold text-sm">
@@ -318,7 +318,7 @@
 
 @if (showEditDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeEditDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
     <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'user-cog']" class="text-primary"></fa-icon>
@@ -504,7 +504,7 @@
 
 @if (showResetDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeResetDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+  <div class="fixed top-0 right-0 w-full max-w-md h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
     <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'key']" class="text-tertiary"></fa-icon>
@@ -555,7 +555,7 @@
 
 @if (showCreateDrawer) {
   <div class="fixed inset-0 bg-black/30 z-[100]" (click)="closeCreateDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-2xl z-[101] flex flex-col border-l border-border/20">
+  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
     <div class="flex-none p-5 border-b border-border/20 flex justify-between items-center">
       <h3 class="text-lg font-bold text-on-surface flex items-center gap-3">
         <fa-icon [icon]="['fas', 'user-plus']" class="text-primary"></fa-icon>

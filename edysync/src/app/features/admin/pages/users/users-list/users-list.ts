@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { HeaderService } from '../../../../../core/services/header.service';
 import { Sede } from '../../../../../core/models/sede';
@@ -44,7 +45,8 @@ interface UserRow {
   standalone: false,
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsersList implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -81,10 +83,13 @@ export class UsersList implements OnInit, OnDestroy {
 
   private sedeLookup: Record<string, string> = {};
 
+  private subscriptions = new Subscription();
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -102,53 +107,66 @@ export class UsersList implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subscriptions.unsubscribe();
   }
 
   private loadData() {
-    this.adminService.getOverview().subscribe({
-      next: (res: any) => {
-        if (res.success && res.users) {
-          this.users = res.users.map((u: any) => ({
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            role: u.role,
-            is_active: u.is_active ?? true,
-            account_status: u.account_status || 'active',
-            admin_password_changed_count: u.admin_password_changed_count || 0,
-            sede_id: u.sede_id,
-            sede_name: u.sede_name,
-            assigned_sedes: u.assigned_sedes || [],
-            therapist_ids: u.therapist_ids || [],
-            payment_plan: u.payment_plan,
-            payment_amount: u.payment_amount || 0,
-            sessions_total: u.sessions_total || 0,
-            sessions_attended: u.sessions_attended || 0,
-            plan_type: u.plan_type || 'individual',
-            has_second_shift: u.has_second_shift || false,
-            payment_amount_2: u.payment_amount_2 || 0,
-            sessions_total_2: u.sessions_total_2 || 0,
-            sessions_attended_2: u.sessions_attended_2 || 0,
-            plan_type_2: u.plan_type_2 || 'individual',
-            salary_base: u.salary_base || 0,
-            contract_hours: u.contract_hours || 0,
-            work_start_time: u.work_start_time,
-            work_end_time: u.work_end_time,
-            work_days: u.work_days,
-          }));
-          this.therapists = this.users.filter((u) => u.role === 'terapista').map((u) => ({ id: u.id, username: u.username, email: u.email }));
-          this.buildSedeLookup();
-          this.applyFilters();
-          this.refreshCharts();
+    this.subscriptions.add(
+      this.adminService.getOverview().subscribe({
+        next: (res: any) => {
+          if (res.success && res.users) {
+            this.users = res.users.map((u: any) => ({
+              id: u.id,
+              username: u.username,
+              email: u.email,
+              role: u.role,
+              is_active: u.is_active ?? true,
+              account_status: u.account_status || 'active',
+              admin_password_changed_count: u.admin_password_changed_count || 0,
+              sede_id: u.sede_id,
+              sede_name: u.sede_name,
+              assigned_sedes: u.assigned_sedes || [],
+              therapist_ids: u.therapist_ids || [],
+              payment_plan: u.payment_plan,
+              payment_amount: u.payment_amount || 0,
+              sessions_total: u.sessions_total || 0,
+              sessions_attended: u.sessions_attended || 0,
+              plan_type: u.plan_type || 'individual',
+              has_second_shift: u.has_second_shift || false,
+              payment_amount_2: u.payment_amount_2 || 0,
+              sessions_total_2: u.sessions_total_2 || 0,
+              sessions_attended_2: u.sessions_attended_2 || 0,
+              plan_type_2: u.plan_type_2 || 'individual',
+              salary_base: u.salary_base || 0,
+              contract_hours: u.contract_hours || 0,
+              work_start_time: u.work_start_time,
+              work_end_time: u.work_end_time,
+              work_days: u.work_days,
+            }));
+            this.therapists = this.users.filter((u) => u.role === 'terapista').map((u) => ({ id: u.id, username: u.username, email: u.email }));
+            this.buildSedeLookup();
+            this.applyFilters();
+            this.refreshCharts();
+            this.loading = false;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
           this.loading = false;
-        }
-      },
-      error: () => (this.loading = false),
-    });
+          this.cdr.markForCheck();
+        },
+      }),
+    );
 
-    this.adminService.getSedes().subscribe({
-      next: (list) => (this.sedes = list),
-    });
+    this.subscriptions.add(
+      this.adminService.getSedes().subscribe({
+        next: (list) => {
+          this.sedes = list;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   private buildSedeLookup() {
@@ -322,29 +340,45 @@ export class UsersList implements OnInit, OnDestroy {
       return;
     }
     user.username = input.value;
-    this.adminService.updateUser({ id: user.id, username: user.username }).subscribe();
+    this.subscriptions.add(
+      this.adminService.updateUser({ id: user.id, username: user.username }).subscribe({
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   updateRole(user: UserRow, event: Event) {
     const select = event.target as HTMLSelectElement;
     user.role = select.value;
-    this.adminService.updateUser({ id: user.id, role: user.role as any }).subscribe();
+    this.subscriptions.add(
+      this.adminService.updateUser({ id: user.id, role: user.role as any }).subscribe({
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   toggleActive(user: UserRow, event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
     user.is_active = checked;
-    this.adminService.updateUser({ id: user.id, is_active: checked }).subscribe();
+    this.subscriptions.add(
+      this.adminService.updateUser({ id: user.id, is_active: checked }).subscribe({
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   assignTherapist(patientId: number, selectEl: HTMLSelectElement) {
     const ids = Array.from(selectEl.selectedOptions).map((o) => parseInt(o.value));
-    this.adminService.assignTherapist(patientId, ids).subscribe({
-      next: () => {
-        const user = this.users.find((u) => u.id === patientId);
-        if (user) user.therapist_ids = ids;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.assignTherapist(patientId, ids).subscribe({
+        next: () => {
+          const user = this.users.find((u) => u.id === patientId);
+          if (user) user.therapist_ids = ids;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   openActionDrawer(user: UserRow) {
@@ -416,14 +450,18 @@ export class UsersList implements OnInit, OnDestroy {
     if (this.editData.end_time) payload.work_end_time = this.editData.end_time;
     if (this.editData.days?.length) payload.work_days = this.editData.days.join(',');
 
-    this.adminService.updateUser(payload).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.closeEditDrawer();
-          this.loadData();
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.updateUser(payload).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.closeEditDrawer();
+            this.loadData();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   openResetDrawer(user: UserRow) {
@@ -455,19 +493,23 @@ export class UsersList implements OnInit, OnDestroy {
     if (this.resetData.firstTime && this.resetData.newPassword) {
       payload.new_password = this.resetData.newPassword;
     }
-    this.adminService.resetPassword(this.resetData.userId, this.resetData.newPassword || undefined).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.resetData.status = `Contraseña reseteada. Clave temporal: ${res.temp_password || 'N/A'}`;
-          setTimeout(() => this.closeResetDrawer(), 3000);
-        } else {
-          this.resetData.status = 'Error: ' + (res.message || 'Desconocido');
-        }
-      },
-      error: () => {
-        this.resetData.status = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.resetPassword(this.resetData.userId, this.resetData.newPassword || undefined).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.resetData.status = `Contraseña reseteada. Clave temporal: ${res.temp_password || 'N/A'}`;
+            setTimeout(() => this.closeResetDrawer(), 3000);
+          } else {
+            this.resetData.status = 'Error: ' + (res.message || 'Desconocido');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.resetData.status = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   openCreateDrawer() {
@@ -505,22 +547,26 @@ export class UsersList implements OnInit, OnDestroy {
       }
     }
 
-    this.adminService.createUser(payload).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.createStatus = `Creado! Contraseña temporal: ${res.temp_password || 'N/A'}`;
-          setTimeout(() => {
-            this.closeCreateDrawer();
-            this.loadData();
-          }, 2000);
-        } else {
-          this.createStatus = 'Error: ' + (res.message || 'Desconocido');
-        }
-      },
-      error: () => {
-        this.createStatus = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.createUser(payload).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.createStatus = `Creado! Contraseña temporal: ${res.temp_password || 'N/A'}`;
+            setTimeout(() => {
+              this.closeCreateDrawer();
+              this.loadData();
+            }, 2000);
+          } else {
+            this.createStatus = 'Error: ' + (res.message || 'Desconocido');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.createStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   async deleteUser(user: UserRow) {
@@ -532,15 +578,19 @@ export class UsersList implements OnInit, OnDestroy {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.adminService.deleteUser(user.id).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.users = this.users.filter((u) => u.id !== user.id);
-          this.applyFilters();
-          this.closeActionDrawer();
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.deleteUser(user.id).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.users = this.users.filter((u) => u.id !== user.id);
+            this.applyFilters();
+            this.closeActionDrawer();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   getSedeName(user: UserRow): string {

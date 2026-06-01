@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
@@ -9,15 +10,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TherapistCalendarPage implements OnInit {
+export class TherapistCalendarPage implements OnInit, OnDestroy {
   loading = true;
   widgetEvents: CalendarWidgetEvent[] = [];
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
     private therapistService: TherapistService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -29,12 +35,16 @@ export class TherapistCalendarPage implements OnInit {
     this.loadSessions();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadSessions() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
     const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
 
-    this.therapistService.getSessions(start, end).subscribe({
+    this.subs.add(this.therapistService.getSessions(start, end).subscribe({
       next: (events) => {
         this.widgetEvents = events.map((e: any) => ({
           id: e.id,
@@ -47,8 +57,13 @@ export class TherapistCalendarPage implements OnInit {
           patient: e.extendedProps?.patient,
         }));
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 }

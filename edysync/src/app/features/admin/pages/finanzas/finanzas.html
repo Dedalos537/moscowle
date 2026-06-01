@@ -30,26 +30,26 @@
   @if (activeTab === 'resumen') {
     <div class="space-y-6" [@fadeInUp]>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-red-700">Deuda Total</span>
-            <span class="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
-              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
+            <span class="text-label-caps text-error">Deuda Total</span>
+            <span class="w-9 h-9 rounded-lg bg-error-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
             </span>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryTotalDeuda.toFixed(2) }}</p>
           <div class="flex items-center gap-2 mt-1">
-            <span class="flex items-center gap-0.5 text-[11px] font-bold text-red-600">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-error">
               <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px]"></fa-icon> Pendiente
             </span>
             <span class="text-xs text-on-surface-variant">de cobro</span>
           </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
           <div class="flex items-start justify-between mb-3">
             <span class="text-label-caps text-success">Ingresos Reales</span>
-            <span class="w-9 h-9 rounded-lg bg-success-container dark:bg-success-container0/15 flex items-center justify-center">
+            <span class="w-9 h-9 rounded-lg bg-success-container  flex items-center justify-center">
               <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
             </span>
           </div>
@@ -62,9 +62,9 @@
           </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-warning dark:text-orange-400">Gastos</span>
+            <span class="text-label-caps text-warning ">Gastos</span>
             <span class="w-9 h-9 rounded-lg bg-warning-container flex items-center justify-center">
               <fa-icon [icon]="['fas', 'receipt']" class="text-warning text-xl"></fa-icon>
             </span>
@@ -78,22 +78,22 @@
           </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 hover:shadow-card-hover transition-shadow">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
           <div class="flex items-start justify-between mb-3">
-            <span class="text-label-caps text-blue-700 dark:text-blue-400">Balance Neto</span>
-            <span class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-              <fa-icon [icon]="['fas', 'university']" class="text-blue-500 text-xl"></fa-icon>
+            <span class="text-label-caps text-info ">Balance Neto</span>
+            <span class="w-9 h-9 rounded-lg bg-info-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'university']" class="text-info text-xl"></fa-icon>
             </span>
           </div>
           <p class="text-3xl font-black text-on-surface tracking-tight"
             [class.text-success]="summaryBalance >= 0"
-            [class.text-red-600]="summaryBalance < 0">
+            [class.text-error]="summaryBalance < 0">
             S/ {{ summaryBalance.toFixed(2) }}
           </p>
           <div class="flex items-center gap-2 mt-1">
             <span class="flex items-center gap-0.5 text-[11px] font-bold"
               [class.text-success]="summaryBalance >= 0"
-              [class.text-red-600]="summaryBalance < 0">
+              [class.text-error]="summaryBalance < 0">
               <fa-icon [icon]="summaryBalance >= 0 ? ['fas', 'arrow-up'] : ['fas', 'arrow-down']" class="text-[14px]"></fa-icon>
               {{ summaryBalance >= 0 ? 'Positivo' : 'Negativo' }}
             </span>
@@ -103,7 +103,7 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
               <fa-icon [icon]="['fas', 'chart-line']" class="text-primary text-lg"></fa-icon>
@@ -111,11 +111,11 @@
             </h3>
             <div class="flex items-center gap-3">
               <span class="flex items-center gap-1.5 text-[11px]">
-                <span class="w-3 h-0.5 rounded-full bg-[#75a83a]"></span>
+                <span class="w-3 h-0.5 rounded-full bg-primary"></span>
                 <span class="text-on-surface-variant font-medium">Ingresos</span>
               </span>
               <span class="flex items-center gap-1.5 text-[11px]">
-                <span class="w-3 h-0.5 rounded-full bg-[#ba1a1a]"></span>
+                <span class="w-3 h-0.5 rounded-full bg-error"></span>
                 <span class="text-on-surface-variant font-medium">Gastos</span>
               </span>
             </div>
@@ -125,7 +125,7 @@
           </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
               <fa-icon [icon]="['fas', 'chart-pie']" class="text-primary text-lg"></fa-icon>
@@ -143,14 +143,14 @@
               </div>
               <div class="text-center">
                 <p class="text-[10px] text-label-caps text-on-surface-variant">Operativos</p>
-                <p class="text-sm font-bold text-blue-700 dark:text-blue-400">S/ {{ dashExpenseStats.operational.toFixed(0) }}</p>
+                <p class="text-sm font-bold text-info ">S/ {{ dashExpenseStats.operational.toFixed(0) }}</p>
               </div>
             </div>
           }
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex-1">
             <div class="flex items-center justify-between mb-2">
@@ -163,9 +163,9 @@
             <div class="w-full h-2.5 bg-surface-container-high rounded-full overflow-hidden">
               <div
                 class="h-full rounded-full transition-all duration-1000"
-                [class.bg-success-container0]="dashCollectionRate >= 75"
-                [class.bg-amber-500]="dashCollectionRate >= 40 && dashCollectionRate < 75"
-                [class.bg-red-500]="dashCollectionRate < 40"
+                [class.bg-success]="dashCollectionRate >= 75"
+                [class.bg-warning]="dashCollectionRate >= 40 && dashCollectionRate < 75"
+                [class.bg-error-container0]="dashCollectionRate < 40"
                 [style.width.%]="dashCollectionRate"
               ></div>
             </div>
@@ -187,7 +187,7 @@
         </div>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
             <fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
@@ -203,8 +203,8 @@
               <div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-surface-container-low/30 -mx-2 px-2 rounded-lg transition-colors">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm"
                   [class.bg-secondary/10]="t.method === 'yape' || t.method === 'plin'"
-                  [class.bg-blue-100]="t.method === 'transfer'"
-                  [class.bg-green-100]="t.method === 'cash'"
+                  [class.bg-info-container]="t.method === 'transfer'"
+                  [class.bg-success-container]="t.method === 'cash'"
                   [class.bg-info-container]="t.method === 'card'"
                   [class.bg-surface-container-high]="!['yape','plin','transfer','cash','card'].includes(t.method)">
                   @switch (t.method) {
@@ -260,17 +260,17 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-blue-100 p-5">
+        <div class="lg:col-span-2 bg-surface-container-lowest rounded-lg shadow-soft border border-info-container p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'tasks']" class="text-blue-500"></fa-icon> Guía de Flujo Diario
+              <fa-icon [icon]="['fas', 'tasks']" class="text-info"></fa-icon> Guía de Flujo Diario
             </h3>
-            <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
+            <span class="text-[10px] bg-info-container text-info px-2 py-1 rounded-full font-bold uppercase">Sugerencias IA</span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-3">
               <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-info-container transition-all cursor-pointer">
-                <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                <div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-error shrink-0">
                   <fa-icon [icon]="['fas', 'phone-alt']" class="text-xs"></fa-icon>
                 </div>
                 <div>
@@ -290,7 +290,7 @@
             </div>
             <div class="space-y-3">
               <div class="flex items-start gap-3 p-3 bg-surface-container-high rounded-xl border border-transparent hover:border-info-container transition-all cursor-pointer">
-                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                <div class="w-8 h-8 rounded-full bg-success-container flex items-center justify-center text-success shrink-0">
                   <fa-icon [icon]="['fas', 'file-invoice-dollar']" class="text-xs"></fa-icon>
                 </div>
                 <div>
@@ -312,11 +312,11 @@
         </div>
 
         <div class="space-y-4">
-          <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-red-100 p-5">
-            <p class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Deuda Total</p>
-            <p class="text-2xl font-black text-red-700">S/ {{ totalDeuda.toFixed(2) }}</p>
+          <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-error-container p-5">
+            <p class="text-[10px] font-black text-error uppercase tracking-widest mb-1">Deuda Total</p>
+            <p class="text-2xl font-black text-error">S/ {{ totalDeuda.toFixed(2) }}</p>
           </div>
-          <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-warning-container p-5">
+          <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-warning-container p-5">
             <p class="text-[10px] font-black text-warning uppercase tracking-widest mb-1">Deudores</p>
             <p class="text-2xl font-black text-warning">{{ totalDeudores }}</p>
           </div>
@@ -329,12 +329,12 @@
         </div>
       } @else {
         @for (group of filteredGroups; track group.sede_name) {
-          <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-border/20 overflow-hidden">
+          <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 overflow-hidden">
             <div class="px-6 py-4 bg-surface-container-high border-b border-border/20 flex justify-between items-center">
               <h3 class="font-bold text-on-surface flex items-center gap-2">
                 <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary"></fa-icon> {{ group.sede_name }}
               </h3>
-              <span class="text-sm font-bold text-red-600">S/ {{ group.total_deuda.toFixed(2) }}</span>
+              <span class="text-sm font-bold text-error">S/ {{ group.total_deuda.toFixed(2) }}</span>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full">
@@ -352,7 +352,7 @@
                     <tr class="hover:bg-surface-container-high/80 transition-colors">
                       <td class="px-5 py-3">
                         <div class="flex items-center gap-3">
-                          <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold text-xs">{{ getInitials(d.paciente) }}</div>
+                          <div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-error font-bold text-xs">{{ getInitials(d.paciente) }}</div>
                           <div>
                             <p class="text-sm font-medium text-on-surface">{{ d.paciente }}</p>
                             <p class="text-[10px] text-on-surface-variant/60">{{ d.email }}</p>
@@ -360,12 +360,12 @@
                         </div>
                       </td>
                       <td class="px-5 py-3 text-sm text-on-surface">{{ d.modality }}</td>
-                      <td class="px-5 py-3 text-right text-sm font-bold text-red-600">S/ {{ d.monto.toFixed(2) }}</td>
+                      <td class="px-5 py-3 text-right text-sm font-bold text-error">S/ {{ d.monto.toFixed(2) }}</td>
                       <td class="px-5 py-3 text-center text-sm text-on-surface">{{ d.fecha_vencimiento }}</td>
                       <td class="px-5 py-3 text-right">
                         <div class="flex justify-end gap-2">
                           @if (getWhatsAppLink(d.phone, d.paciente, d.monto)) {
-                            <a [href]="getWhatsAppLink(d.phone, d.paciente, d.monto)" target="_blank" class="w-8 h-8 rounded-lg bg-green-500 text-white flex items-center justify-center hover:bg-success transition-all text-xs" title="WhatsApp">
+                            <a [href]="getWhatsAppLink(d.phone, d.paciente, d.monto)" target="_blank" class="w-8 h-8 rounded-lg bg-success text-on-primary flex items-center justify-center hover:bg-success transition-all text-xs" title="WhatsApp">
                               <fa-icon [icon]="['fab', 'whatsapp']"></fa-icon>
                             </a>
                           }
@@ -427,10 +427,10 @@
       } @else {
 
         @if (incompletePlanPatients.length > 0) {
-          <div class="flex items-start gap-4 p-4 bg-orange-50 border border-warning-container rounded-xl">
+          <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
             <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-orange-800">
+              <p class="text-sm font-bold text-warning">
                 {{ incompletePlanPatients.length }} pacientes sin configuración de pago
               </p>
               <p class="text-xs text-warning mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
@@ -439,7 +439,7 @@
         }
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <div class="flex items-start justify-between mb-3">
               <span class="text-label-caps text-success">Total Recaudado (Mes)</span>
               <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
@@ -451,31 +451,31 @@
             </p>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <div class="flex items-start justify-between mb-3">
-              <span class="text-label-caps text-blue-700 dark:text-blue-400">Pendiente por Cobrar</span>
-              <fa-icon [icon]="['fas', 'wallet']" class="text-blue-500 text-xl"></fa-icon>
+              <span class="text-label-caps text-info ">Pendiente por Cobrar</span>
+              <fa-icon [icon]="['fas', 'wallet']" class="text-info text-xl"></fa-icon>
             </div>
             <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalPending.toFixed(2) }}</p>
             <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-              <fa-icon [icon]="['fas', 'clock']" class="text-[14px] text-blue-500"></fa-icon>
+              <fa-icon [icon]="['fas', 'clock']" class="text-[14px] text-info"></fa-icon>
               Monto total pendiente
             </p>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <div class="flex items-start justify-between mb-3">
-              <span class="text-label-caps text-red-700">Total Deuda</span>
-              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-red-500 text-xl"></fa-icon>
+              <span class="text-label-caps text-error">Total Deuda</span>
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
             </div>
             <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
             <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
-              <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-red-500"></fa-icon>
+              <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-error"></fa-icon>
               {{ financials?.overdue_users_count || 0 }} pacientes morosos
             </p>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <div class="flex items-start justify-between mb-3">
               <span class="text-label-caps text-primary">Pacientes Registrados</span>
               <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-xl"></fa-icon>
@@ -489,7 +489,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
               Estado de Pagos
@@ -499,7 +499,7 @@
             </div>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
               Deuda por Sede
@@ -509,7 +509,7 @@
             </div>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
               Antigüedad de Vencimientos
@@ -519,7 +519,7 @@
             </div>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
               Historial de Ingresos (6 Meses)
@@ -529,7 +529,7 @@
             </div>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
               Ingresos por Tipo de Plan
@@ -539,7 +539,7 @@
             </div>
           </div>
 
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
               Proyección vs Real
@@ -551,7 +551,7 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 lg:col-start-2">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 lg:col-start-2">
             <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
               Ingresos por Sede
@@ -568,7 +568,7 @@
             [class.bg-surface-container-lowest]="pagosTab === 'pacientes'"
             [class.text-on-surface]="pagosTab === 'pacientes'"
             [class.text-on-surface-variant]="pagosTab !== 'pacientes'"
-            [class.shadow-sm]="pagosTab === 'pacientes'"
+            [class.shadow-soft]="pagosTab === 'pacientes'"
             (click)="pagosTab = 'pacientes'"
           >
             <fa-icon [icon]="['fas', 'users']" class="text-[18px]"></fa-icon>
@@ -579,7 +579,7 @@
             [class.bg-surface-container-lowest]="pagosTab === 'historial'"
             [class.text-on-surface]="pagosTab === 'historial'"
             [class.text-on-surface-variant]="pagosTab !== 'historial'"
-            [class.shadow-sm]="pagosTab === 'historial'"
+            [class.shadow-soft]="pagosTab === 'historial'"
             (click)="pagosTab = 'historial'"
           >
             <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
@@ -591,7 +591,7 @@
         </div>
 
         @if (pagosTab === 'pacientes') {
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 md:p-6">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
 
             <div class="flex flex-col gap-4 mb-6">
               <div class="flex flex-col md:flex-row gap-3">
@@ -692,9 +692,9 @@
                           <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                             <div
                               class="h-full rounded-full transition-all duration-700"
-                              [class.bg-success-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
-                              [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
-                              [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                              [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                              [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                              [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
                               [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
                             ></div>
                           </div>
@@ -709,9 +709,9 @@
                         } @else {
                           <span
                             class="text-sm font-bold"
-                            [class.text-green-700]="p.payment_amount < 100"
-                            [class.text-amber-700]="p.payment_amount >= 100 && p.payment_amount < 300"
-                            [class.text-red-700]="p.payment_amount >= 300"
+                            [class.text-success]="p.payment_amount < 100"
+                            [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                            [class.text-error]="p.payment_amount >= 300"
                           >
                             S/ {{ p.payment_amount.toFixed(2) }}
                           </span>
@@ -722,7 +722,7 @@
                           <div class="flex flex-col items-center">
                             <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                             @if (isOverdue(p)) {
-                              <span class="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+                              <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
                             }
                           </div>
                         } @else {
@@ -815,9 +815,9 @@
                     <div>
                       <span class="text-label-caps text-on-surface-variant">Deuda</span>
                       <p class="text-sm font-bold"
-                        [class.text-green-700]="p.payment_amount < 100"
-                        [class.text-amber-700]="p.payment_amount >= 100 && p.payment_amount < 300"
-                        [class.text-red-700]="p.payment_amount >= 300">
+                        [class.text-success]="p.payment_amount < 100"
+                        [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                        [class.text-error]="p.payment_amount >= 300">
                         S/ {{ p.payment_amount.toFixed(2) }}
                       </p>
                     </div>
@@ -831,9 +831,9 @@
                     <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                       <div
                         class="h-full rounded-full transition-all"
-                        [class.bg-success-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
-                        [class.bg-amber-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
-                        [class.bg-red-500]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                        [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                        [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                        [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
                         [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
                       ></div>
                     </div>
@@ -845,7 +845,7 @@
                       <span class="text-on-surface-variant">Próx. venc.:</span>
                       <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
                       @if (isOverdue(p)) {
-                        <span class="text-[10px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">VENCIDO</span>
+                        <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full">VENCIDO</span>
                       }
                     </div>
                   }
@@ -871,7 +871,7 @@
         }
 
         @if (pagosTab === 'historial') {
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-card p-5 md:p-6">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
 
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
               <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
@@ -946,7 +946,7 @@
                       </td>
                       <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
                       <td class="px-4 py-3.5 text-right">
-                        <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10" title="Eliminar">
+                        <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container " title="Eliminar">
                           <fa-icon [icon]="['fas', 'trash-alt']" class="text-[16px]"></fa-icon>
                         </button>
                       </td>
@@ -1000,20 +1000,20 @@
         <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
 
         @if (needsRecalculation) {
-          <div class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <fa-icon [icon]="['fas', 'info-circle']" class="text-blue-500 text-lg shrink-0"></fa-icon>
-            <p class="text-xs text-blue-700 dark:text-blue-400">
+          <div class="flex items-start gap-3 p-3 bg-info-container border border-info-container rounded-lg">
+            <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-lg shrink-0"></fa-icon>
+            <p class="text-xs text-info ">
               <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
             </p>
           </div>
         }
 
         @if (hasMissingData) {
-          <div class="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-amber-500 text-lg shrink-0"></fa-icon>
+          <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
+            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
             <div>
-              <p class="text-xs font-bold text-amber-800">Datos faltantes</p>
-              <p class="text-xs text-amber-700 mt-0.5">
+              <p class="text-xs font-bold text-warning">Datos faltantes</p>
+              <p class="text-xs text-warning mt-0.5">
                 @if (!registerForm.document_number) { • DNI del paciente<br> }
                 @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
                 Se recomienda completar estos campos para el comprobante.
@@ -1028,18 +1028,18 @@
         </div>
 
         @if (analyzingReceipt) {
-          <div class="flex items-center gap-3 p-3 bg-secondary/5 dark:bg-secondary/50/10 border border-purple-200 rounded-lg">
+          <div class="flex items-center gap-3 p-3 bg-secondary/5  border border-accent-container rounded-lg">
             <app-spinner size="sm" colorClass="text-secondary"></app-spinner>
-            <span class="text-xs font-medium text-secondary dark:text-purple-400">Analizando voucher con OCR...</span>
+            <span class="text-xs font-medium text-secondary ">Analizando voucher con OCR...</span>
           </div>
         }
 
         @if (analyzeResult && !analyzingReceipt) {
-          <div class="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <fa-icon [icon]="['fas', 'check-circle']" class="text-green-500 text-lg shrink-0"></fa-icon>
+          <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
+            <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
             <div>
-              <p class="text-xs font-bold text-green-800 dark:text-green-400">OCR Completado</p>
-              <p class="text-xs text-green-700 dark:text-green-300 mt-0.5">
+              <p class="text-xs font-bold text-success ">OCR Completado</p>
+              <p class="text-xs text-success  mt-0.5">
                 Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
               </p>
             </div>
@@ -1120,13 +1120,13 @@
                         S/ {{ t.rate.toFixed(2) }}/hr
                         <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
                       } @else {
-                        <span class="text-xs text-orange-400 bg-orange-50 px-2 py-1 rounded">Sin contrato</span>
+                        <span class="text-xs text-warning bg-warning-container px-2 py-1 rounded">Sin contrato</span>
                       }
                     </td>
                     <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
                     <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
-                    <td class="px-6 py-4 text-sm text-green-600">S/ {{ t.paid.toFixed(2) }}</td>
-                    <td class="px-6 py-4 text-sm" [class.text-red-500]="t.balance > 0" [class.text-green-500]="t.balance <= 0">
+                    <td class="px-6 py-4 text-sm text-success">S/ {{ t.paid.toFixed(2) }}</td>
+                    <td class="px-6 py-4 text-sm" [class.text-error]="t.balance > 0" [class.text-success]="t.balance <= 0">
                       S/ {{ t.balance.toFixed(2) }}
                     </td>
                     <td class="px-6 py-4 text-right">
@@ -1161,9 +1161,9 @@
                     <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
                     <td class="px-6 py-4 text-sm capitalize">
                       <span class="px-2 py-1 rounded text-xs font-bold"
-                        [class.bg-blue-100]="e.category === 'therapist_payment'" [class.text-blue-700]="e.category === 'therapist_payment'"
+                        [class.bg-info-container]="e.category === 'therapist_payment'" [class.text-info]="e.category === 'therapist_payment'"
                         [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
-                        [class.bg-green-100]="e.category === 'bonus'" [class.text-green-700]="e.category === 'bonus'"
+                        [class.bg-success-container]="e.category === 'bonus'" [class.text-success]="e.category === 'bonus'"
                         [class.bg-warning-container]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'"
                         [class.text-warning]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'">
                         {{ e.category.replace('_', ' ') }}
@@ -1181,7 +1181,7 @@
                           </span>
                         }
                         @if (e.receipt_image_path) {
-                          <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-green-700" title="Ver Comprobante">
+                          <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-success" title="Ver Comprobante">
                             <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
                           </a>
                         }

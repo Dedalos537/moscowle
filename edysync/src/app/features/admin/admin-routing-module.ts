@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { RoleGuard } from '../../core/guards/role.guard';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { Sedes } from './pages/sedes/sedes';
 import { UsersList } from './pages/users/users-list/users-list';
@@ -18,12 +19,15 @@ import { ApiTokens } from './pages/api-tokens/api-tokens';
 import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
+import { Logs } from './pages/logs/logs';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
 
 const routes: Routes = [
-  { 
-    path: '', 
+  {
+    path: '',
     component: AdminLayout,
+    canActivate: [RoleGuard],
+    data: { role: ['admin', 'supervisor'] },
     children: [
       { path: 'dashboard', component: Dashboard },
       { path: 'sedes', component: Sedes },
@@ -43,6 +47,7 @@ const routes: Routes = [
       { path: 'profile', component: Profile },
       { path: 'yape-import', component: YapeImport },
       { path: 'ai', component: AiTraining },
+      { path: 'logs', component: Logs },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HeaderService } from '../../../../core/services/header.service';
 import {
   TherapistService,
@@ -7,7 +7,7 @@ import {
 import { CalendarEvent } from '../../../../core/models/appointment';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 Chart.register(...registerables);
@@ -26,7 +26,8 @@ interface WeeklyData {
   standalone: false,
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistReports implements OnInit, OnDestroy {
   @ViewChild('accuracyChart') accuracyChart?: any;
@@ -35,6 +36,7 @@ export class TherapistReports implements OnInit, OnDestroy {
   loading = true;
   startDate = '';
   endDate = '';
+  error: string | null = null;
 
   improvementRate = 0;
   avgSessionTime = 0;
@@ -151,9 +153,12 @@ export class TherapistReports implements OnInit, OnDestroy {
   };
   readonly sessionsChartType = 'bar' as const;
 
+  private subs = new Subscription();
+
   constructor(
     private headerService: HeaderService,
     private therapistService: TherapistService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -167,15 +172,17 @@ export class TherapistReports implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subs.unsubscribe();
   }
 
   private loadData() {
     this.loading = true;
+    this.cdr.markForCheck();
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
 
-    forkJoin({
+    this.subs.add(forkJoin({
       overview: this.therapistService.getReportsOverview(),
       detailed: this.therapistService.getDetailedReports(),
       appointments: this.therapistService.getTherapistAppointments(month, year),
@@ -198,9 +205,14 @@ export class TherapistReports implements OnInit, OnDestroy {
         }
 
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   private buildWeeklyData(events: CalendarEvent[]) {
@@ -275,11 +287,12 @@ export class TherapistReports implements OnInit, OnDestroy {
 
   onFilterChange() {
     this.loading = true;
+    this.cdr.markForCheck();
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
 
-    forkJoin({
+    this.subs.add(forkJoin({
       overview: this.therapistService.getReportsOverview(),
       detailed: this.therapistService.getDetailedReports(this.startDate || undefined, this.endDate || undefined),
       appointments: this.therapistService.getTherapistAppointments(month, year),
@@ -299,9 +312,14 @@ export class TherapistReports implements OnInit, OnDestroy {
           this.buildWeeklyData(res.appointments.data);
         }
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   exportCSV() {

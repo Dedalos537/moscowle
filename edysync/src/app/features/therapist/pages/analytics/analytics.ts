@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Chart, registerables } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -13,14 +14,16 @@ Chart.register(...registerables);
   standalone: false,
   templateUrl: './analytics.html',
   styleUrl: './analytics.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TherapistAnalytics implements OnInit, AfterViewInit {
+export class TherapistAnalytics implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('predictionChart') predictionChart?: BaseChartDirective;
   @ViewChild('confidenceChart') confidenceChart?: BaseChartDirective;
 
   loading = true;
   data: AnalyticsData | null = null;
+  error: string | null = null;
 
   kpiCards: KpiCard[] = [];
   difficultyMatrix: DifficultyMatrixEntry[] = [];
@@ -31,9 +34,12 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
   confidenceChartData: ChartData<'bar'> = { labels: [], datasets: [] };
   confidenceChartOptions: ChartOptions<'bar'> = {};
 
+  private subs = new Subscription();
+
   constructor(
     private headerService: HeaderService,
-    private therapistService: TherapistService
+    private therapistService: TherapistService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -49,8 +55,12 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
     this.initChartOptions();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadAnalytics() {
-    this.therapistService.getAnalytics().subscribe({
+    this.subs.add(this.therapistService.getAnalytics().subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.data = res.data;
@@ -61,9 +71,14 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
           this.buildConfidenceChart(res.data);
         }
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   private buildKpiCards(d: AnalyticsData) {
@@ -74,8 +89,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         label: 'Adaptaciones IA',
         value: d.kpi.adaptations_count.toString(),
         suffix: '',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50',
+        color: 'text-info',
+        bgColor: 'bg-info-container',
       },
       {
         icon: '',
@@ -83,8 +98,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         label: 'Precisión Promedio',
         value: d.kpi.avg_accuracy.toFixed(1),
         suffix: '%',
-        color: 'text-emerald-600',
-        bgColor: 'bg-emerald-50',
+        color: 'text-success',
+        bgColor: 'bg-success-container',
       },
       {
         icon: '',
@@ -101,8 +116,8 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
         label: 'Modelos Activos',
         value: d.kpi.active_models.toString(),
         suffix: '',
-        color: 'text-purple-600',
-        bgColor: 'bg-purple-50',
+        color: 'text-accent',
+        bgColor: 'bg-accent-container',
       },
     ];
   }
@@ -222,6 +237,7 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
 
   refresh() {
     this.loading = true;
+    this.cdr.markForCheck();
     this.loadAnalytics();
   }
 
@@ -258,9 +274,9 @@ export class TherapistAnalytics implements OnInit, AfterViewInit {
   }
 
   private getAccuracyColor(accuracy: number): string {
-    if (accuracy >= 80) return 'bg-emerald-500';
-    if (accuracy >= 60) return 'bg-amber-400';
-    return 'bg-red-400';
+    if (accuracy >= 80) return 'bg-success';
+    if (accuracy >= 60) return 'bg-warning';
+    return 'bg-error';
   }
 
   getPredictionTotal(): number {
@@ -282,23 +298,23 @@ interface KpiCard {
   suffix: string;
   color: string;
   bgColor: string;
+  change?: number;
 }
 
 interface DifficultyMatrixEntry {
   game: string;
-  levels: {
-    level: string;
-    accuracy: number;
-    count: number;
-    dotColor: string;
-    barWidth: string;
-  }[];
+  program?: string;
+  levels: any[];
 }
 
 interface Adaptation {
   date: string;
   description: string;
   impact: 'positive' | 'neutral' | 'negative';
+  patient_name: string;
+  type: string;
+  status: string;
+  created_at: string;
 }
 
 interface ChartData<T> {

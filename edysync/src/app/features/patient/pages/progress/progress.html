@@ -1,53 +1,60 @@
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-<div *ngIf="!loading && data" class="space-y-6" [@fadeInUp]>
-  <app-card>
-    <p class="text-on-surface-variant text-sm">{{ data.weekly_summary }}</p>
-  </app-card>
-
+@if (!loading && data) {
+<div class="space-y-6" [@fadeInUp]>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <app-card title="Precisión (7 días)" [icon]="['fas', 'bullseye']">
+    <app-card title="Precisión por Sesión" [icon]="['fas', 'chart-line']">
       <div class="flex items-end gap-2 h-48">
-        <div *ngFor="let val of data.accuracy_data; let i = index" class="flex-1 flex flex-col items-center gap-1">
-          <div class="w-full rounded-t-lg transition-all duration-500"
-               [style.height.px]="val * 1.8"
-               [ngClass]="{
-                 'bg-primary': val >= 70,
-                 'bg-warning': val >= 40 && val < 70,
-                 'bg-error': val < 40
-               }">
+        @for (val of data.accuracy_data; track $index; let i = $index) {
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-primary-container/20 rounded-t-lg transition-all duration-500"
+                 [style.height.%]="val" [ngClass]="val > data.avg_accuracy ? 'bg-primary-container' : 'bg-surface-container-high'">
+            </div>
+            @if (data.labels[i]) {
+              <span class="text-[10px] text-on-surface-variant truncate w-full text-center">{{ data.labels[i] }}</span>
+            }
           </div>
-          <span class="text-[10px] text-on-surface-variant font-medium">{{ val }}%</span>
-          <span class="text-[8px] text-on-surface-variant/60" *ngIf="data.labels[i]">{{ data.labels[i] | slice:0:3 }}</span>
-        </div>
+        }
       </div>
     </app-card>
 
-    <app-card title="Tiempo Promedio (7 días)" [icon]="['fas', 'clock']">
+    <app-card title="Tiempo de Respuesta" [icon]="['fas', 'stopwatch']">
       <div class="flex items-end gap-2 h-48">
-        <div *ngFor="let val of data.time_data; let i = index" class="flex-1 flex flex-col items-center gap-1">
-          <div class="w-full bg-info rounded-t-lg transition-all duration-500"
-               [style.height.px]="val * 0.8">
+        @for (val of data.time_data; track $index; let i = $index) {
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-info-container rounded-t-lg transition-all duration-500"
+                 [style.height.%]="val">
+            </div>
+            @if (data.labels[i]) {
+              <span class="text-[10px] text-on-surface-variant truncate w-full text-center">{{ data.labels[i] }}</span>
+            }
           </div>
-          <span class="text-[10px] text-on-surface-variant font-medium">{{ val }}s</span>
-        </div>
+        }
       </div>
     </app-card>
   </div>
 
   <app-card title="Logros" [icon]="['fas', 'trophy']">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div *ngFor="let achievement of data.achievements"
-           class="p-4 rounded-xl text-center transition-all"
-           [ngClass]="achievement.achieved ? 'bg-success-container border border-success-container' : 'bg-surface-container-low border border-border opacity-60'">
-        <fa-icon [icon]="achievement.achieved ? ['fas', 'medal'] : ['fas', 'lock']"
-                 [ngClass]="achievement.achieved ? 'text-primary' : 'text-on-surface-variant/40'"
-                 class="text-2xl mb-2"></fa-icon>
-        <p class="text-xs font-bold text-on-surface">{{ achievement.name }}</p>
-        <p class="text-[10px] text-on-surface-variant mt-1" *ngIf="achievement.achieved && achievement.date">{{ achievement.date | date:'dd/MM/yyyy' }}</p>
+    @if (data.achievements?.length) {
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        @for (achievement of data.achievements; track $index) {
+          <div class="p-4 rounded-xl border text-center"
+               [ngClass]="achievement.achieved ? 'bg-success-container border-success-container' : 'bg-surface-container-low border-border/30 opacity-60'">
+            <fa-icon [icon]="achievement.achieved ? ['fas', 'trophy'] : ['fas', 'lock']"
+                     [ngClass]="achievement.achieved ? 'text-success' : 'text-on-surface-variant'"
+                     class="text-2xl mb-2"></fa-icon>
+            <p class="text-sm font-bold text-on-surface">{{ achievement.title }}</p>
+            @if (achievement.achieved && achievement.date) {
+              <p class="text-[10px] text-on-surface-variant mt-1">{{ achievement.date | date:'dd/MM/yyyy' }}</p>
+            }
+          </div>
+        }
       </div>
-    </div>
+    }
   </app-card>
 </div>
+}

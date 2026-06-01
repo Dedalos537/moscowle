@@ -1,22 +1,29 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-alert',
   standalone: false,
   templateUrl: './alert.html',
-  styleUrl: './alert.scss'
+  styleUrl: './alert.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Alert {
   @Input() type: 'success' | 'error' | 'warning' | 'info' = 'info';
   @Input() message: string = '';
+  @Input() dismissible: boolean = true;
+  @Output() dismissed = new EventEmitter<void>();
+
+  visible = true;
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   get alertClasses() {
     switch(this.type) {
-      case 'success': return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20';
-      case 'error': return 'bg-error-container text-on-error-container border-error/20';
-      case 'warning': return 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-      case 'info': return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
+      case 'success': return 'bg-success-container text-success border-success-container';
+      case 'error': return 'bg-error-container text-on-error-container border-error-container';
+      case 'warning': return 'bg-warning-container text-warning border-warning-container';
+      case 'info': return 'bg-info-container text-info border-info-container';
     }
   }
 
@@ -27,5 +34,10 @@ export class Alert {
       case 'warning': return ['fas', 'exclamation-triangle'];
       case 'info': return ['fas', 'info-circle'];
     }
+  }
+
+  dismiss() {
+    this.visible = false;
+    this.dismissed.emit();
   }
 }

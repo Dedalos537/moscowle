@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
@@ -10,9 +11,10 @@ import { ConfirmService } from '../../../../../core/services/confirm.service';
   standalone: false,
   templateUrl: './user-detail.html',
   styleUrl: './user-detail.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
-export class UserDetail implements OnInit {
+export class UserDetail implements OnInit, OnDestroy {
   userId!: number;
   user: any = null;
   stats: any = {};
@@ -20,12 +22,14 @@ export class UserDetail implements OnInit {
   selectedStatus = 'active';
   showEditModal = false;
   editData = { username: '', role: '', is_active: true };
+  private subscriptions: Subscription = new Subscription();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -33,18 +37,25 @@ export class UserDetail implements OnInit {
     this.loadUser();
   }
 
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
+  }
+
   private loadUser() {
-    this.adminService.getUser(this.userId).subscribe({
-      next: (res) => {
-        if (res.success && res.user) {
-          this.user = res.user;
-          this.selectedStatus = res.user.role === 'admin' ? 'active' : 'active';
-          this.editData = { username: res.user.username, role: res.user.role, is_active: true };
-        }
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getUser(this.userId).subscribe({
+        next: (res) => {
+          if (res.success && res.user) {
+            this.user = res.user;
+            this.selectedStatus = res.user.role === 'admin' ? 'active' : 'active';
+            this.editData = { username: res.user.username, role: res.user.role, is_active: true };
+          }
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.loading = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   get roleLabel(): string {
@@ -62,11 +73,15 @@ export class UserDetail implements OnInit {
   }
 
   updateStatus() {
-    this.adminService.updateUser({ id: this.userId, account_status: this.selectedStatus as any, is_active: this.selectedStatus === 'active' }).subscribe({
-      next: (res: any) => {
-        if (res.success) this.loadUser();
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.updateUser({ id: this.userId, account_status: this.selectedStatus as any, is_active: this.selectedStatus === 'active' }).subscribe({
+        next: (res: any) => {
+          if (res.success) this.loadUser();
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
   }
 
   openEditModal() {
@@ -79,14 +94,18 @@ export class UserDetail implements OnInit {
   }
 
   saveEdit() {
-    this.adminService.updateUser({ id: this.userId, username: this.editData.username, role: this.editData.role as any, is_active: this.editData.is_active }).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.closeEditModal();
-          this.loadUser();
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.updateUser({ id: this.userId, username: this.editData.username, role: this.editData.role as any, is_active: this.editData.is_active }).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.closeEditModal();
+            this.loadUser();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
   }
 
   async resetPassword() {
@@ -98,7 +117,11 @@ export class UserDetail implements OnInit {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.adminService.resetPassword(this.userId).subscribe();
+    this.subscriptions.add(
+      this.adminService.resetPassword(this.userId).subscribe({
+        error: () => { this.cdr.markForCheck(); }
+      })
+    );
   }
 
   async deleteUser() {
@@ -110,11 +133,15 @@ export class UserDetail implements OnInit {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.adminService.deleteUser(this.userId).subscribe({
-      next: (res: any) => {
-        if (res.success) this.router.navigate(['/admin/users']);
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.deleteUser(this.userId).subscribe({
+        next: (res: any) => {
+          if (res.success) this.router.navigate(['/admin/users']);
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
   }
 
   goBack() {

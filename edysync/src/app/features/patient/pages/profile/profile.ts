@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PatientService } from '../../../../core/services/patient.service';
@@ -9,9 +10,10 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatientProfile implements OnInit {
+export class PatientProfile implements OnInit, OnDestroy {
   user: any = null;
   username = '';
   phone = '';
@@ -20,11 +22,15 @@ export class PatientProfile implements OnInit {
   saving = false;
   message = '';
   messageType: 'success' | 'error' = 'success';
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
     private authService: AuthService,
-    private patientService: PatientService
+    private patientService: PatientService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -33,35 +39,44 @@ export class PatientProfile implements OnInit {
       subtitle: 'Gestiona tu información personal',
       icon: ['fas', 'user-circle'],
     });
-    this.authService.currentUser$.subscribe((u) => {
+    this.subs.add(this.authService.currentUser$.subscribe((u) => {
       this.user = u;
       if (u) {
         this.username = u.username || '';
         this.phone = u.phone || '';
       }
-    });
+      this.cdr.markForCheck();
+    }));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   saveProfile() {
     this.saving = true;
     this.message = '';
+    this.cdr.markForCheck();
     const payload: any = { username: this.username, phone: this.phone };
     if (this.newPassword && this.newPassword === this.confirmPassword) {
       payload.new_password = this.newPassword;
     }
-    this.patientService.updateProfile(payload).subscribe({
+    this.subs.add(this.patientService.updateProfile(payload).subscribe({
       next: (res) => {
         this.saving = false;
         this.messageType = 'success';
         this.message = 'Perfil actualizado correctamente';
         this.newPassword = '';
         this.confirmPassword = '';
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
         this.messageType = 'error';
+        this.error = err.message;
         this.message = 'Error al actualizar el perfil';
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 }

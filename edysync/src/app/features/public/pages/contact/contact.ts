@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 
 @Component({
@@ -7,8 +8,9 @@ import { HeaderService } from '../../../../core/services/header.service';
   standalone: false,
   templateUrl: './contact.html',
   styleUrl: './contact.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Contact implements OnInit {
+export class Contact implements OnInit, OnDestroy {
   form = {
     first_name: '',
     last_name: '',
@@ -23,10 +25,14 @@ export class Contact implements OnInit {
   success = false;
   error = '';
   submitted = false;
+  loading = false;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -37,20 +43,30 @@ export class Contact implements OnInit {
     });
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   submitForm() {
     this.submitted = true;
     this.submitting = true;
+    this.loading = true;
     this.error = '';
-    this.http.post('/api/public/contact', this.form).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.http.post('/api/public/contact', this.form).subscribe({
       next: () => {
         this.success = true;
         this.submitting = false;
+        this.loading = false;
         this.form = { first_name: '', last_name: '', email: '', phone: '', subject: '', message: '', service_interest: '', urgency: 'normal' };
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.error = err.error?.message || 'Error al enviar el mensaje';
         this.submitting = false;
+        this.loading = false;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 }
