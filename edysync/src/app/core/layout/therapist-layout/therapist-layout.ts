@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
+import { SidebarService } from '../../services/sidebar.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-therapist-layout',
@@ -9,39 +12,53 @@ import { ConfirmService } from '../../services/confirm.service';
   templateUrl: './therapist-layout.html',
   styleUrl: './therapist-layout.scss',
   animations: [routeAnimations],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TherapistLayout implements OnInit {
+export class TherapistLayout implements OnInit, OnDestroy {
   theme: string = 'light';
   routeLoading = false;
   loadStartTime = 0;
   loadElapsed = '';
+  loading = false;
+  error: string | null = null;
+  sidebarOpen = false;
+
+  private subs = new Subscription();
 
   constructor(
     private router: Router,
     public confirmService: ConfirmService,
+    public sidebarService: SidebarService,
+    private themeService: ThemeService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
-    this.router.events.subscribe(e => {
+    this.subs.add(this.themeService.theme$.subscribe(t => {
+      this.theme = t;
+      this.cdr.markForCheck();
+    }));
+    this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {
         this.routeLoading = true;
         this.loadStartTime = Date.now();
         this.loadElapsed = '';
+        this.cdr.markForCheck();
       }
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
         const elapsed = Date.now() - this.loadStartTime;
         this.loadElapsed = `${(elapsed / 1000).toFixed(1)}s`;
-        setTimeout(() => this.routeLoading = false, 350);
+        setTimeout(() => { this.routeLoading = false; this.cdr.markForCheck(); }, 350);
       }
-    });
-    const saved = localStorage.getItem('theme');
-    const isDark = document.documentElement.classList.contains('dark');
-    if (saved === 'dark' || (!saved && isDark)) {
-      this.theme = 'dark';
-      document.documentElement.classList.add('dark');
-    } else if (saved !== 'dark') {
-      document.documentElement.classList.remove('dark');
-    }
+    }));
+    this.subs.add(this.sidebarService.open$.subscribe(open => {
+      this.sidebarOpen = open;
+      this.cdr.markForCheck();
+    }));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   prepareRoute() {
@@ -49,13 +66,6 @@ export class TherapistLayout implements OnInit {
   }
 
   toggleDarkMode() {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-    if (this.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    this.themeService.toggle();
   }
 }

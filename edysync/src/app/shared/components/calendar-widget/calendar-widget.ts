@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, NgZone } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 
 export interface CalendarWidgetEvent {
   id: number;
@@ -30,6 +30,7 @@ interface DayCell {
   standalone: false,
   templateUrl: './calendar-widget.html',
   styleUrl: './calendar-widget.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarWidget implements OnInit, OnChanges {
   @Input() events: CalendarWidgetEvent[] = [];
@@ -51,6 +52,8 @@ export class CalendarWidget implements OnInit, OnChanges {
   private clickCount = 0;
   private clickTimer: any = null;
   private lastClickedKey = '';
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.buildGrid();
@@ -295,9 +298,9 @@ export class CalendarWidget implements OnInit, OnChanges {
   get statusColor() {
     return (status: string) => {
       switch (status) {
-        case 'completed': return 'bg-emerald-500';
-        case 'cancelled': return 'bg-red-400';
-        default: return 'bg-indigo-400';
+        case 'completed': return 'bg-success-container';
+        case 'cancelled': return 'bg-error-container';
+        default: return 'bg-info-container';
       }
     };
   }
@@ -305,9 +308,9 @@ export class CalendarWidget implements OnInit, OnChanges {
   get statusBgClass() {
     return (status: string) => {
       switch (status) {
-        case 'completed': return 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
-        case 'cancelled': return 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300';
-        default: return 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300';
+        case 'completed': return 'bg-success-container text-success';
+        case 'cancelled': return 'bg-error-container text-error';
+        default: return 'bg-info-container text-info';
       }
     };
   }

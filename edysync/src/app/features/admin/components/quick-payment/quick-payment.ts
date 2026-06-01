@@ -1,7 +1,7 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AlertService } from '../../../../core/services/alert.service';
-import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subscription, Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
 interface PatientHit {
   id: number;
@@ -28,8 +28,9 @@ interface RegisterForm {
   standalone: false,
   templateUrl: './quick-payment.html',
   styleUrl: './quick-payment.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QuickPayment {
+export class QuickPayment implements OnDestroy {
   @Output() paymentCompleted = new EventEmitter<void>();
 
   searchQuery = '';
@@ -57,37 +58,43 @@ export class QuickPayment {
   };
 
   private searchSubject = new Subject<string>();
+  private subscriptions = new Subscription();
 
   constructor(
     private adminService: AdminService,
     private alertService: AlertService,
+    private cdr: ChangeDetectorRef,
   ) {
-    this.searchSubject.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      switchMap(q => {
-        if (q.length < 2) {
+    this.subscriptions.add(
+      this.searchSubject.pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(q => {
+          if (q.length < 2) {
+            this.searchResults = [];
+            this.showDropdown = false;
+            this.searching = false;
+            return [];
+          }
+          this.searching = true;
+          return this.adminService.searchPatients(q);
+        }),
+      ).subscribe({
+        next: (res: any) => {
+          this.searchResults = res.patients || [];
+          this.showDropdown = this.searchResults.length > 0;
+          this.selectedIndex = -1;
+          this.searching = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
           this.searchResults = [];
           this.showDropdown = false;
           this.searching = false;
-          return [];
-        }
-        this.searching = true;
-        return this.adminService.searchPatients(q);
+          this.cdr.markForCheck();
+        },
       }),
-    ).subscribe({
-      next: (res: any) => {
-        this.searchResults = res.patients || [];
-        this.showDropdown = this.searchResults.length > 0;
-        this.selectedIndex = -1;
-        this.searching = false;
-      },
-      error: () => {
-        this.searchResults = [];
-        this.showDropdown = false;
-        this.searching = false;
-      },
-    });
+    );
   }
 
   onSearchInput(value: string) {
@@ -171,19 +178,23 @@ export class QuickPayment {
     this.registerForm.receipt = file;
     if (file) {
       this.analyzingReceipt = true;
-      this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
-        next: (res: any) => {
-          this.analyzeResult = res;
-          this.analyzingReceipt = false;
-          if (res.amount) this.registerForm.amount = parseFloat(res.amount);
-          if (res.reference) this.registerForm.reference = res.reference;
-          if (res.method) this.registerForm.method = res.method;
-          if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
-        },
-        error: () => {
-          this.analyzingReceipt = false;
-        },
-      });
+      this.subscriptions.add(
+        this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
+          next: (res: any) => {
+            this.analyzeResult = res;
+            this.analyzingReceipt = false;
+            if (res.amount) this.registerForm.amount = parseFloat(res.amount);
+            if (res.reference) this.registerForm.reference = res.reference;
+            if (res.method) this.registerForm.method = res.method;
+            if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.analyzingReceipt = false;
+            this.cdr.markForCheck();
+          },
+        }),
+      );
     }
   }
 
@@ -201,24 +212,32 @@ export class QuickPayment {
     if (this.registerForm.guardian_name) formData.append('guardian_name', this.registerForm.guardian_name);
     if (this.registerForm.receipt) formData.append('receipt', this.registerForm.receipt);
 
-    this.adminService.registerPayment(formData).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.registerStatus = 'Pago registrado exitosamente';
-          this.alertService.show('Pago registrado correctamente', 'success');
-          setTimeout(() => {
-            this.closePaymentForm();
-            this.clearSearch();
-            this.paymentCompleted.emit();
-          }, 1000);
-        } else {
-          this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-        }
-      },
-      error: () => {
-        this.registerStatus = 'Error de conexion al servidor';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.registerPayment(formData).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.registerStatus = 'Pago registrado exitosamente';
+            this.alertService.show('Pago registrado correctamente', 'success');
+            setTimeout(() => {
+              this.closePaymentForm();
+              this.clearSearch();
+              this.paymentCompleted.emit();
+            }, 1000);
+          } else {
+            this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.registerStatus = 'Error de conexion al servidor';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
   }
 
   get needsRecalculation(): boolean {

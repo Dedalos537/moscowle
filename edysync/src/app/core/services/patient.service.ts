@@ -40,7 +40,8 @@ export interface PatientProgress {
   accuracy_data: number[];
   time_data: number[];
   weekly_summary: string;
-  achievements: { name: string; achieved: boolean; date?: string }[];
+  avg_accuracy: number;
+  achievements: { title: string; name: string; achieved: boolean; date?: string }[];
 }
 
 export interface PatientPayment {
@@ -50,6 +51,7 @@ export interface PatientPayment {
   method: string;
   status: string;
   reference?: string;
+  concept?: string;
 }
 
 export interface MyTherapistInfo {
@@ -59,6 +61,7 @@ export interface MyTherapistInfo {
   phone?: string;
   bio?: string;
   specialties?: string[];
+  full_name?: string;
 }
 
 @Injectable({ providedIn: 'root' })

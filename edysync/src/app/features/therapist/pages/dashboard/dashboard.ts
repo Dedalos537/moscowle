@@ -1,20 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { AlertService } from '../../../../core/services/alert.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: false,
   templateUrl: './dashboard.html',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TherapistDashboard implements OnInit {
+export class TherapistDashboard implements OnInit, OnDestroy {
   loading = true;
   data: any = null;
   currentUser: any = null;
+  error: string | null = null;
 
   weeklyReportsPending = false;
   weeklyReportsCount = 0;
@@ -24,11 +26,13 @@ export class TherapistDashboard implements OnInit {
   weeklyReportDetail: any = null;
   weeklyReportDetailLoading = false;
 
+  private subs = new Subscription();
+
   constructor(
     private http: HttpClient,
     private headerService: HeaderService,
     private auth: AuthService,
-    private alertService: AlertService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -38,27 +42,35 @@ export class TherapistDashboard implements OnInit {
       icon: null
     });
 
-    this.auth.currentUser$.subscribe(u => {
+    this.subs.add(this.auth.currentUser$.subscribe(u => {
       this.currentUser = u;
-    });
+      this.cdr.markForCheck();
+    }));
 
-    this.http.get('/api/therapist/dashboard').subscribe({
+    this.subs.add(this.http.get('/api/therapist/dashboard').subscribe({
       next: (res: any) => {
         if (res.success) {
           this.data = res.data;
           this.data.topics = this.parseTopics(res.data.planned_text);
         }
         this.loading = false;
+        this.cdr.markForCheck();
         this.checkPendingReports();
       },
-      error: () => {
+      error: (err) => {
         this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       }
-    });
+    }));
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   checkPendingReports() {
-    this.http.get('/api/therapist/weekly-reports/pending').subscribe({
+    this.subs.add(this.http.get('/api/therapist/weekly-reports/pending').subscribe({
       next: (res: any) => {
         if (res.success && res.has_pending) {
           this.weeklyReportsPending = true;
@@ -67,11 +79,16 @@ export class TherapistDashboard implements OnInit {
           this.weeklyReportWeekEnd = res.week_end;
           setTimeout(() => {
             this.showWeeklyReviewModal = true;
+            this.cdr.markForCheck();
           }, 2000);
         }
+        this.cdr.markForCheck();
       },
-      error: () => {}
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      }
+    }));
   }
 
   viewWeeklyReports() {
@@ -82,6 +99,25 @@ export class TherapistDashboard implements OnInit {
   dismissWeeklyReview() {
     this.showWeeklyReviewModal = false;
     this.weeklyReportsPending = false;
+  }
+
+  generateWeeklyReport() {
+    this.weeklyReportsPending = true;
+    this.subs.add(this.http.post('/api/therapist/weekly-reports/generate', {}).subscribe({
+      next: (res: any) => {
+        this.weeklyReportsPending = false;
+        if (res.success) {
+          this.showWeeklyReviewModal = true;
+          this.weeklyReportDetail = res.report;
+        }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.weeklyReportsPending = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      }
+    }));
   }
 
   parseTopics(text: string): {name: string, status: string}[] {

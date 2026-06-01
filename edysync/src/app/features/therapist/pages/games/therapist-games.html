@@ -13,7 +13,7 @@
   } @else {
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       @for (game of games; track game) {
-        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border overflow-hidden group hover:shadow-lg transition-all">
+        <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-border overflow-hidden group hover:shadow-soft transition-all">
           <div class="aspect-video bg-gradient-to-br from-primary/5 to-surface-container-high flex items-center justify-center">
             <fa-icon [icon]="['fas', 'gamepad']" class="text-4xl text-primary/30 group-hover:text-primary/50 transition-colors"></fa-icon>
           </div>

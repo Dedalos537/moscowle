@@ -7,18 +7,25 @@
   color: var(--color-on-primary);
 }
 .btn--primary:hover {
-  background-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
+  background-color: color-mix(in srgb, var(--color-primary) 85%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .btn--primary:active {
-  background-color: color-mix(in srgb, var(--color-primary) 80%, transparent);
+  transform: scale(0.97);
 }
 
 .btn--secondary {
   border: 1px solid var(--color-border);
   color: var(--color-on-surface);
+  background-color: var(--color-surface-container-high);
 }
 .btn--secondary:hover {
-  background-color: var(--color-surface-container-high);
+  background-color: var(--color-surface-container-highest);
+  transform: translateY(-1px);
+}
+.btn--secondary:active {
+  transform: scale(0.97);
 }
 
 .btn--danger {
@@ -26,7 +33,11 @@
   color: var(--color-on-error);
 }
 .btn--danger:hover {
-  background-color: color-mix(in srgb, var(--color-error) 90%, transparent);
+  background-color: color-mix(in srgb, var(--color-error) 85%, transparent);
+  transform: translateY(-1px);
+}
+.btn--danger:active {
+  transform: scale(0.97);
 }
 
 .btn--ghost {
@@ -34,11 +45,17 @@
 }
 .btn--ghost:hover {
   background-color: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+  transform: translateY(-1px);
+}
+.btn--ghost:active {
+  transform: scale(0.97);
 }
 
 .btn--disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 button {
@@ -49,15 +66,17 @@ button {
   padding: 0.5rem 1.25rem;
   border-radius: var(--radius);
   font-family: var(--font-label);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   letter-spacing: 0.01em;
 }
 
 button:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  outline: none;
 }

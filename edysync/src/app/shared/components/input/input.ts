@@ -1,11 +1,12 @@
-import { Component, Input as NgInput, Output, EventEmitter } from '@angular/core';
+import { Component, Input as NgInput, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-input',
   standalone: false,
   templateUrl: './input.html',
-  styleUrl: './input.scss'
+  styleUrl: './input.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Input {
   @NgInput() id: string = '';
@@ -17,6 +18,8 @@ export class Input {
   @NgInput() icon?: IconProp;
 
   @Output() valueChange = new EventEmitter<string | number>();
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   onInput(event: Event) {
     const input = event.target as HTMLInputElement;

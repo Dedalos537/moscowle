@@ -12,15 +12,15 @@
 @if (confirmService.state$ | async; as confirmState) {
   @if (confirmState.visible) {
     <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="confirmService.close(false)">
-      <div class="bg-surface-container-lowest rounded-2xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
         <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-             [class.bg-red-100]="confirmState.options.variant === 'danger'"
-             [class.bg-amber-100]="confirmState.options.variant === 'warning'"
+             [class.bg-error-container]="confirmState.options.variant === 'danger'"
+             [class.bg-warning-container]="confirmState.options.variant === 'warning'"
              [class.bg-primary-container/15]="confirmState.options.variant === 'primary'">
           <fa-icon [icon]="$any(confirmState.options.icon || ['fas', 'exclamation-triangle'])"
                    class="text-2xl"
-                   [class.text-red-600]="confirmState.options.variant === 'danger'"
-                   [class.text-amber-600]="confirmState.options.variant === 'warning'"
+                   [class.text-error]="confirmState.options.variant === 'danger'"
+                   [class.text-warning]="confirmState.options.variant === 'warning'"
                    [class.text-primary-container]="confirmState.options.variant === 'primary'"></fa-icon>
         </div>
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">{{ confirmState.options.title }}</h3>
@@ -34,9 +34,15 @@
   }
 }
 
+@if (sidebarOpen) {
+  <div class="fixed inset-0 z-30 bg-black/40 md:hidden" (click)="sidebarService.close()"></div>
+}
+
 <div class="flex h-screen bg-background text-on-surface overflow-hidden transition-colors duration-300">
-  <aside class="w-64 h-screen bg-surface-container-lowest border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20">
-    <div class="h-24 flex items-center px-6 border-b border-border/50 shrink-0">
+  <aside class="w-64 h-screen bg-surface-container-lowest border-r border-border flex flex-col transition-colors duration-300 flex-shrink-0 z-20"
+         [class.sidebar-mobile]="true"
+         [class.sidebar-mobile--open]="sidebarOpen">
+    <div class="h-20 flex items-center px-6 border-b border-border/50 shrink-0">
       <div class="flex items-center gap-3">
         <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
         <div class="flex flex-col">
@@ -52,7 +58,7 @@
 
     <nav class="flex-1 overflow-y-auto px-3 space-y-0.5 custom-scrollbar">
       <a routerLink="/patient/dashboard" routerLinkActive="active" #rld="routerLinkActive"
-         class="nav-link" [class.active]="rld.isActive">
+         class="nav-link" [class.active]="rld.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'home']" [class.!text-primary-container]="rld.isActive"></fa-icon>
         <span>Mi Panel</span>
       </a>

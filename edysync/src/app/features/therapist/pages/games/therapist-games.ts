@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -8,15 +9,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './therapist-games.html',
   styleUrl: './therapist-games.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistGames implements OnInit, OnDestroy {
   games: string[] = [];
   loading = false;
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -30,17 +36,24 @@ export class TherapistGames implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subs.unsubscribe();
   }
 
   private loadGames() {
     this.loading = true;
-    this.therapistService.getGames().subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getGames().subscribe({
       next: (res) => {
         this.games = res.games;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   getGameUrl(filename: string): string {

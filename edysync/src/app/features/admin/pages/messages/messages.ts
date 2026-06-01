@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ContactMessage } from '../../../../core/models/expense';
@@ -9,6 +10,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './messages.html',
   styleUrl: './messages.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Messages implements OnInit, OnDestroy {
@@ -27,10 +29,12 @@ export class Messages implements OnInit, OnDestroy {
   body = '';
   sending = false;
   statusText = '';
+  private subscriptions: Subscription = new Subscription();
 
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -44,25 +48,33 @@ export class Messages implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.subscriptions.unsubscribe();
     this.headerService.reset();
   }
 
   private loadData() {
-    this.adminService.getContactMessages().subscribe({
-      next: (res) => (this.contactMessages = res.data),
-      error: () => (this.contactMessages = []),
-    });
-    this.adminService.getUsers('terapista').subscribe({
-      next: (res) => (this.therapists = res.users.map((u) => ({ id: u.id, username: u.username }))),
-      error: () => (this.therapists = []),
-    });
-    this.adminService.getUsers('jugador').subscribe({
-      next: (res) => {
-        this.patients = res.users.map((u) => ({ id: u.id, username: u.username }));
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getContactMessages().subscribe({
+        next: (res) => { this.contactMessages = res.data; this.cdr.markForCheck(); },
+        error: () => { this.contactMessages = []; this.cdr.markForCheck(); },
+      })
+    );
+    this.subscriptions.add(
+      this.adminService.getUsers('terapista').subscribe({
+        next: (res) => { this.therapists = res.users.map((u) => ({ id: u.id, username: u.username })); this.cdr.markForCheck(); },
+        error: () => { this.therapists = []; this.cdr.markForCheck(); },
+      })
+    );
+    this.subscriptions.add(
+      this.adminService.getUsers('jugador').subscribe({
+        next: (res) => {
+          this.patients = res.users.map((u) => ({ id: u.id, username: u.username }));
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.loading = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   switchTab(tab: 'therapists' | 'patients') {
@@ -99,8 +111,8 @@ export class Messages implements OnInit, OnDestroy {
   }
 
   getSentimentColor(sentiment?: string): string {
-    const colors: Record<string, string> = { 'positivo': 'text-green-600', 'neutral': 'text-yellow-600', 'negativo': 'text-red-600' };
-    return colors[sentiment || ''] || 'text-gray-500';
+    const colors: Record<string, string> = { 'positivo': 'text-success', 'neutral': 'text-warning', 'negativo': 'text-error' };
+    return colors[sentiment || ''] || 'text-on-surface-variant';
   }
 
   getIntentLabel(intent?: string): string {
@@ -112,8 +124,8 @@ export class Messages implements OnInit, OnDestroy {
   }
 
   getConfidenceBadge(conf?: string): string {
-    const badges: Record<string, string> = { 'alta': 'bg-green-100 text-green-700', 'media': 'bg-yellow-100 text-yellow-700', 'baja': 'bg-red-100 text-red-700' };
-    return badges[conf || ''] || 'bg-gray-100 text-gray-600';
+    const badges: Record<string, string> = { 'alta': 'bg-success-container text-success', 'media': 'bg-warning-container text-warning', 'baja': 'bg-error-container text-error' };
+    return badges[conf || ''] || 'bg-surface-container-high text-on-surface-variant';
   }
 
   sendMessage() {
@@ -123,25 +135,29 @@ export class Messages implements OnInit, OnDestroy {
     }
     this.sending = true;
     this.statusText = 'Enviando...';
-    this.adminService
-      .broadcastMessage({
-        target: 'single',
-        receiver_id: this.selectedReceiverId,
-        subject: this.subject,
-        body: this.body,
-      })
-      .subscribe({
-        next: () => {
-          this.sending = false;
-          this.statusText = 'Mensaje enviado correctamente.';
-          this.subject = '';
-          this.body = '';
-          this.selectedReceiverId = null;
-        },
-        error: (err) => {
-          this.sending = false;
-          this.statusText = err.error?.message || 'Error al enviar';
-        },
-      });
+    this.subscriptions.add(
+      this.adminService
+        .broadcastMessage({
+          target: 'single',
+          receiver_id: this.selectedReceiverId,
+          subject: this.subject,
+          body: this.body,
+        })
+        .subscribe({
+          next: () => {
+            this.sending = false;
+            this.statusText = 'Mensaje enviado correctamente.';
+            this.subject = '';
+            this.body = '';
+            this.selectedReceiverId = null;
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.sending = false;
+            this.statusText = err.error?.message || 'Error al enviar';
+            this.cdr.markForCheck();
+          },
+        })
+    );
   }
 }

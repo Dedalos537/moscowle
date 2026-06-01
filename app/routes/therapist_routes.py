@@ -692,7 +692,7 @@ def reports():
 @therapist_bp.route('/reports/export', methods=['GET'])
 @login_required
 def export_reports():
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
 
     start = request.args.get('start')
@@ -977,7 +977,7 @@ def calendar():
 @therapist_bp.route('/patients/<int:patient_id>')
 @login_required
 def patient_detail(patient_id):
-    if current_user.role not in ['terapista', 'admin']:
+    if current_user.role not in ['terapista', 'admin', 'supervisor']:
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -1033,7 +1033,7 @@ def patient_detail(patient_id):
 @therapist_bp.route('/patients/<int:patient_id>/update', methods=['POST'])
 @login_required
 def update_patient(patient_id):
-    if current_user.role not in ['terapista', 'admin']:
+    if current_user.role not in ['terapista', 'admin', 'supervisor']:
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     
     patient = User.query.get_or_404(patient_id)

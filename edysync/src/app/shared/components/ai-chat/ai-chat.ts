@@ -1,5 +1,6 @@
-import { Component, ElementRef, ViewChild, HostListener, AfterViewChecked } from '@angular/core';
+import { Component, ElementRef, ViewChild, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Subscription } from 'rxjs';
 import { LlamaService, ChatMessage } from '../../../core/services/llama.service';
 
 @Component({
@@ -7,8 +8,9 @@ import { LlamaService, ChatMessage } from '../../../core/services/llama.service'
   standalone: false,
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AiChat implements AfterViewChecked {
+export class AiChat implements AfterViewChecked, OnDestroy {
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
   @ViewChild('inputEl') inputEl!: ElementRef;
 
@@ -17,6 +19,7 @@ export class AiChat implements AfterViewChecked {
   inputMessage = '';
   loading = false;
   hasUnread = false;
+  error: string | null = null;
 
   suggestions = [
     'Ver ingresos del mes',
@@ -26,7 +29,13 @@ export class AiChat implements AfterViewChecked {
     'Estado de deudores',
   ];
 
-  constructor(private llama: LlamaService, private sanitizer: DomSanitizer) {}
+  private subs = new Subscription();
+
+  constructor(
+    private llama: LlamaService,
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   sanitize(html: string): SafeHtml {
     return this.sanitizer.bypassSecurityTrustHtml(html);
@@ -34,6 +43,10 @@ export class AiChat implements AfterViewChecked {
 
   ngAfterViewChecked() {
     this.scrollToBottom();
+  }
+
+  ngOnDestroy() {
+    this.subs.unsubscribe();
   }
 
   @HostListener('document:keydown.escape')
@@ -47,11 +60,12 @@ export class AiChat implements AfterViewChecked {
     if (this.isOpen && this.messages.length === 0) {
       this.loadHistory();
     }
+    this.cdr.markForCheck();
     setTimeout(() => this.inputEl?.nativeElement?.focus(), 300);
   }
 
   private loadHistory() {
-    this.llama.getHistory().subscribe({
+    this.subs.add(this.llama.getHistory().subscribe({
       next: (res) => {
         if (res.success) {
           this.messages = res.messages.map((m) => ({
@@ -60,8 +74,9 @@ export class AiChat implements AfterViewChecked {
             intent: m.intent,
           }));
         }
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   sendSuggestion(text: string) {
@@ -76,8 +91,10 @@ export class AiChat implements AfterViewChecked {
     this.messages.push({ role: 'user', content: msg });
     this.inputMessage = '';
     this.loading = true;
+    this.error = null;
+    this.cdr.markForCheck();
 
-    this.llama.sendMessage(msg, 'dashboard').subscribe({
+    this.subs.add(this.llama.sendMessage(msg, 'dashboard').subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
@@ -95,15 +112,18 @@ export class AiChat implements AfterViewChecked {
             content: 'Error al procesar tu mensaje',
           });
         }
+        this.cdr.markForCheck();
       },
       error: () => {
         this.loading = false;
+        this.error = 'Error de conexion con el servidor';
         this.messages.push({
           role: 'assistant',
           content: 'Error de conexion con el servidor',
         });
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   private scrollToBottom() {

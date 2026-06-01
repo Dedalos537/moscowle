@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService, PatientPayment } from '../../../../core/services/patient.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -8,15 +9,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './payments.html',
   styleUrl: './payments.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatientPayments implements OnInit {
+export class PatientPayments implements OnInit, OnDestroy {
   loading = true;
   payments: PatientPayment[] = [];
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
-    private patientService: PatientService
+    private patientService: PatientService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -28,22 +34,31 @@ export class PatientPayments implements OnInit {
     this.loadPayments();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadPayments() {
-    this.patientService.getPayments().subscribe({
+    this.subs.add(this.patientService.getPayments().subscribe({
       next: (res) => {
         if (res.success) this.payments = res.data;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
-      completed: 'bg-green-100 text-green-700',
-      pending: 'bg-amber-100 text-amber-700',
-      cancelled: 'bg-red-100 text-red-700',
+      completed: 'bg-success-container text-success',
+      pending: 'bg-warning-container text-warning',
+      cancelled: 'bg-error-container text-on-error-container',
     };
-    return map[status] || 'bg-gray-100 text-gray-500';
+    return map[status] || 'bg-surface-container-high text-on-surface-variant';
   }
 }

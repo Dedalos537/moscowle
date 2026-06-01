@@ -1,5 +1,8 @@
 <header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-3">
+    <button (click)="toggleSidebar()" class="md:hidden w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-1" aria-label="Toggle sidebar">
+      <fa-icon [icon]="['fas', 'bars']"></fa-icon>
+    </button>
     @if (headerService.icon$ | async; as icon) {
       @if (icon && icon.length && icon.length === 2) {
         <fa-icon [icon]="icon" class="text-primary-container text-xl"></fa-icon>
@@ -15,9 +18,9 @@
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
 
     @if (isRecording) {
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200">
-        <span class="w-2 h-2 rounded-full bg-red-500 recording-dot"></span>
-        <span class="text-label-caps text-red-600 hidden sm:inline">Grabando</span>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-error-container border border-error-container">
+        <span class="w-2 h-2 rounded-full bg-error recording-dot"></span>
+        <span class="text-label-caps text-error hidden sm:inline">Grabando</span>
       </div>
     }
 
@@ -51,10 +54,10 @@
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
                        [class.bg-primary-container/15]="!notif.type || notif.type === 'default'"
-                       [class.bg-amber-100]="notif.type === 'debt'"
+                       [class.bg-warning-container]="notif.type === 'debt'"
                        [class.bg-info/10]="notif.type === 'activity'">
                     @if (notif.type === 'debt') {
-                      <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-amber-600 text-sm"></fa-icon>
+                      <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning text-sm"></fa-icon>
                     } @else if (notif.type === 'activity') {
                       <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info text-sm"></fa-icon>
                     } @else {
@@ -100,9 +103,9 @@
             <p class="text-sm font-bold text-on-surface truncate">{{ user?.username || 'Usuario' }}</p>
             <p class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</p>
           </div>
-          <button class="w-full flex items-center gap-3 px-4 py-2.5 text-body-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors" (click)="logout()">
-            <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-base"></fa-icon>
-            Cerrar Sesión
+          <button class="w-full flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="logout()">
+            <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-sm"></fa-icon>
+            <span>Cerrar Sesión</span>
           </button>
         </div>
       }
@@ -112,9 +115,9 @@
 
 @if (showLogoutWarning) {
   <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="cancelLogout()">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
-      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-red-600 text-2xl"></fa-icon>
+    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
+        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-error text-2xl"></fa-icon>
       </div>
       <h3 class="text-lg font-bold text-on-surface text-center mb-2">Grabación en curso</h3>
       <p class="text-body-sm text-on-surface-variant text-center mb-6">Hay una sesión grabándose en este momento. Si cierras sesión, la grabación se detendrá y la sesión quedará incompleta.</p>

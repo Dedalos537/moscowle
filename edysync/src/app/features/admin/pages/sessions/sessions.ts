@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { CalendarWidgetEvent, CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
@@ -11,6 +12,7 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
   standalone: false,
   templateUrl: './sessions.html',
   styleUrl: './sessions.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Sessions implements OnInit, OnDestroy {
@@ -22,6 +24,7 @@ export class Sessions implements OnInit, OnDestroy {
   patients: { id: number; username: string }[] = [];
   patientsLoading = false;
   loading = true;
+  private subscriptions: Subscription = new Subscription();
 
   rawEvents: any[] = [];
   widgetEvents: CalendarWidgetEvent[] = [];
@@ -73,6 +76,7 @@ export class Sessions implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -88,15 +92,20 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.subscriptions.unsubscribe();
     this.headerService.reset();
   }
 
   private loadTherapists() {
-    this.adminService.getUsers('terapista').subscribe({
-      next: (res) => {
-        this.therapists = res.users.map((u) => ({ id: u.id, username: u.username }));
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getUsers('terapista').subscribe({
+        next: (res) => {
+          this.therapists = res.users.map((u) => ({ id: u.id, username: u.username }));
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
   }
 
   private loadSessions() {
@@ -105,25 +114,28 @@ export class Sessions implements OnInit, OnDestroy {
     const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
     const therapistId = this.selectedTherapistId !== 'all' ? parseInt(this.selectedTherapistId) : undefined;
 
-    this.adminService.getSessions(start, end, therapistId).subscribe({
-      next: (events) => {
-        this.rawEvents = events;
-        this.widgetEvents = events.map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          date: new Date(e.start),
-          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
-          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
-          status: e.extendedProps?.status || 'scheduled',
-          therapist: e.extendedProps?.therapist,
-          patient: e.extendedProps?.patient,
-          therapistId: e.extendedProps?.therapist_id,
-          patientId: e.extendedProps?.patient_id,
-        }));
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getSessions(start, end, therapistId).subscribe({
+        next: (events) => {
+          this.rawEvents = events;
+          this.widgetEvents = events.map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            date: new Date(e.start),
+            time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
+            endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+            status: e.extendedProps?.status || 'scheduled',
+            therapist: e.extendedProps?.therapist,
+            patient: e.extendedProps?.patient,
+            therapistId: e.extendedProps?.therapist_id,
+            patientId: e.extendedProps?.patient_id,
+          }));
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.loading = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   onTherapistFilterChange() {
@@ -159,14 +171,17 @@ export class Sessions implements OnInit, OnDestroy {
     this.programError = null;
     this.programSuccessMessage = null;
 
-    this.adminService.getSessionAudit(this.editForm.id).subscribe({
-      next: (data: any) => {
-        if (data && data.success && data.exists && data.audit.has_program) {
-          this.auditState = data.audit;
-        }
-      },
-      error: () => {},
-    });
+    this.subscriptions.add(
+      this.adminService.getSessionAudit(this.editForm.id).subscribe({
+        next: (data: any) => {
+          if (data && data.success && data.exists && data.audit.has_program) {
+            this.auditState = data.audit;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
 
     this.showEditModal = true;
   }
@@ -255,16 +270,20 @@ export class Sessions implements OnInit, OnDestroy {
       return;
     }
     this.patientsLoading = true;
-    this.adminService.getPatientsByTherapist(therapistId).subscribe({
-      next: (list) => {
-        this.patients = list;
-        this.patientsLoading = false;
-      },
-      error: () => {
-        this.patients = [];
-        this.patientsLoading = false;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getPatientsByTherapist(therapistId).subscribe({
+        next: (list) => {
+          this.patients = list;
+          this.patientsLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.patients = [];
+          this.patientsLoading = false;
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   async submitCreate() {
@@ -291,48 +310,56 @@ export class Sessions implements OnInit, OnDestroy {
       end_time: f.end_time,
     };
 
-    this.adminService.batchCreateSessions(payload).subscribe({
-      next: (res: any) => {
-        const sessionIds: number[] = res?.session_ids || [];
-        if (this.createProgramFile && sessionIds.length > 0) {
-          this.programUploadingCreate = true;
-          let uploaded = 0;
-          sessionIds.forEach((id) => {
-            this.adminService.uploadSessionProgram(id, this.createProgramFile!).subscribe({
-              next: () => {
-                uploaded++;
-                if (uploaded === sessionIds.length) {
-                  this.programUploadingCreate = false;
-                  this.createProgramFile = null;
-                  this.submitting = false;
-                  this.closeCreateModal();
-                  this.refreshEvents();
-                }
-              },
-              error: () => {
-                uploaded++;
-                if (uploaded === sessionIds.length) {
-                  this.programUploadingCreate = false;
-                  this.createProgramFile = null;
-                  this.submitting = false;
-                  this.closeCreateModal();
-                  this.refreshEvents();
-                }
-              },
+    this.subscriptions.add(
+      this.adminService.batchCreateSessions(payload).subscribe({
+        next: (res: any) => {
+          const sessionIds: number[] = res?.session_ids || [];
+          if (this.createProgramFile && sessionIds.length > 0) {
+            this.programUploadingCreate = true;
+            let uploaded = 0;
+            sessionIds.forEach((id) => {
+              this.subscriptions.add(
+                this.adminService.uploadSessionProgram(id, this.createProgramFile!).subscribe({
+                  next: () => {
+                    uploaded++;
+                    if (uploaded === sessionIds.length) {
+                      this.programUploadingCreate = false;
+                      this.createProgramFile = null;
+                      this.submitting = false;
+                      this.closeCreateModal();
+                      this.refreshEvents();
+                      this.cdr.markForCheck();
+                    }
+                  },
+                  error: () => {
+                    uploaded++;
+                    if (uploaded === sessionIds.length) {
+                      this.programUploadingCreate = false;
+                      this.createProgramFile = null;
+                      this.submitting = false;
+                      this.closeCreateModal();
+                      this.refreshEvents();
+                      this.cdr.markForCheck();
+                    }
+                  },
+                })
+              );
             });
-          });
-        } else {
+          } else {
+            this.submitting = false;
+            this.createProgramFile = null;
+            this.closeCreateModal();
+            this.refreshEvents();
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
           this.submitting = false;
-          this.createProgramFile = null;
-          this.closeCreateModal();
-          this.refreshEvents();
-        }
-      },
-      error: () => {
-        this.submitting = false;
-        this.programUploadingCreate = false;
-      },
-    });
+          this.programUploadingCreate = false;
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   private refreshEvents() {
@@ -360,23 +387,27 @@ export class Sessions implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     this.submitting = true;
-    this.adminService
-      .updateSession(f.id, {
-        title: f.title,
-        start_time: `${f.date}T${f.start_time}`,
-        end_time: `${f.date}T${f.end_time}`,
-        status: f.status as any,
-      })
-      .subscribe({
-        next: () => {
-          this.submitting = false;
-          this.closeEditModal();
-          this.refreshEvents();
-        },
-        error: () => {
-          this.submitting = false;
-        },
-      });
+    this.subscriptions.add(
+      this.adminService
+        .updateSession(f.id, {
+          title: f.title,
+          start_time: `${f.date}T${f.start_time}`,
+          end_time: `${f.date}T${f.end_time}`,
+          status: f.status as any,
+        })
+        .subscribe({
+          next: () => {
+            this.submitting = false;
+            this.closeEditModal();
+            this.refreshEvents();
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.submitting = false;
+            this.cdr.markForCheck();
+          },
+        })
+    );
   }
 
   async deleteSession() {
@@ -389,16 +420,20 @@ export class Sessions implements OnInit, OnDestroy {
     }));
     if (!confirmed) return;
     this.deleting = true;
-    this.adminService.deleteSession(this.editForm.id).subscribe({
-      next: () => {
-        this.deleting = false;
-        this.closeEditModal();
-        this.refreshEvents();
-      },
-      error: () => {
-        this.deleting = false;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.deleteSession(this.editForm.id).subscribe({
+        next: () => {
+          this.deleting = false;
+          this.closeEditModal();
+          this.refreshEvents();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.deleting = false;
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   private resetForms() {
@@ -425,23 +460,27 @@ export class Sessions implements OnInit, OnDestroy {
       this.programError = null;
       this.programSuccessMessage = null;
 
-      this.adminService.uploadSessionProgram(this.editForm.id, file).subscribe({
-        next: (res: any) => {
-          this.programUploading = false;
-          if (res.success) {
-            this.programSuccessMessage = 'Programación subida correctamente.';
-            this.auditState = { has_program: true, planned_text_preview: res.planned_text_preview };
-          } else {
-            this.programError = res.error || 'Error desconocido';
-          }
-          event.target.value = null;
-        },
-        error: () => {
-          this.programUploading = false;
-          this.programError = 'Error de conexión al subir.';
-          event.target.value = null;
-        },
-      });
+      this.subscriptions.add(
+        this.adminService.uploadSessionProgram(this.editForm.id, file).subscribe({
+          next: (res: any) => {
+            this.programUploading = false;
+            if (res.success) {
+              this.programSuccessMessage = 'Programación subida correctamente.';
+              this.auditState = { has_program: true, planned_text_preview: res.planned_text_preview };
+            } else {
+              this.programError = res.error || 'Error desconocido';
+            }
+            event.target.value = null;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.programUploading = false;
+            this.programError = 'Error de conexión al subir.';
+            event.target.value = null;
+            this.cdr.markForCheck();
+          },
+        })
+      );
     }
   }
 
@@ -459,20 +498,24 @@ export class Sessions implements OnInit, OnDestroy {
     }));
     if (!confirmed) return;
     this.programDeleting = true;
-    this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
-      next: (res: any) => {
-        this.programDeleting = false;
-        if (res.success) {
-          this.auditState = null;
-          this.programSuccessMessage = 'Programación eliminada.';
-        } else {
-          this.programError = res.error || 'Error al eliminar';
-        }
-      },
-      error: () => {
-        this.programDeleting = false;
-        this.programError = 'Error de conexión al eliminar.';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.deleteSessionProgram(this.editForm.id).subscribe({
+        next: (res: any) => {
+          this.programDeleting = false;
+          if (res.success) {
+            this.auditState = null;
+            this.programSuccessMessage = 'Programación eliminada.';
+          } else {
+            this.programError = res.error || 'Error al eliminar';
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.programDeleting = false;
+          this.programError = 'Error de conexión al eliminar.';
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 }

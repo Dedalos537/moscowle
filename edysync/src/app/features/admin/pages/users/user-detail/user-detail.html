@@ -4,20 +4,28 @@
     <div class="flex justify-center py-20">
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
+  } @else if (error) {
+    <div class="flex flex-col items-center justify-center py-20 text-center" role="alert">
+      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <p class="text-error font-semibold text-lg">{{ error }}</p>
+      <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadUser()">
+        Reintentar
+      </button>
+    </div>
   } @else if (user) {
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-border/20">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-container-lowest p-6 rounded-xl shadow-soft border border-border/20">
       <div class="flex items-center gap-4">
         <div class="relative">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold shadow-md">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-2xl font-bold shadow-soft">
             {{ getInitials(user.username) }}
           </div>
-          <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white" [class.bg-green-500]="user.is_active" [class.bg-red-500]="!user.is_active"></div>
+           <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white" [class.bg-success]="user.is_active" [class.bg-error]="!user.is_active"></div>
         </div>
         <div>
           <h1 class="text-2xl font-bold text-on-surface">{{ user.username }}</h1>
           <p class="text-on-surface-variant text-sm">{{ user.email }}</p>
           <div class="flex items-center gap-2 mt-1">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium" [class.bg-secondary/10]="roleColor === 'purple'" [class.text-secondary]="roleColor === 'purple'" [class.bg-blue-100]="roleColor === 'blue'" [class.text-blue-700]="roleColor === 'blue'" [class.bg-green-100]="roleColor === 'green'" [class.text-green-700]="roleColor === 'green'">
+             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium" [class.bg-secondary/10]="roleColor === 'purple'" [class.text-secondary]="roleColor === 'purple'" [class.bg-info-container]="roleColor === 'blue'" [class.text-info]="roleColor === 'blue'" [class.bg-success-container]="roleColor === 'green'" [class.text-on-success-container]="roleColor === 'green'">
               {{ roleLabel }}
             </span>
             <span class="text-xs text-on-surface-variant/60">ID: {{ user.id }}</span>
@@ -32,7 +40,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 space-y-6">
-        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-border/20 p-6">
+        <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-6">
           <h3 class="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
             <fa-icon [icon]="['fas', 'id-card']" class="text-on-surface-variant/60"></fa-icon> Información Personal
           </h3>
@@ -52,7 +60,7 @@
             <div>
               <label class="block text-sm font-medium text-on-surface-variant mb-1">Estado</label>
               <p class="text-on-surface font-medium">
-                <span class="inline-block w-2 h-2 rounded-full mr-1" [class.bg-green-500]="user.is_active" [class.bg-red-500]="!user.is_active"></span>
+                <span class="inline-block w-2 h-2 rounded-full mr-1" [class.bg-success]="user.is_active" [class.bg-error]="!user.is_active"></span>
                 {{ user.is_active ? 'Activo' : 'Inactivo' }}
               </p>
             </div>
@@ -60,7 +68,7 @@
         </div>
 
         @if (user.role === 'jugador') {
-          <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-border/20 p-6">
+          <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-6">
             <h3 class="text-lg font-semibold text-on-surface mb-4 flex items-center gap-2">
               <fa-icon [icon]="['fas', 'chart-line']" class="text-on-surface-variant/60"></fa-icon> Estadísticas
             </h3>
@@ -87,7 +95,7 @@
       </div>
 
       <div class="space-y-6">
-        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-border/20 p-6">
+        <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-6">
           <h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-4">Estado de Cuenta</h3>
           <div class="space-y-4">
             <div>
@@ -104,7 +112,7 @@
           </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-border/20 p-6">
+        <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 p-6">
           <h3 class="text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-4">Acciones Rápidas</h3>
           <div class="space-y-3">
             <app-button variant="ghost" label="Resetear Contraseña" [icon]="['fas', 'key']" (clicked)="resetPassword()"></app-button>

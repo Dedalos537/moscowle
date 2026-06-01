@@ -27,7 +27,6 @@ import { TherapistCalendarPage } from './pages/calendar/calendar';
     TherapistGames,
     TherapistPatients,
     TherapistPatientDetail,
-    TherapistSessionReview,
     TherapistReports,
     TherapistAnalytics,
     TherapistCalendarPage,

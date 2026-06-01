@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { routeAnimations } from '../../animations';
 
 @Component({
@@ -7,8 +7,11 @@ import { routeAnimations } from '../../animations';
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss',
   animations: [routeAnimations],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MainLayout {
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   prepareRoute() {
     return;

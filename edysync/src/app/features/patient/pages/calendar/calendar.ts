@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService } from '../../../../core/services/patient.service';
 import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
@@ -9,15 +10,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatientCalendar implements OnInit {
+export class PatientCalendar implements OnInit, OnDestroy {
   loading = true;
   widgetEvents: CalendarWidgetEvent[] = [];
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
     private patientService: PatientService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -29,8 +35,12 @@ export class PatientCalendar implements OnInit {
     this.loadSessions();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadSessions() {
-    this.patientService.getSessions().subscribe({
+    this.subs.add(this.patientService.getSessions().subscribe({
       next: (res) => {
         if (res.success) {
           this.widgetEvents = res.data.map((s) => ({
@@ -43,8 +53,13 @@ export class PatientCalendar implements OnInit {
           }));
         }
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 }

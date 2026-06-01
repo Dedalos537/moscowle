@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -12,7 +13,8 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './sedes.html',
   styleUrl: './sedes.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sedes implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -29,11 +31,14 @@ export class Sedes implements OnInit, OnDestroy {
   editSedeData = { id: 0, name: '', address: '' };
   editStatus = '';
 
+  private subscriptions = new Subscription();
+
   constructor(
     private headerService: HeaderService,
     private adminService: AdminService,
     private alertService: AlertService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   get activeCount(): number {
@@ -61,32 +66,41 @@ export class Sedes implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subscriptions.unsubscribe();
   }
 
   loadSedes() {
     this.loading = true;
-    this.adminService.getSedes().subscribe({
-      next: (data) => {
-        this.sedes = data;
-        this.loading = false;
-        this.loadAllAnalytics();
-      },
-      error: () => {
-        this.loading = false;
-        this.alertService.show('Error al cargar sedes', 'error');
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getSedes().subscribe({
+        next: (data) => {
+          this.sedes = data;
+          this.loading = false;
+          this.loadAllAnalytics();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loading = false;
+          this.alertService.show('Error al cargar sedes', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   private loadAllAnalytics() {
     for (const sede of this.sedes) {
-      this.adminService.getSedeAnalytics(sede.id).subscribe({
-        next: (res) => {
-          if (res.success && res.analytics) {
-            sede.stats = res.analytics;
-          }
-        }
-      });
+      this.subscriptions.add(
+        this.adminService.getSedeAnalytics(sede.id).subscribe({
+          next: (res) => {
+            if (res.success && res.analytics) {
+              sede.stats = res.analytics;
+            }
+            this.cdr.markForCheck();
+          },
+          error: () => this.cdr.markForCheck(),
+        }),
+      );
     }
   }
 
@@ -94,6 +108,7 @@ export class Sedes implements OnInit, OnDestroy {
     this.newSede = { name: '', address: '' };
     this.createStatus = '';
     this.showCreateDrawer = true;
+    this.cdr.markForCheck();
   }
 
   closeCreateDrawer() {
@@ -106,23 +121,27 @@ export class Sedes implements OnInit, OnDestroy {
       return;
     }
     this.createStatus = 'Creando...';
-    this.adminService.createSede(this.newSede).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.createStatus = 'Sede creada';
-          this.alertService.show('Sede creada correctamente', 'success');
-          setTimeout(() => {
-            this.closeCreateDrawer();
-            this.loadSedes();
-          }, 1500);
-        } else {
-          this.createStatus = 'Error: ' + (res.message || '');
-        }
-      },
-      error: () => {
-        this.createStatus = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.createSede(this.newSede).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.createStatus = 'Sede creada';
+            this.alertService.show('Sede creada correctamente', 'success');
+            setTimeout(() => {
+              this.closeCreateDrawer();
+              this.loadSedes();
+            }, 1500);
+          } else {
+            this.createStatus = 'Error: ' + (res.message || '');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.createStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   openEditDrawer(sede: Sede) {
@@ -141,26 +160,30 @@ export class Sedes implements OnInit, OnDestroy {
       return;
     }
     this.editStatus = 'Guardando...';
-    this.adminService.updateSede(this.editSedeData.id, {
-      name: this.editSedeData.name,
-      address: this.editSedeData.address,
-    }).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.editStatus = 'Guardado';
-          this.alertService.show('Sede actualizada correctamente', 'success');
-          setTimeout(() => {
-            this.closeEditDrawer();
-            this.loadSedes();
-          }, 1500);
-        } else {
-          this.editStatus = 'Error: ' + (res.message || '');
-        }
-      },
-      error: () => {
-        this.editStatus = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.updateSede(this.editSedeData.id, {
+        name: this.editSedeData.name,
+        address: this.editSedeData.address,
+      }).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.editStatus = 'Guardado';
+            this.alertService.show('Sede actualizada correctamente', 'success');
+            setTimeout(() => {
+              this.closeEditDrawer();
+              this.loadSedes();
+            }, 1500);
+          } else {
+            this.editStatus = 'Error: ' + (res.message || '');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.editStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   async toggleActive(sede: Sede) {
@@ -173,18 +196,24 @@ export class Sedes implements OnInit, OnDestroy {
       icon: ['fas', sede.active ? 'pause' : 'play'],
     }));
     if (!confirmed) return;
-    this.adminService.updateSede(sede.id, { active: !sede.active }).subscribe({
-      next: (res) => {
-        if (res.success) {
-          sede.active = !sede.active;
-          this.alertService.show(
-            `Sede ${sede.active ? 'activada' : 'desactivada'} correctamente`,
-            'success',
-          );
-        }
-      },
-      error: () => this.alertService.show('Error al actualizar sede', 'error'),
-    });
+    this.subscriptions.add(
+      this.adminService.updateSede(sede.id, { active: !sede.active }).subscribe({
+        next: (res) => {
+          if (res.success) {
+            sede.active = !sede.active;
+            this.alertService.show(
+              `Sede ${sede.active ? 'activada' : 'desactivada'} correctamente`,
+              'success',
+            );
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.alertService.show('Error al actualizar sede', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   async deleteSede(sede: Sede) {
@@ -196,12 +225,18 @@ export class Sedes implements OnInit, OnDestroy {
       icon: ['fas', 'trash'],
     }));
     if (!confirmed) return;
-    this.adminService.updateSede(sede.id, { active: false }).subscribe({
-      next: () => {
-        this.sedes = this.sedes.filter(s => s.id !== sede.id);
-        this.alertService.show('Sede eliminada', 'success');
-      },
-      error: () => this.alertService.show('Error al eliminar sede', 'error'),
-    });
+    this.subscriptions.add(
+      this.adminService.updateSede(sede.id, { active: false }).subscribe({
+        next: () => {
+          this.sedes = this.sedes.filter(s => s.id !== sede.id);
+          this.alertService.show('Sede eliminada', 'success');
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.alertService.show('Error al eliminar sede', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 }

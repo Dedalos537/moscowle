@@ -1,8 +1,11 @@
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-<div *ngIf="!loading && patient" class="space-y-6" [@fadeInUp]>
+@if (!loading && patient) {
+<div class="space-y-6" [@fadeInUp]>
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-1">
       <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
@@ -14,26 +17,36 @@
           <p class="text-sm text-on-surface-variant">{{ patient.email }}</p>
         </div>
         <div class="space-y-3 text-sm">
-          <div *ngIf="patient.phone" class="flex justify-between">
-            <span class="text-on-surface-variant">Teléfono</span>
-            <span class="text-on-surface font-medium">{{ patient.phone }}</span>
-          </div>
-          <div *ngIf="patient.document_number" class="flex justify-between">
-            <span class="text-on-surface-variant">Documento</span>
-            <span class="text-on-surface font-medium">{{ patient.document_number }}</span>
-          </div>
-          <div *ngIf="patient.date_of_birth" class="flex justify-between">
-            <span class="text-on-surface-variant">Fecha de Nac.</span>
-            <span class="text-on-surface font-medium">{{ patient.date_of_birth }}</span>
-          </div>
-          <div *ngIf="patient.guardian_name" class="flex justify-between">
-            <span class="text-on-surface-variant">Apoderado</span>
-            <span class="text-on-surface font-medium">{{ patient.guardian_name }}</span>
-          </div>
-          <div *ngIf="patient.therapy_goals" class="pt-3 border-t border-border">
-            <p class="text-on-surface-variant mb-1">Objetivos Terapéuticos</p>
-            <p class="text-on-surface">{{ patient.therapy_goals }}</p>
-          </div>
+          @if (patient.phone) {
+            <div class="flex justify-between">
+              <span class="text-on-surface-variant">Teléfono</span>
+              <span class="text-on-surface font-medium">{{ patient.phone }}</span>
+            </div>
+          }
+          @if (patient.document_number) {
+            <div class="flex justify-between">
+              <span class="text-on-surface-variant">Documento</span>
+              <span class="text-on-surface font-medium">{{ patient.document_number }}</span>
+            </div>
+          }
+          @if (patient.date_of_birth) {
+            <div class="flex justify-between">
+              <span class="text-on-surface-variant">Fecha de Nac.</span>
+              <span class="text-on-surface font-medium">{{ patient.date_of_birth }}</span>
+            </div>
+          }
+          @if (patient.guardian_name) {
+            <div class="flex justify-between">
+              <span class="text-on-surface-variant">Apoderado</span>
+              <span class="text-on-surface font-medium">{{ patient.guardian_name }}</span>
+            </div>
+          }
+          @if (patient.therapy_goals) {
+            <div class="pt-3 border-t border-border">
+              <p class="text-on-surface-variant mb-1">Objetivos Terapéuticos</p>
+              <p class="text-on-surface">{{ patient.therapy_goals }}</p>
+            </div>
+          }
         </div>
       </div>
     </div>
@@ -61,56 +74,65 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let session of sessions" class="border-b border-border/50 hover:bg-surface-container-low transition-colors">
-                <td class="py-3 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
-                <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>
-                <td class="py-3">
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                        [ngClass]="{
-                          'bg-success-container text-success': session.status === 'completed',
-                          'bg-info-container text-info': session.status === 'scheduled',
-                          'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
-                        }">
-                    {{ session.status }}
-                  </span>
-                </td>
-                <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance || '—' }}</td>
-              </tr>
-              <tr *ngIf="sessions.length === 0">
-                <td colspan="4" class="py-8 text-center text-on-surface-variant text-sm">No hay sesiones registradas</td>
-              </tr>
+              @for (session of sessions; track $index) {
+                <tr class="border-b border-border/50 hover:bg-surface-container-low transition-colors">
+                  <td class="py-3 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
+                  <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>
+                  <td class="py-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                          [ngClass]="{
+                            'bg-success-container text-success': session.status === 'completed',
+                            'bg-info-container text-info': session.status === 'scheduled',
+                            'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
+                          }">
+                      {{ session.status }}
+                    </span>
+                  </td>
+                  <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance || '—' }}</td>
+                </tr>
+              }
+              @if (sessions.length === 0) {
+                <tr>
+                  <td colspan="4" class="py-8 text-center text-on-surface-variant text-sm">No hay sesiones registradas</td>
+                </tr>
+              }
             </tbody>
           </table>
         </div>
 
-        <div *ngIf="weeklyReport" class="mt-4 p-4 bg-info-container rounded-xl border border-info-container">
-          <h4 class="text-sm font-bold text-info mb-3 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'file-alt']" class="text-info"></fa-icon>
-            Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
-          </h4>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-              <p class="text-xs text-info font-bold uppercase tracking-wider">Sesiones</p>
-              <p class="text-xl font-black text-info">{{ weeklyReport.sessions_count }}</p>
+        @if (weeklyReport) {
+          <div class="mt-4 p-4 bg-info-container rounded-xl border border-info-container">
+            <h4 class="text-sm font-bold text-info mb-3 flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'file-alt']" class="text-info"></fa-icon>
+              Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
+            </h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                <p class="text-xs text-info font-bold uppercase tracking-wider">Sesiones</p>
+                <p class="text-xl font-black text-info">{{ weeklyReport.sessions_count }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                <p class="text-xs text-info font-bold uppercase tracking-wider">Score Promedio</p>
+                <p class="text-xl font-black text-info">{{ weeklyReport.avg_score || '—' }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                <p class="text-xs text-info font-bold uppercase tracking-wider">Objetivos Logrados</p>
+                <p class="text-xl font-black text-info">{{ weeklyReport.objectives_achieved }}/{{ weeklyReport.objectives_total }}</p>
+              </div>
+              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                <p class="text-xs text-info font-bold uppercase tracking-wider">Progreso</p>
+                <p class="text-xl font-black text-info">{{ weeklyReport.objectives_total > 0 ? (weeklyReport.objectives_achieved / weeklyReport.objectives_total * 100).toFixed(0) : 0 }}%</p>
+              </div>
             </div>
-            <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-              <p class="text-xs text-info font-bold uppercase tracking-wider">Score Promedio</p>
-              <p class="text-xl font-black text-info">{{ weeklyReport.avg_score || '—' }}</p>
-            </div>
-            <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-              <p class="text-xs text-info font-bold uppercase tracking-wider">Objetivos Logrados</p>
-              <p class="text-xl font-black text-info">{{ weeklyReport.objectives_achieved }}/{{ weeklyReport.objectives_total }}</p>
-            </div>
-            <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-              <p class="text-xs text-info font-bold uppercase tracking-wider">Progreso</p>
-              <p class="text-xl font-black text-info">{{ weeklyReport.objectives_total > 0 ? (weeklyReport.objectives_achieved / weeklyReport.objectives_total * 100).toFixed(0) : 0 }}%</p>
-            </div>
+            @if (weeklyReport.report_text) {
+              <div class="p-3 bg-white rounded-lg border border-info-container text-sm text-info whitespace-pre-wrap max-h-40 overflow-y-auto">
+                {{ weeklyReport.report_text }}
+              </div>
+            }
           </div>
-          <div *ngIf="weeklyReport.report_text" class="p-3 bg-white rounded-lg border border-info-container text-sm text-info whitespace-pre-wrap max-h-40 overflow-y-auto">
-            {{ weeklyReport.report_text }}
-          </div>
-        </div>
+        }
       </div>
     </div>
   </div>
 </div>
+}

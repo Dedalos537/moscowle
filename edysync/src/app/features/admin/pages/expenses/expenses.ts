@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
@@ -10,6 +11,7 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './expenses.html',
   styleUrl: './expenses.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
 export class Expenses implements OnInit, OnDestroy {
@@ -20,6 +22,7 @@ export class Expenses implements OnInit, OnDestroy {
   therapists: User[] = [];
   loading = true;
   submitting = false;
+  private subscriptions: Subscription = new Subscription();
 
   showModal = false;
   modalMode: 'therapist_payment' | 'operational' = 'operational';
@@ -37,6 +40,7 @@ export class Expenses implements OnInit, OnDestroy {
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -51,24 +55,34 @@ export class Expenses implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.subscriptions.unsubscribe();
     this.headerService.reset();
   }
 
   private loadData() {
     this.loading = true;
-    this.adminService.getTherapistFinancials().subscribe({
-      next: (res) => (this.therapistFinancials = res.data),
-    });
-    this.adminService.getUsers('terapista').subscribe({
-      next: (res) => (this.therapists = res.users.map((u) => ({ ...u, is_active: true } as User))),
-    });
-    this.adminService.getExpenses().subscribe({
-      next: (res) => {
-        this.recentExpenses = res.data;
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getTherapistFinancials().subscribe({
+        next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
+    this.subscriptions.add(
+      this.adminService.getUsers('terapista').subscribe({
+        next: (res) => { this.therapists = res.users.map((u) => ({ ...u, is_active: true } as User)); this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
+    this.subscriptions.add(
+      this.adminService.getExpenses().subscribe({
+        next: (res) => {
+          this.recentExpenses = res.data;
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.loading = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   openPaymentModal(therapist: TherapistFinancial) {
@@ -121,13 +135,16 @@ export class Expenses implements OnInit, OnDestroy {
     if (this.form.therapist_id) fd.append('therapist_id', String(this.form.therapist_id));
     if (this.form.receipt) fd.append('receipt', this.form.receipt);
 
-    this.adminService.createExpense(fd).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeModal();
-        this.loadData();
-      },
-      error: () => (this.submitting = false),
-    });
+    this.subscriptions.add(
+      this.adminService.createExpense(fd).subscribe({
+        next: () => {
+          this.submitting = false;
+          this.closeModal();
+          this.loadData();
+          this.cdr.markForCheck();
+        },
+        error: () => { this.submitting = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 }

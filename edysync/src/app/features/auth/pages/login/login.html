@@ -1,7 +1,7 @@
 <div class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
 
   <button (click)="toggleDarkMode()"
-    class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-lg border z-50 cursor-pointer bg-surface-container-lowest text-on-surface-variant border-border hover:bg-surface-container-high"
+    class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-soft border z-50 cursor-pointer bg-surface-container-lowest text-on-surface-variant border-border hover:bg-surface-container-high"
     [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
     @if (darkMode) {
       <fa-icon [icon]="['fas', 'sun']" class="text-lg text-warning"></fa-icon>
@@ -10,7 +10,7 @@
     }
   </button>
 
-  <div class="w-full max-w-md bg-surface-container-lowest rounded-[32px] shadow-soft p-10 relative overflow-hidden transition-colors duration-300">
+  <div class="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300">
 
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-container to-primary-fixed-dim"></div>
 
@@ -18,8 +18,8 @@
           <div class="w-20 h-20 mx-auto mb-4">
               <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
           </div>
-          <h2 class="text-2xl font-bold text-on-surface tracking-tight transition-colors">Centro de Terapias</h2>
-          <h3 class="text-lg font-medium text-on-surface-variant transition-colors">Juan Pablo II</h3>
+          <h2 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h2>
+          <h3 class="text-h3 text-on-surface-variant transition-colors">Juan Pablo II</h3>
           <p class="text-body-sm text-outline mt-2 transition-colors">Acceso a Plataforma Digital</p>
       </div>
 
@@ -37,9 +37,9 @@
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
                        <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
                    </span>
-                   <input type="email" id="email" name="email" [(ngModel)]="email"
-                       class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-2xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary-container focus:bg-surface-container-lowest"
-                       placeholder="usuario@ejemplo.com" required>
+                    <input type="email" id="email" name="email" [(ngModel)]="email"
+                        class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
+                        placeholder="usuario@ejemplo.com" required>
                </div>
                @if (emailError) {
                  <span class="text-xs text-error mt-1.5 block">{{ emailError }}</span>
@@ -52,9 +52,9 @@
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
                        <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
                    </span>
-                   <input [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
-                       class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-2xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary-container focus:bg-surface-container-lowest"
-                       placeholder="Ingresa tu contraseña" required>
+                    <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
+                        class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
+                        placeholder="Ingresa tu contraseña" required>
 
                    <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface focus:outline-none transition-colors border-none bg-transparent cursor-pointer">
                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
@@ -75,8 +75,8 @@
 
            <button type="submit"
               [disabled]="!isFormValid || isLoading"
-              class="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2"
-              [ngClass]="(isFormValid && !isLoading) ? 'bg-primary text-on-primary hover:-translate-y-0.5 cursor-pointer shadow-lg shadow-primary/20' : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed shadow-none'"
+              class="w-full py-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
+              [ngClass]="(isFormValid && !isLoading) ? 'bg-primary text-on-primary cursor-pointer shadow-soft shadow-primary/20 btn--active' : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed shadow-none'"
               (click)="doLogin()">
 
               @if (isLoading) {

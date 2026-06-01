@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService, PatientDashboardData } from '../../../../core/services/patient.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -8,15 +9,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatientDashboard implements OnInit {
+export class PatientDashboard implements OnInit, OnDestroy {
   loading = true;
   data: PatientDashboardData | null = null;
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
-    private patientService: PatientService
+    private patientService: PatientService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -28,13 +34,22 @@ export class PatientDashboard implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadData() {
-    this.patientService.getDashboard().subscribe({
+    this.subs.add(this.patientService.getDashboard().subscribe({
       next: (res) => {
         if (res.success) this.data = res.data;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 }

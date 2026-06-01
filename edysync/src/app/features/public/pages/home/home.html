@@ -25,7 +25,7 @@
       </p>
 
       <div class="flex flex-wrap gap-4 animate-fade-up delay-4">
-        <a href="#" class="btn-primary text-base px-8 py-3.5 gap-3 shadow-lg shadow-primary/20">
+        <a href="#" class="btn-primary text-base px-8 py-3.5 gap-3 shadow-soft shadow-primary/20">
           <fa-icon [icon]="['fas', 'rocket']" class="text-[20px]"></fa-icon>
           Comenzar Ahora
         </a>
@@ -98,7 +98,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
       @for (stat of stats; track stat.label; let i = $index) {
         <div class="text-center animate-fade-up" [class.delay-1]="i === 0" [class.delay-2]="i === 1" [class.delay-3]="i === 2" [class.delay-4]="i === 3">
-          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-container/15 text-primary-container mb-4 mx-auto">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-primary-container/15 text-primary-container mb-4 mx-auto">
             <fa-icon [icon]="stat.icon" class="text-2xl"></fa-icon>
           </div>
           <div class="text-4xl sm:text-5xl font-extrabold text-primary mb-1 tabular-nums">
@@ -157,7 +157,7 @@
 
 <section class="py-20 sm:py-24">
   <div class="max-w-7xl mx-auto px-6">
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary-fixed-dim to-primary px-8 py-16 sm:px-16 sm:py-20 text-center">
+    <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary-fixed-dim to-primary px-8 py-16 sm:px-16 sm:py-20 text-center">
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <div class="absolute -top-20 -right-20 w-[300px] h-[300px] rounded-full bg-white/5 blur-3xl"></div>
         <div class="absolute -bottom-20 -left-20 w-[250px] h-[250px] rounded-full bg-white/5 blur-3xl"></div>
@@ -174,7 +174,7 @@
         <div class="flex flex-wrap justify-center gap-4 animate-fade-up delay-2">
           <a
             href="#"
-            class="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-on-primary text-primary font-bold text-base shadow-xl shadow-black/10 hover:shadow-2xl hover:brightness-105 transition-all duration-200 active:scale-[0.97]"
+            class="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl bg-on-primary text-primary font-bold text-base shadow-soft shadow-black/10 hover:shadow-soft hover:brightness-105 transition-all duration-200 active:scale-[0.97]"
           >
             <fa-icon [icon]="['fas', 'calendar-plus']" class="text-[20px]"></fa-icon>
             Prueba Gratis

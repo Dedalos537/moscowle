@@ -22,8 +22,8 @@ class AppointmentDAO(BaseDAO[Appointment]):
                 .where(Appointment.start_time >= start_date)
                 .where(Appointment.start_time <= end_date)
                 .options(
-                    selectinload(Appointment.therapist_id), # Eager load relations
-                    selectinload(Appointment.patient_id)
+                    selectinload(Appointment.therapist),
+                    selectinload(Appointment.patient)
                 )
                 .order_by(Appointment.start_time.asc())
                 .offset(skip)

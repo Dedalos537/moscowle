@@ -1,46 +1,61 @@
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-<div *ngIf="!loading" class="space-y-4" [@fadeInUp]>
-  <app-card title="Historial de Sesiones" [icon]="['fas', 'calendar-alt']">
+@if (!loading) {
+<div class="space-y-6" [@fadeInUp]>
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 overflow-hidden">
+    <div class="p-6 border-b border-border">
+      <h2 class="text-lg font-bold text-on-surface">Mis Sesiones</h2>
+    </div>
     <div class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-surface-container-low">
-          <tr>
+        <thead>
+          <tr class="bg-surface-container-low">
             <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Fecha</th>
             <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Título</th>
-            <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Terapeuta</th>
             <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
             <th class="text-left px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Asistencia</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          <tr *ngFor="let session of sessions" class="hover:bg-surface-container-low transition-colors">
-            <td class="px-6 py-4 text-sm text-on-surface font-medium">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
-            <td class="px-6 py-4 text-sm text-on-surface">{{ session.title }}</td>
-            <td class="px-6 py-4 text-sm text-on-surface-variant">{{ session.therapist }}</td>
-            <td class="px-6 py-4">
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    [ngClass]="getStatusClass(session.status)">
-                {{ getStatusLabel(session.status) }}
-              </span>
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-sm" *ngIf="session.attendance">
-                {{ session.attendance === 'present' ? 'Presente' : session.attendance === 'absent' ? 'Ausente' : session.attendance }}
-              </span>
-              <span class="text-sm text-on-surface-variant" *ngIf="!session.attendance">—</span>
-            </td>
-          </tr>
-          <tr *ngIf="sessions.length === 0">
-            <td colspan="5" class="px-6 py-12 text-center text-on-surface-variant">
-              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-3xl mb-2 opacity-30"></fa-icon>
-              <p class="text-sm">No tienes sesiones registradas</p>
-            </td>
-          </tr>
+          @for (session of sessions; track $index) {
+            <tr class="hover:bg-surface-container-low transition-colors">
+              <td class="px-6 py-4 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
+              <td class="px-6 py-4 text-sm text-on-surface font-medium">{{ session.title }}</td>
+              <td class="px-6 py-4">
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                      [ngClass]="{
+                        'bg-success-container text-success': session.status === 'completed',
+                        'bg-info-container text-info': session.status === 'scheduled',
+                        'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
+                      }">
+                  {{ session.status === 'completed' ? 'Completada' : session.status === 'scheduled' ? 'Programada' : 'Cancelada' }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-on-surface-variant">
+                @if (session.attendance) {
+                  <span class="text-success">{{ session.attendance }}</span>
+                }
+                @if (!session.attendance) {
+                  <span>—</span>
+                }
+              </td>
+            </tr>
+          }
+          @if (sessions.length === 0) {
+            <tr>
+              <td colspan="4" class="px-6 py-12 text-center text-on-surface-variant">
+                <fa-icon [icon]="['fas', 'calendar']" class="text-3xl mb-2 opacity-30"></fa-icon>
+                <p class="text-sm">No tienes sesiones registradas</p>
+              </td>
+            </tr>
+          }
         </tbody>
       </table>
     </div>
-  </app-card>
+  </div>
 </div>
+}

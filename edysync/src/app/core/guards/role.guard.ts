@@ -25,6 +25,9 @@ export class RoleGuard implements CanActivate {
         if (user.role === 'admin' && (requiredRole === 'terapista' || (Array.isArray(requiredRole) && requiredRole.includes('terapista')))) {
           return true;
         }
+        if (user.role === 'supervisor' && (requiredRole === 'admin' || requiredRole === 'terapista' || (Array.isArray(requiredRole) && (requiredRole.includes('admin') || requiredRole.includes('terapista'))))) {
+          return true;
+        }
         this.router.navigate(['/auth/login']);
         return false;
       })

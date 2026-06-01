@@ -155,7 +155,7 @@ def get_notifications():
 @api_bp.route('/patients')
 @login_required
 def api_patients():
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     therapist_id = request.args.get('therapist_id')
     if current_user.role == 'terapista':
@@ -193,7 +193,7 @@ def mark_notifications_read():
 @api_bp.route('/sessions', methods=['GET'])
 @login_required
 def api_get_sessions():
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     start = request.args.get('start')
     end = request.args.get('end')
@@ -217,20 +217,42 @@ def api_get_sessions():
             q = q.filter(Appointment.therapist_id == current_user.id)
         appts = q.order_by(Appointment.start_time.desc()).limit(200).all()
     results = []
+    def _session_color(status):
+        colors = {
+            'scheduled': '#3B82F6',
+            'in_progress': '#75a83a',
+            'completed': '#6B7280',
+            'cancelled': '#EF4444',
+        }
+        return colors.get(status, '#9CA3AF')
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
         end_iso = a.end_time.isoformat() if a.end_time else None
+        try:
+            games_list = json.loads(a.games) if a.games else []
+        except (json.JSONDecodeError, TypeError):
+            games_list = []
         results.append({
             'id': a.id,
             'title': a.title or (a.patient.username if a.patient else 'Sesión'),
             'start': start_iso,
             'end': end_iso,
+            'backgroundColor': _session_color(a.status),
+            'borderColor': _session_color(a.status),
+            'extendedProps': {
+                'therapist_id': a.therapist_id,
+                'patient_id': a.patient_id,
+                'therapist': a.therapist.username if a.therapist else '',
+                'patient': a.patient.username if a.patient else '',
+                'status': a.status,
+                'notes': a.notes or '',
+            },
             'status': a.status,
             'attendance': a.attendance,
             'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
             'location': a.location,
             'notes': a.notes,
-            'games': json.loads(a.games) if a.games else [],
+            'games': games_list,
             'is_holiday': True if a.notes and "Scheduled on Holiday" in a.notes else False
         })
     return jsonify(results)
@@ -301,7 +323,7 @@ def api_list_games():
 @login_required
 def api_get_sessions_day():
 
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     date_str = request.args.get('date')
@@ -444,7 +466,7 @@ def api_create_session():
 @api_bp.route('/sessions/<int:session_id>', methods=['GET'])
 @login_required
 def api_get_session(session_id):
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     from app.models import SessionImage
     appt = Appointment.query.get_or_404(session_id)
@@ -503,7 +525,7 @@ def api_get_session(session_id):
 @api_bp.route('/sessions/<int:session_id>', methods=['PUT'])
 @login_required
 def api_update_session(session_id):
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
@@ -555,7 +577,7 @@ def api_update_session(session_id):
 @api_bp.route('/sessions/<int:session_id>', methods=['DELETE'])
 @login_required
 def api_delete_session(session_id):
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     success = appointment_service.delete_session(session_id, current_user.id)
@@ -1348,7 +1370,7 @@ def api_admin_update_profile():
 @login_required
 def upload_session_image(appointment_id):
 
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
         
     appointment = Appointment.query.get_or_404(appointment_id)
@@ -1434,7 +1456,7 @@ def upload_session_image(appointment_id):
 @login_required
 def delete_session_image(appointment_id, image_id):
 
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
 
     image = SessionImage.query.get_or_404(image_id)
@@ -1779,7 +1801,7 @@ Centro de Terapias
 @login_required
 def search_patients():
     """Búsqueda global de pacientes para el Command+K Modal"""
-    if current_user.role not in ['admin', 'therapist']:
+    if current_user.role not in ['admin', 'therapist', 'supervisor']:
         return jsonify({'error': 'Unauthorized'}), 403
         
     query = request.args.get('q', '').strip()
@@ -2002,7 +2024,7 @@ def completar_sesiones_vencidas():
 @csrf.exempt
 def upload_session_audio(appointment_id):
     """Subir audio para transcripción Whisper (se elimina tras transcribir)"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     appointment = Appointment.query.get_or_404(appointment_id)
@@ -2081,7 +2103,7 @@ def upload_session_audio(appointment_id):
 @login_required
 def trigger_session_audit(appointment_id):
     """Disparar auditoría IA: programación vs transcripción"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     try:
@@ -2133,7 +2155,7 @@ def trigger_session_audit(appointment_id):
 @login_required
 def get_session_audit(appointment_id):
     """Estado y reporte de auditoría de sesión"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     from app.models import SessionAudit
@@ -2171,7 +2193,7 @@ def get_session_audit(appointment_id):
 @api_bp.route('/sessions/<int:appointment_id>/compare-live', methods=['GET'])
 @login_required
 def compare_session_live(appointment_id):
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     from app.models import SessionAudit
@@ -2202,7 +2224,7 @@ def compare_session_live(appointment_id):
 @api_bp.route('/sessions/<int:appointment_id>/report-docx', methods=['GET'])
 @login_required
 def download_report_docx(appointment_id):
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     from app.models import SessionAudit, Appointment
@@ -2328,7 +2350,7 @@ def delete_session_program(appointment_id):
 @login_required
 def get_session_program(appointment_id):
     """Texto de programación para terapista"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     from app.models import SessionAudit
@@ -2352,7 +2374,7 @@ def get_session_program(appointment_id):
 @login_required
 def generate_weekly_report():
 
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -2398,7 +2420,7 @@ def get_weekly_report(patient_id):
 @login_required
 def generate_daily_report():
 
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -2423,7 +2445,7 @@ def generate_daily_report():
 @login_required
 def start_session_recording(session_id):
     """Marcar sesión como en_progreso para grabación"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     appt = Appointment.query.get_or_404(session_id)
@@ -2446,7 +2468,7 @@ def start_session_recording(session_id):
 @login_required
 def analyze_session_attendance(session_id):
     """Detectar inasistencia vía transcripción vs plan"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     appt = Appointment.query.get_or_404(session_id)
@@ -2498,7 +2520,7 @@ def analyze_session_attendance(session_id):
 @login_required
 def mark_session_absent(session_id):
     """Marcar sesión como ausente"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     appt = Appointment.query.get_or_404(session_id)
@@ -2526,7 +2548,7 @@ def mark_session_absent(session_id):
 @login_required
 def submit_session_feedback(session_id):
     """Feedback del terapeuta sobre la sesión"""
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     appt = Appointment.query.get_or_404(session_id)
@@ -2771,13 +2793,14 @@ def api_therapist_efficiency():
 @api_bp.route('/sessions/current', methods=['GET'])
 @login_required
 def api_current_session():
-    if current_user.role not in ('terapista', 'admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     now = datetime.now(timezone.utc).replace(tzinfo=None)
+    from sqlalchemy import or_
     appt = Appointment.query.filter(
         Appointment.therapist_id == current_user.id,
         Appointment.start_time <= now,
-        Appointment.end_time >= now,
+        or_(Appointment.end_time >= now, Appointment.end_time.is_(None)),
         Appointment.status.in_(['scheduled', 'in_progress'])
     ).order_by(Appointment.start_time).first()
     if not appt:

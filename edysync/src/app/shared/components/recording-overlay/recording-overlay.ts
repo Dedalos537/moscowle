@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { RecordingService } from '../../../core/services/recording.service';
 import { Observable } from 'rxjs';
@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
   standalone: false,
   templateUrl: './recording-overlay.html',
   styleUrl: './recording-overlay.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecordingOverlay implements OnInit, OnDestroy {
   state: Observable<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>;
@@ -22,6 +23,7 @@ export class RecordingOverlay implements OnInit, OnDestroy {
   constructor(
     private recordingService: RecordingService,
     private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {
     this.state = this.recordingService.recordingState$;
     this.elapsed = this.recordingService.elapsedTime$;

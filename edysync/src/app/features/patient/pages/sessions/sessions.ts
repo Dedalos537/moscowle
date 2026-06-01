@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService, PatientSession } from '../../../../core/services/patient.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -8,15 +9,20 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './sessions.html',
   styleUrl: './sessions.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PatientSessions implements OnInit {
+export class PatientSessions implements OnInit, OnDestroy {
   loading = true;
   sessions: PatientSession[] = [];
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
-    private patientService: PatientService
+    private patientService: PatientService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -28,14 +34,23 @@ export class PatientSessions implements OnInit {
     this.loadSessions();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadSessions() {
-    this.patientService.getSessions().subscribe({
+    this.subs.add(this.patientService.getSessions().subscribe({
       next: (res) => {
         if (res.success) this.sessions = res.data;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   getStatusLabel(status: string): string {
@@ -49,10 +64,10 @@ export class PatientSessions implements OnInit {
 
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
-      scheduled: 'bg-blue-100 text-blue-700',
-      completed: 'bg-green-100 text-green-700',
-      cancelled: 'bg-gray-100 text-gray-500',
+      scheduled: 'bg-info-container text-info',
+      completed: 'bg-success-container text-success',
+      cancelled: 'bg-surface-container-high text-on-surface-variant',
     };
-    return map[status] || 'bg-gray-100 text-gray-500';
+    return map[status] || 'bg-surface-container-high text-on-surface-variant';
   }
 }

@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { TherapistService, Conversation, MessageItem } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -9,7 +10,8 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './therapist-messages.html',
   styleUrl: './therapist-messages.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -29,16 +31,19 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
   loading = true;
   loadingThread = false;
   isRecording = false;
+  error: string | null = null;
   mediaRecorder: MediaRecorder | null = null;
   audioChunks: Blob[] = [];
 
   private pollInterval: any;
   private needsScroll = false;
+  private subs = new Subscription();
 
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
     private auth: AuthService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -49,9 +54,10 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
       actionTemplate: this.headerActions,
     });
 
-    this.auth.currentUser$.subscribe((user) => {
+    this.subs.add(this.auth.currentUser$.subscribe((user) => {
       if (user) this.currentUserId = user.id;
-    });
+      this.cdr.markForCheck();
+    }));
 
     this.loadConversations();
     this.pollInterval = setInterval(() => this.pollNewMessages(), 5000);
@@ -64,17 +70,24 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.headerService.reset();
     if (this.pollInterval) clearInterval(this.pollInterval);
+    this.subs.unsubscribe();
   }
 
   private loadConversations() {
     this.loading = true;
-    this.therapistService.getConversations().subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getConversations().subscribe({
       next: (res) => {
         this.conversations = res.conversations;
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   selectConversation(userId: number, userName: string) {
@@ -85,17 +98,23 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
     this.newMessage = '';
     this.selectedFile = null;
     this.selectedFileName = '';
+    this.cdr.markForCheck();
 
-    this.therapistService.getMessageThread(userId).subscribe({
+    this.subs.add(this.therapistService.getMessageThread(userId).subscribe({
       next: (res) => {
         this.messages = res.messages;
         this.loadingThread = false;
         this.markConversationRead(userId);
         this.needsScroll = true;
+        this.cdr.markForCheck();
         setTimeout(() => this.scrollToBottom(), 100);
       },
-      error: () => (this.loadingThread = false),
-    });
+      error: (err) => {
+        this.loadingThread = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   private markConversationRead(userId: number) {
@@ -105,20 +124,30 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
 
   private pollNewMessages() {
     if (!this.selectedUserId) return;
-    this.therapistService.getMessageThread(this.selectedUserId).subscribe({
+    this.subs.add(this.therapistService.getMessageThread(this.selectedUserId).subscribe({
       next: (res) => {
         if (res.messages.length > this.messages.length) {
           this.messages = res.messages;
           this.needsScroll = true;
+          this.cdr.markForCheck();
           setTimeout(() => this.scrollToBottom(), 100);
         }
       },
-    });
-    this.therapistService.getConversations().subscribe({
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
+    this.subs.add(this.therapistService.getConversations().subscribe({
       next: (res) => {
         this.conversations = res.conversations;
+        this.cdr.markForCheck();
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   onKeydown(event: Event) {
@@ -147,29 +176,41 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
     if ((!this.newMessage.trim() && !this.selectedFile) || !this.selectedUserId || this.sending) return;
 
     this.sending = true;
-    this.therapistService.sendMessage(this.selectedUserId, this.newMessage.trim(), this.selectedFile).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.sendMessage(this.selectedUserId, this.newMessage.trim(), this.selectedFile).subscribe({
       next: () => {
         this.sending = false;
         this.newMessage = '';
         this.clearFile();
+        this.cdr.markForCheck();
         this.refreshThread();
       },
-      error: () => {
+      error: (err) => {
         this.sending = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   private refreshThread() {
     if (!this.selectedUserId) return;
-    this.therapistService.getMessageThread(this.selectedUserId).subscribe({
-      next: (res) => (this.messages = res.messages),
-    });
+    this.subs.add(this.therapistService.getMessageThread(this.selectedUserId).subscribe({
+      next: (res) => {
+        this.messages = res.messages;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   startRecording() {
     if (!navigator.mediaDevices?.getUserMedia) return;
     this.isRecording = true;
+    this.cdr.markForCheck();
     this.audioChunks = [];
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -182,10 +223,12 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
         const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.selectedFile = new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
         this.selectedFileName = this.selectedFile.name;
+        this.cdr.markForCheck();
       };
       this.mediaRecorder.start();
     }).catch(() => {
       this.isRecording = false;
+      this.cdr.markForCheck();
     });
   }
 
@@ -193,6 +236,7 @@ export class TherapistMessages implements OnInit, OnDestroy, AfterViewInit {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
       this.isRecording = false;
+      this.cdr.markForCheck();
     }
   }
 

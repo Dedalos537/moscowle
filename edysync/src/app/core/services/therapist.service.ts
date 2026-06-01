@@ -253,14 +253,16 @@ export interface DifficultyLevel {
   level: string;
   accuracy: number;
   count: number;
+  name?: string;
 }
 
 export interface PredictionDistribution {
   label: PredictionType;
   value: number;
+  percentage?: number;
 }
 
-export type PredictionType = 'Avanzar' | 'Apoyar' | 'Mantener';
+export type PredictionType = 'Avanzar' | 'Apoyar' | 'Mantener' | string;
 
 export interface ModelConfidence {
   model: string;
@@ -271,6 +273,10 @@ export interface Adaptation {
   date: string;
   description: string;
   impact: 'positive' | 'neutral' | 'negative';
+  patient_name: string;
+  type: string;
+  status: string;
+  created_at: string;
 }
 
 export interface ReportsOverview {

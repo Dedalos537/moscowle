@@ -4,6 +4,7 @@ import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { ApiBaseInterceptor } from './interceptors/api-base.interceptor';
+import { ErrorInterceptor } from './interceptors/error.interceptor';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { Navbar } from './layout/navbar/navbar';
 import { Footer } from './layout/footer/footer';
@@ -46,6 +47,11 @@ import { PatientLayout } from './layout/patient-layout/patient-layout';
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
+      multi: true
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorInterceptor,
       multi: true
     }
   ]

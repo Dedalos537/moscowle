@@ -29,6 +29,13 @@ payment_service = PaymentService()
 finance_service = FinanceService()
 workflow_engine = WorkflowEngine()
 
+
+@admin_bp.before_request
+@login_required
+def check_supervisor_write():
+    if current_user.role == 'supervisor' and request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        return jsonify({'success': False, 'error': 'Los supervisores solo tienen acceso de lectura'}), 403
+
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -844,6 +851,105 @@ def api_financial_summary():
         return jsonify({'error': 'Unauthorized'}), 403
     financials = payment_service.get_financial_summary()
     return jsonify({'success': True, 'data': financials})
+
+@admin_bp.route('/api/audit-stats')
+@login_required
+def api_audit_stats():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    try:
+        from app.models import SessionAudit, Appointment, User
+        from sqlalchemy import func as sqlfunc
+
+        total_audits = SessionAudit.query.filter(SessionAudit.audit_score.isnot(None)).count()
+        avg_score = db.session.query(sqlfunc.avg(SessionAudit.audit_score)).filter(
+            SessionAudit.audit_score.isnot(None)
+        ).scalar() or 0
+
+        recent_audits = db.session.query(
+            SessionAudit, Appointment, User
+        ).join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).join(
+            User, Appointment.therapist_id == User.id
+        ).filter(
+            SessionAudit.audit_score.isnot(None)
+        ).order_by(SessionAudit.audited_at.desc()).limit(20).all()
+
+        audit_rows = []
+        for audit, appt, therapist in recent_audits:
+            patient = User.query.get(appt.patient_id)
+            audit_rows.append({
+                'id': audit.id,
+                'therapist': therapist.username,
+                'patient': patient.username if patient else 'N/A',
+                'date': appt.start_time.strftime('%d/%m/%Y') if appt.start_time else 'N/A',
+                'score': round(audit.audit_score, 1) if audit.audit_score else 0,
+                'status': audit.audit_status
+            })
+
+        therapist_scores = db.session.query(
+            User.username,
+            sqlfunc.avg(SessionAudit.audit_score).label('avg_score'),
+            sqlfunc.count(SessionAudit.id).label('count')
+        ).join(
+            Appointment, SessionAudit.appointment_id == Appointment.id
+        ).join(
+            User, Appointment.therapist_id == User.id
+        ).filter(
+            SessionAudit.audit_score.isnot(None)
+        ).group_by(User.id).all()
+
+        data = {
+            'total': total_audits,
+            'avg_score': round(avg_score, 1),
+            'recent': audit_rows,
+            'by_therapist': [{'name': t[0], 'avg_score': round(t[1], 1), 'count': t[2]} for t in therapist_scores]
+        }
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        current_app.logger.error(f"Error loading audit stats: {e}")
+        return jsonify({'success': False, 'data': {'total': 0, 'avg_score': 0, 'recent': [], 'by_therapist': []}})
+
+@admin_bp.route('/api/therapist-efficiency')
+@login_required
+def api_therapist_efficiency():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    try:
+        from app.models import Appointment, SessionMetrics
+        therapist_id = request.args.get('therapist_id', type=int)
+        query = db.session.query(
+            User.id.label('therapist_id'),
+            User.username,
+            sqlfunc.count(Appointment.id).label('total'),
+            sqlfunc.avg(SessionMetrics.accurracy).label('avg_accuracy'),
+            sqlfunc.count(sqlfunc.nullif(Appointment.status, 'cancelled')).label('completed')
+        ).join(User, Appointment.therapist_id == User.id
+        ).outerjoin(SessionMetrics, SessionMetrics.session_id == Appointment.id
+        ).filter(User.role == 'terapista')
+        if therapist_id:
+            query = query.filter(User.id == therapist_id)
+        rows = query.group_by(User.id).all()
+        total_sessions = max(sum(r.total for r in rows), 1) if rows else 1
+        breakdown = []
+        for r in rows:
+            completion = (r.completed / r.total * 100) if r.total else 0
+            accuracy = r.avg_accuracy or 0
+            efficiency = round((completion * 0.4 + accuracy * 0.6), 1)
+            breakdown.append({
+                'therapist_id': r.therapist_id,
+                'name': r.username,
+                'total_sessions': r.total,
+                'completed': r.completed,
+                'avg_accuracy': round(accuracy, 1),
+                'efficiency': efficiency
+            })
+        overall = round(sum(e['efficiency'] for e in breakdown) / len(breakdown), 1) if breakdown else 0
+        return jsonify({'success': True, 'overall': overall, 'breakdown': breakdown})
+    except Exception as e:
+        current_app.logger.error(f"Error loading therapist efficiency: {e}")
+        return jsonify({'success': False, 'overall': 0, 'breakdown': []})
 
 @admin_bp.route('/api/payments/all')
 @login_required
@@ -1888,7 +1994,7 @@ def api_generate_quarterly():
 @admin_bp.route('/api/reports/patient-monthly/<int:patient_id>', methods=['GET'])
 @login_required
 def api_patient_monthly_reports(patient_id):
-    if current_user.role not in ('admin', 'terapista'):
+    if current_user.role not in ('admin', 'terapista', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     reports = MonthlyReport.query.filter_by(patient_id=patient_id).order_by(MonthlyReport.year.desc(), MonthlyReport.month.desc()).all()
@@ -1903,7 +2009,7 @@ def api_patient_monthly_reports(patient_id):
 @admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
 @login_required
 def api_patient_quarterly_reports(patient_id):
-    if current_user.role not in ('admin', 'terapista'):
+    if current_user.role not in ('admin', 'terapista', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     reports = QuarterlyReport.query.filter_by(patient_id=patient_id).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).all()
@@ -1951,3 +2057,15 @@ def download_receipt(payment_id):
         download_name=f"Recibo_JP2_REC-{payment.id:06d}.pdf",
         mimetype='application/pdf'
     )
+
+@admin_bp.route('/api/logs', methods=['GET'])
+@login_required
+def admin_api_logs():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.log_service import log_capture_handler
+    level = request.args.get('level')
+    limit = request.args.get('limit', 100, type=int)
+    search = request.args.get('search')
+    logs = log_capture_handler.get_logs(level=level, limit=limit, search=search)
+    return jsonify({'success': True, 'logs': logs})

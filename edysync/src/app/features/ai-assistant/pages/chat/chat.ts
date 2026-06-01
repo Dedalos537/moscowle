@@ -1,5 +1,6 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 
 interface ChatMessage {
@@ -13,17 +14,22 @@ interface ChatMessage {
   standalone: false,
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AiAssistantChat implements OnInit {
+export class AiAssistantChat implements OnInit, OnDestroy {
   @ViewChild('chatContainer') chatContainer!: ElementRef;
 
   messages: ChatMessage[] = [];
   input = '';
   loading = false;
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -35,8 +41,12 @@ export class AiAssistantChat implements OnInit {
     this.loadHistory();
   }
 
+  ngOnDestroy() {
+    this.subs.unsubscribe();
+  }
+
   private loadHistory() {
-    this.http.get<any>('/llama/chat/history').subscribe({
+    this.subs.add(this.http.get<any>('/llama/chat/history').subscribe({
       next: (res) => {
         if (res?.messages) {
           this.messages = res.messages.map((m: any) => ({
@@ -44,9 +54,14 @@ export class AiAssistantChat implements OnInit {
             content: m.content,
             timestamp: new Date(m.timestamp),
           }));
+          this.cdr.markForCheck();
         }
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   sendMessage() {
@@ -61,8 +76,9 @@ export class AiAssistantChat implements OnInit {
     const userInput = this.input;
     this.input = '';
     this.loading = true;
+    this.cdr.markForCheck();
 
-    this.http.post<any>('/llama/chat/send', { message: userInput }).subscribe({
+    this.subs.add(this.http.post<any>('/llama/chat/send', { message: userInput }).subscribe({
       next: (res) => {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
@@ -71,18 +87,26 @@ export class AiAssistantChat implements OnInit {
         };
         this.messages.push(assistantMsg);
         this.loading = false;
+        this.cdr.markForCheck();
         this.scrollToBottom();
       },
-      error: () => {
+      error: (err) => {
         this.messages.push({
           role: 'assistant',
           content: 'Lo siento, hubo un error al procesar tu consulta.',
           timestamp: new Date(),
         });
         this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
         this.scrollToBottom();
       },
-    });
+    }));
+  }
+
+  retry() {
+    this.error = null;
+    this.loadHistory();
   }
 
   private scrollToBottom() {

@@ -35,13 +35,13 @@
                     S/ {{ t.rate.toFixed(2) }}/hr
                     <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
                   } @else {
-                    <span class="text-xs text-orange-400 bg-orange-50 px-2 py-1 rounded">Sin contrato</span>
+                    <span class="text-xs text-warning bg-warning-container px-2 py-1 rounded">Sin contrato</span>
                   }
                 </td>
                 <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
                 <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
-                <td class="px-6 py-4 text-sm text-green-600">S/ {{ t.paid.toFixed(2) }}</td>
-                <td class="px-6 py-4 text-sm" [class.text-red-500]="t.balance > 0" [class.text-green-500]="t.balance <= 0">
+                <td class="px-6 py-4 text-sm text-success">S/ {{ t.paid.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-sm" [class.text-error]="t.balance > 0" [class.text-success]="t.balance <= 0">
                   S/ {{ t.balance.toFixed(2) }}
                 </td>
                 <td class="px-6 py-4 text-right">
@@ -76,9 +76,9 @@
                 <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
                 <td class="px-6 py-4 text-sm capitalize">
                   <span class="px-2 py-1 rounded text-xs font-bold"
-                    [class.bg-blue-100]="e.category === 'therapist_payment'" [class.text-blue-700]="e.category === 'therapist_payment'"
+                    [class.bg-info-container]="e.category === 'therapist_payment'" [class.text-info]="e.category === 'therapist_payment'"
                     [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
-                    [class.bg-green-100]="e.category === 'bonus'" [class.text-green-700]="e.category === 'bonus'"
+                    [class.bg-success-container]="e.category === 'bonus'" [class.text-on-success-container]="e.category === 'bonus'"
                     [class.bg-warning-container]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'"
                     [class.text-warning]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'">
                     {{ e.category.replace('_', ' ') }}
@@ -96,7 +96,7 @@
                       </span>
                     }
                     @if (e.receipt_image_path) {
-                      <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-green-700" title="Ver Comprobante">
+                      <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-success" title="Ver Comprobante">
                         <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
                       </a>
                     }

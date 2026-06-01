@@ -1,34 +1,37 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-pill-status',
   standalone: false,
   templateUrl: './pill-status.html',
-  styleUrl: './pill-status.scss'
+  styleUrl: './pill-status.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PillStatus {
   @Input() status: 'active' | 'completed' | 'pending' | 'error' | 'warning' = 'active';
   @Input() label: string = '';
 
+  constructor(private cdr: ChangeDetectorRef) {}
+
   get pillClasses() {
     const base = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-caps';
     const variants = {
-      active: 'bg-primary-container/15 text-primary-container',
-      completed: 'bg-primary-container/15 text-primary-container',
+      active: 'bg-primary-container text-primary',
+      completed: 'bg-success-container text-success',
       pending: 'bg-surface-container-high text-on-surface-variant',
       error: 'bg-error-container text-on-error-container',
-      warning: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+      warning: 'bg-warning-container text-warning'
     };
     return `${base} ${variants[this.status]}`;
   }
 
   get dotClass() {
     const variants = {
-      active: 'bg-primary-container',
-      completed: 'bg-primary-container',
+      active: 'bg-primary',
+      completed: 'bg-success',
       pending: 'bg-outline',
       error: 'bg-error',
-      warning: 'bg-amber-500'
+      warning: 'bg-warning'
     };
     return `w-1.5 h-1.5 rounded-full ${variants[this.status]}`;
   }

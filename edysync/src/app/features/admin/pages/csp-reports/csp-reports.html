@@ -10,7 +10,7 @@
     <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-csv']" (clicked)="exportCsv()"></app-button>
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border/20 p-4 flex flex-wrap gap-4 items-center">
+  <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-border/20 p-4 flex flex-wrap gap-4 items-center">
     <app-input id="filter-directive" placeholder="Directiva" [(value)]="filter.directive" (valueChange)="onFilterChange()"></app-input>
     <app-input id="filter-uri" placeholder="URI Bloqueada" [(value)]="filter.blocked_uri" (valueChange)="onFilterChange()"></app-input>
     <app-input id="filter-since" type="date" [(value)]="filter.since" (valueChange)="onFilterChange()"></app-input>
@@ -20,8 +20,16 @@
     <div class="flex justify-center py-16">
       <app-spinner size="md" colorClass="text-primary"></app-spinner>
     </div>
+  } @else if (error) {
+    <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
+      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <p class="text-error font-semibold text-lg">{{ error }}</p>
+      <button class="mt-4 px-6 py-2.5 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-opacity" (click)="loadReports()">
+        Reintentar
+      </button>
+    </div>
   } @else {
-    <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-border/20 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full min-w-[800px]">
           <thead>
@@ -39,7 +47,7 @@
                 <td class="px-5 py-4 text-on-surface whitespace-nowrap">{{ r.received_at }}</td>
                 <td class="px-5 py-4 text-on-surface max-w-[200px] truncate" [title]="r.document_uri">{{ r.document_uri }}</td>
                 <td class="px-5 py-4">
-                  <span class="px-2 py-1 text-[10px] font-bold rounded bg-red-50 text-red-700">{{ r.violated_directive }}</span>
+                  <span class="px-2 py-1 text-[10px] font-bold rounded bg-error-container text-error">{{ r.violated_directive }}</span>
                 </td>
                 <td class="px-5 py-4 text-on-surface max-w-[200px] truncate" [title]="r.blocked_uri">{{ r.blocked_uri }}</td>
                 <td class="px-5 py-4 text-on-surface-variant font-mono text-xs">{{ r.ip_address || '—' }}</td>
@@ -61,7 +69,7 @@
       <div class="flex justify-center gap-2">
         @for (p of [].constructor(pages); track $index) {
           <button (click)="goToPage($index + 1)" class="px-3 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer"
-            [class.bg-primary]="page === $index + 1" [class.text-white]="page === $index + 1"
+            [class.bg-primary]="page === $index + 1" [class.text-on-primary]="page === $index + 1"
             [class.bg-surface-container-high]="page !== $index + 1" [class.text-on-surface]="page !== $index + 1">
             {{ $index + 1 }}
           </button>

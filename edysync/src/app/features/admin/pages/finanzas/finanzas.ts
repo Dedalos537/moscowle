@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -9,27 +10,10 @@ import { User } from '../../../../core/models/user';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 
 Chart.register(...registerables);
-
-interface DebtGroup {
-  sede_name: string;
-  deudores: DebtorItem[];
-  total_deuda: number;
-}
-
-interface DebtorItem {
-  paciente: string;
-  email: string;
-  phone?: string;
-  monto: number;
-  modality?: string;
-  fecha_vencimiento?: string;
-  payment_day?: number;
-  sede?: string;
-}
 
 interface PatientRow {
   id: number;
@@ -76,15 +60,16 @@ interface Therapist {
   standalone: false,
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Finanzas implements OnInit, OnDestroy {
   readonly Math = Math;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
-  activeTab: 'resumen' | 'deudores' | 'pagos' | 'gastos' = 'resumen';
+  activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' = 'resumen';
 
-  switchTab(tab: 'resumen' | 'deudores' | 'pagos' | 'gastos') {
+  switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
   }
 
@@ -92,20 +77,12 @@ export class Finanzas implements OnInit, OnDestroy {
   summaryIngresos = 0;
   summaryGastos = 0;
 
-  groups: DebtGroup[] = [];
-  debtorsLoading = true;
-  debtorMonth = 'current';
-  filterText = '';
-
-  showPaymentModal = false;
-  paymentForm = { patient_id: 0, patient_name: '', amount: 0, method: 'transfer', reference: '' };
-  paymentStatus = '';
-
   patients: PatientRow[] = [];
   paymentHistory: PaymentHistoryRow[] = [];
   sedes: Sede[] = [];
   therapistsList: Therapist[] = [];
   paymentsLoading = true;
+  historyLoading = true;
   pagosTab: 'pacientes' | 'historial' = 'pacientes';
 
   searchQuery = '';
@@ -306,12 +283,15 @@ export class Finanzas implements OnInit, OnDestroy {
     receipt: null as File | null,
   };
 
+  private subscriptions = new Subscription();
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
     private alertService: AlertService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -322,7 +302,6 @@ export class Finanzas implements OnInit, OnDestroy {
       actionTemplate: this.headerActions,
     });
     this.loadSummaryData();
-    this.loadDebtorsData();
     this.checkDeepLinks();
     this.loadPaymentsData();
     this.loadExpensesData();
@@ -330,39 +309,52 @@ export class Finanzas implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subscriptions.unsubscribe();
   }
 
 
   private loadSummaryData() {
-    this.adminService.getDebtReport('all').subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const porSede: Record<string, any> = res.data.por_sede || {};
-          this.summaryTotalDeuda = Object.values(porSede).reduce((sum: number, g: any) => {
-            return sum + ((g.deudores || []).reduce((s: number, d: any) => s + (d.monto || 0), 0));
-          }, 0);
-        }
-        this.genDashboardCharts();
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getDebtReport('all').subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            const porSede: Record<string, any> = res.data.por_sede || {};
+            this.summaryTotalDeuda = Object.values(porSede).reduce((sum: number, g: any) => {
+              return sum + ((g.deudores || []).reduce((s: number, d: any) => s + (d.monto || 0), 0));
+            }, 0);
+          }
+          this.genDashboardCharts();
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
 
-    this.adminService.getFinancialSummary().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.summaryIngresos = res.data.income_real || 0;
-        }
-        this.genDashboardCharts();
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getFinancialSummary().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.summaryIngresos = res.data.income_real || 0;
+          }
+          this.genDashboardCharts();
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
 
-    this.adminService.getExpenses().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.summaryGastos = res.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
-        }
-        this.genDashboardCharts();
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getExpenses().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.summaryGastos = res.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+          }
+          this.genDashboardCharts();
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   private getMonthlyIncome(): Map<string, number> {
@@ -498,87 +490,6 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
 
-  loadDebtorsData() {
-    this.debtorsLoading = true;
-    this.adminService.getDebtReport(this.debtorMonth).subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const porSede: Record<string, any> = res.data.por_sede || {};
-          this.groups = Object.values(porSede).map((g: any) => ({
-            sede_name: g.sede_name || 'Sin sede',
-            deudores: (g.deudores || []).map((d: any) => ({
-              paciente: d.paciente || d.email || 'Desconocido',
-              email: d.email || '',
-              phone: d.phone,
-              monto: d.monto || 0,
-              modality: d.modality || 'Sin Modalidad',
-              fecha_vencimiento: d.fecha_vencimiento || 'N/A',
-              payment_day: d.payment_day,
-            })),
-            total_deuda: g.deudores ? g.deudores.reduce((sum: number, d: any) => sum + (d.monto || 0), 0) : 0,
-          }));
-        }
-        this.debtorsLoading = false;
-      },
-      error: () => (this.debtorsLoading = false),
-    });
-  }
-
-  get filteredGroups(): DebtGroup[] {
-    if (!this.filterText) return this.groups;
-    const q = this.filterText.toLowerCase();
-    return this.groups
-      .map((g) => ({
-        ...g,
-        deudores: g.deudores.filter((d) => d.paciente.toLowerCase().includes(q)),
-      }))
-      .filter((g) => g.deudores.length > 0);
-  }
-
-  get totalDeuda(): number {
-    return this.groups.reduce((sum, g) => sum + g.total_deuda, 0);
-  }
-
-  get totalDeudores(): number {
-    return this.groups.reduce((sum, g) => sum + g.deudores.length, 0);
-  }
-
-  openPaymentModal(item: DebtorItem) {
-    this.paymentForm = { patient_id: 0, patient_name: item.paciente, amount: item.monto, method: 'transfer', reference: '' };
-    this.paymentStatus = '';
-    this.showPaymentModal = true;
-  }
-
-  closePaymentModal() {
-    this.showPaymentModal = false;
-  }
-
-  submitDebtorPayment() {
-    this.paymentStatus = 'Registrando...';
-    const formData = new FormData();
-    formData.append('patient_id', String(this.paymentForm.patient_id || 0));
-    formData.append('amount', String(this.paymentForm.amount));
-    formData.append('method', this.paymentForm.method);
-    formData.append('reference', this.paymentForm.reference);
-
-    this.adminService.registerPayment(formData).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.paymentStatus = 'Pago registrado';
-          setTimeout(() => {
-            this.closePaymentModal();
-            this.loadDebtorsData();
-          }, 1500);
-        } else {
-          this.paymentStatus = 'Error: ' + (res.message || '');
-        }
-      },
-      error: () => {
-        this.paymentStatus = 'Error de conexión';
-      },
-    });
-  }
-
   getWhatsAppLink(phone: string | undefined, name: string, amount: number): string | null {
     if (!phone) return null;
     const clean = phone.replace(/\D/g, '');
@@ -589,12 +500,6 @@ export class Finanzas implements OnInit, OnDestroy {
   getInitials(name: string): string {
     return name?.slice(0, 2).toUpperCase() || 'XX';
   }
-
-  onDebtorMonthChange(month: string) {
-    this.debtorMonth = month;
-    this.loadDebtorsData();
-  }
-
 
   private checkDeepLinks() {
     const params = this.route.snapshot.queryParams;
@@ -615,92 +520,127 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private loadSedes() {
-    this.adminService.getSedes().subscribe({
-      next: (list) => (this.sedes = list),
-    });
+    this.subscriptions.add(
+      this.adminService.getSedes().subscribe({
+        next: (list) => {
+          this.sedes = list;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   private loadPaymentsTherapists() {
-    this.adminService.getUsers('terapista').subscribe({
-      next: (res) => {
-        if (res.success) this.therapistsList = res.users;
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getUsers('terapista').subscribe({
+        next: (res) => {
+          if (res.success) this.therapistsList = res.users;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   private loadPaymentsDebtReport() {
     this.paymentsLoading = true;
-    this.adminService.getDebtReport('all').subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          const porSede: Record<string, any> = res.data.por_sede || {};
-          const list: PatientRow[] = [];
-
+    this.subscriptions.add(
+      forkJoin({
+        patients: this.adminService.getUsers('jugador'),
+        debt: this.adminService.getDebtReport('all'),
+      }).subscribe({
+        next: ({ patients, debt }) => {
+          const porSede: Record<string, any> = debt?.data?.por_sede || {};
+          const debtByName = new Map<string, any>();
           Object.values(porSede).forEach((group: any) => {
-            const sedeName = group.sede_name || '';
             (group.deudores || []).forEach((d: any) => {
-              list.push({
-                id: d.id || 0,
-                username: d.paciente || d.username || d.email || 'Sin nombre',
-                email: d.email || '',
-                phone: d.phone,
-                sede_name: sedeName,
-                therapist_name: d.therapist_name || '',
-                plan_name: d.modality || 'Sin plan',
-                plan_frequency: d.frequency || '',
-                payment_amount: d.monto || 0,
-                sessions_total: d.sessions_total || 0,
-                sessions_attended: d.sessions_attended || 0,
-                sessions_remaining: d.sessions_remaining ?? ((d.sessions_total || 0) - (d.sessions_attended || 0)),
-                next_due_date: d.fecha_vencimiento,
-                status: d.estado || 'active',
-                has_plan_config: d.has_plan_config ?? false,
-              });
+              const key = (d.paciente || d.email || '').toLowerCase().trim();
+              if (key) debtByName.set(key, d);
             });
+          });
+
+          const list: PatientRow[] = (patients.users || []).map((u: any) => {
+            const nameKey = (u.username || u.email || '').toLowerCase().trim();
+            const d = debtByName.get(nameKey) || {};
+            return {
+              id: u.id,
+              username: u.username || 'Sin nombre',
+              email: u.email || '',
+              phone: u.phone,
+              sede_name: d.sede_name || u.sede_name || '',
+              therapist_name: d.therapist_name || '',
+              plan_name: d.modality || u.plan_type || 'Sin plan',
+              plan_frequency: d.frequency || u.payment_plan || '',
+              payment_amount: d.monto || u.payment_amount || 0,
+              sessions_total: u.sessions_total || 0,
+              sessions_attended: u.sessions_attended || 0,
+              sessions_remaining: u.sessions_remaining ?? ((u.sessions_total || 0) - (u.sessions_attended || 0)),
+              next_due_date: d.fecha_vencimiento || u.payment_due_date,
+              status: u.account_status || 'active',
+              has_plan_config: !!(u.payment_plan || u.payment_amount),
+            };
           });
           this.patients = list;
           this.updateCharts();
-        }
-        this.paymentsLoading = false;
-      },
-      error: () => (this.paymentsLoading = false),
-    });
+          this.paymentsLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.paymentsLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   private loadFinancialSummary() {
-    this.adminService.getFinancialSummary().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.financials = res.data;
-          this.updateCharts();
-        }
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.getFinancialSummary().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.financials = res.data;
+            this.updateCharts();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   private loadPaymentHistory() {
-    this.adminService.getAllPayments().subscribe({
-      next: (res) => {
-        if (res.success && res.payments) {
-          this.paymentHistory = res.payments.map((p: any) => ({
-            id: p.id,
-            patient_id: p.patient_id,
-            patient_name: p.patient_name || '',
-            amount: p.amount || 0,
-            discount: p.discount || 0,
-            method: p.method || '',
-            reference: p.reference,
-            date: p.date || '',
-            status: p.status || 'completed',
-            receipt_image_path: p.receipt_image_path,
-            document_number: p.document_number,
-            guardian_name: p.guardian_name,
-          }));
-        }
-        this.genDashboardCharts();
-        this.updateRevenueHistoryChart();
-      },
-    });
+    this.historyLoading = true;
+    this.subscriptions.add(
+      this.adminService.getAllPayments().subscribe({
+        next: (res) => {
+          if (res.success && res.payments) {
+            this.paymentHistory = res.payments.map((p: any) => ({
+              id: p.id,
+              patient_id: p.patient_id,
+              patient_name: p.patient_name || '',
+              amount: p.amount || 0,
+              discount: p.discount || 0,
+              method: p.method || '',
+              reference: p.reference,
+              date: p.date || '',
+              status: p.status || 'completed',
+              receipt_image_path: p.receipt_image_path,
+              document_number: p.document_number,
+              guardian_name: p.guardian_name,
+            }));
+          }
+          this.historyLoading = false;
+          this.genDashboardCharts();
+          this.updateRevenueHistoryChart();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.historyLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   get activeFilterCount(): number {
@@ -798,13 +738,13 @@ export class Finanzas implements OnInit, OnDestroy {
     const st = this.getPatientStatus(p);
     switch (st) {
       case 'al_dia':
-        return { label: 'Al Dia', bg: 'bg-green-100 dark:bg-green-500/10', text: 'text-green-700 dark:text-green-400', dot: 'bg-green-500' };
+        return { label: 'Al Dia', bg: 'bg-success-container', text: 'text-success', dot: 'bg-success' };
       case 'deudor':
-        return { label: 'Deudor', bg: 'bg-red-100 dark:bg-red-500/10', text: 'text-red-700 dark:text-red-400', dot: 'bg-red-500' };
+        return { label: 'Deudor', bg: 'bg-error-container', text: 'text-error', dot: 'bg-error' };
       case 'sin_plan':
-        return { label: 'Sin Plan', bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-400' };
+        return { label: 'Sin Plan', bg: 'bg-warning-container', text: 'text-warning', dot: 'bg-warning' };
       default:
-        return { label: 'Inactivo', bg: 'bg-gray-100 dark:bg-gray-500/10', text: 'text-gray-600 dark:text-gray-400', dot: 'bg-gray-400' };
+        return { label: 'Inactivo', bg: 'bg-surface-container-high', text: 'text-on-surface-variant', dot: 'bg-outline' };
     }
   }
 
@@ -815,13 +755,13 @@ export class Finanzas implements OnInit, OnDestroy {
 
   getMethodBadgeClass(method: string): string {
     const map: Record<string, string> = {
-      yape: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400',
-      plin: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400',
-      transfer: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
-      cash: 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400',
-      card: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400',
+      yape: 'bg-accent-container text-accent',
+      plin: 'bg-accent-container text-accent',
+      transfer: 'bg-info-container text-info',
+      cash: 'bg-success-container text-success',
+      card: 'bg-info-container text-info',
     };
-    return map[method] || 'bg-gray-100 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400';
+    return map[method] || 'bg-surface-container-high text-on-surface-variant';
   }
 
   getMethodLabel(method: string): string {
@@ -833,6 +773,25 @@ export class Finanzas implements OnInit, OnDestroy {
       card: 'Tarjeta',
     };
     return map[method] || method;
+  }
+
+  get yapeTransactions(): PaymentHistoryRow[] {
+    return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin');
+  }
+
+  get yapeTotal(): number {
+    return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0);
+  }
+
+  get yapeMonthlyTotal(): number {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    return this.yapeTransactions
+      .filter((p) => p.date && p.date.startsWith(currentMonth))
+      .reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0);
+  }
+
+  get yapeCount(): number {
+    return this.yapeTransactions.length;
   }
 
   get totalIncomeReal(): number {
@@ -1012,6 +971,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.analyzingReceipt = false;
     this.registerStatus = '';
     this.showRegisterModal = true;
+    this.cdr.markForCheck();
   }
 
   closeRegisterModal() {
@@ -1023,19 +983,23 @@ export class Finanzas implements OnInit, OnDestroy {
     this.registerForm.receipt = file;
     if (file) {
       this.analyzingReceipt = true;
-      this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
-        next: (res) => {
-          this.analyzeResult = res;
-          this.analyzingReceipt = false;
-          if (res.amount) this.registerForm.amount = parseFloat(res.amount);
-          if (res.reference) this.registerForm.reference = res.reference;
-          if (res.method) this.registerForm.method = res.method;
-          if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
-        },
-        error: () => {
-          this.analyzingReceipt = false;
-        },
-      });
+      this.subscriptions.add(
+        this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
+          next: (res) => {
+            this.analyzeResult = res;
+            this.analyzingReceipt = false;
+            if (res.amount) this.registerForm.amount = parseFloat(res.amount);
+            if (res.reference) this.registerForm.reference = res.reference;
+            if (res.method) this.registerForm.method = res.method;
+            if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.analyzingReceipt = false;
+            this.cdr.markForCheck();
+          },
+        }),
+      );
     }
   }
 
@@ -1053,23 +1017,27 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.registerForm.guardian_name) formData.append('guardian_name', this.registerForm.guardian_name);
     if (this.registerForm.receipt) formData.append('receipt', this.registerForm.receipt);
 
-    this.adminService.registerPayment(formData).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.registerStatus = 'Pago registrado exitosamente';
-          setTimeout(() => {
-            this.closeRegisterModal();
-            this.loadPaymentsDebtReport();
-            this.loadPaymentHistory();
-          }, 1500);
-        } else {
-          this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-        }
-      },
-      error: () => {
-        this.registerStatus = 'Error de conexión al servidor';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.registerPayment(formData).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.registerStatus = 'Pago registrado exitosamente';
+            setTimeout(() => {
+              this.closeRegisterModal();
+              this.loadPaymentsDebtReport();
+              this.loadPaymentHistory();
+            }, 1500);
+          } else {
+            this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.registerStatus = 'Error de conexión al servidor';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   get needsRecalculation(): boolean {
@@ -1105,22 +1073,26 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.settingsForm.payment_due_date) data.payment_due_date = this.settingsForm.payment_due_date;
     if (this.settingsForm.payment_plan) data.payment_plan = this.settingsForm.payment_plan;
 
-    this.adminService.updatePaymentSettings(this.settingsForm.patient_id!, data).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.settingsStatus = 'Configuración guardada';
-          setTimeout(() => {
-            this.closeSettingsModal();
-            this.loadPaymentsDebtReport();
-          }, 1500);
-        } else {
-          this.settingsStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-        }
-      },
-      error: () => {
-        this.settingsStatus = 'Error de conexión';
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.updatePaymentSettings(this.settingsForm.patient_id!, data).subscribe({
+        next: (res: any) => {
+          if (res.success) {
+            this.settingsStatus = 'Configuración guardada';
+            setTimeout(() => {
+              this.closeSettingsModal();
+              this.loadPaymentsDebtReport();
+            }, 1500);
+          } else {
+            this.settingsStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.settingsStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   get incompletePlanPatients(): PatientRow[] {
@@ -1136,17 +1108,23 @@ export class Finanzas implements OnInit, OnDestroy {
       variant: 'warning',
     }));
     if (!confirmed) return;
-    this.adminService.exportPaymentsCsv().subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: () => this.alertService.show('Error al generar el reporte', 'error'),
-    });
+    this.subscriptions.add(
+      this.adminService.exportPaymentsCsv().subscribe({
+        next: (blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.alertService.show('Error al generar el reporte', 'error');
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   showHelp() {
@@ -1154,8 +1132,8 @@ export class Finanzas implements OnInit, OnDestroy {
       'Panel de Finanzas',
       'Panel de Finanzas\n\n' +
       '• Dashboard: Resumen financiero del centro.\n' +
-      '• Deudores: Gestiona pagos pendientes por sede.\n' +
       '• Pagos: Lista de pacientes con su estado de pago, plan y progreso.\n' +
+      '• Yape: Transacciones registradas vía Yape / Plin.\n' +
       '• Gastos: Pagos a personal y gastos operativos.\n' +
       '• Use los filtros para buscar por sede, terapeuta, o estado.',
     );
@@ -1170,11 +1148,15 @@ export class Finanzas implements OnInit, OnDestroy {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.adminService.deletePayment(id).subscribe({
-      next: () => {
-        this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id);
-      },
-    });
+    this.subscriptions.add(
+      this.adminService.deletePayment(id).subscribe({
+        next: () => {
+          this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id);
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
   }
 
   viewPatientHistory(patient: PatientRow) {
@@ -1186,6 +1168,10 @@ export class Finanzas implements OnInit, OnDestroy {
       return (this.financials.income_real / this.financials.income_expected) * 100;
     }
     return 0;
+  }
+
+  getPatientName(id: number): string {
+    return this.patients.find((p) => p.id === id)?.username || '';
   }
 
   sedeById(id: number): string {
@@ -1203,20 +1189,38 @@ export class Finanzas implements OnInit, OnDestroy {
 
   private loadExpensesData() {
     this.expensesLoading = true;
-    this.adminService.getTherapistFinancials().subscribe({
-      next: (res) => (this.therapistFinancials = res.data),
-    });
-    this.adminService.getUsers('terapista').subscribe({
-      next: (res) => (this.expenseTherapists = res.users.map((u) => ({ ...u, is_active: true } as User))),
-    });
-    this.adminService.getExpenses().subscribe({
-      next: (res) => {
-        this.recentExpenses = res.data;
-        this.expensesLoading = false;
-        this.genDashboardCharts();
-      },
-      error: () => (this.expensesLoading = false),
-    });
+    this.subscriptions.add(
+      this.adminService.getTherapistFinancials().subscribe({
+        next: (res) => {
+          this.therapistFinancials = res.data;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
+    this.subscriptions.add(
+      this.adminService.getUsers('terapista').subscribe({
+        next: (res) => {
+          this.expenseTherapists = res.users.map((u) => ({ ...u, is_active: true } as User));
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
+    this.subscriptions.add(
+      this.adminService.getExpenses().subscribe({
+        next: (res) => {
+          this.recentExpenses = res.data;
+          this.expensesLoading = false;
+          this.genDashboardCharts();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.expensesLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   openTherapistPaymentModal(therapist: TherapistFinancial) {
@@ -1269,13 +1273,19 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.expenseForm.therapist_id) fd.append('therapist_id', String(this.expenseForm.therapist_id));
     if (this.expenseForm.receipt) fd.append('receipt', this.expenseForm.receipt);
 
-    this.adminService.createExpense(fd).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.closeExpenseModal();
-        this.loadExpensesData();
-      },
-      error: () => (this.submitting = false),
-    });
+    this.subscriptions.add(
+      this.adminService.createExpense(fd).subscribe({
+        next: () => {
+          this.submitting = false;
+          this.closeExpenseModal();
+          this.loadExpensesData();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.submitting = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 }

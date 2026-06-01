@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { HeaderService } from '../../../../core/services/header.service';
 
@@ -27,6 +27,7 @@ interface Testimonial {
   standalone: false,
   templateUrl: './home.html',
   styleUrl: './home.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Home implements OnInit, AfterViewInit, OnDestroy {
   features: Feature[] = [
@@ -97,7 +98,10 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
 
   private observer: IntersectionObserver | null = null;
 
-  constructor(private headerService: HeaderService) {}
+  constructor(
+    private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -144,6 +148,7 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
           this.displayedStats[index] = target;
           clearInterval(interval);
         }
+        this.cdr.markForCheck();
       }, duration / steps);
     });
   }

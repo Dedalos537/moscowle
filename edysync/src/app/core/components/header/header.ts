@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { HeaderService } from '../../services/header.service';
 import { AdminService } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
 import { RecordingService } from '../../services/recording.service';
+import { SidebarService } from '../../services/sidebar.service';
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
@@ -12,6 +13,7 @@ import { ConfirmService } from '../../services/confirm.service';
   standalone: false,
   templateUrl: './header.html',
   styleUrl: './header.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Header implements OnInit, OnDestroy {
   showNotifications = false;
@@ -21,24 +23,34 @@ export class Header implements OnInit, OnDestroy {
   unreadCount = 0;
   user: any = null;
   isRecording = false;
+  error: string | null = null;
   private userSub!: Subscription;
   private recordingSub!: Subscription;
+  private subs = new Subscription();
 
   constructor(
     public headerService: HeaderService,
     private adminService: AdminService,
     private authService: AuthService,
     private recordingService: RecordingService,
+    private sidebarService: SidebarService,
     private router: Router,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
+
+  toggleSidebar() {
+    this.sidebarService.toggle();
+  }
 
   ngOnInit() {
     this.userSub = this.authService.currentUser$.subscribe(user => {
       this.user = user;
+      this.cdr.markForCheck();
     });
     this.recordingSub = this.recordingService.recordingState$.subscribe(state => {
       this.isRecording = state === 'recording' || state === 'starting' || state === 'mic_error';
+      this.cdr.markForCheck();
     });
     this.fetchNotifications();
   }
@@ -46,6 +58,7 @@ export class Header implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.userSub?.unsubscribe();
     this.recordingSub?.unsubscribe();
+    this.subs.unsubscribe();
   }
 
   toggleNotifications() {
@@ -57,27 +70,33 @@ export class Header implements OnInit, OnDestroy {
   }
 
   markAllAsRead() {
-    this.adminService.markNotificationsRead().subscribe({
+    this.subs.add(this.adminService.markNotificationsRead().subscribe({
       next: () => {
         this.unreadCount = 0;
         this.notifications = [];
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
         this.fetchNotifications();
       },
-    });
+    }));
   }
 
   markOneRead(notifId: number) {
-    this.adminService.markOneNotificationRead(notifId).subscribe({
+    this.subs.add(this.adminService.markOneNotificationRead(notifId).subscribe({
       next: () => {
         this.notifications = this.notifications.filter(n => n.id !== notifId);
         this.unreadCount = this.notifications.length;
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
         this.fetchNotifications();
       },
-    });
+    }));
   }
 
   toggleUserMenu() {
@@ -86,16 +105,19 @@ export class Header implements OnInit, OnDestroy {
   }
 
   fetchNotifications() {
-    this.adminService.getNotifications().subscribe({
+    this.subs.add(this.adminService.getNotifications().subscribe({
       next: (data) => {
         this.notifications = data || [];
         this.unreadCount = this.notifications.length;
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
+        this.error = err.message;
         this.notifications = [];
         this.unreadCount = 0;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   isString(value: any): boolean {
@@ -122,16 +144,18 @@ export class Header implements OnInit, OnDestroy {
 
     this.showLogoutWarning = false;
     this.recordingService.forceStopAndLogout();
-    this.authService.logout().subscribe({
+    this.subs.add(this.authService.logout().subscribe({
       next: () => {
         this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
       },
-      error: () => {
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
         localStorage.removeItem('user');
         localStorage.removeItem('csrf_token');
         this.router.navigate(['/auth/login'], { queryParams: { logout: 'success' } });
       },
-    });
+    }));
   }
 
   cancelLogout() {

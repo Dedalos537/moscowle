@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { Payment } from '../../../../core/models/payment';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -11,19 +12,23 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
   standalone: false,
   templateUrl: './payment-history.html',
   styleUrl: './payment-history.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
 })
-export class PaymentHistory implements OnInit {
+export class PaymentHistory implements OnInit, OnDestroy {
   userId!: number;
   patientName = '';
   payments: Payment[] = [];
   loading = true;
+  error: string | null = null;
+  private subscriptions: Subscription = new Subscription();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminService,
     private confirmService: ConfirmService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -31,18 +36,26 @@ export class PaymentHistory implements OnInit {
     this.loadHistory();
   }
 
-  private loadHistory() {
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
+  }
+
+  loadHistory() {
     this.loading = true;
-    this.adminService.getPaymentHistory(this.userId).subscribe({
-      next: (res) => {
-        if (res.success && res.payments) {
-          this.payments = res.payments;
-          this.patientName = res.patient?.username || 'Paciente';
-        }
-        this.loading = false;
-      },
-      error: () => (this.loading = false),
-    });
+    this.error = null;
+    this.subscriptions.add(
+      this.adminService.getPaymentHistory(this.userId).subscribe({
+        next: (res) => {
+          if (res.success && res.payments) {
+            this.payments = res.payments;
+            this.patientName = res.patient?.username || 'Paciente';
+          }
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.loading = false; this.error = err.error?.message || err.message || 'Error al cargar historial de pagos'; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   get totalPaid(): number {
@@ -62,9 +75,12 @@ export class PaymentHistory implements OnInit {
       variant: 'danger',
     }));
     if (!confirmed) return;
-    this.adminService.deletePayment(id).subscribe({
-      next: () => this.loadHistory(),
-    });
+    this.subscriptions.add(
+      this.adminService.deletePayment(id).subscribe({
+        next: () => { this.loadHistory(); this.cdr.markForCheck(); },
+        error: (err) => { this.error = err.error?.message || err.message || 'Error al eliminar pago'; this.cdr.markForCheck(); },
+      })
+    );
   }
 
   getMethodIcon(method: string): string {

@@ -12,6 +12,8 @@ import click
 from uuid import uuid4
 from datetime import datetime
 import hashlib
+from collections import deque
+import traceback
 
 def register_auth_loader(app):
     try:
@@ -77,6 +79,12 @@ def setup_logging(app):
         )
         console_handler.setFormatter(console_formatter)
         app.logger.addHandler(console_handler)
+
+    # In-memory capture handler for admin log viewer
+    from app.services.log_service import log_capture_handler
+    capture_formatter = logging.Formatter('[%(asctime)s] %(levelname)s [%(name)s]: %(message)s')
+    log_capture_handler.setFormatter(capture_formatter)
+    app.logger.addHandler(log_capture_handler)
     
     app.logger.addHandler(file_handler)
     app.logger.setLevel(getattr(logging, app.config['LOG_LEVEL']))

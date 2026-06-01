@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { TherapistService, TherapistProfileData } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -8,7 +9,8 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './therapist-profile.html',
   styleUrl: './therapist-profile.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistProfile implements OnInit, OnDestroy {
   profile: TherapistProfileData | null = null;
@@ -20,10 +22,14 @@ export class TherapistProfile implements OnInit, OnDestroy {
   saving = false;
   statusText = '';
   statusType: 'success' | 'error' = 'success';
+  error: string | null = null;
+
+  private subs = new Subscription();
 
   constructor(
     private therapistService: TherapistService,
     private headerService: HeaderService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -33,18 +39,24 @@ export class TherapistProfile implements OnInit, OnDestroy {
       icon: ['fas', 'user-circle'],
     });
 
-    this.therapistService.getProfile().subscribe({
+    this.subs.add(this.therapistService.getProfile().subscribe({
       next: (profile) => {
         this.profile = profile;
         this.username = profile.username;
         this.email = profile.email;
         this.timezone = profile.timezone || 'America/Lima';
+        this.cdr.markForCheck();
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   ngOnDestroy() {
     this.headerService.reset();
+    this.subs.unsubscribe();
   }
 
   saveProfile() {
@@ -56,13 +68,14 @@ export class TherapistProfile implements OnInit, OnDestroy {
 
     this.saving = true;
     this.statusText = '';
+    this.cdr.markForCheck();
 
     const data: any = {};
     if (this.username) data.username = this.username;
     if (this.timezone) data.timezone = this.timezone;
     if (this.newPassword) data.new_password = this.newPassword;
 
-    this.therapistService.updateProfile(data).subscribe({
+    this.subs.add(this.therapistService.updateProfile(data).subscribe({
       next: (res) => {
         this.saving = false;
         this.statusType = res.success ? 'success' : 'error';
@@ -77,13 +90,16 @@ export class TherapistProfile implements OnInit, OnDestroy {
             localStorage.setItem('user', JSON.stringify(user));
           }
         }
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
         this.statusType = 'error';
+        this.error = err.message;
         this.statusText = 'Error de conexión';
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   get timezones(): string[] {

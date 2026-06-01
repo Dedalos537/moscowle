@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService } from '../../../../core/services/patient.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -9,7 +10,8 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
   standalone: false,
   templateUrl: './messages.html',
   styleUrl: './messages.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('chatContainer') chatContainer!: ElementRef;
@@ -25,16 +27,19 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   selectedFile: File | null = null;
   selectedFileName = '';
   isRecording = false;
+  error: string | null = null;
   mediaRecorder: MediaRecorder | null = null;
   audioChunks: Blob[] = [];
 
   private pollInterval: any;
   private needsScroll = false;
+  private subs = new Subscription();
 
   constructor(
     private headerService: HeaderService,
     private patientService: PatientService,
     private auth: AuthService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -44,9 +49,10 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
       icon: ['fas', 'envelope'],
     });
 
-    this.auth.currentUser$.subscribe((user) => {
+    this.subs.add(this.auth.currentUser$.subscribe((user) => {
       if (user) this.currentUserId = user.id;
-    });
+      this.cdr.markForCheck();
+    }));
 
     this.loadTherapist();
     this.loadMessages();
@@ -60,21 +66,27 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     this.headerService.reset();
     if (this.pollInterval) clearInterval(this.pollInterval);
+    this.subs.unsubscribe();
   }
 
   private loadTherapist() {
-    this.patientService.getMyTherapist().subscribe({
+    this.subs.add(this.patientService.getMyTherapist().subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.therapistId = res.data.id;
           this.therapistName = res.data.username;
+          this.cdr.markForCheck();
         }
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   private loadMessages() {
-    this.patientService.getMessages().subscribe({
+    this.subs.add(this.patientService.getMessages().subscribe({
       next: (res) => {
         if (res.success) {
           this.messages = res.messages;
@@ -87,22 +99,32 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
           setTimeout(() => this.scrollToBottom(), 100);
         }
         this.loading = false;
+        this.cdr.markForCheck();
       },
-      error: () => (this.loading = false),
-    });
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   private pollNewMessages() {
     if (!this.therapistId) return;
-    this.patientService.getMessages().subscribe({
+    this.subs.add(this.patientService.getMessages().subscribe({
       next: (res) => {
         if (res.success && res.messages.length > this.messages.length) {
           this.messages = res.messages;
           this.needsScroll = true;
+          this.cdr.markForCheck();
           setTimeout(() => this.scrollToBottom(), 100);
         }
       },
-    });
+      error: (err) => {
+        this.error = err.message;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   isOwnMessage(msg: any): boolean {
@@ -135,22 +157,27 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
     if ((!this.newMessage.trim() && !this.selectedFile) || !this.therapistId || this.sending) return;
 
     this.sending = true;
-    this.patientService.sendMessage(this.therapistId, this.newMessage.trim(), this.selectedFile).subscribe({
+    this.cdr.markForCheck();
+    this.subs.add(this.patientService.sendMessage(this.therapistId, this.newMessage.trim(), this.selectedFile).subscribe({
       next: () => {
         this.sending = false;
         this.newMessage = '';
         this.clearFile();
+        this.cdr.markForCheck();
         this.loadMessages();
       },
-      error: () => {
+      error: (err) => {
         this.sending = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
       },
-    });
+    }));
   }
 
   startRecording() {
     if (!navigator.mediaDevices?.getUserMedia) return;
     this.isRecording = true;
+    this.cdr.markForCheck();
     this.audioChunks = [];
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -163,10 +190,12 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
         const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
         this.selectedFile = new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' });
         this.selectedFileName = this.selectedFile.name;
+        this.cdr.markForCheck();
       };
       this.mediaRecorder.start();
     }).catch(() => {
       this.isRecording = false;
+      this.cdr.markForCheck();
     });
   }
 
@@ -174,6 +203,7 @@ export class PatientMessages implements OnInit, OnDestroy, AfterViewInit {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
       this.isRecording = false;
+      this.cdr.markForCheck();
     }
   }
 

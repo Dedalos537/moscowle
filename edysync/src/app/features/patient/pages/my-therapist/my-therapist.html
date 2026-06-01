@@ -1,43 +1,53 @@
-<div *ngIf="loading" class="flex justify-center items-center h-96">
+@if (loading) {
+<div class="flex justify-center items-center h-96">
   <app-spinner size="lg" colorClass="text-primary"></app-spinner>
 </div>
+}
 
-<div *ngIf="!loading && therapist" class="max-w-2xl mx-auto" [@fadeInUp]>
-  <app-card>
-    <div class="bg-primary/5 -mx-6 -mt-6 p-8 text-center border-b border-border mb-6">
-      <div class="w-24 h-24 rounded-full bg-primary-container/15 flex items-center justify-center mx-auto mb-4">
-        <fa-icon [icon]="['fas', 'user']" class="text-3xl text-primary"></fa-icon>
+@if (!loading && therapist) {
+<div class="max-w-2xl mx-auto space-y-6" [@fadeInUp]>
+  <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-16 h-16 rounded-full bg-primary-container/15 flex items-center justify-center">
+        <fa-icon [icon]="['fas', 'user']" class="text-primary text-2xl"></fa-icon>
       </div>
-      <h2 class="text-xl font-bold text-on-surface">{{ therapist.username }}</h2>
-      <p class="text-sm text-on-surface-variant">{{ therapist.email }}</p>
+      <div>
+        <h2 class="text-xl font-bold text-on-surface">{{ therapist.full_name || therapist.username }}</h2>
+        <p class="text-sm text-on-surface-variant">{{ therapist.email }}</p>
+      </div>
     </div>
     <div class="space-y-4">
-      <div *ngIf="therapist.phone" class="flex items-center gap-3">
-        <fa-icon [icon]="['fas', 'phone']" class="text-primary w-5"></fa-icon>
-        <span class="text-sm text-on-surface">{{ therapist.phone }}</span>
+      <div class="flex justify-between items-center py-2 border-b border-border/50">
+        <span class="text-on-surface-variant">Teléfono</span>
+        @if (therapist.phone) {
+          <span class="text-on-surface font-medium">{{ therapist.phone }}</span>
+        }
       </div>
-      <div *ngIf="therapist.specialties?.length" class="flex items-center gap-3">
-        <fa-icon [icon]="['fas', 'stethoscope']" class="text-primary w-5"></fa-icon>
-        <div class="flex flex-wrap gap-2">
-          <span *ngFor="let spec of therapist.specialties"
-                class="px-2.5 py-1 bg-primary-container/15 text-primary-container text-xs font-bold rounded-full">{{ spec }}</span>
+      <div class="flex justify-between items-center py-2 border-b border-border/50">
+        <span class="text-on-surface-variant">Especialidades</span>
+        @if (therapist.specialties?.length) {
+          <div class="flex flex-wrap gap-1">
+            @for (spec of therapist.specialties; track $index) {
+              <span class="px-2.5 py-1 rounded-full bg-primary-container/15 text-primary text-[10px] font-bold uppercase tracking-wider">{{ spec }}</span>
+            }
+          </div>
+        }
+      </div>
+      @if (therapist.bio) {
+        <div class="py-2 border-b border-border/50">
+          <p class="text-on-surface-variant text-sm mb-1">Biografía</p>
+          <p class="text-on-surface">{{ therapist.bio }}</p>
         </div>
-      </div>
-      <div *ngIf="therapist.bio" class="pt-4 border-t border-border">
-        <p class="text-sm text-on-surface-variant">{{ therapist.bio }}</p>
-      </div>
-      <div class="pt-4 flex gap-3">
-        <a routerLink="/patient/messages"
-           class="flex-1 text-center px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-fixed-dim transition-colors">
-          <fa-icon [icon]="['fas', 'envelope']" class="mr-2"></fa-icon>
-          Enviar Mensaje
-        </a>
-      </div>
+      }
     </div>
-  </app-card>
+  </div>
 </div>
+}
 
-<div *ngIf="!loading && !therapist" class="text-center py-16 text-on-surface-variant">
-  <fa-icon [icon]="['fas', 'user-md']" class="text-4xl mb-3 opacity-30"></fa-icon>
-  <p class="text-sm">No tienes un terapeuta asignado aún</p>
+@if (!loading && !therapist) {
+<div class="flex flex-col items-center justify-center py-16">
+  <fa-icon [icon]="['fas', 'user-md']" class="text-5xl text-on-surface-variant/30 mb-4"></fa-icon>
+  <h3 class="text-xl font-bold text-on-surface mb-2">Sin terapeuta asignado</h3>
+  <p class="text-on-surface-variant text-center max-w-md">Aún no tienes un terapeuta asignado. Por favor, contacta con la administración.</p>
 </div>
+}
