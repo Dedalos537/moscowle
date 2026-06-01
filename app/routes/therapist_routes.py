@@ -150,38 +150,8 @@ def session_review(appointment_id):
 @login_required
 def sessions():
     if current_user.role != 'terapista':
-        flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
-    # Compute session statistics for the cards
-    today_start, today_end = get_user_today_utc_range(current_user)
-    now = datetime.utcnow()
-
-    sessions_today = Appointment.query.filter(
-        Appointment.therapist_id == current_user.id,
-        Appointment.start_time >= today_start,
-        Appointment.start_time < today_end,
-        Appointment.status == 'scheduled'
-    ).count()
-
-    completed_sessions = Appointment.query.filter(
-        Appointment.therapist_id == current_user.id,
-        Appointment.status == 'completed'
-    ).count()
-
-    pending_sessions = Appointment.query.filter(
-        Appointment.therapist_id == current_user.id,
-        Appointment.status == 'scheduled',
-        Appointment.start_time > now
-    ).count()
-
-    active_patients = User.query.filter_by(role='jugador', is_active=True).count()
-
-    return render_template('therapist/sessions.html',
-                           active_page='sessions',
-                           sessions_today=sessions_today,
-                           completed_sessions=completed_sessions,
-                           pending_sessions=pending_sessions,
-                           active_patients=active_patients)
+    return redirect('/')
 
 @therapist_bp.route('/games')
 @login_required
