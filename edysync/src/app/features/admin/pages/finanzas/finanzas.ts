@@ -12,6 +12,7 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 Chart.register(...registerables);
 
@@ -91,6 +92,61 @@ export class Finanzas implements OnInit, OnDestroy {
   selectedStatus: string = '';
   selectedSort: string = '';
   historyMonth: string = '';
+
+  get sedeFilterOptions(): SelectOption[] {
+    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+  }
+
+  get therapistFilterOptions(): SelectOption[] {
+    return [{value: null, label: 'Todos los Terapeutas'}, ...this.therapistsList.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  get historyMonthOptions(): SelectOption[] {
+    return [{value: '', label: 'Todos los meses'}, ...this.historyMonths.map(m => ({value: m, label: m}))];
+  }
+
+  statusFilterOptions: SelectOption[] = [
+    {value: '', label: 'Todos los Estados'},
+    {value: 'al_dia', label: 'Al Día'},
+    {value: 'deudor', label: 'Deudores'},
+    {value: 'sin_plan', label: 'Sin Plan'},
+    {value: 'inactivo', label: 'Inactivos'},
+  ];
+
+  sortOptions: SelectOption[] = [
+    {value: '', label: 'Ordenar por...'},
+    {value: 'nombre', label: 'Nombre'},
+    {value: 'vencimiento_cercano', label: 'Vencimiento cercano'},
+    {value: 'vencimiento_lejano', label: 'Vencimiento lejano'},
+    {value: 'mayor_deuda', label: 'Mayor deuda'},
+  ];
+
+  paymentMethodOptions: SelectOption[] = [
+    {value: 'transfer', label: 'Transferencia'},
+    {value: 'yape', label: 'Yape'},
+    {value: 'plin', label: 'Plin'},
+    {value: 'cash', label: 'Efectivo'},
+    {value: 'card', label: 'Tarjeta'},
+  ];
+
+  planFrequencyOptions: SelectOption[] = [
+    {value: 'Mensual', label: 'Mensual'},
+    {value: 'Quincenal', label: 'Quincenal'},
+  ];
+
+  expenseCategoryOptions: SelectOption[] = [
+    {value: 'therapist_payment', label: 'Pago a Terapeuta'},
+    {value: 'operational', label: 'Gasto Operativo'},
+    {value: 'bonus', label: 'Bonificación'},
+    {value: 'other', label: 'Otro'},
+  ];
+
+  expenseMethodOptions: SelectOption[] = [
+    {value: 'transfer', label: 'Transferencia Bancaria'},
+    {value: 'yape_plin', label: 'Yape / Plin'},
+    {value: 'cash', label: 'Efectivo'},
+    {value: 'other', label: 'Otro'},
+  ];
 
   showRegisterModal = false;
   registerForm = {

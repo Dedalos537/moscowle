@@ -24,12 +24,13 @@ import { ConfirmDialog } from './components/confirm-dialog/confirm-dialog';
 import { ChatComponent } from './components/chat/chat.component';
 import { SplashScreen } from './components/splash-screen/splash-screen';
 import { CollapsiblePanel } from './components/collapsible-panel/collapsible-panel';
+import { Select } from './components/select/select';
 
 @NgModule({
   declarations: [
     Button, Card, Input, Spinner, Alert, Modal, Chip,
     ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay, ConfirmDialog,
-    ChatComponent, SplashScreen, CollapsiblePanel,
+    ChatComponent, SplashScreen, CollapsiblePanel, Select,
   ],
   imports: [
     CommonModule, FormsModule, FontAwesomeModule
@@ -38,7 +39,7 @@ import { CollapsiblePanel } from './components/collapsible-panel/collapsible-pan
     CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip,
     ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay, ConfirmDialog,
-    ChatComponent, SplashScreen, CollapsiblePanel,
+    ChatComponent, SplashScreen, CollapsiblePanel, Select,
   ]
 })
 export class SharedModule {

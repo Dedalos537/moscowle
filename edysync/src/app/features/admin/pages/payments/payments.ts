@@ -10,6 +10,7 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 Chart.register(...registerables);
 
@@ -106,6 +107,49 @@ export class Payments implements OnInit, OnDestroy {
     payment_due_date: '',
   };
   settingsStatus = '';
+
+  // ─── Select Options ──────────────────────────────────────
+
+  get sedeFilterOptions(): SelectOption[] {
+    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+  }
+
+  get therapistFilterOptions(): SelectOption[] {
+    return [{value: null, label: 'Todos los Terapeutas'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  statusFilterOptions: SelectOption[] = [
+    {value: '', label: 'Todos'},
+    {value: 'al_dia', label: 'Al Día'},
+    {value: 'deudores', label: 'Deudores'},
+    {value: 'sin_plan', label: 'Sin Plan'},
+    {value: 'inactivos', label: 'Inactivos'},
+  ];
+
+  sortOptions: SelectOption[] = [
+    {value: '', label: 'Ordenar'},
+    {value: 'nombre', label: 'Nombre'},
+    {value: 'vencimiento_cercano', label: 'Vencimiento cercano'},
+    {value: 'vencimiento_lejano', label: 'Vencimiento lejano'},
+    {value: 'mayor_deuda', label: 'Mayor deuda'},
+  ];
+
+  get historyMonthOptions(): SelectOption[] {
+    return [{value: '', label: 'Todos los meses'}, ...this.historyMonths.map(m => ({value: m, label: m}))];
+  }
+
+  paymentMethodOptions: SelectOption[] = [
+    {value: 'transfer', label: 'Transferencia'},
+    {value: 'yape', label: 'Yape'},
+    {value: 'plin', label: 'Plin'},
+    {value: 'cash', label: 'Efectivo'},
+    {value: 'card', label: 'Tarjeta'},
+  ];
+
+  planFrequencyOptions: SelectOption[] = [
+    {value: 'Mensual', label: 'Mensual'},
+    {value: 'Quincenal', label: 'Quincenal'},
+  ];
 
   // ─── Financial Summary Data ──────────────────────────────
   financials: any = {

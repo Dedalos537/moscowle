@@ -3,12 +3,12 @@ from marshmallow import Schema, fields, validate, ValidationError, INCLUDE
 class CreateUserSchema(Schema):
     email = fields.Email(required=True)
     username = fields.Str(required=False, allow_none=True, validate=validate.Length(min=1))
-    role = fields.Str(required=True, validate=validate.OneOf(['terapista', 'jugador', 'terapeuta']))
+    role = fields.Str(required=True, validate=validate.OneOf(['terapista', 'jugador', 'terapeuta', 'supervisor', 'admin']))
 
 class UpdateUserSchema(Schema):
     id = fields.Int(required=True)
     username = fields.Str(required=False, allow_none=True)
-    role = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['terapista', 'jugador', 'admin', 'terapeuta']))
+    role = fields.Str(required=False, allow_none=True, validate=validate.OneOf(['terapista', 'jugador', 'admin', 'terapeuta', 'supervisor']))
     is_active = fields.Bool(required=False)
     
     # Sede assignment - accept both int and string

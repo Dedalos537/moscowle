@@ -24,6 +24,13 @@
       </div>
     }
 
+    <button (click)="toggleHelp()"
+      class="w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors"
+      [class.!bg-primary-container/30]="showHelp"
+      title="Ayuda">
+      <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
+    </button>
+
     <div class="relative">
       <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
         <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0"></fa-icon>
@@ -112,6 +119,65 @@
     </div>
   </div>
 </header>
+
+@if (showHelp) {
+  <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="toggleHelp()">
+    <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-md w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+      <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center mx-auto mb-4">
+        <fa-icon [icon]="['fas', 'lightbulb']" class="text-primary text-2xl"></fa-icon>
+      </div>
+      <h3 class="text-lg font-bold text-on-surface text-center mb-1">¿Necesitas ayuda?</h3>
+      <p class="text-body-sm text-on-surface-variant text-center mb-6">Selecciona tu rol para ver guías rápidas</p>
+
+      <div class="space-y-3">
+        <details class="group bg-surface-container-low rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between p-4 cursor-pointer font-bold text-on-surface text-sm hover:bg-surface-container-high transition-colors list-none">
+            <fa-icon [icon]="['fas', 'user-shield']" class="text-primary mr-3"></fa-icon>
+            Administrador
+            <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs transition-transform group-open:rotate-180"></fa-icon>
+          </summary>
+          <div class="px-4 pb-4 text-body-sm text-on-surface-variant space-y-2">
+            <p>• Gestiona terapeutas, pacientes y reportes desde este panel.</p>
+            <p>• Usa el menú lateral para navegar entre secciones.</p>
+            <p>• Los reportes de deuda se actualizan automáticamente.</p>
+          </div>
+        </details>
+        <details class="group bg-surface-container-low rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between p-4 cursor-pointer font-bold text-on-surface text-sm hover:bg-surface-container-high transition-colors list-none">
+            <fa-icon [icon]="['fas', 'user-md']" class="text-primary mr-3"></fa-icon>
+            Terapista
+            <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs transition-transform group-open:rotate-180"></fa-icon>
+          </summary>
+          <div class="px-4 pb-4 text-body-sm text-on-surface-variant space-y-2">
+            <p>• Gestiona tus pacientes y sesiones desde el panel.</p>
+            <p>• Usa el chat para comunicación directa con pacientes.</p>
+            <p>• Las grabaciones se guardan automáticamente al finalizar.</p>
+          </div>
+        </details>
+        <details class="group bg-surface-container-low rounded-xl overflow-hidden">
+          <summary class="flex items-center justify-between p-4 cursor-pointer font-bold text-on-surface text-sm hover:bg-surface-container-high transition-colors list-none">
+            <fa-icon [icon]="['fas', 'user']" class="text-primary mr-3"></fa-icon>
+            Paciente / Jugador
+            <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs transition-transform group-open:rotate-180"></fa-icon>
+          </summary>
+          <div class="px-4 pb-4 text-body-sm text-on-surface-variant space-y-2">
+            <p>• Revisa tus pagos y sessions desde tu panel personal.</p>
+            <p>• Puedes comunicarte con tu terapeuta vía chat.</p>
+            <p>• Los reportes de progreso están disponibles en Reportes.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-border/30 text-center">
+        <p class="text-body-sm text-on-surface-variant">
+          <fa-icon [icon]="['fas', 'envelope']" class="mr-1"></fa-icon>
+          ¿Más dudas?
+          <a href="mailto:info@centrojuanpabloii.com" class="text-primary font-bold hover:underline">info@centrojuanpabloii.com</a>
+        </p>
+      </div>
+    </div>
+  </div>
+}
 
 @if (showLogoutWarning) {
   <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="cancelLogout()">

@@ -6,6 +6,7 @@ import { CalendarWidgetEvent, CalendarWidget } from '../../../../shared/componen
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 @Component({
   selector: 'app-sessions',
@@ -20,7 +21,7 @@ export class Sessions implements OnInit, OnDestroy {
   @ViewChild(CalendarWidget) calendarWidget!: CalendarWidget;
 
   therapists: { id: number; username: string }[] = [];
-  selectedTherapistId = 'all';
+  selectedTherapistId: number | null = null;
   patients: { id: number; username: string }[] = [];
   patientsLoading = false;
   loading = true;
@@ -33,6 +34,28 @@ export class Sessions implements OnInit, OnDestroy {
   showEditModal = false;
 
   sedes = ['Piura', 'Talara'];
+
+  get therapistOptions(): SelectOption[] {
+    return [{value: null, label: 'Todos'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  get therapistCreateOptions(): SelectOption[] {
+    return [{value: null, label: 'Seleccionar terapeuta'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  get patientCreateOptions(): SelectOption[] {
+    return [{value: null, label: 'Seleccionar paciente'}, ...this.patients.map(p => ({value: p.id, label: p.username}))];
+  }
+
+  get sedeCreateOptions(): SelectOption[] {
+    return [{value: null, label: 'Seleccionar sede'}, ...this.sedes.map(s => ({value: s, label: s}))];
+  }
+
+  statusOptions: SelectOption[] = [
+    {value: 'scheduled', label: 'Programada'},
+    {value: 'completed', label: 'Completada'},
+    {value: 'cancelled', label: 'Cancelada'},
+  ];
 
   months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -112,7 +135,7 @@ export class Sessions implements OnInit, OnDestroy {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
     const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
-    const therapistId = this.selectedTherapistId !== 'all' ? parseInt(this.selectedTherapistId) : undefined;
+    const therapistId = this.selectedTherapistId ?? undefined;
 
     this.subscriptions.add(
       this.adminService.getSessions(start, end, therapistId).subscribe({

@@ -22,10 +22,12 @@ def get_contact_list(role_filter=None):
         return q.order_by(User.role, User.username).all()
     elif current_user.role == 'terapista':
         patient_ids = [p.id for p in current_user.assigned_patients if p.is_active]
+        associated_ids = [p.id for p in current_user.associated_patients if p.is_active]
+        all_patient_ids = set(patient_ids + associated_ids)
         admin_super_ids = [u.id for u in User.query.filter(
             User.role.in_(['admin', 'supervisor']), User.is_active == True
         ).all()]
-        ids = set(patient_ids + admin_super_ids)
+        ids = set(all_patient_ids) | set(admin_super_ids)
         ids.discard(current_user.id)
         if not ids:
             return []

@@ -9,6 +9,7 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 Chart.register(...registerables);
 
@@ -67,6 +68,15 @@ export class Reports implements OnInit, OnDestroy {
   selectedMonth: number = new Date().getMonth() + 1;
   selectedYear: number = new Date().getFullYear();
   selectedQuarter: number = Math.floor(new Date().getMonth() / 3) + 1;
+
+  monthOptions: SelectOption[] = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => ({value: m, label: String(m).padStart(2, '0')}));
+
+  get yearOptions(): SelectOption[] {
+    const y = this.selectedYear;
+    return [y-2, y-1, y, y+1].map(yy => ({value: yy, label: String(yy)}));
+  }
+
+  quarterOptions: SelectOption[] = [1,2,3,4].map(q => ({value: q, label: `Q${q}`}));
 
   // Efficiency
   therapistEfficiency: any = null;

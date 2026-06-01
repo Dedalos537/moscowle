@@ -429,37 +429,15 @@
                   >
                 </div>
 
-                <select (change)="selectedSedeId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
-                  <option value="">Todas las Sedes</option>
-                  @for (s of sedes; track s.id) {
-                    <option [value]="s.id" [selected]="selectedSedeId === s.id">{{ s.name }}</option>
-                  }
-                </select>
+                <app-select (valueChange)="selectedSedeId = $event" [options]="sedeFilterOptions" class="min-w-[160px]"></app-select>
 
-                <select (change)="selectedTherapistId = $any($event.target).value ? +$any($event.target).value : null" class="input-field min-w-[160px]">
-                  <option value="">Todos los Terapeutas</option>
-                  @for (t of therapistsList; track t.id) {
-                    <option [value]="t.id" [selected]="selectedTherapistId === t.id">{{ t.username }}</option>
-                  }
-                </select>
+                <app-select (valueChange)="selectedTherapistId = $event" [options]="therapistFilterOptions" class="min-w-[160px]"></app-select>
               </div>
 
               <div class="flex flex-col md:flex-row gap-3">
-                <select (change)="selectedStatus = $any($event.target).value" class="input-field min-w-[160px]">
-                  <option value="">Todos los Estados</option>
-                  <option value="al_dia">Al Día</option>
-                  <option value="deudor">Deudores</option>
-                  <option value="sin_plan">Sin Plan</option>
-                  <option value="inactivo">Inactivos</option>
-                </select>
+                <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions" class="min-w-[160px]"></app-select>
 
-                <select (change)="selectedSort = $any($event.target).value" class="input-field min-w-[180px]">
-                  <option value="">Ordenar por...</option>
-                  <option value="nombre">Nombre</option>
-                  <option value="vencimiento_cercano">Vencimiento cercano</option>
-                  <option value="vencimiento_lejano">Vencimiento lejano</option>
-                  <option value="mayor_deuda">Mayor deuda</option>
-                </select>
+                <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" class="min-w-[180px]"></app-select>
 
                 @if (activeFilterCount > 0) {
                   <div class="flex items-center gap-2 px-3 py-1.5 bg-primary-container/15 text-primary-container rounded-lg text-xs font-bold">
@@ -709,12 +687,7 @@
               </h3>
               <div class="flex gap-2 items-center">
                 <app-button variant="ghost" label="Exportar" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
-                <select (change)="historyMonth = $any($event.target).value" class="input-field min-w-[160px]">
-                  <option value="">Todos los meses</option>
-                  @for (m of historyMonths; track m) {
-                    <option [value]="m" [selected]="historyMonth === m">{{ m }}</option>
-                  }
-                </select>
+                <app-select (valueChange)="historyMonth = $event" [options]="historyMonthOptions" class="min-w-[160px]"></app-select>
                 <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
               </div>
             </div>
@@ -827,13 +800,7 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Método</label>
-          <select [(ngModel)]="registerForm.method" class="input-field">
-            <option value="transfer">Transferencia</option>
-            <option value="yape">Yape</option>
-            <option value="plin">Plin</option>
-            <option value="cash">Efectivo</option>
-            <option value="card">Tarjeta</option>
-          </select>
+          <app-select [(ngModel)]="registerForm.method" [options]="paymentMethodOptions" class="input-field"></app-select>
         </div>
         <app-input id="discount" label="Descuento (S/)" type="number" [(value)]="registerForm.discount"></app-input>
       </div>
@@ -905,10 +872,7 @@
       </p>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Frecuencia de Pago</label>
-        <select [(ngModel)]="settingsForm.payment_plan" class="input-field">
-          <option value="Mensual">Mensual</option>
-          <option value="Quincenal">Quincenal</option>
-        </select>
+        <app-select [(ngModel)]="settingsForm.payment_plan" [options]="planFrequencyOptions" class="input-field"></app-select>
       </div>
       <app-input id="settings-amount" label="Monto Acordado (S/)" type="number" [(value)]="settingsForm.payment_amount"></app-input>
       <app-input id="settings-due" label="Fecha de Vencimiento Actual" type="date" [(value)]="settingsForm.payment_due_date"></app-input>
@@ -1128,12 +1092,7 @@
       <div class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Categoría</label>
-          <select [(ngModel)]="expenseForm.category" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
-            <option value="therapist_payment">Pago a Terapeuta</option>
-            <option value="operational">Gasto Operativo</option>
-            <option value="bonus">Bonificación</option>
-            <option value="other">Otro</option>
-          </select>
+          <app-select [(ngModel)]="expenseForm.category" [options]="expenseCategoryOptions" class="w-full"></app-select>
         </div>
 
         @if (expenseForm.therapist_id) {
@@ -1147,12 +1106,7 @@
 
         <div>
           <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
-          <select [(ngModel)]="expenseForm.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary">
-            <option value="transfer">Transferencia Bancaria</option>
-            <option value="yape_plin">Yape / Plin</option>
-            <option value="cash">Efectivo</option>
-            <option value="other">Otro</option>
-          </select>
+          <app-select [(ngModel)]="expenseForm.method" [options]="expenseMethodOptions" class="w-full"></app-select>
         </div>
 
         <div>

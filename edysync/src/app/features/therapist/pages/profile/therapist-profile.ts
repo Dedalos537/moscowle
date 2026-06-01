@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { TherapistService, TherapistProfileData } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 @Component({
   selector: 'app-therapist-profile',
@@ -100,6 +101,10 @@ export class TherapistProfile implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  get timezoneOptions(): SelectOption[] {
+    return this.timezones.map(tz => ({value: tz, label: tz}));
   }
 
   get timezones(): string[] {

@@ -42,11 +42,7 @@
           </div>
           <div>
             <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Zona Horaria</label>
-            <select [(ngModel)]="timezone" class="w-full rounded-lg border-border focus:ring-primary focus:border-primary text-sm">
-              @for (tz of timezones; track tz) {
-                <option [value]="tz">{{ tz }}</option>
-              }
-            </select>
+            <app-select [(ngModel)]="timezone" [options]="timezoneOptions" class="w-full rounded-lg border-border focus:ring-primary focus:border-primary text-sm"></app-select>
           </div>
         </div>
       </app-card>

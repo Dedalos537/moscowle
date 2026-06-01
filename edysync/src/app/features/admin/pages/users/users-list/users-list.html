@@ -84,19 +84,9 @@
         </h3>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
-          <select (change)="onSedeChange($any($event.target).value)" class="input-field text-sm">
-            <option value="">Todas las Sedes</option>
-            @for (s of sedes; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
-            }
-          </select>
+          <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes" [clearable]="true" class="w-48"></app-select>
 
-          <select (change)="onTherapistFilterChange($any($event.target).value)" class="input-field text-sm">
-            <option value="">Todos Terapeutas</option>
-            @for (t of therapists; track t.id) {
-              <option [value]="t.id">{{ t.username }}</option>
-            }
-          </select>
+          <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions" placeholder="Todos los terapeutas" [clearable]="true" class="w-48"></app-select>
 
           <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full sm:w-56"></app-input>
 
@@ -144,12 +134,7 @@
                   </td>
                   <td class="px-5 py-3.5 text-sm text-on-surface-variant max-w-[160px] truncate" [title]="u.email">{{ u.email }}</td>
                   <td class="px-5 py-3.5">
-                    <select [value]="u.role" (change)="updateRole(u, $event)" class="appearance-none bg-surface-container-high hover:bg-surface-container-highest border border-border/30 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg text-sm font-medium py-1.5 pl-3 pr-8 cursor-pointer transition-all text-on-surface">
-                      <option value="terapista">Terapeuta</option>
-                      <option value="jugador">Paciente</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    <app-select [(ngModel)]="u.role" [options]="roleOptions" (valueChange)="updateRole(u, $event)" class="w-36"></app-select>
                   </td>
                   <td class="px-5 py-3.5">
                     @if (u.role === 'jugador') {
@@ -176,12 +161,8 @@
                   <td class="px-5 py-3.5">
                     @if (u.role === 'jugador') {
                       <div class="flex items-center gap-2">
-                        <select #sel multiple class="w-44 bg-surface-container-high border border-border/30 text-on-surface text-xs font-medium rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary py-1.5 pl-3 pr-2 h-20 custom-scrollbar">
-                          @for (t of therapists; track t.id) {
-                            <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)" class="py-0.5">{{ t.username }}</option>
-                          }
-                        </select>
-                        <button (click)="assignTherapist(u.id, sel)" class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-soft transition-all shrink-0 cursor-pointer" title="Guardar">
+                        <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll" class="w-44"></app-select>
+                        <button (click)="assignTherapist(u)" class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-soft transition-all shrink-0 cursor-pointer" title="Guardar">
                           <fa-icon [icon]="['fas', 'check']" class="text-lg"></fa-icon>
                         </button>
                       </div>
@@ -254,12 +235,8 @@
                       <fa-icon [icon]="['fas', 'stethoscope']" class="text-sm"></fa-icon> Terapeutas Asignados
                     </label>
                     <div class="flex gap-2">
-                      <select #sel2 multiple class="flex-1 bg-surface-container-lowest border border-border/30 text-on-surface text-xs rounded-lg focus:ring-primary focus:border-primary p-2 h-20 custom-scrollbar">
-                        @for (t of therapists; track t.id) {
-                          <option [value]="t.id" [selected]="u.therapist_ids.includes(t.id)">{{ t.username }}</option>
-                        }
-                      </select>
-                      <button (click)="assignTherapist(u.id, sel2)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-soft self-start shrink-0 cursor-pointer">
+                      <app-select [multiple]="true" [(ngModel)]="u.therapist_ids" [options]="therapistOptionsAll" class="flex-1"></app-select>
+                      <button (click)="assignTherapist(u)" class="px-3 py-2 bg-secondary text-on-secondary rounded-lg text-xs font-medium hover:bg-secondary-fixed-dim transition-colors shadow-soft self-start shrink-0 cursor-pointer">
                         <fa-icon [icon]="['fas', 'check']" class="text-sm"></fa-icon>
                       </button>
                     </div>
@@ -347,11 +324,7 @@
       </div>
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
-        <select [(ngModel)]="editData.role" class="input-field text-sm">
-          <option value="terapista">Terapeuta</option>
-          <option value="jugador">Paciente</option>
-          <option value="admin">Administrador</option>
-        </select>
+        <app-select [(ngModel)]="editData.role" [options]="roleOptions" class="w-full"></app-select>
       </div>
       <label class="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" [(ngModel)]="editData.is_active" class="rounded text-primary focus:ring-primary">
@@ -365,12 +338,7 @@
           </h4>
           <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
             <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas</label>
-            <p class="text-[10px] text-on-surface-variant/60 mb-1">Ctrl+Click para múltiples</p>
-            <select multiple [(ngModel)]="editData.sede_ids" class="input-field h-24 text-sm">
-              @for (s of sedes; track s.id) {
-                <option [value]="s.id">{{ s.name }}</option>
-              }
-            </select>
+            <app-select [multiple]="true" [(ngModel)]="editData.sede_ids" [options]="multiSedeOptions" class="w-full"></app-select>
           </div>
           <div class="bg-surface-container-lowest p-3 rounded-lg border border-border/20">
             <label class="text-label-caps text-on-surface-variant mb-1.5 block">Horario Regular</label>
@@ -410,12 +378,7 @@
       @if (editData.role === 'jugador') {
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
-          <select [(ngModel)]="editData.sede_id" class="input-field text-sm">
-            <option [value]="null">— Sin asignar —</option>
-            @for (s of sedes; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
-            }
-          </select>
+          <app-select [(ngModel)]="editData.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
         </div>
 
         <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
@@ -425,27 +388,15 @@
           <div class="grid grid-cols-3 gap-3">
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1 block">Modalidad</label>
-              <select [(ngModel)]="editData.modality" class="input-field text-sm">
-                <option [value]="0">Sin paquete</option>
-                <option [value]="1">1x (4 ses)</option>
-                <option [value]="2">2x (8 ses)</option>
-                <option [value]="3">3x (12 ses)</option>
-              </select>
+              <app-select [(ngModel)]="editData.modality" [options]="editModalityOptions" class="w-full"></app-select>
             </div>
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1 block">Plan</label>
-              <select [(ngModel)]="editData.plan_type" class="input-field text-sm">
-                <option value="individual">Individual</option>
-                <option value="group">Grupal</option>
-              </select>
+              <app-select [(ngModel)]="editData.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
             </div>
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1 block">Frecuencia</label>
-              <select [(ngModel)]="editData.frequency" class="input-field text-sm">
-                <option value="monthly">Mensual</option>
-                <option value="biweekly">Quincenal</option>
-                <option value="weekly">Semanal</option>
-              </select>
+              <app-select [(ngModel)]="editData.frequency" [options]="frequencyOptions" class="w-full"></app-select>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -473,19 +424,11 @@
               <div class="grid grid-cols-3 gap-3">
                 <div>
                   <label class="text-[10px] text-on-surface-variant/60 uppercase">Modalidad</label>
-                  <select [(ngModel)]="editData.modality_2" class="input-field text-sm">
-                    <option [value]="0">Sin paq.</option>
-                    <option [value]="1">1x</option>
-                    <option [value]="2">2x</option>
-                    <option [value]="3">3x</option>
-                  </select>
+                  <app-select [(ngModel)]="editData.modality_2" [options]="editModalityOptions" class="w-full"></app-select>
                 </div>
                 <div>
                   <label class="text-[10px] text-on-surface-variant/60 uppercase">Plan</label>
-                  <select [(ngModel)]="editData.plan_type_2" class="input-field text-sm">
-                    <option value="individual">Individual</option>
-                    <option value="group">Grupal</option>
-                  </select>
+                  <app-select [(ngModel)]="editData.plan_type_2" [options]="planTypeOptions" class="w-full"></app-select>
                 </div>
                 <div>
                   <label class="text-[10px] text-on-surface-variant/60 uppercase">Monto</label>
@@ -583,35 +526,21 @@
         </div>
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1.5 block">Rol</label>
-          <select [(ngModel)]="newUser.role" class="input-field text-sm">
-            <option value="terapista">Terapeuta</option>
-            <option value="jugador">Paciente</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="admin">Administrador</option>
-          </select>
+          <app-select [(ngModel)]="newUser.role" [options]="roleOptions" class="w-full"></app-select>
         </div>
       </div>
 
       @if (newUser.role === 'jugador') {
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
-          <select [(ngModel)]="newUser.sede_id" class="input-field text-sm">
-            <option [value]="null">— Sin asignar —</option>
-            @for (s of sedes; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
-            }
-          </select>
+          <app-select [(ngModel)]="newUser.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
         </div>
       }
 
       @if (newUser.role === 'terapista') {
         <div>
           <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sedes Asignadas (Ctrl+Click)</label>
-          <select multiple [(ngModel)]="newUser.sede_ids" class="input-field h-24 text-sm">
-            @for (s of sedes; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
-            }
-          </select>
+          <app-select [multiple]="true" [(ngModel)]="newUser.sede_ids" [options]="multiSedeOptions" class="w-full"></app-select>
         </div>
         <div class="bg-surface-container-high rounded-xl p-4">
           <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
@@ -639,26 +568,15 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1.5 block">Modalidad</label>
-              <select [(ngModel)]="newUser.modality" class="input-field text-sm">
-                <option [value]="1">1x Semana (4 ses)</option>
-                <option [value]="2">2x Semana (8 ses)</option>
-                <option [value]="3">3x Semana (12 ses)</option>
-              </select>
+              <app-select [(ngModel)]="newUser.modality" [options]="createModalityOptions" class="w-full"></app-select>
             </div>
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1.5 block">Frecuencia</label>
-              <select [(ngModel)]="newUser.frequency" class="input-field text-sm">
-                <option value="monthly">Mensual</option>
-                <option value="biweekly">Quincenal</option>
-                <option value="weekly">Semanal</option>
-              </select>
+              <app-select [(ngModel)]="newUser.frequency" [options]="frequencyOptions" class="w-full"></app-select>
             </div>
             <div>
               <label class="text-label-caps text-on-surface-variant mb-1.5 block">Tipo de Plan</label>
-              <select [(ngModel)]="newUser.plan_type" class="input-field text-sm">
-                <option value="individual">Individual</option>
-                <option value="group">Grupal / Fijo</option>
-              </select>
+              <app-select [(ngModel)]="newUser.plan_type" [options]="planTypeOptions" class="w-full"></app-select>
             </div>
           </div>
           <div>
@@ -687,12 +605,7 @@
                 </div>
                 <div class="sm:col-span-2">
                   <label class="text-label-caps text-on-surface-variant mb-1 block">Terapeuta</label>
-                  <select [(ngModel)]="newUser.schedule_therapist" class="input-field text-sm">
-                    <option [value]="null">— Seleccionar —</option>
-                    @for (t of therapists; track t.id) {
-                      <option [value]="t.id">{{ t.username }} ({{ t.email }})</option>
-                    }
-                  </select>
+                  <app-select [(ngModel)]="newUser.schedule_therapist" [options]="scheduleTherapistOptions" class="w-full"></app-select>
                 </div>
               </div>
               <div>

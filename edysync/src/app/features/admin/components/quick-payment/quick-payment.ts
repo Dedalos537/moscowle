@@ -2,6 +2,7 @@ import { Component, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetecto
 import { AdminService } from '../../../../core/services/admin.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { Subscription, Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 interface PatientHit {
   id: number;
@@ -43,6 +44,14 @@ export class QuickPayment implements OnDestroy {
   analyzingReceipt = false;
   analyzeResult: any = null;
   registerStatus = '';
+
+  paymentMethodOptions: SelectOption[] = [
+    {value: 'transfer', label: 'Transferencia'},
+    {value: 'yape', label: 'Yape'},
+    {value: 'plin', label: 'Plin'},
+    {value: 'cash', label: 'Efectivo'},
+    {value: 'card', label: 'Tarjeta'},
+  ];
 
   registerForm: RegisterForm = {
     patient_id: null,

@@ -6,12 +6,7 @@
 
   <div class="card p-4 flex flex-wrap gap-4 items-center">
     <label class="text-sm font-semibold text-on-surface">Filtrar por Terapeuta:</label>
-    <select [(ngModel)]="selectedTherapistId" (change)="onTherapistFilterChange()" class="input-field text-sm w-full md:w-64">
-      <option value="all">Todos los Terapeutas</option>
-      @for (t of therapists; track t.id) {
-        <option value="{{ t.id }}">{{ t.username }}</option>
-      }
-    </select>
+    <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full md:w-64"></app-select>
   </div>
 
   <div class="min-h-[500px]">
@@ -36,23 +31,13 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta <span class="text-error">*</span></label>
-      <select [(ngModel)]="createForm.therapist_id" (change)="onTherapistSelectCreate()" class="input-field text-sm">
-        <option value="">Seleccionar Terapeuta...</option>
-        @for (t of therapists; track t.id) {
-          <option value="{{ t.id }}">{{ t.username }}</option>
-        }
-      </select>
+      <app-select [(ngModel)]="createForm.therapist_id" (valueChange)="onTherapistSelectCreate()" [options]="therapistCreateOptions" class="text-sm"></app-select>
     </div>
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
       <div class="relative">
-        <select [(ngModel)]="createForm.patient_id" class="input-field text-sm" [disabled]="!createForm.therapist_id">
-          <option value="">Seleccionar Paciente...</option>
-          @for (p of patients; track p.id) {
-            <option value="{{ p.id }}">{{ p.username }}</option>
-          }
-        </select>
+        <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" class="text-sm"></app-select>
         @if (patientsLoading) {
           <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
         }
@@ -69,12 +54,7 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede <span class="text-error">*</span></label>
-      <select [(ngModel)]="createForm.sede" class="input-field text-sm">
-        <option value="">Seleccionar Sede...</option>
-        @for (s of sedes; track s) {
-          <option value="{{ s }}">{{ s }}</option>
-        }
-      </select>
+      <app-select [(ngModel)]="createForm.sede" [options]="sedeCreateOptions" class="text-sm"></app-select>
     </div>
 
     <div>
@@ -211,11 +191,7 @@
         </div>
         <div>
           <label class="text-xs font-medium text-on-surface-variant mb-1 block">Estado</label>
-          <select [(ngModel)]="editForm.status" class="input-field text-sm w-full">
-            <option value="scheduled">Programada</option>
-            <option value="completed">Completada</option>
-            <option value="cancelled">Cancelada</option>
-          </select>
+          <app-select [(ngModel)]="editForm.status" [options]="statusOptions" class="text-sm w-full"></app-select>
         </div>
       </div>
     </div>

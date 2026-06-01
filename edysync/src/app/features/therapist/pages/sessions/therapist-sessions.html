@@ -112,11 +112,7 @@
     </div>
     <div>
       <label class="block text-sm font-medium text-on-surface mb-1">Estado</label>
-      <select [(ngModel)]="editForm.status" class="input-field">
-        <option value="scheduled">Programada</option>
-        <option value="completed">Completada</option>
-        <option value="cancelled">Cancelada</option>
-      </select>
+      <app-select [(ngModel)]="editForm.status" [options]="statusOptions" class="input-field"></app-select>
     </div>
   </div>
   <div modal-footer>

@@ -68,103 +68,7 @@ def _parse_datetime(value):
 def dashboard():
     if current_user.role != 'terapista':
         return redirect(url_for('main.dashboard'))
-
-    stats = dashboard_service.get_therapist_stats(current_user.id)
-    patients = dashboard_service.get_therapist_patients_data(current_user.id)
-
-    # Alerts: simple heuristics
-    alerts = []
-    # Filter by my patients only
-    my_patient_ids = [p.id for p in current_user.associated_patients]
-    if my_patient_ids:
-        low_accuracy_users = db.session.query(User.username)\
-            .join(SessionMetrics, SessionMetrics.user_id == User.id)\
-            .filter(User.id.in_(my_patient_ids), SessionMetrics.accurracy < 60)\
-            .limit(5).all()
-        for name_tuple in low_accuracy_users:
-            alerts.append({"patient": name_tuple[0], "message": "Rendimiento bajo detectado", "type": "red"})
-
-    # Audit compliance data
-    try:
-        from app.models import SessionAudit
-        from sqlalchemy import func as sqlfunc
-        avg_compliance = db.session.query(sqlfunc.avg(SessionAudit.audit_score)).join(
-            Appointment, SessionAudit.appointment_id == Appointment.id
-        ).filter(
-            Appointment.therapist_id == current_user.id,
-            SessionAudit.audit_score.isnot(None)
-        ).scalar() or 0
-        total_audits = SessionAudit.query.join(
-            Appointment, SessionAudit.appointment_id == Appointment.id
-        ).filter(
-            Appointment.therapist_id == current_user.id,
-            SessionAudit.audit_score.isnot(None)
-        ).count()
-    except Exception:
-        avg_compliance = 0
-        total_audits = 0
-
-    # Today's sessions (agenda)
-    from datetime import datetime, timedelta
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    tomorrow = today + timedelta(days=1)
-    today_sessions = Appointment.query.filter(
-        Appointment.therapist_id == current_user.id,
-        Appointment.start_time >= today,
-        Appointment.start_time < tomorrow,
-        Appointment.status != 'cancelled'
-    ).order_by(Appointment.start_time).all()
-
-    agenda = []
-    next_session = None
-    now = datetime.now()
-    for s in today_sessions:
-        patient = User.query.get(s.patient_id)
-        is_current = s.start_time <= now and (s.end_time is None or s.end_time > now)
-        session_info = {
-            'id': s.id,
-            'title': s.title or 'Sesion de Terapia',
-            'patient': patient.username if patient else 'N/A',
-            'start': s.start_time.strftime('%I:%M %p'),
-            'location': s.location or '',
-            'status': s.status,
-            'is_current': is_current
-        }
-        agenda.append(session_info)
-        if not next_session and (is_current or s.start_time > now):
-            next_session = session_info
-
-    # Recent audit objectives for the current/next session
-    session_objectives = []
-    session_progress = 0
-    if next_session:
-        try:
-            audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
-            if audit:
-                session_progress = int(audit.audit_score or 0)
-                report = audit.get_report()
-                if report:
-                    for obj in report.get('objectives', []):
-                        session_objectives.append({
-                            'name': obj.get('name', ''),
-                            'status': obj.get('status', 'pendiente')
-                        })
-        except Exception:
-            pass
-
-    return render_template('therapist/dashboard.html',
-                           stats=stats,
-                           patients=patients,
-                           alerts=alerts,
-                           avg_compliance=round(avg_compliance, 1),
-                           total_audits=total_audits,
-                           agenda=agenda,
-                           next_session=next_session,
-                           session_objectives=session_objectives,
-                           session_progress=session_progress,
-                           planned_text=None,
-                           today_date=now.strftime('%d %b'),
-                           active_page='dashboard')
+    return redirect('/')
 
 @therapist_bp.route('/patients')
 @login_required
@@ -1274,32 +1178,30 @@ def api_update_profile():
 def api_weekly_reports_pending():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Acceso denegado'}), 403
-
-    from app.models import WeeklyReport, Notification
-
-    week_start, week_end = None, None
-    today = datetime.utcnow().date()
-    monday = today - timedelta(days=today.weekday())
-
-    reports = WeeklyReport.query.filter(
-        WeeklyReport.therapist_id == current_user.id,
-        WeeklyReport.week_start == monday
-    ).count()
-
-    notification = Notification.query.filter(
-        Notification.user_id == current_user.id,
-        Notification.type == 'reportes',
-        Notification.is_read == False
-    ).order_by(Notification.created_at.desc()).first()
-
-    return jsonify({
-        'success': True,
-        'has_pending': reports > 0,
-        'reports_count': reports,
-        'has_notification': notification is not None,
-        'week_start': monday.isoformat(),
-        'week_end': (monday + timedelta(days=6)).isoformat(),
-    })
+    try:
+        from app.models import WeeklyReport, Notification
+        today = datetime.utcnow().date()
+        monday = today - timedelta(days=today.weekday())
+        reports = WeeklyReport.query.filter(
+            WeeklyReport.therapist_id == current_user.id,
+            WeeklyReport.week_start == monday
+        ).count()
+        notification = Notification.query.filter(
+            Notification.user_id == current_user.id,
+            Notification.type == 'reportes',
+            Notification.is_read == False
+        ).order_by(Notification.created_at.desc()).first()
+        return jsonify({
+            'success': True,
+            'has_pending': reports > 0,
+            'reports_count': reports,
+            'has_notification': notification is not None,
+            'week_start': monday.isoformat(),
+            'week_end': (monday + timedelta(days=6)).isoformat(),
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in weekly-reports/pending: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al consultar reportes'}), 500
 
 
 @therapist_bp.route('/efficiency', methods=['GET'])

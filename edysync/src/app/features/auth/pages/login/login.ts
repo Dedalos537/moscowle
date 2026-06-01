@@ -24,6 +24,16 @@ export class Login implements OnInit, OnDestroy {
   emailError = '';
   passwordError = '';
 
+  showHelp = false;
+
+  guideStep = 0; // 0=none, 1=email, 2=password, 3=button, 4=done
+  guidePos = { top: 0, left: 0, arrowLeft: 50 };
+  guideText = '';
+  guideVisible = false;
+
+  private guideTimer: any;
+  private resizeHandler: (() => void) | null = null;
+
   private subs = new Subscription();
 
   constructor(
@@ -43,10 +53,111 @@ export class Login implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     }));
+    this.scheduleGuide();
   }
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    clearTimeout(this.guideTimer);
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+  }
+
+  private scheduleGuide() {
+    clearTimeout(this.guideTimer);
+    this.guideTimer = setTimeout(() => {
+      this.startGuide();
+    }, 10000);
+  }
+
+  private startGuide() {
+    if (this.guideStep > 0 || this.showHelp) return;
+    const logo = document.querySelector('.login-logo');
+    if (logo) {
+      const r = logo.getBoundingClientRect();
+      this.guidePos = { top: r.top - 8, left: r.right + 16, arrowLeft: 16 };
+    }
+    this.guideText = 'Ingresa aquí el correo electrónico que te enviamos para tu login';
+    this.guideStep = 1;
+    this.guideVisible = true;
+    this.cdr.markForCheck();
+
+    setTimeout(() => this.positionGuide('email'), 350);
+    this.resizeHandler = () => {
+      if (this.guideStep === 1) this.positionGuide('email');
+      else if (this.guideStep === 2) this.positionGuide('password');
+      else if (this.guideStep === 3) this.positionGuide('login-btn');
+    };
+    window.addEventListener('resize', this.resizeHandler);
+  }
+
+  private positionGuide(targetId: string) {
+    const el = document.getElementById(targetId);
+    const card = document.querySelector('.login-card');
+    if (!el || !card) return;
+    const er = el.getBoundingClientRect();
+    const cr = card.getBoundingClientRect();
+
+    if (targetId === 'email') {
+      this.guidePos = {
+        top: er.top - 4,
+        left: cr.right + 16,
+        arrowLeft: 20,
+      };
+    } else if (targetId === 'password') {
+      this.guidePos = {
+        top: er.top - 4,
+        left: cr.right + 16,
+        arrowLeft: 20,
+      };
+    } else if (targetId === 'login-btn') {
+      const btn = document.querySelector('.login-submit') as HTMLElement;
+      if (btn) {
+        const br = btn.getBoundingClientRect();
+        this.guidePos = {
+          top: br.top - 8,
+          left: cr.right + 16,
+          arrowLeft: 20,
+        };
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onEmailInput() {
+    if (this.guideStep === 1 && this.email.trim().length > 5) {
+      this.guideStep = 2;
+      this.guideText = 'Ahora ingresa la contraseña que te enviamos';
+      this.cdr.markForCheck();
+      setTimeout(() => this.positionGuide('password'), 350);
+    }
+  }
+
+  onPasswordInput() {
+    if (this.guideStep === 2 && this.password.length > 0) {
+      this.guideStep = 3;
+      this.guideText = 'Perfecto! Presiona INICIAR SESIÓN para acceder';
+      this.cdr.markForCheck();
+      setTimeout(() => this.positionGuide('login-btn'), 350);
+    }
+  }
+
+  dismissGuide() {
+    this.guideStep = 4;
+    this.guideVisible = false;
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
+    this.cdr.markForCheck();
+  }
+
+  toggleHelp() {
+    this.showHelp = !this.showHelp;
+    if (this.showHelp) {
+      this.dismissGuide();
+    }
   }
 
   toggleDarkMode() {

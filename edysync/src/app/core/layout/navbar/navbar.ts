@@ -14,6 +14,7 @@ import { ConfirmService } from '../../services/confirm.service';
 export class Navbar implements OnInit, OnDestroy {
   user$: Observable<any>;
   theme: string = 'light';
+  showHelp = false;
   private subs = new Subscription();
 
   constructor(
@@ -57,5 +58,9 @@ export class Navbar implements OnInit, OnDestroy {
 
   toggleTheme() {
     this.themeService.toggle();
+  }
+
+  toggleHelp() {
+    this.showHelp = !this.showHelp;
   }
 }

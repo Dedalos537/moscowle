@@ -9,17 +9,17 @@
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Pacientes Activos</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.active_patients }}</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.active_patients || data.total_students || 0 }}</p>
     </div>
     <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Sesiones Hoy</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.today_sessions_count }}</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.today_sessions_count || data.agenda?.length || 0 }}</p>
     </div>
     <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Cumplimiento</p>
       <p class="text-3xl font-bold text-on-surface">
         @if (data.avg_compliance > 0) {
-          {{ data.avg_compliance }}%
+          {{ data.avg_compliance | number:'1.0-0' }}%
         }
         @if (!data.avg_compliance || data.avg_compliance === 0) {
           —
@@ -28,7 +28,7 @@
     </div>
     <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
       <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Juegos Asignados</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.total_games_assigned }}</p>
+      <p class="text-3xl font-bold text-on-surface">{{ data.total_games_assigned || 0 }}</p>
     </div>
   </div>
 

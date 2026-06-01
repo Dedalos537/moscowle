@@ -5,6 +5,7 @@ import { AdminService } from '../../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
+import { SelectOption } from '../../../../../shared/components/select/select';
 
 @Component({
   selector: 'app-user-detail',
@@ -23,6 +24,21 @@ export class UserDetail implements OnInit, OnDestroy {
   selectedStatus = 'active';
   showEditModal = false;
   editData = { username: '', role: '', is_active: true };
+
+  statusOptions: SelectOption[] = [
+    {value: 'active', label: 'Activo'},
+    {value: 'inactive', label: 'Inactivo'},
+    {value: 'retired', label: 'Retirado'},
+    {value: 'debtor', label: 'Deudor'},
+  ];
+
+  roleOptions: SelectOption[] = [
+    {value: 'jugador', label: 'Paciente'},
+    {value: 'terapista', label: 'Terapeuta'},
+    {value: 'supervisor', label: 'Supervisor'},
+    {value: 'admin', label: 'Administrador'},
+  ];
+
   private subscriptions: Subscription = new Subscription();
 
   constructor(
@@ -62,12 +78,12 @@ export class UserDetail implements OnInit, OnDestroy {
   }
 
   get roleLabel(): string {
-    const map: Record<string, string> = { jugador: 'Paciente', terapista: 'Terapeuta', admin: 'Administrador' };
+    const map: Record<string, string> = { jugador: 'Paciente', terapista: 'Terapeuta', admin: 'Administrador', supervisor: 'Supervisor' };
     return map[this.user?.role] || this.user?.role || '';
   }
 
   get roleColor(): string {
-    const map: Record<string, string> = { admin: 'purple', jugador: 'blue', terapista: 'green' };
+    const map: Record<string, string> = { admin: 'purple', jugador: 'blue', terapista: 'green', supervisor: 'orange' };
     return map[this.user?.role] || 'gray';
   }
 

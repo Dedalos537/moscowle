@@ -11,6 +11,13 @@
        <fa-icon [icon]="theme === 'light' ? ['fas', 'moon'] : ['fas', 'sun']"></fa-icon>
     </button>
 
+    <button (click)="toggleHelp()"
+      class="p-2 rounded-full hover:bg-surface-container-low transition text-on-surface-variant"
+      [class.!bg-primary-container/30]="showHelp"
+      title="Ayuda">
+      <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
+    </button>
+
     @if (user$ | async; as user) {
       <div class="flex items-center gap-4 border-l pl-4 border-border">
         <span class="text-body-sm font-medium text-on-surface">{{ user.email }}</span>
@@ -22,4 +29,45 @@
       <app-button variant="primary" label="Iniciar Sesión" (clicked)="usuarioSeVaALogin()"></app-button>
     }
   </div>
+
+  @if (showHelp) {
+    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="toggleHelp()">
+      <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-md w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
+        <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center mx-auto mb-4">
+          <fa-icon [icon]="['fas', 'lightbulb']" class="text-primary text-2xl"></fa-icon>
+        </div>
+        <h3 class="text-lg font-bold text-on-surface text-center mb-1">Bienvenido a EdySync</h3>
+        <p class="text-body-sm text-on-surface-variant text-center mb-6">Plataforma digital del Centro de Terapias Juan Pablo II</p>
+
+        <div class="space-y-3">
+          <div class="bg-surface-container-low rounded-xl p-4">
+            <p class="text-body-sm text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'sign-in-alt']" class="text-primary mr-2"></fa-icon>
+              Inicia sesión con tu correo y contraseña para acceder a tu panel personal.
+            </p>
+          </div>
+          <div class="bg-surface-container-low rounded-xl p-4">
+            <p class="text-body-sm text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'user-plus']" class="text-primary mr-2"></fa-icon>
+              Si eres nuevo, contacta a administración para crear tu cuenta.
+            </p>
+          </div>
+          <div class="bg-surface-container-low rounded-xl p-4">
+            <p class="text-body-sm text-on-surface-variant">
+              <fa-icon [icon]="['fas', 'question-circle']" class="text-primary mr-2"></fa-icon>
+              ¿Olvidaste tu contraseña? Usa la opción "¿Olvidaste tu contraseña?" en el inicio de sesión.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-border/30 text-center">
+          <p class="text-body-sm text-on-surface-variant">
+            <fa-icon [icon]="['fas', 'envelope']" class="mr-1"></fa-icon>
+            Contacto:
+            <a href="mailto:info@centrojuanpabloii.com" class="text-primary font-bold hover:underline">info@centrojuanpabloii.com</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  }
 </header>

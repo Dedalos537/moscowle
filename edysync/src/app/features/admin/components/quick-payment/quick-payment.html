@@ -98,13 +98,7 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Metodo</label>
-            <select [(ngModel)]="registerForm.method" class="input-field">
-              <option value="transfer">Transferencia</option>
-              <option value="yape">Yape</option>
-              <option value="plin">Plin</option>
-              <option value="cash">Efectivo</option>
-              <option value="card">Tarjeta</option>
-            </select>
+            <app-select [(ngModel)]="registerForm.method" [options]="paymentMethodOptions" class="input-field"></app-select>
           </div>
           <div>
             <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Descuento (S/)</label>

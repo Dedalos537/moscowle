@@ -5,6 +5,7 @@ import { HeaderService } from '../../../../core/services/header.service';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 @Component({
   selector: 'app-expenses',
@@ -23,6 +24,20 @@ export class Expenses implements OnInit, OnDestroy {
   loading = true;
   submitting = false;
   private subscriptions: Subscription = new Subscription();
+
+  categoryOptions: SelectOption[] = [
+    {value: 'therapist_payment', label: 'Pago a Terapeuta'},
+    {value: 'operational', label: 'Gasto Operativo'},
+    {value: 'bonus', label: 'Bonificación'},
+    {value: 'other', label: 'Otro'},
+  ];
+
+  methodOptions: SelectOption[] = [
+    {value: 'transfer', label: 'Transferencia Bancaria'},
+    {value: 'yape_plin', label: 'Yape / Plin'},
+    {value: 'cash', label: 'Efectivo'},
+    {value: 'other', label: 'Otro'},
+  ];
 
   showModal = false;
   modalMode: 'therapist_payment' | 'operational' = 'operational';

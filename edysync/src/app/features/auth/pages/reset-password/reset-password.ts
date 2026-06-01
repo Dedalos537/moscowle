@@ -18,6 +18,7 @@ export class ResetPassword implements OnDestroy {
   message = '';
   loading = false;
   error: string | null = null;
+  showHelp = false;
 
   private subs = new Subscription();
 

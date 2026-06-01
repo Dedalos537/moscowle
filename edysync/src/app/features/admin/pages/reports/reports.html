@@ -371,7 +371,7 @@
             Top Terapistas
           </h3>
           <div class="space-y-2">
-            @for (t of auditStats?.by_therapist; track $index) {
+            @for (t of auditStats?.by_therapist || []; track $index) {
               <div class="flex justify-between items-center text-sm p-2 hover:bg-surface-container rounded-lg transition-colors">
                 <span class="font-medium text-on-surface">{{ t.name }}</span>
                 <span class="bg-success-container text-success font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}/10</span>
@@ -389,7 +389,7 @@
           </h3>
           <table class="w-full text-left text-sm">
             <tbody>
-              @for (r of auditStats?.recent; track $index) {
+              @for (r of auditStats?.recent || []; track $index) {
                 <tr class="border-b border-border/20 last:border-b-0 hover:bg-surface-container transition-colors">
                   <td class="p-3 font-semibold text-on-surface">{{ r.title }}</td>
                   <td class="p-3 text-on-surface-variant text-xs">{{ r.therapist }}</td>
@@ -544,18 +544,8 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <p class="text-sm text-on-surface-variant">Reportes mensuales por terapeuta y paciente</p>
             <div class="flex gap-2 mt-4 md:mt-0">
-              <select [(ngModel)]="selectedMonth" (change)="loadMonthlySummary()"
-                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
-                @for (m of [1,2,3,4,5,6,7,8,9,10,11,12]; track m) {
-                  <option [value]="m">{{ m | number:'2.0' }}</option>
-                }
-              </select>
-              <select [(ngModel)]="selectedYear" (change)="loadMonthlySummary()"
-                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
-                @for (y of [selectedYear-2, selectedYear-1, selectedYear, selectedYear+1]; track y) {
-                  <option [value]="y">{{ y }}</option>
-                }
-              </select>
+              <app-select [(ngModel)]="selectedMonth" (valueChange)="loadMonthlySummary()" [options]="monthOptions" class="w-20"></app-select>
+              <app-select [(ngModel)]="selectedYear" (valueChange)="loadMonthlySummary()" [options]="yearOptions" class="w-24"></app-select>
               <button class="btn-secondary" (click)="loadMonthlySummary()" [disabled]="monthlyLoading">
                 <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
               </button>
@@ -634,18 +624,8 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <p class="text-sm text-on-surface-variant">Reportes trimestrales por terapeuta y paciente</p>
             <div class="flex gap-2 mt-4 md:mt-0">
-              <select [(ngModel)]="selectedQuarter" (change)="loadQuarterlySummary()"
-                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
-                @for (q of [1,2,3,4]; track q) {
-                  <option [value]="q">Q{{ q }}</option>
-                }
-              </select>
-              <select [(ngModel)]="selectedYear" (change)="loadQuarterlySummary()"
-                      class="h-9 px-3 bg-surface border border-outline rounded-lg text-sm text-on-surface">
-                @for (y of [selectedYear-2, selectedYear-1, selectedYear, selectedYear+1]; track y) {
-                  <option [value]="y">{{ y }}</option>
-                }
-              </select>
+              <app-select [(ngModel)]="selectedQuarter" (valueChange)="loadQuarterlySummary()" [options]="quarterOptions" class="w-20"></app-select>
+              <app-select [(ngModel)]="selectedYear" (valueChange)="loadQuarterlySummary()" [options]="yearOptions" class="w-24"></app-select>
               <button class="btn-secondary" (click)="loadQuarterlySummary()" [disabled]="quarterlyLoading">
                 <fa-icon [icon]="['fas', 'sync-alt']" class="text-[18px]"></fa-icon>
               </button>

@@ -10,12 +10,12 @@
     }
   </button>
 
-  <div class="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300">
+  <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300">
 
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-container to-primary-fixed-dim"></div>
 
       <div class="text-center mb-8">
-          <div class="w-20 h-20 mx-auto mb-4">
+          <div class="login-logo w-20 h-20 mx-auto mb-4">
               <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
           </div>
           <h2 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h2>
@@ -37,9 +37,9 @@
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
                        <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
                    </span>
-                    <input type="email" id="email" name="email" [(ngModel)]="email"
-                        class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-                        placeholder="usuario@ejemplo.com" required>
+                     <input type="email" id="email" name="email" [(ngModel)]="email" (input)="onEmailInput()"
+                         class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
+                         placeholder="usuario@ejemplo.com" required>
                </div>
                @if (emailError) {
                  <span class="text-xs text-error mt-1.5 block">{{ emailError }}</span>
@@ -52,9 +52,9 @@
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
                        <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
                    </span>
-                    <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password"
-                        class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-                        placeholder="Ingresa tu contraseña" required>
+                     <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password" (input)="onPasswordInput()"
+                         class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
+                         placeholder="Ingresa tu contraseña" required>
 
                    <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface focus:outline-none transition-colors border-none bg-transparent cursor-pointer">
                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
@@ -73,11 +73,11 @@
               <a routerLink="/auth/reset-password" class="text-body-sm font-bold text-primary-container hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
           </div>
 
-           <button type="submit"
+           <button type="submit" id="login-btn"
               [disabled]="!isFormValid || isLoading"
-              class="w-full py-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
+              class="login-submit w-full py-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
               [ngClass]="(isFormValid && !isLoading) ? 'bg-primary text-on-primary cursor-pointer shadow-soft shadow-primary/20 btn--active' : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed shadow-none'"
-              (click)="doLogin()">
+              (click)="doLogin(); dismissGuide()">
 
               @if (isLoading) {
                   <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
@@ -95,4 +95,68 @@
            </p>
        </div>
   </div>
+
+  <button type="button" (click)="toggleHelp()"
+    class="help-btn"
+    [class.help-btn--active]="showHelp"
+    [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
+    <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
+  </button>
+
+  @if (guideVisible) {
+    <div class="guide-character" [style.top.px]="guidePos.top" [style.left.px]="guidePos.left">
+      <div class="guide-avatar">
+        <img src="assets/img/logo.svg" alt="Guía">
+      </div>
+      <div class="guide-bubble">
+        <span class="guide-text">{{ guideText }}</span>
+        <div class="guide-arrow" [style.left.%]="guidePos.arrowLeft"></div>
+      </div>
+      <button type="button" class="guide-close" (click)="dismissGuide()">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+  }
+
+  @if (showHelp) {
+    <div class="help-overlay" (click)="toggleHelp()">
+      <div class="help-panel" (click)="$event.stopPropagation()">
+        <div class="help-character">
+          <fa-icon [icon]="['fas', 'lightbulb']" class="help-icon"></fa-icon>
+        </div>
+        <h4 class="help-title">¿Cómo iniciar sesión?</h4>
+        <p class="help-subtitle">Sigue estos pasos para acceder a la plataforma</p>
+
+        <div class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-content">
+            <strong>Correo Electrónico</strong>
+            <p>Escribe el correo que registraste en la plataforma, por ejemplo: <em>usuario@ejemplo.com</em></p>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-content">
+            <strong>Contraseña</strong>
+            <p>Ingresa tu contraseña personal. Si no recuerdas tu contraseña, haz clic en <em>"¿Olvidaste tu contraseña?"</em></p>
+          </div>
+        </div>
+
+        <div class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-content">
+            <strong>Iniciar Sesión</strong>
+            <p>Presiona el botón <em>"INICIAR SESIÓN"</em> y accederás a tu panel personalizado según tu rol.</p>
+          </div>
+        </div>
+
+        <div class="help-footer">
+          <fa-icon [icon]="['fas', 'envelope']"></fa-icon>
+          ¿Más dudas? Escríbenos a
+          <a href="mailto:info@centrojuanpabloii.com" class="help-email">info@centrojuanpabloii.com</a>
+        </div>
+      </div>
+    </div>
+  }
 </div>

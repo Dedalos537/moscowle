@@ -7,6 +7,7 @@ import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
+import { SelectOption } from '../../../../../shared/components/select/select';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 
 Chart.register(...registerables);
@@ -58,7 +59,7 @@ export class UsersList implements OnInit, OnDestroy {
   activeFilter = 'all';
   searchQuery = '';
   selectedSedeId: number | null = null;
-  selectedTherapistId: string | null = null;
+  selectedTherapistId: number | null = null;
   loading = true;
 
   stats = { total: 0, active: 0, inactive: 0, patients: 0, therapists: 0, supervisors: 0, admins: 0, retired: 0, debtors: 0 };
@@ -84,6 +85,66 @@ export class UsersList implements OnInit, OnDestroy {
   private sedeLookup: Record<string, string> = {};
 
   private subscriptions = new Subscription();
+
+  roleOptions: SelectOption[] = [
+    {value: 'jugador', label: 'Paciente'},
+    {value: 'terapista', label: 'Terapeuta'},
+    {value: 'supervisor', label: 'Supervisor'},
+    {value: 'admin', label: 'Administrador'},
+  ];
+
+  modalityOptions: SelectOption[] = [
+    {value: 'presencial', label: 'Presencial'},
+    {value: 'online', label: 'Online'},
+  ];
+
+  planTypeOptions: SelectOption[] = [
+    {value: 'individual', label: 'Individual'},
+    {value: 'group', label: 'Grupal'},
+  ];
+
+  frequencyOptions: SelectOption[] = [
+    {value: 'monthly', label: 'Mensual'},
+    {value: 'biweekly', label: 'Quincenal'},
+    {value: 'weekly', label: 'Semanal'},
+  ];
+
+  editModalityOptions: SelectOption[] = [
+    {value: 0, label: 'Sin paquete'},
+    {value: 1, label: '1x (4 ses)'},
+    {value: 2, label: '2x (8 ses)'},
+    {value: 3, label: '3x (12 ses)'},
+  ];
+
+  createModalityOptions: SelectOption[] = [
+    {value: 1, label: '1x Semana (4 ses)'},
+    {value: 2, label: '2x Semana (8 ses)'},
+    {value: 3, label: '3x Semana (12 ses)'},
+  ];
+
+  get sedeOptions(): SelectOption[] {
+    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+  }
+
+  get therapistOptions(): SelectOption[] {
+    return [{value: null, label: 'Todos los terapeutas'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  get therapistOptionsAll(): SelectOption[] {
+    return this.therapists.map(t => ({value: t.id, label: t.username}));
+  }
+
+  get patientSedeOptions(): SelectOption[] {
+    return [{value: null, label: '— Sin asignar —'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+  }
+
+  get multiSedeOptions(): SelectOption[] {
+    return this.sedes.map(s => ({value: s.id, label: s.name}));
+  }
+
+  get scheduleTherapistOptions(): SelectOption[] {
+    return [{value: null, label: '— Seleccionar —'}, ...this.therapists.map(t => ({value: t.id, label: t.username + ' (' + t.email + ')'}))];
+  }
 
   constructor(
     private adminService: AdminService,
@@ -216,12 +277,12 @@ export class UsersList implements OnInit, OnDestroy {
           for (const s of this.sedes) {
             if (s.name === label) {
               this.selectedSedeId = s.id;
-              this.onSedeChange(String(s.id));
+              this.onSedeChange(s.id);
               return;
             }
           }
           this.selectedSedeId = null;
-          this.onSedeChange('');
+          this.onSedeChange(null);
         }
       },
     };
@@ -318,13 +379,13 @@ export class UsersList implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  onSedeChange(sedeId: string) {
-    this.selectedSedeId = sedeId ? parseInt(sedeId) : null;
+  onSedeChange(sedeId: number | null) {
+    this.selectedSedeId = sedeId;
     this.applyFilters();
   }
 
-  onTherapistFilterChange(therapistId: string) {
-    this.selectedTherapistId = therapistId || null;
+  onTherapistFilterChange(therapistId: number | null) {
+    this.selectedTherapistId = therapistId;
     this.applyFilters();
   }
 
@@ -349,11 +410,10 @@ export class UsersList implements OnInit, OnDestroy {
     );
   }
 
-  updateRole(user: UserRow, event: Event) {
-    const select = event.target as HTMLSelectElement;
-    user.role = select.value;
+  updateRole(user: UserRow, newRole: string) {
+    user.role = newRole;
     this.subscriptions.add(
-      this.adminService.updateUser({ id: user.id, role: user.role as any }).subscribe({
+      this.adminService.updateUser({ id: user.id, role: newRole as any }).subscribe({
         error: () => this.cdr.markForCheck(),
       }),
     );
@@ -369,13 +429,11 @@ export class UsersList implements OnInit, OnDestroy {
     );
   }
 
-  assignTherapist(patientId: number, selectEl: HTMLSelectElement) {
-    const ids = Array.from(selectEl.selectedOptions).map((o) => parseInt(o.value));
+  assignTherapist(user: UserRow) {
+    const ids = user.therapist_ids;
     this.subscriptions.add(
-      this.adminService.assignTherapist(patientId, ids).subscribe({
+      this.adminService.assignTherapist(user.id, ids).subscribe({
         next: () => {
-          const user = this.users.find((u) => u.id === patientId);
-          if (user) user.therapist_ids = ids;
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),

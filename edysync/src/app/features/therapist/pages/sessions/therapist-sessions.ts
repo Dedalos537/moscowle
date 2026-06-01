@@ -5,6 +5,7 @@ import { TherapistService } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { SelectOption } from '../../../../shared/components/select/select';
 
 @Component({
   selector: 'app-therapist-sessions',
@@ -31,6 +32,12 @@ export class TherapistSessions implements OnInit, OnDestroy {
     pending_sessions: 0,
     active_patients: 0,
   };
+
+  statusOptions: SelectOption[] = [
+    {value: 'scheduled', label: 'Programada'},
+    {value: 'completed', label: 'Completada'},
+    {value: 'cancelled', label: 'Cancelada'},
+  ];
 
   editForm = {
     id: 0,

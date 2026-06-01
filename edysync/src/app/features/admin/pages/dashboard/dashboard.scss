@@ -174,10 +174,10 @@
 
 .quick-payment-card {
   background-color: var(--color-primary); border-radius: var(--radius-lg);
-  padding: 1.5rem; position: relative; overflow: hidden;
+  padding: 1.5rem; position: relative;
 }
 
-.quick-payment-card__bg { position: absolute; top: -1rem; right: -1rem; width: 6rem; height: 6rem; background-color: rgba(255,255,255,.1); border-radius: 9999px; }
+.quick-payment-card__bg { position: absolute; top: -1rem; right: -1rem; width: 6rem; height: 6rem; background-color: rgba(255,255,255,.1); border-radius: 9999px; overflow: hidden; }
 .quick-payment-card__title { font-size: 1.125rem; font-weight: 700; color: var(--color-on-primary); display: flex; align-items: center; gap: .5rem; margin: 0 0 .5rem; position: relative; z-index: 1; }
 .quick-payment-card__desc { font-size: .875rem; color: color-mix(in srgb,var(--color-on-primary) 80%,transparent); margin-bottom: 1rem; position: relative; z-index: 1; }
 
