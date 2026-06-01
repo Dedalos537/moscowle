@@ -257,6 +257,7 @@ export class Sessions implements OnInit, OnDestroy {
   openCreateModal() {
     this.showCreateModal = true;
     this.resetForms();
+    this.cdr.markForCheck();
   }
 
   closeCreateModal() {

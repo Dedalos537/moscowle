@@ -6,9 +6,9 @@
 }
 
 .chat-toggle {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   background: var(--color-primary);
   color: var(--color-on-primary);
   border: none;
@@ -47,7 +47,7 @@
 
 .chat-panel {
   position: absolute;
-  bottom: 68px;
+  bottom: 56px;
   right: 0;
   width: 380px;
   max-height: 560px;

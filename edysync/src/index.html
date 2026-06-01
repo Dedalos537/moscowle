@@ -2,35 +2,63 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>EduSync AI — Centro Juan Pablo II</title>
+  <title>EdySync</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
-  <script>
-    (function() {
-      try {
-        var theme = localStorage.getItem('theme');
-        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      } catch(e) {}
-    })();
-  </script>
-  <style>
-    .material-symbols-outlined {
-      font-family: 'Material Symbols Outlined';
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-    .material-symbols-outlined.fill {
-      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-  </style>
-</head>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="stylesheet" href="styles.css"></head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <style>
+      .init-splash {
+        position: fixed; inset: 0; z-index: 99999;
+        display: flex; align-items: center; justify-content: center;
+        background: #F8F6F0;
+        font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      .init-splash__inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+      .init-splash__logo { animation: pulse-logo 1.5s ease-in-out infinite; }
+      .init-splash__title {
+        font-size: 1.5rem; font-weight: 800; color: #0A6E5E; margin: 0; text-align: center;
+      }
+      .init-splash__subtitle {
+        font-size: 0.875rem; font-weight: 600; color: #6B7280;
+        text-transform: uppercase; letter-spacing: 0.05em; margin: -0.5rem 0 1rem 0; text-align: center;
+      }
+      .init-splash__bar {
+        width: 200px; height: 4px; border-radius: 2px;
+        background: #E5E7EB; overflow: hidden;
+      }
+      .init-splash__bar-fill {
+        height: 100%; border-radius: 2px; background: #0A6E5E;
+        animation: load-bar 1.8s ease-in-out forwards;
+      }
+      @keyframes pulse-logo {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.85; }
+      }
+      @keyframes load-bar {
+        0% { width: 0%; }
+        40% { width: 55%; }
+        80% { width: 78%; }
+        100% { width: 85%; }
+      }
+    </style>
+    <div class="init-splash" id="initSplash">
+      <div class="init-splash__inner">
+        <div class="init-splash__logo">
+          <svg width="56" height="56" viewBox="0 0 64 64" fill="none">
+            <rect width="64" height="64" rx="16" fill="#0A6E5E"/>
+            <path d="M20 44V28L32 20L44 28V44H36V34H28V44H20Z" fill="white"/>
+          </svg>
+        </div>
+        <h1 class="init-splash__title">Juan Pablo II</h1>
+        <p class="init-splash__subtitle">Centro de Terapias</p>
+        <div class="init-splash__bar">
+          <div class="init-splash__bar-fill"></div>
+        </div>
+      </div>
+    </div>
+  </app-root>
 </body>
 </html>
