@@ -13,7 +13,7 @@ class SessionMetricsDAO(BaseDAO[SessionMetrics]):
                 select(SessionMetrics)
                 .where(SessionMetrics.user_id == user_id)
                 .order_by(SessionMetrics.date.desc())
-                .options(selectinload(SessionMetrics.session.id)) # Example eager load if needed
+                # .options(selectinload(SessionMetrics.session)) # Removed — no 'session' relationship defined
                 .offset(skip).limit(limit)
             )
             result = await self.session.execute(query)

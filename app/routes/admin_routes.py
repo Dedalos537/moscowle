@@ -29,6 +29,13 @@ payment_service = PaymentService()
 finance_service = FinanceService()
 workflow_engine = WorkflowEngine()
 
+
+@admin_bp.before_request
+@login_required
+def check_supervisor_write():
+    if current_user.role == 'supervisor' and request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        return jsonify({'success': False, 'error': 'Los supervisores solo tienen acceso de lectura'}), 403
+
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -1888,7 +1895,7 @@ def api_generate_quarterly():
 @admin_bp.route('/api/reports/patient-monthly/<int:patient_id>', methods=['GET'])
 @login_required
 def api_patient_monthly_reports(patient_id):
-    if current_user.role not in ('admin', 'terapista'):
+    if current_user.role not in ('admin', 'terapista', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     reports = MonthlyReport.query.filter_by(patient_id=patient_id).order_by(MonthlyReport.year.desc(), MonthlyReport.month.desc()).all()
@@ -1903,7 +1910,7 @@ def api_patient_monthly_reports(patient_id):
 @admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
 @login_required
 def api_patient_quarterly_reports(patient_id):
-    if current_user.role not in ('admin', 'terapista'):
+    if current_user.role not in ('admin', 'terapista', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     reports = QuarterlyReport.query.filter_by(patient_id=patient_id).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).all()
@@ -1951,3 +1958,15 @@ def download_receipt(payment_id):
         download_name=f"Recibo_JP2_REC-{payment.id:06d}.pdf",
         mimetype='application/pdf'
     )
+
+@admin_bp.route('/api/logs', methods=['GET'])
+@login_required
+def admin_api_logs():
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.log_service import log_capture_handler
+    level = request.args.get('level')
+    limit = request.args.get('limit', 100, type=int)
+    search = request.args.get('search')
+    logs = log_capture_handler.get_logs(level=level, limit=limit, search=search)
+    return jsonify({'success': True, 'logs': logs})
