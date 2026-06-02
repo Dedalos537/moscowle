@@ -1,12 +1,16 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-reset-password',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule],
   templateUrl: './reset-password.html',
   styleUrl: './reset-password.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

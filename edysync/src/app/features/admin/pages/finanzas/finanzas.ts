@@ -1,65 +1,43 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { BaseChartDirective } from 'ng2-charts';
+import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
+import { Chart, registerables } from 'chart.js';
+import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
+import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede } from '../../../../core/models/sede';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
-import { Chart, registerables } from 'chart.js';
-import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
-import { firstValueFrom, forkJoin } from 'rxjs';
-import { ConfirmService } from '../../../../core/services/confirm.service';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Select } from '../../../../shared/components/select/select';
+import { Input } from '../../../../shared/components/input/input';
+import { Modal } from '../../../../shared/components/modal/modal';
+import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm } from './finanzas.models';
+import {
+  getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
+  getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue,
+} from './finanzas-utils';
+import {
+  makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
+} from './finanzas-charts-config';
 
 Chart.register(...registerables);
 
-interface PatientRow {
-  id: number;
-  username: string;
-  email: string;
-  phone?: string;
-  sede_name: string;
-  therapist_name: string;
-  plan_name: string;
-  plan_frequency: string;
-  payment_amount: number;
-  sessions_total: number;
-  sessions_attended: number;
-  sessions_remaining: number;
-  next_due_date?: string;
-  status: string;
-  has_plan_config: boolean;
-}
-
-interface PaymentHistoryRow {
-  id: number;
-  patient_id: number;
-  patient_name: string;
-  amount: number;
-  discount: number;
-  method: string;
-  reference?: string;
-  date: string;
-  status: string;
-  receipt_image_path?: string;
-  document_number?: string;
-  guardian_name?: string;
-}
-
-interface Therapist {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-}
-
 @Component({
   selector: 'app-finanzas',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -67,6 +45,15 @@ interface Therapist {
 })
 export class Finanzas implements OnInit, OnDestroy {
   readonly Math = Math;
+  readonly getCategoryLabel = getCategoryLabel;
+  readonly getMethodBadgeClass = getMethodBadgeClass;
+  readonly getMethodLabel = getMethodLabel;
+  readonly getWhatsAppLink = getWhatsAppLink;
+  readonly getInitials = getInitials;
+  readonly getPatientStatus = getPatientStatus;
+  readonly getStatusInfo = getStatusInfo;
+  readonly isOverdue = isOverdue;
+
   isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
@@ -91,235 +78,125 @@ export class Finanzas implements OnInit, OnDestroy {
   searchQuery = '';
   selectedSedeId: number | null = null;
   selectedTherapistId: number | null = null;
-  selectedStatus: string = '';
-  selectedSort: string = '';
-  historyMonth: string = '';
+  selectedStatus = '';
+  selectedSort = '';
+  historyMonth = '';
 
   get sedeFilterOptions(): SelectOption[] {
-    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+    return [{ value: null, label: 'Todas las Sedes' }, ...this.sedes.map(s => ({ value: s.id, label: s.name }))];
   }
 
   get therapistFilterOptions(): SelectOption[] {
-    return [{value: null, label: 'Todos los Terapeutas'}, ...this.therapistsList.map(t => ({value: t.id, label: t.username}))];
+    return [{ value: null, label: 'Todos los Terapeutas' }, ...this.therapistsList.map(t => ({ value: t.id, label: t.username }))];
   }
 
   get historyMonthOptions(): SelectOption[] {
-    return [{value: '', label: 'Todos los meses'}, ...this.historyMonths.map(m => ({value: m, label: m}))];
+    return [{ value: '', label: 'Todos los meses' }, ...this.historyMonths.map(m => ({ value: m, label: m }))];
   }
 
   statusFilterOptions: SelectOption[] = [
-    {value: '', label: 'Todos los Estados'},
-    {value: 'al_dia', label: 'Al Día'},
-    {value: 'deudor', label: 'Deudores'},
-    {value: 'sin_plan', label: 'Sin Plan'},
-    {value: 'inactivo', label: 'Inactivos'},
+    { value: '', label: 'Todos los Estados' },
+    { value: 'al_dia', label: 'Al Día' },
+    { value: 'deudor', label: 'Deudores' },
+    { value: 'sin_plan', label: 'Sin Plan' },
+    { value: 'inactivo', label: 'Inactivos' },
   ];
 
   sortOptions: SelectOption[] = [
-    {value: '', label: 'Ordenar por...'},
-    {value: 'nombre', label: 'Nombre'},
-    {value: 'vencimiento_cercano', label: 'Vencimiento cercano'},
-    {value: 'vencimiento_lejano', label: 'Vencimiento lejano'},
-    {value: 'mayor_deuda', label: 'Mayor deuda'},
+    { value: '', label: 'Ordenar por...' },
+    { value: 'nombre', label: 'Nombre' },
+    { value: 'vencimiento_cercano', label: 'Vencimiento cercano' },
+    { value: 'vencimiento_lejano', label: 'Vencimiento lejano' },
+    { value: 'mayor_deuda', label: 'Mayor deuda' },
   ];
 
   paymentMethodOptions: SelectOption[] = [
-    {value: 'transfer', label: 'Transferencia'},
-    {value: 'yape', label: 'Yape'},
-    {value: 'plin', label: 'Plin'},
-    {value: 'cash', label: 'Efectivo'},
-    {value: 'card', label: 'Tarjeta'},
+    { value: 'transfer', label: 'Transferencia' },
+    { value: 'yape', label: 'Yape' },
+    { value: 'plin', label: 'Plin' },
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'card', label: 'Tarjeta' },
   ];
 
   planFrequencyOptions: SelectOption[] = [
-    {value: 'Mensual', label: 'Mensual'},
-    {value: 'Quincenal', label: 'Quincenal'},
+    { value: 'Mensual', label: 'Mensual' },
+    { value: 'Quincenal', label: 'Quincenal' },
   ];
 
   expenseCategoryOptions: SelectOption[] = [
-    {value: 'therapist_payment', label: 'Pago a Terapeuta'},
-    {value: 'operational', label: 'Gasto Operativo'},
-    {value: 'bonus', label: 'Bonificación'},
-    {value: 'other', label: 'Otro'},
+    { value: 'therapist_payment', label: 'Pago a Terapeuta' },
+    { value: 'operational', label: 'Gasto Operativo' },
+    { value: 'bonus', label: 'Bonificación' },
+    { value: 'other', label: 'Otro' },
   ];
 
   expenseMethodOptions: SelectOption[] = [
-    {value: 'transfer', label: 'Transferencia Bancaria'},
-    {value: 'yape_plin', label: 'Yape / Plin'},
-    {value: 'cash', label: 'Efectivo'},
-    {value: 'other', label: 'Otro'},
+    { value: 'transfer', label: 'Transferencia Bancaria' },
+    { value: 'yape_plin', label: 'Yape / Plin' },
+    { value: 'cash', label: 'Efectivo' },
+    { value: 'other', label: 'Otro' },
   ];
 
   showRegisterModal = false;
-  registerForm = {
-    patient_id: null as number | null,
-    amount: 0,
-    method: 'transfer',
-    reference: '',
-    next_due_date: '',
-    payment_date: '',
-    discount: 0,
-    document_number: '',
-    guardian_name: '',
-    receipt: null as File | null,
+  registerForm: RegisterForm = {
+    patient_id: null, amount: 0, method: 'transfer', reference: '',
+    next_due_date: '', payment_date: '', discount: 0,
+    document_number: '', guardian_name: '', receipt: null,
   };
   registerStatus = '';
   analyzeResult: any = null;
   analyzingReceipt = false;
 
   showSettingsModal = false;
-  settingsForm = {
-    patient_id: null as number | null,
-    patient_name: '',
-    payment_plan: 'Mensual',
-    payment_amount: 0,
-    payment_due_date: '',
+  settingsForm: SettingsForm = {
+    patient_id: null, patient_name: '', payment_plan: 'Mensual',
+    payment_amount: 0, payment_due_date: '',
   };
   settingsStatus = '';
 
-  financials: any = {
-    income_real: 0,
-    income_expected: 0,
-    overdue_amount: 0,
-    overdue_users_count: 0,
-  };
+  financials: any = { income_real: 0, income_expected: 0, overdue_amount: 0, overdue_users_count: 0 };
 
   chartStatusDist: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  chartStatusOpt: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} pacientes` } },
-    },
-    cutout: '68%',
-  };
+  chartStatusOpt = makeDoughnutOpts();
   readonly chartStatusType = 'doughnut' as const;
 
   chartDebtByLocation: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartDebtByLocationOpt: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y',
-    plugins: {
-      legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
-    },
-    scales: {
-      x: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val) => `S/${val}` }, beginAtZero: true },
-      y: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11, weight: 600 }, color: '#1a1c16' } },
-    },
-  };
+  chartDebtByLocationOpt = makeBarOpts('y');
   readonly chartDebtByLocationType = 'bar' as const;
 
   chartPaymentAge: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartPaymentAgeOpt: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10 },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } },
-      y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' }, beginAtZero: true },
-    },
-  };
+  chartPaymentAgeOpt = makeBarOpts();
   readonly chartPaymentAgeType = 'bar' as const;
 
   chartRevenueHistory: ChartData<'line'> = { labels: [], datasets: [] };
-  chartRevenueHistoryOpt: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } },
-      y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val) => `S/${val}` }, beginAtZero: true },
-    },
-    elements: { line: { tension: 0.4, borderWidth: 3 }, point: { radius: 4, hoverRadius: 6 } },
-  };
+  chartRevenueHistoryOpt = makeLineOpts();
   readonly chartRevenueHistoryType = 'line' as const;
 
   chartRevenueByPlan: ChartData<'pie'> = { labels: [], datasets: [] };
-  chartRevenueByPlanOpt: ChartConfiguration<'pie'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `${ctx.label}: S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
-    },
-  };
+  chartRevenueByPlanOpt = makePieOpts();
   readonly chartRevenueByPlanType = 'pie' as const;
 
   chartProjVsReal: ChartData<'bar'> = { labels: [], datasets: [] };
   chartProjVsRealOpt: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
+      legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: '600' as const }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
+      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: '700' as const }, bodyFont: { family: 'Manrope', size: 13, weight: '600' as const }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
     },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } },
-      y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val) => `S/${val}` }, beginAtZero: true },
-    },
+    scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: '500' as const }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: '500' as const }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } },
   };
   readonly chartProjVsRealType = 'bar' as const;
 
   chartRevenueByLocation: ChartData<'pie'> = { labels: [], datasets: [] };
-  chartRevenueByLocationOpt: ChartConfiguration<'pie'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx) => `${ctx.label}: S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
-    },
-  };
+  chartRevenueByLocationOpt = makePieOpts();
   readonly chartRevenueByLocationType = 'pie' as const;
 
   dashIncomeExpenseChart: ChartData<'line'> = { labels: [], datasets: [] };
-  dashIncomeExpenseOpt: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        callbacks: { label: (ctx) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` }
-      },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } },
-      y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val) => `S/${val}` }, beginAtZero: true },
-    },
-    elements: { line: { tension: 0.4, borderWidth: 3 }, point: { radius: 4, hoverRadius: 6 } },
-  };
+  dashIncomeExpenseOpt = makeLineOpts();
   readonly dashIncomeExpenseType = 'line' as const;
 
   dashExpenseCategoryChart: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  dashExpenseCategoryOpt: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } },
-      tooltip: {
-        backgroundColor: 'rgba(26, 28, 22, 0.92)',
-        titleFont: { family: 'Manrope', size: 12, weight: 700 },
-        bodyFont: { family: 'Manrope', size: 13, weight: 600 },
-        padding: { x: 14, y: 10 },
-        cornerRadius: 10,
-        callbacks: { label: (ctx) => `${ctx.label}: S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` }
-      },
-    },
-    cutout: '68%',
-  };
+  dashExpenseCategoryOpt = makeDoughnutOpts();
   readonly dashExpenseCategoryType = 'doughnut' as const;
 
   therapistFinancials: TherapistFinancial[] = [];
@@ -330,15 +207,9 @@ export class Finanzas implements OnInit, OnDestroy {
 
   showExpenseModal = false;
   expenseModalMode: 'therapist_payment' | 'operational' = 'operational';
-  expenseForm = {
-    category: 'operational' as string,
-    therapist_id: null as number | null,
-    therapist_name: '',
-    amount: 0,
-    method: 'transfer' as string,
-    date: '',
-    description: '',
-    receipt: null as File | null,
+  expenseForm: ExpenseForm = {
+    category: 'operational', therapist_id: null, therapist_name: '',
+    amount: 0, method: 'transfer', date: '', description: '', receipt: null,
   };
 
   private subscriptions = new Subscription();
@@ -359,10 +230,8 @@ export class Finanzas implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     });
     this.headerService.setConfig({
-      title: 'Finanzas',
-      subtitle: 'Gestión integrada de finanzas del centro',
-      icon: ['fas', 'university'],
-      actionTemplate: this.headerActions,
+      title: 'Finanzas', subtitle: 'Gestión integrada de finanzas del centro',
+      icon: ['fas', 'university'], actionTemplate: this.headerActions,
     });
     this.loadSummaryData();
     this.checkDeepLinks();
@@ -375,16 +244,14 @@ export class Finanzas implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
-
   private loadSummaryData() {
     this.subscriptions.add(
       this.adminService.getDebtReport('all').subscribe({
         next: (res) => {
           if (res.success && res.data) {
             const porSede: Record<string, any> = res.data.por_sede || {};
-            this.summaryTotalDeuda = Object.values(porSede).reduce((sum: number, g: any) => {
-              return sum + ((g.deudores || []).reduce((s: number, d: any) => s + (d.monto || 0), 0));
-            }, 0);
+            this.summaryTotalDeuda = Object.values(porSede).reduce((sum: number, g: any) =>
+              sum + ((g.deudores || []).reduce((s: number, d: any) => s + (d.monto || 0), 0)), 0);
           }
           this.genDashboardCharts();
           this.cdr.markForCheck();
@@ -392,26 +259,20 @@ export class Finanzas implements OnInit, OnDestroy {
         error: () => this.cdr.markForCheck(),
       }),
     );
-
     this.subscriptions.add(
       this.adminService.getFinancialSummary().subscribe({
         next: (res) => {
-          if (res.success && res.data) {
-            this.summaryIngresos = res.data.income_real || 0;
-          }
+          if (res.success && res.data) this.summaryIngresos = res.data.income_real || 0;
           this.genDashboardCharts();
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),
       }),
     );
-
     this.subscriptions.add(
       this.adminService.getExpenses().subscribe({
         next: (res) => {
-          if (res.success && res.data) {
-            this.summaryGastos = res.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
-          }
+          if (res.success && res.data) this.summaryGastos = res.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
           this.genDashboardCharts();
           this.cdr.markForCheck();
         },
@@ -420,458 +281,178 @@ export class Finanzas implements OnInit, OnDestroy {
     );
   }
 
-  private getMonthlyIncome(): Map<string, number> {
-    const map = new Map<string, number>();
-    this.paymentHistory.forEach((p) => {
-      if (p.date) {
-        const key = p.date.substring(0, 7);
-        map.set(key, (map.get(key) || 0) + (p.amount - (p.discount || 0)));
-      }
-    });
-    return map;
-  }
-
-  private getMonthlyExpenses(): Map<string, number> {
-    const map = new Map<string, number>();
-    this.recentExpenses.forEach((e) => {
-      if (e.date) {
-        const key = e.date.substring(0, 7);
-        map.set(key, (map.get(key) || 0) + e.amount);
-      }
-    });
-    return map;
-  }
-
-  private getLast6MonthsKeys(): string[] {
-    const keys: string[] = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-    return keys;
-  }
-
-  private formatMonthLabel(key: string): string {
-    const [y, m] = key.split('-');
-    return new Date(+y, +m - 1, 1).toLocaleDateString('es-PE', { month: 'short', year: '2-digit' });
-  }
-
   private genDashboardCharts() {
-    const incomeByMonth = this.getMonthlyIncome();
-    const expenseByMonth = this.getMonthlyExpenses();
-    const monthKeys = this.getLast6MonthsKeys();
+    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
+    const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
+    const monthKeys = getLast6MonthsKeys();
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const expValues = monthKeys.map((k) => expenseByMonth.get(k) || 0);
-    const labels = monthKeys.map((k) => this.formatMonthLabel(k));
+    const labels = monthKeys.map((k) => formatMonthLabel(k));
 
     this.dashIncomeExpenseChart = {
       labels,
       datasets: [
-        {
-          label: 'Ingresos',
-          data: revenues,
-          borderColor: '#75a83a',
-          backgroundColor: 'rgba(117, 168, 58, 0.1)',
-          fill: true,
-          pointBackgroundColor: '#75a83a',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-        },
-        {
-          label: 'Gastos',
-          data: expValues,
-          borderColor: '#ba1a1a',
-          backgroundColor: 'rgba(186, 26, 26, 0.08)',
-          fill: true,
-          pointBackgroundColor: '#ba1a1a',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-        },
+        { label: 'Ingresos', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 },
+        { label: 'Gastos', data: expValues, borderColor: '#ba1a1a', backgroundColor: 'rgba(186, 26, 26, 0.08)', fill: true, pointBackgroundColor: '#ba1a1a', pointBorderColor: '#fff', pointBorderWidth: 2 },
       ],
     };
 
     const catMap: Record<string, number> = {};
-    this.recentExpenses.forEach((e) => {
-      const cat = e.category || 'Otros';
-      catMap[cat] = (catMap[cat] || 0) + e.amount;
-    });
+    this.recentExpenses.forEach((e) => { const k = e.category || 'Otros'; catMap[k] = (catMap[k] || 0) + e.amount; });
     if (Object.keys(catMap).length === 0) catMap['Sin datos'] = 0;
     const catLabels = Object.keys(catMap);
-    const catData = Object.values(catMap);
-    const catColors: Record<string, string> = {
-      therapist_payment: '#75a83a',
-      operational: '#3b82f6',
-      bonus: '#f59e0b',
-      other: '#8b5cf6',
-    };
+    const catColors: Record<string, string> = { therapist_payment: '#75a83a', operational: '#3b82f6', bonus: '#f59e0b', other: '#8b5cf6' };
     this.dashExpenseCategoryChart = {
-      labels: catLabels.map((k) => this.getCategoryLabel(k)),
-      datasets: [{
-        data: catData,
-        backgroundColor: catLabels.map((k) => catColors[k] || '#8b5cf6'),
-        borderWidth: 0,
-        hoverOffset: 8,
-      }],
+      labels: catLabels.map((k) => getCategoryLabel(k)),
+      datasets: [{ data: Object.values(catMap), backgroundColor: catLabels.map((k) => catColors[k] || '#8b5cf6'), borderWidth: 0, hoverOffset: 8 }],
     };
   }
 
-  private getCategoryLabel(key: string): string {
-    const map: Record<string, string> = {
-      therapist_payment: 'Pago Terapeutas',
-      operational: 'Gastos Operativos',
-      bonus: 'Bonificaciones',
-      other: 'Otros',
-    };
-    return map[key] || key;
-  }
-
-  get summaryBalance(): number {
-    return this.summaryIngresos - this.summaryGastos;
-  }
+  get summaryBalance(): number { return this.summaryIngresos - this.summaryGastos; }
 
   get dashCollectionRate(): number {
-    if (this.financials?.income_expected > 0) {
-      return Math.min(100, (this.financials.income_real / this.financials.income_expected) * 100);
-    }
+    if (this.financials?.income_expected > 0) return Math.min(100, (this.financials.income_real / this.financials.income_expected) * 100);
     return 0;
   }
 
-  get dashRecentTransactions(): any[] {
-    return this.paymentHistory.slice(0, 10);
-  }
+  get dashRecentTransactions(): any[] { return this.paymentHistory.slice(0, 10); }
 
   get dashExpenseStats() {
     const total = this.recentExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const therapistPayments = this.recentExpenses
-      .filter((e) => e.category === 'therapist_payment')
-      .reduce((sum, e) => sum + e.amount, 0);
-    const operational = this.recentExpenses
-      .filter((e) => e.category === 'operational')
-      .reduce((sum, e) => sum + e.amount, 0);
+    const therapistPayments = this.recentExpenses.filter((e) => e.category === 'therapist_payment').reduce((sum, e) => sum + e.amount, 0);
+    const operational = this.recentExpenses.filter((e) => e.category === 'operational').reduce((sum, e) => sum + e.amount, 0);
     return { total, therapistPayments, operational, other: total - therapistPayments - operational };
-  }
-
-
-  getWhatsAppLink(phone: string | undefined, name: string, amount: number): string | null {
-    if (!phone) return null;
-    const clean = phone.replace(/\D/g, '');
-    const msg = encodeURIComponent(`Hola ${name}, te saludamos de Moscowle. Recordarte que el pago de tu mensualidad (S/ ${amount}) está pendiente. ¡Gracias!`);
-    return `https://wa.me/51${clean}?text=${msg}`;
-  }
-
-  getInitials(name: string): string {
-    return name?.slice(0, 2).toUpperCase() || 'XX';
   }
 
   private checkDeepLinks() {
     const params = this.route.snapshot.queryParams;
-    if (params['search_patient']) {
-      this.searchQuery = params['search_patient'];
-    }
-    if (params['action'] === 'register') {
-      setTimeout(() => this.openRegisterModal(), 800);
-    }
+    if (params['search_patient']) this.searchQuery = params['search_patient'];
+    if (params['action'] === 'register') setTimeout(() => this.openRegisterModal(), 800);
   }
 
-  private loadPaymentsData() {
-    this.loadSedes();
-    this.loadPaymentsTherapists();
-    this.loadPaymentsDebtReport();
-    this.loadFinancialSummary();
-    this.loadPaymentHistory();
-  }
+  private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadFinancialSummary(); this.loadPaymentHistory(); }
 
   private loadSedes() {
-    this.subscriptions.add(
-      this.adminService.getSedes().subscribe({
-        next: (list) => {
-          this.sedes = list;
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+    this.subscriptions.add(this.adminService.getSedes().subscribe({ next: (list) => { this.sedes = list; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
   }
 
   private loadPaymentsTherapists() {
-    this.subscriptions.add(
-      this.adminService.getUsers('terapista').subscribe({
-        next: (res) => {
-          if (res.success) this.therapistsList = res.users;
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+    this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { if (res.success) this.therapistsList = res.users; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
   }
 
   private loadPaymentsDebtReport() {
     this.paymentsLoading = true;
     this.subscriptions.add(
-      forkJoin({
-        patients: this.adminService.getUsers('jugador'),
-        debt: this.adminService.getDebtReport('all'),
-      }).subscribe({
+      forkJoin({ patients: this.adminService.getUsers('jugador'), debt: this.adminService.getDebtReport('all') }).subscribe({
         next: ({ patients, debt }) => {
           const porSede: Record<string, any> = debt?.data?.por_sede || {};
           const debtByName = new Map<string, any>();
-          Object.values(porSede).forEach((group: any) => {
-            (group.deudores || []).forEach((d: any) => {
-              const key = (d.paciente || d.email || '').toLowerCase().trim();
-              if (key) debtByName.set(key, d);
-            });
-          });
-
-          const list: PatientRow[] = (patients.users || []).map((u: any) => {
+          Object.values(porSede).forEach((group: any) => (group.deudores || []).forEach((d: any) => {
+            const key = (d.paciente || d.email || '').toLowerCase().trim();
+            if (key) debtByName.set(key, d);
+          }));
+          this.patients = (patients.users || []).map((u: any) => {
             const nameKey = (u.username || u.email || '').toLowerCase().trim();
             const d = debtByName.get(nameKey) || {};
             return {
-              id: u.id,
-              username: u.username || 'Sin nombre',
-              email: u.email || '',
-              phone: u.phone,
-              sede_name: d.sede_name || u.sede_name || '',
-              therapist_name: d.therapist_name || '',
-              plan_name: d.modality || u.plan_type || 'Sin plan',
-              plan_frequency: d.frequency || u.payment_plan || '',
-              payment_amount: d.monto || u.payment_amount || 0,
-              sessions_total: u.sessions_total || 0,
+              id: u.id, username: u.username || 'Sin nombre', email: u.email || '', phone: u.phone,
+              sede_name: d.sede_name || u.sede_name || '', therapist_name: d.therapist_name || '',
+              plan_name: d.modality || u.plan_type || 'Sin plan', plan_frequency: d.frequency || u.payment_plan || '',
+              payment_amount: d.monto || u.payment_amount || 0, sessions_total: u.sessions_total || 0,
               sessions_attended: u.sessions_attended || 0,
               sessions_remaining: u.sessions_remaining ?? ((u.sessions_total || 0) - (u.sessions_attended || 0)),
-              next_due_date: d.fecha_vencimiento || u.payment_due_date,
-              status: u.account_status || 'active',
+              next_due_date: d.fecha_vencimiento || u.payment_due_date, status: u.account_status || 'active',
               has_plan_config: !!(u.payment_plan || u.payment_amount),
             };
           });
-          this.patients = list;
           this.updateCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
         },
-        error: () => {
-          this.paymentsLoading = false;
-          this.cdr.markForCheck();
-        },
+        error: () => { this.paymentsLoading = false; this.cdr.markForCheck(); },
       }),
     );
   }
 
   private loadFinancialSummary() {
-    this.subscriptions.add(
-      this.adminService.getFinancialSummary().subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            this.financials = res.data;
-            this.updateCharts();
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+    this.subscriptions.add(this.adminService.getFinancialSummary().subscribe({
+      next: (res) => { if (res.success && res.data) { this.financials = res.data; this.updateCharts(); } this.cdr.markForCheck(); },
+      error: () => this.cdr.markForCheck(),
+    }));
   }
 
   private loadPaymentHistory() {
     this.historyLoading = true;
-    this.subscriptions.add(
-      this.adminService.getAllPayments().subscribe({
-        next: (res) => {
-          if (res.success && res.payments) {
-            this.paymentHistory = res.payments.map((p: any) => ({
-              id: p.id,
-              patient_id: p.patient_id,
-              patient_name: p.patient_name || '',
-              amount: p.amount || 0,
-              discount: p.discount || 0,
-              method: p.method || '',
-              reference: p.reference,
-              date: p.date || '',
-              status: p.status || 'completed',
-              receipt_image_path: p.receipt_image_path,
-              document_number: p.document_number,
-              guardian_name: p.guardian_name,
-            }));
-          }
-          this.historyLoading = false;
-          this.genDashboardCharts();
-          this.updateRevenueHistoryChart();
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.historyLoading = false;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+    this.subscriptions.add(this.adminService.getAllPayments().subscribe({
+      next: (res) => {
+        if (res.success && res.payments) {
+          this.paymentHistory = res.payments.map((p: any) => ({
+            id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || '',
+            amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
+            reference: p.reference, date: p.date || '', status: p.status || 'completed',
+            receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name,
+          }));
+        }
+        this.historyLoading = false;
+        this.genDashboardCharts();
+        this.updateRevenueHistoryChart();
+        this.cdr.markForCheck();
+      },
+      error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
+    }));
   }
 
   get activeFilterCount(): number {
-    let count = 0;
-    if (this.searchQuery) count++;
-    if (this.selectedSedeId) count++;
-    if (this.selectedTherapistId) count++;
-    if (this.selectedStatus) count++;
-    if (this.selectedSort) count++;
-    return count;
+    let c = 0;
+    if (this.searchQuery) c++;
+    if (this.selectedSedeId) c++;
+    if (this.selectedTherapistId) c++;
+    if (this.selectedStatus) c++;
+    if (this.selectedSort) c++;
+    return c;
   }
 
-  clearFilters() {
-    this.searchQuery = '';
-    this.selectedSedeId = null;
-    this.selectedTherapistId = null;
-    this.selectedStatus = '';
-    this.selectedSort = '';
-  }
+  clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; }
 
   get filteredPatients(): PatientRow[] {
     let result = [...this.patients];
-    if (this.searchQuery) {
-      const q = this.searchQuery.toLowerCase();
-      result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q));
-    }
-    if (this.selectedSedeId) {
-      const sedeName = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || '';
-      result = result.filter((p) => p.sede_name === sedeName);
-    }
-    if (this.selectedTherapistId) {
-      const therapistName = this.therapistsList.find((t) => t.id === this.selectedTherapistId)?.username || '';
-      result = result.filter((p) => p.therapist_name === therapistName);
-    }
-    if (this.selectedStatus) {
-      result = result.filter((p) => {
-        const st = this.getPatientStatus(p);
-        if (this.selectedStatus === 'al_dia') return st === 'al_dia';
-        if (this.selectedStatus === 'deudor') return st === 'deudor';
-        if (this.selectedStatus === 'sin_plan') return st === 'sin_plan';
-        if (this.selectedStatus === 'inactivo') return st === 'inactivo';
-        return true;
-      });
-    }
+    if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
+    if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
+    if (this.selectedTherapistId) { const tn = this.therapistsList.find((t) => t.id === this.selectedTherapistId)?.username || ''; result = result.filter((p) => p.therapist_name === tn); }
+    if (this.selectedStatus) result = result.filter((p) => getPatientStatus(p) === this.selectedStatus);
     if (this.selectedSort) {
       switch (this.selectedSort) {
-        case 'nombre':
-          result.sort((a, b) => a.username.localeCompare(b.username));
-          break;
-        case 'vencimiento_cercano':
-          result.sort((a, b) => {
-            if (!a.next_due_date) return 1;
-            if (!b.next_due_date) return -1;
-            return new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime();
-          });
-          break;
-        case 'vencimiento_lejano':
-          result.sort((a, b) => {
-            if (!a.next_due_date) return 1;
-            if (!b.next_due_date) return -1;
-            return new Date(b.next_due_date).getTime() - new Date(a.next_due_date).getTime();
-          });
-          break;
-        case 'mayor_deuda':
-          result.sort((a, b) => b.payment_amount - a.payment_amount);
-          break;
+        case 'nombre': result.sort((a, b) => a.username.localeCompare(b.username)); break;
+        case 'vencimiento_cercano': result.sort((a, b) => { if (!a.next_due_date) return 1; if (!b.next_due_date) return -1; return new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime(); }); break;
+        case 'vencimiento_lejano': result.sort((a, b) => { if (!a.next_due_date) return 1; if (!b.next_due_date) return -1; return new Date(b.next_due_date).getTime() - new Date(a.next_due_date).getTime(); }); break;
+        case 'mayor_deuda': result.sort((a, b) => b.payment_amount - a.payment_amount); break;
       }
     }
     return result;
   }
 
   get filteredHistory(): PaymentHistoryRow[] {
-    let result = [...this.paymentHistory];
-    if (this.historyMonth) {
-      result = result.filter((p) => p.date && p.date.startsWith(this.historyMonth));
-    }
-    return result;
+    let r = [...this.paymentHistory];
+    if (this.historyMonth) r = r.filter((p) => p.date && p.date.startsWith(this.historyMonth));
+    return r;
   }
 
   get historyMonths(): string[] {
-    const months = new Set<string>();
-    this.paymentHistory.forEach((p) => {
-      if (p.date) months.add(p.date.substring(0, 7));
-    });
-    return Array.from(months).sort((a, b) => b.localeCompare(a));
+    const s = new Set<string>();
+    this.paymentHistory.forEach((p) => { if (p.date) s.add(p.date.substring(0, 7)); });
+    return Array.from(s).sort((a, b) => b.localeCompare(a));
   }
 
-  getPatientStatus(p: PatientRow): string {
-    if (!p.has_plan_config || p.payment_amount <= 0) return 'sin_plan';
-    if (p.sessions_remaining <= 0) return 'deudor';
-    return 'al_dia';
-  }
+  get yapeTransactions(): PaymentHistoryRow[] { return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin'); }
+  get yapeTotal(): number { return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
+  get yapeMonthlyTotal(): number { const cm = new Date().toISOString().substring(0, 7); return this.yapeTransactions.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
+  get yapeCount(): number { return this.yapeTransactions.length; }
 
-  getStatusInfo(p: PatientRow): { label: string; bg: string; text: string; dot: string } {
-    const st = this.getPatientStatus(p);
-    switch (st) {
-      case 'al_dia':
-        return { label: 'Al Dia', bg: 'bg-success-container', text: 'text-success', dot: 'bg-success' };
-      case 'deudor':
-        return { label: 'Deudor', bg: 'bg-error-container', text: 'text-error', dot: 'bg-error' };
-      case 'sin_plan':
-        return { label: 'Sin Plan', bg: 'bg-warning-container', text: 'text-warning', dot: 'bg-warning' };
-      default:
-        return { label: 'Inactivo', bg: 'bg-surface-container-high', text: 'text-on-surface-variant', dot: 'bg-outline' };
-    }
-  }
-
-  isOverdue(p: PatientRow): boolean {
-    if (!p.next_due_date || p.payment_amount <= 0) return false;
-    return new Date(p.next_due_date) < new Date();
-  }
-
-  getMethodBadgeClass(method: string): string {
-    const map: Record<string, string> = {
-      yape: 'bg-accent-container text-accent',
-      plin: 'bg-accent-container text-accent',
-      transfer: 'bg-info-container text-info',
-      cash: 'bg-success-container text-success',
-      card: 'bg-info-container text-info',
-    };
-    return map[method] || 'bg-surface-container-high text-on-surface-variant';
-  }
-
-  getMethodLabel(method: string): string {
-    const map: Record<string, string> = {
-      yape: 'Yape',
-      plin: 'Plin',
-      transfer: 'Transferencia',
-      cash: 'Efectivo',
-      card: 'Tarjeta',
-    };
-    return map[method] || method;
-  }
-
-  get yapeTransactions(): PaymentHistoryRow[] {
-    return this.paymentHistory.filter((p) => p.method === 'yape' || p.method === 'plin');
-  }
-
-  get yapeTotal(): number {
-    return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0);
-  }
-
-  get yapeMonthlyTotal(): number {
-    const currentMonth = new Date().toISOString().substring(0, 7);
-    return this.yapeTransactions
-      .filter((p) => p.date && p.date.startsWith(currentMonth))
-      .reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0);
-  }
-
-  get yapeCount(): number {
-    return this.yapeTransactions.length;
-  }
-
-  get totalIncomeReal(): number {
-    return this.financials?.income_real || 0;
-  }
-
-  get totalPending(): number {
-    return this.patients.filter((p) => p.payment_amount > 0).reduce((sum, p) => sum + p.payment_amount, 0);
-  }
-
-  get totalDebt(): number {
-    return this.financials?.overdue_amount || 0;
-  }
-
-  get totalPatients(): number {
-    return this.patients.length;
-  }
+  get totalIncomeReal(): number { return this.financials?.income_real || 0; }
+  get totalPending(): number { return this.patients.filter((p) => p.payment_amount > 0).reduce((sum, p) => sum + p.payment_amount, 0); }
+  get totalDebt(): number { return this.financials?.overdue_amount || 0; }
+  get totalPatients(): number { return this.patients.length; }
+  get progressPercent(): number { return this.financials?.income_expected > 0 ? (this.financials.income_real / this.financials.income_expected) * 100 : 0; }
 
   private updateCharts() {
     this.updateStatusDistChart();
@@ -884,38 +465,17 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private updateStatusDistChart() {
-    const alDia = this.patients.filter((p) => this.getPatientStatus(p) === 'al_dia').length;
-    const deudor = this.patients.filter((p) => this.getPatientStatus(p) === 'deudor').length;
-    const sinPlan = this.patients.filter((p) => this.getPatientStatus(p) === 'sin_plan').length;
-    this.chartStatusDist = {
-      labels: ['Al Día', 'Deudores', 'Sin Plan'],
-      datasets: [{
-        data: [alDia, deudor, sinPlan],
-        backgroundColor: ['#75a83a', '#ba1a1a', '#d9dbce'],
-        borderWidth: 0,
-        hoverOffset: 8,
-      }],
-    };
+    const alDia = this.patients.filter((p) => getPatientStatus(p) === 'al_dia').length;
+    const deudor = this.patients.filter((p) => getPatientStatus(p) === 'deudor').length;
+    const sinPlan = this.patients.filter((p) => getPatientStatus(p) === 'sin_plan').length;
+    this.chartStatusDist = { labels: ['Al Día', 'Deudores', 'Sin Plan'], datasets: [{ data: [alDia, deudor, sinPlan], backgroundColor: ['#75a83a', '#ba1a1a', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
   }
 
   private updateDebtByLocationChart() {
     const debtBySede: Record<string, number> = {};
-    this.patients.forEach((p) => {
-      debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount;
-    });
+    this.patients.forEach((p) => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
     const labels = Object.keys(debtBySede);
-    const data = Object.values(debtBySede);
-    const colors = ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
-    this.chartDebtByLocation = {
-      labels,
-      datasets: [{
-        label: 'Deuda (S/)',
-        data,
-        backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-        borderRadius: 6,
-        barPercentage: 0.5,
-      }],
-    };
+    this.chartDebtByLocation = { labels, datasets: [{ label: 'Deuda (S/)', data: Object.values(debtBySede), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderRadius: 6, barPercentage: 0.5 }] };
   }
 
   private updatePaymentAgeChart() {
@@ -924,111 +484,43 @@ export class Finanzas implements OnInit, OnDestroy {
     const now = new Date();
     this.patients.forEach((p) => {
       if (!p.next_due_date) return;
-      const due = new Date(p.next_due_date);
-      const diffDays = Math.floor((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 0) counts[0]++;
-      else if (diffDays <= 7) counts[0]++;
-      else if (diffDays <= 15) counts[1]++;
-      else if (diffDays <= 30) counts[2]++;
-      else if (diffDays <= 60) counts[3]++;
-      else counts[4]++;
+      const diffDays = Math.floor((now.getTime() - new Date(p.next_due_date).getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) counts[0]++; else if (diffDays <= 7) counts[0]++; else if (diffDays <= 15) counts[1]++; else if (diffDays <= 30) counts[2]++; else if (diffDays <= 60) counts[3]++; else counts[4]++;
     });
-    this.chartPaymentAge = {
-      labels: ranges,
-      datasets: [{
-        label: 'Pacientes',
-        data: counts,
-        backgroundColor: ['rgba(117, 168, 58, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(186, 26, 26, 0.8)'],
-        borderRadius: 6,
-        barPercentage: 0.6,
-      }],
-    };
+    this.chartPaymentAge = { labels: ranges, datasets: [{ label: 'Pacientes', data: counts, backgroundColor: ['rgba(117, 168, 58, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(186, 26, 26, 0.8)'], borderRadius: 6, barPercentage: 0.6 }] };
   }
 
   private updateRevenueHistoryChart() {
-    const incomeByMonth = this.getMonthlyIncome();
-    const monthKeys = this.getLast6MonthsKeys();
+    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
+    const monthKeys = getLast6MonthsKeys();
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
-    const labels = monthKeys.map((k) => this.formatMonthLabel(k));
-
-    this.chartRevenueHistory = {
-      labels,
-      datasets: [{
-        label: 'Ingresos (S/)',
-        data: revenues,
-        borderColor: '#75a83a',
-        backgroundColor: 'rgba(117, 168, 58, 0.1)',
-        fill: true,
-        pointBackgroundColor: '#75a83a',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-      }],
-    };
+    const labels = monthKeys.map((k) => formatMonthLabel(k));
+    this.chartRevenueHistory = { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
   }
 
   private updateRevenueByPlanChart() {
     const planMap: Record<string, number> = {};
-    this.patients.forEach((p) => {
-      const plan = p.plan_name || 'Sin plan';
-      planMap[plan] = (planMap[plan] || 0) + p.payment_amount;
-    });
+    this.patients.forEach((p) => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
     const labels = Object.keys(planMap);
-    const data = Object.values(planMap);
-    const colors = ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'];
-    this.chartRevenueByPlan = {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-        borderWidth: 0,
-        hoverOffset: 8,
-      }],
-    };
+    this.chartRevenueByPlan = { labels, datasets: [{ data: Object.values(planMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
   private updateProjVsRealChart() {
-    const projected = this.financials?.income_expected || 0;
-    const real = this.financials?.income_real || 0;
-    this.chartProjVsReal = {
-      labels: ['Este Mes'],
-      datasets: [
-        { label: 'Proyectado', data: [projected], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 },
-        { label: 'Real', data: [real], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 },
-      ],
-    };
+    this.chartProjVsReal = { labels: ['Este Mes'], datasets: [{ label: 'Proyectado', data: [this.financials?.income_expected || 0], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [this.financials?.income_real || 0], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
   }
 
   private updateRevenueByLocationChart() {
     const sedeMap: Record<string, number> = {};
-    this.patients.forEach((p) => {
-      sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount;
-    });
+    this.patients.forEach((p) => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
     const labels = Object.keys(sedeMap);
-    const data = Object.values(sedeMap);
-    const colors = ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
-    this.chartRevenueByLocation = {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-        borderWidth: 0,
-        hoverOffset: 8,
-      }],
-    };
+    this.chartRevenueByLocation = { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
   openRegisterModal(patient?: PatientRow) {
     this.registerForm = {
-      patient_id: patient?.id || null,
-      amount: patient?.payment_amount || 0,
-      method: 'transfer',
-      reference: '',
-      next_due_date: '',
-      payment_date: new Date().toISOString().substring(0, 10),
-      discount: 0,
-      document_number: '',
-      guardian_name: '',
-      receipt: null,
+      patient_id: patient?.id || null, amount: patient?.payment_amount || 0, method: 'transfer', reference: '',
+      next_due_date: '', payment_date: new Date().toISOString().substring(0, 10), discount: 0,
+      document_number: '', guardian_name: '', receipt: null,
     };
     this.analyzeResult = null;
     this.analyzingReceipt = false;
@@ -1037,9 +529,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  closeRegisterModal() {
-    this.showRegisterModal = false;
-  }
+  closeRegisterModal() { this.showRegisterModal = false; }
 
   onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] || null;
@@ -1057,10 +547,7 @@ export class Finanzas implements OnInit, OnDestroy {
             if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
             this.cdr.markForCheck();
           },
-          error: () => {
-            this.analyzingReceipt = false;
-            this.cdr.markForCheck();
-          },
+          error: () => { this.analyzingReceipt = false; this.cdr.markForCheck(); },
         }),
       );
     }
@@ -1068,66 +555,46 @@ export class Finanzas implements OnInit, OnDestroy {
 
   submitRegisterPayment() {
     this.registerStatus = 'Registrando...';
-    const formData = new FormData();
-    if (this.registerForm.patient_id) formData.append('patient_id', String(this.registerForm.patient_id));
-    formData.append('amount', String(this.registerForm.amount));
-    formData.append('method', this.registerForm.method);
-    if (this.registerForm.reference) formData.append('reference', this.registerForm.reference);
-    if (this.registerForm.next_due_date) formData.append('next_due_date', this.registerForm.next_due_date);
-    if (this.registerForm.payment_date) formData.append('payment_date', this.registerForm.payment_date);
-    formData.append('discount', String(this.registerForm.discount));
-    if (this.registerForm.document_number) formData.append('document_number', this.registerForm.document_number);
-    if (this.registerForm.guardian_name) formData.append('guardian_name', this.registerForm.guardian_name);
-    if (this.registerForm.receipt) formData.append('receipt', this.registerForm.receipt);
+    const fd = new FormData();
+    if (this.registerForm.patient_id) fd.append('patient_id', String(this.registerForm.patient_id));
+    fd.append('amount', String(this.registerForm.amount));
+    fd.append('method', this.registerForm.method);
+    if (this.registerForm.reference) fd.append('reference', this.registerForm.reference);
+    if (this.registerForm.next_due_date) fd.append('next_due_date', this.registerForm.next_due_date);
+    if (this.registerForm.payment_date) fd.append('payment_date', this.registerForm.payment_date);
+    fd.append('discount', String(this.registerForm.discount));
+    if (this.registerForm.document_number) fd.append('document_number', this.registerForm.document_number);
+    if (this.registerForm.guardian_name) fd.append('guardian_name', this.registerForm.guardian_name);
+    if (this.registerForm.receipt) fd.append('receipt', this.registerForm.receipt);
 
-    this.subscriptions.add(
-      this.adminService.registerPayment(formData).subscribe({
-        next: (res: any) => {
-          if (res.success) {
-            this.registerStatus = 'Pago registrado exitosamente';
-            setTimeout(() => {
-              this.closeRegisterModal();
-              this.loadPaymentsDebtReport();
-              this.loadPaymentHistory();
-            }, 1500);
-          } else {
-            this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.registerStatus = 'Error de conexión al servidor';
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+    this.subscriptions.add(this.adminService.registerPayment(fd).subscribe({
+      next: (res: any) => {
+        if (res.success) {
+          this.registerStatus = 'Pago registrado exitosamente';
+          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); }, 1500);
+        } else {
+          this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => { this.registerStatus = 'Error de conexión al servidor'; this.cdr.markForCheck(); },
+    }));
   }
 
-  get needsRecalculation(): boolean {
-    const amt = this.registerForm.amount;
-    const disc = this.registerForm.discount;
-    return amt > 0 && disc > 0;
-  }
-
-  get hasMissingData(): boolean {
-    return !this.registerForm.document_number || !this.registerForm.guardian_name;
-  }
+  get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
+  get hasMissingData(): boolean { return !this.registerForm.document_number || !this.registerForm.guardian_name; }
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {
-      patient_id: patient.id,
-      patient_name: patient.username,
-      payment_plan: patient.plan_frequency || 'Mensual',
-      payment_amount: patient.payment_amount,
+      patient_id: patient.id, patient_name: patient.username,
+      payment_plan: patient.plan_frequency || 'Mensual', payment_amount: patient.payment_amount,
       payment_due_date: patient.next_due_date || '',
     };
     this.settingsStatus = '';
     this.showSettingsModal = true;
   }
 
-  closeSettingsModal() {
-    this.showSettingsModal = false;
-  }
+  closeSettingsModal() { this.showSettingsModal = false; }
 
   submitSettings() {
     this.settingsStatus = 'Guardando...';
@@ -1136,194 +603,66 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.settingsForm.payment_due_date) data.payment_due_date = this.settingsForm.payment_due_date;
     if (this.settingsForm.payment_plan) data.payment_plan = this.settingsForm.payment_plan;
 
-    this.subscriptions.add(
-      this.adminService.updatePaymentSettings(this.settingsForm.patient_id!, data).subscribe({
-        next: (res: any) => {
-          if (res.success) {
-            this.settingsStatus = 'Configuración guardada';
-            setTimeout(() => {
-              this.closeSettingsModal();
-              this.loadPaymentsDebtReport();
-            }, 1500);
-          } else {
-            this.settingsStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.settingsStatus = 'Error de conexión';
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+    this.subscriptions.add(this.adminService.updatePaymentSettings(this.settingsForm.patient_id!, data).subscribe({
+      next: (res: any) => {
+        if (res.success) { this.settingsStatus = 'Configuración guardada'; setTimeout(() => { this.closeSettingsModal(); this.loadPaymentsDebtReport(); }, 1500); }
+        else { this.settingsStatus = 'Error: ' + (res.message || res.error || 'Desconocido'); }
+        this.cdr.markForCheck();
+      },
+      error: () => { this.settingsStatus = 'Error de conexión'; this.cdr.markForCheck(); },
+    }));
   }
 
-  get incompletePlanPatients(): PatientRow[] {
-    return this.patients.filter((p) => !p.has_plan_config);
-  }
+  get incompletePlanPatients(): PatientRow[] { return this.patients.filter((p) => !p.has_plan_config); }
 
   async generateReport() {
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Generar Reporte',
-      message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?',
-      confirmText: 'Generar',
-      cancelText: 'Cancelar',
-      variant: 'warning',
+    const c = await firstValueFrom(this.confirmService.confirm({ title: 'Generar Reporte', message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?', confirmText: 'Generar', cancelText: 'Cancelar', variant: 'warning' }));
+    if (!c) return;
+    this.subscriptions.add(this.adminService.exportPaymentsCsv().subscribe({
+      next: (blob) => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`; a.click(); window.URL.revokeObjectURL(url); this.cdr.markForCheck(); },
+      error: () => { this.alertService.show('Error al generar el reporte', 'error'); this.cdr.markForCheck(); },
     }));
-    if (!confirmed) return;
-    this.subscriptions.add(
-      this.adminService.exportPaymentsCsv().subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`;
-          a.click();
-          window.URL.revokeObjectURL(url);
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.alertService.show('Error al generar el reporte', 'error');
-          this.cdr.markForCheck();
-        },
-      }),
-    );
   }
 
   showHelp() {
-    this.alertService.showHelp(
-      'Panel de Finanzas',
-      'Panel de Finanzas\n\n' +
-      '• Dashboard: Resumen financiero del centro.\n' +
-      '• Pagos: Lista de pacientes con su estado de pago, plan y progreso.\n' +
-      '• Yape: Transacciones registradas vía Yape / Plin.\n' +
-      '• Gastos: Pagos a personal y gastos operativos.\n' +
-      '• Use los filtros para buscar por sede, terapeuta, o estado.',
-    );
+    this.alertService.showHelp('Panel de Finanzas',
+      'Panel de Finanzas\n\n• Dashboard: Resumen financiero del centro.\n• Pagos: Lista de pacientes con su estado de pago, plan y progreso.\n• Yape: Transacciones registradas vía Yape / Plin.\n• Gastos: Pagos a personal y gastos operativos.\n• Use los filtros para buscar por sede, terapeuta, o estado.');
   }
 
   async deletePayment(id: number) {
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Eliminar Pago',
-      message: '¿Eliminar este pago?',
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      variant: 'danger',
-    }));
-    if (!confirmed) return;
-    this.subscriptions.add(
-      this.adminService.deletePayment(id).subscribe({
-        next: () => {
-          this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id);
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+    const c = await firstValueFrom(this.confirmService.confirm({ title: 'Eliminar Pago', message: '¿Eliminar este pago?', confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger' }));
+    if (!c) return;
+    this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
   }
 
-  viewPatientHistory(patient: PatientRow) {
-    window.open(`/admin/payments/history/${patient.id}`, '_blank');
-  }
-
-  get progressPercent(): number {
-    if (this.financials?.income_expected > 0) {
-      return (this.financials.income_real / this.financials.income_expected) * 100;
-    }
-    return 0;
-  }
-
-  getPatientName(id: number): string {
-    return this.patients.find((p) => p.id === id)?.username || '';
-  }
-
-  sedeById(id: number): string {
-    return this.sedes.find((s) => s.id === id)?.name || '';
-  }
-
-  therapistById(id: number): string {
-    return this.therapistsList.find((t) => t.id === id)?.username || '';
-  }
-
-  trackById(_: number, item: any): number {
-    return item.id || item.patient_id;
-  }
-
+  viewPatientHistory(patient: PatientRow) { window.open(`/admin/payments/history/${patient.id}`, '_blank'); }
+  getPatientName(id: number): string { return this.patients.find((p) => p.id === id)?.username || ''; }
+  sedeById(id: number): string { return this.sedes.find((s) => s.id === id)?.name || ''; }
+  therapistById(id: number): string { return this.therapistsList.find((t) => t.id === id)?.username || ''; }
+  trackById(_: number, item: any): number { return item.id || item.patient_id; }
 
   private loadExpensesData() {
     this.expensesLoading = true;
-    this.subscriptions.add(
-      this.adminService.getTherapistFinancials().subscribe({
-        next: (res) => {
-          this.therapistFinancials = res.data;
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-    this.subscriptions.add(
-      this.adminService.getUsers('terapista').subscribe({
-        next: (res) => {
-          this.expenseTherapists = res.users.map((u) => ({ ...u, is_active: true } as User));
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-    this.subscriptions.add(
-      this.adminService.getExpenses().subscribe({
-        next: (res) => {
-          this.recentExpenses = res.data;
-          this.expensesLoading = false;
-          this.genDashboardCharts();
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.expensesLoading = false;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+    this.subscriptions.add(this.adminService.getTherapistFinancials().subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { this.expenseTherapists = res.users.map((u: any) => ({ ...u, is_active: true } as User)); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+    this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.markForCheck(); }, error: () => { this.expensesLoading = false; this.cdr.markForCheck(); } }));
   }
 
   openTherapistPaymentModal(therapist: TherapistFinancial) {
     this.expenseModalMode = 'therapist_payment';
-    this.expenseForm = {
-      category: 'therapist_payment',
-      therapist_id: therapist.therapist.id,
-      therapist_name: therapist.therapist.username,
-      amount: therapist.balance > 0 ? therapist.balance : 0,
-      method: 'transfer',
-      date: new Date().toISOString().split('T')[0],
-      description: `Pago a ${therapist.therapist.username}`,
-      receipt: null,
-    };
+    this.expenseForm = { category: 'therapist_payment', therapist_id: therapist.therapist.id, therapist_name: therapist.therapist.username, amount: therapist.balance > 0 ? therapist.balance : 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: `Pago a ${therapist.therapist.username}`, receipt: null };
     this.showExpenseModal = true;
   }
 
   openOperationalModal() {
     this.expenseModalMode = 'operational';
-    this.expenseForm = {
-      category: 'operational',
-      therapist_id: null,
-      therapist_name: '',
-      amount: 0,
-      method: 'transfer',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      receipt: null,
-    };
+    this.expenseForm = { category: 'operational', therapist_id: null, therapist_name: '', amount: 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: '', receipt: null };
     this.showExpenseModal = true;
   }
 
-  closeExpenseModal() {
-    this.showExpenseModal = false;
-  }
+  closeExpenseModal() { this.showExpenseModal = false; }
 
-  onExpenseFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) this.expenseForm.receipt = file;
-  }
+  onExpenseFileSelected(event: any) { const file = event.target.files[0]; if (file) this.expenseForm.receipt = file; }
 
   submitExpenseForm() {
     this.submitting = true;
@@ -1336,19 +675,9 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.expenseForm.therapist_id) fd.append('therapist_id', String(this.expenseForm.therapist_id));
     if (this.expenseForm.receipt) fd.append('receipt', this.expenseForm.receipt);
 
-    this.subscriptions.add(
-      this.adminService.createExpense(fd).subscribe({
-        next: () => {
-          this.submitting = false;
-          this.closeExpenseModal();
-          this.loadExpensesData();
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.submitting = false;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+    this.subscriptions.add(this.adminService.createExpense(fd).subscribe({
+      next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.cdr.markForCheck(); },
+      error: () => { this.submitting = false; this.cdr.markForCheck(); },
+    }));
   }
 }

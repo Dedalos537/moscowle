@@ -60,8 +60,11 @@
         @if (data.agenda?.length) {
           <div class="space-y-3">
             @for (item of data.agenda; track $index) {
-              <div class="p-3 rounded-xl transition-colors"
-                   [ngClass]="item.is_current ? 'bg-primary-container/20 border border-primary-container' : 'hover:bg-surface-container-low'">
+               <div class="p-3 rounded-xl transition-colors"
+                    [class.bg-primary-container/20]="item.is_current"
+                    [class.border]="item.is_current"
+                    [class.border-primary-container]="item.is_current"
+                    [class.hover:bg-surface-container-low]="!item.is_current">
                 <div class="flex items-center justify-between">
                   <p class="font-semibold text-sm text-on-surface">{{ item.title }}</p>
                   @if (item.is_current) {

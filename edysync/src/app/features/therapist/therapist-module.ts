@@ -18,7 +18,12 @@ import { TherapistAnalytics } from './pages/analytics/analytics';
 import { TherapistCalendarPage } from './pages/calendar/calendar';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    FormsModule,
+    BaseChartDirective,
+    TherapistRoutingModule,
+    SharedModule,
     TherapistDashboard,
     TherapistSessions,
     TherapistSessionReview,
@@ -30,13 +35,6 @@ import { TherapistCalendarPage } from './pages/calendar/calendar';
     TherapistReports,
     TherapistAnalytics,
     TherapistCalendarPage,
-  ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    BaseChartDirective,
-    TherapistRoutingModule,
-    SharedModule,
   ],
 })
 export class TherapistModule {}

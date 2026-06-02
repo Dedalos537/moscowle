@@ -27,7 +27,7 @@
               <td class="px-6 py-4 text-sm text-on-surface font-medium">{{ session.title }}</td>
               <td class="px-6 py-4">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                      [ngClass]="{
+                      [class]="{
                         'bg-success-container text-success': session.status === 'completed',
                         'bg-info-container text-info': session.status === 'scheduled',
                         'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'

@@ -9,15 +9,13 @@ import { ResetPassword } from './pages/reset-password/reset-password';
 
 
 @NgModule({
-  declarations: [
-    Login,
-    ResetPassword,
-  ],
   imports: [
     CommonModule,
     FormsModule,
     AuthRoutingModule,
     SharedModule,
+    Login,
+    ResetPassword,
   ],
 })
 export class AuthModule { }

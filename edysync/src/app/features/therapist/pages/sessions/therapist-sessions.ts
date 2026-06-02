@@ -1,4 +1,7 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { TherapistService } from '../../../../core/services/therapist.service';
@@ -6,10 +9,14 @@ import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Modal } from '../../../../shared/components/modal/modal';
+import { Select } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-sessions',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Modal, Select, Button],
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

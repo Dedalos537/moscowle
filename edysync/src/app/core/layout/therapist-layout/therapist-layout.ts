@@ -1,14 +1,20 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
+import { Header } from '../../components/header/header';
+import { Spinner } from '../../../shared/components/spinner/spinner';
+import { Button } from '../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-layout',
-  standalone: false,
+  standalone: true,
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button],
   templateUrl: './therapist-layout.html',
   styleUrl: './therapist-layout.scss',
   animations: [routeAnimations],

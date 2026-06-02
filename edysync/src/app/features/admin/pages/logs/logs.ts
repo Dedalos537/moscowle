@@ -1,4 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { LogViewerService, LogEntry } from '../../../../core/services/log-viewer.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, listStagger } from '../../../../core/animations';
@@ -6,11 +9,12 @@ import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-logs',
-  standalone: false,
+  standalone: true,
   templateUrl: './logs.html',
   styleUrl: './logs.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, listStagger],
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
 })
 export class Logs implements OnInit, OnDestroy {
   logs: LogEntry[] = [];

@@ -1,9 +1,12 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
 import { Subscription } from 'rxjs';
+import { Button } from '../../../shared/components/button/button';
 
 interface NavItem {
   path: string;
@@ -14,7 +17,8 @@ interface NavItem {
 
 @Component({
   selector: 'app-sidebar',
-  standalone: false,
+  standalone: true,
+  imports: [RouterModule, FontAwesomeModule, Button],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

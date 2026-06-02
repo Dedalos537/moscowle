@@ -1,4 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -7,14 +10,19 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Select } from '../../../../shared/components/select/select';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-sessions',
-  standalone: false,
+  standalone: true,
   templateUrl: './sessions.html',
   styleUrl: './sessions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, CalendarWidget],
 })
 export class Sessions implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

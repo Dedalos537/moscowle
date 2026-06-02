@@ -1,19 +1,19 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'app-modal',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './modal.html',
   styleUrl: './modal.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Modal {
-  @Input() isOpen: boolean = false;
-  @Input() title: string = '';
+  isOpen = input(false);
+  title = input<string>('');
 
-  @Output() close = new EventEmitter<void>();
-
-  constructor(private cdr: ChangeDetectorRef) {}
+  close = output<void>();
 
   closeModal() {
     this.close.emit();

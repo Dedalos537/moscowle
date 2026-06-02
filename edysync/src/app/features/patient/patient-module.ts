@@ -15,7 +15,11 @@ import { PatientProfile } from './pages/profile/profile';
 import { PatientMyTherapist } from './pages/my-therapist/my-therapist';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    FormsModule,
+    PatientRoutingModule,
+    SharedModule,
     PatientDashboard,
     PatientSessions,
     PatientPayments,
@@ -24,12 +28,6 @@ import { PatientMyTherapist } from './pages/my-therapist/my-therapist';
     PatientMessages,
     PatientProfile,
     PatientMyTherapist,
-  ],
-  imports: [
-    CommonModule,
-    FormsModule,
-    PatientRoutingModule,
-    SharedModule,
   ],
 })
 export class PatientModule {}

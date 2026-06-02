@@ -1,13 +1,19 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService } from '../../../../core/services/patient.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-patient-messages',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button],
   templateUrl: './messages.html',
   styleUrl: './messages.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

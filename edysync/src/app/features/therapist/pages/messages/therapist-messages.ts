@@ -1,13 +1,19 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { TherapistService, Conversation, MessageItem } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-messages',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button],
   templateUrl: './therapist-messages.html',
   styleUrl: './therapist-messages.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

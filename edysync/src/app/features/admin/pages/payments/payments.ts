@@ -1,4 +1,9 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -11,6 +16,11 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Select } from '../../../../shared/components/select/select';
+import { Input } from '../../../../shared/components/input/input';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 Chart.register(...registerables);
 
@@ -56,11 +66,12 @@ interface Therapist {
 
 @Component({
   selector: 'app-payments',
-  standalone: false,
+  standalone: true,
   templateUrl: './payments.html',
   styleUrl: './payments.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
 })
 export class Payments implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

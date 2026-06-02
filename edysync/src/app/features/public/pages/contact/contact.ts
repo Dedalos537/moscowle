@@ -1,11 +1,16 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
+import { Input } from '../../../../shared/components/input/input';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-contact',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule, Input, Button],
   templateUrl: './contact.html',
   styleUrl: './contact.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

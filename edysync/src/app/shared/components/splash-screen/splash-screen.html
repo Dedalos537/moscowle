@@ -1,4 +1,4 @@
-<div class="splash" [class.splash--hidden]="isReady">
+<div class="splash" [class.splash--hidden]="isReady()">
   <div class="splash__inner">
     <div class="splash__logo">
       <img src="assets/img/logo.svg" alt="Centro Juan Pablo II" width="80" height="80" style="object-fit:contain;">
@@ -6,7 +6,7 @@
     <h1 class="splash__title">Juan Pablo II</h1>
     <p class="splash__subtitle">Centro de Terapias</p>
     <div class="splash__bar">
-      <div class="splash__bar-fill" [class.splash__bar-fill--done]="isReady"></div>
+      <div class="splash__bar-fill" [class.splash__bar-fill--done]="isReady()"></div>
     </div>
   </div>
 </div>

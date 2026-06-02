@@ -1,4 +1,6 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { HeaderService } from '../../../../core/services/header.service';
 
@@ -24,7 +26,8 @@ interface Testimonial {
 
 @Component({
   selector: 'app-home',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule],
   templateUrl: './home.html',
   styleUrl: './home.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -10,16 +10,14 @@ import { About } from './pages/about/about';
 import { Contact } from './pages/contact/contact';
 
 @NgModule({
-  declarations: [
-    Home,
-    About,
-    Contact
-  ],
   imports: [
     CommonModule,
     FormsModule,
     PublicRoutingModule,
-    SharedModule
+    SharedModule,
+    Home,
+    About,
+    Contact
   ]
 })
 export class PublicModule { }

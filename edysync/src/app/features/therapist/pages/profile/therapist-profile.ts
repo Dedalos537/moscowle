@@ -1,13 +1,22 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { TherapistService, TherapistProfileData } from '../../../../core/services/therapist.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Card } from '../../../../shared/components/card/card';
+import { Input } from '../../../../shared/components/input/input';
+import { Select } from '../../../../shared/components/select/select';
+import { Alert } from '../../../../shared/components/alert/alert';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-profile',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Card, Input, Select, Alert, Button],
   templateUrl: './therapist-profile.html',
   styleUrl: './therapist-profile.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

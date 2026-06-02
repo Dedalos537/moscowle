@@ -1,4 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -6,14 +9,20 @@ import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Input } from '../../../../shared/components/input/input';
+import { Select } from '../../../../shared/components/select/select';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-expenses',
-  standalone: false,
+  standalone: true,
   templateUrl: './expenses.html',
   styleUrl: './expenses.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Select, Modal],
 })
 export class Expenses implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

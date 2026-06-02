@@ -80,11 +80,12 @@
                   <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>
                   <td class="py-3">
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                          [ngClass]="{
-                            'bg-success-container text-success': session.status === 'completed',
-                            'bg-info-container text-info': session.status === 'scheduled',
-                            'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
-                          }">
+                          [class.bg-success-container]="session.status === 'completed'"
+                          [class.text-success]="session.status === 'completed'"
+                          [class.bg-info-container]="session.status === 'scheduled'"
+                          [class.text-info]="session.status === 'scheduled'"
+                          [class.bg-surface-container-high]="session.status === 'cancelled'"
+                          [class.text-on-surface-variant]="session.status === 'cancelled'">
                       {{ session.status }}
                     </span>
                   </td>

@@ -35,9 +35,9 @@
       }
 
       @for (msg of messages; track msg.timestamp) {
-        <div class="flex" [ngClass]="{'justify-end': msg.role === 'user', 'justify-start': msg.role === 'assistant'}">
+        <div class="flex" [class]="{'justify-end': msg.role === 'user', 'justify-start': msg.role === 'assistant'}">
           <div class="max-w-[75%] p-3 rounded-lg text-sm"
-               [ngClass]="msg.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-on-surface rounded-bl-sm'">
+               [class]="msg.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-on-surface rounded-bl-sm'">
             <p class="whitespace-pre-wrap">{{ msg.content }}</p>
             <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
           </div>

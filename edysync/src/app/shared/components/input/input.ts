@@ -1,30 +1,29 @@
-import { Component, Input as NgInput, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-input',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './input.html',
   styleUrl: './input.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Input {
-  @NgInput() id: string = '';
-  @NgInput() label: string = '';
-  @NgInput() type: string = 'text';
-  @NgInput() placeholder: string = '';
-  @NgInput() value: string | number = '';
-  @NgInput() error?: string;
-  @NgInput() icon?: IconProp;
+  id = input<string>('');
+  label = input<string>('');
+  type = input<string>('text');
+  placeholder = input<string>('');
+  value = input<string | number>('');
+  error = input<string>();
+  icon = input<IconProp>();
 
-  @Output() valueChange = new EventEmitter<string | number>();
-
-  constructor(private cdr: ChangeDetectorRef) {}
+  valueChange = output<string | number>();
 
   onInput(event: Event) {
     const input = event.target as HTMLInputElement;
     const val = input.type === 'number' ? parseFloat(input.value) || 0 : input.value;
-    this.value = val;
     this.valueChange.emit(val);
   }
 }

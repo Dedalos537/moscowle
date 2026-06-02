@@ -1,17 +1,16 @@
-import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-pill-status',
-  standalone: false,
+  standalone: true,
+  imports: [],
   templateUrl: './pill-status.html',
   styleUrl: './pill-status.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PillStatus {
-  @Input() status: 'active' | 'completed' | 'pending' | 'error' | 'warning' = 'active';
-  @Input() label: string = '';
-
-  constructor(private cdr: ChangeDetectorRef) {}
+  status = input<'active' | 'completed' | 'pending' | 'error' | 'warning'>('active');
+  label = input<string>('');
 
   get pillClasses() {
     const base = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-caps';
@@ -22,7 +21,7 @@ export class PillStatus {
       error: 'bg-error-container text-on-error-container',
       warning: 'bg-warning-container text-warning'
     };
-    return `${base} ${variants[this.status]}`;
+    return `${base} ${variants[this.status()]}`;
   }
 
   get dotClass() {
@@ -33,6 +32,6 @@ export class PillStatus {
       error: 'bg-error',
       warning: 'bg-warning'
     };
-    return `w-1.5 h-1.5 rounded-full ${variants[this.status]}`;
+    return `w-1.5 h-1.5 rounded-full ${variants[this.status()]}`;
   }
 }

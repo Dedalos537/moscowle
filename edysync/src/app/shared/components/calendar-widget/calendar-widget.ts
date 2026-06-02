@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 export interface CalendarWidgetEvent {
   id: number;
@@ -27,19 +28,20 @@ interface DayCell {
 
 @Component({
   selector: 'app-calendar-widget',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './calendar-widget.html',
   styleUrl: './calendar-widget.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalendarWidget implements OnInit, OnChanges {
-  @Input() events: CalendarWidgetEvent[] = [];
-  @Input() role: 'admin' | 'therapist' | 'patient' = 'admin';
-  @Input() readonly = false;
+  events = input<CalendarWidgetEvent[]>([]);
+  role = input<'admin' | 'therapist' | 'patient'>('admin');
+  readonly = input(false);
 
-  @Output() dayDblClick = new EventEmitter<Date>();
-  @Output() rangeDblClick = new EventEmitter<{ start: Date; end: Date }>();
-  @Output() eventClick = new EventEmitter<CalendarWidgetEvent>();
+  dayDblClick = output<Date>();
+  rangeDblClick = output<{ start: Date; end: Date }>();
+  eventClick = output<CalendarWidgetEvent>();
 
   currentMonth: Date = new Date();
   selectedDate: Date = new Date();
@@ -52,8 +54,6 @@ export class CalendarWidget implements OnInit, OnChanges {
   private clickCount = 0;
   private clickTimer: any = null;
   private lastClickedKey = '';
-
-  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.buildGrid();
@@ -118,7 +118,7 @@ export class CalendarWidget implements OnInit, OnChanges {
         const dayStart = new Date(cursor);
         dayStart.setHours(0, 0, 0, 0);
 
-        const dayEvents = this.events.filter((e) => {
+        const dayEvents = this.events().filter((e) => {
           const ed = new Date(e.date);
           ed.setHours(0, 0, 0, 0);
           return ed.getTime() === dayStart.getTime();
@@ -270,14 +270,14 @@ export class CalendarWidget implements OnInit, OnChanges {
     if (this.rangeStart && this.rangeEnd) {
       const s = new Date(this.rangeStart).setHours(0, 0, 0, 0);
       const e = new Date(this.rangeEnd).setHours(0, 0, 0, 0);
-      return this.events.filter((ev) => {
+      return this.events().filter((ev) => {
         const ed = new Date(ev.date).setHours(0, 0, 0, 0);
         return ed >= Math.min(s, e) && ed <= Math.max(s, e);
       });
     }
 
     const sel = this.dateKey(this.selectedDate);
-    return this.events.filter((ev) => this.dateKey(ev.date) === sel);
+    return this.events().filter((ev) => this.dateKey(ev.date) === sel);
   }
 
   get selectedDateLabel(): string {
@@ -326,7 +326,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   }
 
   onEventClick(event: CalendarWidgetEvent) {
-    if (this.readonly) return;
+    if (this.readonly()) return;
     this.eventClick.emit(event);
   }
 

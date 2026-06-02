@@ -16,7 +16,11 @@ import { TherapistLayout } from './layout/therapist-layout/therapist-layout';
 import { PatientLayout } from './layout/patient-layout/patient-layout';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule,
+    HttpClientModule,
+    RouterModule,
+    SharedModule,
     MainLayout,
     Navbar,
     Footer,
@@ -25,12 +29,6 @@ import { PatientLayout } from './layout/patient-layout/patient-layout';
     AdminLayout,
     TherapistLayout,
     PatientLayout,
-  ],
-  imports: [
-    CommonModule,
-    HttpClientModule,
-    RouterModule,
-    SharedModule
   ],
   exports: [
     MainLayout,

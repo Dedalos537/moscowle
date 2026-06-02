@@ -1,5 +1,8 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -10,7 +13,8 @@ import { ConfirmService } from '../../../../core/services/confirm.service';
 
 @Component({
   selector: 'app-therapist-session-review',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule],
   templateUrl: './session-review.html',
   styleUrl: './session-review.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

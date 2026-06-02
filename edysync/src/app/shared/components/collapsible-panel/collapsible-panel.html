@@ -1,19 +1,19 @@
-<div class="collapsible-panel" [class.collapsible-panel--card]="variant === 'card'" [class.collapsible-panel--drawer]="variant === 'drawer'">
+<div class="collapsible-panel" [class.collapsible-panel--card]="variant() === 'card'" [class.collapsible-panel--drawer]="variant() === 'drawer'">
   <div class="panel-header" (click)="toggle()" role="button" tabindex="0" (keydown.enter)="toggle()" (keydown.space)="toggle(); $event.preventDefault()">
     <div class="panel-header-left">
-      @if (icon) {
-        <fa-icon [icon]="icon" class="panel-header-icon"></fa-icon>
+      @if (icon()) {
+        <fa-icon [icon]="icon()" class="panel-header-icon"></fa-icon>
       }
-      <span class="panel-header-title">{{ title }}</span>
+      <span class="panel-header-title">{{ title() }}</span>
     </div>
     <fa-icon
       [icon]="['fas', 'chevron-down']"
       class="panel-chevron"
-      [class.panel-chevron--open]="expanded"
+      [class.panel-chevron--open]="expanded()"
     ></fa-icon>
   </div>
 
-  <div class="panel-body-wrapper" [@collapse]="expanded ? '*' : 'void'">
+  <div class="panel-body-wrapper" [@collapse]="expanded() ? '*' : 'void'">
     <div class="panel-body">
       <ng-content></ng-content>
     </div>

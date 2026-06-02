@@ -1,9 +1,15 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/animations';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { Sede } from '../../../../core/models/sede';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../shared/components/button/button';
+import { QuickPayment } from '../../components/quick-payment/quick-payment';
 
 interface SedeStat {
   id: number;
@@ -36,7 +42,8 @@ interface DailyPending {
 
 @Component({
   selector: 'app-dashboard',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],

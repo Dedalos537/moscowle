@@ -57,6 +57,15 @@ ai_models/
 *.backup
 *.bak
 
+# User uploaded media (should NOT be in git)
+uploads/uploads/receipts/*
+uploads/uploads/messages/*
+uploads/uploads/*.webm
+uploads/uploads/*.jpeg
+uploads/uploads/*.jpg
+uploads/uploads/*.png
+app/static/uploads/session_images/*
+
 # Testing
 .pytest_cache/
 .coverage

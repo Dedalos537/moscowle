@@ -1,12 +1,17 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService, PatientInfo } from '../../../../core/services/therapist.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 
 @Component({
   selector: 'app-therapist-patients',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner],
   templateUrl: './patients.html',
   styleUrl: './patients.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

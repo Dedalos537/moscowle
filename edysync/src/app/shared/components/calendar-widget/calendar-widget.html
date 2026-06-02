@@ -81,7 +81,7 @@
         @for (event of selectedDayEvents; track event.id) {
           <button
             class="agenda-item"
-            [class.clickable]="!readonly"
+            [class.clickable]="!readonly()"
             (click)="onEventClick(event)"
           >
             <div class="agenda-item-indicator" [class]="statusColor(event.status)"></div>
@@ -91,7 +91,7 @@
                 @if (event.time) {
                   <span>{{ event.time }}{{ event.endTime ? ' - ' + event.endTime : '' }}</span>
                 }
-                @if (role === 'admin') {
+                @if (role() === 'admin') {
                   @if (event.therapist) {
                     <span class="meta-sep"></span>
                     <span>{{ event.therapist }}</span>
@@ -101,7 +101,7 @@
                     <span>{{ event.patient }}</span>
                   }
                 }
-                @if (role === 'therapist' && event.patient) {
+                @if (role() === 'therapist' && event.patient) {
                   <span class="meta-sep"></span>
                   <span>{{ event.patient }}</span>
                 }
@@ -115,7 +115,7 @@
       <div class="agenda-empty">
         <fa-icon [icon]="['fas', 'calendar-times']" class="text-on-surface-variant/30"></fa-icon>
         <p class="agenda-empty-text">Sin sesiones para esta fecha</p>
-        @if (!readonly) {
+        @if (!readonly()) {
           <p class="agenda-empty-hint">Doble click en un día para crear sesión{{ isRangeSelected ? 'es' : '' }}</p>
         }
       </div>

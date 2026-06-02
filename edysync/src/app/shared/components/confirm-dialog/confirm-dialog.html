@@ -1,16 +1,16 @@
 <div class="confirm-backdrop" (click)="cancel.emit()">
   <div class="confirm-panel" (click)="$event.stopPropagation()">
     <div class="confirm-icon"
-      [class.confirm-icon--danger]="state.options.variant === 'danger'"
-      [class.confirm-icon--warning]="state.options.variant === 'warning'"
-      [class.confirm-icon--primary]="state.options.variant === 'primary'">
-      <fa-icon [icon]="state.options.icon || ['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
+      [class.confirm-icon--danger]="state().options.variant === 'danger'"
+      [class.confirm-icon--warning]="state().options.variant === 'warning'"
+      [class.confirm-icon--primary]="state().options.variant === 'primary'">
+      <fa-icon [icon]="state().options.icon || ['fas', 'exclamation-triangle']" class="text-2xl"></fa-icon>
     </div>
-    <h3 class="confirm-title">{{ state.options.title }}</h3>
-    <p class="confirm-message">{{ state.options.message }}</p>
+    <h3 class="confirm-title">{{ state().options.title }}</h3>
+    <p class="confirm-message">{{ state().options.message }}</p>
     <div class="confirm-actions">
-      <app-button variant="secondary" class="flex-1" [label]="state.options.cancelText || 'Cancelar'" (clicked)="cancel.emit()"></app-button>
-      <app-button [variant]="state.options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="state.options.confirmText || 'Confirmar'" (clicked)="confirm.emit()"></app-button>
+      <app-button variant="secondary" class="flex-1" [label]="state().options.cancelText || 'Cancelar'" (clicked)="cancel.emit()"></app-button>
+      <app-button [variant]="state().options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="state().options.confirmText || 'Confirmar'" (clicked)="confirm.emit()"></app-button>
     </div>
   </div>
 </div>

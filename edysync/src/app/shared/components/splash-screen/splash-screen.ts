@@ -1,14 +1,14 @@
-import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-splash-screen',
-  standalone: false,
+  standalone: true,
+  imports: [],
   templateUrl: './splash-screen.html',
   styleUrl: './splash-screen.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SplashScreen {
-  @Input() isReady = false;
+  isReady = input(false);
 
-  constructor(private cdr: ChangeDetectorRef) {}
 }

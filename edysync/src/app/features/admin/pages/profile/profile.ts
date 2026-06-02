@@ -1,15 +1,22 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Input } from '../../../../shared/components/input/input';
+import { Card } from '../../../../shared/components/card/card';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-profile',
-  standalone: false,
+  standalone: true,
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FontAwesomeModule, Button, Input, Card, Alert],
 })
 export class Profile implements OnInit, OnDestroy {
   username = '';

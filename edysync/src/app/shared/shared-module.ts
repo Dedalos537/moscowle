@@ -27,13 +27,11 @@ import { CollapsiblePanel } from './components/collapsible-panel/collapsible-pan
 import { Select } from './components/select/select';
 
 @NgModule({
-  declarations: [
+  imports: [
+    CommonModule, FormsModule, FontAwesomeModule,
     Button, Card, Input, Spinner, Alert, Modal, Chip,
     ProgressBar, PillStatus, AiChat, CalendarWidget, AlertModal, RecordingOverlay, ConfirmDialog,
     ChatComponent, SplashScreen, CollapsiblePanel, Select,
-  ],
-  imports: [
-    CommonModule, FormsModule, FontAwesomeModule
   ],
   exports: [
     CommonModule, FormsModule, FontAwesomeModule,

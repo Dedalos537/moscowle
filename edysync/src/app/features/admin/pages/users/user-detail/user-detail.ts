@@ -1,15 +1,24 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { SelectOption } from '../../../../../shared/components/select/select';
+import { Spinner } from '../../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../../shared/components/button/button';
+import { Select } from '../../../../../shared/components/select/select';
+import { Input } from '../../../../../shared/components/input/input';
+import { Modal } from '../../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-user-detail',
-  standalone: false,
+  standalone: true,
+  imports: [FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Modal],
   templateUrl: './user-detail.html',
   styleUrl: './user-detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

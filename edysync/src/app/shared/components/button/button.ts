@@ -1,21 +1,24 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 @Component({
   selector: 'app-button',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule],
   templateUrl: './button.html',
   styleUrl: './button.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Button {
-  @Input() label: string = '';
-  @Input() variant: 'primary' | 'secondary' | 'danger' | 'ghost' = 'primary';
-  @Input() icon?: IconProp;
-  @Input() disabled: boolean = false;
-  @Input() type: 'button' | 'submit' = 'button';
+  label = input<string>('');
+  variant = input<'primary' | 'secondary' | 'danger' | 'ghost'>('primary');
+  icon = input<IconProp>();
+  disabled = input(false);
+  type = input<'button' | 'submit'>('button');
 
-  @Output() clicked = new EventEmitter<Event>();
+  clicked = output<Event>();
 
   readonly variantMap: Record<string, Record<string, boolean>> = {
     primary: { 'btn--primary': true },
@@ -24,17 +27,15 @@ export class Button {
     ghost: { 'btn--ghost': true }
   };
 
-  constructor(private cdr: ChangeDetectorRef) {}
-
   get btnClass(): Record<string, boolean> {
     return {
-      ...this.variantMap[this.variant],
-      'btn--disabled': this.disabled
+      ...this.variantMap[this.variant()],
+      'btn--disabled': this.disabled()
     };
   }
 
   onClick(event: Event) {
-    if (!this.disabled) {
+    if (!this.disabled()) {
       this.clicked.emit(event);
     }
   }

@@ -31,7 +31,7 @@
               <td class="px-6 py-4 text-sm text-on-surface-variant">{{ patient.email }}</td>
               <td class="px-6 py-4">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                      [ngClass]="patient.status_color || 'bg-surface-container-high text-on-surface-variant'">
+                      [class]="patient.status_color || 'bg-surface-container-high text-on-surface-variant'">
                   {{ patient.status_label || 'Activo' }}
                 </span>
               </td>

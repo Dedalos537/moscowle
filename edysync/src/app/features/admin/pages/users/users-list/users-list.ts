@@ -1,4 +1,8 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { HeaderService } from '../../../../../core/services/header.service';
@@ -9,6 +13,10 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { firstValueFrom } from 'rxjs';
 import { SelectOption } from '../../../../../shared/components/select/select';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
+import { Spinner } from '../../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../../shared/components/button/button';
+import { Select } from '../../../../../shared/components/select/select';
+import { Input } from '../../../../../shared/components/input/input';
 
 Chart.register(...registerables);
 
@@ -43,7 +51,8 @@ interface UserRow {
 
 @Component({
   selector: 'app-users-list',
-  standalone: false,
+  standalone: true,
+  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

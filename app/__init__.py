@@ -620,13 +620,13 @@ def create_app(config_class=Config):
     from app.routes.patient_routes import patient_bp
     app.register_blueprint(patient_bp)
     
-    from app.routes.api_routes import api_bp
+    from app.routes.api import api_bp
     app.register_blueprint(api_bp)
     
     from app.routes.uploads import uploads_bp
     app.register_blueprint(uploads_bp)
         
-    from app.routes.admin_routes import admin_bp
+    from app.routes.admin import admin_bp
     app.register_blueprint(admin_bp)
     
     # Register Yape/Financial Integration Blueprint

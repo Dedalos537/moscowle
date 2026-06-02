@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../services/header.service';
 import { AdminService } from '../../services/admin.service';
 import { AuthService } from '../../services/auth.service';
@@ -7,10 +9,12 @@ import { SidebarService } from '../../services/sidebar.service';
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
+import { Button } from '../../../shared/components/button/button';
 
 @Component({
   selector: 'app-header',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule, Button],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

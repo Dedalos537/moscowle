@@ -1,16 +1,23 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AITrainingStatus } from '../../../../core/models/ai-training';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Card } from '../../../../shared/components/card/card';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-ai-training',
-  standalone: false,
+  standalone: true,
   templateUrl: './ai-training.html',
   styleUrl: './ai-training.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner, Card, Alert],
 })
 export class AiTraining implements OnInit, OnDestroy {
   status: AITrainingStatus = { model_exists: false, training_in_progress: false };

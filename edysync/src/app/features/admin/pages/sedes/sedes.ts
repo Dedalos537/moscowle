@@ -1,4 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -7,10 +10,14 @@ import { AlertService } from '../../../../core/services/alert.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede, SedeAnalytics } from '../../../../core/models/sede';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { SedeCard } from './components/sede-card/sede-card';
 
 @Component({
   selector: 'app-sedes',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, SedeCard],
   templateUrl: './sedes.html',
   styleUrl: './sedes.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

@@ -1,11 +1,14 @@
 import { Component, ElementRef, ViewChild, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { LlamaService, ChatMessage } from '../../../core/services/llama.service';
 
 @Component({
   selector: 'app-ai-chat',
-  standalone: false,
+  standalone: true,
+  imports: [FormsModule, FontAwesomeModule],
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

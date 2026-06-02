@@ -12,7 +12,7 @@
         @for (val of data.accuracy_data; track $index; let i = $index) {
           <div class="flex-1 flex flex-col items-center gap-1">
             <div class="w-full bg-primary-container/20 rounded-t-lg transition-all duration-500"
-                 [style.height.%]="val" [ngClass]="val > data.avg_accuracy ? 'bg-primary-container' : 'bg-surface-container-high'">
+                 [style.height.%]="val" [class]="val > data.avg_accuracy ? 'bg-primary-container' : 'bg-surface-container-high'">
             </div>
             @if (data.labels[i]) {
               <span class="text-[10px] text-on-surface-variant truncate w-full text-center">{{ data.labels[i] }}</span>
@@ -43,9 +43,9 @@
       <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
         @for (achievement of data.achievements; track $index) {
           <div class="p-4 rounded-xl border text-center"
-               [ngClass]="achievement.achieved ? 'bg-success-container border-success-container' : 'bg-surface-container-low border-border/30 opacity-60'">
-            <fa-icon [icon]="achievement.achieved ? ['fas', 'trophy'] : ['fas', 'lock']"
-                     [ngClass]="achievement.achieved ? 'text-success' : 'text-on-surface-variant'"
+               [class]="achievement.achieved ? 'bg-success-container border-success-container' : 'bg-surface-container-low border-border/30 opacity-60'">
+             <fa-icon [icon]="achievement.achieved ? ['fas', 'trophy'] : ['fas', 'lock']"
+                      [class]="achievement.achieved ? 'text-success' : 'text-on-surface-variant'"
                      class="text-2xl mb-2"></fa-icon>
             <p class="text-sm font-bold text-on-surface">{{ achievement.title }}</p>
             @if (achievement.achieved && achievement.date) {

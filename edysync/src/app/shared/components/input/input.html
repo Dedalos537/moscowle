@@ -1,29 +1,29 @@
 <div class="flex flex-col gap-1.5 w-full relative">
-  @if (label) {
-    <label [for]="id" class="text-sm font-medium text-on-surface">{{ label }}</label>
+  @if (label()) {
+    <label [for]="id()" class="text-sm font-medium text-on-surface">{{ label() }}</label>
   }
 
   <div class="relative w-full">
-    @if (icon) {
+    @if (icon()) {
       <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
-        <fa-icon [icon]="icon" class="text-sm"></fa-icon>
+        <fa-icon [icon]="icon()" class="text-sm"></fa-icon>
       </div>
     }
 
     <input
-      [id]="id"
-      [type]="type"
-      [value]="value"
+      [id]="id()"
+      [type]="type()"
+      [value]="value()"
       (input)="onInput($event)"
-      [placeholder]="placeholder"
+      [placeholder]="placeholder()"
       class="w-full bg-surface-container-lowest text-on-surface border border-border rounded-lg px-4 py-2.5 text-sm outline-none transition-all duration-200"
-      [class.pl-10]="icon"
-      [class.!border-error]="error"
+      [class.pl-10]="icon()"
+      [class.!border-error]="error()"
       #inputEl
     >
   </div>
 
-  @if (error) {
-    <span class="text-xs font-medium text-error mt-0.5">{{ error }}</span>
+  @if (error()) {
+    <span class="text-xs font-medium text-error mt-0.5">{{ error() }}</span>
   }
 </div>

@@ -1,17 +1,24 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ContactMessage } from '../../../../core/models/expense';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Input } from '../../../../shared/components/input/input';
 
 @Component({
   selector: 'app-messages',
-  standalone: false,
+  standalone: true,
   templateUrl: './messages.html',
   styleUrl: './messages.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input],
 })
 export class Messages implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

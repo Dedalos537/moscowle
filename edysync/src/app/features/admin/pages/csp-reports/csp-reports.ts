@@ -1,16 +1,21 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { CSPReport, CSPReportFilter } from '../../../../core/models/csp-report';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Input } from '../../../../shared/components/input/input';
 
 @Component({
   selector: 'app-csp-reports',
-  standalone: false,
+  standalone: true,
   templateUrl: './csp-reports.html',
   styleUrl: './csp-reports.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [FontAwesomeModule, Button, Spinner, Input],
 })
 export class CspReports implements OnInit, OnDestroy {
   reports: CSPReport[] = [];

@@ -1,11 +1,15 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { AsyncPipe } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router } from '@angular/router';
 import { RecordingService } from '../../../core/services/recording.service';
 import { Observable } from 'rxjs';
+import { Button } from '../button/button';
 
 @Component({
   selector: 'app-recording-overlay',
-  standalone: false,
+  standalone: true,
+  imports: [AsyncPipe, FontAwesomeModule, Button],
   templateUrl: './recording-overlay.html',
   styleUrl: './recording-overlay.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,7 +27,6 @@ export class RecordingOverlay implements OnInit, OnDestroy {
   constructor(
     private recordingService: RecordingService,
     private router: Router,
-    private cdr: ChangeDetectorRef,
   ) {
     this.state = this.recordingService.recordingState$;
     this.elapsed = this.recordingService.elapsedTime$;

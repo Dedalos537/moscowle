@@ -8,17 +8,22 @@ from datetime import datetime, timedelta
 warnings.filterwarnings('ignore', message='.*google.generativeai.*has ended.*')
 from app.extensions import db
 from app.models import User, Payment, Appointment, Expense
-from app.services.context_cache_service import get_cached_context, get_cached_context_text
+from app.services.context_cache_service import get_cached_context, get_cached_context_text, invalidate_context
 from app.services.workflow_intelligence_service import track_workflow, predict_next_action
 
 logger = logging.getLogger('app')
 
-# ==================== MAPAS SEMÁNTICOS ====================
+_RE_AMOUNT = re.compile(r'S/?\.?\s*(\d+(?:[.,]\d{3})*(?:[.,]\d{2})?)')
+_RE_PATIENT = re.compile(r'(?:para|con|de|alumno|paciente|Sr|Sra|Dr)\s+([A-Za-záéíóúÁÉÍÓÚ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚ]+)*)')
+_RE_NAME_CAPS = re.compile(r'\b([A-Z][a-záéíóú]+(?:\s+[A-Z][a-záéíóú]+)*)\b')
+_RE_DATE = re.compile(r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})')
+_RE_DAY = re.compile(r'(lunes|martes|miércoles|jueves|viernes|sábado|domingo)')
+_RE_RELATIVE = re.compile(r'(mañana|hoy|esta semana|próxima semana|pronto)')
+_RE_HOUR = re.compile(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m|p\.m)?', re.IGNORECASE)
 
-# Sinónimos y variantes para cada intención
 SEMANTIC_MAPS = {
     'unpaid_users': {
-        'keywords': ['no han pagado', 'moroso', 'deuda', 'sin pagar', 'deudor', 
+        'keywords': ['no han pagado', 'moroso', 'deuda', 'sin pagar', 'deudor',
                      'no pagó', 'vencido', 'atrasado', 'incobrable', 'debe', 'debe pagar',
                      'morosos', 'deudores', 'sin cobrar', 'impago', 'adeudado'],
         'alternatives': ['quién', 'cuáles', 'cuántos', 'lista', 'listar'],
@@ -49,7 +54,7 @@ SEMANTIC_MAPS = {
     },
     'schedule_optimization': {
         'keywords': ['mejorar horarios', 'optimize', 'optimar', 'reorganizar',
-                     'recomendación horarios', 'sugerencia horarios', 'cómo mejoro', 
+                     'recomendación horarios', 'sugerencia horarios', 'cómo mejoro',
                      'agendar mejor', 'programación óptima', 'conflictos horarios'],
         'alternatives': ['cómo', 'mejora', 'propuesta', 'idea'],
         'example': '¿Cómo mejoro los horarios?'
@@ -111,8 +116,9 @@ SEMANTIC_MAPS = {
     },
     'create_user': {
         'keywords': ['crear usuario', 'nuevo paciente', 'nuevo alumno', 'registrar',
-                     'nuevo usuario', 'agregar usuario', 'crear cuenta', 'dar de alta'],
-        'alternatives': ['nombre', 'email', 'teléfono', 'rol'],
+                     'nuevo usuario', 'agregar usuario', 'crear cuenta', 'dar de alta',
+                     'nuevo cliente', 'registra alumno', 'agrega paciente'],
+        'alternatives': ['nombre', 'email', 'teléfono', 'rol', 'crear'],
         'example': 'Crear usuario María García'
     },
     'list_users': {
@@ -139,7 +145,7 @@ SEMANTIC_MAPS = {
     'navigation': {
         'keywords': ['llévame', 'navega', 'ir a', 'voy a', 'go to', 'abre',
                      'vamos a', 'acceder', 'ingresar', 'vaya a'],
-        'sections': ['deudores', 'pagos', 'sesiones', 'reportes', 'usuarios', 
+        'sections': ['deudores', 'pagos', 'sesiones', 'reportes', 'usuarios',
                      'sedes', 'gastos', 'mensajes', 'juegos', 'dashboard', 'panel'],
         'example': 'Llévame a ver los deudores'
     },
@@ -151,181 +157,140 @@ SEMANTIC_MAPS = {
         'alternatives': ['de', 'para', 'usuario', 'pago'],
         'example': 'Ver historial de pagos de Juan'
     },
-    'create_user': {
-        'keywords': ['crear usuario', 'nuevo paciente', 'nuevo alumno', 'registrar',
-                     'nuevo usuario', 'agregar usuario', 'crear cuenta', 'dar de alta',
-                     'nuevo cliente', 'registra alumno', 'agrega paciente'],
-        'alternatives': ['nombre', 'email', 'teléfono', 'rol', 'crear'],
-        'example': 'Crear usuario María García'
-    }
 }
 
-# ==================== DETECTOR DE INTENCIONES - V5 ====================
+CRITICAL_PARAMS = {
+    'register_payment': ['patient_name', 'amount'],
+    'create_appointment': ['patient_name', 'day', 'time'],
+    'create_expense': ['amount', 'category'],
+    'assign_therapist': ['patient_name'],
+    'create_user': ['patient_name'],
+}
+
+CLARIFICATION_QUESTIONS = {
+    'register_payment': '¿Para quién es el pago y cuál es el monto? ej: "S/. 500 para Juan"',
+    'create_appointment': '¿Cuál es el nombre del paciente y qué día/hora prefieres?',
+    'create_expense': '¿Cuál es el monto y la categoría del gasto?',
+    'assign_therapist': '¿Cuál es el nombre del paciente para asignarle terapeuta?',
+    'create_user': '¿Cuál es el nombre completo del nuevo usuario?',
+}
+
+NAV_URL_MAP = {
+    'dashboard': 'admin.dashboard', 'pacientes': 'admin.users', 'patients': 'admin.users',
+    'cobros': 'admin.dashboard', 'payments': 'admin.dashboard',
+    'reportes': 'admin.reports', 'reports': 'admin.reports',
+    'sesiones': 'admin.dashboard', 'sessions': 'admin.dashboard',
+    'juegos': 'admin.games', 'games': 'admin.games',
+    'gastos': 'admin.expenses', 'expenses': 'admin.expenses',
+    'sedes': 'admin.sedes',
+}
+
+INTENTS_WITH_DATA = {
+    'unpaid_users', 'weekly_due', 'revenue_metrics', 'breakeven_analysis',
+    'schedule_optimization', 'generate_report', 'list_sessions', 'list_payments', 'list_users',
+}
+
+MUTATION_INTENTS = {'register_payment', 'create_user'}
+
+
+def safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 
 def get_semantic_confidence(message: str, intent_key: str) -> float:
-    """Calcula confianza semántica de una intención"""
     msg_lower = message.lower()
-    intent_map = SEMANTIC_MAPS.get(intent_key, {})
-    
-    keywords = intent_map.get('keywords', [])
-    
-    # Contar matches de keywords
+    keywords = SEMANTIC_MAPS.get(intent_key, {}).get('keywords', [])
     keyword_matches = sum(1 for kw in keywords if kw in msg_lower)
-    
-    # Si hay matches, confianza es proporcional a cantidad de matches
     if keyword_matches > 0:
-        # 0.5 base + 0.5 por matches (pueden llegar a 0.95)
         return min(0.98, 0.5 + (keyword_matches * 0.1))
-    
-    # Si no hay keywords, retornar 0 para no forzar este intent
     return 0.0
 
+
 def detect_user_intent_v5(message: str) -> tuple:
-    """Detecta intención con análisis semántico"""
     msg_lower = message.lower()
-    
-    # Calcular confianza para cada intención
-    scores = {}
-    for intent_key in SEMANTIC_MAPS.keys():
-        scores[intent_key] = get_semantic_confidence(message, intent_key)
-    
-    # Obtener mejores candidatos (solo los que tienen confianza > 0)
+    scores = {k: get_semantic_confidence(message, k) for k in SEMANTIC_MAPS}
     valid_intents = [(k, v) for k, v in scores.items() if v > 0.0]
     valid_intents.sort(key=lambda x: x[1], reverse=True)
-    
-    MIN_CONFIDENCE = 0.5  # se necesita al menos 0.5 para override general_chat
-    if valid_intents and valid_intents[0][1] >= MIN_CONFIDENCE:
-        best_intent = valid_intents[0][0]
-        best_confidence = valid_intents[0][1]
+
+    if valid_intents and valid_intents[0][1] >= 0.5:
+        best_intent, best_confidence = valid_intents[0]
     else:
         best_intent = 'general_chat'
-        best_confidence = valid_intents[0][1] if valid_intents else 0.3
-        best_confidence = max(best_confidence, 0.3)
-    
-    # Extraer parámetros según intención
+        best_confidence = max(valid_intents[0][1] if valid_intents else 0.3, 0.3)
+
     params = extract_parameters_v5(message, best_intent)
-    
-    # Solo preguntar clarificacion si el intent NO es general_chat
+
     if best_intent != 'general_chat' and should_ask_clarification(best_intent, params):
-        question = generate_clarification_question(best_intent, params)
-        return best_intent, params, best_confidence, question
-    
+        return best_intent, params, best_confidence, CLARIFICATION_QUESTIONS.get(best_intent, '¿Puedes dar más detalles?')
+
     return best_intent, params, best_confidence, None
 
+
 def extract_parameters_v5(message: str, intent: str) -> dict:
-    """Extrae parámetros específicos según intención"""
     msg_lower = message.lower()
     params = {}
-    
-    # Patrones comunes
-    amount_match = re.search(r'S/?\.?\s*(\d+(?:[.,]\d{3})*(?:[.,]\d{2})?)', message)
+    amount_match = _RE_AMOUNT.search(message)
     if amount_match:
-        params['amount'] = float(amount_match.group(1).replace(',', '').replace('.', ''))
-    
-    # Búsqueda de nombres mejorada
-    # Primero buscar después de palabras clave como "para", "con", "de"
-    for keyword in ['para', 'con', 'de', 'alumno', 'paciente','Sr', 'Sra', 'Dr']:
-        pattern = rf'{keyword}\s+([A-Za-záéíóúÁÉÍÓÚ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚ]+)*)'
-        matches = re.findall(pattern, message, re.IGNORECASE)
-        if matches:
-            params['patient_name'] = matches[0].strip()
-            break
-    
-    # Si no encontró, buscar capitalizadas
+        params['amount'] = safe_float(amount_match.group(1).replace(',', '').replace('.', ''))
+
+    patient_match = _RE_PATIENT.search(message)
+    if patient_match:
+        params['patient_name'] = patient_match.group(1).strip()
+
     if 'patient_name' not in params:
-        name_matches = re.findall(r'\b([A-Z][a-záéíóú]+(?:\s+[A-Z][a-záéíóú]+)*)\b', message)
+        name_matches = _RE_NAME_CAPS.findall(message)
         if name_matches:
             params['patient_name'] = name_matches[0]
-    
-    # Guardar también todos los nombres mencionados
+
     all_names = re.findall(r'\b([A-Za-záéíóúÁÉÍÓÚ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚ]+)*)\b', message)
     params['mentioned_names'] = all_names
-    
-    # Búsqueda de fechas
-    date_patterns = [
-        r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',  # DD/MM/YYYY
-        r'(lunes|martes|miércoles|jueves|viernes|sábado|domingo)',
-        r'(mañana|hoy|esta semana|próxima semana|pronto)'
-    ]
-    for pattern in date_patterns:
-        date_match = re.search(pattern, message, re.IGNORECASE)
-        if date_match:
-            params['date_reference'] = date_match.group(0)
-    
-    # Parámetros específicos por intención
-    if intent == 'breakeven_analysis':
-        if amount_match:
-            params['target_profit'] = float(amount_match.group(1).replace(',', '').replace('.', ''))
-    
+
+    date_match = _RE_DATE.search(message) or _RE_DAY.search(message) or _RE_RELATIVE.search(message)
+    if date_match:
+        params['date_reference'] = date_match.group(0)
+
+    if intent == 'breakeven_analysis' and amount_match:
+        params['target_profit'] = safe_float(amount_match.group(1).replace(',', '').replace('.', ''))
+
     elif intent == 'navigation':
         for section in SEMANTIC_MAPS['navigation']['sections']:
             if section in msg_lower:
                 params['target_section'] = section
                 break
-    
+
     elif intent == 'create_appointment':
-        # Buscar día
         for day in ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']:
             if day in msg_lower:
                 params['day'] = day
                 break
-        
-        # Buscar hora
-        hour_match = re.search(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m|p\.m)?', message, re.IGNORECASE)
+        hour_match = _RE_HOUR.search(message)
         if hour_match:
             params['time'] = hour_match.group(0)
-    
+
     elif intent == 'create_expense':
-        # Categoría
-        categories = ['útiles', 'servicios', 'salarios', 'rent', 'mantenimiento', 'otros']
-        for categ in categories:
+        for categ in ['útiles', 'servicios', 'salarios', 'rent', 'mantenimiento', 'otros']:
             if categ in msg_lower:
                 params['category'] = categ
                 break
-    
+
     return params
 
+
 def should_ask_clarification(intent: str, params: dict) -> bool:
-    """Determina si se necesita más información"""
-    critical_params = {
-        'register_payment': ['patient_name', 'amount'],
-        'create_appointment': ['patient_name', 'day', 'time'],
-        'create_expense': ['amount', 'category'],
-        'assign_therapist': ['patient_name'],
-        'create_user': ['patient_name'],
-    }
-    
-    required = critical_params.get(intent, [])
-    missing = [p for p in required if p not in params or not params[p]]
-    
-    return len(missing) > 0
+    required = CRITICAL_PARAMS.get(intent, [])
+    return any(p not in params or not params[p] for p in required)
 
-def generate_clarification_question(intent: str, params: dict) -> str:
-    """Genera pregunta de clarificación inteligente"""
-    critical = {
-        'register_payment': '¿Para quién es el pago y cuál es el monto? ej: "S/. 500 para Juan"',
-        'create_appointment': '¿Cuál es el nombre del paciente y qué día/hora prefieres?',
-        'create_expense': '¿Cuál es el monto y la categoría del gasto?',
-        'assign_therapist': '¿Cuál es el nombre del paciente para asignarle terapeuta?',
-        'create_user': '¿Cuál es el nombre completo del nuevo usuario?'
-    }
-    
-    return critical.get(intent, '¿Puedes dar más detalles?')
-
-# ==================== PROCESAMIENTO CON DATOS REALES ====================
 
 def process_intent_with_data_v5(intent: str, params: dict, message: str):
-    """Procesa intención usando funciones de business_analytics"""
     from app.services.business_analytics_service import (
-        get_unpaid_users,
-        get_weekly_due_payments,
-        calculate_revenue_metrics,
-        get_schedule_recommendations,
-        generate_business_report,
-        estimate_breakeven_point,
-        answer_business_question
+        get_unpaid_users, get_weekly_due_payments, calculate_revenue_metrics,
+        get_schedule_recommendations, generate_business_report,
+        estimate_breakeven_point, answer_business_question
     )
-    
+
     try:
         if intent == 'unpaid_users':
             data = get_unpaid_users()
@@ -337,10 +302,9 @@ Resumen:
 
 Top Deudores:"""
             for i, user in enumerate(data['users'][:5], 1):
-                response += f"\n  {i}. {user['name']}"
-                response += f"\n     - Deuda: S/. {user['amount_due']:.2f}"
+                response += f"\n  {i}. {user['name']}\n     - Deuda: S/. {user['amount_due']:.2f}"
             return response
-        
+
         elif intent == 'weekly_due':
             data = get_weekly_due_payments()
             response = f"""PAGOS PROXIMA SEMANA
@@ -351,207 +315,200 @@ Resumen:
 
 Proximos a Pagar:"""
             for i, p in enumerate(data['payments'][:5], 1):
-                response += f"\n  {i}. {p['name']}"
-                response += f"\n     - Monto: S/. {p['amount']}"
+                response += f"\n  {i}. {p['name']}\n     - Monto: S/. {p['amount']}"
             return response
-        
+
         elif intent == 'revenue_metrics':
             data = calculate_revenue_metrics()
-            response = f"""METRICAS FINANCIERAS - ESTE MES
+            verdict = 'Ganando dinero' if data['net_profit'] > 0 else 'Gastos superiores a ingresos - Requiere atencion'
+            return f"""METRICAS FINANCIERAS - ESTE MES
 
 Estado General:
   - Ingresos totales: S/. {data['total_income']:.2f}
   - Egresos totales: S/. {data['total_expenses']:.2f}
-  
+
 Rentabilidad:
   - Ganancia neta: S/. {data['net_profit']:.2f}
   - Margen de ganancia: {data['profit_margin_percent']:.1f}%
-  
+
 Cobranza:
   - Tasa de cobranza: {data['collection_rate']:.1f}%
-  
-Analisis: {'Ganando dinero' if data['net_profit'] > 0 else 'Gastos superiores a ingresos - Requiere atencion'}"""
-            return response
-        
+
+Analisis: {verdict}"""
+
         elif intent == 'breakeven_analysis':
-            target = params.get('target_profit', 5000)
-            be = estimate_breakeven_point(target)
+            be = estimate_breakeven_point(params.get('target_profit', 5000))
             if be:
-                return f"""Punto de Equilibrio para S/. {target:,.0f}
+                return f"""Punto de Equilibrio para S/. {params['target_profit']:,.0f}
 Alumnos actuales: {be['current_students']}
 Necesarios: {be['students_needed']}
 Adicionales: {be['additional_students']}
 Factibilidad: {be['feasibility'].upper()}"""
             return "Error en cálculo"
-        
+
         elif intent == 'schedule_optimization':
             rec = get_schedule_recommendations()
-            return f"""Recomendaciones para Horarios\n{rec['recommendations'][:500]}"""
-        
+            return f"Recomendaciones para Horarios\n{rec['recommendations'][:500]}"
+
         elif intent == 'generate_report':
             return generate_business_report()
-        
+
         elif intent == 'list_sessions':
-            # Listar sesiones próximas
             tomorrow = datetime.now() + timedelta(days=1)
-            next_week = tomorrow + timedelta(days=7)
-            
             sessions = Appointment.query.filter(
                 Appointment.start_time >= tomorrow,
-                Appointment.start_time <= next_week,
+                Appointment.start_time <= tomorrow + timedelta(days=7),
                 Appointment.status.in_(['pending', 'confirmed'])
             ).order_by(Appointment.start_time).limit(10).all()
-            
             if not sessions:
                 return "No hay sesiones programadas para la proxima semana"
-            
             response = "Proximas Sesiones\n"
             for s in sessions:
                 patient = User.query.get(s.patient_id)
                 response += f"\n• {patient.username}: {s.start_time.strftime('%a %d %b %H:%M')}"
             return response
-        
+
         elif intent == 'list_payments':
-            # Últimos pagos registrados
             payments = Payment.query.order_by(Payment.date.desc()).limit(10).all()
-            
             if not payments:
                 return "Sin pagos registrados"
-            
             response = "Ultimos Pagos\n"
             for p in payments:
                 patient = User.query.get(p.patient_id)
                 response += f"\n• {patient.username}: S/. {p.amount} ({p.date.strftime('%d/%m')})"
             return response
-        
+
         elif intent == 'list_users':
-            # Listar pacientes/usuarios activos
-            # Usar contexto cacheado para obtener conteo exacto
-            from app.services.context_cache_service import get_cached_context
             context = get_cached_context()
-            patients_data = context.get('patients', {})
-            patients_list = patients_data.get('patients', [])
-            
+            patients_list = context.get('patients', {}).get('patients', [])
             if not patients_list:
                 return "No hay pacientes registrados"
-            
             response = f"{len(patients_list)} Pacientes Activos\n"
             for p in patients_list[:10]:
-                # Mostrar nombre, último pago, estado
                 response += f"\n• {p.get('name', '?')}"
                 if p.get('days_since_payment'):
                     response += f" (Hace {p['days_since_payment']} días)"
             return response
-        
+
         else:
-            # Preguntas genéricas
             return answer_business_question(message)
-    
+
     except Exception as e:
         logger.error(f"Error processing v5 intent {intent}: {e}")
         return f"Error: {str(e)[:60]}"
 
-# ==================== FUNCIÓN PRINCIPAL V5 ====================
+
+def _build_result(intent, response, params, confidence, action, **extra):
+    result = {
+        'intent': intent,
+        'response': response,
+        'parameters': params,
+        'confidence': confidence,
+        'action': action,
+        'tutorial_steps': [],
+    }
+    result.update(extra)
+    return result
+
+
+def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
+    messages = [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': msg}]
+
+    try:
+        from groq import Groq
+        groq_key = os.getenv('GROQ_API_KEY')
+        if groq_key:
+            client = Groq(api_key=groq_key)
+            resp = client.chat.completions.create(
+                model='llama-3.1-8b-instant',
+                messages=messages, temperature=0.3, max_tokens=2000
+            )
+            if resp.choices[0].message.content:
+                return resp.choices[0].message.content
+    except Exception as e:
+        logger.warning(f"Groq falló: {e}")
+
+    try:
+        import google.generativeai as genai
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        if gemini_key:
+            genai.configure(api_key=gemini_key)
+            gemini_resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(
+                f"{system_prompt}\n\nUsuario: {msg}"
+            )
+            if gemini_resp.text:
+                return gemini_resp.text
+    except Exception as e:
+        logger.warning(f"Gemini falló: {e}")
+
+    try:
+        import requests
+        ollama_resp = requests.post(
+            'http://127.0.0.1:11434/api/chat',
+            json={'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'), 'messages': messages, 'stream': False},
+            timeout=30
+        )
+        if ollama_resp.ok:
+            content = ollama_resp.json().get('message', {}).get('content', '')
+            if content:
+                return content
+    except Exception as e:
+        logger.error(f"Ollama falló: {e}")
+
+    return "Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet."
+
 
 def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
-    """NLP avanzado con clarificaciones + contexto BD cacheado"""
     try:
-        # Paso 0: Cargar contexto de caché (se actualiza cada 5 minutos)
         context_text = get_cached_context_text()
-        
-        # Paso 1: Detectar intención con análisis avanzado
         intent, params, confidence, clarification = detect_user_intent_v5(msg)
         logger.info(f"Detected v5: intent={intent}, confidence={confidence:.2f}, params={params}")
-        
-        # Paso 1B: Registrar en workflow intelligence (no bloquea)
+
         try:
             track_workflow(intent, params)
-            # Sugerir próxima acción probable
             next_action = predict_next_action(intent)
-        except:
+        except Exception:
             next_action = None
-        
-        # Paso 2: Si necesita clarificación, preguntar
+
         if clarification:
-            result = {
-                'intent': intent,
-                'response': clarification,
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'clarification_needed',
-                'tutorial_steps': []
-            }
-            return result
-        
-        # Paso 3: Procesar según intención
-        if intent in ['unpaid_users', 'weekly_due', 'revenue_metrics', 'breakeven_analysis',
-                      'schedule_optimization', 'generate_report', 'list_sessions', 'list_payments', 'list_users']:
-            # Análisis de datos reales
+            return _build_result(intent, clarification, params, confidence, 'clarification_needed')
+
+        if intent in INTENTS_WITH_DATA:
             response = process_intent_with_data_v5(intent, params, msg)
-            
-            result = {
-                'intent': intent,
-                'response': response,
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'data_processed',
-                'tutorial_steps': []
-            }
-        
+            result = _build_result(intent, response, params, confidence, 'data_processed')
+
         elif intent == 'navigation':
-            # Navegar a sección
-            from app.services.enhanced_llm_service_v5 import get_navigation_url, get_tutorial_steps
-            target_section = params.get('target_section', 'dashboard')
-            redirect_url = get_navigation_url(target_section, uid)
-            
-            result = {
-                'intent': intent,
-                'response': f"Llevandote a {target_section}...",
-                'parameters': params,
-                'redirect': redirect_url,
-                'tutorial_steps': get_tutorial_steps('navigation', target_section),
-                'confidence': confidence,
-                'action': 'navigate'
-            }
-        
+            redirect_url = get_navigation_url(params.get('target_section', 'dashboard'), uid)
+            result = _build_result(
+                intent, f"Llevandote a {params.get('target_section', 'dashboard')}...",
+                params, confidence, 'navigate',
+                redirect=redirect_url,
+                tutorial_steps=get_tutorial_steps('navigation', params.get('target_section', 'dashboard'))
+            )
+
         elif intent == 'register_payment':
-            # Registrar pago - invalidar caché después
-            from app.services.context_cache_service import invalidate_context
             invalidate_context()
-            
             patient_name = params.get('patient_name', 'alumno')
             amount = params.get('amount', 0)
-            
-            result = {
-                'intent': intent,
-                'response': f"Pago Registrado\n\nCantidad: S/. {amount:.2f}\nAlumno: {patient_name}\n\nContexto actualizado - Proxima consulta tendra datos actualizados",
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'register_payment',
-                'tutorial_steps': []
-            }
-        
+            result = _build_result(
+                intent,
+                f"Pago Registrado\n\nCantidad: S/. {amount:.2f}\nAlumno: {patient_name}\n\nContexto actualizado - Proxima consulta tendra datos actualizados",
+                params, confidence, 'register_payment'
+            )
+
         elif intent == 'create_appointment':
-            # Crear sesión
-            result = {
-                'intent': intent,
-                'response': f"Creando sesión para {params.get('patient_name', '?')} el {params.get('day', '')}...",
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'create_appointment',
-                'tutorial_steps': []
-            }
-        
+            result = _build_result(
+                intent,
+                f"Creando sesión para {params.get('patient_name', '?')} el {params.get('day', '')}...",
+                params, confidence, 'create_appointment'
+            )
+
         elif intent == 'create_user':
-            # Crear usuario nuevo
-            from app.services.context_cache_service import invalidate_context
             invalidate_context()
-            
             user_name = params.get('patient_name', 'usuario')
-            
-            result = {
-                'intent': intent,
-                'response': f"""Nuevo Usuario Creado
+            result = _build_result(
+                intent,
+                f"""Nuevo Usuario Creado
 
 Nombre: {user_name}
 
@@ -562,23 +519,16 @@ Pasos Siguientes:
   4. Crea sesiones
 
 Contexto actualizado""",
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'create_user',
-                'tutorial_steps': []
-            }
-        
-        else:  # general_chat o chat con Llama — fallback chain: Groq → Gemini → Ollama
-            response = None
+                params, confidence, 'create_user'
+            )
 
+        else:
             from app.services.functions_trainer_service import functions_trainer
-            functions_info = functions_trainer.get_functions_prompt()
-
             system_prompt = f"""Eres asistente inteligente del Centro de Terapias Juan Pablo II.
 
 {context_text}
 
-{functions_info}
+{functions_trainer.get_functions_prompt()}
 
 RESPUESTAS:
 - Si el usuario pregunta por datos, cita cifras EXACTAS del contexto
@@ -586,93 +536,21 @@ RESPUESTAS:
 - Se practico, conciso y util
 - Siempre usa los datos reales proporcionados"""
 
-            def _build_messages():
-                return [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': msg}]
+            response = _llm_fallback_chain(system_prompt, msg)
+            result = _build_result(intent, response, params, confidence, 'general_chat', context_loaded=True)
 
-            # 1) Groq
-            try:
-                from groq import Groq
-                groq_key = os.getenv('GROQ_API_KEY')
-                if groq_key:
-                    client = Groq(api_key=groq_key)
-                    resp = client.chat.completions.create(
-                        model='llama-3.1-8b-instant',
-                        messages=_build_messages(),
-                        temperature=0.3,
-                        max_tokens=2000
-                    )
-                    response = resp.choices[0].message.content or ''
-            except Exception as e:
-                logger.warning(f"Groq falló, intentando Gemini: {e}")
-
-            # 2) Gemini (fallback si Groq falló)
-            if not response:
-                try:
-                    import google.generativeai as genai
-                    gemini_key = os.getenv('GEMINI_API_KEY')
-                    if gemini_key:
-                        genai.configure(api_key=gemini_key)
-                        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-                        gemini_resp = gemini_model.generate_content(
-                            f"{system_prompt}\n\nUsuario: {msg}"
-                        )
-                        response = gemini_resp.text or ''
-                except Exception as e:
-                    logger.warning(f"Gemini falló: {e}")
-
-            # 3) Ollama local (último recurso)
-            if not response:
-                try:
-                    import requests
-                    ollama_payload = {
-                        'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'),
-                        'messages': _build_messages(),
-                        'stream': False
-                    }
-                    ollama_resp = requests.post(
-                        'http://127.0.0.1:11434/api/chat',
-                        json=ollama_payload,
-                        timeout=30
-                    )
-                    if ollama_resp.ok:
-                        response = ollama_resp.json().get('message', {}).get('content', '')
-                except Exception as e:
-                    logger.error(f"Ollama falló: {e}")
-
-            # Si ningún proveedor respondió
-            if not response:
-                response = "Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet."
-            
-            result = {
-                'intent': intent,
-                'response': response,
-                'parameters': params,
-                'confidence': confidence,
-                'action': 'general_chat',
-                'tutorial_steps': [],
-                'context_loaded': True
-            }
-        
-        # Agregar predicción de siguiente acción si existe
-        if 'next_action' in locals() and next_action:
+        if next_action:
             result['next_predicted_action'] = next_action
             logger.info(f"Proxima accion sugerida: {next_action}")
-        
+
         return result
-    
+
     except Exception as e:
         logger.error(f"Error in v5: {e}", exc_info=True)
-        return {
-            'intent': 'error',
-            'response': f"Error: {str(e)[:50]}",
-            'parameters': {},
-            'confidence': 0,
-            'action': 'error'
-        }
+        return _build_result('error', f"Error: {str(e)[:50]}", {}, 0, 'error')
 
 
 def save_chat_message(conversation_id, role, content, intent=None, parameters=None, action_status=None):
-    from app.extensions import db
     from app.models import AIChatMessage
     msg = AIChatMessage(
         conversation_id=conversation_id,
@@ -689,23 +567,7 @@ def save_chat_message(conversation_id, role, content, intent=None, parameters=No
 
 def get_navigation_url(section, user_id):
     from flask import url_for
-    mapping = {
-        'dashboard': 'admin.dashboard',
-        'pacientes': 'admin.users',
-        'patients': 'admin.users',
-        'cobros': 'admin.dashboard',
-        'payments': 'admin.dashboard',
-        'reportes': 'admin.reports',
-        'reports': 'admin.reports',
-        'sesiones': 'admin.dashboard',
-        'sessions': 'admin.dashboard',
-        'juegos': 'admin.games',
-        'games': 'admin.games',
-        'gastos': 'admin.expenses',
-        'expenses': 'admin.expenses',
-        'sedes': 'admin.sedes',
-    }
-    ep = mapping.get(section.lower(), 'admin.dashboard')
+    ep = NAV_URL_MAP.get(section.lower(), 'admin.dashboard')
     try:
         return url_for(ep)
     except Exception:
@@ -724,7 +586,6 @@ def get_tutorial_steps(action, section=None):
 
 
 def extract_payment_details(message):
-    import re
     result = {}
     m_patient = re.search(r'(?:para|de|paciente)\s+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?)', message, re.I)
     if m_patient:

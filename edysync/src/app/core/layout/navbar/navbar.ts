@@ -1,15 +1,20 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule, Router } from '@angular/router';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
-import { Router } from '@angular/router';
 import { Observable, firstValueFrom, Subscription } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
+import { Button } from '../../../shared/components/button/button';
 
 @Component({
   selector: 'app-navbar',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Button],
   templateUrl: './navbar.html',
   styleUrl: './navbar.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Navbar implements OnInit, OnDestroy {
   user$: Observable<any>;

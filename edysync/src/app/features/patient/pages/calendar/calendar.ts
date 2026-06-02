@@ -1,13 +1,16 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { PatientService } from '../../../../core/services/patient.service';
-import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { CalendarWidget, CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 
 @Component({
   selector: 'app-patient-calendar',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, Spinner, CalendarWidget],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

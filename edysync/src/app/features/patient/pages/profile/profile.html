@@ -1,7 +1,7 @@
 <div class="max-w-2xl mx-auto space-y-6" [@fadeInUp]>
   @if (message) {
     <div class="p-4 rounded-xl text-sm font-bold"
-         [ngClass]="messageType === 'success' ? 'bg-success-container text-success border border-success-container' : 'bg-error-container text-error border border-error-container'">
+         [class]="messageType === 'success' ? 'bg-success-container text-success border border-success-container' : 'bg-error-container text-error border border-error-container'">
       {{ message }}
     </div>
   }

@@ -1,16 +1,24 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { YapeTransaction, YapeDashboardStats } from '../../../../core/models/yape';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Input } from '../../../../shared/components/input/input';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Modal } from '../../../../shared/components/modal/modal';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-yape-import',
-  standalone: false,
+  standalone: true,
   templateUrl: './yape-import.html',
   styleUrl: './yape-import.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FontAwesomeModule, Button, Input, Spinner, Modal, Alert],
 })
 export class YapeImport implements OnInit, OnDestroy {
   dashboard: YapeDashboardStats = { total: 0, pending: 0 };

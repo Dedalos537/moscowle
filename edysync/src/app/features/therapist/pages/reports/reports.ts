@@ -1,4 +1,7 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../../../core/services/header.service';
 import {
   TherapistService,
@@ -9,6 +12,9 @@ import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { forkJoin, Subscription } from 'rxjs';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { BaseChartDirective } from 'ng2-charts';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Button } from '../../../../shared/components/button/button';
 
 Chart.register(...registerables);
 
@@ -23,7 +29,8 @@ interface WeeklyData {
 
 @Component({
   selector: 'app-therapist-reports',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Spinner, Button, BaseChartDirective],
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

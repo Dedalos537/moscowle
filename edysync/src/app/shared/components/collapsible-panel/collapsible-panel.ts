@@ -1,31 +1,31 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { collapse } from '../../../core/animations';
 
 @Component({
   selector: 'app-collapsible-panel',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './collapsible-panel.html',
   styleUrl: './collapsible-panel.scss',
   animations: [collapse],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CollapsiblePanel {
-  @Input() title: string = '';
-  @Input() icon?: IconProp;
-  @Input() expanded: boolean = false;
-  @Input() variant: 'default' | 'card' | 'drawer' = 'default';
+  title = input<string>('');
+  icon = input<IconProp>();
+  expanded = input(false);
+  variant = input<'default' | 'card' | 'drawer'>('default');
 
-  @Output() expandedChange = new EventEmitter<boolean>();
+  expandedChange = output<boolean>();
 
   toggle() {
-    this.expanded = !this.expanded;
-    this.expandedChange.emit(this.expanded);
+    this.expandedChange.emit(!this.expanded());
   }
 
   close() {
-    if (this.expanded) {
-      this.expanded = false;
+    if (this.expanded()) {
       this.expandedChange.emit(false);
     }
   }

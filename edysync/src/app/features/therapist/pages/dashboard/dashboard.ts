@@ -1,13 +1,19 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Card } from '../../../../shared/components/card/card';
+import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-dashboard',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule, Spinner, Card, Button],
   templateUrl: './dashboard.html',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush

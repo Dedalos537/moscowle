@@ -1,18 +1,18 @@
-import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'app-chip',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './chip.html',
   styleUrl: './chip.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Chip {
-  @Input() label: string = '';
-  @Input() variant: 'primary' | 'secondary' | 'outline' = 'primary';
-  @Input() removable: boolean = false;
-
-  constructor(private cdr: ChangeDetectorRef) {}
+  label = input<string>('');
+  variant = input<'primary' | 'secondary' | 'outline'>('primary');
+  removable = input(false);
 
   get chipClasses() {
     const base = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label-caps transition-colors duration-200';
@@ -21,6 +21,6 @@ export class Chip {
       secondary: 'bg-surface-container-low text-on-surface-variant',
       outline: 'bg-transparent text-on-surface-variant border border-border'
     };
-    return `${base} ${variants[this.variant]}`;
+    return `${base} ${variants[this.variant()]}`;
   }
 }

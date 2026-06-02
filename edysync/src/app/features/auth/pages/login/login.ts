@@ -1,11 +1,16 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-login',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

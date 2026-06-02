@@ -1,5 +1,6 @@
-import { Component, Input, Output, EventEmitter, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
 export interface SelectOption {
@@ -12,7 +13,8 @@ export interface SelectOption {
 
 @Component({
   selector: 'app-select',
-  standalone: false,
+  standalone: true,
+  imports: [FormsModule, FontAwesomeModule],
   templateUrl: './select.html',
   styleUrl: './select.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,15 +25,15 @@ export interface SelectOption {
   }]
 })
 export class Select implements ControlValueAccessor {
-  @Input() options: SelectOption[] = [];
-  @Input() placeholder: string = 'Seleccionar...';
-  @Input() label: string = '';
-  @Input() disabled: boolean = false;
-  @Input() multiple: boolean = false;
-  @Input() searchable: boolean = false;
-  @Input() clearable: boolean = false;
+  options = input<SelectOption[]>([]);
+  placeholder = input<string>('Seleccionar...');
+  label = input<string>('');
+  disabled = input(false);
+  multiple = input(false);
+  searchable = input(false);
+  clearable = input(false);
 
-  @Output() valueChange = new EventEmitter<any>();
+  valueChange = output<any>();
 
   @ViewChild('dropdownPanel') dropdownPanel?: ElementRef;
   @ViewChild('searchInput') searchInput?: ElementRef;
@@ -48,19 +50,19 @@ export class Select implements ControlValueAccessor {
   constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {}
 
   get filteredOptions(): SelectOption[] {
-    if (!Array.isArray(this.options)) return [];
-    if (!this.searchQuery) return this.options;
+    if (!Array.isArray(this.options())) return [];
+    if (!this.searchQuery) return this.options();
     const q = this.searchQuery.toLowerCase();
-    return this.options.filter(o => o.label.toLowerCase().includes(q) || (o.description && o.description.toLowerCase().includes(q)));
+    return this.options().filter(o => o.label.toLowerCase().includes(q) || (o.description && o.description.toLowerCase().includes(q)));
   }
 
   private findOption(value: any): SelectOption | undefined {
-    if (!Array.isArray(this.options)) return undefined;
-    return this.options.find(o => o.value === value);
+    if (!Array.isArray(this.options())) return undefined;
+    return this.options().find(o => o.value === value);
   }
 
   get selectedLabel(): string {
-    if (this.multiple) {
+    if (this.multiple()) {
       if (!Array.isArray(this.selectedValues) || this.selectedValues.length === 0) return '';
       if (this.selectedValues.length === 1) {
         const opt = this.findOption(this.selectedValues[0]);
@@ -78,7 +80,7 @@ export class Select implements ControlValueAccessor {
   }
 
   writeValue(value: any): void {
-    if (this.multiple) {
+    if (this.multiple()) {
       this.selectedValues = Array.isArray(value) ? value : [];
     } else {
       this.selectedValue = value;
@@ -89,26 +91,25 @@ export class Select implements ControlValueAccessor {
   registerOnChange(fn: any): void { this.onChange = fn; }
   registerOnTouched(fn: any): void { this.onTouched = fn; }
   setDisabledState(isDisabled: boolean): void {
-    this.disabled = isDisabled;
     this.cdr.markForCheck();
   }
 
   toggle() {
-    if (this.disabled) return;
+    if (this.disabled()) return;
     this.isOpen = !this.isOpen;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    if (this.isOpen && this.searchable) {
+    if (this.isOpen && this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
   }
 
   open() {
-    if (this.disabled || this.isOpen) return;
+    if (this.disabled() || this.isOpen) return;
     this.isOpen = true;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    if (this.searchable) {
+    if (this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
   }
@@ -121,7 +122,7 @@ export class Select implements ControlValueAccessor {
 
   select(option: SelectOption) {
     if (option.disabled) return;
-    if (this.multiple) {
+    if (this.multiple()) {
       const idx = this.selectedValues.indexOf(option.value);
       if (idx === -1) {
         this.selectedValues = [...this.selectedValues, option.value];
@@ -140,12 +141,12 @@ export class Select implements ControlValueAccessor {
   }
 
   isSelected(value: any): boolean {
-    return this.multiple ? this.selectedValues.includes(value) : this.selectedValue === value;
+    return this.multiple() ? this.selectedValues.includes(value) : this.selectedValue === value;
   }
 
   clear(event?: Event) {
     event?.stopPropagation();
-    if (this.multiple) {
+    if (this.multiple()) {
       this.selectedValues = [];
       this.onChange([]);
       this.valueChange.emit([]);

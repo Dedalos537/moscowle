@@ -1,14 +1,20 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ChatService, ContactUser, ChatItem, MessageData } from '../../../core/services/chat.service';
 import { HeaderService } from '../../../core/services/header.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Subscription } from 'rxjs';
+import { Spinner } from '../spinner/spinner';
 
 @Component({
   selector: 'app-chat',
-  standalone: false,
+  standalone: true,
+  imports: [FormsModule, DatePipe, FontAwesomeModule, Spinner],
   templateUrl: './chat.component.html',
   styleUrl: './chat.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatComponent implements OnInit, OnDestroy {
   @ViewChild('chatMessages') chatMessages!: ElementRef;

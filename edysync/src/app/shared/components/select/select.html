@@ -1,8 +1,8 @@
-<div class="select-wrap" [class.select-wrap--open]="isOpen" [class.select-wrap--disabled]="disabled">
-  @if (label) {
-    <label class="select__label" (click)="open()">{{ label }}</label>
+<div class="select-wrap" [class.select-wrap--open]="isOpen" [class.select-wrap--disabled]="disabled()">
+  @if (label()) {
+    <label class="select__label" (click)="open()">{{ label() }}</label>
   }
-  <div class="select__trigger" (click)="toggle()" role="combobox" [attr.aria-expanded]="isOpen" tabindex="0" [attr.aria-disabled]="disabled">
+  <div class="select__trigger" (click)="toggle()" role="combobox" [attr.aria-expanded]="isOpen" tabindex="0" [attr.aria-disabled]="disabled()">
     <div class="select__trigger-content">
       @if (selectedOption?.icon) {
         <fa-icon [icon]="selectedOption!.icon!" class="select__trigger-icon"></fa-icon>
@@ -10,11 +10,11 @@
       @if (selectedLabel) {
         <span class="select__trigger-text">{{ selectedLabel }}</span>
       } @else {
-        <span class="select__trigger-placeholder">{{ placeholder }}</span>
+        <span class="select__trigger-placeholder">{{ placeholder() }}</span>
       }
     </div>
     <div class="select__trigger-actions">
-      @if (clearable && selectedLabel) {
+      @if (clearable() && selectedLabel) {
         <button class="select__clear" (click)="clear($event)" tabindex="-1" aria-label="Limpiar selección">
           <fa-icon [icon]="['fas', 'times']" size="sm"></fa-icon>
         </button>
@@ -24,13 +24,13 @@
   </div>
   @if (isOpen) {
     <div class="select__dropdown" #dropdownPanel>
-      @if (searchable && options.length > 5) {
+      @if (searchable() && options().length > 5) {
         <div class="select__search">
           <fa-icon [icon]="['fas', 'search']" class="select__search-icon"></fa-icon>
           <input #searchInput [(ngModel)]="searchQuery" [ngModelOptions]="{standalone: true}" (keydown)="$event.stopPropagation()" type="text" class="select__search-input" placeholder="Buscar..." autocomplete="off">
         </div>
       }
-      <div class="select__options" [class.select__options--searching]="searchable && options.length > 5">
+      <div class="select__options" [class.select__options--searching]="searchable() && options().length > 5">
         @for (option of filteredOptions; track option.value; let i = $index) {
           <div class="select__option"
             [class.select__option--selected]="isSelected(option.value)"
@@ -40,7 +40,7 @@
             (mouseenter)="highlightedIndex = i"
             role="option"
             [attr.aria-selected]="isSelected(option.value)">
-            @if (multiple) {
+            @if (multiple()) {
               <div class="select__checkbox" [class.select__checkbox--checked]="isSelected(option.value)">
                 @if (isSelected(option.value)) {
                   <fa-icon [icon]="['fas', 'check']" size="xs"></fa-icon>
@@ -58,7 +58,7 @@
                 }
               </div>
             </div>
-            @if (!multiple && isSelected(option.value)) {
+            @if (!multiple() && isSelected(option.value)) {
               <fa-icon [icon]="['fas', 'check']" class="select__checkmark"></fa-icon>
             }
           </div>

@@ -1,18 +1,26 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AdminAPIToken } from '../../../../core/models/api-token';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Modal } from '../../../../shared/components/modal/modal';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-api-tokens',
-  standalone: false,
+  standalone: true,
   templateUrl: './api-tokens.html',
   styleUrl: './api-tokens.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Modal, Alert],
 })
 export class ApiTokens implements OnInit, OnDestroy {
   tokens: AdminAPIToken[] = [];

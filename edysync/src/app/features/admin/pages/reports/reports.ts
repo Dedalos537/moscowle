@@ -1,4 +1,8 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -10,6 +14,10 @@ import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } fr
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Select } from '../../../../shared/components/select/select';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 Chart.register(...registerables);
 
@@ -24,11 +32,12 @@ interface FinancialSummary {
 
 @Component({
   selector: 'app-reports',
-  standalone: false,
+  standalone: true,
   templateUrl: './reports.html',
   styleUrl: './reports.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Modal],
 })
 export class Reports implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;

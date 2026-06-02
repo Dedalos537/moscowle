@@ -1,12 +1,16 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AlertService, AlertConfig } from '../../../core/services/alert.service';
+import { Button } from '../button/button';
 
 @Component({
   selector: 'app-alert-modal',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule, Button],
   templateUrl: './alert-modal.component.html',
   styleUrl: './alert-modal.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertModal implements OnInit, OnDestroy {
   visible = false;

@@ -1,15 +1,15 @@
 <button
-  [type]="type"
-  [ngClass]="btnClass"
-  [disabled]="disabled"
+  [type]="type()"
+  [class]="btnClass"
+  [disabled]="disabled()"
   (click)="onClick($event)">
 
-  @if (icon) {
-    <fa-icon [icon]="icon"></fa-icon>
+  @if (icon()) {
+    <fa-icon [icon]="icon()"></fa-icon>
   }
 
-  @if (label) {
-    <span>{{ label }}</span>
+  @if (label()) {
+    <span>{{ label() }}</span>
   }
 
   <ng-content></ng-content>

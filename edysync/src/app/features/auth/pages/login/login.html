@@ -76,7 +76,16 @@
            <button type="submit" id="login-btn"
               [disabled]="!isFormValid || isLoading"
               class="login-submit w-full py-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
-              [ngClass]="(isFormValid && !isLoading) ? 'bg-primary text-on-primary cursor-pointer shadow-soft shadow-primary/20 btn--active' : 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed shadow-none'"
+               [class.bg-primary]="isFormValid && !isLoading"
+               [class.text-on-primary]="isFormValid && !isLoading"
+               [class.cursor-pointer]="isFormValid && !isLoading"
+               [class.shadow-soft]="isFormValid && !isLoading"
+               [class.shadow-primary/20]="isFormValid && !isLoading"
+               [class.btn--active]="isFormValid && !isLoading"
+               [class.bg-surface-container-high]="!isFormValid || isLoading"
+               [class.text-on-surface-variant/40]="!isFormValid || isLoading"
+               [class.cursor-not-allowed]="!isFormValid || isLoading"
+               [class.shadow-none]="!isFormValid || isLoading"
               (click)="doLogin(); dismissGuide()">
 
               @if (isLoading) {

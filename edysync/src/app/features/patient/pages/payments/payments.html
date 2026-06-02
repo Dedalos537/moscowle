@@ -28,7 +28,7 @@
               <td class="px-6 py-4 text-sm text-on-surface font-medium">S/ {{ payment.amount }}</td>
               <td class="px-6 py-4">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                      [ngClass]="payment.status === 'paid' ? 'bg-success-container text-success' : 'bg-warning-container text-warning'">
+                      [class]="payment.status === 'paid' ? 'bg-success-container text-success' : 'bg-warning-container text-warning'">
                   {{ payment.status === 'paid' ? 'Pagado' : 'Pendiente' }}
                 </span>
               </td>

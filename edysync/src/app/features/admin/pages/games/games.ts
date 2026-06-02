@@ -1,15 +1,23 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Modal } from '../../../../shared/components/modal/modal';
+import { Input } from '../../../../shared/components/input/input';
+import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
   selector: 'app-games',
-  standalone: false,
+  standalone: true,
   templateUrl: './games.html',
   styleUrl: './games.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner, Modal, Input, Alert],
 })
 export class Games implements OnInit, OnDestroy {
   games: string[] = [];

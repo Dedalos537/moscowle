@@ -1,12 +1,19 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
+import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
+import { Sidebar } from '../../components/sidebar/sidebar';
+import { Header } from '../../components/header/header';
+import { Spinner } from '../../../shared/components/spinner/spinner';
+import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
+import { AiChat } from '../../../shared/components/ai-chat/ai-chat';
 
 @Component({
   selector: 'app-admin-layout',
-  standalone: false,
+  standalone: true,
+  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss',
   animations: [routeAnimations],

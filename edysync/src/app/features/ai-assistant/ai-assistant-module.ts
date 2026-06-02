@@ -6,14 +6,12 @@ import { AiAssistantChat } from './pages/chat/chat';
 import { AiAssistantRoutingModule } from './ai-assistant-routing-module';
 
 @NgModule({
-  declarations: [
-    AiAssistantChat,
-  ],
   imports: [
     CommonModule,
     FormsModule,
     SharedModule,
     AiAssistantRoutingModule,
+    AiAssistantChat,
   ],
 })
 export class AiAssistantModule { }

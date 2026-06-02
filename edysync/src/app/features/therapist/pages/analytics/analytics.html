@@ -12,7 +12,7 @@
         <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">{{ kpi.label }}</p>
         <p class="text-2xl font-bold text-on-surface">{{ kpi.value }}</p>
         @if (kpi.change) {
-          <p class="text-xs mt-1" [ngClass]="kpi.change > 0 ? 'text-success' : 'text-error'">
+          <p class="text-xs mt-1" [class.text-success]="kpi.change > 0" [class.text-error]="kpi.change <= 0">
             <fa-icon [icon]="kpi.change > 0 ? ['fas', 'arrow-up'] : ['fas', 'arrow-down']" class="mr-1"></fa-icon>
             {{ kpi.change > 0 ? '+' : '' }}{{ kpi.change }}%
           </p>
@@ -41,11 +41,9 @@
                     @for (lvl of entry.levels; track $index) {
                       <td class="text-center py-2">
                         <span class="text-sm font-bold"
-                              [ngClass]="{
-                                'text-success': lvl.accuracy >= 80,
-                                'text-warning': lvl.accuracy >= 50 && lvl.accuracy < 80,
-                                'text-error': lvl.accuracy < 50
-                              }">
+                              [class.text-success]="lvl.accuracy >= 80"
+                              [class.text-warning]="lvl.accuracy >= 50 && lvl.accuracy < 80"
+                              [class.text-error]="lvl.accuracy < 50">
                           {{ lvl.accuracy }}%
                         </span>
                       </td>
@@ -70,11 +68,10 @@
               <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
                 <div class="h-full rounded-full transition-all duration-700"
                      [style.width.%]="p.percentage"
-                     [ngClass]="{
-                       'bg-primary': p.label === 'Alto',
-                       'bg-info': p.label === 'Medio',
-                       'bg-surface-container-high text-on-surface-variant': p.label === 'Bajo'
-                     }">
+                     [class.bg-primary]="p.label === 'Alto'"
+                     [class.bg-info]="p.label === 'Medio'"
+                     [class.bg-surface-container-high]="p.label === 'Bajo'"
+                     [class.text-on-surface-variant]="p.label === 'Bajo'">
                 </div>
               </div>
             </div>
@@ -103,11 +100,12 @@
                 <td class="py-3 text-on-surface-variant">{{ ad.type }}</td>
                 <td class="py-3">
                   <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                        [ngClass]="{
-                          'bg-success-container text-success': ad.status === 'active',
-                          'bg-surface-container-high text-on-surface-variant': ad.status === 'completed',
-                          'bg-warning-container text-warning': ad.status === 'pending'
-                        }">
+                        [class.bg-success-container]="ad.status === 'active'"
+                        [class.text-success]="ad.status === 'active'"
+                        [class.bg-surface-container-high]="ad.status === 'completed'"
+                        [class.text-on-surface-variant]="ad.status === 'completed'"
+                        [class.bg-warning-container]="ad.status === 'pending'"
+                        [class.text-warning]="ad.status === 'pending'">
                     {{ ad.status }}
                   </span>
                 </td>

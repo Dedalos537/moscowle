@@ -33,12 +33,6 @@ plotly
 gunicorn>=21.2.0
 flask-socketio>=5.3.0
 eventlet>=0.33.3
-bleach>=6.0.0
-markdown>=3.5.0
-celery>=5.3.0
-redis>=5.0.0
 sentry-sdk[flask]>=2.0.0
 flasgger>=0.9.7.1
-pytest>=8.0.0
-pytest-cov>=5.0.0
 scikit-learn

@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -6,14 +8,17 @@ import { Payment } from '../../../../core/models/payment';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 
 @Component({
   selector: 'app-payment-history',
-  standalone: false,
+  standalone: true,
   templateUrl: './payment-history.html',
   styleUrl: './payment-history.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter]
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner],
 })
 export class PaymentHistory implements OnInit, OnDestroy {
   userId!: number;

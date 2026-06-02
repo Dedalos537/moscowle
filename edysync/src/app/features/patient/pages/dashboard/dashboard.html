@@ -68,7 +68,7 @@
             <p class="text-xs text-on-surface-variant">{{ session.start_time | date:'shortTime' }} - {{ session.therapist }}</p>
           </div>
           <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                [ngClass]="{
+                [class]="{
                   'bg-success-container text-success': session.status === 'scheduled',
                   'bg-info-container text-info': session.status === 'completed',
                   'bg-surface-container-high text-on-surface-variant': session.status === 'cancelled'
@@ -82,9 +82,9 @@
     <app-card title="Estado de Pagos" [icon]="['fas', 'file-invoice-dollar']">
       <div class="flex flex-col items-center justify-center py-6">
         <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-             [ngClass]="data.payment_status.is_overdue ? 'bg-error-container' : 'bg-success-container'">
-          <fa-icon [icon]="data.payment_status.is_overdue ? ['fas', 'exclamation-circle'] : ['fas', 'check-circle']"
-                   [ngClass]="data.payment_status.is_overdue ? 'text-error' : 'text-success'"
+             [class]="data.payment_status.is_overdue ? 'bg-error-container' : 'bg-success-container'">
+           <fa-icon [icon]="data.payment_status.is_overdue ? ['fas', 'exclamation-circle'] : ['fas', 'check-circle']"
+                    [class]="data.payment_status.is_overdue ? 'text-error' : 'text-success'"
                    class="text-3xl"></fa-icon>
         </div>
         @if (!data.payment_status.is_overdue) {

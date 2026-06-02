@@ -1,17 +1,19 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ConfirmState } from '../../../core/services/confirm.service';
+import { Button } from '../button/button';
 
 @Component({
   selector: 'app-confirm-dialog',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule, Button],
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConfirmDialog {
-  @Input() state!: ConfirmState;
-  @Output() confirm = new EventEmitter<void>();
-  @Output() cancel = new EventEmitter<void>();
+  state = input.required<ConfirmState>();
+  confirm = output<void>();
+  cancel = output<void>();
 
-  constructor(private cdr: ChangeDetectorRef) {}
 }

@@ -1,4 +1,6 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { Chart, registerables } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
@@ -6,12 +8,15 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService, AnalyticsData } from '../../../../core/services/therapist.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Card } from '../../../../shared/components/card/card';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-therapist-analytics',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FontAwesomeModule, Spinner, Card],
   templateUrl: './analytics.html',
   styleUrl: './analytics.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

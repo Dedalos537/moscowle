@@ -1,8 +1,14 @@
-import { Component, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, output, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { Subscription, Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { SelectOption } from '../../../../shared/components/select/select';
+import { Button } from '../../../../shared/components/button/button';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { Select } from '../../../../shared/components/select/select';
 
 interface PatientHit {
   id: number;
@@ -26,13 +32,14 @@ interface RegisterForm {
 
 @Component({
   selector: 'app-quick-payment',
-  standalone: false,
+  standalone: true,
   templateUrl: './quick-payment.html',
   styleUrl: './quick-payment.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select],
 })
 export class QuickPayment implements OnDestroy {
-  @Output() paymentCompleted = new EventEmitter<void>();
+  paymentCompleted = output<void>();
 
   searchQuery = '';
   searchResults: PatientHit[] = [];

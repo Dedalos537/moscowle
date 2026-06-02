@@ -1,4 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -11,7 +14,8 @@ interface ChatMessage {
 
 @Component({
   selector: 'app-ai-assistant-chat',
-  standalone: false,
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './chat.html',
   styleUrl: './chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

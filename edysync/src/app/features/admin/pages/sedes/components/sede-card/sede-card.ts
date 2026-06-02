@@ -1,18 +1,18 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Sede } from '../../../../../../core/models/sede';
 
 @Component({
   selector: 'app-sede-card',
-  standalone: false,
+  standalone: true,
+  imports: [FontAwesomeModule],
   templateUrl: './sede-card.html',
   styleUrl: './sede-card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SedeCard {
-  @Input({ required: true }) sede!: Sede;
-  @Output() edit = new EventEmitter<Sede>();
-  @Output() delete = new EventEmitter<Sede>();
-  @Output() toggle = new EventEmitter<Sede>();
-
-  constructor(private cdr: ChangeDetectorRef) {}
+  sede = input.required<Sede>();
+  edit = output<Sede>();
+  delete = output<Sede>();
+  toggle = output<Sede>();
 }
