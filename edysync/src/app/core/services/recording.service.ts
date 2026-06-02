@@ -60,10 +60,15 @@ export class RecordingService {
 
   private checkSessions() {
     const user = this.getCurrentUser();
-    if (!user || user.role !== 'terapista') return;
+    if (!user || user.role !== 'terapista') {
+      this.activeSession$.next(null);
+      return;
+    }
     if (this.recordingState$.value === 'recording' || this.recordingState$.value === 'starting') return;
 
-    this.http.post('/api/sessions/auto-complete-expired', {}).subscribe();
+    this.http.post('/api/sessions/auto-complete-expired', {}).subscribe({
+      error: () => {},
+    });
 
     this.http.get<any>('/api/sessions/current').subscribe({
       next: (res) => {

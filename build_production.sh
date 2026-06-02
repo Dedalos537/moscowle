@@ -42,6 +42,11 @@ if [ -d "${PROJECT_ROOT}/edysync" ]; then
     cd "${PROJECT_ROOT}"
     cp -r "${PROJECT_ROOT}/edysync/dist/edysync/browser/"* "$BUILD_DIR/${ANGULAR_PACKAGE}/"
     echo " Angular build copied to ${ANGULAR_PACKAGE}/"
+    HASHED_STYLES=$(ls "${PROJECT_ROOT}/edysync/dist/edysync/browser/styles-"*.css 2>/dev/null | head -1)
+    if [ -n "$HASHED_STYLES" ]; then
+      cp "$HASHED_STYLES" "$BUILD_DIR/${ANGULAR_PACKAGE}/styles.css"
+      echo " Copied $(basename "$HASHED_STYLES") → styles.css"
+    fi
 fi
 
 echo -e "${BLUE}[5/11] Creating Angular .htaccess for subdomain...${NC}"
