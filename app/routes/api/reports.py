@@ -1,47 +1,15 @@
-from flask import Blueprint, request, jsonify, current_app, url_for
-from flask_login import login_required, current_user
-from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage, Sede, Payment
-from app.services.appointment_service import AppointmentService
-from app.services.game_service import GameService
-from app.services.admin_service import AdminService
-from app.services.notification_service import NotificationService
-from app.services.patient_service import PatientService
-from app.services.dashboard_service import DashboardService
-from app.services.report_service import ReportService
-import json, os, time, warnings
-warnings.filterwarnings('ignore', message='.*google.generativeai.*ended.*')
-try:
-    import google.generativeai as genai
-except ImportError:
-    genai = None
-try:
-    from groq import Groq
-except ImportError:
-    Groq = None
-try:
-    import ollama
-    _ollama_client = ollama.Client(host='http://127.0.0.1:11434')
-    _ollama_client.list()
-except Exception:
-    _ollama_client = None
-from app.services.google_drive_service import GoogleDriveService
-from app.services.ai_service import predict_level, start_async_training
-from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone
-from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
-from app.extensions import bcrypt, limiter, csrf
-from app.services.email_service import EmailService
-from app.services.financial_service import FinancialService
-from app.utils.api_helpers import api_response
-from app.services.availability_service import AvailabilityService
-from datetime import datetime, timedelta, timezone
-import json
-import os
-import uuid
-from werkzeug.utils import secure_filename
-import requests
-from sqlalchemy import or_, func
-
-
+from app.routes.api._shared import (
+    db, User, Notification, Appointment, Message, Game, SessionMetrics,
+    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
+    genai, Groq, _ollama_client, predict_level, start_async_training,
+    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
+    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
+    AvailabilityService, requests, or_, func,
+    report_service,
+    LIMA_TZ, _parse_json, _parse_datetime, analyze_contact_message_ai,
+    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
+    uuid, secure_filename, datetime, timedelta, timezone,
+)
 from app.routes.api import api_bp
 @api_bp.route('/sessions/<int:appointment_id>/report-docx', methods=['GET'])
 @login_required
