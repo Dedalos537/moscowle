@@ -3,10 +3,17 @@ import logging
 from datetime import datetime, timedelta
 from app.extensions import db
 from app.models import User, Payment, Expense
-import ollama
 
 logger = logging.getLogger('app')
-client = ollama.Client(host='http://127.0.0.1:11434')
+
+try:
+    import ollama
+    _ollama_available = True
+    _ollama_client = ollama.Client(host='http://127.0.0.1:11434')
+except Exception:
+    _ollama_available = False
+    _ollama_client = None
+    logger.warning("Ollama no disponible. Funciones de IA deshabilitadas.")
 
 
 def get_unpaid_users():
@@ -208,7 +215,10 @@ Ingresos esperados próxima semana: S/. {weekly['total_amount']:.2f}
 
 Dame 3 RECOMENDACIONES ESPECÍFICAS para mejorar los horarios y aumentar cobranza. Sé conciso."""
         
-        response = client.chat(
+        if not _ollama_available:
+            return {'recommendations': 'IA local no disponible en este entorno'}
+        
+        response = _ollama_client.chat(
             model='llama3.1:8b',
             messages=[{'role': 'user', 'content': context}],
             options={'temperature': 0.3}
@@ -305,7 +315,14 @@ La pregunta del usuario es: "{question}"
 
 Responde de forma concisa y basada en estos DATOS REALES. Si la pregunta es sobre números, cite los datos exactos."""
         
-        response = client.chat(
+        if not _ollama_available:
+            return {
+                'question': question,
+                'answer': 'IA local no disponible en este entorno. No puedo responder preguntas de negocio.',
+                'data_sources': 'BD Real'
+            }
+        
+        response = _ollama_client.chat(
             model='llama3.1:8b',
             messages=[{'role': 'user', 'content': context}],
             options={'temperature': 0.2}
@@ -331,42 +348,37 @@ Responde de forma concisa y basada en estos DATOS REALES. Si la pregunta es sobr
 def analyze_payment_voucher_with_vision(image_path: str):
     """Analiza una foto de boleta usando visión (si está disponible)"""
     try:
-        # Primero, intentar con OCR simple
         from app.services.ocr_service import extract_receipt_data_simple
         simple_result = extract_receipt_data_simple(image_path)
-        
-        # Luego, intentar con Llama visión si está disponible
-        try:
-            # Verificar si llava está disponible
-            response = client.chat(
-                model='llava:7b',  # Modelo de visión
-                messages=[{
-                    'role': 'user',
-                    'content': 'Analiza esta boleta. Extrae: monto total, fecha, nombre del pagador. Responde SOLO en JSON.'
-                }],
-                images=[image_path],
-                options={'temperature': 0.1}
-            )
-            
-            vision_result = response['message']['content']
-            logger.info(f"Vision analysis: {vision_result[:100]}")
-            
-            # Combinar resultados
-            return {
-                'status': 'success',
-                'ocr_data': simple_result,
-                'vision_analysis': vision_result,
-                'extraction_method': 'ocr_+_vision'
-            }
-        except:
-            # Fallback si llava no está disponible
-            logger.warning("Llava not available, using OCR only")
+
+        if not _ollama_available:
+            logger.warning("Ollama no disponible, usando OCR only")
             return {
                 'status': 'success',
                 'ocr_data': simple_result,
                 'vision_analysis': None,
                 'extraction_method': 'ocr_only'
             }
+
+        response = _ollama_client.chat(
+            model='llava:7b',
+            messages=[{
+                'role': 'user',
+                'content': 'Analiza esta boleta. Extrae: monto total, fecha, nombre del pagador. Responde SOLO en JSON.'
+            }],
+            images=[image_path],
+            options={'temperature': 0.1}
+        )
+
+        vision_result = response['message']['content']
+        logger.info(f"Vision analysis: {vision_result[:100]}")
+
+        return {
+            'status': 'success',
+            'ocr_data': simple_result,
+            'vision_analysis': vision_result,
+            'extraction_method': 'ocr_+_vision'
+        }
     except Exception as e:
         logger.error(f"Error analyzing voucher: {e}")
         return {'status': 'error', 'error': str(e)}
