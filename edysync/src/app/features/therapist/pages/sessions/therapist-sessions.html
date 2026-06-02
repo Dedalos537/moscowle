@@ -4,10 +4,7 @@
       <h2 class="text-h2 font-h2 text-on-surface">Mis Sesiones</h2>
       <p class="text-body-md text-on-surface-variant/70">Gestiona tus sesiones con pacientes</p>
     </div>
-    <button class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-lg hover:scale-[1.02] transition-all" (click)="openCreateModal()">
-      <fa-icon [icon]="['fas', 'plus']" class="text-sm"></fa-icon>
-      Nueva Sesión
-    </button>
+
   </div>
 
   <div class="grid grid-cols-12 gap-6 mb-8">
@@ -78,9 +75,7 @@
         </div>
         <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
         <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
-        <button class="bg-primary text-on-primary px-8 py-4 rounded-full font-bold shadow-xl hover:scale-105 transition-all" (click)="openCreateModal()">
-          Agendar Primera Sesión
-        </button>
+
       </div>
     }
 
