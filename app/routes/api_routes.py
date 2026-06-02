@@ -1648,7 +1648,7 @@ def admin_sedes_analytics(sede_id):
 @login_required
 def admin_deudores_por_sede():
     """Reporte de deuda delegado a FinancialService"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({"error": "Forbidden", "data": []}), 403
 
     month = request.args.get('month', 'all')

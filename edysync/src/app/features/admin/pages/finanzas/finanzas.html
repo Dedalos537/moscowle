@@ -103,6 +103,7 @@
         </div>
       </div>
 
+      @if (!isSupervisor) {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
           <div class="flex items-center justify-between mb-4">
@@ -130,7 +131,7 @@
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
               <fa-icon [icon]="['fas', 'chart-pie']" class="text-primary text-lg"></fa-icon>
-              Gastos por Categoría
+              Gastos por Categoria
             </h3>
           </div>
           <div class="relative" style="height: 220px">
@@ -150,7 +151,9 @@
           }
         </div>
       </div>
+      }
 
+      @if (!isSupervisor) {
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex-1">
@@ -187,6 +190,7 @@
           </div>
         </div>
       </div>
+      }
 
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
         <div class="flex items-center justify-between mb-4">
@@ -306,6 +310,7 @@
           </div>
         </div>
 
+        @if (!isSupervisor) {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
               <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
@@ -379,6 +384,7 @@
             </div>
           </div>
         </div>
+        }
 
         <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
           <button

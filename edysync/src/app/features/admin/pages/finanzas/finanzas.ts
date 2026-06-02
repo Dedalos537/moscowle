@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { Sede } from '../../../../core/models/sede';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
@@ -66,6 +67,7 @@ interface Therapist {
 })
 export class Finanzas implements OnInit, OnDestroy {
   readonly Math = Math;
+  isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' = 'resumen';
@@ -346,11 +348,16 @@ export class Finanzas implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private route: ActivatedRoute,
     private alertService: AlertService,
+    private authService: AuthService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
+    this.authService.currentUser$.subscribe(u => {
+      this.isSupervisor = u?.role === 'supervisor';
+      this.cdr.markForCheck();
+    });
     this.headerService.setConfig({
       title: 'Finanzas',
       subtitle: 'Gestión integrada de finanzas del centro',

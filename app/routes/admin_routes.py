@@ -30,12 +30,6 @@ finance_service = FinanceService()
 workflow_engine = WorkflowEngine()
 
 
-@admin_bp.before_request
-@login_required
-def check_supervisor_write():
-    if current_user.role == 'supervisor' and request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
-        return jsonify({'success': False, 'error': 'Los supervisores solo tienen acceso de lectura'}), 403
-
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -678,7 +672,7 @@ def sedes_page():
 @admin_bp.route('/deudores')
 @login_required
 def deudores_page():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     return render_template('admin/deudores.html', active_page='admin_deudores')
@@ -687,7 +681,7 @@ def deudores_page():
 @admin_bp.route('/expenses')
 @login_required
 def expenses():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -703,7 +697,7 @@ def expenses():
 @admin_bp.route('/expenses/create', methods=['POST'])
 @login_required
 def create_expense_route():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -743,7 +737,7 @@ def create_expense_route():
 @admin_bp.route('/api/therapist-financials')
 @login_required
 def api_therapist_financials():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     month = request.args.get('month', type=int)
     year = request.args.get('year', type=int)
@@ -765,7 +759,7 @@ def api_therapist_financials():
 @admin_bp.route('/api/expenses')
 @login_required
 def api_expenses():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
@@ -789,7 +783,7 @@ def api_expenses():
 @admin_bp.route('/api/expenses/create', methods=['POST'])
 @login_required
 def api_create_expense():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     data = request.form.to_dict() if request.form else request.get_json(silent=True) or {}
     if not data.get('therapist_id'):
@@ -847,7 +841,7 @@ def api_contact_messages():
 @admin_bp.route('/api/financial-summary')
 @login_required
 def api_financial_summary():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     financials = payment_service.get_financial_summary()
     return jsonify({'success': True, 'data': financials})
@@ -955,7 +949,7 @@ def api_therapist_efficiency():
 @login_required
 def api_all_payments():
 
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import Payment, User
     payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
@@ -1270,7 +1264,7 @@ def profile():
 @admin_bp.route('/payments')
 @login_required
 def payments():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -1288,7 +1282,7 @@ def payments():
 @admin_bp.route('/api/payment-info/<int:patient_id>')
 @login_required
 def get_payment_info(patient_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'No autorizado'}), 403
     
     info = payment_service.get_billing_info(patient_id)
@@ -1300,7 +1294,7 @@ def get_payment_info(patient_id):
 @admin_bp.route('/payments/register', methods=['POST'])
 @login_required
 def register_payment():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
     # Collect form data and validate
     discount_input = request.form.get('discount')
@@ -1410,7 +1404,7 @@ def register_payment():
 @admin_bp.route('/payments/history/<int:patient_id>')
 @login_required
 def payment_history(patient_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
     
     patient = User.query.get_or_404(patient_id)
@@ -1535,7 +1529,7 @@ def analyze_receipt():
 @admin_bp.route('/sessions')
 @login_required
 def sessions_calendar():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -1550,7 +1544,7 @@ def sessions_calendar():
 @admin_bp.route('/api/sessions')
 @login_required
 def get_sessions_api():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
         
     try:
@@ -1802,7 +1796,7 @@ def update_session(session_id):
 @login_required
 def api_daily_reports():
 
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     start = request.args.get('start')
@@ -1825,7 +1819,7 @@ def api_daily_reports():
 @login_required
 def api_weekly_summary():
 
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     week_start = request.args.get('week_start')
