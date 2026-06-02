@@ -347,13 +347,14 @@ export class Finanzas implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
+    private authService: AuthService,
     private alertService: AlertService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
-    this.authService.currentUser$.subscribe(u => {
+    this.authService.currentUser$.subscribe((u: User | null) => {
       this.isSupervisor = u?.role === 'supervisor';
       this.cdr.markForCheck();
     });
