@@ -53,7 +53,7 @@ def get_or_create_conversation(user_id: int) -> int:
 @login_required
 def get_chat_history():
     """Obtiene el historial de chat del usuario."""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
@@ -79,7 +79,7 @@ def get_chat_history():
 @login_required
 def send_message():
     """Endpoint principal para enviar mensajes al Copilot."""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.get_json() or {}
@@ -502,7 +502,7 @@ def send_message():
 @login_required
 def upload_voucher():
     """Procesa un voucher/comprobante de pago con análisis inteligente."""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     if 'file' not in request.files:
@@ -639,7 +639,6 @@ def upload_voucher():
 @csrf.exempt
 @login_required
 def confirm_payment():
-    """Confirma y registra un pago después de análisis de voucher."""
     if current_user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
     

@@ -171,7 +171,7 @@ def list_chats():
                 logger.error(f"Error processing chat {chat.id}: {str(e)}")
                 continue
 
-        if current_user.role == 'admin':
+        if current_user.role in ('admin', 'supervisor'):
             try:
                 from app.models import ContactMessage
                 last_contact = ContactMessage.query.order_by(ContactMessage.created_at.desc()).first()
@@ -249,7 +249,7 @@ def create_chat():
 @login_required
 def get_contact_messages():
     try:
-        if current_user.role != 'admin':
+        if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
         from app.models import ContactMessage
         page = request.args.get('page', 1, type=int)
@@ -443,7 +443,7 @@ def send_message(chat_id):
 @login_required
 def mark_contact_read():
     try:
-        if current_user.role == 'admin':
+        if current_user.role in ('admin', 'supervisor'):
             from app.models import ContactMessage
             ContactMessage.query.filter_by(status='unread').update({'status': 'read'})
             db.session.commit()

@@ -279,7 +279,7 @@ def my_therapist():
     try:
         recent_q = Message.query.join(User, Message.sender).filter(
             Message.receiver_id == current_user.id,
-            or_(User.role == 'admin', User.id == current_user.assigned_therapist_id)
+            or_(User.role.in_(['admin', 'supervisor']), User.id == current_user.assigned_therapist_id)
         ).order_by(Message.created_at.desc()).limit(6)
 
         for m in recent_q:

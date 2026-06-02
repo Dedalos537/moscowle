@@ -33,7 +33,7 @@ workflow_engine = WorkflowEngine()
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -91,7 +91,7 @@ def dashboard():
 @admin_bp.route('/api/workflow/execute/<int:action_id>', methods=['POST'])
 @login_required
 def execute_smart_action(action_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado.'}), 403
         
     action = SmartAction.query.get_or_404(action_id)
@@ -128,7 +128,7 @@ def execute_smart_action(action_id):
 @admin_bp.route('/users')
 @login_required
 def users():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -156,7 +156,7 @@ def users():
 @admin_bp.route('/users/<int:user_id>')
 @login_required
 def user_details(user_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -184,7 +184,7 @@ def user_details(user_id):
 @admin_bp.route('/users/<int:user_id>/toggle-status', methods=['POST'])
 @login_required
 def toggle_user_status(user_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -252,7 +252,7 @@ def reset_password(user_id):
 @admin_bp.route('/games')
 @login_required
 def games():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     games_dir = os.path.join(current_app.root_path, 'static', 'games')
@@ -265,7 +265,7 @@ def games():
 @admin_bp.route('/reports')
 @login_required
 def reports():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     
@@ -381,7 +381,7 @@ def reports():
 @admin_bp.route('/generate-ia-report', methods=['POST'])
 @login_required
 def generate_ia_report():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
         
     try:
@@ -491,7 +491,7 @@ def generate_ia_report():
 @login_required
 def ai_chat_process():
     """Chatbot Llama"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
         
     # 1. Manejo de Subida de Vouchers (OCR Local Local local)
@@ -603,7 +603,7 @@ def ai_chat_process():
 @admin_bp.route('/reports/send-weekly-summary', methods=['POST'])
 @login_required
 def send_weekly_summary_manual():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
@@ -623,7 +623,7 @@ def send_weekly_summary_manual():
 @admin_bp.route('/reports/export-payments')
 @login_required
 def export_payments_csv():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
     
     import csv
@@ -663,7 +663,7 @@ def export_payments_csv():
 @admin_bp.route('/sedes')
 @login_required
 def sedes_page():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     return render_template('admin/sedes_cards.html', active_page='admin_sedes')
@@ -809,7 +809,7 @@ def api_create_expense():
 @admin_bp.route('/api/contact-messages')
 @login_required
 def api_contact_messages():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import ContactMessage
     import json
@@ -849,7 +849,7 @@ def api_financial_summary():
 @admin_bp.route('/api/audit-stats')
 @login_required
 def api_audit_stats():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
         from app.models import SessionAudit, Appointment, User
@@ -908,7 +908,7 @@ def api_audit_stats():
 @admin_bp.route('/api/therapist-efficiency')
 @login_required
 def api_therapist_efficiency():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
         from app.models import Appointment, SessionMetrics
@@ -975,7 +975,7 @@ def api_all_payments():
 @admin_bp.route('/api/report-therapist-stats')
 @login_required
 def api_report_therapist_stats():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import SessionMetrics, Appointment
     therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
@@ -989,7 +989,7 @@ def api_report_therapist_stats():
 @admin_bp.route('/api/report-patient-stats')
 @login_required
 def api_report_patient_stats():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import SessionMetrics
     patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
@@ -1003,7 +1003,7 @@ def api_report_patient_stats():
 @admin_bp.route('/api/overview')
 @login_required
 def api_admin_overview():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     overview = dashboard_service.get_admin_overview()
     return jsonify({'success': True, 'data': overview})
@@ -1013,7 +1013,7 @@ def api_admin_overview():
 @admin_bp.route('/messages')
 @login_required
 def messages():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
@@ -1027,7 +1027,7 @@ def messages():
 @admin_bp.route('/csp-reports')
 @login_required
 def csp_reports():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
 
@@ -1256,7 +1256,7 @@ def export_csp_reports():
 @admin_bp.route('/profile')
 @login_required
 def profile():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
     return render_template('admin/profile.html', active_page='admin_dashboard')
@@ -1458,7 +1458,7 @@ def delete_payment(payment_id):
 @login_required
 def analyze_receipt():
     """Analizar voucher de pago con IA"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     if 'receipt' not in request.files:
@@ -1749,7 +1749,7 @@ def batch_create_sessions():
 @admin_bp.route('/api/sessions/<int:session_id>', methods=['PUT'])
 @login_required
 def update_session(session_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     data = request.json
@@ -1842,7 +1842,7 @@ def api_weekly_summary():
 @login_required
 def api_accumulate_reports():
     """Acumular reportes diarios"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     report_date = request.args.get('date')
@@ -1888,7 +1888,7 @@ def api_accumulate_reports():
 @admin_bp.route('/api/reports/monthly', methods=['GET'])
 @login_required
 def api_monthly_reports():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -1903,7 +1903,7 @@ def api_monthly_reports():
 @admin_bp.route('/api/reports/quarterly', methods=['GET'])
 @login_required
 def api_quarterly_reports():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -1918,7 +1918,7 @@ def api_quarterly_reports():
 @admin_bp.route('/api/reports/generate-all-weekly', methods=['POST'])
 @login_required
 def api_generate_all_weekly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     week_start = request.args.get('week_start')
@@ -1948,7 +1948,7 @@ def api_generate_all_weekly():
 @admin_bp.route('/api/reports/generate-monthly', methods=['POST'])
 @login_required
 def api_generate_monthly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -1968,7 +1968,7 @@ def api_generate_monthly():
 @admin_bp.route('/api/reports/generate-quarterly', methods=['POST'])
 @login_required
 def api_generate_quarterly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
     year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -2019,7 +2019,7 @@ def download_receipt(payment_id):
     from flask import flash, redirect, url_for
     from flask_login import current_user
     
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
 
@@ -2055,7 +2055,7 @@ def download_receipt(payment_id):
 @admin_bp.route('/api/logs', methods=['GET'])
 @login_required
 def admin_api_logs():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     from app.services.log_service import log_capture_handler
     level = request.args.get('level')

@@ -18,7 +18,7 @@ def service_worker():
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'admin':
+    if current_user.role in ('admin', 'supervisor'):
         return redirect(url_for('admin.dashboard'))
     elif current_user.role == 'terapista':
         return redirect(url_for('therapist.dashboard'))
@@ -41,7 +41,7 @@ def logout():
 @main_bp.route('/messages')
 @login_required
 def messages_list():
-    if current_user.role == 'admin':
+    if current_user.role in ('admin', 'supervisor'):
         return redirect(url_for('admin.messages'))
     elif current_user.role == 'jugador':
         return redirect(url_for('patient.messages'))
@@ -54,7 +54,7 @@ def messages_list():
 @main_bp.route('/profile')
 @login_required
 def profile():
-    if current_user.role == 'admin':
+    if current_user.role in ('admin', 'supervisor'):
         return redirect(url_for('admin.profile'))
     elif current_user.role == 'jugador':
         return redirect(url_for('patient.profile'))

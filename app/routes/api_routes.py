@@ -160,7 +160,7 @@ def api_patients():
     therapist_id = request.args.get('therapist_id')
     if current_user.role == 'terapista':
         patients = patient_service.get_therapist_patients(current_user.id)
-    elif therapist_id and current_user.role == 'admin':
+    elif therapist_id and current_user.role in ('admin', 'supervisor'):
         try:
             from app.models import User
             t_user = User.query.get(int(therapist_id))
@@ -388,7 +388,7 @@ def api_create_session():
     if not data.get('end_time'):
         data['end_time'] = data['start_time'] + timedelta(hours=1)
     therapist_id = current_user.id
-    if current_user.role == 'admin':
+    if current_user.role in ('admin', 'supervisor'):
         if 'therapist_ids' in data:
             therapist_id = data['therapist_ids'][0]
         elif 'therapist_id' in data:
@@ -735,7 +735,7 @@ def api_admin_delete_game():
 @api_bp.route('/admin/messages/broadcast', methods=['POST'])
 @login_required
 def api_admin_broadcast():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
     subject = (data.get('subject') or '').strip()
@@ -785,7 +785,7 @@ def _serialize_user(u):
 @api_bp.route('/admin/list-users')
 @login_required
 def api_admin_list_users():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     role = (request.args.get('role') or '').strip()
     users = admin_service.list_users(role)
@@ -794,7 +794,7 @@ def api_admin_list_users():
 @api_bp.route('/admin/user/<int:user_id>')
 @login_required
 def api_admin_get_user(user_id):
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     u = User.query.get(user_id)
     if not u:
@@ -968,7 +968,7 @@ def upload_game():
 @limiter.limit("10 per minute")
 @login_required
 def gemini_proxy():
-    if current_user.role not in ('terapista','admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     api_key = current_app.config.get('GEMINI_API_KEY')
     payload = request.get_json() or {}
@@ -1003,7 +1003,7 @@ def gemini_proxy():
 @api_bp.route('/ai/generate_game', methods=['POST'])
 @login_required
 def generate_game():
-    if current_user.role not in ('terapista','admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     api_key = current_app.config.get('GEMINI_API_KEY')
     payload = request.get_json() or {}
@@ -1108,7 +1108,7 @@ def generate_game():
 @login_required
 def assign_games_to_session():
     """Asignar juegos vía AppointmentGame"""
-    if current_user.role not in ('terapista','admin'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
     
     data = request.get_json() or {}
@@ -1346,7 +1346,7 @@ def unread_messages_count():
 @api_bp.route('/admin/profile', methods=['POST'])
 @login_required
 def api_admin_update_profile():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
     data = request.get_json(silent=True) or {}
     name = (data.get('username') or '').strip()
@@ -1488,11 +1488,10 @@ from app.models import Sede
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
 @login_required
 def admin_sedes():
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'message': 'Forbidden'}), 403
-
     try:
         if request.method == 'GET':
+            if current_user.role not in ('admin', 'supervisor'):
+                return jsonify({'success': False, 'message': 'Forbidden'}), 403
             sedes = Sede.query.order_by(Sede.created_at.desc()).all()
             result = []
             for s in sedes:
@@ -1513,6 +1512,8 @@ def admin_sedes():
             return jsonify(result)
 
         if request.method == 'POST':
+            if current_user.role != 'admin':
+                return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             name = data.get('name')
             if not name:
@@ -1534,15 +1535,14 @@ def admin_sedes():
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
 @login_required
 def admin_sedes_detail(sede_id):
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        
     try:
         s = Sede.query.get(sede_id)
         if not s:
             return jsonify({'success': False, 'message': 'No encontrado'}), 404
 
         if request.method == 'PUT':
+            if current_user.role != 'admin':
+                return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             if 'active' in data:
                 s.active = bool(data['active'])
@@ -1554,6 +1554,8 @@ def admin_sedes_detail(sede_id):
             db.session.commit()
             return jsonify({'success': True})
         
+        if current_user.role not in ('admin', 'supervisor'):
+            return jsonify({'success': False, 'message': 'Forbidden'}), 403
         return jsonify({
             'id': s.id,
             'name': s.name,
@@ -1568,7 +1570,7 @@ def admin_sedes_detail(sede_id):
 @login_required
 def admin_sedes_analytics(sede_id):
     """Analíticas de sede"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
     
     try:
@@ -1669,7 +1671,6 @@ def admin_deudores_por_sede():
 @api_bp.route('/v1/payments/<int:payment_id>/mark-paid', methods=['POST'])
 @login_required
 def mark_payment_paid(payment_id):
-    """Marcar pago como completado y reactivar"""
     if current_user.role != 'admin':
         return jsonify({'error': 'Unauthorized', 'message': 'Solo admins pueden realizar esta acción.'}), 403
         
@@ -1700,7 +1701,7 @@ def mark_payment_paid(payment_id):
 @login_required
 def send_payment_reminder():
     """Enviar recordatorio de pago"""
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
     
     try:
@@ -1890,7 +1891,7 @@ def contact_message():
 @login_required
 def get_capacity_metrics():
 
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     
     try:
@@ -1941,7 +1942,6 @@ def create_notification():
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['POST'])
 @login_required
 def upload_session_program(appointment_id):
-    """Subir .docx de programación de sesión"""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Solo el administrador puede subir la programación'}), 403
 
@@ -2319,7 +2319,6 @@ def download_report_docx(appointment_id):
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['DELETE'])
 @login_required
 def delete_session_program(appointment_id):
-    """Eliminar programación .docx"""
     if current_user.role != 'admin':
         return jsonify({'success': False, 'error': 'Solo el administrador puede eliminar la programación'}), 403
 
@@ -2400,7 +2399,7 @@ def generate_weekly_report():
 @api_bp.route('/reports/weekly/<int:patient_id>', methods=['GET'])
 @login_required
 def get_weekly_report(patient_id):
-    if current_user.role not in ('terapista', 'admin', 'jugador'):
+    if current_user.role not in ('terapista', 'admin', 'supervisor', 'jugador'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     week_start = request.args.get('week')
@@ -2578,7 +2577,7 @@ def submit_session_feedback(session_id):
 @api_bp.route('/admin/audit-stats', methods=['GET'])
 @login_required
 def get_audit_stats():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
         
     try:
@@ -2650,14 +2649,27 @@ def get_audit_stats():
 @api_bp.route('/therapist/weekly-reports/pending', methods=['GET'])
 @login_required
 def api_weekly_reports_pending():
-    if current_user.role != 'terapista':
-        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
+        therapist_id = current_user.id
+        if current_user.role == 'terapista':
+            pass
+        elif current_user.role in ('admin', 'supervisor'):
+            therapist_id = request.args.get('therapist_id', type=int) or therapist_id
+        else:
+            return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
         from app.models import WeeklyReport, Notification
+        from sqlalchemy import inspect as sa_inspect
+        from app.extensions import db
+        inspector = sa_inspect(db.engine)
+        if 'weekly_report' not in inspector.get_table_names():
+            db.create_all()
+            current_app.logger.info("Auto-migration: created tables on-demand")
+
         week_start = datetime.utcnow().date()
         monday = week_start - timedelta(days=week_start.weekday())
         reports = WeeklyReport.query.filter(
-            WeeklyReport.therapist_id == current_user.id,
+            WeeklyReport.therapist_id == therapist_id,
             WeeklyReport.week_start == monday
         ).count()
         notification = Notification.query.filter(
@@ -2680,7 +2692,7 @@ def api_weekly_reports_pending():
 @api_bp.route('/weekly-summary', methods=['GET'])
 @login_required
 def api_weekly_summary():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         week_start = request.args.get('week_start')
@@ -2716,7 +2728,7 @@ def api_weekly_summary():
 @api_bp.route('/reports/accumulate', methods=['POST'])
 @login_required
 def api_reports_accumulate():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         result = report_service.generate_all_weekly_reports()
@@ -2728,7 +2740,7 @@ def api_reports_accumulate():
 @api_bp.route('/reports/generate-all-weekly', methods=['POST'])
 @login_required
 def api_reports_generate_all_weekly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         week_start = request.args.get('week_start')
@@ -2741,7 +2753,7 @@ def api_reports_generate_all_weekly():
 @api_bp.route('/daily-reports', methods=['GET'])
 @login_required
 def api_daily_reports():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         start = request.args.get('start')
@@ -2762,7 +2774,7 @@ def api_daily_reports():
 @api_bp.route('/therapist/efficiency', methods=['GET'])
 @login_required
 def api_therapist_efficiency():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         therapist_id = request.args.get('therapist_id', type=int)
@@ -2901,7 +2913,7 @@ def get_therapist_dashboard():
 @api_bp.route('/reports/monthly', methods=['GET'])
 @login_required
 def api_reports_monthly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -2916,7 +2928,7 @@ def api_reports_monthly():
 @api_bp.route('/reports/quarterly', methods=['GET'])
 @login_required
 def api_reports_quarterly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -2932,7 +2944,7 @@ def api_reports_quarterly():
 @login_required
 @csrf.exempt
 def api_reports_generate_monthly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         year = request.args.get('year', type=int, default=datetime.utcnow().year)
@@ -2952,7 +2964,7 @@ def api_reports_generate_monthly():
 @login_required
 @csrf.exempt
 def api_reports_generate_quarterly():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         year = request.args.get('year', type=int, default=datetime.utcnow().year)

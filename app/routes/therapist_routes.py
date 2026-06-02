@@ -1146,14 +1146,27 @@ def api_update_profile():
 @therapist_bp.route('/api/weekly-reports/pending', methods=['GET'])
 @login_required
 def api_weekly_reports_pending():
-    if current_user.role != 'terapista':
-        return jsonify({'error': 'Acceso denegado'}), 403
     try:
+        therapist_id = current_user.id
+        if current_user.role == 'terapista':
+            pass
+        elif current_user.role in ('admin', 'supervisor'):
+            therapist_id = request.args.get('therapist_id', type=int) or therapist_id
+        else:
+            return jsonify({'error': 'Acceso denegado'}), 403
+
         from app.models import WeeklyReport, Notification
+        from sqlalchemy import inspect as sa_inspect
+        from app.extensions import db
+        inspector = sa_inspect(db.engine)
+        if 'weekly_report' not in inspector.get_table_names():
+            db.create_all()
+            current_app.logger.info("Auto-migration: created tables on-demand")
+
         today = datetime.utcnow().date()
         monday = today - timedelta(days=today.weekday())
         reports = WeeklyReport.query.filter(
-            WeeklyReport.therapist_id == current_user.id,
+            WeeklyReport.therapist_id == therapist_id,
             WeeklyReport.week_start == monday
         ).count()
         notification = Notification.query.filter(
@@ -1177,7 +1190,7 @@ def api_weekly_reports_pending():
 @therapist_bp.route('/efficiency', methods=['GET'])
 @login_required
 def therapist_efficiency():
-    if current_user.role != 'admin':
+    if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         therapist_id = request.args.get('therapist_id', type=int)
