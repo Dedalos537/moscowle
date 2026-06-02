@@ -84,8 +84,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
         }
         this.cdr.markForCheck();
       },
-      error: (err) => {
-        this.error = err.message;
+      error: () => {
         this.cdr.markForCheck();
       }
     }));

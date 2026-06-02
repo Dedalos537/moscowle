@@ -589,6 +589,16 @@ def create_app(config_class=Config):
             except Exception:
                 app.logger.warning("Auto-migration for chat_participant.last_read_at skipped or failed", exc_info=True)
 
+            # Ensure weekly_report table exists
+            try:
+                from sqlalchemy import inspect as sa_inspect
+                inspector = sa_inspect(db.engine)
+                if 'weekly_report' not in inspector.get_table_names():
+                    db.create_all()
+                    app.logger.info("Auto-migration: created weekly_report table")
+            except Exception:
+                app.logger.warning("Auto-migration for weekly_report skipped", exc_info=True)
+
             app.logger.info("Database tables created/verified")
         except Exception as e:
             app.logger.error("Database connection/creation failed", exc_info=True)
