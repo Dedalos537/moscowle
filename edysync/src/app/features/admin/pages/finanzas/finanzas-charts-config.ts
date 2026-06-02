@@ -2,8 +2,8 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 
 export const chartTooltip = {
   backgroundColor: 'rgba(26, 28, 22, 0.92)',
-  titleFont: { family: 'Manrope', size: 12, weight: '700' as const },
-  bodyFont: { family: 'Manrope', size: 13, weight: '600' as const },
+  titleFont: { family: 'Manrope', size: 12, weight: 700 },
+  bodyFont: { family: 'Manrope', size: 13, weight: 600 },
   padding: { x: 14, y: 10 },
   cornerRadius: 10,
 };
@@ -15,14 +15,14 @@ export const chartTooltipSoles = {
 
 export const chartLegendBottom = {
   position: 'bottom' as const,
-  labels: { font: { family: 'Manrope', size: 11, weight: '600' as const }, padding: 12, usePointStyle: true, pointStyle: 'circle' as const },
+  labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' as const },
 };
 
 export const xGridNone = { display: false };
 export const yGridLight = { color: 'rgba(217, 219, 206, 0.4)' };
 
-export const tickSmall = { font: { family: 'Manrope', size: 10, weight: '500' as const }, color: '#76796c' };
-export const tickSmallBold = { font: { family: 'Manrope', size: 11, weight: '600' as const }, color: '#1a1c16' };
+export const tickSmall = { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' };
+export const tickSmallBold = { font: { family: 'Manrope', size: 11, weight: 600 }, color: '#1a1c16' };
 
 export const lineElements = { line: { tension: 0.4, borderWidth: 3 }, point: { radius: 4, hoverRadius: 6 } };
 

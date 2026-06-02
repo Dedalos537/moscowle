@@ -1,5 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Poppins:wght@600;700;800;900&display=swap");
 @use "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Poppins:wght@600;700;800;900&display=swap");
 
 @custom-variant dark (&:where(.dark, .dark *));
 

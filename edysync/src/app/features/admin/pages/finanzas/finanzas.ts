@@ -180,10 +180,10 @@ export class Finanzas implements OnInit, OnDestroy {
   chartProjVsRealOpt: ChartConfiguration<'bar'>['options'] = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: '600' as const }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: '700' as const }, bodyFont: { family: 'Manrope', size: 13, weight: '600' as const }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
+      legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
+      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
     },
-    scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: '500' as const }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: '500' as const }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } },
+    scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } },
   };
   readonly chartProjVsRealType = 'bar' as const;
 
