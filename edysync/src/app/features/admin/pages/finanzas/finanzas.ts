@@ -347,7 +347,6 @@ export class Finanzas implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
-    private authService: AuthService,
     private alertService: AlertService,
     private authService: AuthService,
     private confirmService: ConfirmService,
