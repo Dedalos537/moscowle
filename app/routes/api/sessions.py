@@ -9,6 +9,7 @@ from app.routes.api._shared import (
     LIMA_TZ, _parse_json, _parse_datetime, analyze_contact_message_ai,
     AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
     uuid, secure_filename, datetime, timedelta, timezone,
+    login_required, current_user, request, jsonify, current_app, url_for,
 )
 from app.routes.api import api_bp
 @api_bp.route('/sessions', methods=['GET'])
