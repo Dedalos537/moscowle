@@ -454,6 +454,9 @@ def create_app(config_class=Config):
     oauth.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    from app.extensions import cors
+    cors_origins = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200').replace(',', ' ').split()
+    cors.init_app(app, resources={r"/api/*": {"origins": cors_origins}}, supports_credentials=True)
     # Expose csrf_token() to Jinja templates so templates can call {{ csrf_token() }}
     try:
         from flask_wtf.csrf import generate_csrf
