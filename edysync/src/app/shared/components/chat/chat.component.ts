@@ -303,8 +303,12 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.sending = true;
     this.chatService.stopTyping(this.selectedChatId);
     this.chatService.sendMessage(this.selectedChatId, this.newMessageText.trim() || undefined, this.selectedFile).subscribe({
-      next: () => {
+      next: (res: any) => {
         this.sending = false;
+        if (res?.success && res?.message) {
+          this.messages = [...this.messages, res.message];
+          setTimeout(() => this.scrollToBottom(), 50);
+        }
         this.newMessageText = '';
         this.clearFile();
         this.cdr.markForCheck();

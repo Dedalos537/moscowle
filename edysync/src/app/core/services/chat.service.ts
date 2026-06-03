@@ -91,6 +91,11 @@ export class ChatService {
       this._connectionStatus.next(false);
     });
 
+    this.socket.on('connect_error', (err: any) => {
+      console.warn('Socket.IO connection error:', err?.message || err);
+      this._connectionStatus.next(false);
+    });
+
     this.socket.on('users:online', (data: { user_ids: number[] }) => {
       this._onlineUsers.next(new Set(data.user_ids));
     });
