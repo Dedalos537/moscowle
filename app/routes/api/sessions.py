@@ -578,6 +578,7 @@ def get_resource(resource_id):
 
 @api_bp.route('/appointments/<int:appointment_id>/upload_image', methods=['POST'])
 @login_required
+@csrf.exempt
 def upload_session_image(appointment_id):
 
     if current_user.role not in ('terapista', 'admin', 'supervisor'):

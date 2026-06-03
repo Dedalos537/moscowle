@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import User, Message, Chat, ChatParticipant
 from sqlalchemy import case
 from app.services.notification_service import NotificationService
@@ -206,6 +206,7 @@ def list_chats():
 
 
 @chat_bp.route('/api/chats', methods=['POST'])
+@csrf.exempt
 @login_required
 def create_chat():
     try:
@@ -327,6 +328,7 @@ def get_messages(chat_id):
 
 
 @chat_bp.route('/api/chats/<int:chat_id>/messages', methods=['POST'])
+@csrf.exempt
 @login_required
 def send_message(chat_id):
     try:
@@ -440,6 +442,7 @@ def send_message(chat_id):
 
 
 @chat_bp.route('/api/chats/-1/read', methods=['PUT'])
+@csrf.exempt
 @login_required
 def mark_contact_read():
     try:
@@ -455,6 +458,7 @@ def mark_contact_read():
 
 
 @chat_bp.route('/api/chats/<int:chat_id>/read', methods=['PUT'])
+@csrf.exempt
 @login_required
 def mark_read(chat_id):
     try:
@@ -491,6 +495,7 @@ def mark_read(chat_id):
 
 
 @chat_bp.route('/api/chats/<int:chat_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def delete_chat(chat_id):
     try:
