@@ -521,7 +521,7 @@ def create_app(config_class=None):
                     app.logger.info(f"Attempting DB connection to configured URI")
 
             # Import all models so db.create_all() can find them
-            import app.models
+            from app import models as _all_models
 
             db.create_all()
 
