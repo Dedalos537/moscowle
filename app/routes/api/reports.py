@@ -288,6 +288,39 @@ def api_weekly_reports_pending():
         current_app.logger.error(f"Error in weekly-reports/pending: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'error': 'Error al consultar reportes'}), 500
 
+@api_bp.route('/therapist/weekly-reports/generate', methods=['POST'])
+@login_required
+def api_weekly_reports_generate():
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    try:
+        therapist_id = current_user.id
+        today = datetime.utcnow().date()
+        monday = today - timedelta(days=today.weekday())
+        week_start = monday.isoformat()
+
+        patients = current_user.associated_patients.filter_by(role='jugador', is_active=True).all() if hasattr(current_user, 'associated_patients') else []
+
+        from app.services.report_service import ReportService
+        rs = ReportService()
+        generated = []
+        for patient in patients:
+            try:
+                report = rs.generate_patient_weekly_report(patient.id, therapist_id, week_start)
+                generated.append(report)
+            except Exception as e:
+                current_app.logger.warning(f"Weekly report error for patient {patient.id}: {e}")
+
+        return jsonify({
+            'success': True,
+            'reports_count': len(generated),
+            'patients_count': len(patients),
+            'report': generated[0] if generated else None
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in weekly-reports/generate: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al generar reportes'}), 500
+
 @api_bp.route('/weekly-summary', methods=['GET'])
 @login_required
 def api_weekly_summary():

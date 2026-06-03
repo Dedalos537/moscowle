@@ -51,6 +51,13 @@ def handle_chat_join(data):
         if participant:
             join_room(f'chat_{chat_id}')
 
+@socketio.on('chat:leave')
+def handle_chat_leave(data):
+    chat_id = data.get('chat_id')
+    if current_user.is_authenticated and chat_id:
+        from flask_socketio import leave_room
+        leave_room(f'chat_{chat_id}')
+
 @socketio.on('typing:start')
 def handle_typing_start(data):
     chat_id = data.get('chat_id')

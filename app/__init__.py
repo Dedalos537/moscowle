@@ -331,7 +331,15 @@ def register_request_handlers(app):
         
         return response
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
+    if config_class is None:
+        env = os.environ.get('FLASK_ENV', 'development')
+        is_railway = os.environ.get('RAILWAY_ENVIRONMENT') is not None or os.environ.get('RAILWAY_SERVICE_NAME') is not None
+        if env == 'production' or is_railway:
+            from config import ProductionConfig
+            config_class = ProductionConfig
+        else:
+            config_class = Config
     app = Flask(__name__)
     app.config.from_object(config_class)
     # Ojo: la BD es MySQL desde env. Nada de SQLite.
