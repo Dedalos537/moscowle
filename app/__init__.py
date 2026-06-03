@@ -520,6 +520,9 @@ def create_app(config_class=None):
                 except Exception:
                     app.logger.info(f"Attempting DB connection to configured URI")
 
+            # Import all models so db.create_all() can find them
+            import app.models
+
             db.create_all()
 
             # Auto-migrate notification table: add title/type columns if missing

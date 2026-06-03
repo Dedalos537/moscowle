@@ -275,7 +275,7 @@ def api_weekly_reports_pending():
             Notification.user_id == current_user.id,
             Notification.type == 'reportes',
             Notification.is_read == False
-        ).order_by(Notification.created_at.desc()).first()
+        ).order_by(Notification.timestamp.desc()).first()
         return jsonify({
             'success': True,
             'has_pending': reports > 0,
