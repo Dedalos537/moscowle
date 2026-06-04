@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, make_response, current_app
 from flask_login import login_required, current_user
-from app.models import SessionMetrics, db, User, Appointment, Message
+from app.models import SessionMetrics, db, User, Appointment, Message, WeeklyReport, MonthlyReport, QuarterlyReport
 from app.extensions import bcrypt
 from app.services.dashboard_service import DashboardService
 from app.services.email_service import EmailService
@@ -1470,5 +1470,59 @@ def api_patient_stats():
         })
 
     return jsonify({'success': True, 'data': stats})
+
+
+@therapist_bp.route('/api/reports/structured/<int:patient_id>')
+@login_required
+def api_structured_reports(patient_id):
+    if current_user.role != 'terapista':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    patient = User.query.get(patient_id)
+    if not patient or patient not in current_user.associated_patients:
+        return jsonify({'success': False, 'error': 'Paciente no encontrado'}), 404
+
+    weekly = WeeklyReport.query.filter(
+        WeeklyReport.patient_id == patient_id,
+        WeeklyReport.therapist_id == current_user.id
+    ).order_by(WeeklyReport.week_start.desc()).limit(12).all()
+
+    monthly = MonthlyReport.query.filter(
+        MonthlyReport.patient_id == patient_id,
+        MonthlyReport.therapist_id == current_user.id
+    ).order_by(MonthlyReport.year.desc(), MonthlyReport.month.desc()).limit(12).all()
+
+    quarterly = QuarterlyReport.query.filter(
+        QuarterlyReport.patient_id == patient_id,
+        QuarterlyReport.therapist_id == current_user.id
+    ).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).limit(12).all()
+
+    return jsonify({
+        'success': True,
+        'patient': {'id': patient.id, 'name': patient.username},
+        'weekly': [{
+            'id': r.id,
+            'week_start': r.week_start.isoformat() if r.week_start else None,
+            'week_end': r.week_end.isoformat() if r.week_end else None,
+            'report_text': r.report_text[:2000] if r.report_text else None,
+            'objectives_met': r.objectives_met,
+            'total_objectives': r.total_objectives,
+        } for r in weekly],
+        'monthly': [{
+            'id': r.id,
+            'month': r.month,
+            'year': r.year,
+            'report_text': r.report_text[:2000] if r.report_text else None,
+            'objectives_met': r.objectives_met,
+            'total_objectives': r.total_objectives,
+        } for r in monthly],
+        'quarterly': [{
+            'id': r.id,
+            'quarter': r.quarter,
+            'year': r.year,
+            'report_text': r.report_text[:2000] if r.report_text else None,
+            'objectives_met': r.objectives_met,
+            'total_objectives': r.total_objectives,
+        } for r in quarterly],
+    })
 
 
