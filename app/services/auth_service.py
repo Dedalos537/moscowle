@@ -6,10 +6,10 @@ class AuthService:
     def __init__(self):
         self.user_repo = UserRepository()
 
-    def login(self, email, password):
+    def login(self, email, password, remember=False):
         user = self.user_repo.get_by_email(email)
         if user and user.is_active and bcrypt.check_password_hash(user.password, password):
-            login_user(user)
+            login_user(user, remember=remember)
             return True, user
         return False, None
 

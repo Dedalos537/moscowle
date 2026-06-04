@@ -8,7 +8,7 @@ from app.extensions import bcrypt, db, csrf
 from app.services.availability_service import AvailabilityService
 from app.models import AdminAPIToken
 import secrets
-from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction
+from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction, MonthlyReport, QuarterlyReport
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
 from app.services.finance_service import FinanceService
@@ -643,9 +643,32 @@ def api_patient_monthly_reports(patient_id):
     if current_user.role not in ('admin', 'terapista', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
+    if current_user.role == 'terapista':
+        if patient_id not in [p.id for p in current_user.associated_patients]:
+            return jsonify({'error': 'Paciente no asignado'}), 403
+
     reports = MonthlyReport.query.filter_by(patient_id=patient_id).order_by(MonthlyReport.year.desc(), MonthlyReport.month.desc()).all()
     return jsonify({'success': True, 'reports': [{
         'id': r.id, 'month': r.month, 'year': r.year,
+        'sessions_count': r.sessions_count, 'avg_score': r.avg_score,
+        'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
+        'report_text': r.report_text, 'created_at': r.created_at.isoformat(),
+    } for r in reports]})
+
+
+@admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
+@login_required
+def api_patient_quarterly_reports(patient_id):
+    if current_user.role not in ('admin', 'terapista', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if current_user.role == 'terapista':
+        if patient_id not in [p.id for p in current_user.associated_patients]:
+            return jsonify({'error': 'Paciente no asignado'}), 403
+
+    reports = QuarterlyReport.query.filter_by(patient_id=patient_id).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).all()
+    return jsonify({'success': True, 'reports': [{
+        'id': r.id, 'quarter': r.quarter, 'year': r.year,
         'sessions_count': r.sessions_count, 'avg_score': r.avg_score,
         'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
         'report_text': r.report_text, 'created_at': r.created_at.isoformat(),

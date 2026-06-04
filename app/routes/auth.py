@@ -1,23 +1,58 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from flask_login import login_required, current_user
-from app.extensions import limiter, csrf
+from app.extensions import limiter, csrf, db
 from app.services.auth_service import AuthService
 from email_validator import validate_email, EmailNotValidError
 from app.schemas.auth_schema import validate_login_input
 from flask_wtf.csrf import generate_csrf
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
 
+
+def _auto_start_session(user):
+    """If therapist logs in during a scheduled session, auto-start recording and create audit."""
+    if user.role != 'terapista':
+        return
+    try:
+        now = datetime.utcnow()
+        from app.models import Appointment, SessionAudit
+        upcoming = Appointment.query.filter(
+            Appointment.therapist_id == user.id,
+            Appointment.status == 'scheduled',
+            Appointment.start_time <= now,
+            Appointment.end_time >= now,
+        ).all()
+        for appt in upcoming:
+            appt.status = 'in_progress'
+            audit = SessionAudit.query.filter_by(appointment_id=appt.id).first()
+            if not audit:
+                audit = SessionAudit(appointment_id=appt.id)
+                db.session.add(audit)
+        if upcoming:
+            db.session.commit()
+    except Exception:
+        pass
+
+
+def _safe_next_url(target):
+    from urllib.parse import urlparse, urljoin
+    host = urlparse(request.host_url)
+    ref = urlparse(urljoin(request.host_url, target))
+    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
+
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("50 per hour")
 def login():
-    # Redirect authenticated users away from the login page to avoid loops
     try:
         if current_user and current_user.is_authenticated:
+            next_url = request.args.get('next')
+            if next_url and _safe_next_url(next_url):
+                return redirect(next_url)
             return redirect(url_for('main.dashboard'))
     except Exception:
-        # If current_user access fails (e.g. user_loader not ready), continue to show login
         pass
     if request.method == 'POST':
         form = {
@@ -32,16 +67,23 @@ def login():
 
         email = data['email']
         password = data['password']
+        remember = request.form.get('remember') == 'on'
 
-        success, user = auth_service.login(email, password)
+        success, user = auth_service.login(email, password, remember=remember)
 
         if success:
+            _auto_start_session(user)
+            next_url = request.form.get('next') or request.args.get('next')
+            if next_url and _safe_next_url(next_url):
+                return redirect(next_url)
             return redirect(url_for('main.dashboard'))
         else:
             flash('Credenciales inválidas o cuenta desactivada.', 'error')
             return render_template('login.html')
     
-    return render_template('login.html')
+    next_url = request.args.get('next')
+    return render_template('login.html', next_url=next_url or '')
+
 
 @auth_bp.route('/logout')
 @login_required
@@ -51,11 +93,13 @@ def logout():
         return jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
     return redirect(url_for('auth.login'))
 
+
 @auth_bp.route('/api/logout', methods=['POST'])
 @csrf.exempt
 def api_logout():
     auth_service.logout()
     return jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
+
 
 @auth_bp.route('/api/login', methods=['POST'])
 @limiter.limit("20 per minute")
@@ -65,13 +109,15 @@ def api_login():
         data = request.get_json(silent=True) or {}
         email = (data.get('email') or '').strip().lower()
         password = data.get('password') or ''
+        remember = data.get('remember', False)
 
         if not email or not password:
             return jsonify({'success': False, 'error': 'Email y contraseña requeridos'}), 400
 
-        success, user = auth_service.login(email, password)
+        success, user = auth_service.login(email, password, remember=remember)
 
         if success:
+            _auto_start_session(user)
             csrf_token = generate_csrf()
             return jsonify({
                 'success': True,
@@ -107,6 +153,7 @@ def api_auth_validate():
         current_app.logger.warning(f"/api/auth/validate error: {e}")
         return jsonify({'valid': False})
 
+
 @auth_bp.route('/api/auth/me', methods=['GET'])
 @login_required
 def api_auth_me():
@@ -120,4 +167,3 @@ def api_auth_me():
     except Exception as e:
         current_app.logger.warning(f"/api/auth/me error: {e}")
         return jsonify({'error': 'Error al obtener usuario'}), 500
-

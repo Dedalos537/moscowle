@@ -138,6 +138,10 @@ def get_weekly_report(patient_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor', 'jugador'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+    if current_user.role == 'terapista':
+        if patient_id not in [p.id for p in current_user.associated_patients]:
+            return jsonify({'success': False, 'error': 'Paciente no asignado'}), 403
+
     week_start = request.args.get('week')
 
     try:
