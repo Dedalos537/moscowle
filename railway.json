@@ -1,6 +1,11 @@
 {
-  "build": null,
-  "deploy": null,
-  "healthcheckPath": "/api/health",
-  "healthcheckTimeout": 100
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "ALWAYS",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 100
+  }
 }
