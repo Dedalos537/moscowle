@@ -676,18 +676,3 @@ def api_patient_quarterly_reports(patient_id):
 
 
 
-@admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
-@login_required
-def api_patient_quarterly_reports(patient_id):
-    if current_user.role not in ('admin', 'terapista', 'supervisor'):
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    reports = QuarterlyReport.query.filter_by(patient_id=patient_id).order_by(QuarterlyReport.year.desc(), QuarterlyReport.quarter.desc()).all()
-    return jsonify({'success': True, 'reports': [{
-        'id': r.id, 'quarter': r.quarter, 'year': r.year,
-        'sessions_count': r.sessions_count, 'avg_score': r.avg_score,
-        'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
-        'report_text': r.report_text, 'created_at': r.created_at.isoformat(),
-    } for r in reports]})
-
-
