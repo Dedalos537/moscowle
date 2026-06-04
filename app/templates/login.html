@@ -17,7 +17,7 @@
     .animation-delay-4000 {
         animation-delay: 4s;
     }
-    
+
     /* Input Animations */
     .input-wrapper { position: relative; }
     .floating-label {
@@ -49,7 +49,7 @@
         border: 1px solid rgba(255, 255, 255, 0.5);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
     }
-    
+
     .dark .glass-card {
         background: rgba(30, 41, 59, 0.6) !important;
         border: 1px solid rgba(255, 255, 255, 0.05) !important;
@@ -59,7 +59,7 @@
 
 <!-- Main Container with Mesh Gradient -->
 <div class="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-50 dark:bg-slate-950 w-full -mt-10 sm:mt-0">
-    
+
     <!-- Animated Mesh Gradient Background -->
     <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/30 dark:bg-primary/20 mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob"></div>
@@ -69,7 +69,7 @@
 
     <!-- Login Card -->
     <div class="relative z-10 w-full max-w-md mx-4 glass-card rounded-3xl p-8 sm:p-10 transition-all duration-500">
-        
+
         <!-- Header & Logo -->
         <div class="text-center mb-10">
             <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white dark:bg-slate-800 shadow-xl shadow-primary/20 mb-6 transform transition-transform hover:scale-105 hover:rotate-3 duration-300">
@@ -86,7 +86,7 @@
                 {% for category, message in messages %}
                     {% set style = 'bg-green-50/80 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300' if category == 'success' else 'bg-red-50/80 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' %}
                     {% set icon = 'fa-check-circle text-green-500' if category == 'success' else 'fa-exclamation-circle text-red-500' %}
-                    
+
                     <div class="backdrop-blur-md border px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-3 transform transition-all duration-300 animate-slideInDown {{ style }} cursor-pointer hover:scale-[0.98]"
                          onclick="this.style.opacity='0'; setTimeout(() => this.remove(), 300)">
                         <i class="fas {{ icon }} text-lg animate-pulse flex-shrink-0"></i>
@@ -106,25 +106,25 @@
         <form method="POST" id="loginForm" class="space-y-6">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ next_url }}">
-            
+
             <!-- Email Input -->
             <div class="input-wrapper group">
                 <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-10">
                     <i class="far fa-envelope text-lg"></i>
                 </div>
-                <input type="email" id="email" name="email" 
-                    class="modern-input w-full pl-12 pr-4 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent" 
+                <input type="email" id="email" name="email"
+                    class="modern-input w-full pl-12 pr-4 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent"
                     placeholder="usuario@ejemplo.com" required>
                 <label for="email" class="floating-label">Correo Electrónico</label>
             </div>
-            
+
             <!-- Password Input -->
             <div class="input-wrapper group">
                 <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-10">
                     <i class="fas fa-lock text-lg"></i>
                 </div>
-                <input type="password" id="password" name="password" 
-                    class="modern-input w-full pl-12 pr-12 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent" 
+                <input type="password" id="password" name="password"
+                    class="modern-input w-full pl-12 pr-12 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-2xl outline-none transition-all text-slate-800 dark:text-white font-medium shadow-inner placeholder-transparent"
                     placeholder="Contraseña" required>
                 <label for="password" class="floating-label">Contraseña</label>
                 <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary focus:outline-none transition-colors z-10 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -200,7 +200,7 @@
                 });
                 const data = await res.json();
                 setBtnValid(Boolean(data && data.valid));
-            }catch(err){ 
+            }catch(err){
                 setBtnValid(e.length > 5 && p.length > 0);
             }
         }

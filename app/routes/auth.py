@@ -1,11 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
-from flask_login import login_required, current_user
-from app.extensions import limiter, csrf, db
-from app.services.auth_service import AuthService
-from email_validator import validate_email, EmailNotValidError
-from app.schemas.auth_schema import validate_login_input
-from flask_wtf.csrf import generate_csrf
 from datetime import datetime
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+from flask_wtf.csrf import generate_csrf
+
+from app.extensions import csrf, db, limiter
+from app.schemas.auth_schema import validate_login_input
+from app.services.auth_service import AuthService
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
@@ -18,6 +19,7 @@ def _auto_start_session(user):
     try:
         now = datetime.utcnow()
         from app.models import Appointment, SessionAudit
+
         upcoming = Appointment.query.filter(
             Appointment.therapist_id == user.id,
             Appointment.status == 'scheduled',
@@ -36,15 +38,8 @@ def _auto_start_session(user):
         pass
 
 
-def _safe_next_url(target):
-    from urllib.parse import urlparse, urljoin
-    host = urlparse(request.host_url)
-    ref = urlparse(urljoin(request.host_url, target))
-    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
-
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("50 per hour")
+@limiter.limit('50 per hour')
 def login():
     try:
         if current_user and current_user.is_authenticated:
@@ -55,14 +50,11 @@ def login():
     except Exception:
         pass
     if request.method == 'POST':
-        form = {
-            'email': request.form.get('email', '').strip().lower(),
-            'password': request.form.get('password', '')
-        }
+        form = {'email': request.form.get('email', '').strip().lower(), 'password': request.form.get('password', '')}
         data, errors = validate_login_input(form)
         if errors:
             flash('Por favor corrige los errores del formulario.', 'error')
-            current_app.logger.debug(f"Login validation errors: {errors}")
+            current_app.logger.debug(f'Login validation errors: {errors}')
             return render_template('login.html')
 
         email = data['email']
@@ -80,10 +72,17 @@ def login():
         else:
             flash('Credenciales inválidas o cuenta desactivada.', 'error')
             return render_template('login.html')
-    
+
     next_url = request.args.get('next')
     return render_template('login.html', next_url=next_url or '')
 
+
+def _safe_next_url(target):
+    from urllib.parse import urljoin, urlparse
+
+    host = urlparse(request.host_url)
+    ref = urlparse(urljoin(request.host_url, target))
+    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
 
 @auth_bp.route('/logout')
 @login_required
@@ -102,7 +101,7 @@ def api_logout():
 
 
 @auth_bp.route('/api/login', methods=['POST'])
-@limiter.limit("20 per minute")
+@limiter.limit('20 per minute')
 @csrf.exempt
 def api_login():
     try:
@@ -119,25 +118,27 @@ def api_login():
         if success:
             _auto_start_session(user)
             csrf_token = generate_csrf()
-            return jsonify({
-                'success': True,
-                'csrf_token': csrf_token,
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                    'role': user.role,
+            return jsonify(
+                {
+                    'success': True,
+                    'csrf_token': csrf_token,
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'username': user.username,
+                        'role': user.role,
+                    },
                 }
-            })
+            )
         else:
             return jsonify({'success': False, 'error': 'Credenciales inválidas o cuenta desactivada'}), 401
     except Exception as e:
-        current_app.logger.warning(f"/api/login error: {e}")
+        current_app.logger.warning(f'/api/login error: {e}')
         return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
 
 @auth_bp.route('/api/auth/validate', methods=['POST'])
-@limiter.limit("60 per minute")
+@limiter.limit('60 per minute')
 @csrf.exempt
 def api_auth_validate():
     try:
@@ -146,11 +147,11 @@ def api_auth_validate():
         password = data.get('password') or ''
         if not email or not password:
             return jsonify({'valid': False})
-        
+
         is_valid = auth_service.validate_credentials(email, password)
         return jsonify({'valid': is_valid})
     except Exception as e:
-        current_app.logger.warning(f"/api/auth/validate error: {e}")
+        current_app.logger.warning(f'/api/auth/validate error: {e}')
         return jsonify({'valid': False})
 
 
@@ -158,12 +159,14 @@ def api_auth_validate():
 @login_required
 def api_auth_me():
     try:
-        return jsonify({
-            'id': current_user.id,
-            'email': current_user.email,
-            'username': current_user.username,
-            'role': current_user.role,
-        })
+        return jsonify(
+            {
+                'id': current_user.id,
+                'email': current_user.email,
+                'username': current_user.username,
+                'role': current_user.role,
+            }
+        )
     except Exception as e:
-        current_app.logger.warning(f"/api/auth/me error: {e}")
+        current_app.logger.warning(f'/api/auth/me error: {e}')
         return jsonify({'error': 'Error al obtener usuario'}), 500

@@ -83,8 +83,25 @@ app_back/
 documento_proyecto.md
 generar_docx.py
 
+# Coverage reports
+coverage_report/
+htmlcov/
+.coverage
+.coverage.*
+
 # Secret keys
 secret_key.txt
 credentials.json
 client_secret*.json
 build_output/
+
+# Docker
+mysql_data/
+
+# Python virtual env
+.venv/
+venv/
+
+# Railway deploy cache
+railway_deploy/
+test_venv/

@@ -1,0 +1,13 @@
+- id: ruff-lint
+  name: ruff lint
+  entry: ruff check --fix
+  language: python
+  types: [python]
+  stages: [pre-commit]
+
+- id: ruff-format
+  name: ruff format
+  entry: ruff format
+  language: python
+  types: [python]
+  stages: [pre-commit]

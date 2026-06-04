@@ -1,6 +1,8 @@
-from app.repositories.user_repository import UserRepository
-from app.extensions import bcrypt
 from flask_login import login_user, logout_user
+
+from app.extensions import bcrypt
+from app.repositories.user_repository import UserRepository
+
 
 class AuthService:
     def __init__(self):

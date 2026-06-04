@@ -1,29 +1,31 @@
 import os
-from dotenv import load_dotenv
 from datetime import timedelta
+
+from dotenv import load_dotenv
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 load_dotenv(os.path.join(basedir, '.env.local'), override=True)
+
 
 class Config:
     # ========== FLASK CONFIGURATION ==========
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
     ENV = os.getenv('FLASK_ENV', 'development')
     DEBUG = ENV == 'development'
-    
+
     # ========== DATABASE OPTIMIZATION ==========
     # Ensure absolute path for SQLite to avoid cwd issues in production
     basedir = os.path.abspath(os.path.dirname(__file__))
-    
+
     # Priority: Environment Variable (MySQL) > Local SQLite fallback
     # Example MySQL URI: mysql+pymysql://user:password@localhost/db_name
     # Read DB URI from environment; do NOT fallback to SQLite here.
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
-        
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
-    
+
     # CRITICAL: Connection pool optimization for MySQL
     # Prevent "MySQL server has gone away" during idle periods
     # NOTE: SQLite uses NullPool implicitly — skip pooling options for SQLite.
@@ -36,37 +38,52 @@ class Config:
             'max_overflow': 20,
             'pool_recycle': 1800,
             'pool_pre_ping': True,
-            'pool_timeout': 30
+            'pool_timeout': 30,
         }
         if 'aivencloud.com' in _uri:
             SQLALCHEMY_ENGINE_OPTIONS['connect_args'] = {'ssl': {}}
-    
+
     # ========== SECURITY - RATE LIMITING ==========
     RATELIMIT_ENABLED = True
-    RATELIMIT_DEFAULT = "200 per day;50 per hour"
-    RATELIMIT_STORAGE_URL = "memory://"
-    RATELIMIT_STRATEGY = "fixed-window"
-    
+    RATELIMIT_DEFAULT = '200 per day;50 per hour'
+    RATELIMIT_STORAGE_URL = 'memory://'
+    RATELIMIT_STRATEGY = 'fixed-window'
+
     # ========== TIMEZONE (Peru = UTC-5, no DST) ==========
     TIMEZONE = 'America/Lima'
-    
+
     # ========== LLM API KEYS ==========
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
     LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
-    
+
     # ========== FILE UPLOADS ==========
     basedir = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.path.join(basedir, 'instance', 'uploads')
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB max
     ALLOWED_UPLOAD_EXTENSIONS = {
-        'png', 'jpg', 'jpeg', 'gif', 'webp',
-        'pdf', 'mp4', 'mov', 'webm',
-        'mp3', 'wav', 'ogg', 'm4a', 
-        'xls', 'xlsx', 'doc', 'docx', 'txt', 'zip'
+        'png',
+        'jpg',
+        'jpeg',
+        'gif',
+        'webp',
+        'pdf',
+        'mp4',
+        'mov',
+        'webm',
+        'mp3',
+        'wav',
+        'ogg',
+        'm4a',
+        'xls',
+        'xlsx',
+        'doc',
+        'docx',
+        'txt',
+        'zip',
     }
-    
+
     # ========== EMAIL CONFIGURATION ==========
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
@@ -77,9 +94,11 @@ class Config:
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER')
     # Timeout para SMTP (prevent hanging)
     MAIL_TIMEOUT = 10  # segundos
-    
+
     # ========== CORS ==========
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200')
+    CORS_ORIGINS = os.getenv(
+        'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
+    )
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
     # These settings help prevent session leaking and improve security
@@ -92,41 +111,46 @@ class Config:
     SESSION_COOKIE_NAME = 'moscowle_session'
     # Ensure cookie domain is not set for local development (accept localhost/127.0.0.1)
     SESSION_COOKIE_DOMAIN = None
-    
+
     # Remember cookie settings
     REMEMBER_COOKIE_SECURE = os.getenv('REMEMBER_COOKIE_SECURE', 'False') == 'True'
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_DURATION = timedelta(days=7)
-    
+
+    # ========== APP-SECRET (for App-Key validation) ==========
+    APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'dev-app-key-change-in-production')
+
     # ========== CSRF CONFIGURATION ==========
     WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'True') == 'True'
-    WTF_CSRF_TIME_LIMIT = None  # No time limit on CSRF tokens
-    WTF_CSRF_SSL_STRICT = False 
-    
+    WTF_CSRF_TIME_LIMIT = int(os.getenv('WTF_CSRF_TIME_LIMIT', '3600'))
+    WTF_CSRF_SSL_STRICT = os.getenv('WTF_CSRF_SSL_STRICT', 'False') == 'True'
+
     # ========== SECURITY HEADERS ==========
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
     HSTS_SECONDS = int(os.getenv('HSTS_SECONDS', 31536000))
     HSTS_INCLUDE_SUBDOMAINS = os.getenv('HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
     # Allow explicit control to force HTTPS in production via env var.
     FORCE_HTTPS = os.getenv('FORCE_HTTPS', 'False') == 'True'
-    
+
     # ========== RATE LIMITING - OPTIMIZED ==========
     # Use Redis in production: redis://localhost:6379
     # Fallback to memory if not set
     RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'memory://')
     RATELIMIT_HEADERS_ENABLED = True
-    RATELIMIT_DEFAULT = "1000 per day,100 per hour"  # Realistic limits
-    
+    RATELIMIT_DEFAULT = '1000 per day,100 per hour'  # Realistic limits
+
     # ========== LOGGING CONFIGURATION ==========
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_FILE = os.getenv('LOG_FILE', 'logs/app.log')
-    LOG_MAX_SIZE = 10 * 1024 * 1024  # 10 MB per file
-    LOG_BACKUP_COUNT = 10
-    
+    LOG_MAX_SIZE = int(os.getenv('LOG_MAX_SIZE', str(10 * 1024 * 1024)))
+    LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', '10'))
+    LOG_JSON_ENABLED = os.getenv('LOG_JSON_ENABLED', 'True') == 'True'
+
     # ========== CELERY CONFIGURATION (for async tasks) ==========
     CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
     CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
 
 class DevelopmentConfig(Config):
     ENV = 'development'
@@ -137,6 +161,7 @@ class DevelopmentConfig(Config):
     REMEMBER_COOKIE_SECURE = False
     FORCE_HTTPS = False
 
+
 class ProductionConfig(Config):
     ENV = 'production'
     DEBUG = False
@@ -146,6 +171,8 @@ class ProductionConfig(Config):
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_SAMESITE = 'None'
     WTF_CSRF_SSL_STRICT = True
+    APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'change-in-production')
+
 
 class TestingConfig(Config):
     TESTING = True

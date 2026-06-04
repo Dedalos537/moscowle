@@ -1,0 +1,71 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-moscowle}
+      MYSQL_USER: ${MYSQL_USER:-moscowle}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-moscowlepass}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      FLASK_ENV: development
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-dev-secret-change-in-production}
+      SQLALCHEMY_DATABASE_URI: mysql+pymysql://moscowle:moscowlepass@db:3306/moscowle
+      REDIS_URL: redis://redis:6379/0
+      WTF_CSRF_TIME_LIMIT: "3600"
+      SESSION_COOKIE_SECURE: "False"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - edysync/
+            - venv/
+            - .venv/
+            - __pycache__/
+            - .git/
+        - action: rebuild
+          path: requirements.txt
+
+volumes:
+  mysql_data:
+  backend_uploads:
+  backend_logs:

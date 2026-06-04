@@ -1,9 +1,11 @@
 import { Component, ElementRef, ViewChild, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { LlamaService, ChatMessage } from '../../../core/services/llama.service';
+import DOMPurify from 'dompurify';
+
+const ALLOWED_REDIRECT_PREFIXES = ['/', '/admin/', '/therapist/', '/patient/', '/auth/'];
 
 @Component({
   selector: 'app-ai-chat',
@@ -36,12 +38,11 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   constructor(
     private llama: LlamaService,
-    private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
   ) {}
 
-  sanitize(html: string): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(html);
+  sanitize(html: string): string {
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p'], ALLOWED_ATTR: ['href'] });
   }
 
   ngAfterViewChecked() {
@@ -107,7 +108,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
             intent: res.intent,
           });
           if (res.redirect) {
-            setTimeout(() => { window.location.href = res.redirect!; }, 1500);
+            const url = res.redirect!;
+            const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(p => url.startsWith(p));
+            const isSameOrigin = url.startsWith(window.location.origin) || url.startsWith('/');
+            if (isAllowed && isSameOrigin) {
+              setTimeout(() => { window.location.href = url; }, 1500);
+            }
           }
         } else {
           this.messages.push({

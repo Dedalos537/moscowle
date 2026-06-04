@@ -11,20 +11,23 @@ import { catchError } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
 
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
   constructor(private authService: AuthService, private router: Router) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const csrfToken = localStorage.getItem('csrf_token');
-    
-    // Configurar peticiones para llevar la cookie de sesión de flask
+    const csrfToken = getCookie('csrf_token');
+
     let reqConfig: any = {
       withCredentials: true
     };
 
-    // Agregar el token CSRF a los headers en peticiones de modificación
     if (csrfToken && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(request.method)) {
       reqConfig.setHeaders = {
         'X-CSRFToken': csrfToken
@@ -36,7 +39,6 @@ export class AuthInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401) {
-          // Sesión expirada o no iniciada
           this.router.navigate(['/auth/login']);
         }
         return throwError(() => error);
