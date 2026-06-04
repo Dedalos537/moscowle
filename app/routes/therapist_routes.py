@@ -1472,6 +1472,82 @@ def api_patient_stats():
     return jsonify({'success': True, 'data': stats})
 
 
+@therapist_bp.route('/api/reports/generate-weekly', methods=['POST'])
+@login_required
+def therapist_generate_weekly():
+    if current_user.role != 'terapista':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    week_start, _ = rs.get_this_week_range()
+    therapist_id = current_user.id
+    patients = current_user.associated_patients.filter_by(role='jugador').all()
+    generated = []
+    for patient in patients:
+        try:
+            r = rs.generate_patient_weekly_report(patient.id, therapist_id, week_start)
+            generated.append(r)
+        except Exception as e:
+            current_app.logger.warning(f"Weekly report error {patient.id}: {e}")
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes semanales generados',
+        'count': len(generated)
+    })
+
+
+@therapist_bp.route('/api/reports/generate-monthly', methods=['POST'])
+@login_required
+def therapist_generate_monthly():
+    if current_user.role != 'terapista':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    today = datetime.utcnow()
+    year = today.year
+    month = today.month
+    therapist_id = current_user.id
+    patients = current_user.associated_patients.filter_by(role='jugador').all()
+    generated = []
+    for patient in patients:
+        try:
+            r = rs.generate_monthly_report(patient.id, therapist_id, year, month)
+            generated.append(r)
+        except Exception as e:
+            current_app.logger.warning(f"Monthly report error {patient.id}: {e}")
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes mensuales generados',
+        'count': len(generated)
+    })
+
+
+@therapist_bp.route('/api/reports/generate-quarterly', methods=['POST'])
+@login_required
+def therapist_generate_quarterly():
+    if current_user.role != 'terapista':
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.report_service import ReportService
+    rs = ReportService()
+    today = datetime.utcnow()
+    year = today.year
+    quarter = (today.month - 1) // 3 + 1
+    therapist_id = current_user.id
+    patients = current_user.associated_patients.filter_by(role='jugador').all()
+    generated = []
+    for patient in patients:
+        try:
+            r = rs.generate_quarterly_report(patient.id, therapist_id, year, quarter)
+            generated.append(r)
+        except Exception as e:
+            current_app.logger.warning(f"Quarterly report error {patient.id}: {e}")
+    return jsonify({
+        'success': True,
+        'message': f'{len(generated)} reportes trimestrales generados',
+        'count': len(generated)
+    })
+
+
 @therapist_bp.route('/api/reports/structured/<int:patient_id>')
 @login_required
 def api_structured_reports(patient_id):
