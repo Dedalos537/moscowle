@@ -201,8 +201,8 @@
                                 </span>
                             </td>
                             <td class="py-4 px-2">
-                                <button class="text-olive hover:text-opacity-80 text-sm font-medium">
-                                    <i class="mr-1 fas fa-eye"></i>Ver Detalles
+                                <button onclick="verReportes('{{ report.id }}', '{{ report.name }}')" class="text-olive hover:text-opacity-80 text-sm font-medium">
+                                    <i class="mr-1 fas fa-file-alt"></i>Ver Reportes
                                 </button>
                             </td>
                         </tr>
@@ -250,8 +250,8 @@
                     </div>
 
                     <div class="flex justify-end border-t border-outline-variant pt-3">
-                        <button class="text-olive hover:text-opacity-80 font-medium text-sm">
-                            <i class="fas fa-eye mr-1"></i> Ver Detalles
+                        <button onclick="verReportes('{{ report.id }}', '{{ report.name }}')" class="text-olive hover:text-opacity-80 font-medium text-sm">
+                            <i class="fas fa-file-alt mr-1"></i> Ver Reportes
                         </button>
                     </div>
                 </div>
@@ -260,6 +260,25 @@
         </div>
 
     </div>
+
+    <!-- Modal de Reportes Estructurados -->
+    <div id="reportes-modal" class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target===this)cerrarReportes()">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between p-6 border-b border-outline-variant">
+                <h3 class="text-xl font-bold text-charcoal" id="modal-paciente-nombre">Reportes</h3>
+                <button onclick="cerrarReportes()" class="w-10 h-10 rounded-2xl bg-surface-container-low hover:bg-surface-container-high flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-on-surface-variant"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6" id="modal-reportes-body">
+                <div class="text-center text-on-surface-variant py-12">
+                    <i class="fas fa-spinner fa-spin text-4xl mb-4"></i>
+                    <p>Cargando reportes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -338,6 +357,59 @@
                         // trigger download
                         window.location = url;
                     });
+                }
+
+                function verReportes(patientId, patientName) {
+                    document.getElementById('modal-paciente-nombre').textContent = 'Reportes de ' + patientName;
+                    document.getElementById('reportes-modal').classList.remove('hidden');
+                    const body = document.getElementById('modal-reportes-body');
+                    body.innerHTML = '<div class="text-center text-on-surface-variant py-12"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><p>Cargando reportes...</p></div>';
+
+                    fetch('/api/reports/structured/' + patientId)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (!data.success) {
+                                body.innerHTML = '<div class="text-center text-red-500 py-12"><p>Error al cargar reportes</p></div>';
+                                return;
+                            }
+                            let html = '';
+                            if (data.weekly.length) {
+                                html += '<div class="mb-6"><h4 class="text-lg font-bold text-charcoal mb-3 flex items-center gap-2"><i class="fas fa-calendar-week text-olive"></i>Reportes Semanales</h4>';
+                                data.weekly.forEach(r => {
+                                    const label = r.week_start ? 'Semana del ' + new Date(r.week_start).toLocaleDateString('es-PE', {day:'numeric', month:'short', year:'numeric'}) : 'Semana';
+                                    html += '<details class="mb-2 bg-surface-container-low rounded-2xl"><summary class="px-4 py-3 cursor-pointer font-semibold text-sm text-charcoal hover:bg-surface-container-high rounded-2xl transition-colors">' + label + ' <span class="text-on-surface-variant font-normal">(' + (r.objectives_met || 0) + '/' + (r.total_objectives || 0) + ' objetivos)</span></summary><div class="px-4 pb-4 text-sm text-on-surface leading-relaxed whitespace-pre-wrap">' + (r.report_text || '<span class="text-on-surface-variant italic">Sin contenido</span>') + '</div></details>';
+                                });
+                                html += '</div>';
+                            }
+                            if (data.monthly.length) {
+                                const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+                                html += '<div class="mb-6"><h4 class="text-lg font-bold text-charcoal mb-3 flex items-center gap-2"><i class="fas fa-calendar-alt text-olive"></i>Reportes Mensuales</h4>';
+                                data.monthly.forEach(r => {
+                                    const label = meses[r.month] + ' ' + r.year;
+                                    html += '<details class="mb-2 bg-surface-container-low rounded-2xl"><summary class="px-4 py-3 cursor-pointer font-semibold text-sm text-charcoal hover:bg-surface-container-high rounded-2xl transition-colors">' + label + ' <span class="text-on-surface-variant font-normal">(' + (r.objectives_met || 0) + '/' + (r.total_objectives || 0) + ' objetivos)</span></summary><div class="px-4 pb-4 text-sm text-on-surface leading-relaxed whitespace-pre-wrap">' + (r.report_text || '<span class="text-on-surface-variant italic">Sin contenido</span>') + '</div></details>';
+                                });
+                                html += '</div>';
+                            }
+                            if (data.quarterly.length) {
+                                html += '<div class="mb-6"><h4 class="text-lg font-bold text-charcoal mb-3 flex items-center gap-2"><i class="fas fa-chart-bar text-olive"></i>Reportes Trimestrales</h4>';
+                                data.quarterly.forEach(r => {
+                                    const label = 'Q' + r.quarter + ' ' + r.year;
+                                    html += '<details class="mb-2 bg-surface-container-low rounded-2xl"><summary class="px-4 py-3 cursor-pointer font-semibold text-sm text-charcoal hover:bg-surface-container-high rounded-2xl transition-colors">' + label + ' <span class="text-on-surface-variant font-normal">(' + (r.objectives_met || 0) + '/' + (r.total_objectives || 0) + ' objetivos)</span></summary><div class="px-4 pb-4 text-sm text-on-surface leading-relaxed whitespace-pre-wrap">' + (r.report_text || '<span class="text-on-surface-variant italic">Sin contenido</span>') + '</div></details>';
+                                });
+                                html += '</div>';
+                            }
+                            if (!data.weekly.length && !data.monthly.length && !data.quarterly.length) {
+                                html = '<div class="text-center text-on-surface-variant py-12"><i class="fas fa-file-alt text-5xl mb-4 text-outline-variant"></i><p>Aún no hay reportes generados para este paciente.</p><p class="text-sm mt-2">Los reportes se generan automáticamente cada semana, mes y trimestre.</p></div>';
+                            }
+                            body.innerHTML = html;
+                        })
+                        .catch(() => {
+                            body.innerHTML = '<div class="text-center text-red-500 py-12"><p>Error de conexión al cargar reportes</p></div>';
+                        });
+                }
+
+                function cerrarReportes() {
+                    document.getElementById('reportes-modal').classList.add('hidden');
                 }
         });
     </script>
