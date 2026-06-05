@@ -510,33 +510,32 @@ def create_app(config_class=None):
 
     with app.app_context():
         uri = app.config.get('SQLALCHEMY_DATABASE_URI')
+        if uri:
+            try:
+                from sqlalchemy.engine.url import make_url
+
+                url = make_url(uri)
+                app.logger.info(f'DB host={url.host}, user={url.username}')
+            except Exception:
+                app.logger.info('DB configured URI')
+
+        from app import models as _all_models
+
         try:
-            if uri:
-                try:
-                    from sqlalchemy.engine.url import make_url
-
-                    url = make_url(uri)
-                    app.logger.info(f'Attempting DB connection to host={url.host}, user={url.username}')
-                except Exception:
-                    app.logger.info('Attempting DB connection to configured URI')
-
-            from app import models as _all_models
-
             db.create_all()
             app.logger.info('Database tables created/verified')
+        except Exception as e:
+            app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
-            try:
-                from flask_migrate import upgrade as migrate_upgrade
+        try:
+            from flask_migrate import upgrade as migrate_upgrade
 
-                migrate_upgrade()
-                app.logger.info('Pending migrations applied (if any)')
-            except Exception:
-                app.logger.debug('No migrations to apply or migration system not yet initialized')
-        except Exception:
-            app.logger.error('Database connection/creation failed', exc_info=True)
-            raise
-        finally:
-            db.session.remove()
+            migrate_upgrade()
+            app.logger.info('Pending migrations applied')
+        except Exception as e:
+            app.logger.warning(f'Migration skipped (non-fatal): {e}')
+
+        db.session.remove()
 
     # ========== BLUEPRINTS ==========
     from app.routes.auth import auth_bp
