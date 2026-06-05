@@ -39,7 +39,6 @@
           },
           "configurations": {
             "production": {
-              "baseHref": "/app/",
               "optimization": {
                 "scripts": true,
                 "styles": true,
