@@ -214,6 +214,7 @@ def register_request_handlers(app):
         g.request_start_time = datetime.utcnow()
 
         # Log incoming request
+        has_cookie = 'moscowle_session=' in (request.headers.get('Cookie', ''))
         app.logger.debug(
             'Request started',
             extra={
@@ -222,6 +223,11 @@ def register_request_handlers(app):
                 'path': request.path,
                 'remote_addr': request.remote_addr,
                 'user_id': current_user.id if current_user.is_authenticated else None,
+                'auth': current_user.is_authenticated,
+                'has_session_cookie': has_cookie,
+                'scheme': request.scheme,
+                'is_secure': request.is_secure,
+                'origin': request.headers.get('Origin', ''),
             },
         )
         # Mark whether this request is an API call

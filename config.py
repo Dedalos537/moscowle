@@ -102,6 +102,7 @@ class Config:
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
     # These settings help prevent session leaking and improve security
+    SESSION_PERMANENT = True
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)
     SESSION_REFRESH_EACH_REQUEST = True
     # For production, these should terminate https
