@@ -6,7 +6,6 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
-edysync/
 node_modules/
 .angular/
 .pytest_cache/
