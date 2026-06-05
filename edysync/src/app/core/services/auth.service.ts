@@ -59,6 +59,12 @@ export class AuthService {
     );
   }
 
+  clearSession(): void {
+    localStorage.removeItem('user');
+    localStorage.removeItem('csrf_token');
+    this.currentUserSubject.next(null);
+  }
+
   isLoggedIn(): boolean {
     return !!localStorage.getItem('user');
   }

@@ -1,8 +1,13 @@
+import calendar
+import logging
 from datetime import datetime, timedelta
+
+from app.models import User
 from app.repositories.patient_repository import PatientRepository
 from app.services.automation.financial_analysis import PatientFinancialStatus
-from app.services.email_service import EmailService
-import calendar
+
+logger = logging.getLogger(__name__)
+
 
 class FinancialService:
     def __init__(self):
@@ -27,10 +32,22 @@ class FinancialService:
                 filter_start = today.replace(month=m_int, day=1)
                 last_day = calendar.monthrange(today.year, m_int)[1]
                 filter_end = today.replace(month=m_int, day=last_day)
-            except:
-                pass # Fallback to all if month is invalid
+            except Exception:
+                logger.warning('Invalid month value: %s', month)
 
         patients = self.repo.get_active_patients()
+
+        # Apply month filter: only include patients whose due date falls
+        # within the selected month OR who are overdue from before it.
+        if filter_start is not None and filter_end is not None:
+            filtered = []
+            for p in patients:
+                dd = getattr(p, 'payment_due_date', None)
+                if dd is None:
+                    continue
+                if filter_start <= dd <= filter_end or dd < filter_start:
+                    filtered.append(p)
+            patients = filtered
 
         deudores_by_sede = {}
         total_adeudado = 0.0
@@ -47,7 +64,6 @@ class FinancialService:
                 if patient.assigned_therapist:
                     therapist_name = patient.assigned_therapist.username or ''
                 elif getattr(patient, 'assigned_therapist_id', None):
-                    from app.models import User
                     th = User.query.get(patient.assigned_therapist_id)
                     if th:
                         therapist_name = th.username or ''
@@ -78,7 +94,7 @@ class FinancialService:
                         'sede_id': sede_id,
                         'total': 0.0,
                         'count': 0,
-                        'deudores': []
+                        'deudores': [],
                     }
 
                 deudor = {
@@ -111,19 +127,19 @@ class FinancialService:
                     total_adeudado += monto
                     total_deudores += 1
 
-            except Exception:
-                continue
+            except Exception as e:
+                logger.warning('Error processing patient %s: %s', getattr(patient, 'id', 'unknown'), e)
 
         # Sort
         for s in deudores_by_sede.values():
-            s['deudores'].sort(key=lambda x: (0 if x['urgencia']=='crítica' else 1 if x['urgencia']=='alta' else 2))
+            s['deudores'].sort(key=lambda x: 0 if x['urgencia'] == 'crítica' else 1 if x['urgencia'] == 'alta' else 2)
 
         summary = {
             'total_adeudado': round(total_adeudado, 2),
             'total_deudores': total_deudores,
             'siedes_afectadas': len(deudores_by_sede),
             'vencidos': vencidos_count,
-            'proximo_a_vencer': proximo_a_vencer_count
+            'proximo_a_vencer': proximo_a_vencer_count,
         }
 
         return {'summary': summary, 'por_sede': deudores_by_sede}
@@ -149,5 +165,5 @@ class FinancialService:
             'due_date': due_date,
             'amount': amount,
             'days_overdue': days_overdue,
-            'balance': round(float(balance), 2)
+            'balance': round(float(balance), 2),
         }
