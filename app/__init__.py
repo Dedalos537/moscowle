@@ -435,7 +435,6 @@ def create_app(config_class=None):
                 strict_transport_security=force_https_flag,
                 strict_transport_security_max_age=app.config.get('HSTS_SECONDS'),
                 strict_transport_security_include_subdomains=app.config.get('HSTS_INCLUDE_SUBDOMAINS', False),
-                content_types_nosniff=False,
                 session_cookie_secure=force_https_flag,
             )
             app.logger.info('Talisman security headers enabled')
@@ -538,42 +537,28 @@ def create_app(config_class=None):
         db.session.remove()
 
     # ========== BLUEPRINTS ==========
-    from app.routes.auth import auth_bp
-    from app.routes.main import main_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(main_bp)
-
-    # Register additional blueprints
-    from app.routes.therapist_routes import therapist_bp
-
-    app.register_blueprint(therapist_bp)
-
-    from app.routes.patient_routes import patient_bp
-
-    app.register_blueprint(patient_bp)
-
-    from app.routes.api import api_bp
-
-    app.register_blueprint(api_bp)
-
-    from app.routes.uploads import uploads_bp
-
-    app.register_blueprint(uploads_bp)
-
-    from app.routes.admin import admin_bp
-
-    app.register_blueprint(admin_bp)
-
-    # Register Yape/Financial Integration Blueprint
-    from app.routes.yape_routes import yape_bp
-
-    app.register_blueprint(yape_bp)
-
-    # Register Chat Blueprint (Telegram-style messaging)
-    from app.routes.chat_routes import chat_bp
-
-    app.register_blueprint(chat_bp)
+    _blueprints = [
+        ('auth', 'app.routes.auth', 'auth_bp'),
+        ('main', 'app.routes.main', 'main_bp'),
+        ('therapist', 'app.routes.therapist_routes', 'therapist_bp'),
+        ('patient', 'app.routes.patient_routes', 'patient_bp'),
+        ('api', 'app.routes.api', 'api_bp'),
+        ('uploads', 'app.routes.uploads', 'uploads_bp'),
+        ('admin', 'app.routes.admin', 'admin_bp'),
+        ('yape', 'app.routes.yape_routes', 'yape_bp'),
+        ('chat', 'app.routes.chat_routes', 'chat_bp'),
+        ('llama', 'app.routes.llama_routes', 'llama_bp'),
+        ('analytics', 'app.routes.analytics_routes', 'analytics_bp'),
+        ('health', 'app.routes.health_routes', 'health_bp'),
+        ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
+    ]
+    for name, module_path, bp_name in _blueprints:
+        try:
+            bp = __import__(module_path, fromlist=[bp_name]).__dict__[bp_name]
+            app.register_blueprint(bp)
+            app.logger.debug('Blueprint registered: %s', name)
+        except Exception as e:
+            app.logger.warning('Blueprint %s failed to load: %s', name, e)
 
     # ========== CLI COMMANDS ==========
     @app.cli.command('migrate-messages')
@@ -617,33 +602,12 @@ def create_app(config_class=None):
         click.echo(f'Migrated {count} messages into {len(pairs)} chat(s).')
 
     # ========== IA OLLAMA MANAGEMENT ==========
-    # Solo ejecutar en el proceso principal de Flask para evitar duplicidad al usar el reloader de Werkzeug
     try:
         from app.utils.manage_ollama import init_ia_check
 
         init_ia_check()
     except Exception as e:
-        app.logger.warning(f'Ollama IA Management initialization failed: {e}')
-
-    # Register Llama Copilot Routes (Enhanced)
-    from app.routes.llama_routes import llama_bp
-
-    app.register_blueprint(llama_bp)
-
-    # Register Analytics & Monitoring Routes
-    from app.routes.analytics_routes import analytics_bp
-
-    app.register_blueprint(analytics_bp)
-
-    # Register Health Check Route
-    from app.routes.health_routes import health_bp
-
-    app.register_blueprint(health_bp)
-
-    # Register Async DAO API Blueprint (V2)
-    from app.routes.async_api_routes import async_api_bp
-
-    app.register_blueprint(async_api_bp)
+        app.logger.warning('Ollama IA Management initialization failed: %s', e)
 
     # ADD JINJA FILTERS
     import json
@@ -662,7 +626,7 @@ def create_app(config_class=None):
         init_scheduler(app)
         app.logger.info('Scheduler initialized')
     except Exception as e:
-        app.logger.error(f'Scheduler initialization failed: {e}')
+        app.logger.error('Scheduler initialization failed: %s', e)
 
     app.logger.info('Application initialization complete')
     return app
