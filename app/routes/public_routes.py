@@ -1,7 +1,8 @@
 import hashlib
+import os
 import time
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, abort, current_app, jsonify, redirect, send_from_directory, url_for
 
 public_bp = Blueprint('public', __name__, url_prefix='/api/public')
 
@@ -39,3 +40,30 @@ def session_check():
         'x_forwarded_proto': req.headers.get('X-Forwarded-Proto', 'not-set'),
         'origin': req.headers.get('Origin', 'not-set'),
     })
+
+
+# ========== SERVE ANGULAR SPA FROM FLASK (SAME-ORIGIN) ==========
+
+spa_bp = Blueprint('spa', __name__)
+
+_SPA_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'edysync', 'dist', 'edysync', 'browser')
+)
+
+
+@spa_bp.route('/app/')
+@spa_bp.route('/app/<path:subpath>')
+def serve_spa(subpath='index.html'):
+    if not subpath:
+        subpath = 'index.html'
+    full_path = os.path.normpath(os.path.join(_SPA_DIR, subpath))
+    if not full_path.startswith(_SPA_DIR):
+        abort(404)
+    if os.path.isfile(full_path):
+        return send_from_directory(_SPA_DIR, subpath)
+    return send_from_directory(_SPA_DIR, 'index.html')
+
+
+@spa_bp.route('/app')
+def redirect_app():
+    return redirect(url_for('spa.serve_spa'))

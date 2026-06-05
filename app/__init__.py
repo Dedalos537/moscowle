@@ -557,6 +557,7 @@ def create_app(config_class=None):
         ('analytics', 'app.routes.analytics_routes', 'analytics_bp'),
         ('health', 'app.routes.health_routes', 'health_bp'),
         ('public', 'app.routes.public_routes', 'public_bp'),
+        ('spa', 'app.routes.public_routes', 'spa_bp'),
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
