@@ -97,7 +97,7 @@ class Config:
 
     # ========== CORS ==========
     CORS_ORIGINS = os.getenv(
-        'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
+        'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200 https://moscowle-backend-production.up.railway.app'
     )
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
