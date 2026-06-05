@@ -30,7 +30,7 @@ python-docx>=0.8.11
 twilio
 openpyxl>=3.0.0
 plotly
-gunicorn>=21.2.0
+gunicorn[eventlet]>=21.2.0,<22
 flask-socketio>=5.3.0
 eventlet>=0.33.3
 bleach>=6.0.0
