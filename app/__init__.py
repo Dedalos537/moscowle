@@ -258,6 +258,7 @@ def register_request_handlers(app):
                         raise ValueError('Invalid key format')
 
                     client_timestamp = int(parts[0])
+                    client_hash = parts[1]
 
                     # Verify timestamp is within valid window (+/- 1 window = 300s)
                     import time
@@ -550,6 +551,7 @@ def create_app(config_class=None):
         ('llama', 'app.routes.llama_routes', 'llama_bp'),
         ('analytics', 'app.routes.analytics_routes', 'analytics_bp'),
         ('health', 'app.routes.health_routes', 'health_bp'),
+        ('public', 'app.routes.public_routes', 'public_bp'),
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
     ]
     for name, module_path, bp_name in _blueprints:

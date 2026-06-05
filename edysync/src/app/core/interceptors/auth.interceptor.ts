@@ -24,17 +24,13 @@ export class AuthInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const csrfToken = getCookie('csrf_token');
 
-    let reqConfig: any = {
-      withCredentials: true
-    };
+    let headers: Record<string, string> = {};
 
     if (csrfToken && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(request.method)) {
-      reqConfig.setHeaders = {
-        'X-CSRFToken': csrfToken
-      };
+      headers['X-CSRFToken'] = csrfToken;
     }
 
-    request = request.clone(reqConfig);
+    request = request.clone({ setHeaders: headers, withCredentials: true });
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
