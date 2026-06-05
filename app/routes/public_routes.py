@@ -1,6 +1,7 @@
 import hashlib
 import time
-from flask import Blueprint, jsonify, current_app, request
+
+from flask import Blueprint, current_app, jsonify
 
 public_bp = Blueprint('public', __name__, url_prefix='/api/public')
 

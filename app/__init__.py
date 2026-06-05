@@ -436,7 +436,6 @@ def create_app(config_class=None):
                 strict_transport_security=force_https_flag,
                 strict_transport_security_max_age=app.config.get('HSTS_SECONDS'),
                 strict_transport_security_include_subdomains=app.config.get('HSTS_INCLUDE_SUBDOMAINS', False),
-                session_cookie_secure=force_https_flag,
             )
             app.logger.info('Talisman security headers enabled')
         else:
