@@ -332,7 +332,10 @@ def create_app(config_class=None):
     if config_class is None:
         env = os.environ.get('FLASK_ENV', 'development')
         is_railway = (
-            os.environ.get('RAILWAY_ENVIRONMENT') is not None or os.environ.get('RAILWAY_SERVICE_NAME') is not None
+            os.environ.get('RAILWAY_ENVIRONMENT') is not None
+            or os.environ.get('RAILWAY_SERVICE_NAME') is not None
+            or os.environ.get('RAILWAY_REPLICA_ID') is not None
+            or os.environ.get('RAILWAY_GIT_COMMIT_SHA') is not None
         )
         if env == 'production' or is_railway:
             from config import ProductionConfig
@@ -482,8 +485,7 @@ def create_app(config_class=None):
         def inject_csrf_token():
             return dict(csrf_token=generate_csrf)
     except Exception:
-        # If flask-wtf isn't available, templates calling csrf_token() will fail gracefully elsewhere
-        pass
+        app.logger.debug('flask-wtf not available, skipping csrf_token injection')
     cache.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*')
 

@@ -97,7 +97,8 @@ class Config:
 
     # ========== CORS ==========
     CORS_ORIGINS = os.getenv(
-        'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200 https://moscowle-backend-production.up.railway.app'
+        'CORS_ORIGINS',
+        'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200 https://moscowle-backend-production.up.railway.app',
     )
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
@@ -108,7 +109,7 @@ class Config:
     # For production, these should terminate https
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False') == 'True'
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'None')
     SESSION_COOKIE_NAME = 'moscowle_session'
     # Ensure cookie domain is not set for local development (accept localhost/127.0.0.1)
     SESSION_COOKIE_DOMAIN = None
@@ -159,6 +160,7 @@ class DevelopmentConfig(Config):
     TESTING = False
     # Development-specific relaxation for local HTTP testing
     SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_SECURE = False
     FORCE_HTTPS = False
 
@@ -177,4 +179,5 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
