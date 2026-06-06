@@ -348,8 +348,6 @@ def create_app(config_class=None):
             config_class = Config
     app = Flask(__name__)
     app.config.from_object(config_class)
-    # Forzar SameSite=None explicitamente — Flask 2.3.3 a veces lo deja como Lax
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
     # Ojo: la BD es MySQL desde env. Nada de SQLite.
 
     # ========== LOGGING - SETUP FIRST ==========
@@ -644,7 +642,4 @@ def create_app(config_class=None):
         app.logger.error('Scheduler initialization failed: %s', e)
 
     app.logger.info('Application initialization complete')
-    app.logger.info('SESSION_COOKIE_SAMESITE final=%s (type=%s)',
-                     app.config.get('SESSION_COOKIE_SAMESITE'),
-                     type(app.config.get('SESSION_COOKIE_SAMESITE')).__name__)
     return app
