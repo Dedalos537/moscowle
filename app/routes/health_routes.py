@@ -70,6 +70,12 @@ def debug_config():
         or os.environ.get('RAILWAY_SERVICE_NAME') is not None
     )
     import config as config_mod
+    import flask
     cfg['Config_default'] = str(config_mod.Config.SESSION_COOKIE_SAMESITE)
     cfg['ProductionConfig_val'] = str(config_mod.ProductionConfig.SESSION_COOKIE_SAMESITE)
+    cfg['flask_version'] = flask.__version__
+    # Check the actual keys in app.config that start with SESSION
+    cfg['config_keys'] = str([k for k in sorted(current_app.config.keys()) if k.startswith('SESSION')])
+    # Check what from_object would get
+    cfg['from_object_value'] = str(getattr(config_mod.ProductionConfig, 'SESSION_COOKIE_SAMESITE', 'NO_ATTR'))
     return jsonify(cfg)
