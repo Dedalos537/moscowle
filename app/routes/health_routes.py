@@ -55,3 +55,18 @@ def health_check():
         'checks': checks,
         'timestamp': __import__('datetime').datetime.utcnow().isoformat()
     }), 200 if overall != 'error' else 503
+
+
+@health_bp.route('/debug-config', methods=['GET'])
+def debug_config():
+    import os
+    cfg = {}
+    for key in ('SESSION_COOKIE_SAMESITE', 'SESSION_COOKIE_SECURE', 'FLASK_ENV', 'ENV', 'DEBUG'):
+        cfg[key] = str(current_app.config.get(key, 'NOT SET'))
+    for key in ('FLASK_ENV', 'SESSION_COOKIE_SAMESITE', 'RAILWAY_ENVIRONMENT', 'RAILWAY_SERVICE_NAME'):
+        cfg[f'environ_{key}'] = str(os.environ.get(key, 'NOT SET'))
+    cfg['is_railway'] = str(
+        os.environ.get('RAILWAY_ENVIRONMENT') is not None
+        or os.environ.get('RAILWAY_SERVICE_NAME') is not None
+    )
+    return jsonify(cfg)
