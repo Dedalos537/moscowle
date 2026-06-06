@@ -69,4 +69,7 @@ def debug_config():
         os.environ.get('RAILWAY_ENVIRONMENT') is not None
         or os.environ.get('RAILWAY_SERVICE_NAME') is not None
     )
+    import config as config_mod
+    cfg['Config_default'] = str(config_mod.Config.SESSION_COOKIE_SAMESITE)
+    cfg['ProductionConfig_val'] = str(config_mod.ProductionConfig.SESSION_COOKIE_SAMESITE)
     return jsonify(cfg)
