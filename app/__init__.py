@@ -345,6 +345,8 @@ def create_app(config_class=None):
             config_class = Config
     app = Flask(__name__)
     app.config.from_object(config_class)
+    # Forzar SameSite=None explicitamente — Flask 2.3.3 a veces lo deja como Lax
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
     # Ojo: la BD es MySQL desde env. Nada de SQLite.
 
     # ========== LOGGING - SETUP FIRST ==========

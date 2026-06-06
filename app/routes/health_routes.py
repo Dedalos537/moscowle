@@ -57,25 +57,4 @@ def health_check():
     }), 200 if overall != 'error' else 503
 
 
-@health_bp.route('/debug-config', methods=['GET'])
-def debug_config():
-    import os
-    cfg = {}
-    for key in ('SESSION_COOKIE_SAMESITE', 'SESSION_COOKIE_SECURE', 'FLASK_ENV', 'ENV', 'DEBUG'):
-        cfg[key] = str(current_app.config.get(key, 'NOT SET'))
-    for key in ('FLASK_ENV', 'SESSION_COOKIE_SAMESITE', 'RAILWAY_ENVIRONMENT', 'RAILWAY_SERVICE_NAME'):
-        cfg[f'environ_{key}'] = str(os.environ.get(key, 'NOT SET'))
-    cfg['is_railway'] = str(
-        os.environ.get('RAILWAY_ENVIRONMENT') is not None
-        or os.environ.get('RAILWAY_SERVICE_NAME') is not None
-    )
-    import config as config_mod
-    import flask
-    cfg['Config_default'] = str(config_mod.Config.SESSION_COOKIE_SAMESITE)
-    cfg['ProductionConfig_val'] = str(config_mod.ProductionConfig.SESSION_COOKIE_SAMESITE)
-    cfg['flask_version'] = flask.__version__
-    # Check the actual keys in app.config that start with SESSION
-    cfg['config_keys'] = str([k for k in sorted(current_app.config.keys()) if k.startswith('SESSION')])
-    # Check what from_object would get
-    cfg['from_object_value'] = str(getattr(config_mod.ProductionConfig, 'SESSION_COOKIE_SAMESITE', 'NO_ATTR'))
-    return jsonify(cfg)
+
