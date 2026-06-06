@@ -641,4 +641,7 @@ def create_app(config_class=None):
         app.logger.error('Scheduler initialization failed: %s', e)
 
     app.logger.info('Application initialization complete')
+    app.logger.info('SESSION_COOKIE_SAMESITE final=%s (type=%s)',
+                     app.config.get('SESSION_COOKIE_SAMESITE'),
+                     type(app.config.get('SESSION_COOKIE_SAMESITE')).__name__)
     return app
