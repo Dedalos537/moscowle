@@ -209,6 +209,9 @@ def register_request_handlers(app):
 
     @app.before_request
     def before_request():
+        # Force SameSite=None for session cookie — necesito pa cPanel cross-origin
+        app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+
         # Generate request ID for tracking
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
