@@ -57,4 +57,17 @@ def health_check():
     }), 200 if overall != 'error' else 503
 
 
-
+@health_bp.route('/samesite-check', methods=['GET'])
+def samesite_check():
+    cfg_val = current_app.config.get('SESSION_COOKIE_SAMESITE', 'NOT_IN_CONFIG')
+    attr_val = current_app.session_cookie_samesite
+    env_val = os.environ.get('SESSION_COOKIE_SAMESITE', 'NOT_SET')
+    flask_env = os.environ.get('FLASK_ENV', 'NOT_SET')
+    return jsonify({
+        'config_value': str(cfg_val),
+        'config_type': type(cfg_val).__name__,
+        'attr_value': str(attr_val),
+        'attr_type': type(attr_val).__name__,
+        'env_value': env_val,
+        'flask_env': flask_env,
+    })
