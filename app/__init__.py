@@ -474,7 +474,11 @@ def create_app(config_class=None):
     )
     cors.init_app(
         app,
-        resources={r'/api/*': {'origins': cors_origins}, r'/admin/*': {'origins': cors_origins}},
+        resources={
+            r'/api/*': {'origins': cors_origins},
+            r'/admin/*': {'origins': cors_origins},
+            r'/llama/*': {'origins': cors_origins},
+        },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
