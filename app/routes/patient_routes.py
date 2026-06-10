@@ -5,7 +5,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.appointment_service import AppointmentService
 from app.services.notification_service import NotificationService
 from app.services.email_service import EmailService
-from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone
+from app.utils import get_user_today_utc_range, get_user_now, get_user_timezone, parse_datetime as _parse_datetime
 from app.extensions import csrf
 from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
@@ -361,24 +361,6 @@ def profile():
     }
     return render_template('patient/profile.html', player_stats=player_stats, active_page='profile')
 
-def _parse_datetime(value):
-    """Parsea datetime ISO o naive"""
-    if not value:
-        return None
-    try:
-        if value.endswith('Z'):
-            value = value[:-1] + '+00:00'
-        dt = datetime.fromisoformat(value)
-        if dt.tzinfo:
-            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-        return dt
-    except Exception:
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(value, fmt)
-            except Exception:
-                continue
-    return None
 
 @patient_bp.route('/api/sessions', methods=['GET'])
 @login_required

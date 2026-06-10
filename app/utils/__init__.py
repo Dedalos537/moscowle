@@ -125,6 +125,27 @@ def normalize_datetime_for_storage(dt_input, user_timezone_str=DEFAULT_TIMEZONE)
     # Convert to UTC and make naive
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
+def parse_datetime(value):
+    """Robust datetime parser. Naive datetimes assumed America/Lima (UTC-5). Returns naive UTC."""
+    if not value:
+        return None
+    try:
+        if value.endswith('Z'):
+            value = value[:-1] + '+00:00'
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(timezone.utc).replace(tzinfo=None)
+    except Exception:
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
+            try:
+                dt = datetime.strptime(value, fmt)
+                return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(timezone.utc).replace(tzinfo=None)
+            except Exception:
+                continue
+    return None
+
+
 def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZONE):
     """
     Convert UTC naive datetime from DB to user's local timezone.

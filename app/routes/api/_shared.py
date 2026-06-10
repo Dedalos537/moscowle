@@ -26,7 +26,7 @@ except Exception:
     _ollama_client = None
 from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, start_async_training
-from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone
+from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone, parse_datetime
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt, limiter, csrf
 from app.services.email_service import EmailService
@@ -49,9 +49,6 @@ report_service = ReportService()
 drive_service = GoogleDriveService()
 fs = FinancialService()
 
-LIMA_TZ = timezone(timedelta(hours=-5))
-
-
 def _parse_json(raw):
     if '```json' in raw: raw = raw.split('```json')[1].split('```')[0]
     elif '```' in raw: raw = raw.split('```')[1].split('```')[0]
@@ -60,25 +57,7 @@ def _parse_json(raw):
     try: return json.loads(raw)
     except Exception: return None
 
-
-def _parse_datetime(value):
-    if not value:
-        return None
-    try:
-        if value.endswith('Z'):
-            value = value[:-1] + '+00:00'
-        dt = datetime.fromisoformat(value)
-        if dt.tzinfo:
-            return dt.astimezone(timezone.utc).replace(tzinfo=None)
-        return dt.replace(tzinfo=LIMA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
-    except Exception:
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
-            try:
-                dt = datetime.strptime(value, fmt)
-                return dt.replace(tzinfo=LIMA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
-            except Exception:
-                continue
-    return None
+_parse_datetime = parse_datetime
 
 
 def analyze_contact_message_ai(name, email, message, service_interest):
