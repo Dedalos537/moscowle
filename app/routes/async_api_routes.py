@@ -4,7 +4,7 @@ from app.dao.user_dao import UserDAO
 from app.dao.appointment_dao import AppointmentDAO
 from app.dao.session_metrics_dao import SessionMetricsDAO
 from app.models import User, Appointment, SessionMetrics
-from app.utils.async_utils import api_response
+from app.utils.api_helpers import api_response
 from datetime import datetime, timedelta
 import asyncio
 
@@ -34,10 +34,10 @@ async def get_active_users():
                     'sedes': sedes
                 })
                 
-            return api_response(data=data, message="Active therapists fetched successfully")
+            return api_response(success=True, data=data, error=None, status=200)
             
     except Exception as e:
-        return api_response(message=str(e), status_code=500, success=False)
+        return api_response(success=False, data=None, error=str(e), status=500)
 
 @async_api_bp.route('/appointments/upcoming', methods=['GET'])
 async def get_upcoming_appointments():
@@ -48,7 +48,7 @@ async def get_upcoming_appointments():
         limit = request.args.get('limit', default=10, type=int)
         
         if not user_id:
-             return api_response(message="User ID required", status_code=400, success=False)
+             return api_response(success=False, data=None, error="User ID required", status=400)
 
         async with get_async_db() as session:
             appt_dao = AppointmentDAO(Appointment, session)
@@ -61,10 +61,10 @@ async def get_upcoming_appointments():
                 'status': a.status
             } for a in appointments]
             
-            return api_response(data=data)
+            return api_response(success=True, data=data, error=None, status=200)
             
     except Exception as e:
-        return api_response(message=str(e), status_code=500, success=False)
+        return api_response(success=False, data=None, error=str(e), status=500)
 
 @async_api_bp.route('/metrics/user/<int:user_id>', methods=['GET'])
 async def get_user_metrics(user_id):
@@ -85,6 +85,6 @@ async def get_user_metrics(user_id):
                 } for m in metrics]
             }
             
-            return api_response(data=data)
+            return api_response(success=True, data=data, error=None, status=200)
     except Exception as e:
-        return api_response(message=str(e), status_code=500, success=False)
+        return api_response(success=False, data=None, error=str(e), status=500)
