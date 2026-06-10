@@ -1,11 +1,14 @@
 import logging
+from typing import Callable
 
 from app.extensions import cache
 
 logger = logging.getLogger('app')
 
+CONTEXT_CACHE_KEY = 'full_context'
 
-def cache_get(key: str, loader_func=None, timeout: int = 300):
+
+def cache_get(key: str, loader_func: Callable | None = None, timeout: int = 300):
     data = cache.get(key)
     if data is not None:
         logger.info(f'Cache HIT: {key}')
@@ -29,4 +32,4 @@ def cache_invalidate(key: str = None):
 
 
 def invalidate_context():
-    cache_invalidate('full_context')
+    cache_invalidate(CONTEXT_CACHE_KEY)

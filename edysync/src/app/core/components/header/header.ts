@@ -23,7 +23,7 @@ export class Header implements OnInit, OnDestroy {
   showNotifications = false;
   showUserMenu = false;
   showLogoutWarning = false;
-  showHelp = false;
+
   notifications: any[] = [];
   unreadCount = 0;
   user: any = null;
@@ -167,9 +167,4 @@ export class Header implements OnInit, OnDestroy {
     this.showLogoutWarning = false;
   }
 
-  toggleHelp() {
-    this.showHelp = !this.showHelp;
-    this.showNotifications = false;
-    this.showUserMenu = false;
-  }
 }
