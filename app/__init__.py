@@ -209,9 +209,6 @@ def register_request_handlers(app):
 
     @app.before_request
     def before_request():
-        # Force SameSite=None for session cookie — necesito pa cPanel cross-origin
-        app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-
         # Generate request ID for tracking
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
@@ -278,7 +275,7 @@ def register_request_handlers(app):
                         return jsonify({'success': False, 'message': 'Expired App-Key'}), 403
 
                     # Compute expected hash
-                    secret = app.config.get('APP_SECRET_KEY', 'dev-app-key-change-in-production')
+                    secret = app.config['APP_SECRET_KEY']
                     message = f'{secret}:{client_timestamp}'
                     expected_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
 
@@ -390,6 +387,15 @@ def create_app(config_class=None):
     if app.config.get('USE_PROXYFIX', True):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
         app.logger.info('ProxyFix middleware enabled')
+
+    # ========== APP_SECRET_KEY VALIDATION ==========
+    app_secret = app.config.get('APP_SECRET_KEY', '')
+    default_keys = {'dev-app-key-change-in-production', 'change-in-production', 'EdySync_Mvp_Secret_2026'}
+    if app_secret in default_keys:
+        app.logger.warning(
+            'APP_SECRET_KEY is set to an insecure default! Set APP_SECRET_KEY env var in production.',
+            extra={'env': app.config.get('ENV', 'unknown')},
+        )
 
     # Talisman for security headers and HSTS
     try:

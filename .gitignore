@@ -10,6 +10,7 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
 env/
 ENV/
 build/
@@ -57,7 +58,7 @@ ai_models/
 *.backup
 *.bak
 
-# User uploaded media (should NOT be in git)
+# User uploaded media
 uploads/uploads/receipts/*
 uploads/uploads/messages/*
 uploads/uploads/*.webm
@@ -66,16 +67,22 @@ uploads/uploads/*.jpg
 uploads/uploads/*.png
 app/static/uploads/session_images/*
 
+# Angular build output (rebuilt in Docker)
+edysync/dist/
+edysync/dist 2/
+edysync/node_modules/
+
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
+coverage_report/
+.coverage.*
 
 # Flask
-instance/
 .webassets-cache
 
-# Backup folders
+# Backup folders (dead code)
 app_back/
 * 2.scss
 
@@ -83,25 +90,20 @@ app_back/
 documento_proyecto.md
 generar_docx.py
 
-# Coverage reports
-coverage_report/
-htmlcov/
-.coverage
-.coverage.*
-
 # Secret keys
 secret_key.txt
 credentials.json
 client_secret*.json
+
+# Build artifacts
 build_output/
 
 # Docker
 mysql_data/
 
-# Python virtual env
-.venv/
-venv/
-
 # Railway deploy cache
 railway_deploy/
 test_venv/
+
+# Old PythonAnywhere reference
+wsgi.py

@@ -23,7 +23,7 @@ format-check:
 	ruff format --check app/
 
 dev:
-	python start_server.py
+	python run.py
 
 docker-build:
 	docker compose build
