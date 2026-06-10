@@ -9,13 +9,13 @@ from app.extensions import db
 from app.models import Appointment, Payment, User
 from app.services.context_loader_service import context_loader
 from app.services.workflow_intelligence_service import predict_next_action, track_workflow
-from app.utils.cache_utils import invalidate_context
+from app.utils.cache_utils import CONTEXT_CACHE_KEY, invalidate_context
 
 
 def get_cached_context():
     from app.utils.cache_utils import cache_get
 
-    return cache_get('full_context', loader_func=context_loader.get_full_context)
+    return cache_get(CONTEXT_CACHE_KEY, loader_func=context_loader.get_full_context)
 
 
 def get_cached_context_text():

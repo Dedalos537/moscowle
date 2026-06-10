@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify
 
 from app.extensions import db
 from app.services.workflow_intelligence_service import get_workflow_stats
-from app.utils.cache_utils import cache_get
+from app.utils.cache_utils import CONTEXT_CACHE_KEY, cache_get
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 
@@ -47,7 +47,7 @@ def workflow_stats():
 def cache_status():
     """Obtiene estado actual del caché de contexto"""
 
-    context_data = cache_get('full_context')
+    context_data = cache_get(CONTEXT_CACHE_KEY)
     cached = context_data is not None
     return jsonify(
         {
@@ -86,7 +86,7 @@ def system_health():
             'system_health': {
                 'status': 'healthy',
                 'recent_conversations': recent_conversations,
-                'cache_active': cache_get('full_context') is not None,
+                'cache_active': cache_get(CONTEXT_CACHE_KEY) is not None,
                 'timestamp': datetime.now().isoformat(),
                 'uptime': 'monitoring...',
             },
