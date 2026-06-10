@@ -21,7 +21,7 @@ def generate_app_key():
 def session_check():
     from flask import request as req
     from flask import session
-    from flask_login import current_user
+    from app.auth_compat import current_user
 
     cookie_header = req.headers.get('Cookie', '')
     has_session_cookie = 'moscowle_session=' in cookie_header

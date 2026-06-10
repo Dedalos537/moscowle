@@ -10,6 +10,7 @@ class TestConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
     RATELIMIT_ENABLED = False # Disable rate limiter for tests
+    JWT_COOKIE_CSRF_PROTECT = False
     SERVER_NAME = 'localhost.localdomain' # Required for url_for in tests without request context if needed
     
     # Reset engine options for SQLite (StaticPool does not support pool_size etc.)

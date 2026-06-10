@@ -12,7 +12,7 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        from flask_login import current_user
+        from app.auth_compat import current_user
 
         if not current_user.is_authenticated or current_user.role not in ('admin', 'supervisor'):
             return jsonify({'error': 'Unauthorized'}), 403

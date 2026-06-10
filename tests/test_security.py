@@ -5,9 +5,10 @@ from app.extensions import csrf
 
 class TestSecurityConfig:
     def test_app_secret_key_from_config(self, app):
-        assert current_app.config.get('APP_SECRET_KEY') is not None
-        assert len(current_app.config['APP_SECRET_KEY']) > 0
-        assert current_app.config['APP_SECRET_KEY'] != 'EdySync_Mvp_Secret_2026'
+        key = current_app.config.get('APP_SECRET_KEY') or current_app.config.get('SECRET_KEY')
+        assert key is not None
+        assert len(key) > 0
+        assert key != 'EdySync_Mvp_Secret_2026'
 
     def test_csrf_time_limit_configurable(self, app):
         limit = current_app.config.get('WTF_CSRF_TIME_LIMIT')

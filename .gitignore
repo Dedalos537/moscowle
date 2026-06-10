@@ -78,6 +78,8 @@ edysync/node_modules/
 htmlcov/
 coverage_report/
 .coverage.*
+playwright-results/
+test-results/
 
 # Flask
 .webassets-cache

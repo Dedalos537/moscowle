@@ -1,6 +1,6 @@
 # Rotación de Credenciales — Moscowle IA
 
-> **Estado:** Pendiente
+> **Estado:** En progreso — APP_SECRET_KEY rotado, `DEFAULT_USER_PASSWORD` documentado. Pendiente: DB, Email, Admin, Gemini, Groq.
 > **Creado:** 2026-06-09
 > **Riesgo:** Crítico — contraseña `Rucula_530` reusada en DB, email y admin
 
@@ -38,7 +38,7 @@ El archivo `.env` existe en disco con credenciales de producción reales. Aunque
 
 ## Secreto #3: Groq API Key
 
-| Actual | `gsk_REVOCADO_rotar_en_console_groq` |
+| Actual | `gsk_...` (rotar, ver https://console.groq.com/keys) |
 |--------|-------------------------------------------------------------|
 | Dónde rotar | https://console.groq.com/keys |
 | Riesgo | Si se filtra, cualquiera puede usar tu cuenta de Groq (costo $) |
@@ -48,11 +48,11 @@ El archivo `.env` existe en disco con credenciales de producción reales. Aunque
 
 ## Secreto #4: Flask Secret Key
 
-| Actual | `moscowle_secret_key_production_2024` |
+| Actual | ~~`moscowle_secret_key_production_2024`~~ → **`9ae7343c0b7ed5154056b09b6df0dfa736cd75a11f2daede609ce28bb9cd7229`** |
 |--------|---------------------------------------|
 | Dónde cambiar | `config.py` lee de `APP_SECRET_KEY` env var |
 | Riesgo | Si se filtra, cualquiera puede forjar sesiones |
-| Acción | Generar con: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| Acción | ✅ **Rotado** — actualizar Railway env `APP_SECRET_KEY` con el nuevo valor |
 
 ---
 
@@ -63,6 +63,19 @@ El archivo `.env` existe en disco con credenciales de producción reales. Aunque
 | Dónde rotar | https://myaccount.google.com/apppasswords |
 | Riesgo | Acceso a Gmail de diegocenteno537@gmail.com |
 | Acción | Generar nuevo app password, revocar el actual |
+
+---
+
+## Secreto #6: Default User Password (`DEFAULT_USER_PASSWORD`)
+
+**Nuevo — agregado durante Fase Post-Auditoría.**
+
+| Propósito | Password predeterminado al crear usuarios vía IA |
+|-----------|--------------------------------------------------|
+| Dónde se usa | `app/routes/llama_routes.py` — crear usuario automático |
+| Valor actual | Variable de entorno `DEFAULT_USER_PASSWORD`. Si no está definida, se genera automáticamente (`secrets.token_urlsafe(12)`) al iniciar la app |
+| Recomendación | Fijar un valor fijo en Railway: `export DEFAULT_USER_PASSWORD=ttVStHMtj-AiD2pC` |
+| Riesgo | Si no se fija, cada reinicio del servidor genera un password diferente |
 
 ---
 

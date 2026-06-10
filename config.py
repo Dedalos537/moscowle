@@ -23,6 +23,14 @@ class Config:
     # Read DB URI from environment; do NOT fallback to SQLite here.
     SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
 
+    # Read/Write Split — replica connection for SELECT queries
+    REPLICA_DATABASE_URL = os.getenv('REPLICA_DATABASE_URL', '')
+
+    SQLALCHEMY_BINDS = {}
+
+    # ========== OLLAMA / LLM CONFIGURATION ==========
+    OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://127.0.0.1:11434')
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 
@@ -48,6 +56,16 @@ class Config:
     RATELIMIT_DEFAULT = '200 per day;50 per hour'
     RATELIMIT_STORAGE_URL = 'memory://'
     RATELIMIT_STRATEGY = 'fixed-window'
+
+    # ========== ALERTING / MONITORING ==========
+    CRISIS_CHECK_INTERVAL = int(os.getenv('CRISIS_CHECK_INTERVAL', '300'))
+    ALERT_SLACK_WEBHOOK_URL = os.getenv('ALERT_SLACK_WEBHOOK_URL', '')
+    ALERT_TELEGRAM_BOT_TOKEN = os.getenv('ALERT_TELEGRAM_BOT_TOKEN', '')
+    ALERT_TELEGRAM_CHAT_ID = os.getenv('ALERT_TELEGRAM_CHAT_ID', '')
+    ALERT_EMAIL_TO = os.getenv('ALERT_EMAIL_TO', '')
+    ALERT_DB_CONN_THRESHOLD = int(os.getenv('ALERT_DB_CONN_THRESHOLD', '50'))
+    ALERT_BRUTE_FORCE_THRESHOLD = int(os.getenv('ALERT_BRUTE_FORCE_THRESHOLD', '20'))
+    ALERT_BRUTE_FORCE_WINDOW_MINUTES = int(os.getenv('ALERT_BRUTE_FORCE_WINDOW_MINUTES', '15'))
 
     # ========== TIMEZONE (Peru = UTC-5, no DST) ==========
     TIMEZONE = 'America/Lima'
@@ -100,6 +118,7 @@ class Config:
         'CORS_ORIGINS',
         'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200 https://moscowle-backend-production.up.railway.app',
     )
+    SOCKET_CORS_ORIGINS = os.getenv('SOCKET_CORS_ORIGINS', 'https://moscowle.ai')
 
     # ========== SESSION CONFIGURATION - CRITICAL ==========
     # These settings help prevent session leaking and improve security
@@ -119,6 +138,29 @@ class Config:
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_DURATION = timedelta(days=7)
+
+    # ========== JWT CONFIGURATION ==========
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', os.getenv('APP_SECRET_KEY', SECRET_KEY))
+    JWT_TOKEN_LOCATION = ['cookies']
+    JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'False') == 'True'
+    JWT_COOKIE_CSRF_PROTECT = True
+    JWT_CSRF_IN_COOKIES = True
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+    JWT_SESSION_COOKIE = False  # browser-session vs persistent
+    REFRESH_TOKEN_LENGTH = int(os.getenv('REFRESH_TOKEN_LENGTH', '64'))
+
+    # ========== MFA RATE LIMITING ==========
+    MFA_MAX_ATTEMPTS = int(os.getenv('MFA_MAX_ATTEMPTS', '5'))
+    MFA_LOCKOUT_MINUTES = int(os.getenv('MFA_LOCKOUT_MINUTES', '15'))
+
+    # ========== OAUTH PROVIDERS ==========
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+    FACEBOOK_CLIENT_ID = os.getenv('FACEBOOK_CLIENT_ID', '')
+    FACEBOOK_CLIENT_SECRET = os.getenv('FACEBOOK_CLIENT_SECRET', '')
+    OAUTH_REDIRECT_URI = os.getenv('OAUTH_REDIRECT_URI', '')
 
     # ========== APP-SECRET (for App-Key validation) ==========
     APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'dev-app-key-change-in-production')

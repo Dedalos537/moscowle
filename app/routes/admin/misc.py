@@ -1,6 +1,6 @@
 from app.services.receipt_generator import generate_receipt_pdf
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify, send_file
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 from functools import wraps
 import os
 from datetime import timedelta

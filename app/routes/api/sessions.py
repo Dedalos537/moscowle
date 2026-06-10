@@ -1,3 +1,4 @@
+from app.utils.sanitizer import sanitize_text
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -222,6 +223,9 @@ def api_create_session():
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
+    for field in ('title', 'notes', 'location'):
+        if isinstance(data.get(field), str):
+            data[field] = sanitize_text(data[field], 1000)
 
     for field in ('start_time', 'end_time'):
         if isinstance(data.get(field), str):
@@ -375,6 +379,9 @@ def api_update_session(session_id):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
+    for field in ('title', 'notes', 'location'):
+        if isinstance(data.get(field), str):
+            data[field] = sanitize_text(data[field], 1000)
 
     for field in ('start_time', 'end_time'):
         if isinstance(data.get(field), str):
@@ -436,7 +443,7 @@ def api_cancel_session(session_id):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.get_json(silent=True) or {}
-    reason = data.get('reason', '')
+    reason = sanitize_text(data.get('reason', ''), 500)
 
     try:
         appt = appointment_service.transition_status(
@@ -655,7 +662,7 @@ def upload_session_image(appointment_id):
 
     file = request.files['image']
     image_type = request.form.get('image_type', 'session_photo')
-    notes = request.form.get('notes', '')
+    notes = sanitize_text(request.form.get('notes', ''), 1000)
 
     if file.filename == '':
         return jsonify({'error': 'Nombre de archivo vacío'}), 400

@@ -1,15 +1,19 @@
 import logging
 import os
 import re as re_module
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from app.extensions import bcrypt, csrf, db
+
+_DEFAULT_USER_PASSWORD = os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
 from app.models import AIChatMessage, AIConversation, Appointment, User
+from app.utils.sanitizer import sanitize_text
 from app.services.appointment_service import AppointmentService
 from app.services.business_analytics_service import (
     estimate_breakeven_point,
@@ -186,7 +190,7 @@ def _handle_create_user(params):
         new_user = User(
             username=name,
             email=email,
-            password=bcrypt.generate_password_hash('cambiar123').decode('utf-8'),
+            password=bcrypt.generate_password_hash(_DEFAULT_USER_PASSWORD).decode('utf-8'),
             role='jugador',
             is_active=True,
         )
@@ -195,7 +199,7 @@ def _handle_create_user(params):
         redirect = url_for('admin.users_list')
         notif_service.create_notification(current_user.id, f'Nuevo usuario creado: {name}', redirect)
         return {
-            'response': f'Usuario creado: {name} ({email}). Password predeterminado: changeme123',
+            'response': f'Usuario creado: {name} ({email}). Password predeterminado: {_DEFAULT_USER_PASSWORD}',
             'redirect': redirect,
             'action_result': {'status': 'success', 'user_id': new_user.id},
         }
@@ -427,7 +431,7 @@ def send_message():
         return auth_error
 
     data = request.get_json() or {}
-    user_message = data.get('message', '').strip()
+    user_message = sanitize_text(data.get('message', ''))
     if not user_message:
         return jsonify({'error': 'Mensaje vacío'}), 400
 

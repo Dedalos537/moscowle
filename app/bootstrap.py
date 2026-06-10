@@ -1,42 +1,48 @@
-from flask import Flask, g, jsonify, request
+from flask import Flask, g, jsonify, redirect, request, url_for
 from flask_talisman import Talisman
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from app.extensions import bcrypt, cache, cors, csrf, db, limiter, login_manager, mail, oauth, socketio
+from app.extensions import bcrypt, cache, cors, csrf, db, jwt, limiter, login_manager, mail, oauth, socketio
 
 
 def register_auth_loader(app: Flask) -> None:
     try:
+        from app.extensions import jwt as _jwt
         from app.models import User
 
-        @login_manager.user_loader
-        def load_user(user_id):
-            if user_id is None:
+        @_jwt.user_identity_loader
+        def user_identity_lookup(user):
+            return str(user.id) if hasattr(user, 'id') else str(user)
+
+        @_jwt.user_lookup_loader
+        def user_lookup_callback(_jwt_header, jwt_data):
+            identity = jwt_data.get('sub')
+            if identity is None:
                 return None
-            try:
-                return User.query.get(int(user_id))
-            except Exception:
-                app.logger.debug('User lookup failed in user_loader; DB may be unavailable')
-                return None
+            return User.query.get(int(identity))
+
+        @_jwt.expired_token_loader
+        def expired_token_callback(_jwt_header, _jwt_data):
+            if '/api/' in request.path or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
+                return jsonify({'success': False, 'message': 'Token expirado, inicia sesión de nuevo'}), 401
+            return redirect(url_for('auth.login'))
+
+        @_jwt.invalid_token_loader
+        def invalid_token_callback(_error):
+            return jsonify({'success': False, 'message': 'Token inválido'}), 401
+
+        @_jwt.unauthorized_loader
+        def missing_token_callback(_error):
+            path = request.path or ''
+            if '/api/' in path or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
+                return jsonify({'success': False, 'message': 'Authorization required'}), 401
+            return redirect(url_for('auth.login', next=request.url))
+
+        @_jwt.revoked_token_loader
+        def revoked_token_callback(_jwt_header, _jwt_data):
+            return jsonify({'success': False, 'message': 'Token revocado'}), 401
     except Exception as e:
-
-        def _dummy_loader(user_id):
-            return None
-
-        login_manager.user_loader(_dummy_loader)
-        try:
-            app.logger.warning(f'register_auth_loader failed to import models: {e}')
-        except Exception:
-            pass
-
-    @login_manager.unauthorized_handler
-    def unauthorized():
-        path = request.path or ''
-        if '/api/' in path or getattr(g, 'is_api', False) or request.accept_mimetypes.accept_json:
-            return jsonify({'success': False, 'message': 'Unauthorized - Please log in'}), 401
-        from flask import redirect, url_for
-
-        return redirect(url_for('auth.login', next=request.url))
+        app.logger.warning(f'register_auth_loader failed to register JWT handlers: {e}')
 
 
 def register_error_handlers(app: Flask) -> None:
@@ -184,6 +190,8 @@ def init_security(app: Flask) -> None:
     try:
         csp = {
             'default-src': ["'self'"],
+            'base-uri': ["'self'"],
+            'object-src': ["'none'"],
             'script-src': [
                 "'self'",
                 "'unsafe-inline'",
@@ -211,13 +219,12 @@ def init_security(app: Flask) -> None:
             'img-src': ["'self'", 'data:', 'https://ui-avatars.com', 'https://cdn.jsdelivr.net'],
             'connect-src': [
                 "'self'",
-                'https://cdn.jsdelivr.net',
                 'https://cdnjs.cloudflare.com',
                 'https://api.github.com',
                 'wss://moscowle-backend-production.up.railway.app',
                 'https://moscowle-backend-production.up.railway.app',
             ],
-            'frame-ancestors': ["'self'"],
+            'frame-ancestors': ["'none'"],
         }
 
         import os
@@ -248,6 +255,7 @@ def init_extensions(app: Flask) -> None:
 
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+    jwt.init_app(app)
     mail.init_app(app)
     oauth.init_app(app)
     login_manager.init_app(app)
@@ -282,13 +290,23 @@ def init_extensions(app: Flask) -> None:
     except Exception:
         app.logger.debug('flask-wtf not available, skipping csrf_token injection')
 
+    try:
+        from app.services.feature_flags import inject_flags
+
+        @app.context_processor
+        def inject_feature_flags():
+            return inject_flags()
+    except Exception:
+        app.logger.debug('feature_flags not available, skipping')
+
     cache_config = {
         'CACHE_TYPE': app.config.get('CACHE_TYPE', 'simple'),
     }
     if app.config.get('CACHE_REDIS_URL'):
         cache_config['CACHE_REDIS_URL'] = app.config['CACHE_REDIS_URL']
     cache.init_app(app, cache_config)
-    socketio.init_app(app, cors_allowed_origins='*')
+    _cors = app.config.get('SOCKET_CORS_ORIGINS', 'https://moscowle.ai')
+    socketio.init_app(app, cors_allowed_origins=_cors)
 
     from importlib import import_module
 
@@ -303,6 +321,26 @@ def init_extensions(app: Flask) -> None:
         app.logger.info(f'Rate limiter initialized with storage: {app.config.get("RATELIMIT_STORAGE_URL")}')
     except Exception as e:
         app.logger.warning(f'Rate limiter initialization failed: {e}')
+
+    try:
+        from app.db.routing import init_db_routing
+        if app.config.get('REPLICA_DATABASE_URL'):
+            init_db_routing(app)
+    except Exception as e:
+        app.logger.warning(f'DB routing initialization failed: {e}')
+
+    try:
+        from app.services.crisis_monitor import crisis_monitor
+        crisis_monitor.init_app(app)
+    except Exception as e:
+        app.logger.warning(f'CrisisMonitor initialization failed: {e}')
+
+    try:
+        from app.auth.oauth import init_oauth
+        if app.config.get('GOOGLE_CLIENT_ID'):
+            init_oauth(app)
+    except Exception as e:
+        app.logger.warning(f'OAuth initialization failed: {e}')
 
 
 def register_blueprints(app: Flask) -> None:
@@ -322,6 +360,10 @@ def register_blueprints(app: Flask) -> None:
         ('public', 'app.routes.public_routes', 'public_bp'),
         ('spa', 'app.routes.public_routes', 'spa_bp'),
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
+        ('metrics', 'app.routes.metrics_routes', 'metrics_bp'),
+        ('mfa', 'app.routes.mfa', 'mfa_bp'),
+        ('oauth', 'app.auth.oauth', 'oauth_bp'),
+        ('api_service_requests', 'app.api.service_requests', 'api_sr'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:

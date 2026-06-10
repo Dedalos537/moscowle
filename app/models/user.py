@@ -1,26 +1,28 @@
 from flask_login import UserMixin
 from datetime import datetime
 from app.extensions import db
+from app.models.base import AuditMixin
 
 patient_therapist = db.Table('patient_therapist',
     db.Column('patient_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    extend_existing=True
 )
 
 therapist_sede = db.Table('therapist_sede',
     db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('sede_id', db.Integer, db.ForeignKey('sede.id'), primary_key=True)
+    db.Column('sede_id', db.Integer, db.ForeignKey('sede.id'), primary_key=True),
+    extend_existing=True
 )
 
-class Sede(db.Model):
+class Sede(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     address = db.Column(db.String(255), nullable=True)
-    active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
 
 
-class User(db.Model, UserMixin):
+class User(db.Model, UserMixin, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -28,8 +30,9 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(50), nullable=False)
     oauth_provider = db.Column(db.String(50), nullable=True)
     oauth_id = db.Column(db.String(200), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    mfa_enabled = db.Column(db.Boolean, default=False)
+    otp_secret = db.Column(db.String(32), nullable=True)
     account_status = db.Column(db.String(50), default='active')
     avatar = db.Column(db.String(400), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
@@ -40,8 +43,11 @@ class User(db.Model, UserMixin):
     therapy_goals = db.Column(db.Text, nullable=True)
     timezone = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    assigned_therapist = db.relationship('User', remote_side=[id], backref=db.backref('assigned_patients', lazy=True))
+    assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    assigned_therapist = db.relationship(
+        'User', remote_side=[id], foreign_keys=[assigned_therapist_id],
+        backref=db.backref('assigned_patients', lazy=True),
+    )
 
     therapists = db.relationship(
         'User',
@@ -83,7 +89,7 @@ class User(db.Model, UserMixin):
     work_end_time = db.Column(db.String(5), nullable=True)
     work_days = db.Column(db.String(20), nullable=True)
 
-    sede_id = db.Column(db.Integer, db.ForeignKey('sede.id'), nullable=True)
+    sede_id = db.Column(db.Integer, db.ForeignKey('sede.id'), nullable=True, index=True)
     sede_item = db.relationship('Sede', foreign_keys=[sede_id], backref=db.backref('patients_assigned', lazy='dynamic'))
 
     assigned_sedes = db.relationship(
@@ -93,4 +99,4 @@ class User(db.Model, UserMixin):
         lazy='dynamic'
     )
 
-    payments = db.relationship('Payment', backref='patient', lazy=True)
+    payments = db.relationship('Payment', foreign_keys='Payment.patient_id', backref='patient', lazy=True)

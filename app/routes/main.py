@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, current_app
-from flask_login import login_required, current_user, logout_user
+from flask_jwt_extended import unset_jwt_cookies
+
+from app.auth_compat import login_required, current_user
 from app.extensions import bcrypt
 from app.models import db
 from app.services.email_service import EmailService
@@ -34,8 +36,9 @@ def game():
 @main_bp.route('/logout')
 @login_required
 def logout():
-    logout_user()
-    return redirect(url_for('auth.login'))
+    response = redirect(url_for('auth.login'))
+    unset_jwt_cookies(response)
+    return response
 
 # ==================== MESSAGING SYSTEM ====================
 @main_bp.route('/messages')
@@ -141,6 +144,8 @@ def change_password():
         return jsonify({'success': False, 'message': 'La contraseña debe incluir una letra mayúscula'}), 400
     if not any(c.isdigit() for c in new_password):
         return jsonify({'success': False, 'message': 'La contraseña debe incluir un número'}), 400
+    if not any(c in '!@#$%^&*(),.?":{}|<>_-' for c in new_password):
+        return jsonify({'success': False, 'message': 'La contraseña debe incluir un carácter especial'}), 400
 
     # Update password
     try:

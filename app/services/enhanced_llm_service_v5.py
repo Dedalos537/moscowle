@@ -720,7 +720,7 @@ def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
         import requests
 
         ollama_resp = requests.post(
-            'http://127.0.0.1:11434/api/chat',
+            f"{os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')}/api/chat",
             json={'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'), 'messages': messages, 'stream': False},
             timeout=30,
         )

@@ -7,3 +7,5 @@ from app.models.chat import *
 from app.models.report import *
 from app.models.admin import *
 from app.models.ai import *
+from app.models.service_request import *
+from app.models.refresh_token import RefreshToken

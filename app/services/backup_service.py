@@ -17,6 +17,7 @@ def run_backup():
 
     inspector = inspect(db.engine)
     table_names = inspector.get_table_names()
+    allowed_tables = set(table_names)
 
     backup_data = {
         'generated_at': timestamp,
@@ -27,9 +28,11 @@ def run_backup():
     for table_name in table_names:
         if table_name.startswith('alembic_'):
             continue
+        if table_name not in allowed_tables:
+            continue
 
         try:
-            result = db.session.execute(text(f'SELECT * FROM {table_name}'))
+            result = db.session.execute(text(f'SELECT * FROM `{table_name}`'))
             rows = []
             for row in result.mappings().all():
                 cleaned = {}

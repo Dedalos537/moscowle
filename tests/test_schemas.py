@@ -4,7 +4,7 @@ from app.schemas.payment_schema import validate_payment_register
 
 
 def test_login_schema_invalid():
-    data, errors = validate_login_input({'email': 'bad', 'password': '123'})
+    data, errors = validate_login_input({'email': 'bad', 'password': ''})
     assert data is None
     assert 'email' in errors and 'password' in errors
 

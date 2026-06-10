@@ -8,15 +8,22 @@ import logging
 # Configurar logger para que salga en el terminal de Flask
 logger = logging.getLogger('app')
 
+_OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')
+
 def is_ollama_running():
-    """Verifica si el puerto 11434 está siendo escuchado."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', 11434)) == 0
+        host = '127.0.0.1'
+        port = 11434
+        if _OLLAMA_HOST.startswith('http'):
+            import urllib.parse
+            parsed = urllib.parse.urlparse(_OLLAMA_HOST)
+            host = parsed.hostname or '127.0.0.1'
+            port = parsed.port or 11434
+        return s.connect_ex((host, port)) == 0
 
 def check_model_exists(model_name="llama3.1:8b"):
-    """Verifica si el modelo específico está disponible en Ollama."""
     try:
-        response = requests.get("http://127.0.0.1:11434/api/tags")
+        response = requests.get(f"{_OLLAMA_HOST}/api/tags")
         if response.status_code == 200:
             models = response.json().get('models', [])
             return any(m['name'] == model_name for m in models)

@@ -4,9 +4,9 @@ from flask import url_for
 def test_login_page_loads(client, app):
     """Prueba que la página de login carga correctamente."""
     with app.app_context():
-        from flask_login import current_user
+        from app.auth_compat import current_user
 
-        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+        if current_user.is_authenticated:
             pass
     response = client.get(url_for('auth.login'), follow_redirects=True)
     assert response.status_code == 200

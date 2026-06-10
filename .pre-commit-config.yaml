@@ -1,3 +1,6 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.16
@@ -21,3 +24,12 @@ repos:
       - id: ruff
         name: ruff (security)
         args: [--select, S, --ignore, S101]
+
+  - repo: local
+    hooks:
+      - id: commit-msg-validator
+        name: Validate commit message format
+        entry: scripts/validate-commit.sh
+        language: script
+        stages: [commit-msg]
+        description: "Ensures commit messages follow <type>(<scope>): <description>"

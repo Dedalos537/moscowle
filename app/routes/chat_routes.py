@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 from app.extensions import db, csrf
 from app.models import User, Message, Chat, ChatParticipant
+from app.utils.sanitizer import sanitize_text
 from sqlalchemy import case
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
@@ -346,10 +347,10 @@ def send_message(chat_id):
 
         if request.is_json:
             data = request.get_json(silent=True) or {}
-            body = (data.get('body') or '').strip()
+            body = sanitize_text(data.get('body', ''))
         else:
             data = request.form.to_dict()
-            body = (data.get('body') or '').strip()
+            body = sanitize_text(data.get('body', ''))
 
             if 'file' in request.files:
                 file = request.files['file']

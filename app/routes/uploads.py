@@ -1,5 +1,5 @@
 from flask import Blueprint, current_app, send_from_directory, abort
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 import os
 
 uploads_bp = Blueprint('uploads', __name__)

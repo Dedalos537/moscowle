@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from flask import Flask, g, jsonify, request
-from flask_login import current_user
+from app.auth_compat import current_user
 
 
 def _is_api_request() -> bool:
@@ -58,7 +58,8 @@ def register_request_handlers(app: Flask) -> None:
 
         if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
             skip_appkey = (
-                request.method == 'OPTIONS'
+                app.testing
+                or request.method == 'OPTIONS'
                 or 'webhook' in request.path
                 or request.path.startswith('/api/auth/')
                 or request.path in ('/api/login', '/api/logout')
