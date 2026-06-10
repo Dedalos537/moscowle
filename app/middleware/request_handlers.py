@@ -13,11 +13,16 @@ def _is_api_request() -> bool:
         return True
     if getattr(g, 'is_api', False):
         return True
+    if request.blueprint == 'api':
+        return True
     if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
         return True
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return True
     if request.is_json:
+        return True
+    accept = request.headers.get('Accept', '')
+    if '*/*' in accept:
         return True
     return False
 
