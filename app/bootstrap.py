@@ -282,7 +282,12 @@ def init_extensions(app: Flask) -> None:
     except Exception:
         app.logger.debug('flask-wtf not available, skipping csrf_token injection')
 
-    cache.init_app(app)
+    cache_config = {
+        'CACHE_TYPE': app.config.get('CACHE_TYPE', 'simple'),
+    }
+    if app.config.get('CACHE_REDIS_URL'):
+        cache_config['CACHE_REDIS_URL'] = app.config['CACHE_REDIS_URL']
+    cache.init_app(app, cache_config)
     socketio.init_app(app, cors_allowed_origins='*')
 
     from importlib import import_module

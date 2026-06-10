@@ -28,7 +28,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 csrf = CSRFProtect()
 
-cache = Cache(config={'CACHE_TYPE': 'simple'})
+cache = Cache()
 
 from apscheduler.schedulers.background import BackgroundScheduler
 

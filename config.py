@@ -135,6 +135,10 @@ class Config:
     # Allow explicit control to force HTTPS in production via env var.
     FORCE_HTTPS = os.getenv('FORCE_HTTPS', 'False') == 'True'
 
+    # ========== CACHE - Redis support for production ==========
+    CACHE_TYPE = os.getenv('CACHE_TYPE', 'simple')
+    CACHE_REDIS_URL = os.getenv('REDIS_URL')
+
     # ========== RATE LIMITING - OPTIMIZED ==========
     # Use Redis in production: redis://localhost:6379
     # Fallback to memory if not set
