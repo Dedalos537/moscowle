@@ -22,7 +22,7 @@ from app.services.enhanced_llm_service_v5 import (
 )
 from app.services.ocr_service import process_payment_voucher, confirm_voucher_data
 from app.services.payment_service import PaymentService
-from app.services.finance_service import FinanceService
+from app.services.financial_service import FinancialService
 from app.services.notification_service import NotificationService
 from app.services.smart_modal_error_service import CommonErrors, create_error_response
 from app.services.appointment_service import AppointmentService
@@ -36,7 +36,7 @@ logger = logging.getLogger('app')
 
 llama_bp = Blueprint('llama', __name__, url_prefix='/llama')
 payment_service = PaymentService()
-finance_service = FinanceService()
+finance_service = FinancialService()
 notif_service = NotificationService()
 appointment_service = AppointmentService()
 

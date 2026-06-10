@@ -11,7 +11,7 @@ import secrets
 from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
-from app.services.finance_service import FinanceService
+from app.services.financial_service import FinancialService
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 import uuid
