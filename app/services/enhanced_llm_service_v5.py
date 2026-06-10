@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import re
@@ -7,14 +6,31 @@ from datetime import datetime, timedelta
 
 warnings.filterwarnings('ignore', message='.*google.generativeai.*has ended.*')
 from app.extensions import db
-from app.models import User, Payment, Appointment, Expense
-from app.services.context_cache_service import get_cached_context, get_cached_context_text, invalidate_context
-from app.services.workflow_intelligence_service import track_workflow, predict_next_action
+from app.models import Appointment, Payment, User
+from app.services.context_loader_service import context_loader
+from app.services.workflow_intelligence_service import predict_next_action, track_workflow
+from app.utils.cache_utils import invalidate_context
+
+
+def get_cached_context():
+    from app.utils.cache_utils import cache_get
+
+    return cache_get('full_context', loader_func=context_loader.get_full_context)
+
+
+def get_cached_context_text():
+    context = get_cached_context()
+    if context:
+        return context_loader.format_context_for_llama(context)
+    return ''
+
 
 logger = logging.getLogger('app')
 
 _RE_AMOUNT = re.compile(r'S/?\.?\s*(\d+(?:[.,]\d{3})*(?:[.,]\d{2})?)')
-_RE_PATIENT = re.compile(r'(?:para|con|de|alumno|paciente|Sr|Sra|Dr)\s+([A-Za-záéíóúÁÉÍÓÚ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚ]+)*)')
+_RE_PATIENT = re.compile(
+    r'(?:para|con|de|alumno|paciente|Sr|Sra|Dr)\s+([A-Za-záéíóúÁÉÍÓÚ]+(?:\s+[A-Za-záéíóúÁÉÍÓÚ]+)*)'
+)
 _RE_NAME_CAPS = re.compile(r'\b([A-Z][a-záéíóú]+(?:\s+[A-Z][a-záéíóú]+)*)\b')
 _RE_DATE = re.compile(r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})')
 _RE_DAY = re.compile(r'(lunes|martes|miércoles|jueves|viernes|sábado|domingo)')
@@ -23,139 +39,369 @@ _RE_HOUR = re.compile(r'(\d{1,2}):?(\d{2})?\s*(am|pm|a\.m|p\.m)?', re.IGNORECASE
 
 SEMANTIC_MAPS = {
     'unpaid_users': {
-        'keywords': ['no han pagado', 'moroso', 'deuda', 'sin pagar', 'deudor',
-                     'no pagó', 'vencido', 'atrasado', 'incobrable', 'debe', 'debe pagar',
-                     'morosos', 'deudores', 'sin cobrar', 'impago', 'adeudado'],
+        'keywords': [
+            'no han pagado',
+            'moroso',
+            'deuda',
+            'sin pagar',
+            'deudor',
+            'no pagó',
+            'vencido',
+            'atrasado',
+            'incobrable',
+            'debe',
+            'debe pagar',
+            'morosos',
+            'deudores',
+            'sin cobrar',
+            'impago',
+            'adeudado',
+        ],
         'alternatives': ['quién', 'cuáles', 'cuántos', 'lista', 'listar'],
-        'example': '¿Cuántos alumnos no han pagado este mes?'
+        'example': '¿Cuántos alumnos no han pagado este mes?',
     },
     'weekly_due': {
-        'keywords': ['próxima semana', 'próximos días', 'vencer', 'próximo', 'esta semana',
-                     'deben pagar', 'vencimiento', 'próxima fecha', '7 días', 'dentro de',
-                     'vencen', 'vencerá', 'vence pronto', 'próximas fechas', 'pendiente pago',
-                     'paga próximo', 'pagar pronto'],
+        'keywords': [
+            'próxima semana',
+            'próximos días',
+            'vencer',
+            'próximo',
+            'esta semana',
+            'deben pagar',
+            'vencimiento',
+            'próxima fecha',
+            '7 días',
+            'dentro de',
+            'vencen',
+            'vencerá',
+            'vence pronto',
+            'próximas fechas',
+            'pendiente pago',
+            'paga próximo',
+            'pagar pronto',
+        ],
         'alternatives': ['quién', 'cuáles', 'cuántos', 'lista', 'detalles', 'pago'],
-        'example': '¿Quiénes tienen que pagar próxima semana?'
+        'example': '¿Quiénes tienen que pagar próxima semana?',
     },
     'revenue_metrics': {
-        'keywords': ['finanzas', 'ganancias', 'ingresos', 'egresos', 'ganancia',
-                     'balance', 'cómo van', 'estado financiero', 'utilidad', 'beneficio',
-                     'profit', 'revenue', 'margen', 'cobranza', 'cuentas', 'cómo andan',
-                     'económico', 'dinero', 'fondos', 'capital', 'activos', 'pasivos'],
+        'keywords': [
+            'finanzas',
+            'ganancias',
+            'ingresos',
+            'egresos',
+            'ganancia',
+            'balance',
+            'cómo van',
+            'estado financiero',
+            'utilidad',
+            'beneficio',
+            'profit',
+            'revenue',
+            'margen',
+            'cobranza',
+            'cuentas',
+            'cómo andan',
+            'económico',
+            'dinero',
+            'fondos',
+            'capital',
+            'activos',
+            'pasivos',
+        ],
         'alternatives': ['estado', 'cómo', 'qué tal', 'informe', 'reporte'],
-        'example': '¿Cómo están las finanzas?'
+        'example': '¿Cómo están las finanzas?',
     },
     'breakeven_analysis': {
-        'keywords': ['necesito', 'cuántos alumnos', 'breakeven', 'ganancia de',
-                     'profit', 'objetivo', 'meta', 'para ganar', 'para lograr',
-                     'rentabilidad', 'punto equilibrio', 'proyección'],
+        'keywords': [
+            'necesito',
+            'cuántos alumnos',
+            'breakeven',
+            'ganancia de',
+            'profit',
+            'objetivo',
+            'meta',
+            'para ganar',
+            'para lograr',
+            'rentabilidad',
+            'punto equilibrio',
+            'proyección',
+        ],
         'alternatives': ['cuántos', 'cantidad', 'número'],
-        'example': 'Necesito ganar 15000 soles, ¿cuántos alumnos necesito?'
+        'example': 'Necesito ganar 15000 soles, ¿cuántos alumnos necesito?',
     },
     'schedule_optimization': {
-        'keywords': ['mejorar horarios', 'optimize', 'optimar', 'reorganizar',
-                     'recomendación horarios', 'sugerencia horarios', 'cómo mejoro',
-                     'agendar mejor', 'programación óptima', 'conflictos horarios'],
+        'keywords': [
+            'mejorar horarios',
+            'optimize',
+            'optimar',
+            'reorganizar',
+            'recomendación horarios',
+            'sugerencia horarios',
+            'cómo mejoro',
+            'agendar mejor',
+            'programación óptima',
+            'conflictos horarios',
+        ],
         'alternatives': ['cómo', 'mejora', 'propuesta', 'idea'],
-        'example': '¿Cómo mejoro los horarios?'
+        'example': '¿Cómo mejoro los horarios?',
     },
     'generate_report': {
-        'keywords': ['informe', 'reporte', 'report', 'resumen', 'análisis',
-                     'data', 'estadísticas', 'métricas', 'gráficos', 'datos',
-                     'síntesis', 'compilar', 'reunir datos'],
+        'keywords': [
+            'informe',
+            'reporte',
+            'report',
+            'resumen',
+            'análisis',
+            'data',
+            'estadísticas',
+            'métricas',
+            'gráficos',
+            'datos',
+            'síntesis',
+            'compilar',
+            'reunir datos',
+        ],
         'alternatives': ['dame', 'muestra', 'envía', 'crea', 'genera'],
-        'example': 'Dame un informe completo'
+        'example': 'Dame un informe completo',
     },
     'register_payment': {
-        'keywords': ['registra', 'pagar', 'payment', 'cobrar', 'pagó', 'registrar pago',
-                     'recibió', 'cobrado', 'acreditado', 'confirmado', 'ingresó',
-                     'pagó', 'abonó', 'depositó', 'transferencia', 'pago', 'ingreso',
-                     'recibí pago', 'cobré', 'se pagó', 'fue pagado', 'me pagó',
-                     'metió', 'metí', 'entró dinero', 'llegó dinero', 'entró pago'],
+        'keywords': [
+            'registra',
+            'pagar',
+            'payment',
+            'cobrar',
+            'pagó',
+            'registrar pago',
+            'recibió',
+            'cobrado',
+            'acreditado',
+            'confirmado',
+            'ingresó',
+            'pagó',
+            'abonó',
+            'depositó',
+            'transferencia',
+            'pago',
+            'ingreso',
+            'recibí pago',
+            'cobré',
+            'se pagó',
+            'fue pagado',
+            'me pagó',
+            'metió',
+            'metí',
+            'entró dinero',
+            'llegó dinero',
+            'entró pago',
+        ],
         'alternatives': ['recibí', 'cobré', 'metí', 'ingresó', 'soles', 'cantidad'],
-        'example': 'Registra S/. 500 para Juan'
+        'example': 'Registra S/. 500 para Juan',
     },
     'upload_voucher': {
-        'keywords': ['boleta', 'foto', 'comprobante', 'recibo', 'voucher',
-                     'imagen', 'screenshot', 'evidencia', 'descarga', 'sube',
-                     'adjunta', 'factura', 'documento', 'comprobación'],
+        'keywords': [
+            'boleta',
+            'foto',
+            'comprobante',
+            'recibo',
+            'voucher',
+            'imagen',
+            'screenshot',
+            'evidencia',
+            'descarga',
+            'sube',
+            'adjunta',
+            'factura',
+            'documento',
+            'comprobación',
+        ],
         'alternatives': ['envía', 'carga', 'procesa', 'analiza'],
-        'example': 'Sube la foto de la boleta'
+        'example': 'Sube la foto de la boleta',
     },
     'create_appointment': {
-        'keywords': ['agendar', 'crear sesión', 'nueva cita', 'programar', 'schedule session',
-                     'crear appointment', 'nueva sesión', 'sesión', 'cita', 'appointment',
-                     'reservar', 'agendá', 'cita con'],
+        'keywords': [
+            'agendar',
+            'crear sesión',
+            'nueva cita',
+            'programar',
+            'schedule session',
+            'crear appointment',
+            'nueva sesión',
+            'sesión',
+            'cita',
+            'appointment',
+            'reservar',
+            'agendá',
+            'cita con',
+        ],
         'alternatives': ['para', 'con', 'entre', 'el', 'la'],
-        'example': 'Agendar sesión con Juan el lunes'
+        'example': 'Agendar sesión con Juan el lunes',
     },
     'update_session': {
-        'keywords': ['actualizar sesión', 'cambiar sesión', 'modificar', 'reprogramar',
-                     'cambiar horario', 'movimiento', 'rescheduled', 'mover sesión'],
+        'keywords': [
+            'actualizar sesión',
+            'cambiar sesión',
+            'modificar',
+            'reprogramar',
+            'cambiar horario',
+            'movimiento',
+            'rescheduled',
+            'mover sesión',
+        ],
         'alternatives': ['de', 'a', 'nueva', 'sesión'],
-        'example': 'Mueve la sesión de Juan a las 3pm'
+        'example': 'Mueve la sesión de Juan a las 3pm',
     },
     'delete_session': {
-        'keywords': ['cancelar sesión', 'eliminar sesión', 'borrar cita', 'canceled',
-                     'quitar', 'remover', 'eliminar cita'],
+        'keywords': [
+            'cancelar sesión',
+            'eliminar sesión',
+            'borrar cita',
+            'canceled',
+            'quitar',
+            'remover',
+            'eliminar cita',
+        ],
         'alternatives': ['sesión', 'cita', 'appointment'],
-        'example': 'Cancela la sesión de María'
+        'example': 'Cancela la sesión de María',
     },
     'create_expense': {
-        'keywords': ['crear gasto', 'nuevo gasto', 'gastar', 'egreso', 'costo',
-                     'expense', 'invertir', 'pagar proveedor', 'registra gasto',
-                     'registrar costo', 'registrar egreso'],
+        'keywords': [
+            'crear gasto',
+            'nuevo gasto',
+            'gastar',
+            'egreso',
+            'costo',
+            'expense',
+            'invertir',
+            'pagar proveedor',
+            'registra gasto',
+            'registrar costo',
+            'registrar egreso',
+        ],
         'alternatives': ['por', 'categoría', 'descripción', 'útiles'],
-        'example': 'Registra un gasto de S/.200 para útiles'
+        'example': 'Registra un gasto de S/.200 para útiles',
     },
     'assign_therapist': {
-        'keywords': ['asignar terapeuta', 'assign therapist', 'terapeuta', 'psicólogo',
-                     'especialista', 'cuenta con', 'asigna', 'asignación'],
+        'keywords': [
+            'asignar terapeuta',
+            'assign therapist',
+            'terapeuta',
+            'psicólogo',
+            'especialista',
+            'cuenta con',
+            'asigna',
+            'asignación',
+        ],
         'alternatives': ['para', 'a', 'con'],
-        'example': 'Asigna a Juan con el Dr. García'
+        'example': 'Asigna a Juan con el Dr. García',
     },
     'create_user': {
-        'keywords': ['crear usuario', 'nuevo paciente', 'nuevo alumno', 'registrar',
-                     'nuevo usuario', 'agregar usuario', 'crear cuenta', 'dar de alta',
-                     'nuevo cliente', 'registra alumno', 'agrega paciente'],
+        'keywords': [
+            'crear usuario',
+            'nuevo paciente',
+            'nuevo alumno',
+            'registrar',
+            'nuevo usuario',
+            'agregar usuario',
+            'crear cuenta',
+            'dar de alta',
+            'nuevo cliente',
+            'registra alumno',
+            'agrega paciente',
+        ],
         'alternatives': ['nombre', 'email', 'teléfono', 'rol', 'crear'],
-        'example': 'Crear usuario María García'
+        'example': 'Crear usuario María García',
     },
     'list_users': {
-        'keywords': ['listar usuarios', 'mostrar usuarios', 'ver usuarios', 'todos los usuarios',
-                     'usuarios activos', 'lista de', 'quiénes', 'cuáles usuarios',
-                     'cuántos pacientes', 'pacientes activos', 'cuántos tengo', 'cuántos alumnos',
-                     'pacientes registrados', 'alumnos activos', 'cuántos hay'],
+        'keywords': [
+            'listar usuarios',
+            'mostrar usuarios',
+            'ver usuarios',
+            'todos los usuarios',
+            'usuarios activos',
+            'lista de',
+            'quiénes',
+            'cuáles usuarios',
+            'cuántos pacientes',
+            'pacientes activos',
+            'cuántos tengo',
+            'cuántos alumnos',
+            'pacientes registrados',
+            'alumnos activos',
+            'cuántos hay',
+        ],
         'alternatives': ['usuarios', 'pacientes', 'alumnos'],
-        'example': 'Lista todos los usuarios'
+        'example': 'Lista todos los usuarios',
     },
     'list_sessions': {
-        'keywords': ['ver sesiones', 'sesiones', 'citas', 'agenda', 'calendario',
-                     'appointments', 'horarios', 'próximas sesiones', 'mis sesiones',
-                     'todas las sesiones', 'listar sesiones', 'mostrar sesiones'],
+        'keywords': [
+            'ver sesiones',
+            'sesiones',
+            'citas',
+            'agenda',
+            'calendario',
+            'appointments',
+            'horarios',
+            'próximas sesiones',
+            'mis sesiones',
+            'todas las sesiones',
+            'listar sesiones',
+            'mostrar sesiones',
+        ],
         'alternatives': ['de', 'para', 'con'],
-        'example': 'Ver todas las sesiones'
+        'example': 'Ver todas las sesiones',
     },
     'broadcast_message': {
-        'keywords': ['enviar mensaje', 'broadcast', 'notificar', 'anunciar',
-                     'comunicar', 'aviso', 'mensaje a todos', 'mensajes'],
+        'keywords': [
+            'enviar mensaje',
+            'broadcast',
+            'notificar',
+            'anunciar',
+            'comunicar',
+            'aviso',
+            'mensaje a todos',
+            'mensajes',
+        ],
         'alternatives': ['a', 'para', 'tema'],
-        'example': 'Envía mensaje a todos los pacientes'
+        'example': 'Envía mensaje a todos los pacientes',
     },
     'navigation': {
-        'keywords': ['llévame', 'navega', 'ir a', 'voy a', 'go to', 'abre',
-                     'vamos a', 'acceder', 'ingresar', 'vaya a'],
-        'sections': ['deudores', 'pagos', 'sesiones', 'reportes', 'usuarios',
-                     'sedes', 'gastos', 'mensajes', 'juegos', 'dashboard', 'panel'],
-        'example': 'Llévame a ver los deudores'
+        'keywords': ['llévame', 'navega', 'ir a', 'voy a', 'go to', 'abre', 'vamos a', 'acceder', 'ingresar', 'vaya a'],
+        'sections': [
+            'deudores',
+            'pagos',
+            'sesiones',
+            'reportes',
+            'usuarios',
+            'sedes',
+            'gastos',
+            'mensajes',
+            'juegos',
+            'dashboard',
+            'panel',
+        ],
+        'example': 'Llévame a ver los deudores',
     },
     'list_payments': {
-        'keywords': ['Ver pagos', 'historial de pagos', 'payment history', 'transacciones',
-                     'comprobantes', 'recibos', 'ingresos', 'pagos registrados', 'pagos de',
-                     'mis pagos', 'qué pagos', 'pagos registrados', 'quién pagó',
-                     'últimos pagos', 'historial pago', 'revisión pagos'],
+        'keywords': [
+            'Ver pagos',
+            'historial de pagos',
+            'payment history',
+            'transacciones',
+            'comprobantes',
+            'recibos',
+            'ingresos',
+            'pagos registrados',
+            'pagos de',
+            'mis pagos',
+            'qué pagos',
+            'pagos registrados',
+            'quién pagó',
+            'últimos pagos',
+            'historial pago',
+            'revisión pagos',
+        ],
         'alternatives': ['de', 'para', 'usuario', 'pago'],
-        'example': 'Ver historial de pagos de Juan'
+        'example': 'Ver historial de pagos de Juan',
     },
 }
 
@@ -176,18 +422,32 @@ CLARIFICATION_QUESTIONS = {
 }
 
 NAV_URL_MAP = {
-    'dashboard': 'admin.dashboard', 'pacientes': 'admin.users', 'patients': 'admin.users',
-    'cobros': 'admin.dashboard', 'payments': 'admin.dashboard',
-    'reportes': 'admin.reports', 'reports': 'admin.reports',
-    'sesiones': 'admin.dashboard', 'sessions': 'admin.dashboard',
-    'juegos': 'admin.games', 'games': 'admin.games',
-    'gastos': 'admin.expenses', 'expenses': 'admin.expenses',
+    'dashboard': 'admin.dashboard',
+    'pacientes': 'admin.users',
+    'patients': 'admin.users',
+    'cobros': 'admin.dashboard',
+    'payments': 'admin.dashboard',
+    'reportes': 'admin.reports',
+    'reports': 'admin.reports',
+    'sesiones': 'admin.dashboard',
+    'sessions': 'admin.dashboard',
+    'juegos': 'admin.games',
+    'games': 'admin.games',
+    'gastos': 'admin.expenses',
+    'expenses': 'admin.expenses',
     'sedes': 'admin.sedes',
 }
 
 INTENTS_WITH_DATA = {
-    'unpaid_users', 'weekly_due', 'revenue_metrics', 'breakeven_analysis',
-    'schedule_optimization', 'generate_report', 'list_sessions', 'list_payments', 'list_users',
+    'unpaid_users',
+    'weekly_due',
+    'revenue_metrics',
+    'breakeven_analysis',
+    'schedule_optimization',
+    'generate_report',
+    'list_sessions',
+    'list_payments',
+    'list_users',
 }
 
 MUTATION_INTENTS = {'register_payment', 'create_user'}
@@ -224,7 +484,12 @@ def detect_user_intent_v5(message: str) -> tuple:
     params = extract_parameters_v5(message, best_intent)
 
     if best_intent != 'general_chat' and should_ask_clarification(best_intent, params):
-        return best_intent, params, best_confidence, CLARIFICATION_QUESTIONS.get(best_intent, '¿Puedes dar más detalles?')
+        return (
+            best_intent,
+            params,
+            best_confidence,
+            CLARIFICATION_QUESTIONS.get(best_intent, '¿Puedes dar más detalles?'),
+        )
 
     return best_intent, params, best_confidence, None
 
@@ -286,9 +551,13 @@ def should_ask_clarification(intent: str, params: dict) -> bool:
 
 def process_intent_with_data_v5(intent: str, params: dict, message: str):
     from app.services.business_analytics_service import (
-        get_unpaid_users, get_weekly_due_payments, calculate_revenue_metrics,
-        get_schedule_recommendations, generate_business_report,
-        estimate_breakeven_point, answer_business_question
+        answer_business_question,
+        calculate_revenue_metrics,
+        estimate_breakeven_point,
+        generate_business_report,
+        get_schedule_recommendations,
+        get_unpaid_users,
+        get_weekly_due_payments,
     )
 
     try:
@@ -302,7 +571,7 @@ Resumen:
 
 Top Deudores:"""
             for i, user in enumerate(data['users'][:5], 1):
-                response += f"\n  {i}. {user['name']}\n     - Deuda: S/. {user['amount_due']:.2f}"
+                response += f'\n  {i}. {user["name"]}\n     - Deuda: S/. {user["amount_due"]:.2f}'
             return response
 
         elif intent == 'weekly_due':
@@ -315,7 +584,7 @@ Resumen:
 
 Proximos a Pagar:"""
             for i, p in enumerate(data['payments'][:5], 1):
-                response += f"\n  {i}. {p['name']}\n     - Monto: S/. {p['amount']}"
+                response += f'\n  {i}. {p["name"]}\n     - Monto: S/. {p["amount"]}'
             return response
 
         elif intent == 'revenue_metrics':
@@ -344,58 +613,63 @@ Alumnos actuales: {be['current_students']}
 Necesarios: {be['students_needed']}
 Adicionales: {be['additional_students']}
 Factibilidad: {be['feasibility'].upper()}"""
-            return "Error en cálculo"
+            return 'Error en cálculo'
 
         elif intent == 'schedule_optimization':
             rec = get_schedule_recommendations()
-            return f"Recomendaciones para Horarios\n{rec['recommendations'][:500]}"
+            return f'Recomendaciones para Horarios\n{rec["recommendations"][:500]}'
 
         elif intent == 'generate_report':
             return generate_business_report()
 
         elif intent == 'list_sessions':
             tomorrow = datetime.now() + timedelta(days=1)
-            sessions = Appointment.query.filter(
-                Appointment.start_time >= tomorrow,
-                Appointment.start_time <= tomorrow + timedelta(days=7),
-                Appointment.status.in_(['pending', 'confirmed'])
-            ).order_by(Appointment.start_time).limit(10).all()
+            sessions = (
+                Appointment.query.filter(
+                    Appointment.start_time >= tomorrow,
+                    Appointment.start_time <= tomorrow + timedelta(days=7),
+                    Appointment.status.in_(['pending', 'confirmed']),
+                )
+                .order_by(Appointment.start_time)
+                .limit(10)
+                .all()
+            )
             if not sessions:
-                return "No hay sesiones programadas para la proxima semana"
-            response = "Proximas Sesiones\n"
+                return 'No hay sesiones programadas para la proxima semana'
+            response = 'Proximas Sesiones\n'
             for s in sessions:
                 patient = User.query.get(s.patient_id)
-                response += f"\n• {patient.username}: {s.start_time.strftime('%a %d %b %H:%M')}"
+                response += f'\n• {patient.username}: {s.start_time.strftime("%a %d %b %H:%M")}'
             return response
 
         elif intent == 'list_payments':
             payments = Payment.query.order_by(Payment.date.desc()).limit(10).all()
             if not payments:
-                return "Sin pagos registrados"
-            response = "Ultimos Pagos\n"
+                return 'Sin pagos registrados'
+            response = 'Ultimos Pagos\n'
             for p in payments:
                 patient = User.query.get(p.patient_id)
-                response += f"\n• {patient.username}: S/. {p.amount} ({p.date.strftime('%d/%m')})"
+                response += f'\n• {patient.username}: S/. {p.amount} ({p.date.strftime("%d/%m")})'
             return response
 
         elif intent == 'list_users':
             context = get_cached_context()
             patients_list = context.get('patients', {}).get('patients', [])
             if not patients_list:
-                return "No hay pacientes registrados"
-            response = f"{len(patients_list)} Pacientes Activos\n"
+                return 'No hay pacientes registrados'
+            response = f'{len(patients_list)} Pacientes Activos\n'
             for p in patients_list[:10]:
-                response += f"\n• {p.get('name', '?')}"
+                response += f'\n• {p.get("name", "?")}'
                 if p.get('days_since_payment'):
-                    response += f" (Hace {p['days_since_payment']} días)"
+                    response += f' (Hace {p["days_since_payment"]} días)'
             return response
 
         else:
             return answer_business_question(message)
 
     except Exception as e:
-        logger.error(f"Error processing v5 intent {intent}: {e}")
-        return f"Error: {str(e)[:60]}"
+        logger.error(f'Error processing v5 intent {intent}: {e}')
+        return f'Error: {str(e)[:60]}'
 
 
 def _build_result(intent, response, params, confidence, action, **extra):
@@ -416,53 +690,55 @@ def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
 
     try:
         from groq import Groq
+
         groq_key = os.getenv('GROQ_API_KEY')
         if groq_key:
             client = Groq(api_key=groq_key)
             resp = client.chat.completions.create(
-                model='llama-3.1-8b-instant',
-                messages=messages, temperature=0.3, max_tokens=2000
+                model='llama-3.1-8b-instant', messages=messages, temperature=0.3, max_tokens=2000
             )
             if resp.choices[0].message.content:
                 return resp.choices[0].message.content
     except Exception as e:
-        logger.warning(f"Groq falló: {e}")
+        logger.warning(f'Groq falló: {e}')
 
     try:
         import google.generativeai as genai
+
         gemini_key = os.getenv('GEMINI_API_KEY')
         if gemini_key:
             genai.configure(api_key=gemini_key)
             gemini_resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(
-                f"{system_prompt}\n\nUsuario: {msg}"
+                f'{system_prompt}\n\nUsuario: {msg}'
             )
             if gemini_resp.text:
                 return gemini_resp.text
     except Exception as e:
-        logger.warning(f"Gemini falló: {e}")
+        logger.warning(f'Gemini falló: {e}')
 
     try:
         import requests
+
         ollama_resp = requests.post(
             'http://127.0.0.1:11434/api/chat',
             json={'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'), 'messages': messages, 'stream': False},
-            timeout=30
+            timeout=30,
         )
         if ollama_resp.ok:
             content = ollama_resp.json().get('message', {}).get('content', '')
             if content:
                 return content
     except Exception as e:
-        logger.error(f"Ollama falló: {e}")
+        logger.error(f'Ollama falló: {e}')
 
-    return "Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet."
+    return 'Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet.'
 
 
-def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
+def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg='dashboard'):
     try:
         context_text = get_cached_context_text()
         intent, params, confidence, clarification = detect_user_intent_v5(msg)
-        logger.info(f"Detected v5: intent={intent}, confidence={confidence:.2f}, params={params}")
+        logger.info(f'Detected v5: intent={intent}, confidence={confidence:.2f}, params={params}')
 
         try:
             track_workflow(intent, params)
@@ -480,10 +756,13 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
         elif intent == 'navigation':
             redirect_url = get_navigation_url(params.get('target_section', 'dashboard'), uid)
             result = _build_result(
-                intent, f"Llevandote a {params.get('target_section', 'dashboard')}...",
-                params, confidence, 'navigate',
+                intent,
+                f'Llevandote a {params.get("target_section", "dashboard")}...',
+                params,
+                confidence,
+                'navigate',
                 redirect=redirect_url,
-                tutorial_steps=get_tutorial_steps('navigation', params.get('target_section', 'dashboard'))
+                tutorial_steps=get_tutorial_steps('navigation', params.get('target_section', 'dashboard')),
             )
 
         elif intent == 'register_payment':
@@ -492,15 +771,19 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg="dashboard"):
             amount = params.get('amount', 0)
             result = _build_result(
                 intent,
-                f"Pago Registrado\n\nCantidad: S/. {amount:.2f}\nAlumno: {patient_name}\n\nContexto actualizado - Proxima consulta tendra datos actualizados",
-                params, confidence, 'register_payment'
+                f'Pago Registrado\n\nCantidad: S/. {amount:.2f}\nAlumno: {patient_name}\n\nContexto actualizado - Proxima consulta tendra datos actualizados',
+                params,
+                confidence,
+                'register_payment',
             )
 
         elif intent == 'create_appointment':
             result = _build_result(
                 intent,
-                f"Creando sesión para {params.get('patient_name', '?')} el {params.get('day', '')}...",
-                params, confidence, 'create_appointment'
+                f'Creando sesión para {params.get("patient_name", "?")} el {params.get("day", "")}...',
+                params,
+                confidence,
+                'create_appointment',
             )
 
         elif intent == 'create_user':
@@ -519,11 +802,14 @@ Pasos Siguientes:
   4. Crea sesiones
 
 Contexto actualizado""",
-                params, confidence, 'create_user'
+                params,
+                confidence,
+                'create_user',
             )
 
         else:
             from app.services.functions_trainer_service import functions_trainer
+
             system_prompt = f"""Eres asistente inteligente del Centro de Terapias Juan Pablo II.
 
 {context_text}
@@ -541,24 +827,25 @@ RESPUESTAS:
 
         if next_action:
             result['next_predicted_action'] = next_action
-            logger.info(f"Proxima accion sugerida: {next_action}")
+            logger.info(f'Proxima accion sugerida: {next_action}')
 
         return result
 
     except Exception as e:
-        logger.error(f"Error in v5: {e}", exc_info=True)
-        return _build_result('error', f"Error: {str(e)[:50]}", {}, 0, 'error')
+        logger.error(f'Error in v5: {e}', exc_info=True)
+        return _build_result('error', f'Error: {str(e)[:50]}', {}, 0, 'error')
 
 
 def save_chat_message(conversation_id, role, content, intent=None, parameters=None, action_status=None):
     from app.models import AIChatMessage
+
     msg = AIChatMessage(
         conversation_id=conversation_id,
         role=role,
         content=content,
         intent=intent,
         parameters=parameters if isinstance(parameters, dict) else {},
-        action_status=action_status
+        action_status=action_status,
     )
     db.session.add(msg)
     db.session.commit()
@@ -567,6 +854,7 @@ def save_chat_message(conversation_id, role, content, intent=None, parameters=No
 
 def get_navigation_url(section, user_id):
     from flask import url_for
+
     ep = NAV_URL_MAP.get(section.lower(), 'admin.dashboard')
     try:
         return url_for(ep)
