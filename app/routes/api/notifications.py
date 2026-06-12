@@ -1,34 +1,36 @@
-from app.routes.api._shared import (
-    db, User, Notification, Appointment, Message, Game, SessionMetrics,
-    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
-    genai, Groq, _ollama_client, predict_level, start_async_training,
-    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
-    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
-    AvailabilityService, requests, or_, func,
-    notification_service,
-    _parse_json, _parse_datetime, analyze_contact_message_ai,
-    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
-    uuid, secure_filename, datetime, timedelta, timezone,
-    login_required, current_user, request, jsonify, current_app, url_for,
-)
 from app.routes.api import api_bp
+from app.routes.api._shared import (
+    csrf,
+    current_app,
+    current_user,
+    jsonify,
+    login_required,
+    notification_service,
+    request,
+)
+
+
 @api_bp.route('/notifications')
 @login_required
 def get_notifications():
     try:
         notifications = notification_service.get_unread_notifications(current_user.id)
-        result = [{
-            'id': n.id,
-            'title': n.title,
-            'type': n.type or 'info',
-            'message': n.message,
-            'timestamp': n.timestamp.strftime('%d %b, %H:%M'),
-            'link': n.link
-        } for n in notifications]
+        result = [
+            {
+                'id': n.id,
+                'title': n.title,
+                'type': n.type or 'info',
+                'message': n.message,
+                'timestamp': n.timestamp.strftime('%d %b, %H:%M'),
+                'link': n.link,
+            }
+            for n in notifications
+        ]
         return jsonify(result)
     except Exception as e:
-        current_app.logger.error(f"Error in get_notifications: {str(e)}")
+        current_app.logger.error(f'Error in get_notifications: {str(e)}')
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @api_bp.route('/notifications/mark-read', methods=['POST'])
 @login_required
@@ -45,6 +47,7 @@ def mark_notifications_read():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
 @api_bp.route('/notifications/create', methods=['POST'])
 @login_required
 @csrf.exempt
@@ -60,13 +63,8 @@ def create_notification():
             return jsonify({'success': False, 'message': 'Mensaje es requerido'}), 400
 
         notification_service.create_notification(
-            user_id=current_user.id,
-            title=title,
-            message=message,
-            notif_type=notif_type,
-            link=link
+            user_id=current_user.id, title=title, message=message, notif_type=notif_type, link=link
         )
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-

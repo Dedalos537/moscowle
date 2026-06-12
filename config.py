@@ -223,6 +223,8 @@ class ProductionConfig(Config):
     JWT_COOKIE_SECURE = True
     JWT_COOKIE_SAMESITE = 'None'
     APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'change-in-production')
+    JWT_COOKIE_SECURE = True
+    JWT_COOKIE_SAMESITE = 'None'
 
 class TestingConfig(Config):
     TESTING = True

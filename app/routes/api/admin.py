@@ -1,18 +1,28 @@
-from app.routes.api._shared import (
-    db, User, Notification, Appointment, Message, Game, SessionMetrics,
-    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
-    genai, Groq, _ollama_client, predict_level, start_async_training,
-    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
-    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
-    AvailabilityService, requests, or_, func,
-    appointment_service, admin_service, notification_service,
-    patient_service, drive_service, fs,
-    _parse_json, _parse_datetime, analyze_contact_message_ai,
-    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
-    uuid, secure_filename, datetime, timedelta, timezone,
-    login_required, current_user, request, jsonify, current_app, url_for,
-)
 from app.routes.api import api_bp
+from app.routes.api._shared import (
+    Appointment,
+    AssignTherapistSchema,
+    EmailService,
+    Message,
+    Payment,
+    Sede,
+    SessionMetrics,
+    UpdateUserSchema,
+    User,
+    admin_service,
+    api_response,
+    bcrypt,
+    current_app,
+    current_user,
+    db,
+    fs,
+    jsonify,
+    login_required,
+    os,
+    request,
+)
+
+
 def _serialize_user(u):
     return {
         'id': u.id,
@@ -43,6 +53,7 @@ def _serialize_user(u):
         'work_days': u.work_days,
     }
 
+
 @api_bp.route('/admin/assign-therapist', methods=['POST'])
 @login_required
 def api_admin_assign_therapist():
@@ -52,10 +63,10 @@ def api_admin_assign_therapist():
     errors = AssignTherapistSchema().validate(data)
     if errors:
         return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
-    
+
     # Support multiple therapists
-    success, message = False, "Error desconocido"
-    
+    success, message = False, 'Error desconocido'
+
     if 'therapist_ids' in data:
         success, message = admin_service.assign_therapist(data['patient_id'], therapist_ids=data['therapist_ids'])
     else:
@@ -64,8 +75,9 @@ def api_admin_assign_therapist():
 
     if not success:
         return jsonify({'success': False, 'message': message}), 400
-        
+
     return jsonify({'success': True})
+
 
 @api_bp.route('/admin/create-user', methods=['POST'])
 @login_required
@@ -74,7 +86,7 @@ def api_admin_create_user():
         if current_user.role != 'admin':
             return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
         data = request.get_json(silent=True) or {}
-        
+
         # Validation logic updated to allow "Patient without email" (Presencial)
         role = data.get('role')
         email = data.get('email', '').strip()
@@ -82,11 +94,13 @@ def api_admin_create_user():
 
         if not role:
             return jsonify({'success': False, 'message': 'El rol es obligatorio'}), 400
-        
+
         # If role is NOT patient, email is mandatory
         if role != 'jugador' and not email:
-            return jsonify({'success': False, 'message': 'El email es obligatorio para administradores y terapeutas'}), 400
-            
+            return jsonify(
+                {'success': False, 'message': 'El email es obligatorio para administradores y terapeutas'}
+            ), 400
+
         # If role IS patient, either email OR username is required
         if role == 'jugador' and not email and not username:
             return jsonify({'success': False, 'message': 'Debes ingresar al menos el Nombre del paciente'}), 400
@@ -94,22 +108,19 @@ def api_admin_create_user():
         success, result = admin_service.create_user(data)
         if not success:
             return jsonify({'success': False, 'message': result}), 400
-            
+
         user_obj = result.get('user') if isinstance(result, dict) else None
         temp_pass = result.get('temp_password') if isinstance(result, dict) else None
-        
+
         if not user_obj:
             # Fallback if service returned weird format
             return jsonify({'success': True, 'message': 'Usuario creado (sin datos de retorno)'})
-            
-        return jsonify({
-            'success': True, 
-            'message': 'Usuario creado',
-            'temp_password': temp_pass
-        })
+
+        return jsonify({'success': True, 'message': 'Usuario creado', 'temp_password': temp_pass})
     except Exception as e:
-        current_app.logger.error(f"Error creating user: {str(e)}")
-        return jsonify({'success': False, 'message': f"Server Error: {str(e)}"}), 500
+        current_app.logger.error(f'Error creating user: {str(e)}')
+        return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
 
 @api_bp.route('/admin/reset-password', methods=['POST'])
 @login_required
@@ -119,15 +130,16 @@ def api_admin_reset_password():
     data = request.get_json(silent=True) or {}
     user_id = data.get('id')
     new_password = data.get('new_password')
-    
+
     if not user_id:
         return jsonify({'success': False, 'message': 'ID de usuario requerido'}), 400
-    
+
     success, result = admin_service.reset_user_password(user_id, new_password)
     if not success:
         return jsonify({'success': False, 'message': result}), 400
-        
+
     return jsonify({'success': True, 'temp_password': result})
+
 
 @api_bp.route('/admin/games/delete', methods=['POST'])
 @login_required
@@ -149,6 +161,7 @@ def api_admin_delete_game():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
 @api_bp.route('/admin/messages/broadcast', methods=['POST'])
 @login_required
 def api_admin_broadcast():
@@ -159,15 +172,16 @@ def api_admin_broadcast():
     body = (data.get('body') or '').strip()
     target = (data.get('target') or 'all').strip()
     receiver_id = data.get('receiver_id')
-    
+
     if not body:
         return jsonify({'success': False, 'message': 'El mensaje no puede estar vacío'}), 400
-        
+
     success, result = admin_service.broadcast_message(current_user.id, subject, body, target, receiver_id)
     if not success:
         return jsonify({'success': False, 'message': result}), 404
-        
+
     return jsonify({'success': True, 'count': result})
+
 
 @api_bp.route('/admin/list-users')
 @login_required
@@ -179,8 +193,9 @@ def api_admin_list_users():
         users = admin_service.list_users(role)
         return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
     except Exception as e:
-        current_app.logger.error(f"Error in api_admin_list_users: {str(e)}")
+        current_app.logger.error(f'Error in api_admin_list_users: {str(e)}')
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @api_bp.route('/admin/user/<int:user_id>')
 @login_required
@@ -192,27 +207,29 @@ def api_admin_get_user(user_id):
         return jsonify({'success': False, 'message': 'Ese usuario no existe'}), 404
     return jsonify({'success': True, 'user': _serialize_user(u)})
 
+
 @api_bp.route('/admin/update-user', methods=['POST'])
 @login_required
 def api_admin_update_user():
     try:
         if current_user.role != 'admin':
             return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-            
+
         data = request.get_json(silent=True) or {}
-        
+
         errors = UpdateUserSchema().validate(data)
         if errors:
             return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
-            
+
         success, result = admin_service.update_user(data)
         if not success:
             return jsonify({'success': False, 'message': result}), 400
-            
+
         return jsonify({'success': True})
     except Exception as e:
-        current_app.logger.error(f"Error updating user: {str(e)}")
-        return jsonify({'success': False, 'message': f"Server Error: {str(e)}"}), 500
+        current_app.logger.error(f'Error updating user: {str(e)}')
+        return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
 
 @api_bp.route('/admin/delete-user', methods=['POST'])
 @login_required
@@ -230,17 +247,18 @@ def api_admin_delete_user():
         return jsonify({'success': False, 'message': 'No puedes borrar al admin principal'}), 400
     try:
         # Cascade delete dependencies first (Explicit for safety)
-        Message.query.filter((Message.sender_id==u.id)|(Message.receiver_id==u.id)).delete()
-        Appointment.query.filter((Appointment.therapist_id==u.id)|(Appointment.patient_id==u.id)).delete()
-        SessionMetrics.query.filter(SessionMetrics.user_id==u.id).delete()
-        Payment.query.filter(Payment.patient_id==u.id).delete()
-        
+        Message.query.filter((Message.sender_id == u.id) | (Message.receiver_id == u.id)).delete()
+        Appointment.query.filter((Appointment.therapist_id == u.id) | (Appointment.patient_id == u.id)).delete()
+        SessionMetrics.query.filter(SessionMetrics.user_id == u.id).delete()
+        Payment.query.filter(Payment.patient_id == u.id).delete()
+
         db.session.delete(u)
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @api_bp.route('/admin/profile', methods=['POST'])
 @login_required
@@ -258,15 +276,17 @@ def api_admin_update_profile():
         current_user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
         changed = True
         try:
-            EmailService.send_password_change_email(current_user.email, new_password, current_user.username or 'Administrador')
+            EmailService.send_password_change_email(
+                current_user.email, new_password, current_user.username or 'Administrador'
+            )
         except Exception:
             pass
     if changed:
         db.session.commit()
     return jsonify({'success': True})
 
+
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
-@csrf.exempt
 @login_required
 def admin_sedes():
     try:
@@ -282,14 +302,16 @@ def admin_sedes():
                         created_at_iso = s.created_at.isoformat()
                     except AttributeError:
                         created_at_iso = str(s.created_at)
-                
-                result.append({
-                    'id': s.id,
-                    'name': s.name,
-                    'address': s.address,
-                    'active': getattr(s, 'is_active', getattr(s, 'active', True)),
-                    'created_at': created_at_iso
-                })
+
+                result.append(
+                    {
+                        'id': s.id,
+                        'name': s.name,
+                        'address': s.address,
+                        'active': getattr(s, 'is_active', getattr(s, 'active', True)),
+                        'created_at': created_at_iso,
+                    }
+                )
             return jsonify(result)
 
         if request.method == 'POST':
@@ -299,7 +321,7 @@ def admin_sedes():
             name = data.get('name')
             if not name:
                 return jsonify({'success': False, 'message': 'Nombre es obligatorio'}), 400
-            
+
             existing = Sede.query.filter_by(name=name).first()
             if existing:
                 return jsonify({'success': False, 'message': 'Sede ya existe'}), 400
@@ -310,11 +332,11 @@ def admin_sedes():
             db.session.commit()
             return jsonify({'success': True, 'id': s.id})
     except Exception as e:
-        current_app.logger.error(f"Error in admin_sedes: {str(e)}")
-        return jsonify({"error": str(e), "data": []}), 500
+        current_app.logger.error(f'Error in admin_sedes: {str(e)}')
+        return jsonify({'error': str(e), 'data': []}), 500
+
 
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
-@csrf.exempt
 @login_required
 def admin_sedes_detail(sede_id):
     try:
@@ -335,21 +357,24 @@ def admin_sedes_detail(sede_id):
                 s.name = data['name']
             if 'address' in data:
                 s.address = data['address']
-            
+
             db.session.commit()
             return jsonify({'success': True})
-        
+
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        return jsonify({
-            'id': s.id,
-            'name': s.name,
-            'address': s.address,
-            'active': getattr(s, 'is_active', getattr(s, 'active', True))
-        })
+        return jsonify(
+            {
+                'id': s.id,
+                'name': s.name,
+                'address': s.address,
+                'active': getattr(s, 'is_active', getattr(s, 'active', True)),
+            }
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in admin_sedes_detail: {str(e)}")
-        return jsonify({"error": str(e), "data": []}), 500
+        current_app.logger.error(f'Error in admin_sedes_detail: {str(e)}')
+        return jsonify({'error': str(e), 'data': []}), 500
+
 
 @api_bp.route('/admin/sedes/<int:sede_id>/analytics', methods=['GET'])
 @login_required
@@ -357,86 +382,95 @@ def admin_sedes_analytics(sede_id):
     """Analíticas de sede"""
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Forbidden'}), 403
-    
+
     try:
         sede = Sede.query.get(sede_id)
         if not sede:
             return jsonify({'success': False, 'message': 'Sede not found'}), 404
-        
+
         from datetime import datetime
+
         # Fix division by zero or empty list issues in statistics
         # Get therapists assigned to this sede
-        therapists = User.query.filter(
-            User.assigned_sedes.any(Sede.id == sede_id),
-            User.role == 'terapista'
-        ).all()
+        therapists = User.query.filter(User.assigned_sedes.any(Sede.id == sede_id), User.role == 'terapista').all()
         therapist_ids = [t.id for t in therapists]
-        
+
         # Get all patients (jugador role) who have appointments with these therapists
-        appointments_at_sede = Appointment.query.filter(
-            Appointment.therapist_id.in_(therapist_ids)
-        ).all() if therapist_ids else []
-        
+        appointments_at_sede = (
+            Appointment.query.filter(Appointment.therapist_id.in_(therapist_ids)).all() if therapist_ids else []
+        )
+
         patient_ids = list(set([a.patient_id for a in appointments_at_sede if a.patient_id]))
-        
+
         # Payments for patients at this sede
-        payments = Payment.query.filter(
-            Payment.patient_id.in_(patient_ids)
-        ).all() if patient_ids else []
-        
+        payments = Payment.query.filter(Payment.patient_id.in_(patient_ids)).all() if patient_ids else []
+
         total_patients = len(patient_ids)
         active_patients = len([pid for pid in patient_ids if User.query.get(pid) and User.query.get(pid).is_active])
-        
+
         total_revenue = sum([p.amount for p in payments if p.status == 'completed']) if payments else 0
         total_sessions = len([a for a in appointments_at_sede if a.status == 'completed'])
         pending_sessions = len([a for a in appointments_at_sede if a.status == 'scheduled'])
-        
+
         today = datetime.utcnow()
         month_start = datetime(today.year, today.month, 1)
-        sessions_this_month = len([a for a in appointments_at_sede if a.status == 'completed' and a.start_time and a.start_time >= month_start])
-        payments_this_month = sum([p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start]) if payments else 0
-        
+        sessions_this_month = len(
+            [
+                a
+                for a in appointments_at_sede
+                if a.status == 'completed' and a.start_time and a.start_time >= month_start
+            ]
+        )
+        payments_this_month = (
+            sum([p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start])
+            if payments
+            else 0
+        )
+
         # Therapists assigned to this sede (already fetched as therapists)
-        
-        return jsonify({
-            'success': True,
-            'sede': {
-                'id': sede.id,
-                'name': sede.name,
-                'address': sede.address,
-            },
-            'analytics': {
-                'patients': {
-                    'total': total_patients,
-                    'active': active_patients,
+
+        return jsonify(
+            {
+                'success': True,
+                'sede': {
+                    'id': sede.id,
+                    'name': sede.name,
+                    'address': sede.address,
                 },
-                'payments': {
-                    'total_revenue': round(total_revenue, 2),
-                    'this_month': round(payments_this_month, 2),
-                    'transactions': len(payments),
+                'analytics': {
+                    'patients': {
+                        'total': total_patients,
+                        'active': active_patients,
+                    },
+                    'payments': {
+                        'total_revenue': round(total_revenue, 2),
+                        'this_month': round(payments_this_month, 2),
+                        'transactions': len(payments),
+                    },
+                    'sessions': {
+                        'total_completed': total_sessions,
+                        'pending': pending_sessions,
+                        'this_month': sessions_this_month,
+                        'total': len(appointments_at_sede),
+                    },
+                    'therapists': {
+                        'count': len(therapists),
+                        'names': [t.email for t in therapists],
+                    },
                 },
-                'sessions': {
-                    'total_completed': total_sessions,
-                    'pending': pending_sessions,
-                    'this_month': sessions_this_month,
-                    'total': len(appointments_at_sede),
-                },
-                'therapists': {
-                    'count': len(therapists),
-                    'names': [t.email for t in therapists],
-                }
             }
-        })
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in admin_sedes_analytics: {str(e)}")
-        return jsonify({"error": str(e), "data": []}), 500
+        current_app.logger.error(f'Error in admin_sedes_analytics: {str(e)}')
+        return jsonify({'error': str(e), 'data': []}), 500
+
 
 @api_bp.route('/admin/deudores', methods=['GET'])
 @login_required
 def admin_deudores_por_sede():
     """Reporte de deuda delegado a FinancialService"""
     if current_user.role not in ('admin', 'supervisor'):
-        return jsonify({"error": "Forbidden", "data": []}), 403
+        return jsonify({'error': 'Forbidden', 'data': []}), 403
 
     month = request.args.get('month', 'all')
     if month == 'curr':
@@ -445,13 +479,15 @@ def admin_deudores_por_sede():
         data = fs.build_debt_report(days_ahead=7, month=month)
         # Ensure 'por_sede' exists even if empty
         if not data or 'por_sede' not in data:
-            data = {"por_sede": {}, "summary": {}}
+            data = {'por_sede': {}, 'summary': {}}
         return api_response(success=True, data=data)
     except Exception as e:
-        current_app.logger.error(f"Financial report failed: {str(e)}")
+        current_app.logger.error(f'Financial report failed: {str(e)}')
         import traceback
+
         current_app.logger.error(traceback.format_exc())
-        return api_response(success=False, error=str(e), data={"por_sede": {}}, status=500)
+        return api_response(success=False, error=str(e), data={'por_sede': {}}, status=500)
+
 
 @api_bp.route('/admin/metrics/capacity', methods=['GET'])
 @login_required
@@ -459,21 +495,18 @@ def get_capacity_metrics():
 
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-    
+
     try:
         from app.services.dashboard_service import DashboardService
+
         ds = DashboardService()
         capacity_data = ds.get_capacity_metrics() if hasattr(ds, 'get_capacity_metrics') else {}
         therapist_load = ds.get_therapist_load() if hasattr(ds, 'get_therapist_load') else []
         user_health = ds.get_user_health_kpi() if hasattr(ds, 'get_user_health_kpi') else {}
-        
-        return jsonify({
-            'success': True,
-            'capacity': capacity_data,
-            'therapist_load': therapist_load,
-            'user_health': user_health
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error fetching capacity metrics: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
 
+        return jsonify(
+            {'success': True, 'capacity': capacity_data, 'therapist_load': therapist_load, 'user_health': user_health}
+        )
+    except Exception as e:
+        current_app.logger.error(f'Error fetching capacity metrics: {str(e)}')
+        return jsonify({'success': False, 'message': str(e)}), 500

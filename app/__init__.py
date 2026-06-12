@@ -65,11 +65,6 @@ def create_app(config_class=None):
         from app import models as _all_models  # noqa: F401
 
         try:
-            _fix_audit_columns(db)
-        except Exception as e:
-            app.logger.warning(f'Audit column fix skipped: {e}')
-
-        try:
             db.create_all()
             app.logger.info('Database tables created/verified')
         except Exception as e:
@@ -89,11 +84,6 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Schema sync skipped (non-fatal): {e}')
 
-        try:
-            _force_audit_columns(db)
-        except Exception as e:
-            app.logger.warning(f'Force audit columns skipped: {e}')
-
         db.session.remove()
 
     register_blueprints(app)
@@ -105,129 +95,55 @@ def create_app(config_class=None):
     return app
 
 
-def _fix_audit_columns(db):
-    """Pre-emptively add common AuditMixin columns to all tables that need them.
-    Runs before db.create_all() so the columns exist before any raw query."""
-    from sqlalchemy import inspect, text
-    AUDIT_COLS = {'created_at': 'TIMESTAMP', 'created_by_id': 'INTEGER', 'updated_at': 'TIMESTAMP'}
-    try:
-        inspector = inspect(db.engine)
-        existing = set(inspector.get_table_names())
-    except Exception:
-        return
-    dialect = db.engine.dialect.name
-    for table_name, table in db.metadata.tables.items():
-        if table_name not in existing:
-            continue
-        model_cols = {c.name for c in table.columns}
-        to_add = {name: sql for name, sql in AUDIT_COLS.items() if name in model_cols}
-        if not to_add:
-            continue
-        actual_cols = {c['name'] for c in inspector.get_columns(table_name)}
-        missing = {name: sql for name, sql in to_add.items() if name not in actual_cols}
-        if not missing:
-            continue
-        with db.engine.begin() as conn:
-            for name, sql in missing.items():
-                try:
-                    conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS {name} {sql}'))
-                except Exception:
-                    pass
-
-
 def _sync_missing_columns(db):
-    from flask import current_app
     from sqlalchemy import inspect, text
-    from sqlalchemy.types import Integer, String, Boolean, DateTime, Float, Text
 
-    dialect = db.engine.dialect.name
-    inspector = inspect(db.engine)
-    db_tables = set(inspector.get_table_names())
-    app_logger = current_app.logger
+    engine = db.engine
+    inspector = inspect(engine)
+    dialect = engine.dialect.name
 
-    TYPE_MAP = {
-        Integer: 'INTEGER',
-        int: 'INTEGER',
-        String: 'VARCHAR(255)',
-        Text: 'TEXT',
-        Boolean: 'BOOLEAN',
-        bool: 'BOOLEAN',
-        DateTime: 'TIMESTAMP',
-        Float: 'FLOAT',
-        float: 'FLOAT',
+    table_columns = {
+        'user': {
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+            'mfa_enabled': 'BOOLEAN',
+            'otp_secret': 'VARCHAR(32)',
+            'mfa_failed_attempts': 'INTEGER',
+            'mfa_locked_until': 'TIMESTAMP',
+        },
+        'sede': {
+            'is_active': 'BOOLEAN',
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+        },
+        'notification': {
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+            'is_active': 'BOOLEAN',
+        },
     }
 
-    JSON_TYPE = 'JSONB' if dialect == 'postgresql' else 'JSON'
-
-    def _col_type_str(col):
-        for typ, sql in TYPE_MAP.items():
-            if isinstance(col.type, typ):
-                if isinstance(col.type, String) and col.type.length:
-                    return f'VARCHAR({col.type.length})'
-                return sql
-        col_type_name = type(col.type).__name__
-        if col_type_name == 'JSON' or col_type_name == 'JSONB':
-            return JSON_TYPE
-        return 'VARCHAR(255)'
-
-    for table_name, table in db.metadata.tables.items():
-        if table_name not in db_tables:
-            try:
-                table.create(db.engine)
-                app_logger.info(f'Schema sync: created table {table_name}')
-            except Exception as e:
-                app_logger.warning(f'Schema sync: could not create {table_name}: {e}')
-            continue
-
+    for table, columns in table_columns.items():
         try:
-            db_columns = {c['name'] for c in inspector.get_columns(table_name)}
-        except Exception as exc:
-            app_logger.warning(f'Schema sync: could not inspect {table_name}: {exc}')
+            existing = {c['name'] for c in inspector.get_columns(table)}
+        except Exception:
             continue
 
-        for col in table.columns:
-            if col.name in db_columns:
+        for col_name, col_type in columns.items():
+            if col_name in existing:
                 continue
-
-            type_str = _col_type_str(col)
-
             try:
-                with db.engine.begin() as conn:
-                    if dialect == 'postgresql':
-                        conn.execute(text(
-                            f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS {col.name} {type_str}'
-                        ))
-                    elif dialect == 'sqlite':
-                        sql_type = type_str.replace('TIMESTAMP', 'DATETIME')
-                        conn.execute(text(
-                            f'ALTER TABLE "{table_name}" ADD COLUMN {col.name} {sql_type}'
-                        ))
-                    else:
-                        conn.execute(text(
-                            f'ALTER TABLE {table_name} ADD COLUMN {col.name} {type_str}'
-                        ))
-                app_logger.info(f'Schema sync: added {table_name}.{col.name} ({type_str})')
-            except Exception as e:
-                app_logger.warning(f'Schema sync: could not add {table_name}.{col.name}: {e}')
-
-
-def _force_audit_columns(db):
-    """Fallback: directly add AuditMixin columns to known tables using raw SQL."""
-    from sqlalchemy import text
-    tables = ['chat', 'chat_participant', 'message', 'contact_message',
-              'ai_conversation', 'ai_chat_message', 'notification']
-    cols = [
-        ('created_at', 'TIMESTAMP'),
-        ('created_by_id', 'INTEGER'),
-        ('updated_at', 'TIMESTAMP'),
-    ]
-    try:
-        with db.engine.begin() as conn:
-            for table in tables:
-                for name, sql in cols:
-                    try:
-                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {name} {sql}'))
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+                if dialect == 'postgresql':
+                    engine.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
+                elif dialect == 'sqlite':
+                    stype = (
+                        col_type.replace('VARCHAR', 'VARCHAR')
+                        .replace('INTEGER', 'INTEGER')
+                        .replace('BOOLEAN', 'BOOLEAN')
+                        .replace('TIMESTAMP', 'DATETIME')
+                    )
+                    engine.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col_name} {stype}'))
+                else:
+                    engine.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_type}'))
+            except Exception:
+                pass
