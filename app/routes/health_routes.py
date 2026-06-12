@@ -174,6 +174,9 @@ def debug_last_error():
         return jsonify({'error': 'invalid key'}), 403
     from app.routes.chat_routes import get_last_error
     return jsonify(get_last_error())
+
+
+@health_bp.route('/health/debug/query', methods=['GET'])
 def debug_query():
     from flask import request as req
     if req.args.get('key') != 'debug2026':
