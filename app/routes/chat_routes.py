@@ -132,55 +132,81 @@ def list_chats():
         online = set(online_users.keys())
         migrate_legacy_messages()
 
-        chats = Chat.query.join(ChatParticipant).filter(
-            ChatParticipant.user_id == current_user.id
-        ).order_by(Chat.created_at.desc()).all()
+        chat_rows = db.session.execute(
+            text("""
+                SELECT c.id, c.is_group, c.created_at
+                FROM chat c
+                JOIN chat_participant cp ON cp.chat_id = c.id
+                WHERE cp.user_id = :uid
+                ORDER BY c.created_at DESC
+            """),
+            {'uid': current_user.id}
+        ).fetchall()
 
         chat_list = []
-        for chat in chats:
+        for cr in chat_rows:
             try:
-                other = ChatParticipant.query.filter(
-                    ChatParticipant.chat_id == chat.id,
-                    ChatParticipant.user_id != current_user.id
-                ).first()
-                other_user = User.query.get(other.user_id) if other else None
+                other_row = db.session.execute(
+                    text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid LIMIT 1"),
+                    {'cid': cr.id, 'uid': current_user.id}
+                ).fetchone()
+                other_user_row = None
+                if other_row:
+                    other_user_row = db.session.execute(
+                        text('SELECT id, username, role, avatar FROM "user" WHERE id = :uid'),
+                        {'uid': other_row.user_id}
+                    ).fetchone()
 
-                last_msg = chat.last_message
-                unread = chat.unread_count_for(current_user.id)
+                last_msg_row = db.session.execute(
+                    text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
+                    {'cid': cr.id}
+                ).fetchone()
+
+                unread_count = db.session.execute(
+                    text("""
+                        SELECT COUNT(*) FROM message
+                        WHERE chat_id = :cid AND sender_id != :uid AND status IN ('sent', 'delivered')
+                    """),
+                    {'cid': cr.id, 'uid': current_user.id}
+                ).scalar() or 0
 
                 chat_list.append({
-                    'id': chat.id,
-                    'is_group': chat.is_group,
-                    'created_at': chat.created_at.isoformat() if chat.created_at else None,
+                    'id': cr.id,
+                    'is_group': cr.is_group,
+                    'created_at': cr.created_at.isoformat() if cr.created_at else None,
                     'other_user': {
-                        'id': other_user.id,
-                        'username': other_user.username,
-                        'role': other_user.role,
-                        'avatar': other_user.avatar,
-                        'is_online': other_user.id in online
-                    } if other_user else None,
-                    'unread_count': unread,
+                        'id': other_user_row.id,
+                        'username': other_user_row.username,
+                        'role': other_user_row.role,
+                        'avatar': other_user_row.avatar,
+                        'is_online': other_user_row.id in online
+                    } if other_user_row else None,
+                    'unread_count': unread_count,
                     'last_message': {
-                        'id': last_msg.id,
-                        'body': last_msg.body,
-                        'sender_id': last_msg.sender_id,
-                        'created_at': last_msg.created_at.isoformat() if last_msg.created_at else None,
-                        'attachment_type': last_msg.attachment_type
-                    } if last_msg else None
+                        'id': last_msg_row.id,
+                        'body': last_msg_row.body,
+                        'sender_id': last_msg_row.sender_id,
+                        'created_at': last_msg_row.created_at.isoformat() if last_msg_row.created_at else None,
+                        'attachment_type': last_msg_row.attachment_type
+                    } if last_msg_row else None
                 })
             except Exception as e:
-                logger.error(f"Error processing chat {chat.id}: {str(e)}")
+                logger.error(f"Error processing chat {cr.id}: {str(e)}")
                 continue
 
         if current_user.role in ('admin', 'supervisor'):
             try:
-                from app.models import ContactMessage
-                last_contact = ContactMessage.query.order_by(ContactMessage.created_at.desc()).first()
-                unread_contact = ContactMessage.query.filter_by(status='unread').count()
+                contact_row = db.session.execute(
+                    text("SELECT id, message, created_at FROM contact_message ORDER BY created_at DESC LIMIT 1")
+                ).fetchone()
+                unread_contact = db.session.execute(
+                    text("SELECT COUNT(*) FROM contact_message WHERE status = 'unread'")
+                ).scalar() or 0
+
                 chat_list.append({
                     'id': -1,
                     'is_group': False,
-                    'created_at': last_contact.created_at.isoformat() if last_contact else None,
+                    'created_at': contact_row.created_at.isoformat() if contact_row else None,
                     'other_user': {
                         'id': -1,
                         'username': 'Mensajes de la Web',
@@ -191,11 +217,11 @@ def list_chats():
                     'unread_count': unread_contact,
                     'last_message': {
                         'id': 0,
-                        'body': last_contact.message[:100] if last_contact else 'Sin mensajes',
+                        'body': contact_row.message[:100] if contact_row else 'Sin mensajes',
                         'sender_id': -1,
-                        'created_at': last_contact.created_at.isoformat() if last_contact else None,
+                        'created_at': contact_row.created_at.isoformat() if contact_row else None,
                         'attachment_type': None
-                    } if last_contact else None
+                    } if contact_row else None
                 })
             except Exception as e:
                 logger.error(f"Error adding contact messages for admin: {str(e)}")
@@ -203,7 +229,8 @@ def list_chats():
         return jsonify(chat_list)
     except Exception as e:
         logger.error(f"Error in list_chats for user {current_user.id}: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': 'Error al cargar conversaciones'}), 500
+        import traceback
+        return jsonify({'success': False, 'message': 'Error al cargar conversaciones', 'error': str(e)[:500], 'traceback': traceback.format_exc()}), 500
 
 
 @chat_bp.route('/api/chats', methods=['POST'])
