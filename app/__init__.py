@@ -117,12 +117,17 @@ def _sync_missing_columns(db):
         float: 'FLOAT',
     }
 
+    JSON_TYPE = 'JSONB' if dialect == 'postgresql' else 'JSON'
+
     def _col_type_str(col):
         for typ, sql in TYPE_MAP.items():
             if isinstance(col.type, typ):
                 if isinstance(col.type, String) and col.type.length:
                     return f'VARCHAR({col.type.length})'
                 return sql
+        col_type_name = type(col.type).__name__
+        if col_type_name == 'JSON' or col_type_name == 'JSONB':
+            return JSON_TYPE
         return 'VARCHAR(255)'
 
     for table_name, table in db.metadata.tables.items():

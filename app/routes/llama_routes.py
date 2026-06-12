@@ -6,15 +6,13 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request, url_for
-from app.auth_compat import current_user, login_required
 from werkzeug.utils import secure_filename
 
-from sqlalchemy import text
+from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, csrf, db
 
 _DEFAULT_USER_PASSWORD = os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
 from app.models import AIChatMessage, AIConversation, Appointment, User
-from app.utils.sanitizer import sanitize_text
 from app.services.appointment_service import AppointmentService
 from app.services.business_analytics_service import (
     estimate_breakeven_point,
@@ -35,6 +33,7 @@ from app.services.notification_service import NotificationService
 from app.services.ocr_service import confirm_voucher_data
 from app.services.payment_service import PaymentService
 from app.services.smart_modal_error_service import CommonErrors, create_error_response
+from app.utils.sanitizer import sanitize_text
 
 logger = logging.getLogger('app')
 
@@ -46,21 +45,12 @@ appointment_service = AppointmentService()
 
 
 def get_or_create_conversation(user_id: int) -> int:
-    row = db.session.execute(
-        text("SELECT id FROM ai_conversation WHERE user_id = :uid ORDER BY id DESC LIMIT 1"),
-        {'uid': user_id}
-    ).fetchone()
-    if row:
-        return row.id
-    result = db.session.execute(
-        AIConversation.__table__.insert().values(
-            user_id=user_id,
-            session_id=str(uuid.uuid4())[:8]
-        )
-    )
-    conv_id = result.inserted_primary_key[0]
-    db.session.commit()
-    return conv_id
+    conv = AIConversation.query.filter_by(user_id=user_id).order_by(AIConversation.id.desc()).first()
+    if not conv:
+        conv = AIConversation(user_id=user_id, session_id=str(uuid.uuid4())[:8])
+        db.session.add(conv)
+        db.session.commit()
+    return conv.id
 
 
 def _find_patient_by_name(name: str):
@@ -74,15 +64,11 @@ def _require_admin_or_supervisor():
 
 
 def _update_action_status(conversation_id: int, status: str):
-    row = db.session.execute(
-        text("SELECT id FROM ai_chat_message WHERE conversation_id = :cid ORDER BY timestamp DESC LIMIT 1"),
-        {'cid': conversation_id}
-    ).fetchone()
-    if row:
-        db.session.execute(
-            text("UPDATE ai_chat_message SET action_status = :s WHERE id = :mid"),
-            {'s': status, 'mid': row.id}
-        )
+    last_msg = (
+        AIChatMessage.query.filter_by(conversation_id=conversation_id).order_by(AIChatMessage.timestamp.desc()).first()
+    )
+    if last_msg:
+        last_msg.action_status = status
         db.session.commit()
 
 
@@ -416,19 +402,8 @@ def get_chat_history():
 
     try:
         conversation_id = get_or_create_conversation(current_user.id)
-        from sqlalchemy.orm import load_only
-
         messages = (
-            AIChatMessage.query.options(
-                load_only(
-                    AIChatMessage.id, AIChatMessage.role, AIChatMessage.content,
-                    AIChatMessage.timestamp, AIChatMessage.intent,
-                    AIChatMessage.parameters, AIChatMessage.action_status
-                )
-            )
-            .filter_by(conversation_id=conversation_id)
-            .order_by(AIChatMessage.timestamp.asc())
-            .all()
+            AIChatMessage.query.filter_by(conversation_id=conversation_id).order_by(AIChatMessage.timestamp.asc()).all()
         )
 
         return jsonify(

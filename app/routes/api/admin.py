@@ -287,6 +287,7 @@ def api_admin_update_profile():
 
 
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def admin_sedes():
     try:
@@ -337,6 +338,7 @@ def admin_sedes():
 
 
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
+@csrf.exempt
 @login_required
 def admin_sedes_detail(sede_id):
     try:

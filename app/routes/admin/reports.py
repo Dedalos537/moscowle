@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
-from app.extensions import db, csrf
+from app.auth_compat import current_user, login_required
+from app.extensions import csrf, db
 from app.models import (
     Appointment,
     MonthlyReport,
@@ -737,6 +737,7 @@ def api_patient_monthly_reports(patient_id):
             ],
         }
     )
+
 
 @admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
 @login_required
