@@ -172,6 +172,36 @@ def debug_query():
             ).fetchall()
             return jsonify({'messages': [{'id':r.id,'sender_id':r.sender_id,'body':r.body[:50]} for r in rows], 'test': 'simulate_messages'})
 
+        elif test == 'test_insert':
+            from datetime import datetime, timezone
+            chat_id = int(req.args.get('cid', 1))
+            result = db.session.execute(
+                text("SELECT 1 FROM chat WHERE id = :cid"), {'cid': chat_id}
+            ).fetchone()
+            if not result:
+                return jsonify({'error': 'chat not found', 'test': 'test_insert'}), 404
+
+            from app.models.chat import Message
+            insert_stmt = Message.__table__.insert().values(
+                sender_id=1,
+                receiver_id=5,
+                body='debug test message ' + str(time.time()),
+                chat_id=chat_id,
+                status='sent',
+                attachment_path=None,
+                attachment_type=None
+            )
+            compiled = str(insert_stmt.compile(compile_kwargs={"literal_binds": True}))
+            result = db.session.execute(insert_stmt)
+            msg_id = result.inserted_primary_key[0]
+            db.session.rollback()
+            return jsonify({
+                'test': 'test_insert',
+                'msg_id': msg_id,
+                'compiled_sql': compiled[:500],
+                'success': True
+            })
+
         else:
             return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg']}), 400
 
