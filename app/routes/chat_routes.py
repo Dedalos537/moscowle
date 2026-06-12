@@ -439,7 +439,8 @@ def send_message(chat_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error sending message to chat {chat_id}: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': 'Error al enviar mensaje'}), 500
+        import traceback
+        return jsonify({'success': False, 'message': 'Error al enviar mensaje', 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 
 @chat_bp.route('/api/chats/-1/read', methods=['PUT'])
