@@ -172,11 +172,15 @@ def api_admin_broadcast():
 @api_bp.route('/admin/list-users')
 @login_required
 def api_admin_list_users():
-    if current_user.role not in ('admin', 'supervisor'):
-        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-    role = (request.args.get('role') or '').strip()
-    users = admin_service.list_users(role)
-    return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
+    try:
+        if current_user.role not in ('admin', 'supervisor'):
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+        role = (request.args.get('role') or '').strip()
+        users = admin_service.list_users(role)
+        return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
+    except Exception as e:
+        current_app.logger.error(f"Error in api_admin_list_users: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @api_bp.route('/admin/user/<int:user_id>')
 @login_required
@@ -282,7 +286,7 @@ def admin_sedes():
                     'id': s.id,
                     'name': s.name,
                     'address': s.address,
-                    'active': s.active,
+                    'active': getattr(s, 'is_active', getattr(s, 'active', True)),
                     'created_at': created_at_iso
                 })
             return jsonify(result)
@@ -321,7 +325,10 @@ def admin_sedes_detail(sede_id):
                 return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             if 'active' in data:
-                s.active = bool(data['active'])
+                if hasattr(s, 'is_active'):
+                    s.is_active = bool(data['active'])
+                else:
+                    s.active = bool(data['active'])
             if 'name' in data and data['name']:
                 s.name = data['name']
             if 'address' in data:
@@ -336,7 +343,7 @@ def admin_sedes_detail(sede_id):
             'id': s.id,
             'name': s.name,
             'address': s.address,
-            'active': s.active
+            'active': getattr(s, 'is_active', getattr(s, 'active', True))
         })
     except Exception as e:
         current_app.logger.error(f"Error in admin_sedes_detail: {str(e)}")

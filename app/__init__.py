@@ -78,6 +78,12 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Migration skipped (non-fatal): {e}')
 
+        try:
+            _sync_missing_columns(db)
+            app.logger.info('Schema sync completed')
+        except Exception as e:
+            app.logger.warning(f'Schema sync skipped (non-fatal): {e}')
+
         db.session.remove()
 
     register_blueprints(app)
@@ -87,3 +93,58 @@ def create_app(config_class=None):
 
     app.logger.info('Application initialization complete')
     return app
+
+
+def _sync_missing_columns(db):
+    from sqlalchemy import inspect, text
+
+    engine = db.engine
+    inspector = inspect(engine)
+    dialect = engine.dialect.name
+
+    table_columns = {
+        'user': {
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+            'mfa_enabled': 'BOOLEAN',
+            'otp_secret': 'VARCHAR(32)',
+            'mfa_failed_attempts': 'INTEGER',
+            'mfa_locked_until': 'TIMESTAMP',
+        },
+        'sede': {
+            'is_active': 'BOOLEAN',
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+        },
+        'notification': {
+            'created_by_id': 'INTEGER',
+            'updated_at': 'TIMESTAMP',
+            'is_active': 'BOOLEAN',
+        },
+    }
+
+    for table, columns in table_columns.items():
+        try:
+            existing = {c['name'] for c in inspector.get_columns(table)}
+        except Exception:
+            continue
+
+        for col_name, col_type in columns.items():
+            if col_name in existing:
+                continue
+            try:
+                if dialect == 'postgresql':
+                    engine.execute(text(
+                        f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col_name} {col_type}'
+                    ))
+                elif dialect == 'sqlite':
+                    stype = col_type.replace('VARCHAR', 'VARCHAR').replace('INTEGER', 'INTEGER').replace('BOOLEAN', 'BOOLEAN').replace('TIMESTAMP', 'DATETIME')
+                    engine.execute(text(
+                        f'ALTER TABLE "{table}" ADD COLUMN {col_name} {stype}'
+                    ))
+                else:
+                    engine.execute(text(
+                        f'ALTER TABLE {table} ADD COLUMN {col_name} {col_type}'
+                    ))
+            except Exception:
+                pass

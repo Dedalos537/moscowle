@@ -15,16 +15,20 @@ from app.routes.api import api_bp
 @api_bp.route('/notifications')
 @login_required
 def get_notifications():
-    notifications = notification_service.get_unread_notifications(current_user.id)
-    result = [{
-        'id': n.id,
-        'title': n.title,
-        'type': n.type or 'info',
-        'message': n.message,
-        'timestamp': n.timestamp.strftime('%d %b, %H:%M'),
-        'link': n.link
-    } for n in notifications]
-    return jsonify(result)
+    try:
+        notifications = notification_service.get_unread_notifications(current_user.id)
+        result = [{
+            'id': n.id,
+            'title': n.title,
+            'type': n.type or 'info',
+            'message': n.message,
+            'timestamp': n.timestamp.strftime('%d %b, %H:%M'),
+            'link': n.link
+        } for n in notifications]
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Error in get_notifications: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @api_bp.route('/notifications/mark-read', methods=['POST'])
 @login_required
