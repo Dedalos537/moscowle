@@ -182,10 +182,11 @@ def debug_query():
                 return jsonify({'error': 'chat not found', 'test': 'test_insert'}), 404
 
             from app.models.chat import Message
+            ts = str(datetime.now(timezone.utc).timestamp())
             insert_stmt = Message.__table__.insert().values(
                 sender_id=1,
                 receiver_id=5,
-                body='debug test msg ' + str(datetime.now(timezone.utc).timestamp()),
+                body='debug test msg ' + ts,
                 chat_id=chat_id,
                 status='sent',
                 attachment_path=None,
@@ -194,11 +195,19 @@ def debug_query():
             compiled = str(insert_stmt.compile(compile_kwargs={"literal_binds": True}))
             result = db.session.execute(insert_stmt)
             msg_id = result.inserted_primary_key[0]
-            db.session.rollback()
+            db.session.commit()
+            # Verify and then delete
+            verify = db.session.execute(
+                text("SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid"), {'mid': msg_id}
+            ).fetchone()
+            verify_dict = dict(verify._mapping) if verify else None
+            db.session.execute(text("DELETE FROM message WHERE id = :mid"), {'mid': msg_id})
+            db.session.commit()
             return jsonify({
                 'test': 'test_insert',
                 'msg_id': msg_id,
                 'compiled_sql': compiled[:500],
+                'inserted': verify_dict,
                 'success': True
             })
 
