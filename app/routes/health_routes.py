@@ -121,7 +121,7 @@ def debug_query():
             return jsonify({'row': dict(r._mapping) if r else None, 'test': 'last_msg'})
 
         elif test == 'users':
-            r = db.session.execute(text('SELECT id, email, username, role, is_active FROM "user" ORDER BY id LIMIT 20')).fetchall()
+            r = db.session.execute(text('SELECT id, email, username, role, is_active FROM `user` ORDER BY id LIMIT 20')).fetchall()
             users = []
             for u in r:
                 try:
@@ -167,8 +167,8 @@ def debug_query():
         elif test == 'simulate_messages':
             cid = int(req.args.get('cid', 1))
             rows = db.session.execute(
-                text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT 10"),
-                {'cid': cid}
+                text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs"),
+                {'cid': cid, 'lim': 10, 'offs': 0}
             ).fetchall()
             return jsonify({'messages': [{'id':r.id,'sender_id':r.sender_id,'body':r.body[:50]} for r in rows], 'test': 'simulate_messages'})
 

@@ -152,10 +152,10 @@ def list_chats():
                 ).fetchone()
                 other_user_row = None
                 if other_row:
-                    other_user_row = db.session.execute(
-                        text('SELECT id, username, role, avatar FROM "user" WHERE id = :uid'),
-                        {'uid': other_row.user_id}
-                    ).fetchone()
+                        other_user_row = db.session.execute(
+                            text('SELECT id, username, role, avatar FROM `user` WHERE id = :uid'),
+                            {'uid': other_row.user_id}
+                        ).fetchone()
 
                 last_msg_row = db.session.execute(
                     text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
@@ -335,7 +335,7 @@ def get_messages(chat_id):
         limit = min(limit, 100)
 
         rows = db.session.execute(
-            text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC OFFSET :offs LIMIT :lim"),
+            text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs"),
             {'cid': chat_id, 'offs': (page - 1) * limit, 'lim': limit}
         ).fetchall()
         rows = list(reversed(list(rows)))
