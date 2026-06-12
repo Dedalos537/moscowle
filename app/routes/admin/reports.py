@@ -7,7 +7,7 @@ from app.auth_compat import current_user, login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
-from app.extensions import db
+from app.extensions import db, csrf
 from app.models import (
     Appointment,
     MonthlyReport,
@@ -512,7 +512,9 @@ def api_daily_reports():
     end = request.args.get('end')
 
     if not start or not end:
-        return jsonify({'success': False, 'error': 'start y end son requeridos (YYYY-MM-DD)'}), 400
+        today = datetime.utcnow().date()
+        start = start or today.isoformat()
+        end = end or today.isoformat()
 
     try:
         from app.services.report_service import ReportService
@@ -550,6 +552,7 @@ def api_weekly_summary():
 
 
 @admin_bp.route('/api/reports/accumulate', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_accumulate_reports():
     """Acumular reportes diarios"""
@@ -632,6 +635,7 @@ def api_quarterly_reports():
 
 
 @admin_bp.route('/api/reports/generate-all-weekly', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_generate_all_weekly():
     if current_user.role not in ('admin', 'supervisor'):

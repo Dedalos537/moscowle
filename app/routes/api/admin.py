@@ -266,6 +266,7 @@ def api_admin_update_profile():
     return jsonify({'success': True})
 
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def admin_sedes():
     try:
@@ -313,6 +314,7 @@ def admin_sedes():
         return jsonify({"error": str(e), "data": []}), 500
 
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
+@csrf.exempt
 @login_required
 def admin_sedes_detail(sede_id):
     try:

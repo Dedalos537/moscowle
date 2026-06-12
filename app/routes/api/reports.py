@@ -396,6 +396,7 @@ def api_weekly_summary():
 
 
 @api_bp.route('/reports/accumulate', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_reports_accumulate():
     if current_user.role not in ('admin', 'supervisor'):
@@ -411,6 +412,7 @@ def api_reports_accumulate():
 
 
 @api_bp.route('/reports/generate-all-weekly', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_reports_generate_all_weekly():
     if current_user.role not in ('admin', 'supervisor'):

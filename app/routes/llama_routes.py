@@ -45,10 +45,7 @@ appointment_service = AppointmentService()
 
 
 def get_or_create_conversation(user_id: int) -> int:
-    today = datetime.utcnow().date()
-    conv = (
-        AIConversation.query.filter_by(user_id=user_id).filter(db.func.date(AIConversation.created_at) == today).first()
-    )
+    conv = AIConversation.query.filter_by(user_id=user_id).order_by(AIConversation.id.desc()).first()
     if not conv:
         conv = AIConversation(user_id=user_id, session_id=str(uuid.uuid4())[:8])
         db.session.add(conv)
@@ -430,7 +427,7 @@ def send_message():
     if auth_error:
         return auth_error
 
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     user_message = sanitize_text(data.get('message', ''))
     if not user_message:
         return jsonify({'error': 'Mensaje vacío'}), 400
