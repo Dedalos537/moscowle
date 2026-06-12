@@ -89,6 +89,11 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Schema sync skipped (non-fatal): {e}')
 
+        try:
+            _force_audit_columns(db)
+        except Exception as e:
+            app.logger.warning(f'Force audit columns skipped: {e}')
+
         db.session.remove()
 
     register_blueprints(app)
@@ -199,3 +204,25 @@ def _sync_missing_columns(db):
                 app_logger.info(f'Schema sync: added {table_name}.{col.name} ({type_str})')
             except Exception as e:
                 app_logger.warning(f'Schema sync: could not add {table_name}.{col.name}: {e}')
+
+
+def _force_audit_columns(db):
+    """Fallback: directly add AuditMixin columns to known tables using raw SQL."""
+    from sqlalchemy import text
+    tables = ['chat', 'chat_participant', 'message', 'contact_message',
+              'ai_conversation', 'ai_chat_message', 'notification']
+    cols = [
+        ('created_at', 'TIMESTAMP'),
+        ('created_by_id', 'INTEGER'),
+        ('updated_at', 'TIMESTAMP'),
+    ]
+    try:
+        with db.engine.begin() as conn:
+            for table in tables:
+                for name, sql in cols:
+                    try:
+                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {name} {sql}'))
+                    except Exception:
+                        pass
+    except Exception:
+        pass

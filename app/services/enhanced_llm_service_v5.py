@@ -839,17 +839,18 @@ RESPUESTAS:
 def save_chat_message(conversation_id, role, content, intent=None, parameters=None, action_status=None):
     from app.models import AIChatMessage
 
-    msg = AIChatMessage(
-        conversation_id=conversation_id,
-        role=role,
-        content=content,
-        intent=intent,
-        parameters=parameters if isinstance(parameters, dict) else {},
-        action_status=action_status,
+    result = db.session.execute(
+        AIChatMessage.__table__.insert().values(
+            conversation_id=conversation_id,
+            role=role,
+            content=content,
+            intent=intent,
+            parameters=parameters if isinstance(parameters, dict) else {},
+            action_status=action_status,
+        )
     )
-    db.session.add(msg)
     db.session.commit()
-    return msg.id
+    return result.inserted_primary_key[0]
 
 
 def get_navigation_url(section, user_id):

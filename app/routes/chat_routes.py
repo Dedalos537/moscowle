@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, url_for
 from app.auth_compat import login_required, current_user
 from app.extensions import db, csrf
 from app.models import User, Message, Chat, ChatParticipant
 from app.utils.sanitizer import sanitize_text
-from sqlalchemy import case
+from sqlalchemy import case, text
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
 from datetime import datetime
@@ -290,35 +290,49 @@ def get_messages(chat_id):
         if chat_id == -1:
             return get_contact_messages()
 
-        chat = Chat.query.get(chat_id)
-        if not chat:
+        chat_exists = db.session.execute(
+            text("SELECT id FROM chat WHERE id = :cid"), {'cid': chat_id}
+        ).fetchone()
+        if not chat_exists:
             return jsonify({'success': False, 'message': 'Chat no encontrado'}), 404
 
-        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
-        if not participant:
+        is_participant = db.session.execute(
+            text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id = :uid"),
+            {'cid': chat_id, 'uid': current_user.id}
+        ).fetchone()
+        if not is_participant:
             return jsonify({'success': False, 'message': 'No eres participante de este chat'}), 403
 
         page = request.args.get('page', 1, type=int)
         limit = request.args.get('limit', 50, type=int)
         limit = min(limit, 100)
 
-        messages = Message.query.filter_by(chat_id=chat_id).order_by(Message.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
-        messages.reverse()
+        rows = db.session.execute(
+            text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC OFFSET :offs LIMIT :lim"),
+            {'cid': chat_id, 'offs': (page - 1) * limit, 'lim': limit}
+        ).fetchall()
+        rows = list(reversed(list(rows)))
 
-        total = Message.query.filter_by(chat_id=chat_id).count()
+        total = db.session.execute(
+            text("SELECT COUNT(*) FROM message WHERE chat_id = :cid"),
+            {'cid': chat_id}
+        ).scalar() or 0
+
+        def _msg_dict(r):
+            return {
+                'id': r.id,
+                'sender_id': r.sender_id,
+                'receiver_id': r.receiver_id,
+                'body': r.body,
+                'status': r.status,
+                'is_read': r.is_read,
+                'file_url': url_for('uploads.protected_file', filename=f'messages/{r.attachment_path}', _external=False) if r.attachment_path else None,
+                'attachment_type': r.attachment_type,
+                'created_at': None
+            }
 
         return jsonify({
-            'messages': [{
-                'id': m.id,
-                'sender_id': m.sender_id,
-                'receiver_id': m.receiver_id,
-                'body': m.body,
-                'status': m.status,
-                'is_read': m.is_read,
-                'file_url': m.file_url,
-                'attachment_type': m.attachment_type,
-                'created_at': m.created_at.isoformat() if m.created_at else None
-            } for m in messages],
+            'messages': [_msg_dict(r) for r in rows],
             'total': total,
             'page': page,
             'has_more': (page * limit) < total
@@ -333,12 +347,17 @@ def get_messages(chat_id):
 @login_required
 def send_message(chat_id):
     try:
-        chat = Chat.query.get(chat_id)
-        if not chat:
+        chat_exists = db.session.execute(
+            text("SELECT id FROM chat WHERE id = :cid"), {'cid': chat_id}
+        ).fetchone()
+        if not chat_exists:
             return jsonify({'success': False, 'message': 'Chat no encontrado'}), 404
 
-        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
-        if not participant:
+        is_participant = db.session.execute(
+            text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id = :uid"),
+            {'cid': chat_id, 'uid': current_user.id}
+        ).fetchone()
+        if not is_participant:
             return jsonify({'success': False, 'message': 'No eres participante de este chat'}), 403
 
         body = ''
@@ -375,47 +394,54 @@ def send_message(chat_id):
         if not body and not attachment_path:
             return jsonify({'success': False, 'message': 'El mensaje no puede estar vacío'}), 400
 
-        other_participants = ChatParticipant.query.filter(
-            ChatParticipant.chat_id == chat_id,
-            ChatParticipant.user_id != current_user.id
-        ).all()
-        receiver_id = other_participants[0].user_id if other_participants else current_user.id
+        other_participant_rows = db.session.execute(
+            text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid"),
+            {'cid': chat_id, 'uid': current_user.id}
+        ).fetchall()
+        receiver_id = other_participant_rows[0].user_id if other_participant_rows else current_user.id
 
-        msg = Message(
-            sender_id=current_user.id,
-            receiver_id=receiver_id,
-            body=body,
-            chat_id=chat_id,
-            status='sent',
-            attachment_path=attachment_path,
-            attachment_type=attachment_type
+        result = db.session.execute(
+            Message.__table__.insert().values(
+                sender_id=current_user.id,
+                receiver_id=receiver_id,
+                body=body,
+                chat_id=chat_id,
+                status='sent',
+                attachment_path=attachment_path,
+                attachment_type=attachment_type
+            )
         )
-        db.session.add(msg)
+        msg_id = result.inserted_primary_key[0]
         db.session.commit()
+
+        msg_row = db.session.execute(
+            text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE id = :mid"),
+            {'mid': msg_id}
+        ).fetchone()
 
         try:
             from flask_socketio import emit as sio_emit
             sio_emit('message:new', {
                 'chat_id': chat_id,
                 'message': {
-                    'id': msg.id,
-                    'sender_id': msg.sender_id,
-                    'receiver_id': msg.receiver_id,
-                    'body': msg.body,
-                    'status': msg.status,
-                    'is_read': msg.is_read,
-                    'file_url': msg.file_url,
-                    'attachment_type': msg.attachment_type,
-                    'created_at': msg.created_at.isoformat() if msg.created_at else None
+                    'id': msg_row.id,
+                    'sender_id': msg_row.sender_id,
+                    'receiver_id': msg_row.receiver_id,
+                    'body': msg_row.body,
+                    'status': msg_row.status,
+                    'is_read': msg_row.is_read,
+                    'file_url': url_for('uploads.protected_file', filename=f'messages/{msg_row.attachment_path}', _external=False) if msg_row.attachment_path else None,
+                    'attachment_type': msg_row.attachment_type,
+                    'created_at': None
                 }
             }, room=f'chat_{chat_id}')
         except Exception as e:
             logger.warning(f"SocketIO emit failed: {str(e)}")
 
-        for op in other_participants:
+        for row in other_participant_rows:
             try:
                 notification_service.create_notification(
-                    user_id=op.user_id,
+                    user_id=row.user_id,
                     title=f'Nuevo mensaje de {current_user.username}',
                     message=body or 'Ha enviado un archivo adjunto',
                     notif_type='message',
@@ -427,13 +453,13 @@ def send_message(chat_id):
         return jsonify({
             'success': True,
             'message': {
-                'id': msg.id,
-                'sender_id': msg.sender_id,
-                'body': msg.body,
-                'status': msg.status,
-                'file_url': msg.file_url,
-                'attachment_type': msg.attachment_type,
-                'created_at': msg.created_at.isoformat() if msg.created_at else None
+                'id': msg_row.id,
+                'sender_id': msg_row.sender_id,
+                'body': msg_row.body,
+                'status': msg_row.status,
+                'file_url': url_for('uploads.protected_file', filename=f'messages/{msg_row.attachment_path}', _external=False) if msg_row.attachment_path else None,
+                'attachment_type': msg_row.attachment_type,
+                'created_at': None
             }
         })
     except Exception as e:
