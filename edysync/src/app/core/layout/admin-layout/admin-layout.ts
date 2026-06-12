@@ -9,11 +9,14 @@ import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { AiChat } from '../../../shared/components/ai-chat/ai-chat';
+import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
+import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
+import { WizardOverlay } from '../../../shared/contextual-help/components/wizard-overlay/wizard-overlay';
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat],
+  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat, HelpButton, HelpPanel, WizardOverlay],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss',
   animations: [routeAnimations],

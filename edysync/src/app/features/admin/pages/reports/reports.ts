@@ -18,6 +18,7 @@ import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
+import DOMPurify from 'dompurify';
 
 Chart.register(...registerables);
 
@@ -420,7 +421,7 @@ export class Reports implements OnInit, OnDestroy {
         next: (res: any) => {
           this.aiGenerating = false;
           if (res.success) {
-            this.aiReport = res.report;
+          this.aiReport = DOMPurify.sanitize(res.report, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p', 'h1', 'h2', 'h3', 'h4', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'], ALLOWED_ATTR: ['href'] });
           } else {
             this.alertService.show('Error: ' + res.error, 'error');
           }

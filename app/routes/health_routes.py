@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, current_app
 from app.extensions import db
+from app.services.crisis_monitor import crisis_monitor
 from sqlalchemy import text
 import os
 import logging
@@ -11,7 +12,7 @@ health_bp = Blueprint('health', __name__, url_prefix='/api')
 
 @health_bp.route('/health', methods=['GET'])
 def health_check():
-    """Health check pa' Railway: DB, Groq, Gemini, Ollama"""
+    """Health check: DB, Groq, Gemini, Ollama, crisis alerts"""
     checks = {}
     overall = 'healthy'
 
@@ -43,15 +44,21 @@ def health_check():
     try:
         import ollama
         from ollama import Client
-        cli = Client(host='http://127.0.0.1:11434')
+        cli = Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
         cli.list()
         ollama_ok = True
     except Exception:
         pass
     checks['ollama'] = {'status': 'ok' if ollama_ok else 'unreachable'}
 
+    checks['alerts'] = crisis_monitor.get_metrics() or {}
+
     return jsonify({
         'status': overall,
         'checks': checks,
+        'version': '2.0-remediation',
         'timestamp': __import__('datetime').datetime.utcnow().isoformat()
     }), 200 if overall != 'error' else 503
+
+
+

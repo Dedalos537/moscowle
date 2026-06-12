@@ -1,4 +1,7 @@
-from app.models import Appointment, db
+from datetime import datetime
+
+from app.models import Appointment
+
 
 class AppointmentRepository:
     @staticmethod
@@ -11,9 +14,27 @@ class AppointmentRepository:
 
     @staticmethod
     def get_upcoming_for_patient(patient_id, limit=3):
-        from datetime import datetime
-        return Appointment.query.filter(
-            Appointment.patient_id == patient_id,
-            Appointment.start_time >= datetime.utcnow(),
-            Appointment.status == 'scheduled'
-        ).order_by(Appointment.start_time).limit(limit).all()
+        return (
+            Appointment.query.filter(
+                Appointment.patient_id == patient_id,
+                Appointment.start_time >= datetime.utcnow(),
+                Appointment.status == 'scheduled',
+            )
+            .order_by(Appointment.start_time)
+            .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def get_upcoming_for_user(user_id, role, limit=5):
+        now = datetime.utcnow()
+        query = (
+            Appointment.query.filter(Appointment.start_time >= now, Appointment.status != 'cancelled')
+            .order_by(Appointment.start_time)
+            .limit(limit)
+        )
+        if role == 'terapista':
+            query = query.filter(Appointment.therapist_id == user_id)
+        else:
+            query = query.filter(Appointment.patient_id == user_id)
+        return query.all()

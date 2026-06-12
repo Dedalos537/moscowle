@@ -69,14 +69,16 @@ export class ChatComponent implements OnInit, OnDestroy {
       icon: ['fas', 'comment-dots'],
     });
 
-    this.auth.currentUser$.subscribe((user) => {
-      if (user) {
-        this.currentUserId = user.id;
-        this.userRole = user.role;
-        this.chatService.connect();
-        this.loadData();
-      }
-    });
+    this.subs.push(
+      this.auth.currentUser$.subscribe((user) => {
+        if (user) {
+          this.currentUserId = user.id;
+          this.userRole = user.role;
+          this.chatService.connect();
+          this.loadData();
+        }
+      })
+    );
 
     this.subs.push(
       this.chatService.onlineUsers$.subscribe((online) => {

@@ -1,6 +1,6 @@
 
 from flask import Blueprint, request, jsonify, current_app, render_template
-from flask_login import login_required
+from app.auth_compat import login_required
 import logging
 
 from app.models import YapeTransaction, db

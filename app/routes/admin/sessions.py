@@ -1,6 +1,6 @@
 from app.services.receipt_generator import generate_receipt_pdf
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify, send_file
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 from functools import wraps
 import os
 from datetime import timedelta
@@ -11,7 +11,7 @@ import secrets
 from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
-from app.services.finance_service import FinanceService
+from app.services.financial_service import FinancialService
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 import uuid
@@ -258,8 +258,9 @@ def update_session(session_id):
         return jsonify({'error': 'Session not found'}), 404
         
     try:
+        from app.utils.sanitizer import sanitize_text
         if 'title' in data:
-            appt.title = data['title']
+            appt.title = sanitize_text(data['title'], 200)
         
         # Parse ISO string → datetime object (naive Peru local)
         if 'start_time' in data and isinstance(data['start_time'], str) and 'T' in data['start_time']:
@@ -280,7 +281,7 @@ def update_session(session_id):
             appt.end_time = end_dt
             
         if 'notes' in data:
-            appt.notes = data['notes']
+            appt.notes = sanitize_text(data['notes'], 5000)
             
         if 'status' in data:
             appt.status = data['status']

@@ -1,5 +1,5 @@
 from flask import request
-from flask_login import current_user
+from app.auth_compat import current_user
 from flask_socketio import join_room, emit
 from datetime import datetime
 from app.extensions import socketio, db

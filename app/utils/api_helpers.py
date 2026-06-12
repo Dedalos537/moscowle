@@ -1,4 +1,4 @@
-from flask import jsonify, request, g
+from flask import jsonify, g
 
 def api_response(success=True, data=None, error=None, status=200):
     payload = {
@@ -11,36 +11,8 @@ def api_response(success=True, data=None, error=None, status=200):
 
 
 def mark_request_api():
-    """Detect whether the current request should be treated as an API call.
-
-    Sets `g.is_api = True` when path or headers indicate an API/JSON request.
-    """
     try:
-        is_api = False
-        path = request.path or ''
-
-        # Path contains /api/ at any level (e.g., /api/*, /therapist/api/*, /admin/api/*)
-        if '/api/' in path:
-            is_api = True
-
-        # Explicit API blueprint
-        if request.blueprint == 'api':
-            is_api = True
-
-        # Ajax / XHR
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            is_api = True
-
-        # Accept header prefers json (including */* from Angular)
-        accept = request.headers.get('Accept', '')
-        if 'application/json' in accept or '*/json' in accept or '*/*' in accept:
-            is_api = True
-
-        # JSON body
-        if request.is_json:
-            is_api = True
-
-        g.is_api = is_api
+        from app.middleware.request_handlers import _is_api_request
+        g.is_api = _is_api_request()
     except RuntimeError:
-        # No request context
         g.is_api = False

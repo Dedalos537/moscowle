@@ -1,17 +1,33 @@
-from app.routes.api._shared import (
-    db, User, Notification, Appointment, Message, Game, SessionMetrics,
-    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
-    genai, Groq, _ollama_client, predict_level, start_async_training,
-    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
-    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
-    AvailabilityService, requests, or_, func,
-    appointment_service, notification_service, drive_service,
-    LIMA_TZ, _parse_json, _parse_datetime, analyze_contact_message_ai,
-    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
-    uuid, secure_filename, datetime, timedelta, timezone,
-    login_required, current_user, request, jsonify, current_app, url_for,
-)
+from app.utils.sanitizer import sanitize_text
 from app.routes.api import api_bp
+from app.routes.api._shared import (
+    Appointment,
+    AvailabilityService,
+    SessionImage,
+    SessionMetrics,
+    User,
+    _parse_datetime,
+    appointment_service,
+    csrf,
+    current_app,
+    current_user,
+    datetime,
+    db,
+    drive_service,
+    json,
+    jsonify,
+    login_required,
+    notification_service,
+    os,
+    request,
+    secure_filename,
+    timedelta,
+    timezone,
+    url_for,
+    uuid,
+)
+
+
 @api_bp.route('/sessions', methods=['GET'])
 @login_required
 def api_get_sessions():
@@ -39,6 +55,7 @@ def api_get_sessions():
             q = q.filter(Appointment.therapist_id == current_user.id)
         appts = q.order_by(Appointment.start_time.desc()).limit(200).all()
     results = []
+
     def _session_color(status):
         colors = {
             'scheduled': '#3B82F6',
@@ -47,6 +64,7 @@ def api_get_sessions():
             'cancelled': '#EF4444',
         }
         return colors.get(status, '#9CA3AF')
+
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
         end_iso = a.end_time.isoformat() if a.end_time else None
@@ -54,30 +72,33 @@ def api_get_sessions():
             games_list = json.loads(a.games) if a.games else []
         except (json.JSONDecodeError, TypeError):
             games_list = []
-        results.append({
-            'id': a.id,
-            'title': a.title or (a.patient.username if a.patient else 'Sesión'),
-            'start': start_iso,
-            'end': end_iso,
-            'backgroundColor': _session_color(a.status),
-            'borderColor': _session_color(a.status),
-            'extendedProps': {
-                'therapist_id': a.therapist_id,
-                'patient_id': a.patient_id,
-                'therapist': a.therapist.username if a.therapist else '',
-                'patient': a.patient.username if a.patient else '',
+        results.append(
+            {
+                'id': a.id,
+                'title': a.title or (a.patient.username if a.patient else 'Sesión'),
+                'start': start_iso,
+                'end': end_iso,
+                'backgroundColor': _session_color(a.status),
+                'borderColor': _session_color(a.status),
+                'extendedProps': {
+                    'therapist_id': a.therapist_id,
+                    'patient_id': a.patient_id,
+                    'therapist': a.therapist.username if a.therapist else '',
+                    'patient': a.patient.username if a.patient else '',
+                    'status': a.status,
+                    'notes': a.notes or '',
+                },
                 'status': a.status,
-                'notes': a.notes or '',
-            },
-            'status': a.status,
-            'attendance': a.attendance,
-            'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
-            'location': a.location,
-            'notes': a.notes,
-            'games': games_list,
-            'is_holiday': True if a.notes and "Scheduled on Holiday" in a.notes else False
-        })
+                'attendance': a.attendance,
+                'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
+                'location': a.location,
+                'notes': a.notes,
+                'games': games_list,
+                'is_holiday': True if a.notes and 'Scheduled on Holiday' in a.notes else False,
+            }
+        )
     return jsonify(results)
+
 
 @api_bp.route('/sessions/upcoming', methods=['GET'])
 @login_required
@@ -90,16 +111,19 @@ def api_upcoming_sessions():
         patient = User.query.get(a.patient_id)
         start_iso = a.start_time.isoformat()
         end_iso = a.end_time.isoformat() if a.end_time else None
-        results.append({
-            'id': a.id,
-            'patient': patient.username or patient.email,
-            'start_time': start_iso,
-            'end_time': end_iso,
-            'status': a.status,
-            'attendance': a.attendance,
-            'games': json.loads(a.games) if a.games else []
-        })
+        results.append(
+            {
+                'id': a.id,
+                'patient': patient.username or patient.email,
+                'start_time': start_iso,
+                'end_time': end_iso,
+                'status': a.status,
+                'attendance': a.attendance,
+                'games': json.loads(a.games) if a.games else [],
+            }
+        )
     return jsonify(results)
+
 
 @api_bp.route('/appointments/patient', methods=['GET'])
 @login_required
@@ -119,19 +143,22 @@ def api_get_patient_appointments():
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
         end_iso = a.end_time.isoformat() if a.end_time else None
-        results.append({
-            'id': a.id,
-            'title': a.title,
-            'start': start_iso,
-            'end': end_iso,
-            'status': a.status,
-            'attendance': a.attendance,
-            'therapist': {'id': a.therapist.id, 'name': a.therapist.username} if a.therapist else None,
-            'location': a.location,
-            'notes': a.notes,
-            'games': json.loads(a.games) if a.games else []
-        })
+        results.append(
+            {
+                'id': a.id,
+                'title': a.title,
+                'start': start_iso,
+                'end': end_iso,
+                'status': a.status,
+                'attendance': a.attendance,
+                'therapist': {'id': a.therapist.id, 'name': a.therapist.username} if a.therapist else None,
+                'location': a.location,
+                'notes': a.notes,
+                'games': json.loads(a.games) if a.games else [],
+            }
+        )
     return jsonify(results)
+
 
 @api_bp.route('/sessions/day', methods=['GET'])
 @login_required
@@ -156,31 +183,37 @@ def api_get_sessions_day():
     base_query = Appointment.query
     if current_user.role == 'terapista':
         base_query = base_query.filter(Appointment.therapist_id == current_user.id)
-    
-    query = base_query.filter(Appointment.start_time >= query_start,
-                              Appointment.start_time < query_end).order_by(Appointment.start_time.asc()).all()
+
+    query = (
+        base_query.filter(Appointment.start_time >= query_start, Appointment.start_time < query_end)
+        .order_by(Appointment.start_time.asc())
+        .all()
+    )
 
     results = []
     for a in query:
         start_iso = a.start_time.isoformat()
-            
+
         end_iso = None
         if a.end_time:
             end_iso = a.end_time.isoformat()
 
-        results.append({
-            'id': a.id,
-            'title': a.title or (a.patient.username if a.patient else 'Sesión'),
-            'start': start_iso,
-            'end': end_iso,
-            'status': a.status,
-            'attendance': a.attendance,
-            'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
-            'notes': a.notes,
-            'location': a.location
-        })
+        results.append(
+            {
+                'id': a.id,
+                'title': a.title or (a.patient.username if a.patient else 'Sesión'),
+                'start': start_iso,
+                'end': end_iso,
+                'status': a.status,
+                'attendance': a.attendance,
+                'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
+                'notes': a.notes,
+                'location': a.location,
+            }
+        )
 
     return jsonify({'date': date_str, 'sessions': results})
+
 
 @api_bp.route('/sessions', methods=['POST'])
 @login_required
@@ -190,6 +223,9 @@ def api_create_session():
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
+    for field in ('title', 'notes', 'location'):
+        if isinstance(data.get(field), str):
+            data[field] = sanitize_text(data[field], 1000)
 
     for field in ('start_time', 'end_time'):
         if isinstance(data.get(field), str):
@@ -208,9 +244,7 @@ def api_create_session():
             therapist_id = data['therapist_id']
     if therapist_id:
         is_available, error_msg = AvailabilityService.check_availability(
-            therapist_id=therapist_id,
-            start_time=data['start_time'],
-            end_time=data['end_time']
+            therapist_id=therapist_id, start_time=data['start_time'], end_time=data['end_time']
         )
         if not is_available:
             return jsonify({'success': False, 'message': error_msg}), 409
@@ -229,19 +263,15 @@ def api_create_session():
             patient_id=pid,
             therapist_id=current_user.id,
             session_id=None,
-            ignore_therapist_conflict=ignore_therapist_conflict
+            ignore_therapist_conflict=ignore_therapist_conflict,
         )
         if validation_errors:
             p_user = User.query.get(pid)
-            p_name = p_user.username if p_user else f"ID {pid}"
+            p_name = p_user.username if p_user else f'ID {pid}'
             for err in validation_errors:
-                all_validation_errors.append(f"{p_name}: {err}")
+                all_validation_errors.append(f'{p_name}: {err}')
     if all_validation_errors:
-        return jsonify({
-            'success': False,
-            'message': 'Algunos datos no cuadran',
-            'errors': all_validation_errors
-        }), 400
+        return jsonify({'success': False, 'message': 'Algunos datos no cuadran', 'errors': all_validation_errors}), 400
     try:
         results = []
         for pid in patient_ids:
@@ -257,30 +287,32 @@ def api_create_session():
                 'status': appt.status,
                 'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
                 'location': appt.location,
-                'notes': appt.notes
+                'notes': appt.notes,
             }
             try:
                 created['games'] = json.loads(appt.games) if appt.games else []
             except Exception:
                 created['games'] = []
             results.append(created)
-        return jsonify({
-            'success': True,
-            'message': 'Sesión registrada, todo ok',
-            'session': results[0] if results else {},
-            'sessions': results
-        }), 201
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Sesión registrada, todo ok',
+                'session': results[0] if results else {},
+                'sessions': results,
+            }
+        ), 201
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @api_bp.route('/sessions/<int:session_id>', methods=['GET'])
 @login_required
 def api_get_session(session_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
-    from app.models import SessionImage
     appt = Appointment.query.get_or_404(session_id)
     if current_user.role == 'terapista':
         is_assigned = False
@@ -290,48 +322,55 @@ def api_get_session(session_id):
             return jsonify({'error': 'No tienes permiso para ver esta sesión'}), 403
     images = []
     for img in appt.session_images or []:
-        images.append({
-            'id': img.id,
-            'url': url_for('static', filename=img.image_path),
-            'type': img.image_type,
-            'notes': img.notes,
-            'uploaded_at': img.uploaded_at.isoformat() if img.uploaded_at else None,
-            'uploaded_by': img.uploaded_by.username if img.uploaded_by else None,
-        })
+        images.append(
+            {
+                'id': img.id,
+                'url': url_for('static', filename=img.image_path),
+                'type': img.image_type,
+                'notes': img.notes,
+                'uploaded_at': img.uploaded_at.isoformat() if img.uploaded_at else None,
+                'uploaded_by': img.uploaded_by.username if img.uploaded_by else None,
+            }
+        )
     start_iso = appt.start_time.isoformat() if appt.start_time else None
     end_iso = appt.end_time.isoformat() if appt.end_time else None
-    return jsonify({
-        'id': appt.id,
-        'title': appt.title or 'Sesión de Terapia',
-        'start_time': start_iso,
-        'end_time': end_iso,
-        'status': appt.status,
-        'attendance': appt.attendance,
-        'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
-        'therapist_id': appt.therapist_id,
-        'location': appt.location,
-        'notes': appt.notes,
-        'games': appt.games_list,
-        'images': images,
-    })
+    return jsonify(
+        {
+            'id': appt.id,
+            'title': appt.title or 'Sesión de Terapia',
+            'start_time': start_iso,
+            'end_time': end_iso,
+            'status': appt.status,
+            'attendance': appt.attendance,
+            'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+            'therapist_id': appt.therapist_id,
+            'location': appt.location,
+            'notes': appt.notes,
+            'games': appt.games_list,
+            'images': images,
+        }
+    )
 
     start_iso = appt.start_time.isoformat() if appt.start_time else None
     end_iso = appt.end_time.isoformat() if appt.end_time else None
 
-    return jsonify({
-        'id': appt.id,
-        'title': appt.title or 'Sesión de Terapia',
-        'start_time': start_iso,
-        'end_time': end_iso,
-        'status': appt.status,
-        'attendance': appt.attendance,
-        'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
-        'therapist_id': appt.therapist_id,
-        'location': appt.location,
-        'notes': appt.notes,
-        'games': appt.games_list,
-        'images': images,
-    })
+    return jsonify(
+        {
+            'id': appt.id,
+            'title': appt.title or 'Sesión de Terapia',
+            'start_time': start_iso,
+            'end_time': end_iso,
+            'status': appt.status,
+            'attendance': appt.attendance,
+            'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+            'therapist_id': appt.therapist_id,
+            'location': appt.location,
+            'notes': appt.notes,
+            'games': appt.games_list,
+            'images': images,
+        }
+    )
+
 
 @api_bp.route('/sessions/<int:session_id>', methods=['PUT'])
 @login_required
@@ -340,6 +379,9 @@ def api_update_session(session_id):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     data = request.json or {}
+    for field in ('title', 'notes', 'location'):
+        if isinstance(data.get(field), str):
+            data[field] = sanitize_text(data[field], 1000)
 
     for field in ('start_time', 'end_time'):
         if isinstance(data.get(field), str):
@@ -351,22 +393,18 @@ def api_update_session(session_id):
     if 'start_time' in data or 'end_time' in data:
         start_time = data.get('start_time', existing_appt.start_time)
         end_time = data.get('end_time', existing_appt.end_time or (existing_appt.start_time + timedelta(hours=1)))
-        
+
         validation_errors = appointment_service.validate_session_times(
             start_time=start_time,
             end_time=end_time,
             patient_id=existing_appt.patient_id,
             therapist_id=current_user.id,
-            session_id=session_id
+            session_id=session_id,
         )
-        
+
         if validation_errors:
-            return jsonify({
-                'success': False,
-                'message': 'Hay observaciones',
-                'errors': validation_errors
-            }), 400
-        
+            return jsonify({'success': False, 'message': 'Hay observaciones', 'errors': validation_errors}), 400
+
     appt = appointment_service.update_session(session_id, data)
     if not appt:
         return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
@@ -379,10 +417,11 @@ def api_update_session(session_id):
         'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
         'location': appt.location,
         'attendance': appt.attendance,
-        'notes': appt.notes
+        'notes': appt.notes,
     }
 
     return jsonify(updated)
+
 
 @api_bp.route('/sessions/<int:session_id>', methods=['DELETE'])
 @login_required
@@ -395,46 +434,47 @@ def api_delete_session(session_id):
         return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
     return jsonify({'success': True})
 
+
 @api_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
 @login_required
 def api_cancel_session(session_id):
 
     if current_user.role not in ['terapista', 'admin']:
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-    
+
     data = request.get_json(silent=True) or {}
-    reason = data.get('reason', '')
-    
+    reason = sanitize_text(data.get('reason', ''), 500)
+
     try:
         appt = appointment_service.transition_status(
-            session_id=session_id,
-            new_status='cancelled',
-            changed_by_user_id=current_user.id,
-            notify=True
+            session_id=session_id, new_status='cancelled', changed_by_user_id=current_user.id, notify=True
         )
-        
+
         # Optionally store cancellation reason in notes
         if reason:
             if appt.notes:
-                appt.notes += f"\n\n[Cancelada] {reason}"
+                appt.notes += f'\n\n[Cancelada] {reason}'
             else:
-                appt.notes = f"[Cancelada] {reason}"
+                appt.notes = f'[Cancelada] {reason}'
             db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Sesión cancelada, listo',
-            'session': {
-                'id': appt.id,
-                'status': appt.status,
-                'status_changed_at': appt.status_changed_at.isoformat() if appt.status_changed_at else None
+
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Sesión cancelada, listo',
+                'session': {
+                    'id': appt.id,
+                    'status': appt.status,
+                    'status_changed_at': appt.status_changed_at.isoformat() if appt.status_changed_at else None,
+                },
             }
-        })
+        )
     except ValueError as e:
         return jsonify({'success': False, 'message': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error cancelling session {session_id}: {str(e)}")
+        current_app.logger.error(f'Error cancelling session {session_id}: {str(e)}')
         return jsonify({'success': False, 'message': 'No se pudo cancelar la sesión'}), 500
+
 
 @api_bp.route('/sessions/assign-games', methods=['POST'])
 @login_required
@@ -442,14 +482,14 @@ def assign_games_to_session():
     """Asignar juegos vía AppointmentGame"""
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
-    
+
     data = request.get_json() or {}
     session_id = data.get('session_id')
     games = data.get('games') or []
-    
+
     if not session_id:
         return jsonify({'error': 'session_id requerido'}), 400
-    
+
     # Extract filenames from games list
     # Support both ['game.html'] and [{'name': 'game.html', 'url': '...'}]
     game_filenames = []
@@ -458,20 +498,18 @@ def assign_games_to_session():
             game_filenames.append(game.get('name', ''))
         else:
             game_filenames.append(game)
-    
+
     # Filter out empty strings
     game_filenames = [g for g in game_filenames if g]
-    
+
     try:
         validated_games = appointment_service.set_session_games(session_id, game_filenames)
-        return jsonify({
-            'status': 'ok',
-            'assigned': [{'name': g.filename, 'title': g.title} for g in validated_games]
-        })
+        return jsonify({'status': 'ok', 'assigned': [{'name': g.filename, 'title': g.title} for g in validated_games]})
     except ValueError as e:
         return jsonify({'error': str(e)}), 404
     except Exception as e:
         return jsonify({'error': f'Error asignando juegos: {str(e)}'}), 500
+
 
 @api_bp.route('/sessions/<int:session_id>/games', methods=['GET'])
 @login_required
@@ -490,6 +528,7 @@ def session_games(session_id):
         games = []
     return jsonify({'enabled': enabled, 'games': games})
 
+
 @api_bp.route('/sessions/<int:session_id>/complete', methods=['POST'])
 @login_required
 def complete_session(session_id):
@@ -504,6 +543,19 @@ def complete_session(session_id):
         appt.end_time = datetime.utcnow()
         db.session.add(appt)
 
+    # Auto-audit on session complete if both program and transcript exist
+    try:
+        import threading
+
+        from app.models import SessionAudit
+        from app.services.audit_service import run_audit
+
+        audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
+        if audit and audit.planned_text and audit.transcript_text and audit.audit_status == 'pending':
+            threading.Thread(target=run_audit, args=(session_id,), daemon=True).start()
+    except Exception:
+        pass
+
     metrics = SessionMetrics.query.filter_by(user_id=appt.patient_id, session_id=session_id).all()
     if not metrics:
         db.session.commit()
@@ -512,13 +564,16 @@ def complete_session(session_id):
     avg_acc = float(sum(m.accurracy for m in metrics) / len(metrics))
     avg_time_ms = float(sum(m.avg_time for m in metrics) / len(metrics) * 1000)
     plays = len(metrics)
-    last_games = [{
-        'game_name': m.game_name,
-        'accuracy': float(m.accurracy),
-        'avg_time_ms': float(m.avg_time * 1000),
-        'prediction': int(m.prediction),
-        'date': m.date.isoformat()
-    } for m in metrics]
+    last_games = [
+        {
+            'game_name': m.game_name,
+            'accuracy': float(m.accurracy),
+            'avg_time_ms': float(m.avg_time * 1000),
+            'prediction': int(m.prediction),
+            'date': m.date.isoformat(),
+        }
+        for m in metrics
+    ]
 
     # Merge into user.game_profile JSON
     patient = User.query.get(appt.patient_id)
@@ -527,22 +582,25 @@ def complete_session(session_id):
     except Exception:
         existing = {}
     existing.setdefault('history', []).extend(last_games)
-    existing['kpis'] = {
-        'avg_accuracy': avg_acc,
-        'avg_time_ms': avg_time_ms,
-        'plays': plays
-    }
+    existing['kpis'] = {'avg_accuracy': avg_acc, 'avg_time_ms': avg_time_ms, 'plays': plays}
 
     patient.game_profile = json.dumps(existing, ensure_ascii=False)
     db.session.commit()
 
     try:
-        notification_service.create_notification(appt.therapist_id, f"Sesión #{appt.id} completada. {plays} juegos registrados.", link=url_for('therapist.reports'))
-        notification_service.create_notification(appt.patient_id, f"Sesión completada. ¡Buen trabajo!", link=url_for('patient.progress'))
+        notification_service.create_notification(
+            appt.therapist_id,
+            f'Sesión #{appt.id} completada. {plays} juegos registrados.',
+            link=url_for('therapist.reports'),
+        )
+        notification_service.create_notification(
+            appt.patient_id, 'Sesión completada. ¡Buen trabajo!', link=url_for('patient.progress')
+        )
     except Exception:
         pass
 
     return jsonify({'status': 'ok', 'updated_profile': existing})
+
 
 @api_bp.route('/resources/<int:resource_id>')
 @login_required
@@ -550,31 +608,41 @@ def get_resource(resource_id):
     try:
         if resource_id == 1:
             # Guía de Ejercicios: summarize recent performance
-            metrics = SessionMetrics.query.filter_by(user_id=current_user.id).order_by(SessionMetrics.date.desc()).limit(20).all()
+            metrics = (
+                SessionMetrics.query.filter_by(user_id=current_user.id)
+                .order_by(SessionMetrics.date.desc())
+                .limit(20)
+                .all()
+            )
             if metrics:
                 avg_acc = sum((m.accurracy or 0) for m in metrics) / len(metrics)
                 avg_time = sum((m.avg_time or 0) for m in metrics) / len(metrics)
-                perf_summary = f"Tu precisión promedio en las últimas sesiones es {avg_acc:.0f}%. Tiempo medio por ejercicio {avg_time:.1f}s."
+                perf_summary = f'Tu precisión promedio en las últimas sesiones es {avg_acc:.0f}%. Tiempo medio por ejercicio {avg_time:.1f}s.'
             else:
-                perf_summary = "No hay datos de sesiones suficientes para personalizar esta guía."
+                perf_summary = 'No hay datos de sesiones suficientes para personalizar esta guía.'
 
-            content = f"<h3>Guía de Ejercicios Personalizada</h3><p>{perf_summary}</p>"
-            content += "<ol><li>Ejercicio respiratorio: 5 minutos.</li><li>Ejercicios de atención: 3 bloques de 4 minutos.</li><li>Revisión de estrategias aprendidas en la sesión.</li></ol>"
+            content = f'<h3>Guía de Ejercicios Personalizada</h3><p>{perf_summary}</p>'
+            content += '<ol><li>Ejercicio respiratorio: 5 minutos.</li><li>Ejercicios de atención: 3 bloques de 4 minutos.</li><li>Revisión de estrategias aprendidas en la sesión.</li></ol>'
             return jsonify({'id': resource_id, 'title': 'Guía de Ejercicios', 'content': content})
 
         if resource_id == 2:
-            content = "<h3>Video Tutorial: Técnicas básicas</h3><p>Este video explica las técnicas recomendadas y cuándo aplicarlas. Duración: 15:30.</p>"
-            content += "<p>Puntos clave: respiración, pausas activas, seguimiento de progreso.</p>"
+            content = '<h3>Video Tutorial: Técnicas básicas</h3><p>Este video explica las técnicas recomendadas y cuándo aplicarlas. Duración: 15:30.</p>'
+            content += '<p>Puntos clave: respiración, pausas activas, seguimiento de progreso.</p>'
             return jsonify({'id': resource_id, 'title': 'Video Tutorial', 'content': content})
 
         if resource_id == 3:
-            content = "<h3>Hoja de Práctica</h3><p>Plantilla descargable para llevar un registro de ejercicios diarios.</p>"
-            content += "<ul><li>Día 1: Ejercicio A - 10 repeticiones</li><li>Día 2: Ejercicio B - 8 repeticiones</li></ul>"
+            content = (
+                '<h3>Hoja de Práctica</h3><p>Plantilla descargable para llevar un registro de ejercicios diarios.</p>'
+            )
+            content += (
+                '<ul><li>Día 1: Ejercicio A - 10 repeticiones</li><li>Día 2: Ejercicio B - 8 repeticiones</li></ul>'
+            )
             return jsonify({'id': resource_id, 'title': 'Hoja de Práctica', 'content': content})
 
         return jsonify({'error': 'Recurso no encontrado'}), 404
     except Exception as e:
         return jsonify({'error': 'Error generando recurso', 'detail': str(e)}), 500
+
 
 @api_bp.route('/appointments/<int:appointment_id>/upload_image', methods=['POST'])
 @login_required
@@ -583,40 +651,39 @@ def upload_session_image(appointment_id):
 
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'error': 'Acceso denegado'}), 403
-        
+
     appointment = Appointment.query.get_or_404(appointment_id)
-    
+
     if current_user.role == 'terapista' and appointment.therapist_id != current_user.id:
         return jsonify({'error': 'No tienes permiso para editar esta sesión'}), 403
-        
+
     if 'image' not in request.files:
         return jsonify({'error': 'No se encontró el archivo de imagen'}), 400
-        
+
     file = request.files['image']
     image_type = request.form.get('image_type', 'session_photo')
-    notes = request.form.get('notes', '')
-    
+    notes = sanitize_text(request.form.get('notes', ''), 1000)
+
     if file.filename == '':
         return jsonify({'error': 'Nombre de archivo vacío'}), 400
-        
+
     if file:
         allowed_extensions = {'png', 'jpg', 'jpeg', 'webp', 'doc', 'docx'}
-        if '.' not in file.filename or \
-           file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
             return jsonify({'error': 'Tipo de archivo no permitido (solo imágenes y Word)'}), 400
-            
+
         # Create secure filename with UUID to prevent collisions
         original_filename = secure_filename(file.filename)
         extension = original_filename.rsplit('.', 1)[1].lower()
-        unique_filename = f"{uuid.uuid4().hex}.{extension}"
-        
+        unique_filename = f'{uuid.uuid4().hex}.{extension}'
+
         # Create directory structure: static/uploads/session_images/YYYY/MM
         now = datetime.utcnow()
-        relative_path = os.path.join('uploads', 'session_images', str(now.year), f"{now.month:02d}")
+        relative_path = os.path.join('uploads', 'session_images', str(now.year), f'{now.month:02d}')
         upload_folder = os.path.join(current_app.root_path, 'static', relative_path)
-        
+
         os.makedirs(upload_folder, exist_ok=True)
-        
+
         file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
 
@@ -625,43 +692,46 @@ def upload_session_image(appointment_id):
             # Pass the file PATH instead of opening it, to avoid stream issues
             patient_name = appointment.patient.username if appointment.patient else 'Paciente_Desconocido'
             session_date = appointment.start_time.strftime('%Y-%m-%d')
-            
-            print(f"Subiendo a Drive: {patient_name} / {session_date} / {unique_filename}")
+
+            print(f'Subiendo a Drive: {patient_name} / {session_date} / {unique_filename}')
             drive_service.upload_file(
-                file_path,  # Path string 
+                file_path,  # Path string
                 unique_filename,
                 file.mimetype,
                 patient_name,
-                session_date
+                session_date,
             )
         except Exception as e:
-            print(f"Error subiendo a Google Drive: {str(e)}")
-        
+            print(f'Error subiendo a Google Drive: {str(e)}')
+
         # Store relative path in DB for serving
         db_relative_path = os.path.join(relative_path, unique_filename)
-        
+
         session_image = SessionImage(
             appointment_id=appointment.id,
             image_path=db_relative_path,
             image_type=image_type,
             uploaded_by_id=current_user.id,
-            notes=notes
+            notes=notes,
         )
-        
+
         db.session.add(session_image)
         db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'image': {
-                'id': session_image.id,
-                'url': url_for('static', filename=db_relative_path),
-                'type': session_image.image_type,
-                'notes': session_image.notes
+
+        return jsonify(
+            {
+                'success': True,
+                'image': {
+                    'id': session_image.id,
+                    'url': url_for('static', filename=db_relative_path),
+                    'type': session_image.image_type,
+                    'notes': session_image.notes,
+                },
             }
-        })
-        
+        )
+
     return jsonify({'error': 'Error al subir archivo'}), 500
+
 
 @api_bp.route('/appointments/<int:appointment_id>/images/<int:image_id>', methods=['DELETE'])
 @login_required
@@ -671,11 +741,11 @@ def delete_session_image(appointment_id, image_id):
         return jsonify({'error': 'Acceso denegado'}), 403
 
     image = SessionImage.query.get_or_404(image_id)
-    
+
     # Verify it belongs to the appointment
     if image.appointment_id != appointment_id:
         return jsonify({'error': 'Imagen no corresponde a la sesión'}), 400
-        
+
     # Verify ownership (therapist assigned to appointment)
     if current_user.role == 'terapista':
         appointment = Appointment.query.get(appointment_id)
@@ -686,12 +756,13 @@ def delete_session_image(appointment_id, image_id):
         full_path = os.path.join(current_app.root_path, 'static', image.image_path)
         if os.path.exists(full_path):
             os.remove(full_path)
-            
+
         db.session.delete(image)
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'Error al eliminar imagen: {str(e)}'}), 500
+
 
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['POST'])
 @login_required
@@ -712,10 +783,10 @@ def upload_session_program(appointment_id):
         return jsonify({'success': False, 'error': 'Solo se aceptan archivos .docx'}), 400
 
     try:
-        from app.services.audit_service import extract_docx_text
         from app.models import SessionAudit
+        from app.services.audit_service import extract_docx_text
 
-        temp_filename = f"temp_program_{uuid.uuid4().hex}.docx"
+        temp_filename = f'temp_program_{uuid.uuid4().hex}.docx'
         temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audit')
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, temp_filename)
@@ -742,34 +813,35 @@ def upload_session_program(appointment_id):
 
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'message': 'Programación subida correctamente',
-            'planned_text_preview': planned_text[:500] + ('...' if len(planned_text) > 500 else ''),
-            'char_count': len(planned_text)
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Programación subida correctamente',
+                'planned_text_preview': planned_text[:500] + ('...' if len(planned_text) > 500 else ''),
+                'char_count': len(planned_text),
+            }
+        )
 
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error subiendo programación: {str(e)}")
+        current_app.logger.error(f'Error subiendo programación: {str(e)}')
         return jsonify({'success': False, 'error': f'Error interno: {str(e)}'}), 500
+
 
 @api_bp.route('/sessions/auto-complete-expired', methods=['POST'])
 @login_required
 @csrf.exempt
 def completar_sesiones_vencidas():
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
-    expired = Appointment.query.filter(
-        Appointment.status == 'in_progress',
-        Appointment.end_time < cutoff
-    ).all()
+    expired = Appointment.query.filter(Appointment.status == 'in_progress', Appointment.end_time < cutoff).all()
     count = 0
     for appt in expired:
         appt.status = 'completed'
         count += 1
     db.session.commit()
     return jsonify({'success': True, 'completed': count})
+
 
 @api_bp.route('/sessions/<int:appointment_id>/audio', methods=['POST'])
 @login_required
@@ -797,11 +869,11 @@ def upload_session_audio(appointment_id):
         return jsonify({'success': False, 'error': f'Formato no soportado. Usa: {", ".join(allowed_audio)}'}), 400
 
     try:
-        from app.services.audit_service import transcribe_audio
         from app.models import SessionAudit
+        from app.services.audit_service import transcribe_audio
 
         # Guardar temporalmente (será eliminado por audit_service)
-        temp_filename = f"session_audio_{appointment_id}_{uuid.uuid4().hex}.{ext}"
+        temp_filename = f'session_audio_{appointment_id}_{uuid.uuid4().hex}.{ext}'
         temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audio')
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, temp_filename)
@@ -828,27 +900,30 @@ def upload_session_audio(appointment_id):
 
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'message': 'Audio transcrito correctamente. Archivo eliminado del servidor.',
-            'transcript_text': result['text'],
-            'transcript_preview': result['text'][:500] + ('...' if len(result['text']) > 500 else ''),
-            'duration_seconds': result.get('duration', 0),
-            'char_count': len(result['text'])
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Audio transcrito correctamente. Archivo eliminado del servidor.',
+                'transcript_text': result['text'],
+                'transcript_preview': result['text'][:500] + ('...' if len(result['text']) > 500 else ''),
+                'duration_seconds': result.get('duration', 0),
+                'char_count': len(result['text']),
+            }
+        )
 
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error transcribiendo audio: {str(e)}")
+        current_app.logger.error(f'Error transcribiendo audio: {str(e)}')
         # Asegurar eliminación del audio en caso de error no manejado
         try:
             if 'temp_path' in locals() and os.path.exists(temp_path):
                 os.remove(temp_path)
-                current_app.logger.info(f" Audio eliminado tras error: {temp_path}")
+                current_app.logger.info(f' Audio eliminado tras error: {temp_path}')
         except Exception:
             pass
         return jsonify({'success': False, 'error': f'Error al transcribir: {str(e)}'}), 500
+
 
 @api_bp.route('/sessions/<int:appointment_id>/audit', methods=['POST'])
 @login_required
@@ -858,17 +933,23 @@ def trigger_session_audit(appointment_id):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     try:
-        from app.services.audit_service import run_audit
         from app.models import User
+        from app.services.audit_service import run_audit
+
         report = run_audit(appointment_id)
         appt = Appointment.query.get(appointment_id)
         score = None
         if report:
-            score = report.get('score') or (report.get('report') or {}).get('audit_score') if isinstance(report, dict) else None
+            score = (
+                report.get('score') or (report.get('report') or {}).get('audit_score')
+                if isinstance(report, dict)
+                else None
+            )
         therapist_name = appt.therapist.username if appt and appt.therapist else 'Desconocido'
         patient_name = appt.patient.username if appt and appt.patient else 'Desconocido'
         score_str = f' — Puntuación: {score}/100' if score is not None else ''
         from app.services.notification_service import NotificationService
+
         ns = NotificationService()
         msg_admin = f'Auditoría completada: {therapist_name} / {patient_name}{score_str}'
         admins = User.query.filter_by(role='admin').all()
@@ -882,24 +963,22 @@ def trigger_session_audit(appointment_id):
         if appt and score is not None:
             try:
                 from app.services.report_service import ReportService
+
                 rs = ReportService()
                 session_date = appt.start_time.date() if appt.start_time else datetime.utcnow().date()
                 rs.generate_daily_report(appt.patient_id, appt.therapist_id, session_date.isoformat())
             except Exception as daily_err:
-                current_app.logger.error(f"Error generando reporte diario post-auditoría: {daily_err}")
+                current_app.logger.error(f'Error generando reporte diario post-auditoría: {daily_err}')
 
-        return jsonify({
-            'success': True,
-            'message': 'Auditoría completada',
-            'report': report
-        })
+        return jsonify({'success': True, 'message': 'Auditoría completada', 'report': report})
     except ValueError as e:
         err_msg = str(e)
-        current_app.logger.warning(f"Audit ValueError for session {appointment_id}: {err_msg}")
+        current_app.logger.warning(f'Audit ValueError for session {appointment_id}: {err_msg}')
         return jsonify({'success': False, 'error': err_msg, 'reason': 'validation'}), 400
     except Exception as e:
-        current_app.logger.error(f"Error en auditoría IA: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error en auditoría IA: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': f'Error en auditoría: {str(e)}', 'reason': 'server'}), 500
+
 
 @api_bp.route('/sessions/<int:appointment_id>/audit', methods=['GET'])
 @login_required
@@ -912,32 +991,35 @@ def get_session_audit(appointment_id):
 
     audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
     if not audit:
-        return jsonify({
-            'success': True,
-            'exists': False,
-            'message': 'No hay registro de auditoría para esta sesión'
-        })
+        return jsonify({'success': True, 'exists': False, 'message': 'No hay registro de auditoría para esta sesión'})
 
-    return jsonify({
-        'success': True,
-        'exists': True,
-        'audit': {
-            'id': audit.id,
-            'has_program': bool(audit.planned_text),
-            'has_transcript': bool(audit.transcript_text),
-            'planned_text_preview': (audit.planned_text[:300] + '...') if audit.planned_text and len(audit.planned_text) > 300 else audit.planned_text,
-            'transcript_preview': (audit.transcript_text[:300] + '...') if audit.transcript_text and len(audit.transcript_text) > 300 else audit.transcript_text,
-            'planned_text': audit.planned_text,
-            'transcript_text': audit.transcript_text,
-            'audio_duration_seconds': audit.audio_duration_seconds,
-            'audit_status': audit.audit_status,
-            'audit_score': audit.audit_score,
-            'report': audit.get_report() if audit.audit_status == 'completed' else None,
-            'docx_uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
-            'audio_transcribed_at': audit.audio_transcribed_at.isoformat() if audit.audio_transcribed_at else None,
-            'audited_at': audit.audited_at.isoformat() if audit.audited_at else None
+    return jsonify(
+        {
+            'success': True,
+            'exists': True,
+            'audit': {
+                'id': audit.id,
+                'has_program': bool(audit.planned_text),
+                'has_transcript': bool(audit.transcript_text),
+                'planned_text_preview': (audit.planned_text[:300] + '...')
+                if audit.planned_text and len(audit.planned_text) > 300
+                else audit.planned_text,
+                'transcript_preview': (audit.transcript_text[:300] + '...')
+                if audit.transcript_text and len(audit.transcript_text) > 300
+                else audit.transcript_text,
+                'planned_text': audit.planned_text,
+                'transcript_text': audit.transcript_text,
+                'audio_duration_seconds': audit.audio_duration_seconds,
+                'audit_status': audit.audit_status,
+                'audit_score': audit.audit_score,
+                'report': audit.get_report() if audit.audit_status == 'completed' else None,
+                'docx_uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
+                'audio_transcribed_at': audit.audio_transcribed_at.isoformat() if audit.audio_transcribed_at else None,
+                'audited_at': audit.audited_at.isoformat() if audit.audited_at else None,
+            },
         }
-    })
+    )
+
 
 @api_bp.route('/sessions/<int:appointment_id>/compare-live', methods=['GET'])
 @login_required
@@ -958,16 +1040,19 @@ def compare_session_live(appointment_id):
     ratio = min(1.0, duracion / 2700)
     factor = min(1.0, ratio / 0.1)
 
-    return jsonify({
-        'success': True,
-        'score_vectorial': vectorial['score_vectorial'],
-        'objetivos_cubiertos': vectorial['objetivos_cubiertos'],
-        'n_objectives': vectorial['n_objectives'],
-        'ratio_duracion': round(ratio, 3),
-        'factor_penalizacion': round(factor, 3),
-        'duracion_segundos': duracion,
-        'char_count': len(audit.transcript_text or '')
-    })
+    return jsonify(
+        {
+            'success': True,
+            'score_vectorial': vectorial['score_vectorial'],
+            'objetivos_cubiertos': vectorial['objetivos_cubiertos'],
+            'n_objectives': vectorial['n_objectives'],
+            'ratio_duracion': round(ratio, 3),
+            'factor_penalizacion': round(factor, 3),
+            'duracion_segundos': duracion,
+            'char_count': len(audit.transcript_text or ''),
+        }
+    )
+
 
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['DELETE'])
 @login_required
@@ -976,6 +1061,7 @@ def delete_session_program(appointment_id):
         return jsonify({'success': False, 'error': 'Solo el administrador puede eliminar la programación'}), 403
 
     from app.models import SessionAudit
+
     audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
     if not audit or not audit.planned_text:
         return jsonify({'success': False, 'error': 'No hay programación para esta sesión'}), 404
@@ -993,9 +1079,10 @@ def delete_session_program(appointment_id):
     # If no transcript either, delete the whole record
     if not audit.transcript_text:
         db.session.delete(audit)
-    
+
     db.session.commit()
     return jsonify({'success': True, 'message': 'Programación eliminada'})
+
 
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['GET'])
 @login_required
@@ -1005,16 +1092,20 @@ def get_session_program(appointment_id):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
     from app.models import SessionAudit
+
     audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
     if not audit or not audit.planned_text:
         return jsonify({'success': False, 'exists': False})
 
-    return jsonify({
-        'success': True,
-        'exists': True,
-        'planned_text': audit.planned_text,
-        'uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None
-    })
+    return jsonify(
+        {
+            'success': True,
+            'exists': True,
+            'planned_text': audit.planned_text,
+            'uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
+        }
+    )
+
 
 @api_bp.route('/sessions/<int:session_id>/start-recording', methods=['POST'])
 @login_required
@@ -1038,6 +1129,7 @@ def start_session_recording(session_id):
 
     return jsonify({'success': True, 'message': 'Grabación iniciada', 'session_id': session_id})
 
+
 @api_bp.route('/sessions/<int:session_id>/analyze-attendance', methods=['POST'])
 @login_required
 def analyze_session_attendance(session_id):
@@ -1050,44 +1142,53 @@ def analyze_session_attendance(session_id):
         return jsonify({'success': False, 'error': 'No tienes permiso para esta sesión'}), 403
 
     from app.models import SessionAudit
+
     audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
 
     transcript = audit.transcript_text if audit and audit.transcript_text else ''
     planned = audit.planned_text if audit and audit.planned_text else ''
 
     if not transcript or len(transcript.strip()) < 50:
-        return jsonify({
-            'success': True,
-            'suggested_attendance': 'absent',
-            'confidence': 0.95,
-            'reason': 'Sin transcripción o muy corta',
-            'coverage_pct': 0
-        })
+        return jsonify(
+            {
+                'success': True,
+                'suggested_attendance': 'absent',
+                'confidence': 0.95,
+                'reason': 'Sin transcripción o muy corta',
+                'coverage_pct': 0,
+            }
+        )
 
     if not planned:
-        return jsonify({
-            'success': True,
-            'suggested_attendance': 'present',
-            'confidence': 0.5,
-            'reason': 'Sin programación para comparar',
-            'coverage_pct': 50
-        })
+        return jsonify(
+            {
+                'success': True,
+                'suggested_attendance': 'present',
+                'confidence': 0.5,
+                'reason': 'Sin programación para comparar',
+                'coverage_pct': 50,
+            }
+        )
 
     try:
         from app.services.audit_service import analyze_attendance
+
         result = analyze_attendance(planned, transcript)
-        return jsonify({
-            'success': True,
-            'suggested_attendance': result['suggested_attendance'],
-            'confidence': result['confidence'],
-            'reason': result.get('reason', ''),
-            'coverage_pct': result.get('coverage_pct', 0)
-        })
+        return jsonify(
+            {
+                'success': True,
+                'suggested_attendance': result['suggested_attendance'],
+                'confidence': result['confidence'],
+                'reason': result.get('reason', ''),
+                'coverage_pct': result.get('coverage_pct', 0),
+            }
+        )
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error analyzing attendance: {str(e)}")
+        current_app.logger.error(f'Error analyzing attendance: {str(e)}')
         return jsonify({'success': False, 'error': f'Error: {str(e)}'}), 500
+
 
 @api_bp.route('/sessions/<int:session_id>/mark-absent', methods=['POST'])
 @login_required
@@ -1106,11 +1207,8 @@ def mark_session_absent(session_id):
     appt.status_changed_by = current_user.id
     db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message': 'Sesión marcada como ausente',
-        'session_id': session_id
-    })
+    return jsonify({'success': True, 'message': 'Sesión marcada como ausente', 'session_id': session_id})
+
 
 @api_bp.route('/sessions/<int:session_id>/feedback', methods=['POST'])
 @login_required
@@ -1129,6 +1227,7 @@ def submit_session_feedback(session_id):
     notes = data.get('notes', '')
 
     from app.models import SessionAudit
+
     audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
     if not audit:
         audit = SessionAudit(appointment_id=session_id)
@@ -1142,6 +1241,7 @@ def submit_session_feedback(session_id):
 
     return jsonify({'success': True, 'message': 'Feedback guardado'})
 
+
 @api_bp.route('/sessions/current', methods=['GET'])
 @login_required
 def api_current_session():
@@ -1149,25 +1249,31 @@ def api_current_session():
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     from sqlalchemy import or_
-    appt = Appointment.query.filter(
-        Appointment.therapist_id == current_user.id,
-        Appointment.start_time <= now,
-        or_(Appointment.end_time >= now, Appointment.end_time.is_(None)),
-        Appointment.status.in_(['scheduled', 'in_progress'])
-    ).order_by(Appointment.start_time).first()
+
+    appt = (
+        Appointment.query.filter(
+            Appointment.therapist_id == current_user.id,
+            Appointment.start_time <= now,
+            or_(Appointment.end_time >= now, Appointment.end_time.is_(None)),
+            Appointment.status.in_(['scheduled', 'in_progress']),
+        )
+        .order_by(Appointment.start_time)
+        .first()
+    )
     if not appt:
         return jsonify({'success': False, 'has_active': False})
-    return jsonify({
-        'success': True,
-        'has_active': True,
-        'session': {
-            'id': appt.id,
-            'title': appt.title or 'Sesión',
-            'start': appt.start_time.isoformat() if appt.start_time else None,
-            'end': appt.end_time.isoformat() if appt.end_time else None,
-            'status': appt.status,
-            'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
-            'location': appt.location,
+    return jsonify(
+        {
+            'success': True,
+            'has_active': True,
+            'session': {
+                'id': appt.id,
+                'title': appt.title or 'Sesión',
+                'start': appt.start_time.isoformat() if appt.start_time else None,
+                'end': appt.end_time.isoformat() if appt.end_time else None,
+                'status': appt.status,
+                'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+                'location': appt.location,
+            },
         }
-    })
-
+    )

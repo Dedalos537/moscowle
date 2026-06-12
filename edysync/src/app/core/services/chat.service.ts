@@ -43,9 +43,7 @@ export interface MessageData {
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private socket!: Socket;
-  private readonly SOCKET_URL = environment.production
-    ? 'https://moscowle-backend-production.up.railway.app'
-    : 'http://127.0.0.1:5001';
+  private readonly SOCKET_URL = environment.production ? 'https://moscowle-backend-production.up.railway.app' : 'http://127.0.0.1:5001';
 
   private _onlineUsers = new BehaviorSubject<Set<number>>(new Set());
   onlineUsers$ = this._onlineUsers.asObservable();

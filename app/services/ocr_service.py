@@ -204,7 +204,7 @@ def validate_voucher_with_llama(amount: float, names: list, text_sample: str) ->
     """Valida datos de voucher usando Llama para mayor confianza"""
     try:
         import ollama
-        client = ollama.Client(host='http://127.0.0.1:11434')
+        client = ollama.Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
         
         prompt = f"""Analiza este texto de boleta:
         Monto encontrado: S/. {amount:.2f}

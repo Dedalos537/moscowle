@@ -1,15 +1,17 @@
 from datetime import datetime
 from app.extensions import db
+from app.models.base import AuditMixin
 
 
-class SessionAudit(db.Model):
+class SessionAudit(db.Model, AuditMixin):
     __tablename__ = 'session_audit'
     id = db.Column(db.Integer, primary_key=True)
+    is_active = db.Column(db.Boolean, default=True)
     appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=False, unique=True)
 
     planned_text = db.Column(db.Text, nullable=True)
     docx_uploaded_at = db.Column(db.DateTime, nullable=True)
-    docx_uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    docx_uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
 
     transcript_text = db.Column(db.Text, nullable=True)
     audio_transcribed_at = db.Column(db.DateTime, nullable=True)
@@ -19,9 +21,6 @@ class SessionAudit(db.Model):
     audit_score = db.Column(db.Float, nullable=True)
     audit_status = db.Column(db.String(30), default='pending')
     audited_at = db.Column(db.DateTime, nullable=True)
-
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     appointment = db.relationship(
         'Appointment',
@@ -42,11 +41,12 @@ class SessionAudit(db.Model):
             return {}
 
 
-class WeeklyReport(db.Model):
+class WeeklyReport(db.Model, AuditMixin):
     __tablename__ = 'weekly_report'
     id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     week_start = db.Column(db.Date, nullable=False)
     week_end = db.Column(db.Date, nullable=False)
     report_text = db.Column(db.Text, nullable=True)
@@ -54,22 +54,21 @@ class WeeklyReport(db.Model):
     sessions_count = db.Column(db.Integer, default=0)
     objectives_achieved = db.Column(db.Integer, default=0)
     objectives_total = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('weekly_reports', lazy=True))
     therapist = db.relationship('User', foreign_keys=[therapist_id])
 
 
-class DailyReport(db.Model):
+class DailyReport(db.Model, AuditMixin):
     __tablename__ = 'daily_report'
     id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     date = db.Column(db.Date, nullable=False)
     sessions_count = db.Column(db.Integer, default=0)
     avg_score = db.Column(db.Float, default=0.0)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])
@@ -79,11 +78,12 @@ class DailyReport(db.Model):
     )
 
 
-class MonthlyReport(db.Model):
+class MonthlyReport(db.Model, AuditMixin):
     __tablename__ = 'monthly_report'
     id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     month = db.Column(db.Integer, nullable=False)
     year = db.Column(db.Integer, nullable=False)
     sessions_count = db.Column(db.Integer, default=0)
@@ -91,7 +91,6 @@ class MonthlyReport(db.Model):
     objectives_achieved = db.Column(db.Integer, default=0)
     objectives_total = db.Column(db.Integer, default=0)
     report_text = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])
@@ -101,11 +100,12 @@ class MonthlyReport(db.Model):
     )
 
 
-class QuarterlyReport(db.Model):
+class QuarterlyReport(db.Model, AuditMixin):
     __tablename__ = 'quarterly_report'
     id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     quarter = db.Column(db.Integer, nullable=False)
     year = db.Column(db.Integer, nullable=False)
     sessions_count = db.Column(db.Integer, default=0)
@@ -113,7 +113,6 @@ class QuarterlyReport(db.Model):
     objectives_achieved = db.Column(db.Integer, default=0)
     objectives_total = db.Column(db.Integer, default=0)
     report_text = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     patient = db.relationship('User', foreign_keys=[patient_id])
     therapist = db.relationship('User', foreign_keys=[therapist_id])

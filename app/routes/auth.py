@@ -1,11 +1,14 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
-from flask_login import login_required, current_user
-from app.extensions import limiter, csrf, db
-from app.services.auth_service import AuthService
-from email_validator import validate_email, EmailNotValidError
-from app.schemas.auth_schema import validate_login_input
-from flask_wtf.csrf import generate_csrf
 from datetime import datetime
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
+from flask_wtf.csrf import generate_csrf
+
+from app.auth_compat import current_user, login_required
+from app.extensions import csrf, db, limiter
+from app.schemas.auth_schema import validate_login_input
+from app.services.auth_service import AuthService
+from app.models.refresh_token import RefreshToken
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
@@ -18,6 +21,7 @@ def _auto_start_session(user):
     try:
         now = datetime.utcnow()
         from app.models import Appointment, SessionAudit
+
         upcoming = Appointment.query.filter(
             Appointment.therapist_id == user.id,
             Appointment.status == 'scheduled',
@@ -36,33 +40,20 @@ def _auto_start_session(user):
         pass
 
 
-def _safe_next_url(target):
-    from urllib.parse import urlparse, urljoin
-    host = urlparse(request.host_url)
-    ref = urlparse(urljoin(request.host_url, target))
-    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
-
-
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("50 per hour")
+@limiter.limit('50 per hour')
 def login():
-    try:
-        if current_user and current_user.is_authenticated:
-            next_url = request.args.get('next')
-            if next_url and _safe_next_url(next_url):
-                return redirect(next_url)
-            return redirect(url_for('main.dashboard'))
-    except Exception:
-        pass
+    if current_user.is_authenticated:
+        next_url = request.args.get('next')
+        if next_url and _safe_next_url(next_url):
+            return redirect(next_url)
+        return redirect(url_for('main.dashboard'))
     if request.method == 'POST':
-        form = {
-            'email': request.form.get('email', '').strip().lower(),
-            'password': request.form.get('password', '')
-        }
+        form = {'email': request.form.get('email', '').strip().lower(), 'password': request.form.get('password', '')}
         data, errors = validate_login_input(form)
         if errors:
             flash('Por favor corrige los errores del formulario.', 'error')
-            current_app.logger.debug(f"Login validation errors: {errors}")
+            current_app.logger.debug(f'Login validation errors: {errors}')
             return render_template('login.html')
 
         email = data['email']
@@ -71,38 +62,62 @@ def login():
 
         success, user = auth_service.login(email, password, remember=remember)
 
+        if success == 'mfa_required':
+            return redirect(url_for('mfa.mfa_login', email=user.email))
         if success:
             _auto_start_session(user)
+            access_token = create_access_token(identity=str(user.id))
+            refresh_token = create_refresh_token(identity=str(user.id))
             next_url = request.form.get('next') or request.args.get('next')
             if next_url and _safe_next_url(next_url):
-                return redirect(next_url)
-            return redirect(url_for('main.dashboard'))
+                response = redirect(next_url)
+            else:
+                response = redirect(url_for('main.dashboard'))
+            set_access_cookies(response, access_token)
+            set_refresh_cookies(response, refresh_token)
+            return response
         else:
             flash('Credenciales inválidas o cuenta desactivada.', 'error')
             return render_template('login.html')
-    
+
     next_url = request.args.get('next')
     return render_template('login.html', next_url=next_url or '')
 
 
+def _safe_next_url(target):
+    from urllib.parse import urljoin, urlparse
+
+    host = urlparse(request.host_url)
+    ref = urlparse(urljoin(request.host_url, target))
+    return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
+
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    RefreshToken.revoke_all_for_user(current_user.id)
     auth_service.logout()
+    response = redirect(url_for('auth.login'))
+    unset_jwt_cookies(response)
     if request.headers.get('Accept') and 'application/json' in request.headers.get('Accept', ''):
-        return jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
-    return redirect(url_for('auth.login'))
+        resp_json = jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
+        unset_jwt_cookies(resp_json)
+        return resp_json
+    return response
 
 
 @auth_bp.route('/api/logout', methods=['POST'])
 @csrf.exempt
 def api_logout():
+    if current_user.is_authenticated:
+        RefreshToken.revoke_all_for_user(current_user.id)
     auth_service.logout()
-    return jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
+    response = jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
+    unset_jwt_cookies(response)
+    return response
 
 
 @auth_bp.route('/api/login', methods=['POST'])
-@limiter.limit("20 per minute")
+@limiter.limit('20 per minute')
 @csrf.exempt
 def api_login():
     try:
@@ -116,28 +131,37 @@ def api_login():
 
         success, user = auth_service.login(email, password, remember=remember)
 
+        if success == 'mfa_required':
+            return jsonify({'success': False, 'mfa_required': True, 'email': user.email}), 401
         if success:
             _auto_start_session(user)
+            access_token = create_access_token(identity=str(user.id))
+            refresh_token = create_refresh_token(identity=str(user.id))
             csrf_token = generate_csrf()
-            return jsonify({
-                'success': True,
-                'csrf_token': csrf_token,
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                    'role': user.role,
+            response = jsonify(
+                {
+                    'success': True,
+                    'csrf_token': csrf_token,
+                    'user': {
+                        'id': user.id,
+                        'email': user.email,
+                        'username': user.username,
+                        'role': user.role,
+                    },
                 }
-            })
+            )
+            set_access_cookies(response, access_token)
+            set_refresh_cookies(response, refresh_token)
+            return response
         else:
             return jsonify({'success': False, 'error': 'Credenciales inválidas o cuenta desactivada'}), 401
     except Exception as e:
-        current_app.logger.warning(f"/api/login error: {e}")
+        current_app.logger.warning(f'/api/login error: {e}')
         return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
 
 
 @auth_bp.route('/api/auth/validate', methods=['POST'])
-@limiter.limit("60 per minute")
+@limiter.limit('60 per minute')
 @csrf.exempt
 def api_auth_validate():
     try:
@@ -146,11 +170,11 @@ def api_auth_validate():
         password = data.get('password') or ''
         if not email or not password:
             return jsonify({'valid': False})
-        
+
         is_valid = auth_service.validate_credentials(email, password)
         return jsonify({'valid': is_valid})
     except Exception as e:
-        current_app.logger.warning(f"/api/auth/validate error: {e}")
+        current_app.logger.warning(f'/api/auth/validate error: {e}')
         return jsonify({'valid': False})
 
 
@@ -158,12 +182,42 @@ def api_auth_validate():
 @login_required
 def api_auth_me():
     try:
-        return jsonify({
-            'id': current_user.id,
-            'email': current_user.email,
-            'username': current_user.username,
-            'role': current_user.role,
-        })
+        return jsonify(
+            {
+                'id': current_user.id,
+                'email': current_user.email,
+                'username': current_user.username,
+                'role': current_user.role,
+            }
+        )
     except Exception as e:
-        current_app.logger.warning(f"/api/auth/me error: {e}")
+        current_app.logger.warning(f'/api/auth/me error: {e}')
         return jsonify({'error': 'Error al obtener usuario'}), 500
+
+
+@auth_bp.route('/api/auth/refresh', methods=['POST'])
+@csrf.exempt
+def api_auth_refresh():
+    from flask_jwt_extended import get_jwt
+    try:
+        verify_jwt_in_request(refresh=True, locations=['cookies'])
+        identity = get_jwt_identity()
+
+        # Rotar refresh token: revocar viejo, crear nuevo
+        claims = get_jwt()
+        jti = claims.get('jti')
+        if jti:
+            old = RefreshToken.query.filter_by(token_hash=RefreshToken._hash(jti)).first()
+            if old:
+                old.revoke()
+
+        new_refresh_token = create_refresh_token(identity=identity)
+        access_token = create_access_token(identity=identity)
+
+        response = jsonify({'success': True, 'message': 'Token refrescado'})
+        set_access_cookies(response, access_token)
+        set_refresh_cookies(response, new_refresh_token)
+        return response
+    except Exception as e:
+        current_app.logger.debug(f'Token refresh failed: {e}')
+        return jsonify({'success': False, 'error': 'Token inválido o expirado'}), 401

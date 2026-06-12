@@ -1,0 +1,73 @@
+[project]
+name = "moscowle-backend"
+version = "1.0.0"
+description = "EduSync AI - Moscowle IA Backend"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "S", "B", "SIM", "UP", "PL"]
+ignore = [
+  "S101",  # Allow assert
+  "S311",  # Allow random
+  "PLR2004", # Magic value comparisons
+  "PLR0913", # Too many arguments
+  "PLR0915", # Too many statements
+  "PLR0911", # Too many return values
+  "PLR0912", # Too many branches
+  "PLR1702", # Too many nested blocks
+  "N801",   # Class names
+  "N802",   # Function names
+  "N803",   # Argument names
+  "N806",   # Variable names
+  "N815",   # Mixed case variables
+  "UP007",  # X | Y style
+  "UP006",  # typing style
+  "UP035",  # deprecated imports
+  "PLC1901", # Simplify
+  "SIM115", # Open context manager
+  "SIM108", # Ternary
+  "SIM117", # Multiple with
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "PL", "B", "SIM"]
+"app/models/*" = ["N"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=app --cov-report=term-missing --cov-report=html:coverage_report -p no:cacheprovider"
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+  "*/migrations/*",
+  "*/tests/*",
+  "*/__pycache__/*",
+  "*/venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "if __name__ == .__main__.:",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "except Exception",
+  "except:",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

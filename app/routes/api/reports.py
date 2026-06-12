@@ -1,28 +1,30 @@
-from app.routes.api._shared import (
-    db, User, Notification, Appointment, Message, Game, SessionMetrics,
-    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
-    genai, Groq, _ollama_client, predict_level, start_async_training,
-    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
-    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
-    AvailabilityService, requests, or_, func,
-    report_service,
-    LIMA_TZ, _parse_json, _parse_datetime, analyze_contact_message_ai,
-    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
-    uuid, secure_filename, datetime, timedelta, timezone,
-    login_required, current_user, request, jsonify, current_app, url_for,
-)
 from app.routes.api import api_bp
+from app.routes.api._shared import (
+    csrf,
+    current_app,
+    current_user,
+    datetime,
+    jsonify,
+    login_required,
+    report_service,
+    request,
+    timedelta,
+)
+
+
 @api_bp.route('/sessions/<int:appointment_id>/report-docx', methods=['GET'])
 @login_required
 def download_report_docx(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
-    from app.models import SessionAudit, Appointment
-    from docx import Document
-    from docx.shared import Inches, Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
     import io
+
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    from app.models import Appointment, SessionAudit
 
     appt = Appointment.query.get(appointment_id)
     if not appt:
@@ -99,12 +101,14 @@ def download_report_docx(appointment_id):
     filename = f'auditoria_{patient_safe}_{appointment_id}.docx'
 
     from flask import send_file
+
     return send_file(
         buf,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         as_attachment=True,
-        download_name=filename
+        download_name=filename,
     )
+
 
 @api_bp.route('/reports/generate-weekly', methods=['POST'])
 @login_required
@@ -122,15 +126,19 @@ def generate_weekly_report():
 
     try:
         from app.services.report_service import ReportService
+
         rs = ReportService()
-        therapist_id = current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        therapist_id = (
+            current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        )
         report = rs.generate_patient_weekly_report(patient_id, therapist_id, week_start)
         return jsonify({'success': True, 'report': report})
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
-        current_app.logger.error(f"Error generating weekly report: {str(e)}")
+        current_app.logger.error(f'Error generating weekly report: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @api_bp.route('/reports/weekly/<int:patient_id>', methods=['GET'])
 @login_required
@@ -146,6 +154,7 @@ def get_weekly_report(patient_id):
 
     try:
         from app.services.report_service import ReportService
+
         rs = ReportService()
         report = rs.get_patient_weekly_report(patient_id, week_start)
         if not report:
@@ -153,6 +162,7 @@ def get_weekly_report(patient_id):
         return jsonify({'success': True, 'exists': True, 'report': report})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @api_bp.route('/reports/generate-daily', methods=['POST'])
 @login_required
@@ -170,84 +180,91 @@ def generate_daily_report():
 
     try:
         from app.services.report_service import ReportService
+
         rs = ReportService()
-        therapist_id = current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        therapist_id = (
+            current_user.id if current_user.role == 'terapista' else data.get('therapist_id', current_user.id)
+        )
         report = rs.generate_daily_report(patient_id, therapist_id, report_date)
         return jsonify({'success': True, 'report': report})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @api_bp.route('/admin/audit-stats', methods=['GET'])
 @login_required
 def get_audit_stats():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-        
+
     try:
-        from app.models import SessionAudit, Appointment, User
         from sqlalchemy import func
+
         from app.extensions import db
+        from app.models import Appointment, SessionAudit, User
 
         total_audits = SessionAudit.query.filter(SessionAudit.audit_score.isnot(None)).count()
-        avg_score_q = db.session.query(func.avg(SessionAudit.audit_score)).filter(SessionAudit.audit_score.isnot(None)).scalar()
+        avg_score_q = (
+            db.session.query(func.avg(SessionAudit.audit_score)).filter(SessionAudit.audit_score.isnot(None)).scalar()
+        )
         avg_score = float(avg_score_q) if avg_score_q else 0.0
-        
-        recent_audits = db.session.query(
-            SessionAudit.id,
-            SessionAudit.audit_score,
-            SessionAudit.audited_at,
-            Appointment.title,
-            User.username.label('therapist_name')
-        ).join(
-            Appointment, SessionAudit.appointment_id == Appointment.id
-        ).join(
-            User, Appointment.therapist_id == User.id
-        ).filter(
-            SessionAudit.audit_score.isnot(None)
-        ).order_by(SessionAudit.audited_at.desc()).limit(10).all()
-        
+
+        recent_audits = (
+            db.session.query(
+                SessionAudit.id,
+                SessionAudit.audit_score,
+                SessionAudit.audited_at,
+                Appointment.title,
+                User.username.label('therapist_name'),
+            )
+            .join(Appointment, SessionAudit.appointment_id == Appointment.id)
+            .join(User, Appointment.therapist_id == User.id)
+            .filter(SessionAudit.audit_score.isnot(None))
+            .order_by(SessionAudit.audited_at.desc())
+            .limit(10)
+            .all()
+        )
+
         audit_rows = []
         for r in recent_audits:
-            audit_rows.append({
-                'id': r[0],
-                'score': float(r[1]),
-                'date': r[2].isoformat() if r[2] else None,
-                'title': r[3],
-                'therapist': r[4]
-            })
+            audit_rows.append(
+                {
+                    'id': r[0],
+                    'score': float(r[1]),
+                    'date': r[2].isoformat() if r[2] else None,
+                    'title': r[3],
+                    'therapist': r[4],
+                }
+            )
 
-        therapist_scores = db.session.query(
-            User.username,
-            func.avg(SessionAudit.audit_score),
-            func.count(SessionAudit.id)
-        ).join(
-            Appointment, SessionAudit.appointment_id == Appointment.id
-        ).join(
-            User, Appointment.therapist_id == User.id
-        ).filter(
-            SessionAudit.audit_score.isnot(None)
-        ).group_by(User.id).all()
-        
+        therapist_scores = (
+            db.session.query(User.username, func.avg(SessionAudit.audit_score), func.count(SessionAudit.id))
+            .join(Appointment, SessionAudit.appointment_id == Appointment.id)
+            .join(User, Appointment.therapist_id == User.id)
+            .filter(SessionAudit.audit_score.isnot(None))
+            .group_by(User.id)
+            .all()
+        )
+
         therapist_stats = []
         for t in therapist_scores:
-            therapist_stats.append({
-                'name': t[0],
-                'avg_score': round(float(t[1]), 1),
-                'count': t[2]
-            })
+            therapist_stats.append({'name': t[0], 'avg_score': round(float(t[1]), 1), 'count': t[2]})
 
-        return jsonify({
-            'success': True,
-            'data': {
-                'total': total_audits,
-                'avg_score': round(avg_score, 1),
-                'recent': audit_rows,
-                'by_therapist': therapist_stats
+        return jsonify(
+            {
+                'success': True,
+                'data': {
+                    'total': total_audits,
+                    'avg_score': round(avg_score, 1),
+                    'recent': audit_rows,
+                    'by_therapist': therapist_stats,
+                },
             }
-        })
+        )
     except Exception as e:
-        current_app.logger.warning(f"Failed to load audit stats: {e}")
+        current_app.logger.warning(f'Failed to load audit stats: {e}')
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @api_bp.route('/therapist/weekly-reports/pending', methods=['GET'])
 @login_required
@@ -261,36 +278,42 @@ def api_weekly_reports_pending():
         else:
             return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
-        from app.models import WeeklyReport, Notification
         from sqlalchemy import inspect as sa_inspect
+
         from app.extensions import db
+        from app.models import Notification, WeeklyReport
+
         inspector = sa_inspect(db.engine)
         if 'weekly_report' not in inspector.get_table_names():
             db.create_all()
-            current_app.logger.info("Auto-migration: created tables on-demand")
+            current_app.logger.info('Auto-migration: created tables on-demand')
 
         week_start = datetime.utcnow().date()
         monday = week_start - timedelta(days=week_start.weekday())
         reports = WeeklyReport.query.filter(
-            WeeklyReport.therapist_id == therapist_id,
-            WeeklyReport.week_start == monday
+            WeeklyReport.therapist_id == therapist_id, WeeklyReport.week_start == monday
         ).count()
-        notification = Notification.query.filter(
-            Notification.user_id == current_user.id,
-            Notification.type == 'reportes',
-            Notification.is_read == False
-        ).order_by(Notification.timestamp.desc()).first()
-        return jsonify({
-            'success': True,
-            'has_pending': reports > 0,
-            'reports_count': reports,
-            'has_notification': notification is not None,
-            'week_start': monday.isoformat(),
-            'week_end': (monday + timedelta(days=6)).isoformat(),
-        })
+        notification = (
+            Notification.query.filter(
+                Notification.user_id == current_user.id, Notification.type == 'reportes', Notification.is_read == False
+            )
+            .order_by(Notification.timestamp.desc())
+            .first()
+        )
+        return jsonify(
+            {
+                'success': True,
+                'has_pending': reports > 0,
+                'reports_count': reports,
+                'has_notification': notification is not None,
+                'week_start': monday.isoformat(),
+                'week_end': (monday + timedelta(days=6)).isoformat(),
+            }
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in weekly-reports/pending: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in weekly-reports/pending: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al consultar reportes'}), 500
+
 
 @api_bp.route('/therapist/weekly-reports/generate', methods=['POST'])
 @login_required
@@ -303,9 +326,14 @@ def api_weekly_reports_generate():
         monday = today - timedelta(days=today.weekday())
         week_start = monday.isoformat()
 
-        patients = current_user.associated_patients.filter_by(role='jugador', is_active=True).all() if hasattr(current_user, 'associated_patients') else []
+        patients = (
+            current_user.associated_patients.filter_by(role='jugador', is_active=True).all()
+            if hasattr(current_user, 'associated_patients')
+            else []
+        )
 
         from app.services.report_service import ReportService
+
         rs = ReportService()
         generated = []
         for patient in patients:
@@ -313,17 +341,20 @@ def api_weekly_reports_generate():
                 report = rs.generate_patient_weekly_report(patient.id, therapist_id, week_start)
                 generated.append(report)
             except Exception as e:
-                current_app.logger.warning(f"Weekly report error for patient {patient.id}: {e}")
+                current_app.logger.warning(f'Weekly report error for patient {patient.id}: {e}')
 
-        return jsonify({
-            'success': True,
-            'reports_count': len(generated),
-            'patients_count': len(patients),
-            'report': generated[0] if generated else None
-        })
+        return jsonify(
+            {
+                'success': True,
+                'reports_count': len(generated),
+                'patients_count': len(patients),
+                'report': generated[0] if generated else None,
+            }
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in weekly-reports/generate: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in weekly-reports/generate: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al generar reportes'}), 500
+
 
 @api_bp.route('/weekly-summary', methods=['GET'])
 @login_required
@@ -348,18 +379,21 @@ def api_weekly_summary():
             for p in entry['patients']:
                 p['efficiency'] = round((p.get('avg_score', 0) or 0) * 0.5, 1)
             by_therapist.append(entry)
-        return jsonify({
-            'success': True,
-            'data': {
-                'week_start': data.get('week_start'),
-                'week_end': data.get('week_end'),
-                'by_therapist': by_therapist,
-                'total_reports': data.get('total_reports', 0),
+        return jsonify(
+            {
+                'success': True,
+                'data': {
+                    'week_start': data.get('week_start'),
+                    'week_end': data.get('week_end'),
+                    'by_therapist': by_therapist,
+                    'total_reports': data.get('total_reports', 0),
+                },
             }
-        })
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in weekly-summary: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in weekly-summary: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al obtener resumen semanal'}), 500
+
 
 @api_bp.route('/reports/accumulate', methods=['POST'])
 @login_required
@@ -368,10 +402,13 @@ def api_reports_accumulate():
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     try:
         result = report_service.generate_all_weekly_reports()
-        return jsonify({'success': True, 'message': f'Reportes acumulados: {len(result)} generados', 'count': len(result)})
+        return jsonify(
+            {'success': True, 'message': f'Reportes acumulados: {len(result)} generados', 'count': len(result)}
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in reports/accumulate: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/accumulate: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al acumular reportes'}), 500
+
 
 @api_bp.route('/reports/generate-all-weekly', methods=['POST'])
 @login_required
@@ -383,8 +420,9 @@ def api_reports_generate_all_weekly():
         result = report_service.generate_all_weekly_reports(week_start)
         return jsonify({'success': True, 'message': f'Se generaron {len(result)} reportes', 'count': len(result)})
     except Exception as e:
-        current_app.logger.error(f"Error in reports/generate-all-weekly: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/generate-all-weekly: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al generar reportes'}), 500
+
 
 @api_bp.route('/daily-reports', methods=['GET'])
 @login_required
@@ -399,13 +437,16 @@ def api_daily_reports():
             start = today.isoformat()
             end = today.isoformat()
         data = report_service.get_daily_reports(start, end)
-        return jsonify({
-            'success': True,
-            'data': data,
-        })
+        return jsonify(
+            {
+                'success': True,
+                'data': data,
+            }
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in daily-reports: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in daily-reports: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al obtener reportes diarios'}), 500
+
 
 @api_bp.route('/therapist/efficiency', methods=['GET'])
 @login_required
@@ -415,28 +456,39 @@ def api_therapist_efficiency():
     try:
         therapist_id = request.args.get('therapist_id', type=int)
         from app.services.dashboard_service import DashboardService
+
         ds = DashboardService()
         from app.models import User
-        therapists = [User.query.get(therapist_id)] if therapist_id else User.query.filter_by(role='terapista', is_active=True).all()
+
+        therapists = (
+            [User.query.get(therapist_id)]
+            if therapist_id
+            else User.query.filter_by(role='terapista', is_active=True).all()
+        )
         breakdown = []
         for t in therapists:
             if not t:
                 continue
             eff = ds.get_therapist_efficiency(t.id)
-            breakdown.append({
-                'therapist_id': t.id,
-                'therapist_name': t.username,
-                'audit_score': eff.get('avg_audit_score', 0),
-                'feedback_score': eff.get('avg_feedback_score', 0),
-                'efficiency': eff.get('efficiency', 0),
-            })
-        return jsonify({
-            'success': True,
-            'breakdown': breakdown,
-        })
+            breakdown.append(
+                {
+                    'therapist_id': t.id,
+                    'therapist_name': t.username,
+                    'audit_score': eff.get('avg_audit_score', 0),
+                    'feedback_score': eff.get('avg_feedback_score', 0),
+                    'efficiency': eff.get('efficiency', 0),
+                }
+            )
+        return jsonify(
+            {
+                'success': True,
+                'breakdown': breakdown,
+            }
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in therapist/efficiency: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in therapist/efficiency: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al obtener eficiencia'}), 500
+
 
 @api_bp.route('/reports/monthly', methods=['GET'])
 @login_required
@@ -449,8 +501,9 @@ def api_reports_monthly():
         summary = report_service.get_monthly_summary(year, month)
         return jsonify({'success': True, 'summary': summary})
     except Exception as e:
-        current_app.logger.error(f"Error in reports/monthly: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/monthly: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al obtener reporte mensual'}), 500
+
 
 @api_bp.route('/reports/quarterly', methods=['GET'])
 @login_required
@@ -463,8 +516,9 @@ def api_reports_quarterly():
         summary = report_service.get_quarterly_summary(year, quarter)
         return jsonify({'success': True, 'summary': summary})
     except Exception as e:
-        current_app.logger.error(f"Error in reports/quarterly: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/quarterly: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al obtener reporte trimestral'}), 500
+
 
 @api_bp.route('/reports/generate-monthly', methods=['POST'])
 @login_required
@@ -476,14 +530,13 @@ def api_reports_generate_monthly():
         year = request.args.get('year', type=int, default=datetime.utcnow().year)
         month = request.args.get('month', type=int, default=datetime.utcnow().month)
         generated = report_service.generate_all_monthly_reports(year, month)
-        return jsonify({
-            'success': True,
-            'message': f'{len(generated)} reportes mensuales generados',
-            'count': len(generated)
-        })
+        return jsonify(
+            {'success': True, 'message': f'{len(generated)} reportes mensuales generados', 'count': len(generated)}
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in reports/generate-monthly: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/generate-monthly: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al generar reportes mensuales'}), 500
+
 
 @api_bp.route('/reports/generate-quarterly', methods=['POST'])
 @login_required
@@ -495,12 +548,9 @@ def api_reports_generate_quarterly():
         year = request.args.get('year', type=int, default=datetime.utcnow().year)
         quarter = request.args.get('quarter', type=int, default=(datetime.utcnow().month - 1) // 3 + 1)
         generated = report_service.generate_all_quarterly_reports(year, quarter)
-        return jsonify({
-            'success': True,
-            'message': f'{len(generated)} reportes trimestrales generados',
-            'count': len(generated)
-        })
+        return jsonify(
+            {'success': True, 'message': f'{len(generated)} reportes trimestrales generados', 'count': len(generated)}
+        )
     except Exception as e:
-        current_app.logger.error(f"Error in reports/generate-quarterly: {str(e)}", exc_info=True)
+        current_app.logger.error(f'Error in reports/generate-quarterly: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'error': 'Error al generar reportes trimestrales'}), 500
-

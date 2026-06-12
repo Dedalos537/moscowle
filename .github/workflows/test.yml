@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: moscowle
+          POSTGRES_PASSWORD: moscowle_test
+          POSTGRES_DB: moscowle_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 app/ --count --max-complexity=12 --max-line-length=120 --statistics
+
+      - name: Test with pytest (SQLite)
+        run: |
+          python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+        env:
+          APP_SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: 'sqlite:///:memory:'
+          JWT_SECRET_KEY: test-jwt-secret
+          GEMINI_API_KEY: skip
+          GROQ_API_KEY: skip
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: false

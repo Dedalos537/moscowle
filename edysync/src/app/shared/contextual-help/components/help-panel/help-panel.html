@@ -1,0 +1,78 @@
+@if (helpState.panelOpen()) {
+  <div class="help-backdrop" (click)="close()"></div>
+  <div class="help-panel" @panelSlide>
+    <div class="help-panel-header">
+      <div class="help-panel-title">
+        <fa-icon [icon]="$any(helpContentService.currentHelp()?.icon ?? ['fas', 'question-circle'])"></fa-icon>
+        <span>{{ helpContentService.currentHelp()?.title ?? 'Ayuda' }}</span>
+      </div>
+      <button class="help-panel-close" (click)="close()" aria-label="Cerrar ayuda">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+
+    <div class="help-panel-body">
+      @if (helpContentService.currentHelp(); as help) {
+        <p class="help-description">{{ help.description }}</p>
+
+        @for (section of help.sections; track section.title) {
+          <div class="help-section">
+            <div class="help-section-title">
+              @if (section.icon) {
+                <fa-icon [icon]="$any(section.icon)"></fa-icon>
+              }
+              <span>{{ section.title }}</span>
+            </div>
+            <div class="help-section-content">{{ section.content }}</div>
+            @if (section.items && section.items.length > 0) {
+              <ul class="help-section-items">
+                @for (item of section.items; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            }
+          </div>
+        }
+
+        @if (help.tips && help.tips.length > 0) {
+          <div class="help-tips">
+            <div class="help-tips-title">
+              <fa-icon [icon]="['fas', 'lightbulb']" class="mr-1"></fa-icon>
+              Consejos útiles
+            </div>
+            <ul class="help-tips-list">
+              @for (tip of help.tips; track tip) {
+                <li>{{ tip }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (help.relatedLinks && help.relatedLinks.length > 0) {
+          <div class="help-links">
+            <div class="help-links-title">Enlaces relacionados</div>
+            @for (link of help.relatedLinks; track link.label) {
+              <a class="help-link-item" [routerLink]="link.route" (click)="close()">
+                @if (link.icon) {
+                  <fa-icon [icon]="$any(link.icon)"></fa-icon>
+                }
+                <span>{{ link.label }}</span>
+                <fa-icon [icon]="['fas', 'arrow-right']" style="margin-left:auto;font-size:0.7rem"></fa-icon>
+              </a>
+            }
+          </div>
+        }
+
+        <button class="help-wizard-btn" (click)="startWizard()">
+          <fa-icon [icon]="['fas', 'compass']"></fa-icon>
+          Iniciar tour guiado
+        </button>
+      } @else {
+        <div class="help-empty">
+          <fa-icon [icon]="['fas', 'map-signs']"></fa-icon>
+          <p>No hay ayuda disponible para esta página.</p>
+        </div>
+      }
+    </div>
+  </div>
+}

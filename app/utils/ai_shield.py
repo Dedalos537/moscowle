@@ -7,7 +7,7 @@ import sys
 def check_ollama():
     """Verifica si el servidor de Ollama está respondiendo."""
     try:
-        response = requests.get('http://127.0.0.1:11434/api/tags', timeout=2)
+        response = requests.get(os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434') + '/api/tags', timeout=2)
         return response.status_code == 200
     except:
         return False

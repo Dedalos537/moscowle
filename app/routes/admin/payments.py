@@ -1,6 +1,6 @@
 from app.services.receipt_generator import generate_receipt_pdf
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify, send_file
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 from functools import wraps
 import os
 from datetime import timedelta
@@ -11,7 +11,7 @@ import secrets
 from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction
 from app.services.dashboard_service import DashboardService
 from app.services.payment_service import PaymentService
-from app.services.finance_service import FinanceService
+from app.services.financial_service import FinancialService
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 import uuid
@@ -499,7 +499,7 @@ def analyze_receipt():
 @login_required
 def download_receipt(payment_id):
     from flask import flash, redirect, url_for
-    from flask_login import current_user
+    from app.auth_compat import current_user
     
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
@@ -514,9 +514,10 @@ def download_receipt(payment_id):
 
     if request.method == 'POST':
         # Retrieve fields to rectify
-        doc_number = request.form.get('document_number')
-        g_name = request.form.get('guardian_name')
-        concept = request.form.get('concept')
+        from app.utils.sanitizer import sanitize_text
+        doc_number = sanitize_text(request.form.get('document_number', ''), 20)
+        g_name = sanitize_text(request.form.get('guardian_name', ''), 200)
+        concept = sanitize_text(request.form.get('concept', ''), 1000)
         
         # Save rectified data for the future
         if doc_number: patient.document_number = doc_number

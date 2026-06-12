@@ -9,7 +9,7 @@ logger = logging.getLogger('app')
 try:
     import ollama
     _ollama_available = True
-    _ollama_client = ollama.Client(host='http://127.0.0.1:11434')
+    _ollama_client = ollama.Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
 except Exception:
     _ollama_available = False
     _ollama_client = None

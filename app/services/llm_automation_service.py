@@ -21,7 +21,7 @@ except ImportError:
 try:
     import ollama
     from ollama import Client
-    client = Client(host='http://127.0.0.1:11434')
+    client = Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
     client.list()
 except (ImportError, Exception):
     client = None

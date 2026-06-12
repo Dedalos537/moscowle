@@ -1,8 +1,16 @@
+import calendar
+import logging
 from datetime import datetime, timedelta
+
+from sqlalchemy import func
+
+from app.extensions import db
+from app.models import Expense, User, Appointment
 from app.repositories.patient_repository import PatientRepository
 from app.services.automation.financial_analysis import PatientFinancialStatus
-from app.services.email_service import EmailService
-import calendar
+
+logger = logging.getLogger(__name__)
+
 
 class FinancialService:
     def __init__(self):
@@ -27,10 +35,22 @@ class FinancialService:
                 filter_start = today.replace(month=m_int, day=1)
                 last_day = calendar.monthrange(today.year, m_int)[1]
                 filter_end = today.replace(month=m_int, day=last_day)
-            except:
-                pass # Fallback to all if month is invalid
+            except Exception:
+                logger.warning('Invalid month value: %s', month)
 
         patients = self.repo.get_active_patients()
+
+        # Apply month filter: only include patients whose due date falls
+        # within the selected month OR who are overdue from before it.
+        if filter_start is not None and filter_end is not None:
+            filtered = []
+            for p in patients:
+                dd = getattr(p, 'payment_due_date', None)
+                if dd is None:
+                    continue
+                if filter_start <= dd <= filter_end or dd < filter_start:
+                    filtered.append(p)
+            patients = filtered
 
         deudores_by_sede = {}
         total_adeudado = 0.0
@@ -47,7 +67,6 @@ class FinancialService:
                 if patient.assigned_therapist:
                     therapist_name = patient.assigned_therapist.username or ''
                 elif getattr(patient, 'assigned_therapist_id', None):
-                    from app.models import User
                     th = User.query.get(patient.assigned_therapist_id)
                     if th:
                         therapist_name = th.username or ''
@@ -78,7 +97,7 @@ class FinancialService:
                         'sede_id': sede_id,
                         'total': 0.0,
                         'count': 0,
-                        'deudores': []
+                        'deudores': [],
                     }
 
                 deudor = {
@@ -111,19 +130,19 @@ class FinancialService:
                     total_adeudado += monto
                     total_deudores += 1
 
-            except Exception:
-                continue
+            except Exception as e:
+                logger.warning('Error processing patient %s: %s', getattr(patient, 'id', 'unknown'), e)
 
         # Sort
         for s in deudores_by_sede.values():
-            s['deudores'].sort(key=lambda x: (0 if x['urgencia']=='crítica' else 1 if x['urgencia']=='alta' else 2))
+            s['deudores'].sort(key=lambda x: 0 if x['urgencia'] == 'crítica' else 1 if x['urgencia'] == 'alta' else 2)
 
         summary = {
             'total_adeudado': round(total_adeudado, 2),
             'total_deudores': total_deudores,
             'siedes_afectadas': len(deudores_by_sede),
             'vencidos': vencidos_count,
-            'proximo_a_vencer': proximo_a_vencer_count
+            'proximo_a_vencer': proximo_a_vencer_count,
         }
 
         return {'summary': summary, 'por_sede': deudores_by_sede}
@@ -149,5 +168,74 @@ class FinancialService:
             'due_date': due_date,
             'amount': amount,
             'days_overdue': days_overdue,
-            'balance': round(float(balance), 2)
+            'balance': round(float(balance), 2),
         }
+
+    def get_expenses(self, start_date=None, end_date=None, category=None):
+        q = Expense.query
+        if start_date:
+            q = q.filter(Expense.date >= start_date)
+        if end_date:
+            q = q.filter(Expense.date <= end_date)
+        if category:
+            q = q.filter(Expense.category == category)
+        return q.order_by(Expense.date.desc()).all()
+
+    def create_expense(self, data):
+        try:
+            date_val = data.get('date')
+            if isinstance(date_val, str):
+                date_val = datetime.strptime(date_val, '%Y-%m-%d')
+            exp = Expense(
+                category=data.get('category'),
+                amount=float(data.get('amount')),
+                date=date_val,
+                description=data.get('description'),
+                therapist_id=data.get('therapist_id'),
+                method=data.get('method'),
+                receipt_image_path=data.get('receipt_image_path')
+            )
+            db.session.add(exp)
+            db.session.commit()
+            return True, exp
+        except Exception as e:
+            return False, str(e)
+
+    def get_therapist_financials(self, month=None, year=None):
+        if not month: month = datetime.now().month
+        if not year: year = datetime.now().year
+        therapists = User.query.filter_by(role='terapista').filter_by(is_active=True).all()
+        results = []
+        start_date = datetime(year, month, 1)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1)
+        else:
+            end_date = datetime(year, month + 1, 1)
+        for t in therapists:
+            rate = 0
+            if t.salary_base and t.contract_hours and t.contract_hours > 0:
+                rate = t.salary_base / t.contract_hours
+            worked_minutes = db.session.query(func.sum(Appointment.duration_minutes))\
+                .filter(Appointment.therapist_id == t.id)\
+                .filter(Appointment.status == 'completed')\
+                .filter(Appointment.start_time >= start_date)\
+                .filter(Appointment.start_time < end_date)\
+                .scalar() or 0
+            worked_hours = worked_minutes / 60
+            projected_pay = rate * worked_hours
+            paid_amount = db.session.query(func.sum(Expense.amount))\
+                .filter(Expense.therapist_id == t.id)\
+                .filter(Expense.category == 'therapist_payment')\
+                .filter(Expense.date >= start_date)\
+                .filter(Expense.date < end_date)\
+                .scalar() or 0
+            results.append({
+                'therapist': t,
+                'rate': rate,
+                'contract_hours': t.contract_hours,
+                'worked_hours': worked_hours,
+                'projected_pay': projected_pay,
+                'paid': paid_amount,
+                'balance': projected_pay - paid_amount
+            })
+        return results

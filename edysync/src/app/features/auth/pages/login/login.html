@@ -1,8 +1,9 @@
-<div class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
+<main role="main" class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
 
   <button (click)="toggleDarkMode()"
     class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-soft border z-50 cursor-pointer bg-surface-container-lowest text-on-surface-variant border-border hover:bg-surface-container-high"
-    [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'">
+    [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'"
+    [attr.aria-label]="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
     @if (darkMode) {
       <fa-icon [icon]="['fas', 'sun']" class="text-lg text-warning"></fa-icon>
     } @else {
@@ -10,7 +11,7 @@
     }
   </button>
 
-  <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300">
+  <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300" role="region" aria-label="Formulario de inicio de sesión">
 
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-container to-primary-fixed-dim"></div>
 
@@ -18,8 +19,8 @@
           <div class="login-logo w-20 h-20 mx-auto mb-4">
               <img src="assets/img/logo.svg" alt="Logo Centro de Terapias" class="w-full h-full object-contain">
           </div>
-          <h2 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h2>
-          <h3 class="text-h3 text-on-surface-variant transition-colors">Juan Pablo II</h3>
+          <h1 class="text-h2 text-on-surface transition-colors">Centro de Terapias</h1>
+          <h2 class="text-h3 text-on-surface-variant transition-colors">Juan Pablo II</h2>
           <p class="text-body-sm text-outline mt-2 transition-colors">Acceso a Plataforma Digital</p>
       </div>
 
@@ -56,9 +57,10 @@
                          class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
                          placeholder="Ingresa tu contraseña" required>
 
-                   <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface focus:outline-none transition-colors border-none bg-transparent cursor-pointer">
-                      <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
-                  </button>
+                    <button type="button" (click)="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface focus:outline-none transition-colors border-none bg-transparent cursor-pointer"
+                       [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                       <fa-icon [icon]="['fas', showPassword ? 'eye-slash' : 'eye']"></fa-icon>
+                   </button>
               </div>
               @if (passwordError) {
                 <span class="text-xs text-error mt-1.5 block">{{ passwordError }}</span>
@@ -70,7 +72,7 @@
                    <input type="checkbox" class="custom-checkbox">
                    <span class="text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Recordarme</span>
                </label>
-              <a routerLink="/auth/reset-password" class="text-body-sm font-bold text-primary-container hover:opacity-80 transition-opacity">¿Olvidaste tu contraseña?</a>
+              <a routerLink="/auth/reset-password" class="text-body-sm font-bold transition-opacity" style="color: var(--color-on-primary-container);">¿Olvidaste tu contraseña?</a>
           </div>
 
            <button type="submit" id="login-btn"
@@ -100,7 +102,7 @@
 
        <div class="mt-8 pt-6 border-t border-border/50 text-center">
            <p class="text-body-sm text-outline transition-colors">
-               ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="text-primary-container font-bold hover:underline">Soporte Técnico</a>
+                ¿Necesitas ayuda? Contacta a <a href="mailto:info@centrojuanpabloii.com" class="font-bold hover:underline" style="color: var(--color-on-primary-container);">Soporte Técnico</a>
            </p>
        </div>
   </div>
@@ -108,7 +110,8 @@
   <button type="button" (click)="toggleHelp()"
     class="help-btn"
     [class.help-btn--active]="showHelp"
-    [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
+    [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'"
+    [attr.aria-label]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
     <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
   </button>
 
@@ -168,4 +171,4 @@
       </div>
     </div>
   }
-</div>
+</main>

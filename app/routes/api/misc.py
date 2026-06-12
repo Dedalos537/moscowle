@@ -9,11 +9,12 @@ from app.routes.api._shared import (
     EmailService, api_response, AvailabilityService, requests, or_, func,
     appointment_service, game_service, admin_service, notification_service,
     patient_service, dashboard_service, report_service, drive_service, fs,
-    LIMA_TZ, _parse_json, _parse_datetime, analyze_contact_message_ai,
+    _parse_json, _parse_datetime, analyze_contact_message_ai,
     AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
     uuid, secure_filename, datetime, timedelta, timezone,
     login_required, current_user, request, jsonify, current_app, url_for,
 )
+from app.utils.sanitizer import sanitize_text
 from app.routes.api import api_bp
 
 @api_bp.route('/time', methods=['GET'])
@@ -203,13 +204,13 @@ def contact_message():
             return jsonify({'error': f'Falta el campo {field}'}), 400
 
     new_msg = ContactMessage(
-        first_name=data.get('first_name'),
-        last_name=data.get('last_name'),
-        email=data.get('email'),
-        phone=data.get('phone'),
-        subject=data.get('subject', 'Consulta Web'),
-        message=data.get('message'),
-        service_interest=data.get('service_interest'),
+        first_name=sanitize_text(data.get('first_name', ''), 100),
+        last_name=sanitize_text(data.get('last_name', ''), 100),
+        email=sanitize_text(data.get('email', ''), 254),
+        phone=sanitize_text(data.get('phone', ''), 20),
+        subject=sanitize_text(data.get('subject', 'Consulta Web'), 200),
+        message=sanitize_text(data.get('message', ''), 5000),
+        service_interest=sanitize_text(data.get('service_interest', ''), 200),
         urgency=data.get('urgency', 'medium'),
         status='unread'
     )

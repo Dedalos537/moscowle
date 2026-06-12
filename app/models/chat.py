@@ -1,15 +1,13 @@
 from datetime import datetime
 from app.extensions import db
+from app.models.base import AuditMixin
 
 
-class Chat(db.Model):
+class Chat(db.Model, AuditMixin):
     __tablename__ = 'chat'
     id = db.Column(db.Integer, primary_key=True)
+    is_active = db.Column(db.Boolean, default=True)
     is_group = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    created_by = db.relationship('User', foreign_keys=[created_by_id])
 
     @property
     def last_message(self):
@@ -31,8 +29,9 @@ class Chat(db.Model):
         ).count()
 
 
-class ChatParticipant(db.Model):
+class ChatParticipant(db.Model, AuditMixin):
     __tablename__ = 'chat_participant'
+    is_active = db.Column(db.Boolean, default=True)
     chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -40,20 +39,20 @@ class ChatParticipant(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
 
     chat = db.relationship('Chat', backref='participant_list', lazy='joined')
-    user = db.relationship('User', backref='chat_participations', lazy='joined')
+    user = db.relationship('User', foreign_keys=[user_id], backref='chat_participations', lazy='joined')
 
 
-class Message(db.Model):
+class Message(db.Model, AuditMixin):
     __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     subject = db.Column(db.String(200), nullable=True)
     body = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    parent_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
-    chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=True)
+    parent_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True, index=True)
+    chat_id = db.Column(db.Integer, db.ForeignKey('chat.id'), nullable=True, index=True)
     status = db.Column(db.String(20), default='sent')
 
     attachment_path = db.Column(db.String(500), nullable=True)
@@ -71,9 +70,10 @@ class Message(db.Model):
         return None
 
 
-class ContactMessage(db.Model):
+class ContactMessage(db.Model, AuditMixin):
     __tablename__ = 'contact_message'
     id = db.Column(db.Integer, primary_key=True)
+    is_active = db.Column(db.Boolean, default=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), nullable=False)
@@ -84,4 +84,3 @@ class ContactMessage(db.Model):
     urgency = db.Column(db.String(50), default='medium')
     status = db.Column(db.String(50), default='unread')
     ai_analysis = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)

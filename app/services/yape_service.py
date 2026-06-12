@@ -239,20 +239,10 @@ class YapeService:
         return None
     
     def _sanitize_string(self, value):
-        """Sanitiza string para prevenir XSS."""
         if not value:
             return None
-        
-        # Convertir a string y limpiar
-        value = str(value).strip()
-        
-        # Remover caracteres peligrosos HTML/SQL basic
-        dangerous_chars = ['<', '>', '"', "'", ';', '--', '/*', '*/']
-        for char in dangerous_chars:
-            value = value.replace(char, '')
-        
-        # Limitar longitud
-        return value[:500] if value else None
+        from app.utils.sanitizer import sanitize_text
+        return sanitize_text(value, max_length=500)
     
     
     def import_transactions(self, file_stream, file_type='csv'):

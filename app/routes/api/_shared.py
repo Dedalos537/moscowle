@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, url_for
-from flask_login import login_required, current_user
+from app.auth_compat import login_required, current_user
 from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage, Sede, Payment
 from app.services.appointment_service import AppointmentService
 from app.services.game_service import GameService
@@ -20,13 +20,14 @@ except ImportError:
     Groq = None
 try:
     import ollama
-    _ollama_client = ollama.Client(host='http://127.0.0.1:11434')
+    _ollama_client = ollama.Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
     _ollama_client.list()
 except Exception:
     _ollama_client = None
 from app.services.google_drive_service import GoogleDriveService
 from app.services.ai_service import predict_level, start_async_training
-from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone
+from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone, parse_datetime
+from app.utils.sanitizer import sanitize_for_prompt
 from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
 from app.extensions import bcrypt, limiter, csrf
 from app.services.email_service import EmailService
@@ -49,9 +50,6 @@ report_service = ReportService()
 drive_service = GoogleDriveService()
 fs = FinancialService()
 
-LIMA_TZ = timezone(timedelta(hours=-5))
-
-
 def _parse_json(raw):
     if '```json' in raw: raw = raw.split('```json')[1].split('```')[0]
     elif '```' in raw: raw = raw.split('```')[1].split('```')[0]
@@ -60,34 +58,16 @@ def _parse_json(raw):
     try: return json.loads(raw)
     except Exception: return None
 
-
-def _parse_datetime(value):
-    if not value:
-        return None
-    try:
-        if value.endswith('Z'):
-            value = value[:-1] + '+00:00'
-        dt = datetime.fromisoformat(value)
-        if dt.tzinfo:
-            return dt.astimezone(timezone.utc).replace(tzinfo=None)
-        return dt.replace(tzinfo=LIMA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
-    except Exception:
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
-            try:
-                dt = datetime.strptime(value, fmt)
-                return dt.replace(tzinfo=LIMA_TZ).astimezone(timezone.utc).replace(tzinfo=None)
-            except Exception:
-                continue
-    return None
+_parse_datetime = parse_datetime
 
 
 def analyze_contact_message_ai(name, email, message, service_interest):
     result = {'sentiment': 'neutral', 'detected_intent': 'consulta', 'suggested_response': '', 'confidence': 'media', 'provider': None}
     prompt = f"""Analiza este mensaje de contacto de un cliente potencial y responde SOLO con JSON válido:
-Nombre: {name}
-Email: {email}
-Mensaje: {message}
-Servicio de interés: {service_interest or 'No especificado'}
+Nombre: {sanitize_for_prompt(name)}
+Email: {sanitize_for_prompt(email)}
+Mensaje: {sanitize_for_prompt(message)}
+Servicio de interés: {sanitize_for_prompt(service_interest or 'No especificado')}
 Responde con este JSON exacto (sin markdown):
 {{"sentiment": "positivo"|"neutral"|"negativo", "detected_intent": "agendar_cita"|"informacion"|"consulta"|"queja"|"seguimiento", "suggested_response": "texto cortés de respuesta sugerida", "confidence": "alta"|"media"|"baja"}}"""
     providers = []

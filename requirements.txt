@@ -6,6 +6,9 @@ marshmallow
 SQLAlchemy
 Flask-SQLAlchemy
 Flask-Login>=0.6.2
+Flask-JWT-Extended>=4.7.0
+pyotp>=2.9.0
+qrcode[pil]>=8.0
 python-dotenv
 Flask-Talisman>=1.0.0
 python-json-logger>=2.0.0
@@ -30,8 +33,9 @@ python-docx>=0.8.11
 twilio
 openpyxl>=3.0.0
 plotly
-gunicorn>=21.2.0
+gunicorn[eventlet]>=21.2.0,<22
 flask-socketio>=5.3.0
+Flask-Migrate>=4.0.0
 eventlet>=0.33.3
 bleach>=6.0.0
 markdown>=3.5.0
