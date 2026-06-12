@@ -16,7 +16,6 @@ def sanitize_html(value: str) -> str:
         value,
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRIBUTES,
-        styles=ALLOWED_STYLES,
         strip=True,
     )
 
