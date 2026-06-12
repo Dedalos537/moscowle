@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, current_app
-from app.extensions import db
+from app.extensions import db, csrf
 from app.services.crisis_monitor import crisis_monitor
 from sqlalchemy import text
 import os
@@ -76,7 +76,95 @@ def debug_schema():
     return jsonify({'tables': result})
 
 
-@health_bp.route('/health/debug/query', methods=['GET'])
+@health_bp.route('/health/debug/send-test', methods=['GET'])
+@csrf.exempt
+def debug_send_test():
+    """Diagnostic: replicates send_message flow with verbose output.
+    User must be logged in (JWT cookie). Visit in browser after logging into the app.
+    """
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+
+    from app.auth_compat import verify_jwt_in_request, get_jwt_identity
+    try:
+        verify_jwt_in_request(locations=['cookies'])
+        uid = get_jwt_identity()
+    except Exception as e:
+        return jsonify({'error': 'not authenticated', 'detail': str(e)}), 401
+
+    from app.models import User
+    user = User.query.get(int(uid))
+    if not user:
+        return jsonify({'error': 'user not found'}), 404
+
+    cid = int(req.args.get('cid', 1))
+    steps = {}
+    errors = []
+
+    # Step 1: chat exists
+    try:
+        chat = db.session.execute(text("SELECT id FROM chat WHERE id = :cid"), {'cid': cid}).fetchone()
+        steps['chat_exists'] = bool(chat)
+    except Exception as e:
+        steps['chat_exists'] = f"ERROR: {e}"
+
+    # Step 2: is participant
+    try:
+        part = db.session.execute(text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id = :uid"), {'cid': cid, 'uid': user.id}).fetchone()
+        steps['is_participant'] = bool(part)
+    except Exception as e:
+        steps['is_participant'] = f"ERROR: {e}"
+
+    # Step 3: other participants
+    try:
+        others = db.session.execute(text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid"), {'cid': cid, 'uid': user.id}).fetchall()
+        steps['other_count'] = len(others)
+        receiver = others[0].user_id if others else None
+        steps['receiver'] = receiver
+    except Exception as e:
+        steps['other_participants'] = f"ERROR: {e}"
+
+    # Step 4: test INSERT with user as sender
+    try:
+        from datetime import datetime, timezone
+        from app.models.chat import Message
+        ts = str(datetime.now(timezone.utc).timestamp())
+        insert_stmt = Message.__table__.insert().values(
+            sender_id=user.id,
+            receiver_id=receiver or user.id,
+            body='DIAGNOSTIC TEST MSG ' + ts,
+            chat_id=cid,
+            status='sent',
+            attachment_path=None,
+            attachment_type=None
+        )
+        compiled = str(insert_stmt.compile(compile_kwargs={"literal_binds": True}))
+        result = db.session.execute(insert_stmt)
+        msg_id = result.inserted_primary_key[0]
+        db.session.commit()
+        # Verify
+        verify = db.session.execute(text("SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid"), {'mid': msg_id}).fetchone()
+        verify_dict = dict(verify._mapping) if verify else None
+        # Clean up
+        db.session.execute(text("DELETE FROM message WHERE id = :mid"), {'mid': msg_id})
+        db.session.commit()
+        steps['insert'] = {
+            'msg_id': msg_id,
+            'compiled_sql': compiled[:500],
+            'verified': verify_dict
+        }
+    except Exception as e:
+        import traceback
+        errors.append({'step': 'insert', 'error': str(e), 'traceback': traceback.format_exc()})
+
+    return jsonify({
+        'user_id': user.id,
+        'username': user.username,
+        'chat_id': cid,
+        'steps': steps,
+        'errors': errors
+    })
 def debug_query():
     from flask import request as req
     if req.args.get('key') != 'debug2026':
