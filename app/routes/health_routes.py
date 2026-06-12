@@ -76,4 +76,56 @@ def debug_schema():
     return jsonify({'tables': result})
 
 
+@health_bp.route('/health/debug/query', methods=['GET'])
+def debug_query():
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+    test = req.args.get('test', 'basic')
+
+    try:
+        if test == 'basic':
+            r = db.session.execute(text("SELECT 1 AS ok")).fetchone()
+            return jsonify({'ok': r.ok, 'test': 'basic'})
+
+        elif test == 'chat_count':
+            r = db.session.execute(text("SELECT COUNT(*) FROM chat")).scalar() or 0
+            p = db.session.execute(text("SELECT COUNT(*) FROM chat_participant")).scalar() or 0
+            m = db.session.execute(text("SELECT COUNT(*) FROM message")).scalar() or 0
+            return jsonify({'chat_count': r, 'participant_count': p, 'message_count': m, 'test': 'chat_count'})
+
+        elif test == 'chat_columns':
+            r = db.session.execute(text("SELECT id, is_group, created_at FROM chat LIMIT 5")).fetchall()
+            return jsonify({'rows': [dict(z._mapping) for z in r], 'test': 'chat_columns'})
+
+        elif test == 'msg_columns':
+            r = db.session.execute(text("SELECT id, sender_id, receiver_id, body, status, is_read, chat_id, attachment_path, attachment_type FROM message LIMIT 5")).fetchall()
+            return jsonify({'rows': [dict(z._mapping) for z in r], 'test': 'msg_columns'})
+
+        elif test == 'join_chat':
+            r = db.session.execute(
+                text("""
+                    SELECT c.id, c.is_group, c.created_at
+                    FROM chat c
+                    JOIN chat_participant cp ON cp.chat_id = c.id
+                    LIMIT 20
+                """)
+            ).fetchall()
+            return jsonify({'rows': [dict(z._mapping) for z in r], 'test': 'join_chat'})
+
+        elif test == 'last_msg':
+            r = db.session.execute(
+                text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
+                {'cid': int(req.args.get('cid', 1))}
+            ).fetchone()
+            return jsonify({'row': dict(r._mapping) if r else None, 'test': 'last_msg'})
+
+        else:
+            return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg']}), 400
+
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e)[:1000], 'traceback': traceback.format_exc(), 'test': test}), 500
+
+
 
