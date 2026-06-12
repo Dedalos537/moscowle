@@ -96,53 +96,60 @@ def create_app(config_class=None):
 
 
 def _sync_missing_columns(db):
+    from flask import current_app
     from sqlalchemy import inspect, text
+    from sqlalchemy.types import Boolean, DateTime, Float, Integer, String, Text
 
     dialect = db.engine.dialect.name
+    inspector = inspect(db.engine)
+    db_tables = set(inspector.get_table_names())
+    app_logger = current_app.logger
 
-    table_columns = {
-        'user': {
-            'created_by_id': 'INTEGER',
-            'updated_at': 'TIMESTAMP',
-            'mfa_enabled': 'BOOLEAN',
-            'otp_secret': 'VARCHAR(32)',
-            'mfa_failed_attempts': 'INTEGER',
-            'mfa_locked_until': 'TIMESTAMP',
-        },
-        'sede': {
-            'is_active': 'BOOLEAN',
-            'created_by_id': 'INTEGER',
-            'updated_at': 'TIMESTAMP',
-        },
-        'notification': {
-            'created_by_id': 'INTEGER',
-            'updated_at': 'TIMESTAMP',
-            'is_active': 'BOOLEAN',
-        },
+    TYPE_MAP = {
+        Integer: 'INTEGER',
+        int: 'INTEGER',
+        String: 'VARCHAR(255)',
+        Text: 'TEXT',
+        Boolean: 'BOOLEAN',
+        bool: 'BOOLEAN',
+        DateTime: 'TIMESTAMP',
+        Float: 'FLOAT',
+        float: 'FLOAT',
     }
 
-    for table, columns in table_columns.items():
-        try:
-            existing = {c['name'] for c in inspect(db.engine).get_columns(table)}
-        except Exception:
+    def _col_type_str(col):
+        for typ, sql in TYPE_MAP.items():
+            if isinstance(col.type, typ):
+                if isinstance(col.type, String) and col.type.length:
+                    return f'VARCHAR({col.type.length})'
+                return sql
+        return 'VARCHAR(255)'
+
+    for table_name, table in db.metadata.tables.items():
+        if table_name not in db_tables:
             continue
 
-        for col_name, col_type in columns.items():
-            if col_name in existing:
+        try:
+            db_columns = {c['name'] for c in inspector.get_columns(table_name)}
+        except Exception as exc:
+            app_logger.warning(f'Schema sync: could not inspect {table_name}: {exc}')
+            continue
+
+        for col in table.columns:
+            if col.name in db_columns:
                 continue
+
+            type_str = _col_type_str(col)
+
             try:
                 with db.engine.begin() as conn:
                     if dialect == 'postgresql':
-                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
+                        conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS {col.name} {type_str}'))
                     elif dialect == 'sqlite':
-                        stype = (
-                            col_type.replace('VARCHAR', 'VARCHAR')
-                            .replace('INTEGER', 'INTEGER')
-                            .replace('BOOLEAN', 'BOOLEAN')
-                            .replace('TIMESTAMP', 'DATETIME')
-                        )
-                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col_name} {stype}'))
+                        sql_type = type_str.replace('TIMESTAMP', 'DATETIME')
+                        conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN {col.name} {sql_type}'))
                     else:
-                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_type}'))
-            except Exception:
-                pass
+                        conn.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {col.name} {type_str}'))
+                app_logger.info(f'Schema sync: added {table_name}.{col.name} ({type_str})')
+            except Exception as e:
+                app_logger.warning(f'Schema sync: could not add {table_name}.{col.name}: {e}')
