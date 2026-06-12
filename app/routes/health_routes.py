@@ -61,4 +61,19 @@ def health_check():
     }), 200 if overall != 'error' else 503
 
 
+@health_bp.route('/health/debug/schema', methods=['GET'])
+def debug_schema():
+    from sqlalchemy import inspect as sa_inspect
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+    inspector = sa_inspect(db.engine)
+    tables = inspector.get_table_names()
+    result = {}
+    for t in sorted(tables):
+        cols = [c['name'] for c in inspector.get_columns(t)]
+        result[t] = cols
+    return jsonify({'tables': result})
+
+
 
