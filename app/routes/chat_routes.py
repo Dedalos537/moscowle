@@ -7,12 +7,17 @@ from sqlalchemy import case, text
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
 from datetime import datetime
-import os, uuid, logging
+import os, uuid, logging, traceback
 from werkzeug.utils import secure_filename
 
 chat_bp = Blueprint('chat', __name__)
 notification_service = NotificationService()
 logger = logging.getLogger(__name__)
+
+# Shared error capture for diagnostics
+_last_error = {}
+def get_last_error():
+    return dict(_last_error)
 
 
 def get_contact_list(role_filter=None):
@@ -492,7 +497,14 @@ def send_message(chat_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error sending message to chat {chat_id}: {str(e)}", exc_info=True)
-        import traceback
+        _last_error.update({
+            'time': str(datetime.now()),
+            'endpoint': 'send_message',
+            'chat_id': chat_id,
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'user_id': current_user.id if hasattr(current_user, 'id') else None
+        })
         return jsonify({'success': False, 'message': 'Error al enviar mensaje', 'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 

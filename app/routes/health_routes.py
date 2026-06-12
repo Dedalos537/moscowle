@@ -165,6 +165,15 @@ def debug_send_test():
         'steps': steps,
         'errors': errors
     })
+
+
+@health_bp.route('/health/debug/last-error', methods=['GET'])
+def debug_last_error():
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+    from app.routes.chat_routes import get_last_error
+    return jsonify(get_last_error())
 def debug_query():
     from flask import request as req
     if req.args.get('key') != 'debug2026':
@@ -300,7 +309,7 @@ def debug_query():
             })
 
         else:
-            return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg']}), 400
+            return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg', 'users', 'simulate_chats', 'simulate_messages', 'test_insert']}), 400
 
     except Exception as e:
         import traceback
