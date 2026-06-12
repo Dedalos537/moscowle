@@ -120,6 +120,48 @@ def debug_query():
             ).fetchone()
             return jsonify({'row': dict(r._mapping) if r else None, 'test': 'last_msg'})
 
+        elif test == 'simulate_chats':
+            uid = int(req.args.get('uid', 1))
+            chats = db.session.execute(
+                text("""
+                    SELECT c.id, c.is_group, c.created_at
+                    FROM chat c
+                    JOIN chat_participant cp ON cp.chat_id = c.id
+                    WHERE cp.user_id = :uid
+                    ORDER BY c.created_at DESC
+                """),
+                {'uid': uid}
+            ).fetchall()
+            result = []
+            for cr in chats:
+                other = db.session.execute(
+                    text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid LIMIT 1"),
+                    {'cid': cr.id, 'uid': uid}
+                ).fetchone()
+                last_msg = db.session.execute(
+                    text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
+                    {'cid': cr.id}
+                ).fetchone()
+                unread = db.session.execute(
+                    text("SELECT COUNT(*) FROM message WHERE chat_id = :cid AND sender_id != :uid AND status IN ('sent', 'delivered')"),
+                    {'cid': cr.id, 'uid': uid}
+                ).scalar() or 0
+                result.append({
+                    'chat_id': cr.id,
+                    'other_user_id': other.user_id if other else None,
+                    'last_msg_id': last_msg.id if last_msg else None,
+                    'unread': unread
+                })
+            return jsonify({'chats': result, 'test': 'simulate_chats'})
+
+        elif test == 'simulate_messages':
+            cid = int(req.args.get('cid', 1))
+            rows = db.session.execute(
+                text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT 10"),
+                {'cid': cid}
+            ).fetchall()
+            return jsonify({'messages': [{'id':r.id,'sender_id':r.sender_id,'body':r.body[:50]} for r in rows], 'test': 'simulate_messages'})
+
         else:
             return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg']}), 400
 
