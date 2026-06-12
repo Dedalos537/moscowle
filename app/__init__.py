@@ -65,6 +65,11 @@ def create_app(config_class=None):
         from app import models as _all_models  # noqa: F401
 
         try:
+            _fix_audit_columns(db)
+        except Exception as e:
+            app.logger.warning(f'Audit column fix skipped: {e}')
+
+        try:
             db.create_all()
             app.logger.info('Database tables created/verified')
         except Exception as e:
@@ -93,6 +98,36 @@ def create_app(config_class=None):
 
     app.logger.info('Application initialization complete')
     return app
+
+
+def _fix_audit_columns(db):
+    """Pre-emptively add common AuditMixin columns to all tables that need them.
+    Runs before db.create_all() so the columns exist before any raw query."""
+    from sqlalchemy import inspect, text
+    AUDIT_COLS = {'created_at': 'TIMESTAMP', 'created_by_id': 'INTEGER', 'updated_at': 'TIMESTAMP'}
+    try:
+        inspector = inspect(db.engine)
+        existing = set(inspector.get_table_names())
+    except Exception:
+        return
+    dialect = db.engine.dialect.name
+    for table_name, table in db.metadata.tables.items():
+        if table_name not in existing:
+            continue
+        model_cols = {c.name for c in table.columns}
+        to_add = {name: sql for name, sql in AUDIT_COLS.items() if name in model_cols}
+        if not to_add:
+            continue
+        actual_cols = {c['name'] for c in inspector.get_columns(table_name)}
+        missing = {name: sql for name, sql in to_add.items() if name not in actual_cols}
+        if not missing:
+            continue
+        with db.engine.begin() as conn:
+            for name, sql in missing.items():
+                try:
+                    conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN IF NOT EXISTS {name} {sql}'))
+                except Exception:
+                    pass
 
 
 def _sync_missing_columns(db):
