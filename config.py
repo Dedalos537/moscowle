@@ -146,6 +146,8 @@ class ProductionConfig(Config):
     REMEMBER_COOKIE_SECURE = True
     REMEMBER_COOKIE_SAMESITE = 'None'
     WTF_CSRF_SSL_STRICT = True
+    JWT_COOKIE_SECURE = True
+    JWT_COOKIE_SAMESITE = 'None'
 
 class TestingConfig(Config):
     TESTING = True
