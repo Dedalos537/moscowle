@@ -120,6 +120,16 @@ def debug_query():
             ).fetchone()
             return jsonify({'row': dict(r._mapping) if r else None, 'test': 'last_msg'})
 
+        elif test == 'users':
+            r = db.session.execute(text('SELECT id, email, username, role, is_active FROM "user" ORDER BY id LIMIT 20')).fetchall()
+            users = []
+            for u in r:
+                try:
+                    users.append({'id': u.id, 'email': u.email, 'username': u.username, 'role': u.role})
+                except Exception:
+                    users.append({'id': u[0], 'email': u[1], 'username': u[2], 'role': u[3]})
+            return jsonify({'users': users, 'test': 'users'})
+
         elif test == 'simulate_chats':
             uid = int(req.args.get('uid', 1))
             chats = db.session.execute(
