@@ -185,7 +185,7 @@ def debug_query():
             insert_stmt = Message.__table__.insert().values(
                 sender_id=1,
                 receiver_id=5,
-                body='debug test message ' + str(time.time()),
+                body='debug test msg ' + str(datetime.now(timezone.utc).timestamp()),
                 chat_id=chat_id,
                 status='sent',
                 attachment_path=None,
