@@ -98,9 +98,7 @@ def create_app(config_class=None):
 def _sync_missing_columns(db):
     from sqlalchemy import inspect, text
 
-    engine = db.engine
-    inspector = inspect(engine)
-    dialect = engine.dialect.name
+    dialect = db.engine.dialect.name
 
     table_columns = {
         'user': {
@@ -125,7 +123,7 @@ def _sync_missing_columns(db):
 
     for table, columns in table_columns.items():
         try:
-            existing = {c['name'] for c in inspector.get_columns(table)}
+            existing = {c['name'] for c in inspect(db.engine).get_columns(table)}
         except Exception:
             continue
 
@@ -133,17 +131,18 @@ def _sync_missing_columns(db):
             if col_name in existing:
                 continue
             try:
-                if dialect == 'postgresql':
-                    engine.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
-                elif dialect == 'sqlite':
-                    stype = (
-                        col_type.replace('VARCHAR', 'VARCHAR')
-                        .replace('INTEGER', 'INTEGER')
-                        .replace('BOOLEAN', 'BOOLEAN')
-                        .replace('TIMESTAMP', 'DATETIME')
-                    )
-                    engine.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col_name} {stype}'))
-                else:
-                    engine.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_type}'))
+                with db.engine.begin() as conn:
+                    if dialect == 'postgresql':
+                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col_name} {col_type}'))
+                    elif dialect == 'sqlite':
+                        stype = (
+                            col_type.replace('VARCHAR', 'VARCHAR')
+                            .replace('INTEGER', 'INTEGER')
+                            .replace('BOOLEAN', 'BOOLEAN')
+                            .replace('TIMESTAMP', 'DATETIME')
+                        )
+                        conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col_name} {stype}'))
+                    else:
+                        conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {col_name} {col_type}'))
             except Exception:
                 pass
