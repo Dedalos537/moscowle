@@ -131,7 +131,8 @@ def _sync_missing_columns(db):
 
         try:
             db_columns = {c['name'] for c in inspector.get_columns(table_name)}
-        except Exception:
+        except Exception as exc:
+            app_logger.warning(f'Schema sync: could not inspect {table_name}: {exc}')
             continue
 
         for col in table.columns:
