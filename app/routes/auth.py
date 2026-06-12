@@ -3,12 +3,14 @@ from datetime import datetime
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
 from flask_wtf.csrf import generate_csrf
-
 from app.auth_compat import current_user, login_required
-from app.extensions import csrf, db, limiter
+from app.extensions import bcrypt, csrf, db, limiter
 from app.schemas.auth_schema import validate_login_input
 from app.services.auth_service import AuthService
+from app.services.email_service import EmailService
 from app.models.refresh_token import RefreshToken
+from app.models.password_reset import PasswordReset
+from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
@@ -221,3 +223,89 @@ def api_auth_refresh():
     except Exception as e:
         current_app.logger.debug(f'Token refresh failed: {e}')
         return jsonify({'success': False, 'error': 'Token inválido o expirado'}), 401
+
+
+@auth_bp.route('/api/auth/reset-password', methods=['POST'])
+@limiter.limit('5 per hour')
+@csrf.exempt
+def api_reset_password_request():
+    try:
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return jsonify({'success': False, 'error': 'Email requerido'}), 400
+
+        now = datetime.utcnow()
+        recent = PasswordReset.query.filter(
+            PasswordReset.email == email,
+            PasswordReset.status == 'pending',
+            PasswordReset.expires_at > now,
+        ).first()
+        if recent:
+            return jsonify({'success': True, 'message': 'Si el email existe, recibirás instrucciones.'})
+
+        PasswordReset.query.filter(
+            PasswordReset.email == email,
+            PasswordReset.status == 'pending',
+            PasswordReset.expires_at <= now,
+        ).update({'status': 'expired'})
+        db.session.commit()
+
+        user = User.query.filter_by(email=email).first()
+        record = PasswordReset.create_for_email(email, user_id=user.id if user else None)
+
+        if user:
+            EmailService.send_password_reset_code(email, user.username or email, record.code)
+            admins = User.query.filter_by(role='admin', is_active=True).all()
+            for admin in admins:
+                EmailService.send_password_reset_notification_admin(admin.email, email, user.username or email)
+
+        return jsonify({'success': True, 'message': 'Si el email existe, recibirás instrucciones.'})
+    except Exception as e:
+        current_app.logger.error(f'/api/auth/reset-password error: {e}')
+        return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+
+
+@auth_bp.route('/api/auth/reset-password/confirm', methods=['POST'])
+@csrf.exempt
+def api_reset_password_confirm():
+    try:
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip().lower()
+        code = (data.get('code') or '').strip()
+        new_password = data.get('new_password') or ''
+
+        if not email or not code or not new_password:
+            return jsonify({'success': False, 'error': 'Email, código y nueva contraseña requeridos'}), 400
+
+        if len(new_password) < 8:
+            return jsonify({'success': False, 'error': 'La contraseña debe tener al menos 8 caracteres'}), 400
+
+        record = PasswordReset.query.filter(
+            PasswordReset.email == email,
+            PasswordReset.code == code,
+            PasswordReset.status == 'pending',
+            PasswordReset.expires_at > datetime.utcnow(),
+        ).order_by(PasswordReset.created_at.desc()).first()
+
+        if not record:
+            return jsonify({'success': False, 'error': 'Código inválido o expirado'}), 400
+
+        record.mark_verified()
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
+
+        user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        db.session.commit()
+
+        record.mark_completed()
+
+        EmailService.send_password_change_email(email, new_password, user.username or email)
+
+        return jsonify({'success': True, 'message': 'Contraseña actualizada exitosamente.'})
+    except Exception as e:
+        current_app.logger.error(f'/api/auth/reset-password/confirm error: {e}')
+        return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
