@@ -305,8 +305,8 @@ def init_extensions(app: Flask) -> None:
     if app.config.get('CACHE_REDIS_URL'):
         cache_config['CACHE_REDIS_URL'] = app.config['CACHE_REDIS_URL']
     cache.init_app(app, cache_config)
-    _cors = app.config.get('SOCKET_CORS_ORIGINS', 'https://moscowle.ai')
-    socketio.init_app(app, cors_allowed_origins=_cors)
+    _cors = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com')
+    socketio.init_app(app, cors_allowed_origins=_cors.split())
 
     from importlib import import_module
 
