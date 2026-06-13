@@ -172,6 +172,11 @@ def _sync_missing_columns(db):
 
     for table_name, table in db.metadata.tables.items():
         if table_name not in db_tables:
+            try:
+                table.create(db.engine)
+                app_logger.info(f'Schema sync: created table {table_name}')
+            except Exception as e:
+                app_logger.warning(f'Schema sync: could not create {table_name}: {e}')
             continue
 
         try:
