@@ -319,4 +319,57 @@ def debug_query():
         return jsonify({'error': str(e)[:1000], 'traceback': traceback.format_exc(), 'test': test}), 500
 
 
+@health_bp.route('/health/debug/sync-schema', methods=['GET', 'POST'])
+def debug_sync_schema():
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+
+    created = []
+    errors = []
+
+    from app.models.password_reset import PasswordReset
+    try:
+        PasswordReset.__table__.create(db.engine, checkfirst=True)
+        created.append('password_resets')
+    except Exception as e:
+        errors.append(f'password_resets: {e}')
+
+    from sqlalchemy import inspect as sa_inspect
+    tables = sa_inspect(db.engine).get_table_names()
+
+    return jsonify({
+        'created': created,
+        'errors': errors,
+        'tables': sorted(tables)
+    })
+
+
+@health_bp.route('/health/debug/run-sql', methods=['GET', 'POST'])
+def debug_run_sql():
+    from flask import request as req
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+
+    sql = req.args.get('sql', '') or (req.get_json(silent=True) or {}).get('sql', '')
+    if not sql:
+        return jsonify({'error': 'missing sql param'}), 400
+
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text(sql))
+        db.session.commit()
+
+        if result.returns_rows:
+            rows = [dict(r._mapping) for r in result.fetchmany(50)]
+            return jsonify({'rows': rows, 'rowcount': result.rowcount})
+        else:
+            return jsonify({'rowcount': result.rowcount})
+
+    except Exception as e:
+        import traceback
+        db.session.rollback()
+        return jsonify({'error': str(e)[:1000], 'traceback': traceback.format_exc()}), 500
+
+
 
