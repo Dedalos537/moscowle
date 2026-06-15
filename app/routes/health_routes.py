@@ -53,10 +53,14 @@ def health_check():
 
     checks['alerts'] = crisis_monitor.get_metrics() or {}
 
+    git_sha = os.environ.get('RAILWAY_GIT_COMMIT_SHA') or ''
+    git_msg = os.environ.get('RAILWAY_GIT_COMMIT_MESSAGE') or ''
     return jsonify({
         'status': overall,
         'checks': checks,
         'version': '2.0-remediation',
+        'git_commit_sha': git_sha[:12] if git_sha else '',
+        'git_commit_message': git_msg[:100] if git_msg else '',
         'timestamp': __import__('datetime').datetime.utcnow().isoformat()
     }), 200 if overall != 'error' else 503
 
@@ -343,6 +347,35 @@ def debug_sync_schema():
         'errors': errors,
         'tables': sorted(tables)
     })
+
+
+@health_bp.route('/health/debug/request-info', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'])
+def debug_request_info():
+    """Returns full request info: headers, cookies, args, body. Helps diagnose 404/CORS issues."""
+    from flask import request as req
+    data = {
+        'method': req.method,
+        'path': req.path,
+        'full_path': req.full_path,
+        'url': req.url,
+        'origin': req.headers.get('Origin', ''),
+        'referer': req.headers.get('Referer', ''),
+        'is_secure': req.is_secure,
+        'scheme': req.scheme,
+        'remote_addr': req.remote_addr,
+        'content_type': req.content_type,
+        'content_length': req.content_length,
+        'headers': dict(req.headers),
+        'cookies': dict(req.cookies),
+        'args': dict(req.args),
+        'json': req.get_json(silent=True),
+        'blueprint': req.blueprint,
+        'endpoint': req.endpoint,
+        'user_agent': req.user_agent.string if req.user_agent else '',
+        'is_json': req.is_json,
+        'accept_mimetypes': str(req.accept_mimetypes),
+    }
+    return jsonify(data)
 
 
 @health_bp.route('/health/debug/run-sql', methods=['GET', 'POST'])
