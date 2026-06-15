@@ -404,6 +404,22 @@ def debug_sync_schema():
     return jsonify({'created': created, 'errors': errors, 'tables': sorted(tables)})
 
 
+@health_bp.route('/health/debug/routes', methods=['GET'])
+def debug_routes():
+    rules = []
+    for rule in sorted(current_app.url_map.iter_rules(), key=lambda r: r.rule):
+        methods = ','.join(sorted(rule.methods - {'HEAD', 'OPTIONS'}))
+        rules.append(
+            {
+                'rule': rule.rule,
+                'endpoint': rule.endpoint,
+                'methods': methods,
+                'blueprint': rule.endpoint.split('.')[0] if '.' in rule.endpoint else '',
+            }
+        )
+    return jsonify({'routes': rules, 'count': len(rules)})
+
+
 @health_bp.route('/health/debug/request-info', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'])
 def debug_request_info():
     """Returns full request info: headers, cookies, args, body. Helps diagnose 404/CORS issues."""
