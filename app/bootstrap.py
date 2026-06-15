@@ -263,7 +263,8 @@ def init_extensions(app: Flask) -> None:
 
     cors_origins = (
         app.config.get(
-            'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
+            'CORS_ORIGINS',
+            'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com https://moscowle.app http://localhost:4200 http://localhost:5173',
         )
         .replace(',', ' ')
         .split()

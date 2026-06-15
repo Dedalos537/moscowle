@@ -30,10 +30,18 @@ def _is_api_request() -> bool:
 def register_request_handlers(app: Flask) -> None:
     @app.before_request
     def before_request():
-        if request.method == 'OPTIONS' and (
-            request.path.startswith('/api/') or request.path.startswith('/admin/')
-        ):
-            return jsonify({}), 200
+        if request.method == 'OPTIONS':
+            origin = request.headers.get('Origin', '')
+            resp = jsonify({})
+            resp.status_code = 200
+            allowed = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com').replace(',', ' ').split()
+            if origin and (origin in allowed or '*' in allowed):
+                resp.headers['Access-Control-Allow-Origin'] = origin
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-App-Key, X-CSRFToken'
+            resp.headers['Access-Control-Max-Age'] = '86400'
+            return resp
 
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
@@ -139,5 +147,14 @@ def register_request_handlers(app: Flask) -> None:
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        origin = request.headers.get('Origin', '')
+        if origin and 'Access-Control-Allow-Origin' not in response.headers:
+            allowed = app.config.get('CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com').replace(',', ' ').split()
+            if origin in allowed or '*' in allowed:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-App-Key, X-CSRFToken'
 
         return response

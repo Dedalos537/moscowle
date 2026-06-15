@@ -1,9 +1,12 @@
-from flask import Blueprint, jsonify, current_app
-from app.extensions import db, csrf
-from app.services.crisis_monitor import crisis_monitor
-from sqlalchemy import text
-import os
 import logging
+import os
+from datetime import UTC
+
+from flask import Blueprint, current_app, jsonify
+from sqlalchemy import text
+
+from app.extensions import csrf, db
+from app.services.crisis_monitor import crisis_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +26,7 @@ def health_check():
             conn.commit()
         db_ok = True
     except Exception as e:
-        logger.warning(f"Health check: DB failed: {e}")
+        logger.warning(f'Health check: DB failed: {e}')
     checks['database'] = {'status': 'ok' if db_ok else 'error'}
     if not db_ok:
         overall = 'degraded'
@@ -42,8 +45,8 @@ def health_check():
 
     ollama_ok = False
     try:
-        import ollama
         from ollama import Client
+
         cli = Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
         cli.list()
         ollama_ok = True
@@ -55,20 +58,23 @@ def health_check():
 
     git_sha = os.environ.get('RAILWAY_GIT_COMMIT_SHA') or ''
     git_msg = os.environ.get('RAILWAY_GIT_COMMIT_MESSAGE') or ''
-    return jsonify({
-        'status': overall,
-        'checks': checks,
-        'version': '2.0-remediation',
-        'git_commit_sha': git_sha[:12] if git_sha else '',
-        'git_commit_message': git_msg[:100] if git_msg else '',
-        'timestamp': __import__('datetime').datetime.utcnow().isoformat()
-    }), 200 if overall != 'error' else 503
+    return jsonify(
+        {
+            'status': overall,
+            'checks': checks,
+            'version': '2.0-remediation',
+            'git_commit_sha': git_sha[:12] if git_sha else '',
+            'git_commit_message': git_msg[:100] if git_msg else '',
+            'timestamp': __import__('datetime').datetime.utcnow().isoformat(),
+        }
+    ), 200 if overall != 'error' else 503
 
 
 @health_bp.route('/health/debug/schema', methods=['GET'])
 def debug_schema():
-    from sqlalchemy import inspect as sa_inspect
     from flask import request as req
+    from sqlalchemy import inspect as sa_inspect
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
     inspector = sa_inspect(db.engine)
@@ -87,10 +93,12 @@ def debug_send_test():
     User must be logged in (JWT cookie). Visit in browser after logging into the app.
     """
     from flask import request as req
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
 
-    from app.auth_compat import verify_jwt_in_request, get_jwt_identity
+    from app.auth_compat import get_jwt_identity, verify_jwt_in_request
+
     try:
         verify_jwt_in_request(locations=['cookies'])
         uid = get_jwt_identity()
@@ -98,6 +106,7 @@ def debug_send_test():
         return jsonify({'error': 'not authenticated', 'detail': str(e)}), 401
 
     from app.models import User
+
     user = User.query.get(int(uid))
     if not user:
         return jsonify({'error': 'user not found'}), 404
@@ -108,32 +117,40 @@ def debug_send_test():
 
     # Step 1: chat exists
     try:
-        chat = db.session.execute(text("SELECT id FROM chat WHERE id = :cid"), {'cid': cid}).fetchone()
+        chat = db.session.execute(text('SELECT id FROM chat WHERE id = :cid'), {'cid': cid}).fetchone()
         steps['chat_exists'] = bool(chat)
     except Exception as e:
-        steps['chat_exists'] = f"ERROR: {e}"
+        steps['chat_exists'] = f'ERROR: {e}'
 
     # Step 2: is participant
     try:
-        part = db.session.execute(text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id = :uid"), {'cid': cid, 'uid': user.id}).fetchone()
+        part = db.session.execute(
+            text('SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id = :uid'),
+            {'cid': cid, 'uid': user.id},
+        ).fetchone()
         steps['is_participant'] = bool(part)
     except Exception as e:
-        steps['is_participant'] = f"ERROR: {e}"
+        steps['is_participant'] = f'ERROR: {e}'
 
     # Step 3: other participants
     try:
-        others = db.session.execute(text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid"), {'cid': cid, 'uid': user.id}).fetchall()
+        others = db.session.execute(
+            text('SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid'),
+            {'cid': cid, 'uid': user.id},
+        ).fetchall()
         steps['other_count'] = len(others)
         receiver = others[0].user_id if others else None
         steps['receiver'] = receiver
     except Exception as e:
-        steps['other_participants'] = f"ERROR: {e}"
+        steps['other_participants'] = f'ERROR: {e}'
 
     # Step 4: test INSERT with user as sender
     try:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from app.models.chat import Message
-        ts = str(datetime.now(timezone.utc).timestamp())
+
+        ts = str(datetime.now(UTC).timestamp())
         insert_stmt = Message.__table__.insert().values(
             sender_id=user.id,
             receiver_id=receiver or user.id,
@@ -141,69 +158,69 @@ def debug_send_test():
             chat_id=cid,
             status='sent',
             attachment_path=None,
-            attachment_type=None
+            attachment_type=None,
         )
-        compiled = str(insert_stmt.compile(compile_kwargs={"literal_binds": True}))
+        compiled = str(insert_stmt.compile(compile_kwargs={'literal_binds': True}))
         result = db.session.execute(insert_stmt)
         msg_id = result.inserted_primary_key[0]
         db.session.commit()
         # Verify
-        verify = db.session.execute(text("SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid"), {'mid': msg_id}).fetchone()
+        verify = db.session.execute(
+            text('SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid'), {'mid': msg_id}
+        ).fetchone()
         verify_dict = dict(verify._mapping) if verify else None
         # Clean up
-        db.session.execute(text("DELETE FROM message WHERE id = :mid"), {'mid': msg_id})
+        db.session.execute(text('DELETE FROM message WHERE id = :mid'), {'mid': msg_id})
         db.session.commit()
-        steps['insert'] = {
-            'msg_id': msg_id,
-            'compiled_sql': compiled[:500],
-            'verified': verify_dict
-        }
+        steps['insert'] = {'msg_id': msg_id, 'compiled_sql': compiled[:500], 'verified': verify_dict}
     except Exception as e:
         import traceback
+
         errors.append({'step': 'insert', 'error': str(e), 'traceback': traceback.format_exc()})
 
-    return jsonify({
-        'user_id': user.id,
-        'username': user.username,
-        'chat_id': cid,
-        'steps': steps,
-        'errors': errors
-    })
+    return jsonify({'user_id': user.id, 'username': user.username, 'chat_id': cid, 'steps': steps, 'errors': errors})
 
 
 @health_bp.route('/health/debug/last-error', methods=['GET'])
 def debug_last_error():
     from flask import request as req
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
     from app.routes.chat_routes import get_last_error
+
     return jsonify(get_last_error())
 
 
 @health_bp.route('/health/debug/query', methods=['GET'])
 def debug_query():
     from flask import request as req
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
     test = req.args.get('test', 'basic')
 
     try:
         if test == 'basic':
-            r = db.session.execute(text("SELECT 1 AS ok")).fetchone()
+            r = db.session.execute(text('SELECT 1 AS ok')).fetchone()
             return jsonify({'ok': r.ok, 'test': 'basic'})
 
         elif test == 'chat_count':
-            r = db.session.execute(text("SELECT COUNT(*) FROM chat")).scalar() or 0
-            p = db.session.execute(text("SELECT COUNT(*) FROM chat_participant")).scalar() or 0
-            m = db.session.execute(text("SELECT COUNT(*) FROM message")).scalar() or 0
+            r = db.session.execute(text('SELECT COUNT(*) FROM chat')).scalar() or 0
+            p = db.session.execute(text('SELECT COUNT(*) FROM chat_participant')).scalar() or 0
+            m = db.session.execute(text('SELECT COUNT(*) FROM message')).scalar() or 0
             return jsonify({'chat_count': r, 'participant_count': p, 'message_count': m, 'test': 'chat_count'})
 
         elif test == 'chat_columns':
-            r = db.session.execute(text("SELECT id, is_group, created_at FROM chat LIMIT 5")).fetchall()
+            r = db.session.execute(text('SELECT id, is_group, created_at FROM chat LIMIT 5')).fetchall()
             return jsonify({'rows': [dict(z._mapping) for z in r], 'test': 'chat_columns'})
 
         elif test == 'msg_columns':
-            r = db.session.execute(text("SELECT id, sender_id, receiver_id, body, status, is_read, chat_id, attachment_path, attachment_type FROM message LIMIT 5")).fetchall()
+            r = db.session.execute(
+                text(
+                    'SELECT id, sender_id, receiver_id, body, status, is_read, chat_id, attachment_path, attachment_type FROM message LIMIT 5'
+                )
+            ).fetchall()
             return jsonify({'rows': [dict(z._mapping) for z in r], 'test': 'msg_columns'})
 
         elif test == 'join_chat':
@@ -219,13 +236,17 @@ def debug_query():
 
         elif test == 'last_msg':
             r = db.session.execute(
-                text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
-                {'cid': int(req.args.get('cid', 1))}
+                text(
+                    'SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1'
+                ),
+                {'cid': int(req.args.get('cid', 1))},
             ).fetchone()
             return jsonify({'row': dict(r._mapping) if r else None, 'test': 'last_msg'})
 
         elif test == 'users':
-            r = db.session.execute(text('SELECT id, email, username, role, is_active FROM `user` ORDER BY id LIMIT 20')).fetchall()
+            r = db.session.execute(
+                text('SELECT id, email, username, role, is_active FROM `user` ORDER BY id LIMIT 20')
+            ).fetchall()
             users = []
             for u in r:
                 try:
@@ -244,49 +265,65 @@ def debug_query():
                     WHERE cp.user_id = :uid
                     ORDER BY c.created_at DESC
                 """),
-                {'uid': uid}
+                {'uid': uid},
             ).fetchall()
             result = []
             for cr in chats:
                 other = db.session.execute(
-                    text("SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid LIMIT 1"),
-                    {'cid': cr.id, 'uid': uid}
+                    text('SELECT user_id FROM chat_participant WHERE chat_id = :cid AND user_id != :uid LIMIT 1'),
+                    {'cid': cr.id, 'uid': uid},
                 ).fetchone()
                 last_msg = db.session.execute(
-                    text("SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1"),
-                    {'cid': cr.id}
+                    text(
+                        'SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1'
+                    ),
+                    {'cid': cr.id},
                 ).fetchone()
-                unread = db.session.execute(
-                    text("SELECT COUNT(*) FROM message WHERE chat_id = :cid AND sender_id != :uid AND status IN ('sent', 'delivered')"),
-                    {'cid': cr.id, 'uid': uid}
-                ).scalar() or 0
-                result.append({
-                    'chat_id': cr.id,
-                    'other_user_id': other.user_id if other else None,
-                    'last_msg_id': last_msg.id if last_msg else None,
-                    'unread': unread
-                })
+                unread = (
+                    db.session.execute(
+                        text(
+                            "SELECT COUNT(*) FROM message WHERE chat_id = :cid AND sender_id != :uid AND status IN ('sent', 'delivered')"
+                        ),
+                        {'cid': cr.id, 'uid': uid},
+                    ).scalar()
+                    or 0
+                )
+                result.append(
+                    {
+                        'chat_id': cr.id,
+                        'other_user_id': other.user_id if other else None,
+                        'last_msg_id': last_msg.id if last_msg else None,
+                        'unread': unread,
+                    }
+                )
             return jsonify({'chats': result, 'test': 'simulate_chats'})
 
         elif test == 'simulate_messages':
             cid = int(req.args.get('cid', 1))
             rows = db.session.execute(
-                text("SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs"),
-                {'cid': cid, 'lim': 10, 'offs': 0}
+                text(
+                    'SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs'
+                ),
+                {'cid': cid, 'lim': 10, 'offs': 0},
             ).fetchall()
-            return jsonify({'messages': [{'id':r.id,'sender_id':r.sender_id,'body':r.body[:50]} for r in rows], 'test': 'simulate_messages'})
+            return jsonify(
+                {
+                    'messages': [{'id': r.id, 'sender_id': r.sender_id, 'body': r.body[:50]} for r in rows],
+                    'test': 'simulate_messages',
+                }
+            )
 
         elif test == 'test_insert':
-            from datetime import datetime, timezone
+            from datetime import datetime
+
             chat_id = int(req.args.get('cid', 1))
-            result = db.session.execute(
-                text("SELECT 1 FROM chat WHERE id = :cid"), {'cid': chat_id}
-            ).fetchone()
+            result = db.session.execute(text('SELECT 1 FROM chat WHERE id = :cid'), {'cid': chat_id}).fetchone()
             if not result:
                 return jsonify({'error': 'chat not found', 'test': 'test_insert'}), 404
 
             from app.models.chat import Message
-            ts = str(datetime.now(timezone.utc).timestamp())
+
+            ts = str(datetime.now(UTC).timestamp())
             insert_stmt = Message.__table__.insert().values(
                 sender_id=1,
                 receiver_id=5,
@@ -294,38 +331,58 @@ def debug_query():
                 chat_id=chat_id,
                 status='sent',
                 attachment_path=None,
-                attachment_type=None
+                attachment_type=None,
             )
-            compiled = str(insert_stmt.compile(compile_kwargs={"literal_binds": True}))
+            compiled = str(insert_stmt.compile(compile_kwargs={'literal_binds': True}))
             result = db.session.execute(insert_stmt)
             msg_id = result.inserted_primary_key[0]
             db.session.commit()
             # Verify and then delete
             verify = db.session.execute(
-                text("SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid"), {'mid': msg_id}
+                text('SELECT id, body, is_read, is_active, created_at FROM message WHERE id = :mid'), {'mid': msg_id}
             ).fetchone()
             verify_dict = dict(verify._mapping) if verify else None
-            db.session.execute(text("DELETE FROM message WHERE id = :mid"), {'mid': msg_id})
+            db.session.execute(text('DELETE FROM message WHERE id = :mid'), {'mid': msg_id})
             db.session.commit()
-            return jsonify({
-                'test': 'test_insert',
-                'msg_id': msg_id,
-                'compiled_sql': compiled[:500],
-                'inserted': verify_dict,
-                'success': True
-            })
+            return jsonify(
+                {
+                    'test': 'test_insert',
+                    'msg_id': msg_id,
+                    'compiled_sql': compiled[:500],
+                    'inserted': verify_dict,
+                    'success': True,
+                }
+            )
 
         else:
-            return jsonify({'error': 'unknown test', 'available': ['basic', 'chat_count', 'chat_columns', 'msg_columns', 'join_chat', 'last_msg', 'users', 'simulate_chats', 'simulate_messages', 'test_insert']}), 400
+            return jsonify(
+                {
+                    'error': 'unknown test',
+                    'available': [
+                        'basic',
+                        'chat_count',
+                        'chat_columns',
+                        'msg_columns',
+                        'join_chat',
+                        'last_msg',
+                        'users',
+                        'simulate_chats',
+                        'simulate_messages',
+                        'test_insert',
+                    ],
+                }
+            ), 400
 
     except Exception as e:
         import traceback
+
         return jsonify({'error': str(e)[:1000], 'traceback': traceback.format_exc(), 'test': test}), 500
 
 
 @health_bp.route('/health/debug/sync-schema', methods=['GET', 'POST'])
 def debug_sync_schema():
     from flask import request as req
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
 
@@ -333,6 +390,7 @@ def debug_sync_schema():
     errors = []
 
     from app.models.password_reset import PasswordReset
+
     try:
         PasswordReset.__table__.create(db.engine, checkfirst=True)
         created.append('password_resets')
@@ -340,19 +398,17 @@ def debug_sync_schema():
         errors.append(f'password_resets: {e}')
 
     from sqlalchemy import inspect as sa_inspect
+
     tables = sa_inspect(db.engine).get_table_names()
 
-    return jsonify({
-        'created': created,
-        'errors': errors,
-        'tables': sorted(tables)
-    })
+    return jsonify({'created': created, 'errors': errors, 'tables': sorted(tables)})
 
 
 @health_bp.route('/health/debug/request-info', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'])
 def debug_request_info():
     """Returns full request info: headers, cookies, args, body. Helps diagnose 404/CORS issues."""
     from flask import request as req
+
     data = {
         'method': req.method,
         'path': req.path,
@@ -381,6 +437,7 @@ def debug_request_info():
 @health_bp.route('/health/debug/run-sql', methods=['GET', 'POST'])
 def debug_run_sql():
     from flask import request as req
+
     if req.args.get('key') != 'debug2026':
         return jsonify({'error': 'invalid key'}), 403
 
@@ -390,6 +447,7 @@ def debug_run_sql():
 
     try:
         from sqlalchemy import text
+
         result = db.session.execute(text(sql))
         db.session.commit()
 
@@ -401,8 +459,6 @@ def debug_run_sql():
 
     except Exception as e:
         import traceback
+
         db.session.rollback()
         return jsonify({'error': str(e)[:1000], 'traceback': traceback.format_exc()}), 500
-
-
-
