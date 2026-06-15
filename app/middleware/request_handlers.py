@@ -30,6 +30,11 @@ def _is_api_request() -> bool:
 def register_request_handlers(app: Flask) -> None:
     @app.before_request
     def before_request():
+        if request.method == 'OPTIONS' and (
+            request.path.startswith('/api/') or request.path.startswith('/admin/')
+        ):
+            return jsonify({}), 200
+
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
 
