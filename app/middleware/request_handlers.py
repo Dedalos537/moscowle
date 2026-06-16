@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from flask import Flask, g, jsonify, request
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from app.auth_compat import current_user
 
 
@@ -68,6 +69,17 @@ def register_request_handlers(app: Flask) -> None:
             mark_request_api()
         except Exception:
             g.is_api = False
+
+        # Try to authenticate via JWT before App-Key check so authenticated
+        # users are recognized even in before_request.
+        try:
+            verify_jwt_in_request(locations=['cookies'], optional=True)
+            uid = get_jwt_identity()
+            if uid is not None:
+                from app.models import User
+                g.current_user = User.query.get(int(uid))
+        except Exception:
+            pass
 
         if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
             skip_appkey = (
