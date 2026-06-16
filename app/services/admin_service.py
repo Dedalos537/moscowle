@@ -124,7 +124,7 @@ class AdminService:
             sede_id = data.get('sede_id')
             if role == 'jugador' and sede_id:
                 sede = Sede.query.get(sede_id)
-                if sede and sede.active:
+                if sede and sede.is_active:
                     user.sede_id = sede.id
 
             if role == 'terapista':
@@ -135,7 +135,7 @@ class AdminService:
                 if sede_ids and isinstance(sede_ids, list):
                     for sid in sede_ids:
                         s = Sede.query.get(sid)
-                        if s and s.active:
+                        if s and s.is_active:
                             user.assigned_sedes.append(s)
         except Exception as e:
             print(f'Error assigning sede: {e}')
@@ -303,7 +303,7 @@ class AdminService:
                 sid = int(data['sede_id']) if data['sede_id'] else 0
                 if sid:
                     s = Sede.query.get(sid)
-                    if s and s.active:
+                    if s and s.is_active:
                         user.sede_id = s.id
                 else:
                     user.sede_id = None
@@ -328,7 +328,7 @@ class AdminService:
 
                     for sid in sids:
                         s = Sede.query.get(sid)
-                        if s and s.active:
+                        if s and s.is_active:
                             user.assigned_sedes.append(s)
             except Exception as e:
                 print(f'Error updating sedes: {e}')

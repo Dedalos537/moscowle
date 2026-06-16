@@ -293,7 +293,13 @@ def admin_sedes():
                         created_at_iso = str(s.created_at)
 
                 result.append(
-                    {'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active, 'created_at': created_at_iso}
+                    {
+                        'id': s.id,
+                        'name': s.name,
+                        'address': s.address,
+                        'active': s.is_active,
+                        'created_at': created_at_iso,
+                    }
                 )
             return jsonify(result)
 
@@ -332,7 +338,7 @@ def admin_sedes_detail(sede_id):
                 return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             if 'active' in data:
-                s.active = bool(data['active'])
+                s.is_active = bool(data['active'])
             if 'name' in data and data['name']:
                 s.name = data['name']
             if 'address' in data:
@@ -343,7 +349,7 @@ def admin_sedes_detail(sede_id):
 
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        return jsonify({'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active})
+        return jsonify({'id': s.id, 'name': s.name, 'address': s.address, 'active': s.is_active})
     except Exception as e:
         current_app.logger.error(f'Error in admin_sedes_detail: {str(e)}')
         return jsonify({'error': str(e), 'data': []}), 500

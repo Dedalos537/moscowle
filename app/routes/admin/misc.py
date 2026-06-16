@@ -46,7 +46,7 @@ def dashboard():
 
     sedes_stats = []
     try:
-        sedes = Sede.query.filter_by(active=True).order_by(Sede.name.asc()).all()
+        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
         for s in sedes:
             count = User.query.filter_by(sede_id=s.id, role='jugador', is_active=True).count()
             sedes_stats.append({'id': s.id, 'name': s.name, 'count': count})

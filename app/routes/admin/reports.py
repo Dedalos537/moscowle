@@ -499,7 +499,7 @@ def api_daily_reports():
 
         rs = ReportService()
         reports = rs.get_daily_reports(start, end)
-        return jsonify({'success': True, 'reports': reports})
+        return jsonify({'success': True, 'data': reports})
     except Exception as e:
         current_app.logger.error(f'Error fetching daily reports: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -522,7 +522,7 @@ def api_weekly_summary():
 
         rs = ReportService()
         summary = rs.get_weekly_summary(week_start)
-        return jsonify({'success': True, 'summary': summary})
+        return jsonify({'success': True, 'data': summary})
     except Exception as e:
         current_app.logger.error(f'Error fetching weekly summary: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
