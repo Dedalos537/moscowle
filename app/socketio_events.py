@@ -1,5 +1,6 @@
-from flask import request
+from flask import g, request
 from app.auth_compat import current_user
+from flask_jwt_extended import decode_token
 from flask_socketio import join_room, emit
 from datetime import datetime
 from app.extensions import socketio, db
@@ -9,6 +10,18 @@ online_users = {}
 
 @socketio.on('connect')
 def handle_connect():
+    # Try to authenticate via JWT cookie if not already authenticated
+    if not current_user.is_authenticated:
+        try:
+            token = request.cookies.get('access_token_cookie')
+            if token:
+                decoded = decode_token(token)
+                uid = decoded.get('sub')
+                if uid:
+                    g.current_user = User.query.get(int(uid))
+        except Exception:
+            pass
+
     if current_user.is_authenticated:
         user_id = current_user.id
         if user_id not in online_users:

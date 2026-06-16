@@ -8,7 +8,7 @@ from flask import Blueprint, current_app, flash, jsonify, make_response, redirec
 from app.auth_compat import current_user, login_required
 from sqlalchemy import case, func, or_
 
-from app.extensions import bcrypt
+from app.extensions import bcrypt, csrf
 from app.models import Appointment, Message, MonthlyReport, QuarterlyReport, SessionMetrics, User, WeeklyReport, db
 from app.services.appointment_service import AppointmentService
 from app.services.dashboard_service import DashboardService
@@ -1282,6 +1282,7 @@ def api_profile():
 
 
 @therapist_bp.route('/api/profile', methods=['PUT'])
+@csrf.exempt
 @login_required
 def api_update_profile():
     if current_user.role != 'terapista':
