@@ -14,7 +14,7 @@ from flask_talisman import Talisman
 from pythonjsonlogger import jsonlogger
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from app.extensions import bcrypt, cache, cors, csrf, db, limiter, login_manager, mail, oauth, socketio
+from app.extensions import bcrypt, cache, cors, csrf, db, jwt, limiter, login_manager, mail, oauth, socketio
 from config import Config
 
 
@@ -428,6 +428,7 @@ def create_app(config_class=None):
 
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+    jwt.init_app(app)
     mail.init_app(app)
     oauth.init_app(app)
     login_manager.init_app(app)
