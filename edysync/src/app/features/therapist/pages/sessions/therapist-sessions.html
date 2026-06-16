@@ -316,12 +316,12 @@
   </div>
   <div modal-footer>
     <div class="flex gap-2">
-      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [animation]="deleting ? 'spin' : undefined" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
       <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
     <div class="flex gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-      <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [animation]="submitting ? 'spin' : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+      <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
     </div>
   </div>
 </app-modal>

@@ -143,7 +143,7 @@
 
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
-    <app-button variant="primary" [label]="programUploadingCreate ? 'Subiendo programas...' : submitting ? 'Creando sesiones...' : 'Crear Sesiones'" [icon]="(submitting || programUploadingCreate) ? ['fas', 'spinner'] : ['fas', 'plus']" [animation]="(submitting || programUploadingCreate) ? 'spin' : undefined" [disabled]="submitting || programUploadingCreate" (clicked)="submitCreate()"></app-button>
+    <app-button variant="primary" [label]="programUploadingCreate ? 'Subiendo programas...' : submitting ? 'Creando sesiones...' : 'Crear Sesiones'" [icon]="(submitting || programUploadingCreate) ? ['fas', 'spinner'] : ['fas', 'plus']" [disabled]="submitting || programUploadingCreate" (clicked)="submitCreate()"></app-button>
   </div>
 </app-modal>
 
@@ -250,6 +250,6 @@
 
   <div modal-footer class="flex items-center justify-between">
     <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar Sesión'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
-    <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [animation]="submitting ? 'spin' : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+    <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
   </div>
 </app-modal>
