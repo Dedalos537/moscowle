@@ -21,11 +21,9 @@ class UserRepository:
         if not therapist:
             return []
 
-        # Merge Many-to-Many (New) and One-to-Many (Legacy)
         m2m = therapist.associated_patients.filter_by(role='jugador', is_active=True).all()
         legacy = [p for p in therapist.assigned_patients if p.role == 'jugador' and p.is_active]
 
-        # Dict comprehension for unique by ID
         merged = {p.id: p for p in m2m}
         for p in legacy:
             merged[p.id] = p
@@ -59,13 +57,3 @@ class UserRepository:
         db.session.add(user)
         db.session.commit()
         return user
-
-    @staticmethod
-    def get_active_therapists(skip=0, limit=50):
-        return (
-            User.query.options(db.joinedload(User.assigned_sedes))
-            .filter(User.role == 'terapista', User.is_active)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )

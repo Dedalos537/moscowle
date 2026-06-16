@@ -12,7 +12,6 @@ from app.routes.api._shared import (
     admin_service,
     api_response,
     bcrypt,
-    csrf,
     current_app,
     current_user,
     db,
@@ -65,13 +64,11 @@ def api_admin_assign_therapist():
     if errors:
         return jsonify({'success': False, 'message': 'Datos inválidos', 'errors': errors}), 400
 
-    # Support multiple therapists
     success, message = False, 'Error desconocido'
 
     if 'therapist_ids' in data:
         success, message = admin_service.assign_therapist(data['patient_id'], therapist_ids=data['therapist_ids'])
     else:
-        # Legacy fallback
         success, message = admin_service.assign_therapist(data['patient_id'], therapist_id=data.get('therapist_id'))
 
     if not success:
@@ -88,7 +85,6 @@ def api_admin_create_user():
             return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
         data = request.get_json(silent=True) or {}
 
-        # Validation logic updated to allow "Patient without email" (Presencial)
         role = data.get('role')
         email = data.get('email', '').strip()
         username = data.get('username', '').strip()
@@ -96,13 +92,11 @@ def api_admin_create_user():
         if not role:
             return jsonify({'success': False, 'message': 'El rol es obligatorio'}), 400
 
-        # If role is NOT patient, email is mandatory
         if role != 'jugador' and not email:
             return jsonify(
                 {'success': False, 'message': 'El email es obligatorio para administradores y terapeutas'}
             ), 400
 
-        # If role IS patient, either email OR username is required
         if role == 'jugador' and not email and not username:
             return jsonify({'success': False, 'message': 'Debes ingresar al menos el Nombre del paciente'}), 400
 
@@ -114,7 +108,6 @@ def api_admin_create_user():
         temp_pass = result.get('temp_password') if isinstance(result, dict) else None
 
         if not user_obj:
-            # Fallback if service returned weird format
             return jsonify({'success': True, 'message': 'Usuario creado (sin datos de retorno)'})
 
         return jsonify({'success': True, 'message': 'Usuario creado', 'temp_password': temp_pass})
@@ -187,15 +180,11 @@ def api_admin_broadcast():
 @api_bp.route('/admin/list-users')
 @login_required
 def api_admin_list_users():
-    try:
-        if current_user.role not in ('admin', 'supervisor'):
-            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
-        role = (request.args.get('role') or '').strip()
-        users = admin_service.list_users(role)
-        return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
-    except Exception as e:
-        current_app.logger.error(f'Error in api_admin_list_users: {str(e)}')
-        return jsonify({'success': False, 'message': str(e)}), 500
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+    role = (request.args.get('role') or '').strip()
+    users = admin_service.list_users(role)
+    return jsonify({'success': True, 'users': [_serialize_user(u) for u in users]})
 
 
 @api_bp.route('/admin/user/<int:user_id>')
@@ -247,7 +236,6 @@ def api_admin_delete_user():
     if u.email == (os.getenv('ADMIN_EMAIL') or 'diegocenteno537@gmail.com'):
         return jsonify({'success': False, 'message': 'No puedes borrar al admin principal'}), 400
     try:
-        # Cascade delete dependencies first (Explicit for safety)
         Message.query.filter((Message.sender_id == u.id) | (Message.receiver_id == u.id)).delete()
         Appointment.query.filter((Appointment.therapist_id == u.id) | (Appointment.patient_id == u.id)).delete()
         SessionMetrics.query.filter(SessionMetrics.user_id == u.id).delete()
@@ -288,7 +276,6 @@ def api_admin_update_profile():
 
 
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
-@csrf.exempt
 @login_required
 def admin_sedes():
     try:
@@ -306,13 +293,7 @@ def admin_sedes():
                         created_at_iso = str(s.created_at)
 
                 result.append(
-                    {
-                        'id': s.id,
-                        'name': s.name,
-                        'address': s.address,
-                        'active': getattr(s, 'is_active', getattr(s, 'active', True)),
-                        'created_at': created_at_iso,
-                    }
+                    {'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active, 'created_at': created_at_iso}
                 )
             return jsonify(result)
 
@@ -339,7 +320,6 @@ def admin_sedes():
 
 
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
-@csrf.exempt
 @login_required
 def admin_sedes_detail(sede_id):
     try:
@@ -352,10 +332,7 @@ def admin_sedes_detail(sede_id):
                 return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             if 'active' in data:
-                if hasattr(s, 'is_active'):
-                    s.is_active = bool(data['active'])
-                else:
-                    s.active = bool(data['active'])
+                s.active = bool(data['active'])
             if 'name' in data and data['name']:
                 s.name = data['name']
             if 'address' in data:
@@ -366,14 +343,7 @@ def admin_sedes_detail(sede_id):
 
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        return jsonify(
-            {
-                'id': s.id,
-                'name': s.name,
-                'address': s.address,
-                'active': getattr(s, 'is_active', getattr(s, 'active', True)),
-            }
-        )
+        return jsonify({'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active})
     except Exception as e:
         current_app.logger.error(f'Error in admin_sedes_detail: {str(e)}')
         return jsonify({'error': str(e), 'data': []}), 500
@@ -393,19 +363,15 @@ def admin_sedes_analytics(sede_id):
 
         from datetime import datetime
 
-        # Fix division by zero or empty list issues in statistics
-        # Get therapists assigned to this sede
         therapists = User.query.filter(User.assigned_sedes.any(Sede.id == sede_id), User.role == 'terapista').all()
         therapist_ids = [t.id for t in therapists]
 
-        # Get all patients (jugador role) who have appointments with these therapists
         appointments_at_sede = (
             Appointment.query.filter(Appointment.therapist_id.in_(therapist_ids)).all() if therapist_ids else []
         )
 
         patient_ids = list(set([a.patient_id for a in appointments_at_sede if a.patient_id]))
 
-        # Payments for patients at this sede
         payments = Payment.query.filter(Payment.patient_id.in_(patient_ids)).all() if patient_ids else []
 
         total_patients = len(patient_ids)
@@ -429,8 +395,6 @@ def admin_sedes_analytics(sede_id):
             if payments
             else 0
         )
-
-        # Therapists assigned to this sede (already fetched as therapists)
 
         return jsonify(
             {
@@ -480,7 +444,6 @@ def admin_deudores_por_sede():
         month = 'current'
     try:
         data = fs.build_debt_report(days_ahead=7, month=month)
-        # Ensure 'por_sede' exists even if empty
         if not data or 'por_sede' not in data:
             data = {'por_sede': {}, 'summary': {}}
         return api_response(success=True, data=data)

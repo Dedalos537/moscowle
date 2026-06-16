@@ -179,7 +179,6 @@ def api_get_sessions_day():
     except Exception:
         return jsonify({'success': False, 'message': 'Fecha malita, revisa el formato'}), 400
 
-    # Filter for therapist or admin
     base_query = Appointment.query
     if current_user.role == 'terapista':
         base_query = base_query.filter(Appointment.therapist_id == current_user.id)
@@ -450,7 +449,6 @@ def api_cancel_session(session_id):
             session_id=session_id, new_status='cancelled', changed_by_user_id=current_user.id, notify=True
         )
 
-        # Optionally store cancellation reason in notes
         if reason:
             if appt.notes:
                 appt.notes += f'\n\n[Cancelada] {reason}'
@@ -490,8 +488,6 @@ def assign_games_to_session():
     if not session_id:
         return jsonify({'error': 'session_id requerido'}), 400
 
-    # Extract filenames from games list
-    # Support both ['game.html'] and [{'name': 'game.html', 'url': '...'}]
     game_filenames = []
     for game in games:
         if isinstance(game, dict):
@@ -499,7 +495,6 @@ def assign_games_to_session():
         else:
             game_filenames.append(game)
 
-    # Filter out empty strings
     game_filenames = [g for g in game_filenames if g]
 
     try:
@@ -518,7 +513,6 @@ def session_games(session_id):
     if not appt:
         return jsonify({'error': 'Sesión no encontrada'}), 404
     now = datetime.utcnow()
-    # Allow access if now is between start and end (or within scheduled with end None -> 2h)
     end_time = appt.end_time or (appt.start_time + timedelta(hours=2))
     enabled = appt.status == 'scheduled' and appt.start_time <= now <= end_time
     games = []
@@ -543,7 +537,6 @@ def complete_session(session_id):
         appt.end_time = datetime.utcnow()
         db.session.add(appt)
 
-    # Auto-audit on session complete if both program and transcript exist
     try:
         import threading
 
@@ -575,7 +568,6 @@ def complete_session(session_id):
         for m in metrics
     ]
 
-    # Merge into user.game_profile JSON
     patient = User.query.get(appt.patient_id)
     try:
         existing = json.loads(patient.game_profile) if patient.game_profile else {}
@@ -607,7 +599,6 @@ def complete_session(session_id):
 def get_resource(resource_id):
     try:
         if resource_id == 1:
-            # Guía de Ejercicios: summarize recent performance
             metrics = (
                 SessionMetrics.query.filter_by(user_id=current_user.id)
                 .order_by(SessionMetrics.date.desc())
@@ -672,12 +663,10 @@ def upload_session_image(appointment_id):
         if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
             return jsonify({'error': 'Tipo de archivo no permitido (solo imágenes y Word)'}), 400
 
-        # Create secure filename with UUID to prevent collisions
         original_filename = secure_filename(file.filename)
         extension = original_filename.rsplit('.', 1)[1].lower()
         unique_filename = f'{uuid.uuid4().hex}.{extension}'
 
-        # Create directory structure: static/uploads/session_images/YYYY/MM
         now = datetime.utcnow()
         relative_path = os.path.join('uploads', 'session_images', str(now.year), f'{now.month:02d}')
         upload_folder = os.path.join(current_app.root_path, 'static', relative_path)
@@ -687,15 +676,13 @@ def upload_session_image(appointment_id):
         file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
 
-        # Upload to Google Drive (Background/Sync)
         try:
-            # Pass the file PATH instead of opening it, to avoid stream issues
             patient_name = appointment.patient.username if appointment.patient else 'Paciente_Desconocido'
             session_date = appointment.start_time.strftime('%Y-%m-%d')
 
             print(f'Subiendo a Drive: {patient_name} / {session_date} / {unique_filename}')
             drive_service.upload_file(
-                file_path,  # Path string
+                file_path,
                 unique_filename,
                 file.mimetype,
                 patient_name,
@@ -704,7 +691,6 @@ def upload_session_image(appointment_id):
         except Exception as e:
             print(f'Error subiendo a Google Drive: {str(e)}')
 
-        # Store relative path in DB for serving
         db_relative_path = os.path.join(relative_path, unique_filename)
 
         session_image = SessionImage(
@@ -742,11 +728,9 @@ def delete_session_image(appointment_id, image_id):
 
     image = SessionImage.query.get_or_404(image_id)
 
-    # Verify it belongs to the appointment
     if image.appointment_id != appointment_id:
         return jsonify({'error': 'Imagen no corresponde a la sesión'}), 400
 
-    # Verify ownership (therapist assigned to appointment)
     if current_user.role == 'terapista':
         appointment = Appointment.query.get(appointment_id)
         if appointment.therapist_id != current_user.id:
@@ -806,7 +790,6 @@ def upload_session_program(appointment_id):
         audit.planned_text = planned_text
         audit.docx_uploaded_at = datetime.utcnow()
         audit.docx_uploaded_by = current_user.id
-        # Resetear auditoría si se sube nueva programación
         audit.audit_status = 'pending'
         audit.audit_report_json = None
         audit.audit_score = None
@@ -872,14 +855,12 @@ def upload_session_audio(appointment_id):
         from app.models import SessionAudit
         from app.services.audit_service import transcribe_audio
 
-        # Guardar temporalmente (será eliminado por audit_service)
         temp_filename = f'session_audio_{appointment_id}_{uuid.uuid4().hex}.{ext}'
         temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audio')
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, temp_filename)
         file.save(temp_path)
 
-        # Transcribir (el archivo se elimina dentro de transcribe_audio)
         result = transcribe_audio(temp_path)
 
         audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
@@ -887,7 +868,6 @@ def upload_session_audio(appointment_id):
             audit = SessionAudit(appointment_id=appointment_id)
             db.session.add(audit)
 
-        # Append transcript (supports chunked recording every 5 min)
         existing = audit.transcript_text or ''
         separator = ' ' if existing else ''
         audit.transcript_text = existing + separator + result['text']
@@ -915,7 +895,6 @@ def upload_session_audio(appointment_id):
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f'Error transcribiendo audio: {str(e)}')
-        # Asegurar eliminación del audio en caso de error no manejado
         try:
             if 'temp_path' in locals() and os.path.exists(temp_path):
                 os.remove(temp_path)
@@ -959,7 +938,6 @@ def trigger_session_audit(appointment_id):
         if appt and appt.therapist_id:
             ns.create_notification(appt.therapist_id, msg_therapist)
 
-        # Auto-generar reporte diario después de la auditoría
         if appt and score is not None:
             try:
                 from app.services.report_service import ReportService
@@ -1069,14 +1047,12 @@ def delete_session_program(appointment_id):
     audit.planned_text = None
     audit.docx_uploaded_at = None
     audit.docx_uploaded_by = None
-    # Reset audit if it was completed
     if audit.audit_status == 'completed':
         audit.audit_status = 'pending'
         audit.audit_report_json = None
         audit.audit_score = None
         audit.audited_at = None
 
-    # If no transcript either, delete the whole record
     if not audit.transcript_text:
         db.session.delete(audit)
 

@@ -1,33 +1,25 @@
 import json
 import os
-import tempfile
 import uuid
-from contextlib import suppress
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_login import current_user, login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
-from app.auth_compat import current_user, login_required
-from app.extensions import csrf, db
+from app.extensions import db
 from app.models import (
     Appointment,
     Payment,
     Sede,
     SessionMetrics,
     User,
+    db,
 )
 from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
-from app.services.payment_service import PaymentService
 from app.services.receipt_generator import generate_receipt_pdf
-from app.utils.sanitizer import sanitize_text
-
-try:
-    from app.services.llm_automation_service import analyze_receipt_image
-except ImportError:
-    analyze_receipt_image = None
 
 
 @admin_bp.route('/expenses')
@@ -57,11 +49,9 @@ def create_expense_route():
         return redirect(url_for('main.dashboard'))
 
     data = request.form.to_dict()
-    # Normalize therapist_id - if empty string, remove it so it's None or handle in service
     if not data.get('therapist_id') or data.get('therapist_id') == '':
         data['therapist_id'] = None
 
-    # Handle File Upload for Receipt
     if 'receipt' in request.files:
         file = request.files['receipt']
         if file and file.filename != '':
@@ -84,9 +74,6 @@ def create_expense_route():
         flash(f'Error al registrar: {res}', 'error')
 
     return redirect(url_for('admin.expenses'))
-
-
-# --- JSON API endpoints for Angular Admin ---
 
 
 @admin_bp.route('/api/therapist-financials')
@@ -197,6 +184,7 @@ def api_all_payments():
 
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
+    from app.models import Payment, User
 
     payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
     result = []
@@ -258,7 +246,6 @@ def payments():
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
 
-    # Auto-check overdue stats on load
     deactivated = payment_service.check_and_deactivate_overdue()
     if deactivated > 0:
         flash(f'{deactivated} usuarios desactivados por falta de pago.', 'warning')
@@ -291,12 +278,10 @@ def get_payment_info(patient_id):
 
 
 @admin_bp.route('/payments/register', methods=['POST'])
-@csrf.exempt
 @login_required
 def register_payment():
     if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
-    # Collect form data and validate
     discount_input = request.form.get('discount')
     if not discount_input or discount_input.strip() == '':
         discount_input = 0.0
@@ -314,12 +299,13 @@ def register_payment():
         'next_due_date': next_date_input,
     }
 
-    # Manual payment date extraction
     payment_date_str = request.form.get('payment_date')
     payment_date_obj = None
     if payment_date_str:
-        with suppress(ValueError):
+        try:
             payment_date_obj = datetime.strptime(payment_date_str, '%Y-%m-%d')
+        except ValueError:
+            pass
 
     data, errors = validate_payment_register(form)
     if errors:
@@ -334,18 +320,6 @@ def register_payment():
     reference = data.get('reference')
     next_due_date = data.get('next_due_date')
 
-    # Duplicate check: reject identical payment (same patient, amount, method) within last 60s
-    recent = Payment.query.filter(
-        Payment.patient_id == patient_id,
-        Payment.amount == float(amount),
-        Payment.method == method,
-        Payment.date >= datetime.utcnow() - timedelta(seconds=60),
-    ).first()
-    if recent:
-        flash('Pago duplicado detectado. Ya se registró un pago idéntico hace instantes.', 'error')
-        return redirect(url_for('admin.payments'))
-
-    # Handle File Upload
     receipt_path = None
     if 'receipt' in request.files:
         file = request.files['receipt']
@@ -360,14 +334,11 @@ def register_payment():
 
             file.save(os.path.join(upload_dir, unique_name))
 
-            # Store relative path for template usage
-            # Fix: Previously it was storing "uploads/receipts/...", but base UPLOAD_FOLDER is already instance/uploads
-            # So the relative path from UPLOAD_FOLDER should be just "receipts/..."
             receipt_path = f'receipts/{unique_name}'
 
     try:
         discount_val = float(discount) if discount else 0.0
-    except Exception:
+    except:
         discount_val = 0.0
 
     document_number = request.form.get('document_number')
@@ -395,7 +366,6 @@ def register_payment():
 
     msg_text = 'Pago registrado, todo ok' if success else str(result_or_payment)
 
-    # Check if this is an AJAX request (from deudores.html)
     is_ajax = False
     if (
         request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -406,14 +376,12 @@ def register_payment():
         is_ajax = True
 
     if is_ajax:
-        # Return JSON for AJAX clients
         if success:
             receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
             return jsonify({'success': True, 'message': msg_text, 'receipt_url': receipt_url}), 200
         else:
             return jsonify({'success': False, 'error': msg_text}), 400
 
-    # For traditional form submissions, use flash messages
     if success:
         flash(msg_text, 'success')
     else:
@@ -431,14 +399,9 @@ def payment_history(patient_id):
     patient = User.query.get_or_404(patient_id)
     payments = Payment.query.filter_by(patient_id=patient_id).order_by(Payment.date.desc()).all()
 
-    try:
-        return render_template(
-            'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
-        )
-    except Exception as e:
-        current_app.logger.error(f'Error rendering payment_history template for patient {patient_id}: {e}')
-        flash('Error al cargar el historial de pagos. Por favor intenta de nuevo.', 'error')
-        return redirect(url_for('admin.payments'))
+    return render_template(
+        'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
+    )
 
 
 @admin_bp.route('/payments/settings', methods=['POST'])
@@ -462,12 +425,9 @@ def update_payment_settings():
 
 
 @admin_bp.route('/payments/delete/<int:payment_id>', methods=['POST'])
-@csrf.exempt
 @login_required
 def delete_payment(payment_id):
     if current_user.role != 'admin':
-        if request.accept_mimetypes.accept_json:
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         return redirect(url_for('main.dashboard'))
 
     try:
@@ -480,22 +440,15 @@ def delete_payment(payment_id):
 
         db.session.delete(payment)
         db.session.commit()
-        msg = 'Pago eliminado.'
-        flash(msg, 'success')
-        if request.accept_mimetypes.accept_json:
-            return jsonify({'success': True, 'message': msg})
+        flash('Pago eliminado.', 'success')
     except Exception as e:
         db.session.rollback()
-        msg = f'Error al eliminar el pago: {str(e)}'
-        flash(msg, 'error')
-        if request.accept_mimetypes.accept_json:
-            return jsonify({'success': False, 'message': msg}), 400
+        flash(f'Error al eliminar el pago: {str(e)}', 'error')
 
     return redirect(request.referrer or url_for('admin.payments'))
 
 
 @admin_bp.route('/analyze-receipt', methods=['POST'])
-@csrf.exempt
 @login_required
 def analyze_receipt():
     """Analizar voucher de pago con IA"""
@@ -511,10 +464,11 @@ def analyze_receipt():
 
     patient_id = request.form.get('patient_id', type=int)
 
-    if analyze_receipt_image is None:
-        return jsonify({'error': 'Receipt analysis service not available'}), 503
-
     try:
+        import tempfile
+
+        from app.services.llm_automation_service import analyze_receipt_image
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
@@ -530,6 +484,8 @@ def analyze_receipt():
 
             if patient_id:
                 try:
+                    from app.services.payment_service import PaymentService
+
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
@@ -553,11 +509,13 @@ def analyze_receipt():
             }
             if patient_id:
                 try:
+                    from app.services.payment_service import PaymentService
+
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
-                except Exception as billing_err:
-                    print(f'WARN: Could not calculate next_due_date: {billing_err}')
+                except Exception:
+                    pass
             return jsonify(data)
 
     except Exception as e:
@@ -568,6 +526,9 @@ def analyze_receipt():
 @admin_bp.route('/payments/<int:payment_id>/download', methods=['GET', 'POST'])
 @login_required
 def download_receipt(payment_id):
+    from flask import flash, redirect, url_for
+    from flask_login import current_user
+
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
@@ -580,11 +541,10 @@ def download_receipt(payment_id):
         return redirect(url_for('admin.users'))
 
     if request.method == 'POST':
-        doc_number = sanitize_text(request.form.get('document_number', ''), 20)
-        g_name = sanitize_text(request.form.get('guardian_name', ''), 200)
-        concept = sanitize_text(request.form.get('concept', ''), 1000)
+        doc_number = request.form.get('document_number')
+        g_name = request.form.get('guardian_name')
+        concept = request.form.get('concept')
 
-        # Save rectified data for the future
         if doc_number:
             patient.document_number = doc_number
         if g_name:

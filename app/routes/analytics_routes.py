@@ -3,8 +3,8 @@ from functools import wraps
 from flask import Blueprint, jsonify
 
 from app.extensions import db
+from app.services.context_cache_service import context_cache
 from app.services.workflow_intelligence_service import get_workflow_stats
-from app.utils.cache_utils import CONTEXT_CACHE_KEY, cache_get
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 
@@ -12,7 +12,7 @@ analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        from app.auth_compat import current_user
+        from flask_login import current_user
 
         if not current_user.is_authenticated or current_user.role not in ('admin', 'supervisor'):
             return jsonify({'error': 'Unauthorized'}), 403
@@ -47,16 +47,14 @@ def workflow_stats():
 def cache_status():
     """Obtiene estado actual del caché de contexto"""
 
-    context_data = cache_get(CONTEXT_CACHE_KEY)
-    cached = context_data is not None
     return jsonify(
         {
             'success': True,
             'cache_status': {
-                'cached_items': 1 if cached else 0,
-                'ttl_seconds': 300,
+                'cached_items': len(context_cache.cache),
+                'ttl_seconds': context_cache.ttl,
                 'next_refresh': 'In 5 minutes',
-                'size_estimate': f'{len(str(context_data)) / 1024:.1f} KB' if cached else '0 KB',
+                'size_estimate': f'{sum(len(str(v)) for v in context_cache.cache.values()) / 1024:.1f} KB',
             },
         }
     )
@@ -68,7 +66,6 @@ def system_health():
     """Obtiene salud general del sistema"""
     from datetime import datetime
 
-    # Contar usuarios activos (con sesión en últimas 24h)
     from sqlalchemy import func
 
     from app.models import AIConversation
@@ -86,7 +83,7 @@ def system_health():
             'system_health': {
                 'status': 'healthy',
                 'recent_conversations': recent_conversations,
-                'cache_active': cache_get(CONTEXT_CACHE_KEY) is not None,
+                'cache_active': len(context_cache.cache) > 0,
                 'timestamp': datetime.now().isoformat(),
                 'uptime': 'monitoring...',
             },
@@ -98,8 +95,6 @@ def system_health():
 @admin_required
 def error_summary():
     """Resumen de errores recientes"""
-    # Aquí se agregaría lógica para rastrear errores
-    # Por ahora retorna estructura vacía
 
     return jsonify({'success': True, 'error_summary': {'critical': 0, 'errors': 0, 'warnings': 0, 'recent_errors': []}})
 

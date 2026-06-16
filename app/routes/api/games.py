@@ -1,26 +1,40 @@
-from app.routes.api._shared import (
-    db, User, Notification, Appointment, Message, Game, SessionMetrics,
-    SessionImage, ContactMessage, Sede, Payment, json, os, time, warnings,
-    genai, Groq, _ollama_client, predict_level, start_async_training,
-    get_user_today_utc_range, get_user_now, localize_datetime_for_display,
-    get_user_timezone, bcrypt, limiter, csrf, EmailService, api_response,
-    AvailabilityService, requests, or_, func,
-    game_service, notification_service,
-    _parse_json, _parse_datetime, analyze_contact_message_ai,
-    AssignTherapistSchema, UpdateUserSchema, SendMessageSchema,
-    uuid, secure_filename, datetime, timedelta, timezone,
-    login_required, current_user, request, jsonify, current_app, url_for,
-)
 from app.routes.api import api_bp
+from app.routes.api._shared import (
+    Appointment,
+    Game,
+    SessionMetrics,
+    User,
+    current_app,
+    current_user,
+    datetime,
+    db,
+    func,
+    game_service,
+    json,
+    jsonify,
+    limiter,
+    login_required,
+    notification_service,
+    or_,
+    os,
+    predict_level,
+    request,
+    requests,
+    start_async_training,
+    url_for,
+)
+
+
 @api_bp.route('/games', methods=['GET'])
 @login_required
 def api_list_games():
     files = game_service.list_games()
     return jsonify({'games': files})
 
+
 @api_bp.route('/save_game', methods=['POST'])
 @login_required
-@limiter.limit("20 per minute")
+@limiter.limit('20 per minute')
 def save_game():
     try:
         data = request.get_json() or {}
@@ -28,32 +42,26 @@ def save_game():
         accuracy = float(data.get('accuracy') or 0)
         avg_time = float(data.get('avg_time') or 0)
         session_id = data.get('session_id')
-        
+
         appt = None
         if session_id:
             appt = Appointment.query.get(int(session_id))
             if not appt:
                 return jsonify({'error': 'Esa sesión no existe'}), 404
-            
+
             if current_user.role == 'jugador' and appt.patient_id != current_user.id:
                 return jsonify({'error': 'No autorizado para esta sesión'}), 403
-            
+
             if appt.status == 'completed':
                 return jsonify({'error': 'Esta sesión ya se completó'}), 400
-                
-            # 3. Game Assignment check (Optional but recommended)
-            # We check if the game being saved is actually part of the session
-            # Using the new property games_list that handles both legacy and new models
-            # We normalize names for comparison (remove .html, case insensitive)
+
             assigned_normalized = [g.lower().replace('.html', '').replace('_', ' ') for g in appt.games_list]
             current_normalized = game_name.lower().replace('.html', '').replace('_', ' ')
-            
-            # Permitir si la lista esta vacia (legacy/testing) o si hay match
-            if appt.games_list and current_normalized not in assigned_normalized:
-                current_app.logger.warning(f"Game mismatch: {game_name} not in {appt.games_list}")
-                # return jsonify({'error': 'Juego no asignado a esta sesión'}), 400
 
-        pred_code, label = predict_level(accuracy, avg_time * 1000)  # avg_time expected in seconds; convert ms for model input
+            if appt.games_list and current_normalized not in assigned_normalized:
+                current_app.logger.warning(f'Game mismatch: {game_name} not in {appt.games_list}')
+
+        pred_code, label = predict_level(accuracy, avg_time * 1000)
 
         m = SessionMetrics(
             user_id=current_user.id,
@@ -61,39 +69,34 @@ def save_game():
             game_name=game_name,
             accurracy=accuracy,
             avg_time=avg_time,
-            prediction=pred_code
+            prediction=pred_code,
         )
-        
-        # Link to Game model if possible
-        # Try to find game by filename or title
+
         game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
         if game_obj:
             m.game_id = game_obj.id
-            
+
         db.session.add(m)
 
-        # If tied to a session, check progress
         if appt:
-            # Flush to ensure the new metric is countable
             db.session.flush()
-            
-            # Count total metrics for this session
+
             played_count = SessionMetrics.query.filter_by(session_id=appt.id).count()
-            
-            # Only close if we have played at least as many games as assigned
-            # Use the robust games_list property
+
             total_assigned = len(appt.games_list)
-            
-            if played_count >= total_assigned and total_assigned > 0:
+
+            if played_count >= total_assigned > 0:
                 appt.status = 'completed'
                 appt.end_time = datetime.utcnow()
                 db.session.add(appt)
-                # Optional: create a notification for therapist
                 try:
-                    notification_service.create_notification(appt.therapist_id, f"Sesión #{appt.id} completada por {current_user.username}", link=url_for('therapist.patients', _external=False))
+                    notification_service.create_notification(
+                        appt.therapist_id,
+                        f'Sesión #{appt.id} completada por {current_user.username}',
+                        link=url_for('therapist.patients', _external=False),
+                    )
                 except Exception:
                     pass
-
 
         db.session.commit()
 
@@ -102,17 +105,18 @@ def save_game():
             if total_metrics > 0 and total_metrics % 5 == 0:
                 all_metrics = SessionMetrics.query.all()
                 training_data = [[m.accurracy, m.avg_time * 1000] for m in all_metrics]
-                current_app.logger.info(f"Triggering AI async retraining with {len(training_data)} samples...")
+                current_app.logger.info(f'Triggering AI async retraining with {len(training_data)} samples...')
                 start_async_training(training_data)
         except Exception as e:
-            current_app.logger.error(f"AI Retraining trigger failed: {e}")
+            current_app.logger.error(f'AI Retraining trigger failed: {e}')
 
         return jsonify({'status': 'ok', 'prediction': pred_code, 'recommendation': label})
     except Exception as e:
         return jsonify({'error': 'no_se_pudo_guardar', 'detail': str(e)}), 400
 
+
 @api_bp.route('/games/upload', methods=['POST'])
-@limiter.limit("5 per hour")
+@limiter.limit('5 per hour')
 @login_required
 def upload_game():
     if current_user.role != 'terapista':
@@ -122,12 +126,13 @@ def upload_game():
     if not file or not name:
         return jsonify({'error': 'Falta el archivo o el nombre'}), 400
     if not name.lower().endswith('.html'):
-        name = f"{name}.html"
+        name = f'{name}.html'
     dest_dir = os.path.join(current_app.root_path, 'static', 'games')
     os.makedirs(dest_dir, exist_ok=True)
     path = os.path.join(dest_dir, name)
     file.save(path)
     return jsonify({'status': 'ok', 'file': name, 'url': url_for('static', filename=f'games/{name}')})
+
 
 @api_bp.route('/ai/generate_game', methods=['POST'])
 @login_required
@@ -147,63 +152,67 @@ def generate_game():
 
     kpi = {}
     kpi['total_sessions'] = SessionMetrics.query.filter_by(user_id=user.id).count()
-    kpi['avg_accuracy'] = float(db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=user.id).scalar() or 0)
-    kpi['avg_time_ms'] = float((db.session.query(func.avg(SessionMetrics.avg_time)).filter_by(user_id=user.id).scalar() or 0) * 1000)
+    kpi['avg_accuracy'] = float(
+        db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=user.id).scalar() or 0
+    )
+    kpi['avg_time_ms'] = float(
+        (db.session.query(func.avg(SessionMetrics.avg_time)).filter_by(user_id=user.id).scalar() or 0) * 1000
+    )
     kpi['last_games'] = [
         {
             'game_name': m.game_name,
             'accuracy': float(m.accurracy),
             'avg_time_ms': float(m.avg_time * 1000),
             'prediction': int(m.prediction),
-            'date': m.date.isoformat()
-        } for m in SessionMetrics.query.filter_by(user_id=user.id).order_by(SessionMetrics.date.desc()).limit(10)
+            'date': m.date.isoformat(),
+        }
+        for m in SessionMetrics.query.filter_by(user_id=user.id).order_by(SessionMetrics.date.desc()).limit(10)
     ]
 
     full_prompt = (
-        f"{prompt}\n\n"
-        "Genera dos bloques: 1) HTML completo para un juego sencillo de reflejos/cognitivo con UI moderna, tailwindcdn y FontAwesome (no frameworks).\n"
-        "2) JSON de configuración KPI con claves: kpis(avg_accuracy, avg_time_ms, total_sessions), goals, difficulty, and tracking schema for events.\n"
-        f"KPIs del paciente: {json.dumps(kpi, ensure_ascii=False)}\n"
-        "Devuelve primero el JSON (entre marcadores ---JSON---) y luego el HTML (entre ---HTML---)."
+        f'{prompt}\n\n'
+        'Genera dos bloques: 1) HTML completo para un juego sencillo de reflejos/cognitivo con UI moderna, tailwindcdn y FontAwesome (no frameworks).\n'
+        '2) JSON de configuración KPI con claves: kpis(avg_accuracy, avg_time_ms, total_sessions), goals, difficulty, and tracking schema for events.\n'
+        f'KPIs del paciente: {json.dumps(kpi, ensure_ascii=False)}\n'
+        'Devuelve primero el JSON (entre marcadores ---JSON---) y luego el HTML (entre ---HTML---).'
     )
 
     if not api_key:
-        # Fallback: simple generated HTML and JSON locally
         config = {
-            'kpis': {'avg_accuracy': kpi['avg_accuracy'], 'avg_time_ms': kpi['avg_time_ms'], 'total_sessions': kpi['total_sessions']},
+            'kpis': {
+                'avg_accuracy': kpi['avg_accuracy'],
+                'avg_time_ms': kpi['avg_time_ms'],
+                'total_sessions': kpi['total_sessions'],
+            },
             'goals': ['Mejorar reflejos', 'Reducir tiempo de reacción'],
             'difficulty': 'medium',
-            'tracking': {'events': ['click', 'hit', 'miss'], 'schema_version': 1}
+            'tracking': {'events': ['click', 'hit', 'miss'], 'schema_version': 1},
         }
-        html = '<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6">\n' \
-               '<h2 class="text-2xl font-bold">Juego IA (fallback)</h2>\n' \
-               '<p class="text-gray-600">Config basado en KPIs.</p>\n' \
-               '</body></html>'
+        html = (
+            '<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="p-6">\n'
+            '<h2 class="text-2xl font-bold">Juego IA (fallback)</h2>\n'
+            '<p class="text-gray-600">Config basado en KPIs.</p>\n'
+            '</body></html>'
+        )
     else:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
-            body = {"contents": [{"parts": [{"text": full_prompt}]}]}
+            url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}'
+            body = {'contents': [{'parts': [{'text': full_prompt}]}]}
             resp = requests.post(url, json=body, timeout=15)
             resp.raise_for_status()
             j = resp.json()
-            text = (
-                j.get('candidates', [{}])[0]
-                .get('content', {})
-                .get('parts', [{}])[0]
-                .get('text') or ''
-            )
+            text = j.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text') or ''
             json_start = text.find('---JSON---')
             html_start = text.find('---HTML---')
             if json_start != -1 and html_start != -1:
-                json_block = text[json_start + len('---JSON---'): html_start].strip()
-                html_block = text[html_start + len('---HTML---'):].strip()
+                json_block = text[json_start + len('---JSON---') : html_start].strip()
+                html_block = text[html_start + len('---HTML---') :].strip()
                 try:
                     config = json.loads(json_block)
                 except Exception:
                     config = {'raw': json_block}
                 html = html_block
             else:
-                # If markers missing, store raw
                 config = {'raw': text}
                 html = '<!DOCTYPE html><html><body><pre>Salida IA sin marcadores</pre></body></html>'
         except Exception as e:
@@ -212,7 +221,7 @@ def generate_game():
 
     dest_dir = os.path.join(current_app.root_path, 'static', 'games')
     os.makedirs(dest_dir, exist_ok=True)
-    filename = f"{game_name}.html"
+    filename = f'{game_name}.html'
     path = os.path.join(dest_dir, filename)
     try:
         with open(path, 'w', encoding='utf-8') as f:
@@ -226,10 +235,6 @@ def generate_game():
     except Exception as e:
         return jsonify({'error': 'persist_failed', 'detail': str(e)}), 500
 
-    return jsonify({
-        'status': 'ok',
-        'file': filename,
-        'url': url_for('static', filename=f'games/{filename}'),
-        'config': config
-    })
-
+    return jsonify(
+        {'status': 'ok', 'file': filename, 'url': url_for('static', filename=f'games/{filename}'), 'config': config}
+    )

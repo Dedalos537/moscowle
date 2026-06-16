@@ -7,175 +7,174 @@
 @if (!loading && data) {
 <div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in">
 
-  <!-- Section 1: Header -->
-  <div class="flex items-start justify-between mb-8" @fadeInUp>
-    <div>
-      <p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 mb-2">Resumen Diario</p>
-      <h1 class="text-2xl font-bold text-on-surface leading-tight">
+  <!-- Header: Saludo + Cumplimiento -->
+  <div class="flex items-center gap-6 mb-6">
+    <div class="flex-1">
+      <p class="text-[26px] font-bold text-on-surface leading-tight">
         Hola, {{ firstName }}. Tu próxima sesión es
-        <span class="text-primary">{{ nextSessionTitle }}</span>
-        @if (nextSessionTime) {
-          a las {{ nextSessionTime }}.
-        }
-      </h1>
+      </p>
+      <p class="text-[26px] font-bold text-on-surface leading-tight mt-0.5">
+        <span class="text-primary">{{ nextSessionTitle }}</span> a las {{ nextSessionTime }}
+      </p>
     </div>
-    <div class="bg-surface-container-lowest rounded-2xl p-4 text-center min-w-[120px] signature-shadow">
-      <div class="w-10 h-10 rounded-full bg-success-container flex items-center justify-center mx-auto mb-2">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg"></fa-icon>
+    <div class="bg-[#0f2e0a] text-white rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[200px]">
+      <svg width="52" height="52" viewBox="0 0 36 36" class="shrink-0">
+        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#2d5a1e" stroke-width="3"/>
+        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#4ade80" stroke-width="3"
+                stroke-dasharray="100" [attr.stroke-dashoffset]="100 - compliancePercent"
+                stroke-linecap="round" transform="rotate(-90 18 18)"/>
+      </svg>
+      <div>
+        <p class="text-2xl font-bold">{{ compliancePercent }}%</p>
+        <p class="text-[10px] uppercase tracking-wider opacity-70">Cumplimiento Global</p>
       </div>
-      <div class="text-3xl font-black text-on-surface">{{ compliancePercent }}%</div>
-      <div class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant/60">Cumplimiento Global</div>
     </div>
   </div>
 
-  <!-- Section 2: Main Content (2 columns) -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" @fadeInUp>
+  <!-- Sesión Actual Card -->
+  <div class="bg-[#0f2e0a] text-white rounded-2xl p-6 mb-8 relative overflow-hidden">
+    <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4">Sesión en Vivo</span>
 
-    <!-- Left: CLASE EN VIVO card -->
-    <div class="lg:col-span-2 bg-on-primary-container rounded-3xl p-8 text-white relative overflow-hidden">
-      <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4">Sesión en Vivo</span>
-      <h2 class="text-2xl font-bold mb-2">Sesión Actual: {{ nextSessionTitle }}</h2>
-      <p class="text-white/70 text-sm mb-8">{{ nextSessionSubtitle }}</p>
-
-      <div class="flex items-center gap-8">
-        <!-- SVG Donut -->
-        <div class="relative w-28 h-28 shrink-0">
-          <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4ade80" stroke-width="2.5"
-                    [attr.stroke-dasharray]="sessionProgress + ', 100'"
-                    stroke-linecap="round"/>
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-2xl font-black">{{ sessionProgress }}%</span>
-            <span class="text-[8px] uppercase tracking-wider text-white/50">Cobertura</span>
-          </div>
-        </div>
+    <div class="flex items-start justify-between gap-6">
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold mb-1">{{ nextSessionTitle }}</h2>
+        <p class="text-white/60 text-sm mb-4">{{ nextSessionSubtitle }}</p>
 
         <!-- Progress bar -->
-        <div class="flex-1 min-w-0">
-          <div class="flex justify-between text-sm mb-2">
-            <span class="text-white/80 font-medium">Meta Semanal</span>
-            <span class="font-bold text-[#4ade80]">{{ sessionProgress }}%</span>
+        <div class="mb-3">
+          <div class="flex justify-between text-[11px] text-white/50 mb-1">
+            <span>Progreso del Programa</span>
+            <span>{{ sessionProgress }}%</span>
           </div>
-          <div class="w-full h-2 bg-white/15 rounded-full overflow-hidden">
-            <div class="h-full bg-[#4ade80] rounded-full transition-all duration-700"
-                 [style.width.%]="sessionProgress"></div>
+          <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div class="h-full bg-[#4ade80] rounded-full transition-all" [style.width.%]="sessionProgress"></div>
           </div>
-          <p class="text-xs text-white/40 mt-3 leading-relaxed">{{ sessionDescription }}</p>
         </div>
-      </div>
-    </div>
 
-    <!-- Right: Agenda de Hoy -->
-    <div class="bg-surface-container-lowest rounded-3xl p-6 signature-shadow">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="font-bold text-on-surface">Agenda de Hoy</h3>
-        <span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">{{ todayDate }}</span>
+        <p class="text-xs text-white/40">{{ sessionDescription }}</p>
       </div>
 
-      <div class="relative pl-6">
-        <div class="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border/50"></div>
-
-        @for (item of agenda; track item.id) {
-          <div class="relative mb-5 last:mb-0">
-            <div class="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-[2.5px] border-surface-container-lowest z-10"
-                 [class.bg-primary]="item.is_current"
-                 [class.bg-success]="!item.is_current && item.status === 'completed'"
-                 [class.bg-border]="!item.is_current && item.status !== 'completed'">
-            </div>
-            @if (item.is_current) {
-              <span class="text-[10px] font-bold text-primary uppercase">Ahora • {{ item.start }}</span>
-            } @else {
-              <span class="text-[10px] text-on-surface-variant/50 font-medium">{{ item.start }}</span>
-            }
-            <p class="font-semibold text-sm text-on-surface mt-0.5">{{ item.title }}</p>
-            @if (item.location) {
-              <p class="text-xs text-on-surface-variant/50 mt-0.5">{{ item.location }}</p>
-            }
-            @if (item.patient) {
-              <p class="text-xs text-primary/80 mt-0.5">{{ item.patient }}</p>
-            }
-          </div>
-        }
-
-        @if (!agenda?.length) {
-          <div class="text-center py-4">
-            <fa-icon [icon]="['fas', 'calendar-check']" class="text-2xl text-on-surface-variant/20 mb-2"></fa-icon>
-            <p class="text-sm text-on-surface-variant/50">Sin sesiones hoy</p>
-          </div>
-        }
+      <!-- Donut -->
+      <div class="shrink-0">
+        <svg width="90" height="90" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#4ade80" stroke-width="3"
+                  stroke-dasharray="100" [attr.stroke-dashoffset]="100 - sessionProgress"
+                  stroke-linecap="round" transform="rotate(-90 18 18)"/>
+        </svg>
       </div>
     </div>
   </div>
 
-  <!-- Section 3: Temas de la Sesión -->
-  <div class="bg-surface-container-lowest rounded-3xl p-6 mb-8 signature-shadow" @fadeInUp>
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-2">
-        <fa-icon [icon]="['fas', 'list-check']" class="text-primary"></fa-icon>
-        <h3 class="font-bold text-on-surface">Temas de la Sesión</h3>
-      </div>
+  <!-- Agenda de Hoy + Temas -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Agenda -->
+    <div>
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider mb-4">Agenda de Hoy</h3>
+      @if (agenda.length > 0) {
+        <div class="relative pl-6">
+          <div class="absolute left-2 top-2 bottom-2 w-px bg-border"></div>
+          @for (item of agenda; track $index) {
+            <div class="relative mb-4 last:mb-0">
+              <div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2"
+                   [class.bg-primary]="item.status === 'scheduled'"
+                   [class.border-primary]="item.status === 'scheduled'"
+                   [class.bg-green-500]="item.status === 'completed'"
+                   [class.border-green-500]="item.status === 'completed'"
+                   [class.bg-surface-container-high]="item.status !== 'scheduled' && item.status !== 'completed'"
+                   [class.border-surface-container-high]="item.status !== 'scheduled' && item.status !== 'completed'">
+              </div>
+              <div class="bg-surface-container rounded-xl p-3">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-on-surface">{{ item.title }}</p>
+                  @if (item.status === 'completed') {
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 font-bold">Completada</span>
+                  }
+                  @if (item.status === 'scheduled') {
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">Programada</span>
+                  }
+                </div>
+                <p class="text-xs text-on-surface-variant mt-1">{{ item.start }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      @if (agenda.length === 0) {
+        <p class="text-on-surface-variant text-sm">Sin sesiones hoy</p>
+      }
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      @for (topic of topics; track $index) {
-        <div class="p-4 rounded-2xl border border-border/30 bg-surface hover:border-primary/30 transition-colors cursor-pointer">
-          <div class="flex items-center gap-2 mb-2">
-            <fa-icon [icon]="getTopicIcon(topic.status)"
-                     [class.text-success]="topic.status === 'LOGRADO'"
-                     [class.text-warning]="topic.status === 'PARCIAL'"
-                     [class.text-on-surface-variant/30]="topic.status === 'PENDIENTE'">
-            </fa-icon>
-            <span class="font-semibold text-sm text-on-surface truncate">{{ topic.name }}</span>
-          </div>
-          <span class="text-[10px] font-bold uppercase tracking-wider"
-                [class.text-success]="topic.status === 'LOGRADO'"
-                [class.text-warning]="topic.status === 'PARCIAL'"
-                [class.text-on-surface-variant/50]="topic.status === 'PENDIENTE'">
-            {{ topic.status }}
-          </span>
+    <!-- Temas de la Sesión -->
+    <div>
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider mb-4">Temas de la Sesión</h3>
+      @if (topics.length > 0) {
+        <div class="space-y-2">
+          @for (topic of topics; track $index) {
+            <div class="bg-surface-container rounded-xl p-3 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                   [class.bg-green-500/15]="topic.status === 'LOGRADO'"
+                   [class.text-green-500]="topic.status === 'LOGRADO'"
+                   [class.bg-amber-500/15]="topic.status === 'PARCIAL'"
+                   [class.text-amber-500]="topic.status === 'PARCIAL'"
+                   [class.bg-surface-container-high]="topic.status === 'PENDIENTE'"
+                   [class.text-on-surface-variant]="topic.status === 'PENDIENTE'">
+                <fa-icon [icon]="getTopicIcon(topic.status)" [class.text-green-500]="topic.status === 'LOGRADO'" [class.text-amber-500]="topic.status === 'PARCIAL'"></fa-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-on-surface truncate">{{ topic.name }}</p>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    [class.bg-green-500/10]="topic.status === 'LOGRADO'"
+                    [class.text-green-500]="topic.status === 'LOGRADO'"
+                    [class.bg-amber-500/10]="topic.status === 'PARCIAL'"
+                    [class.text-amber-500]="topic.status === 'PARCIAL'"
+                    [class.bg-surface-container-high]="topic.status === 'PENDIENTE'"
+                    [class.text-on-surface-variant]="topic.status === 'PENDIENTE'">
+                {{ topic.status }}
+              </span>
+            </div>
+          }
         </div>
+      }
+      @if (topics.length === 0) {
+        <p class="text-on-surface-variant text-sm">Sin programación subida</p>
       }
     </div>
   </div>
 
-  <!-- Section 4: Bottom Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4" @fadeInUp>
-    <!-- Reportes Pendientes -->
-    <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
-      <div class="w-12 h-12 rounded-xl bg-warning-container flex items-center justify-center shrink-0">
-        <fa-icon [icon]="['fas', 'file-alt']" class="text-warning"></fa-icon>
+  <!-- Stats Row -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'file-lines']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Reportes Pendientes</p>
       </div>
-      <div>
-        <p class="text-2xl font-black text-on-surface">{{ reportesCount }}</p>
-        <p class="text-xs text-on-surface-variant/60">Reportes Pendientes</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-error-container text-on-error-container text-[9px] font-bold rounded-full uppercase">Prioridad Alta</span>
-      </div>
+      <p class="text-3xl font-bold text-on-surface">{{ reportesCount }}</p>
     </div>
 
-    <!-- Progreso Académico -->
-    <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
-      <div class="w-12 h-12 rounded-xl bg-success-container flex items-center justify-center shrink-0">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-success"></fa-icon>
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Progreso Académico</p>
       </div>
-      <div>
-        <p class="text-2xl font-black text-on-surface">+{{ compliancePercent }}%</p>
-        <p class="text-xs text-on-surface-variant/60">Progreso Académico</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">Este Mes</span>
-      </div>
+      <p class="text-3xl font-bold text-on-surface">{{ compliancePercent }}%</p>
     </div>
 
-    <!-- AI Coach -->
-    <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
-      <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-        <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">AI Coach</p>
       </div>
-      <div>
-        <p class="text-lg font-black text-on-surface">AI Coach</p>
-        <p class="text-xs text-on-surface-variant/60">Nuevas sugerencias</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">3 Tips Listos</span>
-      </div>
+      <p class="text-2xl font-bold text-on-surface">Activo</p>
+      <p class="text-xs text-on-surface-variant mt-1">Última revisión: hoy</p>
     </div>
   </div>
 

@@ -19,7 +19,6 @@ from app.services.patient_service import PatientService
 from app.utils import get_user_today_utc_range
 from app.utils import parse_datetime as _parse_datetime
 
-# Lazy imports for heavy analytics libraries
 pd = None
 go = None
 px = None
@@ -90,12 +89,11 @@ def patients():
                 days_inactive = (now - last_date).days
                 if days_inactive > 30:
                     status_label = 'Retirado'
-                    status_color = 'bg-gray-100 text-gray-700'  # Gray implies retired/gone
+                    status_color = 'bg-gray-100 text-gray-700'
                 else:
                     status_label = 'Deudor'
-                    status_color = 'bg-red-100 text-red-700'  # Red implies debt/action needed
+                    status_color = 'bg-red-100 text-red-700'
             else:
-                # No history, but inactive -> Likely just created or Deudor
                 status_label = 'Deudor'
                 status_color = 'bg-red-100 text-red-700'
 
@@ -114,8 +112,6 @@ def session_review(appointment_id):
 
     appointment = Appointment.query.get_or_404(appointment_id)
 
-    # Verify ownership or assignment
-    # Allows viewing if current_user conducted the session OR is one of the patient's assigned therapists
     is_assigned = False
     if appointment.patient:
         is_assigned = current_user in appointment.patient.therapists
@@ -158,9 +154,6 @@ def analytics():
 
     my_patient_ids = [p.id for p in current_user.associated_patients]
 
-    # --- Real Data Calculation ---
-
-    # 1. AI Overview
     if not my_patient_ids:
         total_metrics = 0
         avg_acc = 0
@@ -193,22 +186,20 @@ def analytics():
 
     ai_overview = {
         'total_adaptations': total_metrics,
-        'adaptations_change': 0,  # Placeholder for trend
+        'adaptations_change': 0,
         'avg_accuracy': round(avg_acc, 1),
-        'accuracy_improvement': 0,  # Placeholder
+        'accuracy_improvement': 0,
         'success_rate': round(success_rate, 1),
-        'success_rate_increase': 0,  # Placeholder
+        'success_rate_increase': 0,
         'active_models': active_models_count,
         'insight': 'El modelo SVM se está adaptando a los patrones de tiempo y precisión de los pacientes.',
     }
 
-    # 2. Model Performance (Mocked for MVP as we don't have ground truth labels in DB yet)
     model_performance = [
         {'name': 'Clasificación de Nivel', 'accuracy': 92},
-        {'name': 'Detección de Fatiga', 'accuracy': 85},  # Future feature
+        {'name': 'Detección de Fatiga', 'accuracy': 85},
     ]
 
-    # 3. Recent Adaptations (Last 10 metrics for my patients)
     recent_adaptations = []
     if my_patient_ids:
         recent_metrics = (
@@ -236,7 +227,6 @@ def analytics():
                 }
             )
 
-    # 4. Charts Data
     difficulty_adaptation_data = {}
     patient_progress_data = {}
     adaptation_frequency_data = {}
@@ -245,7 +235,6 @@ def analytics():
         pass
 
     else:
-        # Chart 1: Difficulty Adaptation Over Time (Last 30 days, top 5 active patients of MINE)
         last_30_days = datetime.utcnow() - timedelta(days=30)
 
         if my_patient_ids:
@@ -297,7 +286,6 @@ def analytics():
             except Exception:
                 pass
 
-        # Chart 2: Patient Progress Distribution
         if my_patient_ids:
             try:
                 subq = (
@@ -337,7 +325,6 @@ def analytics():
             except Exception:
                 pass
 
-        # Chart 3: Adaptation Frequency by Game
         if my_patient_ids:
             try:
                 game_counts = (
@@ -388,7 +375,6 @@ def reports():
 
     my_patient_ids = [p.id for p in current_user.associated_patients]
 
-    # Overview stats from DB
     now = datetime.utcnow()
     last_30 = now - timedelta(days=30)
     prev_60 = now - timedelta(days=60)
@@ -400,14 +386,13 @@ def reports():
     completed_objectives = 0
     completed_objectives_change = 0
     active_patients = 0
-    active_patients_change = 0  # Placeholder as we don't track historical patient count easily
+    active_patients_change = 0
 
     monthly_progress_chart = {}
     sessions_per_day_chart = {}
     game_performance_chart = {}
 
     if my_patient_ids:
-        # 1. Improvement Rate
         avg_last_30 = (
             db.session.query(func.avg(SessionMetrics.accurracy))
             .filter(SessionMetrics.user_id.in_(my_patient_ids), SessionMetrics.date >= last_30)
@@ -444,13 +429,9 @@ def reports():
 
         active_patients = len([p for p in current_user.associated_patients if p.is_active])
 
-        # Chart 1: Monthly Progress
-
-        # Check dialect for date formatting
         if db.engine.dialect.name == 'sqlite':
             month_col = func.strftime('%Y-%m', SessionMetrics.date).label('Mes')
         else:
-            # MySQL / PostgreSQL (assuming MySQL as standard on cPanel)
             month_col = func.date_format(SessionMetrics.date, '%Y-%m').label('Mes')
 
         q_monthly = db.session.query(month_col, func.avg(SessionMetrics.accurracy).label('Progreso')).filter(
@@ -481,18 +462,9 @@ def reports():
         )
         monthly_progress_chart = json.loads(fig_monthly.to_json())
 
-        # Chart 2: Sessions per Day
-
-        # Dialect check for weekday extraction
         if db.engine.dialect.name == 'sqlite':
             weekday_col = func.strftime('%w', Appointment.start_time).label('weekday')
         else:
-            # MySQL: DAYOFWEEK() returns 1=Sun, 2=Mon...7=Sat. SQLite %w returns 0=Sun, 1=Mon...6=Sat.
-            # We need to standardize. Let's stick to 0=Sun..6=Sat logic if possible, or just build separate maps.
-            # But wait, let's just use Python for weekday processing if possible. Or handle mapping carefully.
-            # MySQL: DAYOFWEEK(date) -> 1=Sunday, 2=Monday.
-            # SQLite: strftime('%w', date) -> 0=Sunday, 1=Monday.
-            # To normalize to 0=Sun, 1=Mon...: MySQL DAYOFWEEK(date) - 1
             weekday_col = (func.dayofweek(Appointment.start_time) - 1).label('weekday')
 
         q_sessions = (
@@ -506,11 +478,8 @@ def reports():
             q_sessions = q_sessions.filter(Appointment.start_time <= end_dt)
         df_sessions = pd.read_sql(q_sessions.statement, db.engine)
 
-        # Normalize weekday column to string to handle both SQLite (str) and MySQL (int)
         if not df_sessions.empty:
-            df_sessions['weekday'] = (
-                df_sessions['weekday'].astype(str).str.split('.').str[0]
-            )  # Handle potential float conversion
+            df_sessions['weekday'] = df_sessions['weekday'].astype(str).str.split('.').str[0]
 
         weekday_map = {'1': 'Lun', '2': 'Mar', '3': 'Mié', '4': 'Jue', '5': 'Vie', '6': 'Sáb', '0': 'Dom'}
         if not df_sessions.empty:
@@ -531,7 +500,6 @@ def reports():
         else:
             sessions_per_day_chart = {}
 
-        # Chart 3: Game Performance
         q_games = db.session.query(
             SessionMetrics.game_name.label('Juego'), func.count(SessionMetrics.id).label('Rendimiento')
         ).filter(SessionMetrics.user_id.in_(my_patient_ids))
@@ -564,7 +532,6 @@ def reports():
         'active_patients_change': active_patients_change,
     }
 
-    # Difficulty analysis buckets based on prediction
     q_pred = db.session.query(SessionMetrics.prediction, func.count(SessionMetrics.id).label('cnt'))
     if my_patient_ids:
         q_pred = q_pred.filter(SessionMetrics.user_id.in_(my_patient_ids))
@@ -576,12 +543,10 @@ def reports():
     q_pred = q_pred.group_by(SessionMetrics.prediction)
     df_pred = pd.read_sql(q_pred.statement, db.engine)
 
-    # Placeholder buckets since we don't have 'cnt' per level defined well yet
     difficulty_analysis = [
         {'name': 'Fácil', 'percentage': int(df_pred['cnt'].sum()) if not df_pred.empty else 0, 'color': 'bg-green-500'}
     ]
 
-    # Patient insights: top 3 by recent avg accuracy
     q_insights = db.session.query(
         SessionMetrics.user_id.label('uid'), func.avg(SessionMetrics.accurracy).label('acc')
     ).filter(SessionMetrics.user_id.in_(my_patient_ids))
@@ -607,7 +572,6 @@ def reports():
                 }
             )
 
-    # Detailed reports: latest metrics per patient
     detailed_reports = []
     users = current_user.associated_patients.filter_by(role='jugador').all()
 
@@ -696,7 +660,6 @@ def export_reports():
     for a in appts:
         pid = a.patient_id
         patient = a.patient
-        # aggregate metrics for patient in the same range
         total_sessions = SessionMetrics.query.filter(
             SessionMetrics.user_id == pid, SessionMetrics.date >= start_dt, SessionMetrics.date <= end_dt
         ).count()
@@ -754,8 +717,6 @@ def messages():
         flash('Acceso denegado', 'error')
         return redirect(url_for('main.dashboard'))
 
-    # Therapist sees all patients they've messaged
-    # Use SUM(CASE...) for cross-DB compatibility (MySQL 5.7/MariaDB don't support FILTER)
     unread_expr = func.sum(case(((Message.is_read == False) & (Message.receiver_id == current_user.id), 1), else_=0))
 
     conversations_query = (
@@ -824,9 +785,7 @@ def profile():
         return redirect(url_for('main.dashboard'))
 
     patients_count = User.query.filter_by(assigned_therapist_id=current_user.id, role='jugador', is_active=True).count()
-    # Number of appointments (sessions) handled by this therapist
     sessions_count = Appointment.query.filter_by(therapist_id=current_user.id).count()
-    # Upcoming scheduled appointments starting from now
     upcoming_appointments = Appointment.query.filter(
         Appointment.therapist_id == current_user.id,
         Appointment.status == 'scheduled',
@@ -956,7 +915,6 @@ def delete_patient(patient_id):
     patient_username = patient.username
 
     try:
-        # Delete patient's related records first to satisfy FK constraints
         SessionMetrics.query.filter_by(user_id=patient_id).delete()
         Appointment.query.filter_by(patient_id=patient_id).delete()
         db.session.delete(patient)
@@ -1002,12 +960,10 @@ def patient_detail(patient_id):
         SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.desc()).limit(10).all()
     )
 
-    # Get all appointments for history list (not just metrics)
     history_appointments = (
         Appointment.query.filter(Appointment.patient_id == patient_id).order_by(Appointment.start_time.desc()).all()
     )
 
-    # Get all sessions for chart data
     all_sessions_query = SessionMetrics.query.filter_by(user_id=patient_id).order_by(SessionMetrics.date.asc()).all()
     all_sessions = []
     for s in all_sessions_query:
@@ -1072,16 +1028,13 @@ def update_patient(patient_id):
     if 'notes' in data:
         patient.notes = sanitize_text(data['notes'], 2000)
 
-    # Activar cuenta añadiendo email
     if 'email' in data and data['email']:
         new_email = data['email'].strip().lower()
-        # Solo procesar si cambia y no estaba ya tomado
         if new_email != patient.email and new_email:
             exists = User.query.filter_by(email=new_email).first()
             if exists:
                 return jsonify({'success': False, 'message': 'El correo ya está registrado por otro usuario'}), 400
 
-            # Detectar si es activación de cuenta "sin email"
             was_placeholder = patient.email.startswith('noemail_') or patient.email.startswith('temp_')
 
             patient.email = new_email
@@ -1106,11 +1059,6 @@ def update_patient(patient_id):
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Paciente actualizado, listo'})
-
-
-# ─────────────────────────────────────────────────────────────
-# JSON API endpoints for Angular therapist module
-# ─────────────────────────────────────────────────────────────
 
 
 @therapist_bp.route('/api/dashboard-stats')
@@ -1387,11 +1335,6 @@ def therapist_efficiency():
         return jsonify({'success': False, 'error': 'Error al obtener eficiencia'}), 500
 
 
-# ─────────────────────────────────────────────────────────────
-# JSON API endpoints for Angular therapist module (missing)
-# ─────────────────────────────────────────────────────────────
-
-
 @therapist_bp.route('/api/analytics')
 @login_required
 def api_analytics():
@@ -1434,7 +1377,6 @@ def api_analytics():
             'active_models': 1,
         }
 
-        # Difficulty matrix
         games = (
             db.session.query(SessionMetrics.game_name)
             .filter(SessionMetrics.user_id.in_(my_patient_ids))
@@ -1461,7 +1403,6 @@ def api_analytics():
             dm.append({'game': game, 'levels': levels})
         difficulty_matrix = dm
 
-        # Prediction distribution
         dist = (
             db.session.query(SessionMetrics.prediction, func.count(SessionMetrics.id))
             .filter(SessionMetrics.user_id.in_(my_patient_ids), SessionMetrics.prediction.isnot(None))
@@ -1471,13 +1412,11 @@ def api_analytics():
         dist_map = {0: 'Mantener', 1: 'Avanzar', 2: 'Apoyo'}
         prediction_distribution = [{'label': dist_map.get(p, str(p)), 'value': c} for p, c in dist]
 
-        # Model confidence (mock)
         model_confidence = [
             {'model': 'SVM', 'confidence': 88},
             {'model': 'Random Forest', 'confidence': 76},
         ]
 
-        # Recent adaptations
         recent = (
             db.session.query(SessionMetrics, User)
             .join(User, SessionMetrics.user_id == User.id)
@@ -1659,7 +1598,6 @@ def api_patient_stats():
         completed = Appointment.query.filter_by(patient_id=uid, status='completed').count()
         avg_acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=uid).scalar() or 0
 
-        # improvement = change from first half to second half of sessions
         improvement = 0
         if total >= 4:
             half = total // 2

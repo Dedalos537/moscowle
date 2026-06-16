@@ -9,7 +9,7 @@ public_bp = Blueprint('public', __name__, url_prefix='/api/public')
 
 @public_bp.route('/app-key', methods=['GET'])
 def generate_app_key():
-    secret = current_app.config['APP_SECRET_KEY']
+    secret = current_app.config.get('APP_SECRET_KEY', 'dev-app-key-change-in-production')
     client_timestamp = int(time.time() / 300)
     message = f'{secret}:{client_timestamp}'
     expected_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
@@ -21,7 +21,7 @@ def generate_app_key():
 def session_check():
     from flask import request as req
     from flask import session
-    from app.auth_compat import current_user
+    from flask_login import current_user
 
     cookie_header = req.headers.get('Cookie', '')
     has_session_cookie = 'moscowle_session=' in cookie_header
@@ -43,8 +43,6 @@ def session_check():
         }
     )
 
-
-# ========== SERVE ANGULAR SPA FROM FLASK (SAME-ORIGIN) ==========
 
 spa_bp = Blueprint('spa', __name__)
 
