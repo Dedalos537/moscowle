@@ -205,6 +205,20 @@ def register_request_handlers(app):
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
 
+        try:
+            from flask_jwt_extended import verify_jwt_in_request as _vji
+            _vji(locations=['cookies', 'headers'], optional=True)
+            from flask_jwt_extended import get_jwt_identity as _gji
+            _uid = _gji()
+            if _uid:
+                from app.models import User as _U
+                _user = _U.query.get(int(_uid))
+                if _user:
+                    g._login_user = _user
+                    g.current_user = _user
+        except Exception:
+            pass
+
         has_cookie = 'moscowle_session=' in (request.headers.get('Cookie', ''))
         app.logger.debug(
             'Request started',
@@ -229,6 +243,15 @@ def register_request_handlers(app):
             g.is_api = False
 
         if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
+            _has_jwt = False
+            try:
+                from flask_jwt_extended import verify_jwt_in_request as _vji
+                _vji(locations=['cookies', 'headers'], optional=True)
+                from flask_jwt_extended import get_jwt_identity as _gji
+                _has_jwt = _gji() is not None
+            except Exception:
+                pass
+
             skip_appkey = (
                 request.method == 'OPTIONS'
                 or 'webhook' in request.path
@@ -237,6 +260,7 @@ def register_request_handlers(app):
                 or request.path.startswith('/api/health')
                 or request.path.startswith('/api/public/')
                 or current_user.is_authenticated
+                or _has_jwt
             )
             if not skip_appkey:
                 app_key = request.headers.get('X-App-Key')
