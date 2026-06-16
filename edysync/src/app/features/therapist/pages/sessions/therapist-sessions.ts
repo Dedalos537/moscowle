@@ -67,6 +67,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   activeBriefing: any = null;
   activeBriefingLoading = false;
   showActiveBriefing = false;
+  lateSession: any = null;
 
   private subs = new Subscription();
 
@@ -99,6 +100,13 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     }));
+
+    this.subs.add(
+      this.recordingService.pendingLateSession$.subscribe(session => {
+        this.lateSession = session;
+        this.cdr.markForCheck();
+      })
+    );
   }
 
   ngOnDestroy() {
@@ -401,5 +409,25 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  getLateSessionDelay(): string {
+    if (!this.lateSession?.start) return '';
+    const start = new Date(this.lateSession.start);
+    const diff = Math.floor((Date.now() - start.getTime()) / 60000);
+    return diff > 0 ? `${diff} min` : '< 1 min';
+  }
+
+  startLateSessionRecording() {
+    this.recordingService.pendingLateSession$.next(null);
+    this.lateSession = null;
+    this.recordingService.autoStart();
+    this.cdr.markForCheck();
+  }
+
+  dismissLateSession() {
+    this.recordingService.pendingLateSession$.next(null);
+    this.lateSession = null;
+    this.cdr.markForCheck();
   }
 }

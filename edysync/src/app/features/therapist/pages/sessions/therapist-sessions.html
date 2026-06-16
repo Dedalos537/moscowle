@@ -1,4 +1,24 @@
 <div class="p-8 max-w-7xl mx-auto">
+<!-- Late Session Warning Modal -->
+<div class="late-session-overlay" *ngIf="lateSession">
+  <div class="late-session-modal">
+    <div class="late-session-icon">⏰</div>
+    <h2>¡La sesión ya comenzó!</h2>
+    <div class="late-session-info">
+      <p><strong>Paciente:</strong> {{ lateSession.patient?.name }}</p>
+      <p><strong>Horario:</strong> {{ lateSession.start | date:'shortTime' }} — {{ lateSession.end | date:'shortTime' }}</p>
+      <p><strong>Atraso:</strong> {{ getLateSessionDelay() }}</p>
+    </div>
+    <div class="late-session-actions">
+      <button class="btn btn-primary" (click)="startLateSessionRecording()">
+        🎤 Iniciar grabación
+      </button>
+      <button class="btn btn-secondary" (click)="dismissLateSession()">
+        ⚠ Marcar como tarde
+      </button>
+    </div>
+  </div>
+</div>
   <div class="flex items-end justify-between mb-8">
     <div>
       <h2 class="text-h2 font-h2 text-on-surface">Mis Sesiones</h2>
