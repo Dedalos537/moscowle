@@ -1311,10 +1311,30 @@ def api_current_session():
         .first()
     )
     if not appt:
+        current_app.logger.info(
+            'api_current_session: no active session',
+            extra={
+                'user_id': current_user.id,
+                'role': current_user.role,
+                'now': now.isoformat(),
+            },
+        )
         return jsonify({'success': False, 'has_active': False})
 
     delay_minutes = int((now - appt.start_time).total_seconds() / 60)
     delay_minutes = max(delay_minutes, 0)
+
+    current_app.logger.info(
+        'api_current_session: active session found',
+        extra={
+            'user_id': current_user.id,
+            'session_id': appt.id,
+            'start': appt.start_time.isoformat() if appt.start_time else None,
+            'end': appt.end_time.isoformat() if appt.end_time else None,
+            'status': appt.status,
+            'delay_minutes': delay_minutes,
+        },
+    )
 
     return jsonify(
         {
