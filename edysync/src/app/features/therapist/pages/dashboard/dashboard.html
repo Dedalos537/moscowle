@@ -12,7 +12,7 @@
     <div>
       <p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 mb-2">Resumen Diario</p>
       <h1 class="text-2xl font-bold text-on-surface leading-tight">
-        Hola, {{ firstName }}. Tu próxima clase es
+        Hola, {{ firstName }}. Tu próxima sesión es
         <span class="text-primary">{{ nextSessionTitle }}</span>
         @if (nextSessionTime) {
           a las {{ nextSessionTime }}.
@@ -33,7 +33,7 @@
 
     <!-- Left: CLASE EN VIVO card -->
     <div class="lg:col-span-2 bg-on-primary-container rounded-3xl p-8 text-white relative overflow-hidden">
-      <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4">Clase en Vivo</span>
+      <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4">Sesión en Vivo</span>
       <h2 class="text-2xl font-bold mb-2">Sesión Actual: {{ nextSessionTitle }}</h2>
       <p class="text-white/70 text-sm mb-8">{{ nextSessionSubtitle }}</p>
 
@@ -116,7 +116,6 @@
         <fa-icon [icon]="['fas', 'list-check']" class="text-primary"></fa-icon>
         <h3 class="font-bold text-on-surface">Temas de la Sesión</h3>
       </div>
-      <a class="text-sm font-bold text-primary cursor-pointer hover:underline transition-colors">Gestionar Plan →</a>
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

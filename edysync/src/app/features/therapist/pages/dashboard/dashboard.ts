@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -56,7 +56,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.success) {
           this.data = res.data;
-          this.data.topics = this.parseTopics(res.data.planned_text);
+          this.loadProgramForSession();
         }
         this.loading = false;
         this.cdr.markForCheck();
@@ -72,6 +72,28 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+  }
+
+  loadProgramForSession() {
+    const sessionId = this.data?.next_session?.id;
+    if (!sessionId) {
+      this.data.topics = this.parseTopics(this.data?.planned_text);
+      return;
+    }
+
+    this.subs.add(
+      this.http.get(`/api/sessions/${sessionId}/program`).subscribe({
+        next: (res: any) => {
+          const text = res.planned_text || this.data?.planned_text || '';
+          this.data.topics = this.parseTopics(text);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.data.topics = this.parseTopics(this.data?.planned_text);
+          this.cdr.markForCheck();
+        }
+      })
+    );
   }
 
   get firstName(): string {
@@ -181,12 +203,20 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   parseTopics(text: string): { name: string; status: string }[] {
     if (!text) return [
-      { name: 'Introducción', status: 'LOGRADO' },
-      { name: 'Revisión General', status: 'PENDIENTE' }
+      { name: 'Sin programación', status: 'PENDIENTE' }
     ];
-    const lines = text.split('\n').filter(l => l.trim().length > 3).slice(0, 4);
+
+    const lines = text.split('\n')
+      .map(l => l.replace(/^[-\*\d\\.]+ */, '').trim())
+      .filter(l => l.length > 3 && !l.match(/^(docente|integrantes?|alumno|profesor|fecha|índice|contents)/i))
+      .slice(0, 4);
+
+    if (lines.length === 0) return [
+      { name: 'Sin programación', status: 'PENDIENTE' }
+    ];
+
     return lines.map((l, i) => ({
-      name: l.replace(/^[-\*\d\\.]+ */, '').substring(0, 30),
+      name: l.substring(0, 35),
       status: i === 0 ? 'LOGRADO' : (i === 1 ? 'PARCIAL' : 'PENDIENTE')
     }));
   }
