@@ -31,20 +31,14 @@ def check_session_attendance(app):
     with app.app_context():
         try:
             now = datetime.now()
-            # Threshold: Session ended 15 mins ago to be safe
             cutoff = now - timedelta(minutes=15)
 
-            # Find appointments:
-            # - Ended before cutoff
-            # - Attendance is 'pending'
-            # - Status is not 'cancelled'
             pending_sessions = Appointment.query.filter(
                 Appointment.end_time < cutoff, Appointment.attendance == 'pending', Appointment.status != 'cancelled'
             ).all()
 
             count = 0
             for session in pending_sessions:
-                # Poka-Yoke Automation: Auto-mark as present
                 session.attendance = 'present'
                 if session.status == 'scheduled':
                     session.status = 'completed'
@@ -54,11 +48,9 @@ def check_session_attendance(app):
                 if patient:
                     patient.sessions_attended = (getattr(patient, 'sessions_attended', 0) or 0) + 1
 
-                    # Deduct from plan (Bonus Tracking)
                     if getattr(patient, 'plan_sessions', 0) > 0:
                         patient.plan_sessions -= 1
 
-                        # Phase 3 Automations: If plan runs out, set status to debtor
                         if patient.plan_sessions <= 0:
                             patient.financial_status = 'deudor'
                 count += 1
@@ -81,8 +73,6 @@ def check_upcoming_payments(app, force=False):
     Check for payments due in the next 7 days or overdue.
     Sends a detailed summary email to the admin grouped by Sede.
     """
-    # 1. Trigger specialized client renewal emails (Frontend 2.0 Logic)
-    # Only run auto-reminders if NOT forced (to avoid spamming clients on admin tests)
     if not force:
         try:
             auto_generate_billing_reminder(app)
@@ -90,7 +80,6 @@ def check_upcoming_payments(app, force=False):
         except Exception as e:
             print(f'Error in auto_generate_billing_reminder: {e}')
 
-    # 2. Generate Admin Report using FinancialService
     with app.app_context():
         try:
             from app.models import User
@@ -98,16 +87,12 @@ def check_upcoming_payments(app, force=False):
             fs = FinancialService()
             report = fs.build_debt_report(days_ahead=7)
 
-            # Map FinancialService report structure to EmailService expected format
-            # EmailService expects: { 'Sede Name': { 'overdue': [], 'upcoming': [], 'uptodate': [] } }
-            # FinancialService provides: { 'por_sede': { 'sede_id': { 'sede_name': '...', 'deudores': [...] } } }
             email_report = {}
             for sede_id, sede_data in report.get('por_sede', {}).items():
                 sede_name = sede_data.get('sede_name', f'Sede {sede_id}')
                 email_report[sede_name] = {'overdue': [], 'upcoming': [], 'uptodate': []}
 
                 for d in sede_data.get('deudores', []):
-                    # Get additional details like phone and last payment date
                     p_info = fs.get_patient_overdue_info(d['id']) or {}
 
                     item = {
@@ -120,7 +105,7 @@ def check_upcoming_payments(app, force=False):
                             datetime.strptime(d['fecha_vencimiento'], '%Y-%m-%d').date() - datetime.utcnow().date()
                         ).days,
                         'due_date': d['fecha_vencimiento'],
-                        'last_payment': 'N/A',  # Simplified as we don't have it easily here
+                        'last_payment': 'N/A',
                     }
 
                     if d['estado'] == 'vencido':
@@ -159,7 +144,6 @@ def run_daily_audits(app):
             today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = datetime.now().replace(hour=23, minute=59, second=59)
 
-            # Find sessions needing audit: have program + transcript, status pending
             pending_audits = (
                 db.session.query(SessionAudit)
                 .join(Appointment, SessionAudit.appointment_id == Appointment.id)
@@ -342,30 +326,22 @@ def run_notification_cleanup(app):
 
 
 def init_scheduler(app):
-    # Schedule payments check daily at 8 AM
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger='cron', hour=8, minute=0)
 
-    # Check attendance every 30 minutes
     scheduler.add_job(func=lambda: check_session_attendance(app), trigger='interval', minutes=30)
 
-    # Run automated audits daily at 11 PM
     scheduler.add_job(func=lambda: run_daily_audits(app), trigger='cron', hour=23, minute=0)
 
-    # Run database backup daily at 3 AM
     scheduler.add_job(func=lambda: run_daily_backup(app), trigger='cron', hour=3, minute=0)
 
-    # Generate weekly reports Saturday at 8 PM
     scheduler.add_job(func=lambda: generate_weekly_reports(app), trigger='cron', day_of_week='sat', hour=20, minute=0)
 
-    # Generate monthly reports on the 1st of each month at 9 PM
     scheduler.add_job(func=lambda: generate_monthly_reports(app), trigger='cron', day=1, hour=21, minute=0)
 
-    # Generate quarterly reports on Jan 1, Apr 1, Jul 1, Oct 1 at 10 PM
     scheduler.add_job(
         func=lambda: generate_quarterly_reports(app), trigger='cron', month='1,4,7,10', day=1, hour=22, minute=0
     )
 
-    # Clean up old read notifications weekly on Sunday at 4 AM
     scheduler.add_job(func=lambda: run_notification_cleanup(app), trigger='cron', day_of_week='sun', hour=4, minute=0)
 
     scheduler.start()

@@ -1,5 +1,6 @@
-from app.models import User
 from app.extensions import db
+from app.models import User
+
 
 class UserRepository:
     @staticmethod
@@ -19,16 +20,14 @@ class UserRepository:
         therapist = User.query.get(therapist_id)
         if not therapist:
             return []
-        
-        # Merge Many-to-Many (New) and One-to-Many (Legacy)
+
         m2m = therapist.associated_patients.filter_by(role='jugador', is_active=True).all()
         legacy = [p for p in therapist.assigned_patients if p.role == 'jugador' and p.is_active]
-        
-        # Dict comprehension for unique by ID
+
         merged = {p.id: p for p in m2m}
         for p in legacy:
             merged[p.id] = p
-            
+
         return list(merged.values())
 
     @staticmethod
@@ -36,14 +35,14 @@ class UserRepository:
         therapist = User.query.get(therapist_id)
         if not therapist:
             return []
-            
+
         m2m = therapist.associated_patients.filter_by(role='jugador').all()
         legacy = [p for p in therapist.assigned_patients if p.role == 'jugador']
-        
+
         merged = {p.id: p for p in m2m}
         for p in legacy:
             merged[p.id] = p
-            
+
         return list(merged.values())
 
     @staticmethod

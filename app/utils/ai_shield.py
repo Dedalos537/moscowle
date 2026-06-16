@@ -1,8 +1,9 @@
+import os
 import subprocess
 import time
+
 import requests
-import os
-import sys
+
 
 def check_ollama():
     """Verifica si el servidor de Ollama está respondiendo."""
@@ -12,43 +13,37 @@ def check_ollama():
     except:
         return False
 
+
 def start_ollama():
     """Inicia el servidor de Ollama si no está corriendo."""
     if check_ollama():
-        print("[AI-SHIELD] Ollama ya está en ejecución.")
+        print('[AI-SHIELD] Ollama ya está en ejecución.')
         return True
 
-    print(" [AI-SHIELD] Iniciando servidor Ollama...")
-    
-    # Intentar encontrar el ejecutable de Ollama
-    ollama_path = "/opt/homebrew/bin/ollama" # Ruta detectada en este sistema
+    print(' [AI-SHIELD] Iniciando servidor Ollama...')
+
+    ollama_path = '/opt/homebrew/bin/ollama'
     if not os.path.exists(ollama_path):
         import shutil
-        ollama_path = shutil.which("ollama") or "ollama"
+
+        ollama_path = shutil.which('ollama') or 'ollama'
 
     try:
-        # Iniciar en segundo plano sin bloquear el terminal de Flask
-        # Redirigimos la salida a un log específico para no contaminar el terminal principal
         with open('logs/ollama_startup.log', 'a') as log_file:
-            subprocess.Popen(
-                [ollama_path, "serve"],
-                stdout=log_file,
-                stderr=log_file,
-                start_new_session=True
-            )
-        
-        # Esperar a que el servidor responda (máximo 15 segundos)
+            subprocess.Popen([ollama_path, 'serve'], stdout=log_file, stderr=log_file, start_new_session=True)
+
         for i in range(15):
             time.sleep(1)
             if check_ollama():
-                print(f"[AI-SHIELD] Ollama iniciado correctamente tras {i+1}s.")
+                print(f'[AI-SHIELD] Ollama iniciado correctamente tras {i + 1}s.')
                 return True
-        
-        print("[AI-SHIELD] Tiempo de espera agotado al iniciar Ollama.")
+
+        print('[AI-SHIELD] Tiempo de espera agotado al iniciar Ollama.')
         return False
     except Exception as e:
-        print(f"[AI-SHIELD] Error crítico al intentar iniciar Ollama: {e}")
+        print(f'[AI-SHIELD] Error crítico al intentar iniciar Ollama: {e}')
         return False
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     start_ollama()

@@ -29,11 +29,10 @@ def register_auth_loader(app):
             try:
                 return User.query.get(int(user_id))
             except Exception:
-                # Por si la BD se fue al muere, devolvemos None no más
                 app.logger.debug('User lookup failed in user_loader; DB may be unavailable')
                 return None
     except Exception as e:
-        # Registrar user_loader pa que flask-login no llore
+
         def _dummy_loader(user_id):
             return None
 
@@ -56,33 +55,27 @@ def register_auth_loader(app):
 def setup_logging(app):
     """Logs chéveres con formato JSON y rotación"""
 
-    # Create logs directory
     log_dir = os.path.dirname(app.config['LOG_FILE'])
     os.makedirs(log_dir, exist_ok=True)
 
-    # Remove default handlers
     app.logger.handlers.clear()
 
-    # File handler with rotation
     file_handler = RotatingFileHandler(
         app.config['LOG_FILE'], maxBytes=app.config['LOG_MAX_SIZE'], backupCount=app.config['LOG_BACKUP_COUNT']
     )
 
-    # JSON formatter for production logging (ELK/Splunk compatible)
     formatter = jsonlogger.JsonFormatter(
         '%(timestamp)s %(level)s %(name)s %(message)s %(exc_info)s %(request_id)s %(path)s %(method)s %(status_code)s %(duration_ms)s',
         timestamp=True,
     )
     file_handler.setFormatter(formatter)
 
-    # Console handler for development
     if app.debug:
         console_handler = logging.StreamHandler()
         console_formatter = logging.Formatter('[%(asctime)s] %(levelname)s [%(name)s]: %(message)s')
         console_handler.setFormatter(console_formatter)
         app.logger.addHandler(console_handler)
 
-    # In-memory capture handler for admin log viewer
     from app.services.log_service import log_capture_handler
 
     capture_formatter = logging.Formatter('[%(asctime)s] %(levelname)s [%(name)s]: %(message)s')
@@ -92,7 +85,6 @@ def setup_logging(app):
     app.logger.addHandler(file_handler)
     app.logger.setLevel(getattr(logging, app.config['LOG_LEVEL']))
 
-    # Log startup
     app.logger.info(
         'Application initialized',
         extra={'env': app.config['ENV'], 'debug': app.debug, 'timestamp': datetime.utcnow().isoformat()},
@@ -117,7 +109,6 @@ def _is_api_request():
 
 def register_error_handlers(app):
     """Manejadores de errores globales"""
-    # CSRF errors should return JSON for API calls
     try:
         from flask_wtf.csrf import CSRFError
 
@@ -209,14 +200,11 @@ def register_request_handlers(app):
 
     @app.before_request
     def before_request():
-        # Force SameSite=None for session cookie — necesito pa cPanel cross-origin
         app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 
-        # Generate request ID for tracking
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
 
-        # Log incoming request
         has_cookie = 'moscowle_session=' in (request.headers.get('Cookie', ''))
         app.logger.debug(
             'Request started',
@@ -233,7 +221,6 @@ def register_request_handlers(app):
                 'origin': request.headers.get('Origin', ''),
             },
         )
-        # Mark whether this request is an API call
         try:
             from app.utils.api_helpers import mark_request_api
 
@@ -241,9 +228,7 @@ def register_request_handlers(app):
         except Exception:
             g.is_api = False
 
-        # Validar App-Key pa que solo el frontend edysync pueda acceder
         if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
-            # Saltar validacion pa: webhooks, auth, login, health, OPTIONS, sesiones activas
             skip_appkey = (
                 request.method == 'OPTIONS'
                 or 'webhook' in request.path
@@ -269,7 +254,6 @@ def register_request_handlers(app):
                     client_timestamp = int(parts[0])
                     client_hash = parts[1]
 
-                    # Verify timestamp is within valid window (+/- 1 window = 300s)
                     import time
 
                     current_timestamp = int(time.time() / 300)
@@ -277,7 +261,6 @@ def register_request_handlers(app):
                         app.logger.warning('Expired App-Key', extra={'path': request.path, 'ip': request.remote_addr})
                         return jsonify({'success': False, 'message': 'Expired App-Key'}), 403
 
-                    # Compute expected hash
                     secret = app.config.get('APP_SECRET_KEY', 'dev-app-key-change-in-production')
                     message = f'{secret}:{client_timestamp}'
                     expected_hash = hashlib.sha256(message.encode('utf-8')).hexdigest()
@@ -298,11 +281,9 @@ def register_request_handlers(app):
 
     @app.after_request
     def after_request(response):
-        # Calculate request duration
         start_time = getattr(g, 'request_start_time', None)
         duration = (datetime.utcnow() - start_time).total_seconds() if start_time else 0
 
-        # Log response
         request_id = getattr(g, 'request_id', 'unknown')
 
         if response.status_code >= 400:
@@ -322,7 +303,6 @@ def register_request_handlers(app):
                 extra={'request_id': request_id, 'status_code': response.status_code, 'duration_ms': duration * 1000},
             )
 
-        # Add security headers
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
@@ -348,12 +328,9 @@ def create_app(config_class=None):
             config_class = Config
     app = Flask(__name__)
     app.config.from_object(config_class)
-    # Ojo: la BD es MySQL desde env. Nada de SQLite.
 
-    # ========== LOGGING - SETUP FIRST ==========
     setup_logging(app)
 
-    # ========== SWAGGER / OPENAPI ==========
     try:
         from flasgger import Swagger
 
@@ -364,7 +341,6 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning(f'Swagger initialization failed: {e}')
 
-    # ========== SENTRY ERROR MONITORING ==========
     sentry_dsn = os.environ.get('SENTRY_DSN')
     if sentry_dsn:
         try:
@@ -385,16 +361,11 @@ def create_app(config_class=None):
     else:
         app.logger.info('SENTRY_DSN not set — skipping Sentry setup')
 
-    # ========== SECURITY MIDDLEWARE ==========
-    # ProxyFix for reverse proxies (cPanel, Nginx)
     if app.config.get('USE_PROXYFIX', True):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
         app.logger.info('ProxyFix middleware enabled')
 
-    # Talisman for security headers and HSTS
     try:
-        # Content Security Policy: allow common CDNs used by the frontend (Chart.js, Tailwind CDN,
-        # Font providers and FontAwesome). Keep defaults restrictive otherwise.
         csp = {
             'default-src': ["'self'"],
             'script-src': [
@@ -422,7 +393,6 @@ def create_app(config_class=None):
                 'https://ka-f.fontawesome.com',
             ],
             'img-src': ["'self'", 'data:', 'https://ui-avatars.com', 'https://cdn.jsdelivr.net'],
-            # CDNs pa que el frontend cargue bien
             'connect-src': [
                 "'self'",
                 'https://cdn.jsdelivr.net',
@@ -434,11 +404,9 @@ def create_app(config_class=None):
             'frame-ancestors': ["'self'"],
         }
 
-        # Solo activar Talisman en produccion, no en dev
         env_flag = os.environ.get('FLASK_ENV') or app.config.get('ENV')
         is_dev = (str(env_flag).lower() == 'development') or bool(app.config.get('DEBUG'))
         if not is_dev:
-            # Forzar HTTPS solo si la config lo pide, no en local
             force_https_flag = app.config.get('FORCE_HTTPS', False)
             Talisman(
                 app,
@@ -455,7 +423,6 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning(f'Talisman configuration failed: {e}')
 
-    # ========== INITIALIZE EXTENSIONS ==========
     db.init_app(app)
     from app.extensions import migrate
 
@@ -480,7 +447,6 @@ def create_app(config_class=None):
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
-    # Expose csrf_token() to Jinja templates so templates can call {{ csrf_token() }}
     try:
         from flask_wtf.csrf import generate_csrf
 
@@ -492,7 +458,6 @@ def create_app(config_class=None):
     cache.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*')
 
-    # ========== IMPORT SOCKETIO EVENTS ==========
     from importlib import import_module
 
     try:
@@ -501,19 +466,16 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning(f'SocketIO event registration failed: {e}')
 
-    # ========== RATE LIMITING ==========
     try:
         limiter.init_app(app)
         app.logger.info(f'Rate limiter initialized with storage: {app.config.get("RATELIMIT_STORAGE_URL")}')
     except Exception as e:
         app.logger.warning(f'Rate limiter initialization failed: {e}')
 
-    # ========== ERROR HANDLERS ==========
     register_auth_loader(app)
     register_error_handlers(app)
     register_request_handlers(app)
 
-    # ========== DATABASE ==========
     @app.shell_context_processor
     def make_shell_context():
         return {'db': db, 'User': __import__('app.models', fromlist=['User']).User}
@@ -547,7 +509,6 @@ def create_app(config_class=None):
 
         db.session.remove()
 
-    # ========== BLUEPRINTS ==========
     _blueprints = [
         ('auth', 'app.routes.auth', 'auth_bp'),
         ('main', 'app.routes.main', 'main_bp'),
@@ -573,7 +534,6 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning('Blueprint %s failed to load: %s', name, e)
 
-    # ========== CLI COMMANDS ==========
     @app.cli.command('migrate-messages')
     def migrate_messages_command():
         """Backfill Chat records for existing messages without a chat_id"""
@@ -614,7 +574,6 @@ def create_app(config_class=None):
         db.session.commit()
         click.echo(f'Migrated {count} messages into {len(pairs)} chat(s).')
 
-    # ========== IA OLLAMA MANAGEMENT ==========
     try:
         from app.utils.manage_ollama import init_ia_check
 
@@ -622,7 +581,6 @@ def create_app(config_class=None):
     except Exception as e:
         app.logger.warning('Ollama IA Management initialization failed: %s', e)
 
-    # ADD JINJA FILTERS
     import json
 
     @app.template_filter('from_json')
@@ -632,7 +590,6 @@ def create_app(config_class=None):
         except Exception:
             return {}
 
-    # ========== BACKGROUND TASKS ==========
     try:
         from app.tasks import init_scheduler
 

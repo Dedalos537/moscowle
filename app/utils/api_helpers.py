@@ -1,11 +1,12 @@
-from flask import jsonify, request, g
+from flask import g, jsonify, request
+
 
 def api_response(success=True, data=None, error=None, status=200):
     payload = {
         'success': bool(success),
         'data': data or {} if success else None,
         'error': error or None,
-        'status': int(status)
+        'status': int(status),
     }
     return jsonify(payload), status
 
@@ -19,28 +20,22 @@ def mark_request_api():
         is_api = False
         path = request.path or ''
 
-        # Path contains /api/ at any level (e.g., /api/*, /therapist/api/*, /admin/api/*)
         if '/api/' in path:
             is_api = True
 
-        # Explicit API blueprint
         if request.blueprint == 'api':
             is_api = True
 
-        # Ajax / XHR
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             is_api = True
 
-        # Accept header prefers json (including */* from Angular)
         accept = request.headers.get('Accept', '')
         if 'application/json' in accept or '*/json' in accept or '*/*' in accept:
             is_api = True
 
-        # JSON body
         if request.is_json:
             is_api = True
 
         g.is_api = is_api
     except RuntimeError:
-        # No request context
         g.is_api = False

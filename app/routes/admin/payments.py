@@ -1,26 +1,25 @@
-from app.services.receipt_generator import generate_receipt_pdf
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, jsonify, send_file
-from flask_login import login_required, current_user
-from functools import wraps
+import json
 import os
-from datetime import timedelta
-from app.extensions import bcrypt, db, csrf
-from app.services.availability_service import AvailabilityService
-from app.models import AdminAPIToken
-import secrets
-from app.models import User, Appointment, SessionMetrics, db, Payment, CSPReport, Sede, ContactMessage, SmartAction
-from app.services.dashboard_service import DashboardService
-from app.services.payment_service import PaymentService
-from app.services.finance_service import FinanceService
-from sqlalchemy import func
-from werkzeug.utils import secure_filename
 import uuid
 from datetime import datetime
-import json
+
+from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_login import current_user, login_required
+from sqlalchemy import func
+from werkzeug.utils import secure_filename
+
+from app.extensions import db
+from app.models import (
+    Appointment,
+    Payment,
+    Sede,
+    SessionMetrics,
+    User,
+    db,
+)
+from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
-
-
-from app.routes.admin import admin_bp, payment_service, finance_service
+from app.services.receipt_generator import generate_receipt_pdf
 
 
 @admin_bp.route('/expenses')
@@ -29,15 +28,17 @@ def expenses():
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
-    
+
     financials = finance_service.get_therapist_financials()
-    recent = finance_service.get_expenses() 
-    
-    return render_template('admin/expenses.html', 
-                            therapist_financials=financials,
-                            recent_expenses=recent,
-                            current_date=datetime.now().strftime('%Y-%m-%d'),
-                            active_page='admin_expenses')
+    recent = finance_service.get_expenses()
+
+    return render_template(
+        'admin/expenses.html',
+        therapist_financials=financials,
+        recent_expenses=recent,
+        current_date=datetime.now().strftime('%Y-%m-%d'),
+        active_page='admin_expenses',
+    )
 
 
 @admin_bp.route('/expenses/create', methods=['POST'])
@@ -46,39 +47,33 @@ def create_expense_route():
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
-    
-    data = request.form.to_dict()
-    # Normalize therapist_id - if empty string, remove it so it's None or handle in service
-    if not data.get('therapist_id'):
-        data['therapist_id'] = None
-    elif data.get('therapist_id') == '':
-         data['therapist_id'] = None
 
-    # Handle File Upload for Receipt
+    data = request.form.to_dict()
+    if not data.get('therapist_id') or data.get('therapist_id') == '':
+        data['therapist_id'] = None
+
     if 'receipt' in request.files:
         file = request.files['receipt']
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
-            unique_name = f"{uuid.uuid4().hex}{ext}"
-            
+            unique_name = f'{uuid.uuid4().hex}{ext}'
+
             upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
-                
+
             file.save(os.path.join(upload_dir, unique_name))
-            data['receipt_image_path'] = f"receipts/{unique_name}"
+            data['receipt_image_path'] = f'receipts/{unique_name}'
 
     success, res = finance_service.create_expense(data)
-    
+
     if success:
         flash('Gasto registrado, todo ok.', 'success')
     else:
         flash(f'Error al registrar: {res}', 'error')
-        
-    return redirect(url_for('admin.expenses'))
 
-# --- JSON API endpoints for Angular Admin ---
+    return redirect(url_for('admin.expenses'))
 
 
 @admin_bp.route('/api/therapist-financials')
@@ -92,15 +87,22 @@ def api_therapist_financials():
     result = []
     for f in financials:
         t = f['therapist']
-        result.append({
-            'therapist': {'id': t.id, 'username': t.username, 'salary_base': t.salary_base, 'contract_hours': t.contract_hours},
-            'rate': f['rate'],
-            'contract_hours': f['contract_hours'],
-            'worked_hours': f['worked_hours'],
-            'projected_pay': f['projected_pay'],
-            'paid': f['paid'],
-            'balance': f['balance'],
-        })
+        result.append(
+            {
+                'therapist': {
+                    'id': t.id,
+                    'username': t.username,
+                    'salary_base': t.salary_base,
+                    'contract_hours': t.contract_hours,
+                },
+                'rate': f['rate'],
+                'contract_hours': f['contract_hours'],
+                'worked_hours': f['worked_hours'],
+                'projected_pay': f['projected_pay'],
+                'paid': f['paid'],
+                'balance': f['balance'],
+            }
+        )
     return jsonify({'success': True, 'data': result})
 
 
@@ -115,17 +117,19 @@ def api_expenses():
     expenses = finance_service.get_expenses(start_date=start_date, end_date=end_date, category=category)
     result = []
     for e in expenses:
-        result.append({
-            'id': e.id,
-            'category': e.category,
-            'amount': e.amount,
-            'date': e.date.strftime('%Y-%m-%d') if e.date else None,
-            'description': e.description,
-            'method': e.method,
-            'receipt_image_path': e.receipt_image_path,
-            'therapist': {'id': e.therapist.id, 'username': e.therapist.username} if e.therapist else None,
-            'created_at': e.created_at.strftime('%Y-%m-%d %H:%M') if e.created_at else None,
-        })
+        result.append(
+            {
+                'id': e.id,
+                'category': e.category,
+                'amount': e.amount,
+                'date': e.date.strftime('%Y-%m-%d') if e.date else None,
+                'description': e.description,
+                'method': e.method,
+                'receipt_image_path': e.receipt_image_path,
+                'therapist': {'id': e.therapist.id, 'username': e.therapist.username} if e.therapist else None,
+                'created_at': e.created_at.strftime('%Y-%m-%d %H:%M') if e.created_at else None,
+            }
+        )
     return jsonify({'success': True, 'data': result})
 
 
@@ -142,17 +146,26 @@ def api_create_expense():
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
-            unique_name = f"{uuid.uuid4().hex}{ext}"
+            unique_name = f'{uuid.uuid4().hex}{ext}'
             upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
             file.save(os.path.join(upload_dir, unique_name))
-            data['receipt_image_path'] = f"receipts/{unique_name}"
+            data['receipt_image_path'] = f'receipts/{unique_name}'
     success, res = finance_service.create_expense(data)
     if success:
-        return jsonify({'success': True, 'message': 'Gasto registrado, listo.', 'expense': {
-            'id': res.id, 'category': res.category, 'amount': res.amount, 'date': res.date.strftime('%Y-%m-%d') if res.date else None
-        }})
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Gasto registrado, listo.',
+                'expense': {
+                    'id': res.id,
+                    'category': res.category,
+                    'amount': res.amount,
+                    'date': res.date.strftime('%Y-%m-%d') if res.date else None,
+                },
+            }
+        )
     return jsonify({'success': False, 'error': res}), 400
 
 
@@ -172,24 +185,27 @@ def api_all_payments():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     from app.models import Payment, User
+
     payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
     result = []
     for p in payments:
         patient = User.query.get(p.patient_id)
-        result.append({
-            'id': p.id,
-            'patient_id': p.patient_id,
-            'patient_name': patient.username if patient else '',
-            'amount': p.amount or 0,
-            'discount': p.discount or 0,
-            'method': p.method or '',
-            'reference': p.reference or '',
-            'date': p.date.strftime('%Y-%m-%dT%H:%M:%S') if p.date else '',
-            'status': p.status or 'completed',
-            'receipt_image_path': p.receipt_image_path or '',
-            'document_number': getattr(p, 'document_number', '') or '',
-            'guardian_name': getattr(p, 'guardian_name', '') or '',
-        })
+        result.append(
+            {
+                'id': p.id,
+                'patient_id': p.patient_id,
+                'patient_name': patient.username if patient else '',
+                'amount': p.amount or 0,
+                'discount': p.discount or 0,
+                'method': p.method or '',
+                'reference': p.reference or '',
+                'date': p.date.strftime('%Y-%m-%dT%H:%M:%S') if p.date else '',
+                'status': p.status or 'completed',
+                'receipt_image_path': p.receipt_image_path or '',
+                'document_number': getattr(p, 'document_number', '') or '',
+                'guardian_name': getattr(p, 'guardian_name', '') or '',
+            }
+        )
     return jsonify({'success': True, 'payments': result})
 
 
@@ -198,13 +214,14 @@ def api_all_payments():
 def api_report_therapist_stats():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-    from app.models import SessionMetrics, Appointment
     therapists = User.query.filter_by(role='terapista', is_active=True).order_by(User.username.asc()).all()
     result = []
     for t in therapists:
         sessions = Appointment.query.filter_by(therapist_id=t.id, status='completed').count()
         acc = db.session.query(func.avg(SessionMetrics.accurracy)).filter_by(user_id=t.id).scalar() or 0
-        result.append({'id': t.id, 'name': t.username, 'email': t.email, 'sessions': sessions, 'avg_accuracy': round(acc, 1)})
+        result.append(
+            {'id': t.id, 'name': t.username, 'email': t.email, 'sessions': sessions, 'avg_accuracy': round(acc, 1)}
+        )
     return jsonify({'success': True, 'data': result})
 
 
@@ -213,7 +230,6 @@ def api_report_therapist_stats():
 def api_report_patient_stats():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-    from app.models import SessionMetrics
     patients = User.query.filter_by(role='jugador', is_active=True).order_by(User.username.asc()).all()
     result = []
     for p in patients:
@@ -229,8 +245,7 @@ def payments():
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
-    
-    # Auto-check overdue stats on load
+
     deactivated = payment_service.check_and_deactivate_overdue()
     if deactivated > 0:
         flash(f'{deactivated} usuarios desactivados por falta de pago.', 'warning')
@@ -239,7 +254,14 @@ def payments():
     therapists = User.query.filter_by(role='terapista').all()
     sedes = Sede.query.all()
     payment_history = payment_service.get_payment_history()
-    return render_template('admin/payments.html', patients=patients_status, therapists=therapists, sedes=sedes, payment_history=payment_history, active_page='admin_payments')
+    return render_template(
+        'admin/payments.html',
+        patients=patients_status,
+        therapists=therapists,
+        sedes=sedes,
+        payment_history=payment_history,
+        active_page='admin_payments',
+    )
 
 
 @admin_bp.route('/api/payment-info/<int:patient_id>')
@@ -247,11 +269,11 @@ def payments():
 def get_payment_info(patient_id):
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'No autorizado'}), 403
-    
+
     info = payment_service.get_billing_info(patient_id)
     if not info:
         return jsonify({'error': 'Usuario no encontrado'}), 404
-        
+
     return jsonify(info)
 
 
@@ -260,37 +282,35 @@ def get_payment_info(patient_id):
 def register_payment():
     if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
-    # Collect form data and validate
     discount_input = request.form.get('discount')
     if not discount_input or discount_input.strip() == '':
         discount_input = 0.0
 
     next_date_input = request.form.get('next_due_date')
     if not next_date_input or next_date_input.strip() == '':
-         next_date_input = None
-         
+        next_date_input = None
+
     form = {
         'patient_id': request.form.get('patient_id'),
         'amount': request.form.get('amount'),
         'discount': discount_input,
         'method': request.form.get('method'),
         'reference': request.form.get('reference'),
-        'next_due_date': next_date_input
+        'next_due_date': next_date_input,
     }
 
-    # Manual payment date extraction
     payment_date_str = request.form.get('payment_date')
     payment_date_obj = None
     if payment_date_str:
         try:
-             payment_date_obj = datetime.strptime(payment_date_str, '%Y-%m-%d')
+            payment_date_obj = datetime.strptime(payment_date_str, '%Y-%m-%d')
         except ValueError:
-             pass 
+            pass
 
     data, errors = validate_payment_register(form)
     if errors:
         flash('Errores en el formulario de pago: ' + json.dumps(errors), 'error')
-        current_app.logger.debug(f"Payment register validation errors: {errors}")
+        current_app.logger.debug(f'Payment register validation errors: {errors}')
         return redirect(url_for('admin.payments'))
 
     patient_id = data['patient_id']
@@ -299,70 +319,74 @@ def register_payment():
     method = data['method']
     reference = data.get('reference')
     next_due_date = data.get('next_due_date')
-    
-    # Handle File Upload
+
     receipt_path = None
     if 'receipt' in request.files:
         file = request.files['receipt']
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
-            unique_name = f"{uuid.uuid4().hex}{ext}"
-            
+            unique_name = f'{uuid.uuid4().hex}{ext}'
+
             upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
-                
+
             file.save(os.path.join(upload_dir, unique_name))
-            
-            # Store relative path for template usage
-            # Fix: Previously it was storing "uploads/receipts/...", but base UPLOAD_FOLDER is already instance/uploads
-            # So the relative path from UPLOAD_FOLDER should be just "receipts/..."
-            receipt_path = f"receipts/{unique_name}"
+
+            receipt_path = f'receipts/{unique_name}'
 
     try:
-         discount_val = float(discount) if discount else 0.0
+        discount_val = float(discount) if discount else 0.0
     except:
-         discount_val = 0.0
-
+        discount_val = 0.0
 
     document_number = request.form.get('document_number')
     guardian_name = request.form.get('guardian_name')
-    
+
     if document_number or guardian_name:
         patient = User.query.get(patient_id)
         if patient:
-            if document_number: patient.document_number = document_number
-            if guardian_name: patient.guardian_name = guardian_name
+            if document_number:
+                patient.document_number = document_number
+            if guardian_name:
+                patient.guardian_name = guardian_name
             db.session.commit()
 
-    success, result_or_payment = payment_service.register_payment(patient_id, float(amount), method, reference, next_due_date, receipt_path, discount_val, payment_date=payment_date_obj)
-    
-    msg_text = "Pago registrado, todo ok" if success else str(result_or_payment)
-    
-    # Check if this is an AJAX request (from deudores.html)
+    success, result_or_payment = payment_service.register_payment(
+        patient_id,
+        float(amount),
+        method,
+        reference,
+        next_due_date,
+        receipt_path,
+        discount_val,
+        payment_date=payment_date_obj,
+    )
+
+    msg_text = 'Pago registrado, todo ok' if success else str(result_or_payment)
+
     is_ajax = False
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        is_ajax = True
-    elif hasattr(request.accept_mimetypes, 'accept_json') and request.accept_mimetypes.accept_json:
-        is_ajax = True
-    elif 'application/json' in request.headers.get('Accept', ''):
+    if (
+        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or hasattr(request.accept_mimetypes, 'accept_json')
+        and request.accept_mimetypes.accept_json
+        or 'application/json' in request.headers.get('Accept', '')
+    ):
         is_ajax = True
 
     if is_ajax:
-        # Return JSON for AJAX clients
         if success:
             receipt_url = url_for('admin.download_receipt', payment_id=result_or_payment.id)
             return jsonify({'success': True, 'message': msg_text, 'receipt_url': receipt_url}), 200
         else:
             return jsonify({'success': False, 'error': msg_text}), 400
-    
-    # For traditional form submissions, use flash messages
+
     if success:
         flash(msg_text, 'success')
     else:
         flash(msg_text, 'error')
-    
+
     return redirect(url_for('admin.payments'))
 
 
@@ -371,11 +395,13 @@ def register_payment():
 def payment_history(patient_id):
     if current_user.role not in ('admin', 'supervisor'):
         return redirect(url_for('main.dashboard'))
-    
+
     patient = User.query.get_or_404(patient_id)
     payments = Payment.query.filter_by(patient_id=patient_id).order_by(Payment.date.desc()).all()
-    
-    return render_template('admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments')
+
+    return render_template(
+        'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
+    )
 
 
 @admin_bp.route('/payments/settings', methods=['POST'])
@@ -383,18 +409,18 @@ def payment_history(patient_id):
 def update_payment_settings():
     if current_user.role != 'admin':
         return redirect(url_for('main.dashboard'))
-        
+
     patient_id = request.form.get('patient_id')
     amount = request.form.get('payment_amount')
     due_date = request.form.get('payment_due_date')
     frequency = request.form.get('payment_plan')
-    
+
     success, msg = payment_service.update_payment_settings(patient_id, amount, due_date, frequency)
     if success:
         flash(msg, 'success')
     else:
         flash(msg, 'error')
-    
+
     return redirect(url_for('admin.payments'))
 
 
@@ -403,22 +429,22 @@ def update_payment_settings():
 def delete_payment(payment_id):
     if current_user.role != 'admin':
         return redirect(url_for('main.dashboard'))
-    
+
     try:
         payment = Payment.query.get_or_404(payment_id)
-        
+
         if payment.receipt_image_path:
             file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], payment.receipt_image_path)
             if os.path.exists(file_path):
                 os.remove(file_path)
-        
+
         db.session.delete(payment)
         db.session.commit()
         flash('Pago eliminado.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al eliminar el pago: {str(e)}', 'error')
-        
+
     return redirect(request.referrer or url_for('admin.payments'))
 
 
@@ -439,16 +465,16 @@ def analyze_receipt():
     patient_id = request.form.get('patient_id', type=int)
 
     try:
-        import json
-        from app.services.llm_automation_service import analyze_receipt_image
         import tempfile
-        
+
+        from app.services.llm_automation_service import analyze_receipt_image
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
 
         try:
-            print(f"DEBUG: Analyzing receipt: {tmp_path}")
+            print(f'DEBUG: Analyzing receipt: {tmp_path}')
             data = analyze_receipt_image(tmp_path)
 
             if 'transaction_id' in data and 'reference' not in data:
@@ -459,39 +485,41 @@ def analyze_receipt():
             if patient_id:
                 try:
                     from app.services.payment_service import PaymentService
+
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
                 except Exception as billing_err:
-                    print(f"WARN: Could not calculate next_due_date: {billing_err}")
+                    print(f'WARN: Could not calculate next_due_date: {billing_err}')
 
             os.unlink(tmp_path)
             return jsonify(data)
 
         except Exception as llm_err:
-            print(f"ERROR with Ollama OCR: {llm_err}")
+            print(f'ERROR with Ollama OCR: {llm_err}')
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-            
+
             data = {
-                'amount': None, 
-                'date': datetime.now().strftime('%Y-%m-%d'), 
-                'reference': None, 
+                'amount': None,
+                'date': datetime.now().strftime('%Y-%m-%d'),
+                'reference': None,
                 'method': 'transferencia',
-                'warning': 'Error al analizar el voucher. Ingresa los datos manualmente.'
+                'warning': 'Error al analizar el voucher. Ingresa los datos manualmente.',
             }
             if patient_id:
                 try:
                     from app.services.payment_service import PaymentService
+
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
                 except Exception:
                     pass
             return jsonify(data)
-        
+
     except Exception as e:
-        print(f"ERROR in analyze_receipt: {str(e)}")
+        print(f'ERROR in analyze_receipt: {str(e)}')
         return jsonify({'error': str(e)}), 200
 
 
@@ -500,37 +528,34 @@ def analyze_receipt():
 def download_receipt(payment_id):
     from flask import flash, redirect, url_for
     from flask_login import current_user
-    
+
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
 
     payment = Payment.query.get_or_404(payment_id)
     patient = User.query.get(payment.patient_id)
-    
+
     if not patient:
-        flash("Paciente no encontrado para este pago.", "error")
+        flash('Paciente no encontrado para este pago.', 'error')
         return redirect(url_for('admin.users'))
 
     if request.method == 'POST':
-        # Retrieve fields to rectify
         doc_number = request.form.get('document_number')
         g_name = request.form.get('guardian_name')
         concept = request.form.get('concept')
-        
-        # Save rectified data for the future
-        if doc_number: patient.document_number = doc_number
-        if g_name: patient.guardian_name = g_name
-        if concept: payment.notes = concept
-        
+
+        if doc_number:
+            patient.document_number = doc_number
+        if g_name:
+            patient.guardian_name = g_name
+        if concept:
+            payment.notes = concept
+
         db.session.commit()
 
     pdf_buffer = generate_receipt_pdf(payment, patient)
-    
-    return send_file(
-        pdf_buffer,
-        as_attachment=True,
-        download_name=f"Recibo_JP2_REC-{payment.id:06d}.pdf",
-        mimetype='application/pdf'
-    )
 
+    return send_file(
+        pdf_buffer, as_attachment=True, download_name=f'Recibo_JP2_REC-{payment.id:06d}.pdf', mimetype='application/pdf'
+    )

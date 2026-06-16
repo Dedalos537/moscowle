@@ -28,13 +28,10 @@ def reports():
         return redirect(url_for('main.dashboard'))
 
     try:
-        # Aggregate simple stats per therapist and patient
         therapists = User.query.filter_by(role='terapista').all()
         t_rows = []
         for t in therapists:
             count_appts = Appointment.query.filter_by(therapist_id=t.id).count()
-            # Calculate average accuracy for sessions managed by this therapist
-            # Using try/except within loop to prevent one bad record from crashing all
             try:
                 avg_acc = (
                     db.session.query(func.avg(SessionMetrics.accurracy))
@@ -59,7 +56,6 @@ def reports():
                 acc = 0
             p_rows.append({'name': p.username, 'email': p.email, 'plays': plays, 'avg_accuracy': round(acc, 1)})
 
-        # Financial Stats (Ticket 5)
         try:
             financials = payment_service.get_financial_summary()
         except Exception as e:
@@ -73,7 +69,6 @@ def reports():
                 'net_profit': 0.0,
             }
 
-        # Audit Stats (HU-06 / HU-08)
         try:
             from sqlalchemy import func as sqlfunc
 
@@ -87,7 +82,6 @@ def reports():
                 or 0
             )
 
-            # Recent audits with session info
             recent_audits = (
                 db.session.query(SessionAudit, Appointment, User)
                 .join(Appointment, SessionAudit.appointment_id == Appointment.id)
@@ -112,7 +106,6 @@ def reports():
                     }
                 )
 
-            # Scores by therapist
             therapist_scores = (
                 db.session.query(
                     User.username,
@@ -184,7 +177,6 @@ def generate_ia_report():
             Appointment.status == 'completed', Appointment.updated_at >= first_of_month
         ).count()
 
-        # Financial data
         recent_payments = Payment.query.filter(Payment.date >= thirty_days_ago).all()
         total_income = sum((p.amount or 0) - (p.discount or 0) for p in recent_payments)
 
@@ -197,13 +189,11 @@ def generate_ia_report():
         except ImportError:
             pass
 
-        # Debt report
         fs = FinancialService()
         debt_data = fs.build_debt_report(days_ahead=7, month='all')
         total_debt = debt_data.get('total_deuda', 0)
         total_debtors = debt_data.get('total_pacientes', 0)
 
-        # Top therapists by session count
         top_therapists = (
             db.session.query(User.username, func.count(Appointment.id).label('session_count'))
             .join(Appointment, Appointment.therapist_id == User.id)
@@ -214,7 +204,6 @@ def generate_ia_report():
             .all()
         )
 
-        # Recent session notes
         sessions = (
             Appointment.query.filter(Appointment.status == 'completed')
             .order_by(Appointment.updated_at.desc())
@@ -288,7 +277,6 @@ def ai_chat_process():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # 1. Manejo de Subida de Vouchers (OCR Local Local local)
     if 'file' in request.files:
         file = request.files['file']
         if file:
@@ -320,7 +308,6 @@ def ai_chat_process():
             except:
                 return jsonify({'response': 'No entendí el voucher, ¿me dictas?', 'status': 'warning'})
 
-    # 2. Análisis con Llama Central
     data = request.get_json() or {}
     msg_user = data.get('message', '')
     context = {'page': request.referrer or 'dashboard'}
@@ -337,7 +324,6 @@ def ai_chat_process():
         params = result.get('parameters', {})
         friendly = result.get('friendly_response', '¡Claro que sí! ')
 
-        # DISPATCHER DE ACCIONES LIMPIO
         if intent == 'register_payment':
             p_name = params.get('patient_name')
             amt = params.get('amount')
@@ -356,7 +342,6 @@ def ai_chat_process():
                 next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
             )
 
-            # Notificación de Llama
             notif_service.create_notification(
                 current_user.id,
                 f' Llama: Registré pago de S/ {amt} para {p.username}.',
@@ -383,7 +368,6 @@ def ai_chat_process():
                 }
             )
 
-            # Notificación de Llama
             notif_service.create_notification(
                 current_user.id, f' Llama: Registré un nuevo gasto de S/ {amt} ({cat}).', url_for('admin.expenses')
             )
@@ -417,11 +401,9 @@ def ai_chat_process():
             elif 'usuario' in dest:
                 target_url = url_for('admin.users')
 
-            # Notificación tipo "Guía"
             notif_service.create_notification(current_user.id, f' Llama: Te estoy llevando a {dest}.', link=target_url)
             return jsonify({'response': friendly, 'status': 'info', 'redirect': target_url})
 
-        # Default fallback
         return jsonify({'response': friendly, 'status': 'info'})
 
     except Exception as e:
@@ -437,10 +419,8 @@ def send_weekly_summary_manual():
     try:
         from app.tasks import check_upcoming_payments
 
-        # Use underlying app object
         app = current_app._get_current_object()
 
-        # Run synchronous and FORCE send even if no alerts
         check_upcoming_payments(app, force=True)
 
         return jsonify({'success': True, 'message': 'Reporte semanal enviado al admin.'})
@@ -460,10 +440,8 @@ def export_payments_csv():
 
     from flask import make_response
 
-    # Get all payments or filtered by month? Ticket implies monthly but let's dump all for now or current month
-    # "Listado de pagos del mes"
     today = datetime.utcnow().date()
-    start_date = today.replace(day=1)  # Start of this month
+    start_date = today.replace(day=1)
 
     payments = Payment.query.filter(Payment.date >= start_date).order_by(Payment.date.desc()).all()
 
@@ -534,7 +512,6 @@ def api_weekly_summary():
 
     week_start = request.args.get('week_start')
     if not week_start:
-        # Default to current week (Monday)
         today = datetime.utcnow().date()
         week_start = (today - timedelta(days=today.weekday())).isoformat()
 
@@ -562,7 +539,6 @@ def api_accumulate_reports():
 
     rs = ReportService()
 
-    # Get all therapists with completed sessions today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     if report_date:
         try:
@@ -733,6 +709,7 @@ def api_patient_monthly_reports(patient_id):
             ],
         }
     )
+
 
 @admin_bp.route('/api/reports/patient-quarterly/<int:patient_id>', methods=['GET'])
 @login_required

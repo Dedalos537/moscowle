@@ -18,7 +18,6 @@ class FinancialService:
         today = datetime.utcnow().date()
         week_ahead = today + timedelta(days=days_ahead)
 
-        # Determine filtering range based on month param
         filter_start = None
         filter_end = None
 
@@ -37,8 +36,6 @@ class FinancialService:
 
         patients = self.repo.get_active_patients()
 
-        # Apply month filter: only include patients whose due date falls
-        # within the selected month OR who are overdue from before it.
         if filter_start is not None and filter_end is not None:
             filtered = []
             for p in patients:
@@ -59,7 +56,6 @@ class FinancialService:
             try:
                 monto = float(getattr(patient, 'payment_amount', 0.0) or 0.0)
 
-                # Therapist name
                 therapist_name = ''
                 if patient.assigned_therapist:
                     therapist_name = patient.assigned_therapist.username or ''
@@ -130,7 +126,6 @@ class FinancialService:
             except Exception as e:
                 logger.warning('Error processing patient %s: %s', getattr(patient, 'id', 'unknown'), e)
 
-        # Sort
         for s in deudores_by_sede.values():
             s['deudores'].sort(key=lambda x: 0 if x['urgencia'] == 'crítica' else 1 if x['urgencia'] == 'alta' else 2)
 
@@ -154,7 +149,6 @@ class FinancialService:
         today = datetime.utcnow().date()
         days_overdue = max(0, (today - due_date).days) if due_date else 0
 
-        # Use existing financial analysis to calculate balance
         balance = PatientFinancialStatus(p.id).calculate_balance()
 
         return {

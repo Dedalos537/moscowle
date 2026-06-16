@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
-from app.models import db, User, Appointment, Payment, SmartAction, Sede
 import json
-from sqlalchemy import func
+from datetime import datetime, timedelta
+
+from app.models import Appointment, SmartAction, User, db
+
 
 class WorkflowEngine:
     """
@@ -18,15 +19,12 @@ class WorkflowEngine:
         today = now.date()
         actions_generated = 0
 
-        # 1. MÓDULO: SESIONES (Detección de completitud)
-        # Buscar citas en el pasado que sigan en estado 'scheduled'
         past_sessions = Appointment.query.filter(
-            Appointment.start_time < now - timedelta(hours=2),
-            Appointment.status == 'scheduled'
+            Appointment.start_time < now - timedelta(hours=2), Appointment.status == 'scheduled'
         ).all()
 
         for sess in past_sessions:
-            desc = f"Sesión de {sess.patient.username} con {sess.therapist.username} del {sess.start_time.strftime('%d/%m')} no marcada."
+            desc = f'Sesión de {sess.patient.username} con {sess.therapist.username} del {sess.start_time.strftime("%d/%m")} no marcada.'
             self._create_smart_action(
                 module='sesiones',
                 description=desc,
@@ -35,60 +33,50 @@ class WorkflowEngine:
                     'action': 'complete_session',
                     'appointment_id': sess.id,
                     'patient_id': sess.patient_id,
-                    'date': sess.start_time.isoformat()
-                }
+                    'date': sess.start_time.isoformat(),
+                },
             )
             actions_generated += 1
 
-        # 2. MÓDULO: USUARIOS (Datos incompletos/Perfil)
-        # Pacientes sin sede asignada
         no_sede = User.query.filter_by(role='jugador', is_active=True, sede_id=None).all()
         for u in no_sede:
             self._create_smart_action(
                 module='usuarios',
-                description=f"Paciente {u.username} no tiene sede asignada.",
+                description=f'Paciente {u.username} no tiene sede asignada.',
                 automation_level='manual',
-                payload={'user_id': u.id, 'action': 'assign_sede'}
+                payload={'user_id': u.id, 'action': 'assign_sede'},
             )
             actions_generated += 1
 
-        # 3. MÓDULO: PAGOS (Deudores Críticos)
-        # Pacientes con sesiones negativas/renovación necesaria
         critical_patients = User.query.filter(
             User.role == 'jugador',
             User.is_active == True,
             User.sessions_total > 0,
-            User.sessions_attended >= User.sessions_total
+            User.sessions_attended >= User.sessions_total,
         ).all()
 
         for u in critical_patients:
             self._create_smart_action(
                 module='pagos',
-                description=f"Paciente {u.username} agotó sesiones ({u.sessions_attended}/{u.sessions_total}). Generar cobro.",
+                description=f'Paciente {u.username} agotó sesiones ({u.sessions_attended}/{u.sessions_total}). Generar cobro.',
                 automation_level='requires_confirmation',
                 payload={
                     'action': 'request_payment',
                     'user_id': u.id,
                     'amount': u.payment_amount,
-                    'modality': u.payment_plan
-                }
+                    'modality': u.payment_plan,
+                },
             )
             actions_generated += 1
 
-        # 4. MÓDULO: FINANZAS (Gastos Recurrentes)
-        # Buscar fechas de servicios (luz/agua/internet) aproximadas el día 1 o 15
         if today.day == 1 or today.day == 15:
             self._create_smart_action(
                 module='finanzas',
-                description=f"Recordatorio mensual: Registrar gastos de servicios (Luz/Agua/Internet) del día {today.day}.",
+                description=f'Recordatorio mensual: Registrar gastos de servicios (Luz/Agua/Internet) del día {today.day}.',
                 automation_level='manual',
-                payload={'action': 'register_expense', 'category': 'servicios'}
+                payload={'action': 'register_expense', 'category': 'servicios'},
             )
             actions_generated += 1
-
-        # 5. MÓDULO: SALUD DEL SISTEMA
-        # Terapistas con muchas citas agendadas pero sin notas/indicadores (Dashboard accuracy < 70)
-        # Esto se puede expandir según sea necesario
 
         db.session.commit()
         return actions_generated
@@ -98,17 +86,10 @@ class WorkflowEngine:
         Evita duplicados si la tarea ya existe y está pendiente.
         """
         payload_str = json.dumps(payload)
-        exists = SmartAction.query.filter_by(
-            module=module,
-            description=description,
-            status='pending'
-        ).first()
+        exists = SmartAction.query.filter_by(module=module, description=description, status='pending').first()
 
         if not exists:
             action = SmartAction(
-                module=module,
-                description=description,
-                automation_level=automation_level,
-                suggested_payload=payload_str
+                module=module, description=description, automation_level=automation_level, suggested_payload=payload_str
             )
             db.session.add(action)

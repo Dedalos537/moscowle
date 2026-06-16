@@ -1,24 +1,81 @@
-# Auditoría IA: Whisper + Llama 3 pa' comparar programación vs ejecución
-
-import os
 import json
 import logging
+import os
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 _STOP_WORDS_ES = {
-    'de', 'la', 'que', 'el', 'en', 'y', 'a', 'los', 'del', 'se', 'las', 'por',
-    'un', 'para', 'con', 'no', 'una', 'su', 'al', 'lo', 'como', 'más', 'pero',
-    'sus', 'le', 'ya', 'este', 'entre', 'porque', 'este', 'esta', 'muy',
-    'todo', 'esta', 'sin', 'ello', 'cada', 'otro', 'cual', 'cuando', 'donde',
-    'quien', 'aquel', 'solo', 'allí', 'así', 'tras', 'entonces', 'tiempo',
-    'cada', 'también', 'sea', 'sido', 'han', 'ser', 'haber', 'tener', 'hacer',
-    'estar', 'poder', 'haber', 'ir', 'dar', 'ver', 'decir', 'saber', 'creer',
-    'era', 'son', 'fue', 'han', 'has', 'había', 'hay'
+    'de',
+    'la',
+    'que',
+    'el',
+    'en',
+    'y',
+    'a',
+    'los',
+    'del',
+    'se',
+    'las',
+    'por',
+    'un',
+    'para',
+    'con',
+    'no',
+    'una',
+    'su',
+    'al',
+    'lo',
+    'como',
+    'más',
+    'pero',
+    'sus',
+    'le',
+    'ya',
+    'este',
+    'entre',
+    'porque',
+    'esta',
+    'muy',
+    'todo',
+    'sin',
+    'ello',
+    'cada',
+    'otro',
+    'cual',
+    'cuando',
+    'donde',
+    'quien',
+    'aquel',
+    'solo',
+    'allí',
+    'así',
+    'tras',
+    'entonces',
+    'tiempo',
+    'también',
+    'sea',
+    'sido',
+    'han',
+    'ser',
+    'haber',
+    'tener',
+    'hacer',
+    'estar',
+    'poder',
+    'ir',
+    'dar',
+    'ver',
+    'decir',
+    'saber',
+    'creer',
+    'era',
+    'son',
+    'fue',
+    'has',
+    'había',
+    'hay',
 }
-
-
 
 
 def extract_docx_text(file_path):
@@ -26,92 +83,86 @@ def extract_docx_text(file_path):
     try:
         from docx import Document
     except ImportError:
-        raise ImportError("python-docx no está instalado. Ejecuta: pip install python-docx")
-    
+        raise ImportError('python-docx no está instalado. Ejecuta: pip install python-docx')
+
     if not os.path.exists(file_path):
-        raise ValueError(f"Archivo no encontrado: {file_path}")
-    
+        raise ValueError(f'Archivo no encontrado: {file_path}')
+
     try:
         doc = Document(file_path)
     except Exception as e:
-        raise ValueError(f"Error al abrir el archivo Word: {str(e)}")
-    
+        raise ValueError(f'Error al abrir el archivo Word: {str(e)}')
+
     sections = []
-    
+
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
             continue
-        # Marcar headings para dar contexto al LLM
         if para.style and para.style.name.startswith('Heading'):
-            sections.append(f"\n## {text}")
+            sections.append(f'\n## {text}')
         else:
             sections.append(text)
-    
+
     for table in doc.tables:
         table_rows = []
         for row in table.rows:
             cells = [cell.text.strip() for cell in row.cells]
-            table_rows.append(" | ".join(cells))
+            table_rows.append(' | '.join(cells))
         if table_rows:
-            sections.append("\n[TABLA]\n" + "\n".join(table_rows) + "\n[/TABLA]")
-    
-    full_text = "\n".join(sections)
-    
-    if not full_text.strip():
-        raise ValueError("El documento Word está vacío o no contiene texto extraíble")
-    
-    logger.info(f"Texto extraído del Word: {len(full_text)} caracteres")
-    return full_text
+            sections.append('\n[TABLA]\n' + '\n'.join(table_rows) + '\n[/TABLA]')
 
+    full_text = '\n'.join(sections)
+
+    if not full_text.strip():
+        raise ValueError('El documento Word está vacío o no contiene texto extraíble')
+
+    logger.info(f'Texto extraído del Word: {len(full_text)} caracteres')
+    return full_text
 
 
 def transcribe_audio(file_path):
     """Transcribe audio con Whisper (se borra tras transcripción)"""
     api_key = os.getenv('GROQ_API_KEY')
     if not api_key:
-        raise ValueError("GROQ_API_KEY no está configurada en las variables de entorno")
-    
+        raise ValueError('GROQ_API_KEY no está configurada en las variables de entorno')
+
     if not os.path.exists(file_path):
-        raise ValueError(f"Archivo de audio no encontrado: {file_path}")
-    
+        raise ValueError(f'Archivo de audio no encontrado: {file_path}')
+
     try:
         from groq import Groq
+
         client = Groq(api_key=api_key)
-        
+
         with open(file_path, 'rb') as audio_file:
             transcription = client.audio.transcriptions.create(
                 file=(os.path.basename(file_path), audio_file),
-                model="whisper-large-v3-turbo",
-                language="es",           # Español (sesiones en Perú)
-                response_format="verbose_json",
-                temperature=0.0          # Máxima precisión
+                model='whisper-large-v3-turbo',
+                language='es',
+                response_format='verbose_json',
+                temperature=0.0,
             )
-        
-        transcript_text = transcription.text or ""
+
+        transcript_text = transcription.text or ''
         duration = getattr(transcription, 'duration', None)
         language = getattr(transcription, 'language', 'es')
-        
-        logger.info(f"Audio transcrito: {len(transcript_text)} caracteres, duración={duration}s")
-        
-        return {
-            'text': transcript_text,
-            'duration': int(duration) if duration else 0,
-            'language': language
-        }
-        
+
+        logger.info(f'Audio transcrito: {len(transcript_text)} caracteres, duración={duration}s')
+
+        return {'text': transcript_text, 'duration': int(duration) if duration else 0, 'language': language}
+
     except Exception as e:
-        logger.error(f"Error en transcripción Whisper/Groq: {str(e)}")
-        raise ValueError(f"Error al transcribir el audio: {str(e)}")
-    
+        logger.error(f'Error en transcripción Whisper/Groq: {str(e)}')
+        raise ValueError(f'Error al transcribir el audio: {str(e)}')
+
     finally:
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                logger.info(f"Audio eliminado por privacidad: {file_path}")
+                logger.info(f'Audio eliminado por privacidad: {file_path}')
         except Exception as del_err:
-            logger.error(f"ERROR CRITICO: No se pudo eliminar el audio {file_path}: {del_err}")
-
+            logger.error(f'ERROR CRITICO: No se pudo eliminar el audio {file_path}: {del_err}')
 
 
 AUDIT_SYSTEM_PROMPT = """Eres un auditor clínico experto del Centro de Terapias Juan Pablo II.
@@ -157,35 +208,34 @@ REGLAS para el campo "status":
 def run_audit(appointment_id):
     """Auditoría IA completa: compara planned_text vs transcript_text con Groq"""
     from app.models import SessionAudit, SessionImage, db
-    
+
     audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
     if not audit:
-        raise ValueError("No existe registro de auditoría para esta sesión")
-    
+        raise ValueError('No existe registro de auditoría para esta sesión')
+
     if not audit.planned_text:
-        raise ValueError("No se ha subido la programación (.docx) para esta sesión")
-    
+        raise ValueError('No se ha subido la programación (.docx) para esta sesión')
+
     if not audit.transcript_text:
-        raise ValueError("No se ha transcrito el audio de esta sesión")
-    
+        raise ValueError('No se ha transcrito el audio de esta sesión')
+
     audit.audit_status = 'processing'
     db.session.commit()
-    
+
     api_key = os.getenv('GROQ_API_KEY')
     if not api_key:
         audit.audit_status = 'error'
         db.session.commit()
-        raise ValueError("GROQ_API_KEY no configurada")
-    
-    # Obtener fotos de la sesión como contexto adicional
+        raise ValueError('GROQ_API_KEY no configurada')
+
     images = SessionImage.query.filter_by(appointment_id=appointment_id).all()
-    photos_context = ""
+    photos_context = ''
     if images:
-        photo_descriptions = [f"- Foto {i+1}: tipo={img.image_type}, notas='{img.notes or 'sin notas'}'" 
-                             for i, img in enumerate(images)]
-        photos_context = f"\n\nFOTOS DE LA SESIÓN ({len(images)} archivos):\n" + "\n".join(photo_descriptions)
-    
-    # Construir el prompt del usuario
+        photo_descriptions = [
+            f"- Foto {i + 1}: tipo={img.image_type}, notas='{img.notes or 'sin notas'}'" for i, img in enumerate(images)
+        ]
+        photos_context = f'\n\nFOTOS DE LA SESIÓN ({len(images)} archivos):\n' + '\n'.join(photo_descriptions)
+
     user_prompt = f"""PROGRAMACIÓN PLANIFICADA (extraída del documento Word):
 ---
 {audit.planned_text}
@@ -198,28 +248,24 @@ TRANSCRIPCIÓN REAL DE LA SESIÓN (audio transcrito por Whisper):
 {photos_context}
 
 Analiza y genera el reporte de cumplimiento en formato JSON."""
-    
+
     try:
         from groq import Groq
+
         client = Groq(api_key=api_key)
-        
+
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": AUDIT_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
+            model='llama-3.1-8b-instant',
+            messages=[{'role': 'system', 'content': AUDIT_SYSTEM_PROMPT}, {'role': 'user', 'content': user_prompt}],
             temperature=0.1,
             max_tokens=2000,
-            response_format={"type": "json_object"}
+            response_format={'type': 'json_object'},
         )
-        
+
         raw_content = response.choices[0].message.content.strip()
-        
-        # Parsear JSON
+
         report = json.loads(raw_content)
-        
-        # Guardar resultado
+
         audit.audit_report_json = json.dumps(report, ensure_ascii=False)
         audit.audit_score = float(report.get('score', 0))
         audit.audit_status = 'completed'
@@ -233,7 +279,7 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
             real_score = sum(scores) / len(scores)
             real_score = round(real_score, 1)
             if abs(real_score - audit.audit_score) > 10:
-                logger.info(f"Score recalculado por objetivos: {audit.audit_score} → {real_score}")
+                logger.info(f'Score recalculado por objetivos: {audit.audit_score} → {real_score}')
                 audit.audit_score = real_score
                 report['score'] = real_score
                 if real_score >= 80:
@@ -254,7 +300,9 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
         factor = min(1.0, ratio / 0.1)
 
         score_final = round((audit.audit_score * 0.5 + score_vectorial * 0.5) * factor, 1)
-        logger.info(f"Score final: LLM={audit.audit_score} vectorial={score_vectorial} factor={factor:.2f} → {score_final}")
+        logger.info(
+            f'Score final: LLM={audit.audit_score} vectorial={score_vectorial} factor={factor:.2f} → {score_final}'
+        )
         audit.audit_score = score_final
         report['score'] = score_final
         if score_final >= 80:
@@ -266,24 +314,24 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
         audit.audit_report_json = json.dumps(report, ensure_ascii=False)
         db.session.commit()
 
-        logger.info(f"Auditoría completada para sesión {appointment_id}: score={audit.audit_score}")
+        logger.info(f'Auditoría completada para sesión {appointment_id}: score={audit.audit_score}')
         return report
-        
+
     except json.JSONDecodeError as e:
         audit.audit_status = 'error'
-        audit.audit_report_json = json.dumps({
-            'error': 'El LLM no devolvió JSON válido',
-            'raw_response': raw_content[:500]
-        })
+        audit.audit_report_json = json.dumps(
+            {'error': 'El LLM no devolvió JSON válido', 'raw_response': raw_content[:500]}
+        )
         db.session.commit()
-        logger.error(f"Error parseando JSON de Llama: {e}")
-        raise ValueError(f"Error al procesar respuesta de IA: {str(e)}")
-        
+        logger.error(f'Error parseando JSON de Llama: {e}')
+        raise ValueError(f'Error al procesar respuesta de IA: {str(e)}')
+
     except Exception as e:
         audit.audit_status = 'error'
         db.session.commit()
-        logger.error(f"Error en auditoría IA: {str(e)}")
-        raise ValueError(f"Error en auditoría IA: {str(e)}")
+        logger.error(f'Error en auditoría IA: {str(e)}')
+        raise ValueError(f'Error en auditoría IA: {str(e)}')
+
 
 ATTENDANCE_SYSTEM_PROMPT = """Eres un asistente que determina si un paciente asistió a su sesión terapéutica.
 Comparas el PLAN DE SESIÓN con la TRANSCRIPCIÓN REAL.
@@ -302,16 +350,18 @@ Responde SOLO con JSON:
 }
 """
 
+
 def analyze_attendance(planned_text, transcript_text):
     """Analiza si el paciente asistió comparando plan vs transcripción"""
     api_key = os.getenv('GROQ_API_KEY')
     if not api_key:
-        raise ValueError("GROQ_API_KEY no está configurada")
-    
+        raise ValueError('GROQ_API_KEY no está configurada')
+
     try:
         from groq import Groq
+
         client = Groq(api_key=api_key)
-        
+
         user_prompt = f"""PLAN DE SESIÓN:
 ---
 {planned_text[:3000]}
@@ -323,33 +373,44 @@ TRANSCRIPCIÓN REAL:
 ---
 
 Analiza si el paciente asistió y cubrió al menos el 5% de lo planificado."""
-        
+
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model='llama-3.1-8b-instant',
             messages=[
-                {"role": "system", "content": ATTENDANCE_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
+                {'role': 'system', 'content': ATTENDANCE_SYSTEM_PROMPT},
+                {'role': 'user', 'content': user_prompt},
             ],
             temperature=0.1,
             max_tokens=500,
-            response_format={"type": "json_object"}
+            response_format={'type': 'json_object'},
         )
-        
+
         import json
+
         result = json.loads(response.choices[0].message.content.strip())
-        
+
         return {
             'suggested_attendance': result.get('suggested_attendance', 'present'),
             'confidence': float(result.get('confidence', 0.5)),
             'coverage_pct': float(result.get('coverage_pct', 50)),
-            'reason': result.get('reason', '')
+            'reason': result.get('reason', ''),
         }
-        
+
     except Exception as e:
-        logger.error(f"Error in analyze_attendance: {str(e)}")
+        logger.error(f'Error in analyze_attendance: {str(e)}')
         if len(transcript_text.strip()) < 50:
-            return {'suggested_attendance': 'absent', 'confidence': 0.8, 'coverage_pct': 0, 'reason': 'Transcripción insuficiente'}
-        return {'suggested_attendance': 'present', 'confidence': 0.6, 'coverage_pct': 50, 'reason': 'Fallback: no se pudo analizar con IA'}
+            return {
+                'suggested_attendance': 'absent',
+                'confidence': 0.8,
+                'coverage_pct': 0,
+                'reason': 'Transcripción insuficiente',
+            }
+        return {
+            'suggested_attendance': 'present',
+            'confidence': 0.6,
+            'coverage_pct': 50,
+            'reason': 'Fallback: no se pudo analizar con IA',
+        }
 
 
 def _dividir_objetivos(texto):
@@ -365,9 +426,9 @@ def _dividir_objetivos(texto):
 
 
 def compute_similarity_vectorial(planned_text, transcript_text):
+    import numpy as np
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
 
     if not transcript_text or not planned_text:
         return {'score_vectorial': 0, 'objetivos_cubiertos': 0, 'n_objectives': 0}
@@ -389,9 +450,8 @@ def compute_similarity_vectorial(planned_text, transcript_text):
         return {
             'score_vectorial': round(min(score, 100), 1),
             'objetivos_cubiertos': cubiertos,
-            'n_objectives': len(objetivos)
+            'n_objectives': len(objetivos),
         }
     except Exception as e:
-        logger.error(f"Error en vectorización: {e}")
+        logger.error(f'Error en vectorización: {e}')
         return {'score_vectorial': 50, 'objetivos_cubiertos': 0, 'n_objectives': len(objetivos)}
-

@@ -21,7 +21,6 @@ oauth = OAuth()
 
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
-# Protección básica pa que no flashee en dev. En prod poner 'strong'.
 login_manager.session_protection = 'basic'
 
 limiter = Limiter(key_func=get_remote_address)

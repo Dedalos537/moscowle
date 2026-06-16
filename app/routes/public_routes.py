@@ -20,29 +20,29 @@ def generate_app_key():
 @public_bp.route('/session-check', methods=['GET'])
 def session_check():
     from flask import request as req
-    from flask_login import current_user
     from flask import session
+    from flask_login import current_user
 
     cookie_header = req.headers.get('Cookie', '')
     has_session_cookie = 'moscowle_session=' in cookie_header
 
-    return jsonify({
-        'authenticated': current_user.is_authenticated,
-        'user_id': current_user.id if current_user.is_authenticated else None,
-        'has_session_cookie': has_session_cookie,
-        'cookie_header_sent': bool(cookie_header),
-        'cookies_in_header': cookie_header[:200] if cookie_header else '',
-        'session_keys': list(session.keys()),
-        'session_permanent': session.permanent if hasattr(session, 'permanent') else False,
-        'is_secure': req.is_secure,
-        'scheme': req.scheme,
-        'remote_addr': req.remote_addr,
-        'x_forwarded_proto': req.headers.get('X-Forwarded-Proto', 'not-set'),
-        'origin': req.headers.get('Origin', 'not-set'),
-    })
+    return jsonify(
+        {
+            'authenticated': current_user.is_authenticated,
+            'user_id': current_user.id if current_user.is_authenticated else None,
+            'has_session_cookie': has_session_cookie,
+            'cookie_header_sent': bool(cookie_header),
+            'cookies_in_header': cookie_header[:200] if cookie_header else '',
+            'session_keys': list(session.keys()),
+            'session_permanent': session.permanent if hasattr(session, 'permanent') else False,
+            'is_secure': req.is_secure,
+            'scheme': req.scheme,
+            'remote_addr': req.remote_addr,
+            'x_forwarded_proto': req.headers.get('X-Forwarded-Proto', 'not-set'),
+            'origin': req.headers.get('Origin', 'not-set'),
+        }
+    )
 
-
-# ========== SERVE ANGULAR SPA FROM FLASK (SAME-ORIGIN) ==========
 
 spa_bp = Blueprint('spa', __name__)
 

@@ -1,7 +1,9 @@
-from flask import Blueprint, jsonify, current_app, request
-from flask_login import login_required
 from threading import Thread
-from app.services.ai_service import train_model, _train_thread, _train_lock
+
+from flask import Blueprint, current_app, jsonify, request
+from flask_login import login_required
+
+from app.services.ai_service import _train_lock, _train_thread, train_model
 
 bp = Blueprint('admin_ai', __name__, url_prefix='/admin/ai')
 
@@ -13,7 +15,9 @@ def status():
     model_exists = False
     try:
         import os
+
         from app.services.ai_service import MODEL_PATH
+
         model_exists = os.path.exists(MODEL_PATH)
     except Exception:
         model_exists = False
@@ -33,11 +37,9 @@ def status():
 @login_required
 def trigger_train():
     """Trigger background training. Returns immediately."""
-    # optional: accept real_data in JSON body to pass to train_model
     payload = request.get_json(silent=True) or {}
     real_data = payload.get('real_data')
 
-    # start background thread if not already running
     started = False
     try:
         global _train_thread
