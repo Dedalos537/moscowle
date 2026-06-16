@@ -1312,10 +1312,15 @@ def api_current_session():
     )
     if not appt:
         return jsonify({'success': False, 'has_active': False})
+
+    delay_minutes = int((now - appt.start_time).total_seconds() / 60)
+    delay_minutes = max(delay_minutes, 0)
+
     return jsonify(
         {
             'success': True,
             'has_active': True,
+            'delay_minutes': delay_minutes,
             'session': {
                 'id': appt.id,
                 'title': appt.title or 'Sesión',
