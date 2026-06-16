@@ -1,7 +1,9 @@
 import json
 import os
+import tempfile
 import uuid
-from datetime import datetime
+from contextlib import suppress
+from datetime import datetime, timedelta
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from sqlalchemy import func
@@ -15,11 +17,17 @@ from app.models import (
     Sede,
     SessionMetrics,
     User,
-    db,
 )
 from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
+from app.services.payment_service import PaymentService
 from app.services.receipt_generator import generate_receipt_pdf
+from app.utils.sanitizer import sanitize_text
+
+try:
+    from app.services.llm_automation_service import analyze_receipt_image
+except ImportError:
+    analyze_receipt_image = None
 
 
 @admin_bp.route('/expenses')
@@ -189,7 +197,6 @@ def api_all_payments():
 
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-    from app.models import Payment, User
 
     payments = Payment.query.order_by(Payment.date.desc()).limit(500).all()
     result = []
@@ -311,10 +318,8 @@ def register_payment():
     payment_date_str = request.form.get('payment_date')
     payment_date_obj = None
     if payment_date_str:
-        try:
+        with suppress(ValueError):
             payment_date_obj = datetime.strptime(payment_date_str, '%Y-%m-%d')
-        except ValueError:
-            pass
 
     data, errors = validate_payment_register(form)
     if errors:
@@ -328,6 +333,17 @@ def register_payment():
     method = data['method']
     reference = data.get('reference')
     next_due_date = data.get('next_due_date')
+
+    # Duplicate check: reject identical payment (same patient, amount, method) within last 60s
+    recent = Payment.query.filter(
+        Payment.patient_id == patient_id,
+        Payment.amount == float(amount),
+        Payment.method == method,
+        Payment.date >= datetime.utcnow() - timedelta(seconds=60),
+    ).first()
+    if recent:
+        flash('Pago duplicado detectado. Ya se registró un pago idéntico hace instantes.', 'error')
+        return redirect(url_for('admin.payments'))
 
     # Handle File Upload
     receipt_path = None
@@ -351,7 +367,7 @@ def register_payment():
 
     try:
         discount_val = float(discount) if discount else 0.0
-    except:
+    except Exception:
         discount_val = 0.0
 
     document_number = request.form.get('document_number')
@@ -415,9 +431,14 @@ def payment_history(patient_id):
     patient = User.query.get_or_404(patient_id)
     payments = Payment.query.filter_by(patient_id=patient_id).order_by(Payment.date.desc()).all()
 
-    return render_template(
-        'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
-    )
+    try:
+        return render_template(
+            'admin/payment_history.html', patient=patient, payments=payments, active_page='admin_payments'
+        )
+    except Exception as e:
+        current_app.logger.error(f'Error rendering payment_history template for patient {patient_id}: {e}')
+        flash('Error al cargar el historial de pagos. Por favor intenta de nuevo.', 'error')
+        return redirect(url_for('admin.payments'))
 
 
 @admin_bp.route('/payments/settings', methods=['POST'])
@@ -481,11 +502,10 @@ def analyze_receipt():
 
     patient_id = request.form.get('patient_id', type=int)
 
+    if analyze_receipt_image is None:
+        return jsonify({'error': 'Receipt analysis service not available'}), 503
+
     try:
-        import tempfile
-
-        from app.services.llm_automation_service import analyze_receipt_image
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
@@ -501,8 +521,6 @@ def analyze_receipt():
 
             if patient_id:
                 try:
-                    from app.services.payment_service import PaymentService
-
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
@@ -526,13 +544,11 @@ def analyze_receipt():
             }
             if patient_id:
                 try:
-                    from app.services.payment_service import PaymentService
-
                     billing = PaymentService().get_billing_info(patient_id)
                     if billing and billing.get('suggested_date'):
                         data['next_due_date'] = billing['suggested_date']
-                except Exception:
-                    pass
+                except Exception as billing_err:
+                    print(f'WARN: Could not calculate next_due_date: {billing_err}')
             return jsonify(data)
 
     except Exception as e:
@@ -543,10 +559,6 @@ def analyze_receipt():
 @admin_bp.route('/payments/<int:payment_id>/download', methods=['GET', 'POST'])
 @login_required
 def download_receipt(payment_id):
-    from flask import flash, redirect, url_for
-
-    from app.auth_compat import current_user
-
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')
         return redirect(url_for('main.dashboard'))
@@ -559,9 +571,6 @@ def download_receipt(payment_id):
         return redirect(url_for('admin.users'))
 
     if request.method == 'POST':
-        # Retrieve fields to rectify
-        from app.utils.sanitizer import sanitize_text
-
         doc_number = sanitize_text(request.form.get('document_number', ''), 20)
         g_name = sanitize_text(request.form.get('guardian_name', ''), 200)
         concept = sanitize_text(request.form.get('concept', ''), 1000)

@@ -2,15 +2,15 @@
 // Handles Modals, Filtering, Sorting and Chart interactions
 
 let activeAgeFilter = null; // '0-30', '30-60', '60-90', '90+'
-let activeChartFilter = false; 
+let activeChartFilter = false;
 
 function openRegisterPaymentModal(id, name, amount) {
     document.getElementById('payment_patient_id').value = id;
     document.getElementById('payment_patient_name').textContent = name;
     document.getElementById('payment_amount').value = amount;
-    document.getElementById('payment_discount').value = ''; 
+    document.getElementById('payment_discount').value = '';
     document.getElementById('absences_hint').classList.add('hidden');
-    
+
     // Fetch smart billing info
     const recalcAlert = document.getElementById('recalc_alert');
     const recalcMsg = document.getElementById('recalc_msg');
@@ -38,7 +38,7 @@ function openRegisterPaymentModal(id, name, amount) {
             today.setMonth(today.getMonth() + 1);
             document.getElementById('payment_next_date').valueAsDate = today;
         });
-    
+
     document.getElementById('paymentModal').classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
 }
@@ -53,13 +53,13 @@ function openSettingsModal(id, name, amount, date, plan) {
     document.getElementById('settings_patient_name').textContent = name;
     document.getElementById('settings_amount').value = amount;
     document.getElementById('settings_plan').value = plan.toLowerCase();
-    
+
     if (date && date !== 'None') {
         document.getElementById('settings_date').value = date;
     } else {
         document.getElementById('settings_date').value = '';
     }
-    
+
     document.getElementById('settingsModal').classList.remove('hidden');
     document.body.classList.add('overflow-hidden');
 }
@@ -74,12 +74,12 @@ function filterPayments() {
     const therapistFilter = document.getElementById('therapistFilter').value;
     const sedeFilter = document.getElementById('sedeFilter').value;
     const statusFilter = document.getElementById('statusFilter').value;
-    
+
     const checkRowData = (name, therapistText, sede, status, lastPayment, debt) => {
         const matchName = name.includes(searchInput);
         const matchTherapist = (therapistFilter === 'all') || (therapistText.includes(therapistFilter));
         const matchSede = (sedeFilter === 'all') || (sede === sedeFilter);
-        
+
         let matchStatus = true;
         const debtNum = parseFloat(debt);
         if (statusFilter === 'debt') {
@@ -88,8 +88,8 @@ function filterPayments() {
             matchStatus = (status === 'active' && debtNum <= 0.5);
         } else if (statusFilter === 'inactive') {
             matchStatus = (status === 'inactive');
-        } 
-        
+        }
+
         let matchAge = true;
         if (activeAgeFilter) {
             let diffDays = 9999;
@@ -110,7 +110,7 @@ function filterPayments() {
 
         return matchName && matchTherapist && matchSede && matchStatus && matchAge;
     };
-    
+
     // Desktop & Mobile Filter
     document.querySelectorAll('.payment-row, .payment-card').forEach(el => {
         const name = (el.dataset.name || '').toLowerCase();
@@ -122,12 +122,12 @@ function filterPayments() {
              const tDiv = el.querySelector('.therapist-name');
              therapistText = tDiv ? tDiv.textContent.trim() : '';
         }
-        
+
         const sede = el.dataset.sede || 'none';
         const status = el.dataset.status || 'active';
         const lastPayment = el.dataset.lastPayment || 'None';
         const debt = el.dataset.debt || '0';
-        
+
         if (checkRowData(name, therapistText, sede, status, lastPayment, debt)) {
             el.style.display = "";
         } else {
@@ -174,7 +174,7 @@ function sortPayments() {
         cards.sort(sortFunction);
         cards.forEach(card => mobileContainer.appendChild(card));
     }
-    
+
     // Save state after sort
     saveState();
 }
@@ -196,7 +196,7 @@ function saveState() {
 function loadState() {
     const saved = localStorage.getItem('moscowle_payments_state');
     if (!saved) return;
-    
+
     try {
         const state = JSON.parse(saved);
         // Clean up old state if needed (optional expiration)
@@ -249,7 +249,7 @@ function analyzeReceipt(input) {
 
     const spinner = document.getElementById('scan_spinner');
     spinner.classList.remove('hidden');
-    
+
     fetch("/admin/analyze-receipt", {
         method: 'POST',
         body: formData,
@@ -258,7 +258,7 @@ function analyzeReceipt(input) {
     .then(response => response.json())
     .then(data => {
         spinner.classList.add('hidden');
-        if (data.error || data.warning) { 
+        if (data.error || data.warning) {
             console.warn("Scan Alert:", data.error || data.warning);
             // Mostrar un aviso amable si es error de cuota
             if(data.warning || (data.error && data.error.includes('429'))) {
@@ -267,9 +267,9 @@ function analyzeReceipt(input) {
                 hint.classList.remove('hidden', 'text-orange-500');
                 hint.classList.add('text-blue-500');
             }
-            return; 
+            return;
         }
-        
+
         if (data.amount) {
             const el = document.getElementById('payment_amount');
             el.value = data.amount; animateField(el);
@@ -333,11 +333,11 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
     loadState();
 
     let totalDebt = 0;
-    let totalRevenueExpected = 0; 
+    let totalRevenueExpected = 0;
     let countActive = 0;
     let countOverdue = 0;
     let countInactive = 0;
-    
+
     const statusCounts = { active: 0, overdue: 0, inactive: 0 };
     const debtBySede = {};
     const revenueBySede = {}; // New
@@ -352,16 +352,16 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
          if (p.status === 'active') countActive++;
          if (p.status === 'overdue') countOverdue++;
          if (p.status === 'inactive') countInactive++;
-         
+
          const sKey = (p.status === 'active' || p.status === 'overdue' || p.status === 'inactive') ? p.status : 'inactive';
          statusCounts[sKey] = (statusCounts[sKey] || 0) + 1;
          totalDebt += (p.debt > 0 ? p.debt : 0);
-         
+
          // New ERP Metrics
          const amount = parseFloat(p.paid || 0);
          const sedeName = p.sede || 'Sin Sede';
          const planName = p.plan || 'No definido';
-         
+
          if (p.status === 'active') {
              totalRevenueExpected += amount;
              revenueBySede[sedeName] = (revenueBySede[sedeName] || 0) + amount;
@@ -371,10 +371,10 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
          if (p.debt > 0.5) {
              debtBySede[sedeName] = (debtBySede[sedeName] || 0) + p.debt;
          }
-         
+
          if (p.lastVal !== 'None') {
              const diffTime = Math.abs(today - new Date(p.lastVal));
-             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
              if(diffDays <= 30) lastPaymentMonths['0-30 días']++;
              else if(diffDays <= 60) lastPaymentMonths['30-60 días']++;
              else if(diffDays <= 90) lastPaymentMonths['60-90 días']++;
@@ -385,26 +385,26 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
     });
 
     // --- 2. Process History Data (Past Trends & Real Revenue) ---
-    const historyByMonth = {}; 
+    const historyByMonth = {};
     const historySedes = {}; // Just for interest?
-    
+
     history.forEach(pay => {
         // pay.date is ISO format
         const d = new Date(pay.date);
         const key = pay.date.slice(0, 7); // YYYY-MM
         const amt = parseFloat(pay.amount || 0);
-        
+
         historyByMonth[key] = (historyByMonth[key] || 0) + amt;
-        
+
         if (key === currentMonthKey) {
             currentRealRevenue += amt;
         }
     });
-    
+
     // Sort months strictly
     const sortedMonths = Object.keys(historyByMonth).sort().slice(-6); // Last 6 months
     const historyDataPoints = sortedMonths.map(m => historyByMonth[m]);
-    
+
     // Update KPIs
     document.getElementById('kpi_total_debt').textContent = `S/ ${totalDebt.toFixed(2)}`;
     document.getElementById('kpi_active_users').textContent = countActive;
@@ -424,8 +424,8 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
                     borderWidth: 0
                 }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { position: 'right' } },
                 onClick: (evt, elements) => {
                     if (elements.length > 0) {
@@ -452,8 +452,8 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
                     borderRadius: 4
                 }]
             },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 onClick: (evt, elements) => {
                     if (elements.length > 0) {
@@ -470,11 +470,11 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
                         filterPayments();
                         document.querySelector('.bg-surface').scrollIntoView({behavior: 'smooth'});
                     }
-                } 
+                }
             }
         });
     }
-    
+
     if (document.getElementById('chartLastPayment')) {
         new Chart(document.getElementById('chartLastPayment'), {
             type: 'bar',
@@ -487,20 +487,20 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
                     borderRadius: 4
                 }]
             },
-            options: { 
-                indexAxis: 'y', responsive: true, maintainAspectRatio: false, 
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 onClick: (evt, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const labels = Object.keys(lastPaymentMonths);
-                        const selectedLabel = labels[index]; 
+                        const selectedLabel = labels[index];
                         let filterCode = null;
                         if (selectedLabel.includes('0-30')) filterCode = '0-30';
                         else if (selectedLabel.includes('30-60')) filterCode = '30-60';
                         else if (selectedLabel.includes('60-90')) filterCode = '60-90';
                         else filterCode = '90+';
-                        
+
                         if (activeAgeFilter === filterCode) {
                             activeAgeFilter = null;
                             document.getElementById('filter-feedback-container').classList.add('hidden');
@@ -518,7 +518,7 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
     }
 
     // --- NEW ERP CHARTS ---
-    
+
     if (document.getElementById('chartRevenueHistory')) {
         new Chart(document.getElementById('chartRevenueHistory'), {
             type: 'line',
@@ -540,7 +540,7 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
     if (document.getElementById('chartRevenueByPlan')) {
         const planLabels = Object.keys(revenueByPlan);
         const planData = Object.values(revenueByPlan);
-        
+
         new Chart(document.getElementById('chartRevenueByPlan'), {
             type: 'doughnut',
             data: {
@@ -558,7 +558,7 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
     if (document.getElementById('chartRevenueBySede')) {
         const sedeLabels = Object.keys(revenueBySede);
         const sedeData = Object.values(revenueBySede);
-        
+
         new Chart(document.getElementById('chartRevenueBySede'), {
             type: 'bar',
             data: {
@@ -594,11 +594,11 @@ function initDashboard(patientsFromJinja, historyFromJinja) {
                     }
                 ]
             },
-            options: { 
-                indexAxis: 'y', 
-                responsive: true, 
+            options: {
+                indexAxis: 'y',
+                responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } } 
+                scales: { x: { beginAtZero: true } }
             }
         });
     }
@@ -612,15 +612,15 @@ function filterHistory() {
     const monthFilter = document.getElementById('monthFilter').value;
     const now = new Date();
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentMonth = now.getMonth() + 1;
 
     document.querySelectorAll('.history-row').forEach(row => {
         const text = (row.dataset.text || '').toLowerCase();
         const rowMonth = parseInt(row.dataset.month || '0');
         const rowYear = parseInt(row.dataset.year || '0');
-        
+
         const matchSearch = text.includes(searchInput);
-        
+
         let matchMonth = true;
         if (monthFilter !== 'all') {
             if (monthFilter === 'current') {
@@ -634,12 +634,10 @@ function filterHistory() {
                 }
                 matchMonth = (rowMonth === targetMonth && rowYear === targetYear);
             } else {
-                // Specific month (01-12) - restricting to current year for clarity
-                // Unless user wants all history? Let's stick to current year for specific months to be safe on "12 this year" issue.
-                matchMonth = (parseInt(monthFilter) === rowMonth && rowYear === currentYear);
+                matchMonth = parseInt(monthFilter) === rowMonth;
             }
         }
-        
+
         row.style.display = (matchSearch && matchMonth) ? '' : 'none';
     });
 }
