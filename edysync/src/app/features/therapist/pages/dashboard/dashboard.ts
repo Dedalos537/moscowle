@@ -7,14 +7,13 @@ import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
-import { Card } from '../../../../shared/components/card/card';
-import { Button } from '../../../../shared/components/button/button';
 
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Spinner, Card, Button],
+  imports: [CommonModule, FontAwesomeModule, Spinner],
   templateUrl: './dashboard.html',
+  styleUrl: './dashboard.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -57,7 +56,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.success) {
           this.data = res.data;
-          this.data.topics = this.parseTopics(res.data.planned_text);
+          this.loadProgramForSession();
         }
         this.loading = false;
         this.cdr.markForCheck();
@@ -73,6 +72,117 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+  }
+
+  loadProgramForSession() {
+    const sessionId = this.data?.next_session?.id;
+    if (!sessionId) {
+      this.data.topics = [];
+      return;
+    }
+
+    this.subs.add(
+      this.http.get(`/api/sessions/${sessionId}/program`).subscribe({
+        next: (res: any) => {
+          const text = res.planned_text || this.data?.planned_text || '';
+          this.data.topics = this.parseTopics(text);
+
+          this.http.get(`/api/sessions/${sessionId}/audit`).subscribe({
+            next: (auditRes: any) => {
+              if (auditRes.success && auditRes.audit) {
+                const audit = auditRes.audit;
+                this.updateTopicStatuses(audit);
+              }
+              this.cdr.markForCheck();
+            },
+            error: () => {
+              this.cdr.markForCheck();
+            }
+          });
+        },
+        error: () => {
+          this.data.topics = this.parseTopics(this.data?.planned_text);
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  updateTopicStatuses(audit: any) {
+    if (!this.data?.topics) return;
+
+    const hasTranscript = audit.has_transcript;
+    const score = audit.audit_score;
+    const status = audit.audit_status;
+
+    if (!hasTranscript) {
+      this.data.topics = this.data.topics.map((t: any) => ({
+        ...t,
+        status: 'PENDIENTE'
+      }));
+      return;
+    }
+
+    if (status === 'completed' && score !== null) {
+      const completedCount = Math.floor((score / 100) * this.data.topics.length);
+      this.data.topics = this.data.topics.map((t: any, i: number) => ({
+        ...t,
+        status: i < completedCount ? 'LOGRADO' : (i === completedCount ? 'PARCIAL' : 'PENDIENTE')
+      }));
+    } else if (hasTranscript && (status === 'pending' || status === 'none')) {
+      this.data.topics = this.data.topics.map((t: any, i: number) => ({
+        ...t,
+        status: i === 0 ? 'PARCIAL' : 'PENDIENTE'
+      }));
+    }
+  }
+
+  get firstName(): string {
+    if (!this.currentUser?.username) return '';
+    return this.currentUser.username.split(' ')[0];
+  }
+
+  get compliancePercent(): number {
+    return Math.round(this.data?.avg_compliance || 0);
+  }
+
+  get nextSessionTitle(): string {
+    return this.data?.next_session?.title || 'Sesión de Terapia';
+  }
+
+  get nextSessionTime(): string {
+    return this.data?.next_session?.start || '';
+  }
+
+  get nextSessionSubtitle(): string {
+    const s = this.data?.next_session;
+    if (!s) return '';
+    const parts = [s.location, s.patient].filter(Boolean);
+    return parts.join(' • ') || 'Sesión programada';
+  }
+
+  get sessionProgress(): number {
+    return this.data?.session_progress || 0;
+  }
+
+  get sessionDescription(): string {
+    const p = this.sessionProgress;
+    if (p >= 80) return 'Excelente avance en el módulo actual.';
+    if (p >= 50) return 'Buen progreso, continúa con el plan.';
+    if (p > 0) return 'Sesión en curso, pendiente de evaluación.';
+    return 'Sin datos de progreso aún.';
+  }
+
+  get agenda(): any[] {
+    return this.data?.agenda || [];
+  }
+
+  get topics(): { name: string; status: string }[] {
+    return this.data?.topics || [];
+  }
+
+  get reportesCount(): number {
+    return this.weeklyReportsCount || 8;
   }
 
   checkPendingReports() {
@@ -125,12 +235,27 @@ export class TherapistDashboard implements OnInit, OnDestroy {
     }));
   }
 
-  parseTopics(text: string): {name: string, status: string}[] {
-    if (!text) return [ {name: 'Introducción', status: 'LOGRADO'}, {name: 'Revisión General', status: 'PENDIENTE'} ];
-    const lines = text.split('\n').filter(l => l.trim().length > 3).slice(0, 4);
-    return lines.map((l, i) => ({
-      name: l.replace(/^[-\*\d\\.]+ */, '').substring(0, 30),
-      status: i === 0 ? 'LOGRADO' : (i === 1 ? 'PARCIAL' : 'PENDIENTE')
+  parseTopics(text: string): { name: string; status: string }[] {
+    if (!text) return [];
+
+    const lines = text.split('\n')
+      .map(l => l.replace(/^[-\*\d\\.]+ */, '').trim())
+      .filter(l => l.length > 3 && !l.match(/^(docente|integrantes?|alumno|profesor|fecha|índice|contents|universidad|carrera|facultad)/i))
+      .slice(0, 4);
+
+    if (lines.length === 0) return [];
+
+    return lines.map((l) => ({
+      name: l.substring(0, 35),
+      status: 'PENDIENTE'
     }));
+  }
+
+  getTopicIcon(status: string): any {
+    switch (status) {
+      case 'LOGRADO': return ['fas', 'check-circle'];
+      case 'PARCIAL': return ['fas', 'exclamation-circle'];
+      default: return ['far', 'circle'];
+    }
   }
 }

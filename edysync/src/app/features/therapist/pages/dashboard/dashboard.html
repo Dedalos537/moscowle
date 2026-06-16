@@ -6,97 +6,176 @@
 
 @if (!loading && data) {
 <div class="px-4 py-8 max-w-7xl mx-auto animate-fade-in">
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
-      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Pacientes Activos</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.active_patients || data.total_students || 0 }}</p>
-    </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
-      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Sesiones Hoy</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.today_sessions_count || data.agenda?.length || 0 }}</p>
-    </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
-      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Cumplimiento</p>
-      <p class="text-3xl font-bold text-on-surface">
-        @if (data.avg_compliance > 0) {
-          {{ data.avg_compliance | number:'1.0-0' }}%
-        }
-        @if (!data.avg_compliance || data.avg_compliance === 0) {
-          —
-        }
+
+  <!-- Header: Saludo + Cumplimiento -->
+  <div class="flex items-center gap-6 mb-6">
+    <div class="flex-1">
+      <p class="text-[26px] font-bold text-on-surface leading-tight">
+        Hola, {{ firstName }}. Tu próxima sesión es
+      </p>
+      <p class="text-[26px] font-bold text-on-surface leading-tight mt-0.5">
+        <span class="text-primary">{{ nextSessionTitle }}</span> a las {{ nextSessionTime }}
       </p>
     </div>
-    <div class="bg-surface-container-lowest rounded-2xl shadow-soft p-5 border border-border/20">
-      <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider mb-1">Juegos Asignados</p>
-      <p class="text-3xl font-bold text-on-surface">{{ data.total_games_assigned || 0 }}</p>
+    <div class="bg-[#0f2e0a] text-white rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[200px]">
+      <svg width="52" height="52" viewBox="0 0 36 36" class="shrink-0">
+        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#2d5a1e" stroke-width="3"/>
+        <circle cx="18" cy="18" r="15.915" fill="none" stroke="#4ade80" stroke-width="3"
+                stroke-dasharray="100" [attr.stroke-dashoffset]="100 - compliancePercent"
+                stroke-linecap="round" transform="rotate(-90 18 18)"/>
+      </svg>
+      <div>
+        <p class="text-2xl font-bold">{{ compliancePercent }}%</p>
+        <p class="text-[10px] uppercase tracking-wider opacity-70">Cumplimiento Global</p>
+      </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-    <div class="lg:col-span-2">
-      <app-card title="Progreso por Programa" [icon]="['fas', 'chart-simple']">
-        @if (data.topics?.length) {
-          <div class="space-y-4">
-            @for (topic of data.topics; track $index) {
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span class="text-on-surface">{{ topic.name }}</span>
-                  <span class="text-on-surface-variant">{{ topic.completed }}/{{ topic.total }} pacientes</span>
-                </div>
-                <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
-                  <div class="h-full rounded-full bg-primary"
-                       [style.width.%]="topic.total > 0 ? (topic.completed / topic.total * 100) : 0">
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </app-card>
-    </div>
+  <!-- Sesión Actual Card -->
+  <div class="bg-[#0f2e0a] text-white rounded-2xl p-6 mb-8 relative overflow-hidden">
+    <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4">Sesión en Vivo</span>
 
+    <div class="flex items-start justify-between gap-6">
+      <div class="flex-1">
+        <h2 class="text-2xl font-bold mb-1">{{ nextSessionTitle }}</h2>
+        <p class="text-white/60 text-sm mb-4">{{ nextSessionSubtitle }}</p>
+
+        <!-- Progress bar -->
+        <div class="mb-3">
+          <div class="flex justify-between text-[11px] text-white/50 mb-1">
+            <span>Progreso del Programa</span>
+            <span>{{ sessionProgress }}%</span>
+          </div>
+          <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div class="h-full bg-[#4ade80] rounded-full transition-all" [style.width.%]="sessionProgress"></div>
+          </div>
+        </div>
+
+        <p class="text-xs text-white/40">{{ sessionDescription }}</p>
+      </div>
+
+      <!-- Donut -->
+      <div class="shrink-0">
+        <svg width="90" height="90" viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.915" fill="none" stroke="#4ade80" stroke-width="3"
+                  stroke-dasharray="100" [attr.stroke-dashoffset]="100 - sessionProgress"
+                  stroke-linecap="round" transform="rotate(-90 18 18)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agenda de Hoy + Temas -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+    <!-- Agenda -->
     <div>
-      <app-card title="Próximas Sesiones" [icon]="['fas', 'calendar']">
-        @if (data.agenda?.length) {
-          <div class="space-y-3">
-            @for (item of data.agenda; track $index) {
-               <div class="p-3 rounded-xl transition-colors"
-                    [class.bg-primary-container/20]="item.is_current"
-                    [class.border]="item.is_current"
-                    [class.border-primary-container]="item.is_current"
-                    [class.hover:bg-surface-container-low]="!item.is_current">
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider mb-4">Agenda de Hoy</h3>
+      @if (agenda.length > 0) {
+        <div class="relative pl-6">
+          <div class="absolute left-2 top-2 bottom-2 w-px bg-border"></div>
+          @for (item of agenda; track $index) {
+            <div class="relative mb-4 last:mb-0">
+              <div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full border-2"
+                   [class.bg-primary]="item.status === 'scheduled'"
+                   [class.border-primary]="item.status === 'scheduled'"
+                   [class.bg-green-500]="item.status === 'completed'"
+                   [class.border-green-500]="item.status === 'completed'"
+                   [class.bg-surface-container-high]="item.status !== 'scheduled' && item.status !== 'completed'"
+                   [class.border-surface-container-high]="item.status !== 'scheduled' && item.status !== 'completed'">
+              </div>
+              <div class="bg-surface-container rounded-xl p-3">
                 <div class="flex items-center justify-between">
-                  <p class="font-semibold text-sm text-on-surface">{{ item.title }}</p>
-                  @if (item.is_current) {
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary text-on-primary">Ahora</span>
+                  <p class="text-sm font-semibold text-on-surface">{{ item.title }}</p>
+                  @if (item.status === 'completed') {
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 font-bold">Completada</span>
+                  }
+                  @if (item.status === 'scheduled') {
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">Programada</span>
                   }
                 </div>
-                <p class="text-xs text-on-surface-variant mt-1">{{ item.start_time | date:'shortTime' }}</p>
-                @if (item.patient) {
-                  <p class="text-xs text-primary mt-1">{{ item.patient }}</p>
-                }
+                <p class="text-xs text-on-surface-variant mt-1">{{ item.start }}</p>
               </div>
-            }
-          </div>
-        }
-        @if (!data.agenda?.length) {
-          <div class="text-center py-6 text-on-surface-variant">
-            <fa-icon [icon]="['fas', 'calendar-check']" class="text-2xl mb-2 opacity-30"></fa-icon>
-            <p class="text-sm">No hay sesiones programadas</p>
-          </div>
-        }
-      </app-card>
+            </div>
+          }
+        </div>
+      }
+      @if (agenda.length === 0) {
+        <p class="text-on-surface-variant text-sm">Sin sesiones hoy</p>
+      }
+    </div>
+
+    <!-- Temas de la Sesión -->
+    <div>
+      <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider mb-4">Temas de la Sesión</h3>
+      @if (topics.length > 0) {
+        <div class="space-y-2">
+          @for (topic of topics; track $index) {
+            <div class="bg-surface-container rounded-xl p-3 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                   [class.bg-green-500/15]="topic.status === 'LOGRADO'"
+                   [class.text-green-500]="topic.status === 'LOGRADO'"
+                   [class.bg-amber-500/15]="topic.status === 'PARCIAL'"
+                   [class.text-amber-500]="topic.status === 'PARCIAL'"
+                   [class.bg-surface-container-high]="topic.status === 'PENDIENTE'"
+                   [class.text-on-surface-variant]="topic.status === 'PENDIENTE'">
+                <fa-icon [icon]="getTopicIcon(topic.status)" [class.text-green-500]="topic.status === 'LOGRADO'" [class.text-amber-500]="topic.status === 'PARCIAL'"></fa-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-on-surface truncate">{{ topic.name }}</p>
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    [class.bg-green-500/10]="topic.status === 'LOGRADO'"
+                    [class.text-green-500]="topic.status === 'LOGRADO'"
+                    [class.bg-amber-500/10]="topic.status === 'PARCIAL'"
+                    [class.text-amber-500]="topic.status === 'PARCIAL'"
+                    [class.bg-surface-container-high]="topic.status === 'PENDIENTE'"
+                    [class.text-on-surface-variant]="topic.status === 'PENDIENTE'">
+                {{ topic.status }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+      @if (topics.length === 0) {
+        <p class="text-on-surface-variant text-sm">Sin programación subida</p>
+      }
     </div>
   </div>
 
-  <div class="flex justify-end">
-    <app-button
-      [label]="weeklyReportsPending ? 'Generando...' : 'Generar Reporte Semanal General'"
-      [icon]="weeklyReportsPending ? ['fas', 'spinner'] : ['fas', 'file-alt']"
-      [disabled]="weeklyReportsPending"
-      (clicked)="generateWeeklyReport()"
-      variant="primary">
-    </app-button>
+  <!-- Stats Row -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'file-lines']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Reportes Pendientes</p>
+      </div>
+      <p class="text-3xl font-bold text-on-surface">{{ reportesCount }}</p>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Progreso Académico</p>
+      </div>
+      <p class="text-3xl font-bold text-on-surface">{{ compliancePercent }}%</p>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-2xl p-5 border border-border/20">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
+        </div>
+        <p class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">AI Coach</p>
+      </div>
+      <p class="text-2xl font-bold text-on-surface">Activo</p>
+      <p class="text-xs text-on-surface-variant mt-1">Última revisión: hoy</p>
+    </div>
   </div>
 
 </div>
