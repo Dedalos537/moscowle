@@ -15,6 +15,7 @@ export class RecordingService {
   showAttendanceCheck$ = new BehaviorSubject<boolean>(false);
   attendanceCountdown$ = new BehaviorSubject<number>(120);
   auditScore$ = new BehaviorSubject<number | null>(null);
+  pendingLateSession$ = new BehaviorSubject<any>(null);
 
   private pollSubscription?: Subscription;
   private recorder: MediaRecorder | null = null;
@@ -76,11 +77,29 @@ export class RecordingService {
         const s = res.session;
         if (this.checkedSessions.has(s.id)) return;
         this.checkedSessions.add(s.id);
+
+        const delayMinutes = res.delay_minutes ?? 0;
+        console.log(`[RecordingService] Session #${s.id} found, delay=${delayMinutes}min, status=${s.status}`);
+
+        // Late session warning: 0-10 min delay, session not yet in_progress
+        if (s.status === 'scheduled' && delayMinutes >= 0 && delayMinutes <= 10) {
+          this.currentSessionId = s.id;
+          const patientName = s.patient?.name || '';
+          this.sessionTitle$.next(s.title || 'Sesión');
+          this.patientName$.next(patientName);
+          this.activeSession$.next(s);
+          this.pendingLateSession$.next(s);
+          console.log(`[RecordingService] Late session detected, showing warning`);
+          return;
+        }
+
+        // Normal case: auto-start recording
         this.currentSessionId = s.id;
         const patientName = s.patient?.name || '';
         this.sessionTitle$.next(s.title || 'Sesión');
         this.patientName$.next(patientName);
         this.activeSession$.next(s);
+        console.log(`[RecordingService] Auto-starting recording for session #${s.id}`);
         this.autoStart();
       },
       error: (err) => console.warn('[RecordingService] Error fetching current session:', err),
