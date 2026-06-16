@@ -6,7 +6,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
-import { AlertService } from '../../../../core/services/alert.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { TherapistStats, PatientStats } from '../../../../core/models/expense';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
@@ -220,7 +220,7 @@ export class Reports implements OnInit, OnDestroy {
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
-    private alertService: AlertService,
+    private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -423,13 +423,13 @@ export class Reports implements OnInit, OnDestroy {
           if (res.success) {
           this.aiReport = DOMPurify.sanitize(res.report, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p', 'h1', 'h2', 'h3', 'h4', 'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'], ALLOWED_ATTR: ['href'] });
           } else {
-            this.alertService.show('Error: ' + res.error, 'error');
+            this.toastService.show('Error: ' + res.error, 'error');
           }
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.aiGenerating = false;
-          this.alertService.show('Error de conexión al generar el reporte.', 'error');
+          this.toastService.show('Error de conexión al generar el reporte.', 'error');
           console.error(err);
           this.cdr.markForCheck();
         },
@@ -493,7 +493,7 @@ export class Reports implements OnInit, OnDestroy {
         next: (res) => {
           this.reportsAccumulating = false;
           if (res.success) {
-            this.alertService.show('Reportes acumulados correctamente.', 'success');
+            this.toastService.show('Reportes acumulados correctamente.', 'success');
             this.loadWeeklySummary();
             this.loadDailyReports();
           }
@@ -501,7 +501,7 @@ export class Reports implements OnInit, OnDestroy {
         },
         error: () => {
           this.reportsAccumulating = false;
-          this.alertService.show('Error al acumular reportes.', 'error');
+          this.toastService.show('Error al acumular reportes.', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -591,14 +591,14 @@ export class Reports implements OnInit, OnDestroy {
       this.adminService.generateMonthlyReports(this.selectedYear, this.selectedMonth).subscribe({
         next: (res) => {
           if (res.success) {
-            this.alertService.show(`${res.count} reportes mensuales generados`, 'success');
+            this.toastService.show(`${res.count} reportes mensuales generados`, 'success');
             this.loadMonthlySummary();
           }
           this.cdr.markForCheck();
         },
         error: () => {
           this.monthlyLoading = false;
-          this.alertService.show('Error al generar reportes mensuales', 'error');
+          this.toastService.show('Error al generar reportes mensuales', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -611,14 +611,14 @@ export class Reports implements OnInit, OnDestroy {
       this.adminService.generateQuarterlyReports(this.selectedYear, this.selectedQuarter).subscribe({
         next: (res) => {
           if (res.success) {
-            this.alertService.show(`${res.count} reportes trimestrales generados`, 'success');
+            this.toastService.show(`${res.count} reportes trimestrales generados`, 'success');
             this.loadQuarterlySummary();
           }
           this.cdr.markForCheck();
         },
         error: () => {
           this.quarterlyLoading = false;
-          this.alertService.show('Error al generar reportes trimestrales', 'error');
+          this.toastService.show('Error al generar reportes trimestrales', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -631,14 +631,14 @@ export class Reports implements OnInit, OnDestroy {
       this.adminService.generateAllWeeklyReports(this.selectedWeekStart).subscribe({
         next: (res) => {
           if (res.success) {
-            this.alertService.show(`${res.count} reportes semanales generados`, 'success');
+            this.toastService.show(`${res.count} reportes semanales generados`, 'success');
             this.loadWeeklySummary();
           }
           this.cdr.markForCheck();
         },
         error: () => {
           this.weeklySummaryLoading = false;
-          this.alertService.show('Error al generar reportes', 'error');
+          this.toastService.show('Error al generar reportes', 'error');
           this.cdr.markForCheck();
         },
       }),

@@ -8,6 +8,7 @@ import { TherapistService } from '../../../../core/services/therapist.service';
 import { RecordingService } from '../../../../core/services/recording.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { SelectOption } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
@@ -75,6 +76,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private router: Router,
     private confirmService: ConfirmService,
+    private toastService: ToastService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -353,6 +355,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       next: () => {
         this.submitting = false;
         this.closeEditModal();
+        this.toastService.show('Sesión actualizada correctamente', 'success');
         this.cdr.markForCheck();
         this.cargarSesiones();
         this.loadStats();
@@ -360,6 +363,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       error: (err) => {
         this.submitting = false;
         this.error = err.message;
+        this.toastService.show('Error al actualizar sesión', 'error');
         this.cdr.markForCheck();
       },
     }));
@@ -385,6 +389,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       next: () => {
         this.deleting = false;
         this.closeEditModal();
+        this.toastService.show('Sesión eliminada correctamente', 'success');
         this.cdr.markForCheck();
         this.cargarSesiones();
         this.loadStats();
@@ -392,6 +397,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       error: (err) => {
         this.deleting = false;
         this.error = err.message;
+        this.toastService.show('Error al eliminar sesión', 'error');
         this.cdr.markForCheck();
       },
     }));

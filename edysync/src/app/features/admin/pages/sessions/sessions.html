@@ -141,9 +141,17 @@
 
   </div>
 
+  @if (submitting) {
+    <div class="px-6 pb-2">
+      <app-progress-bar [value]="createProgress" [max]="100" size="sm"></app-progress-bar>
+      <p class="text-xs text-on-surface-variant/70 mt-1.5 text-center">
+        {{ programUploadingCreate ? 'Subiendo programas...' : 'Creando sesiones...' }}
+      </p>
+    </div>
+  }
   <div modal-footer>
     <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
-    <app-button variant="primary" [label]="programUploadingCreate ? 'Subiendo programas...' : submitting ? 'Creando sesiones...' : 'Crear Sesiones'" [icon]="(submitting || programUploadingCreate) ? ['fas', 'spinner'] : ['fas', 'plus']" [disabled]="submitting || programUploadingCreate" (clicked)="submitCreate()"></app-button>
+    <app-button variant="primary" [label]="submitting ? 'Creando...' : 'Crear Sesiones'" [icon]="submitting ? ['fas', 'spinner'] : ['fas', 'plus']" [disabled]="submitting" (clicked)="submitCreate()"></app-button>
   </div>
 </app-modal>
 

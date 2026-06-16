@@ -4,13 +4,14 @@ import { RecordingService } from './core/services/recording.service';
 import { AuthService } from './core/services/auth.service';
 import { SplashScreen } from './shared/components/splash-screen/splash-screen';
 import { AlertModal } from './shared/components/alert-modal/alert-modal.component';
+import { ToastContainer } from './shared/components/toast-container/toast-container';
 import { RecordingOverlay } from './shared/components/recording-overlay/recording-overlay';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterModule, SplashScreen, AlertModal, RecordingOverlay],
+  imports: [RouterModule, SplashScreen, AlertModal, ToastContainer, RecordingOverlay],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

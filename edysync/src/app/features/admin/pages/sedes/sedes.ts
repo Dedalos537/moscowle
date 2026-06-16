@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AdminService } from '../../../../core/services/admin.service';
-import { AlertService } from '../../../../core/services/alert.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede, SedeAnalytics } from '../../../../core/models/sede';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -43,7 +43,7 @@ export class Sedes implements OnInit, OnDestroy {
   constructor(
     private headerService: HeaderService,
     private adminService: AdminService,
-    private alertService: AlertService,
+    private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -88,7 +88,7 @@ export class Sedes implements OnInit, OnDestroy {
         },
         error: () => {
           this.loading = false;
-          this.alertService.show('Error al cargar sedes', 'error');
+          this.toastService.show('Error al cargar sedes', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -133,7 +133,7 @@ export class Sedes implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success) {
             this.createStatus = 'Sede creada';
-            this.alertService.show('Sede creada correctamente', 'success');
+            this.toastService.show('Sede creada correctamente', 'success');
             setTimeout(() => {
               this.closeCreateDrawer();
               this.loadSedes();
@@ -175,7 +175,7 @@ export class Sedes implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success) {
             this.editStatus = 'Guardado';
-            this.alertService.show('Sede actualizada correctamente', 'success');
+            this.toastService.show('Sede actualizada correctamente', 'success');
             setTimeout(() => {
               this.closeEditDrawer();
               this.loadSedes();
@@ -208,7 +208,7 @@ export class Sedes implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success) {
             sede.active = !sede.active;
-            this.alertService.show(
+            this.toastService.show(
               `Sede ${sede.active ? 'activada' : 'desactivada'} correctamente`,
               'success',
             );
@@ -216,7 +216,7 @@ export class Sedes implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.alertService.show('Error al actualizar sede', 'error');
+          this.toastService.show('Error al actualizar sede', 'error');
           this.cdr.markForCheck();
         },
       }),
@@ -236,11 +236,11 @@ export class Sedes implements OnInit, OnDestroy {
       this.adminService.updateSede(sede.id, { active: false }).subscribe({
         next: () => {
           this.sedes = this.sedes.filter(s => s.id !== sede.id);
-          this.alertService.show('Sede eliminada', 'success');
+          this.toastService.show('Sede eliminada', 'success');
           this.cdr.markForCheck();
         },
         error: () => {
-          this.alertService.show('Error al eliminar sede', 'error');
+          this.toastService.show('Error al eliminar sede', 'error');
           this.cdr.markForCheck();
         },
       }),

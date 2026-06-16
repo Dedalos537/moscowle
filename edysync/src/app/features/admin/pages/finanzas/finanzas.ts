@@ -10,7 +10,7 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { AlertService } from '../../../../core/services/alert.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede } from '../../../../core/models/sede';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
@@ -219,7 +219,7 @@ export class Finanzas implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private route: ActivatedRoute,
     private authService: AuthService,
-    private alertService: AlertService,
+    private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -620,7 +620,7 @@ export class Finanzas implements OnInit, OnDestroy {
     if (!c) return;
     this.subscriptions.add(this.adminService.exportPaymentsCsv().subscribe({
       next: (blob) => { const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `pagos_${new Date().toISOString().slice(0, 7)}.csv`; a.click(); window.URL.revokeObjectURL(url); this.cdr.markForCheck(); },
-      error: () => { this.alertService.show('Error al generar el reporte', 'error'); this.cdr.markForCheck(); },
+      error: () => { this.toastService.show('Error al generar el reporte', 'error'); this.cdr.markForCheck(); },
     }));
   }
 

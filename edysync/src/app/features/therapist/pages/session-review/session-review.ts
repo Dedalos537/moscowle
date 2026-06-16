@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { TherapistService } from '../../../../core/services/therapist.service';
-import { AlertService } from '../../../../core/services/alert.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { RecordingService } from '../../../../core/services/recording.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 
@@ -91,7 +91,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
-    private alertService: AlertService,
+    private toastService: ToastService,
     private recordingService: RecordingService,
     private confirmService: ConfirmService,
   ) {}
@@ -308,7 +308,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         if (video) video.srcObject = this.videoStream;
       }, 100);
     } catch {
-      this.alertService.show('No se pudo acceder a la cámara. Verifica los permisos.', 'error');
+      this.toastService.show('No se pudo acceder a la cámara. Verifica los permisos.', 'error');
     }
   }
 
@@ -385,7 +385,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       .catch(() => {
         this.isRecording = false;
         this.cdr.detectChanges();
-        this.alertService.show('No se pudo acceder al micrófono. Verifica los permisos.', 'error');
+        this.toastService.show('No se pudo acceder al micrófono. Verifica los permisos.', 'error');
       });
   }
 
@@ -546,7 +546,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.showWarningModal = false;
         this.clearWarningTimer();
         this.cdr.markForCheck();
-        this.alertService.show('Sesión marcada como ausente.', 'info');
+        this.toastService.show('Sesión marcada como ausente.', 'info');
         this.loadAudit();
       },
       error: (err) => {
@@ -580,9 +580,9 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
           } else if (this.pendingAutoAudit) {
             this.pendingAutoAudit = false;
             if (!data.audit.has_program) {
-              this.alertService.show('No se puede auditar: no hay programación (.docx) subida para esta sesión.', 'warning');
+              this.toastService.show('No se puede auditar: no hay programación (.docx) subida para esta sesión.', 'warning');
             } else if (!data.audit.has_transcript) {
-              this.alertService.show('No se puede auditar: no hay transcripción de audio disponible.', 'warning');
+              this.toastService.show('No se puede auditar: no hay transcripción de audio disponible.', 'warning');
             }
           }
         } else {
@@ -649,7 +649,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       error: (err) => {
         this.error = err.message;
         this.cdr.markForCheck();
-        this.alertService.show('Error al descargar el reporte', 'error');
+        this.toastService.show('Error al descargar el reporte', 'error');
       },
     }));
   }

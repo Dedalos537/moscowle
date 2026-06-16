@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { AdminService } from '../../../../core/services/admin.service';
-import { AlertService } from '../../../../core/services/alert.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { Subscription, Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { SelectOption } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
@@ -78,7 +78,7 @@ export class QuickPayment implements OnDestroy {
 
   constructor(
     private adminService: AdminService,
-    private alertService: AlertService,
+    private toastService: ToastService,
     private cdr: ChangeDetectorRef,
   ) {
     this.subscriptions.add(
@@ -233,7 +233,7 @@ export class QuickPayment implements OnDestroy {
         next: (res: any) => {
           if (res.success) {
             this.registerStatus = 'Pago registrado exitosamente';
-            this.alertService.show('Pago registrado correctamente', 'success');
+            this.toastService.show('Pago registrado correctamente', 'success');
             setTimeout(() => {
               this.closePaymentForm();
               this.clearSearch();

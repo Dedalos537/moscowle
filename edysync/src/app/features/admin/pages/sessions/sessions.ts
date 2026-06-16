@@ -9,11 +9,13 @@ import { CalendarWidgetEvent, CalendarWidget } from '../../../../shared/componen
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { SelectOption } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { ProgressBar } from '../../../../shared/components/progress-bar/progress-bar';
 
 @Component({
   selector: 'app-sessions',
@@ -22,7 +24,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
   styleUrl: './sessions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, CalendarWidget],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Select, Modal, CalendarWidget, ProgressBar],
 })
 export class Sessions implements OnInit, OnDestroy {
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
@@ -102,11 +104,13 @@ export class Sessions implements OnInit, OnDestroy {
   programSuccessMessage: string | null = null;
   createProgramFile: File | null = null;
   programUploadingCreate = false;
+  createProgress = 0;
 
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
     private confirmService: ConfirmService,
+    private toastService: ToastService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -332,6 +336,7 @@ export class Sessions implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     this.submitting = true;
+    this.createProgress = 10;
     const payload = {
       therapist_id: parseInt(f.therapist_id),
       patient_id: parseInt(f.patient_id),
@@ -347,30 +352,38 @@ export class Sessions implements OnInit, OnDestroy {
         next: (res: any) => {
           const sessionIds: number[] = res?.session_ids || [];
           if (this.createProgramFile && sessionIds.length > 0) {
+            this.createProgress = 40;
             this.programUploadingCreate = true;
             let uploaded = 0;
+            const total = sessionIds.length;
             sessionIds.forEach((id) => {
               this.subscriptions.add(
                 this.adminService.uploadSessionProgram(id, this.createProgramFile!).subscribe({
                   next: () => {
                     uploaded++;
-                    if (uploaded === sessionIds.length) {
+                    this.createProgress = 40 + Math.round((uploaded / total) * 50);
+                    if (uploaded === total) {
+                      this.createProgress = 100;
                       this.programUploadingCreate = false;
                       this.createProgramFile = null;
                       this.submitting = false;
                       this.closeCreateModal();
                       this.refreshEvents();
+                      this.toastService.show(`${total} sesiones creadas con programación`, 'success');
                       this.cdr.markForCheck();
                     }
                   },
                   error: () => {
                     uploaded++;
-                    if (uploaded === sessionIds.length) {
+                    this.createProgress = 40 + Math.round((uploaded / total) * 50);
+                    if (uploaded === total) {
+                      this.createProgress = 100;
                       this.programUploadingCreate = false;
                       this.createProgramFile = null;
                       this.submitting = false;
                       this.closeCreateModal();
                       this.refreshEvents();
+                      this.toastService.show(`${total} sesiones creadas (con errores en algunas programaciones)`, 'warning');
                       this.cdr.markForCheck();
                     }
                   },
@@ -378,16 +391,20 @@ export class Sessions implements OnInit, OnDestroy {
               );
             });
           } else {
+            this.createProgress = 100;
             this.submitting = false;
             this.createProgramFile = null;
             this.closeCreateModal();
             this.refreshEvents();
+            this.toastService.show(`${f.dates.length} sesiones creadas correctamente`, 'success');
             this.cdr.markForCheck();
           }
         },
         error: () => {
           this.submitting = false;
           this.programUploadingCreate = false;
+          this.createProgress = 0;
+          this.toastService.show('Error al crear sesiones', 'error');
           this.cdr.markForCheck();
         },
       })
@@ -432,10 +449,12 @@ export class Sessions implements OnInit, OnDestroy {
             this.submitting = false;
             this.closeEditModal();
             this.refreshEvents();
+            this.toastService.show('Sesión actualizada correctamente', 'success');
             this.cdr.markForCheck();
           },
           error: () => {
             this.submitting = false;
+            this.toastService.show('Error al actualizar sesión', 'error');
             this.cdr.markForCheck();
           },
         })
@@ -458,10 +477,12 @@ export class Sessions implements OnInit, OnDestroy {
           this.deleting = false;
           this.closeEditModal();
           this.refreshEvents();
+          this.toastService.show('Sesión eliminada correctamente', 'success');
           this.cdr.markForCheck();
         },
         error: () => {
           this.deleting = false;
+          this.toastService.show('Error al eliminar sesión', 'error');
           this.cdr.markForCheck();
         },
       })
