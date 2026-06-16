@@ -106,6 +106,26 @@ export class RecordingService {
     });
   }
 
+  startRecording(session: any) {
+    this.currentSessionId = session.id;
+    const patientName = session.patient?.name || '';
+    this.sessionTitle$.next(session.title || 'Sesión');
+    this.patientName$.next(patientName);
+    this.activeSession$.next(session);
+
+    this.recordingState$.next('starting');
+    this.isRecording$.next(true);
+    this.canLogout$.next(false);
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      this._startRecording(stream);
+    }).catch(() => {
+      this.recordingState$.next('mic_error');
+      this.isRecording$.next(false);
+      this.canLogout$.next(true);
+    });
+  }
+
   private autoStart() {
     this.recordingState$.next('starting');
     this.isRecording$.next(true);
