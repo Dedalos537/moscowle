@@ -466,6 +466,8 @@ def update_payment_settings():
 @login_required
 def delete_payment(payment_id):
     if current_user.role != 'admin':
+        if request.accept_mimetypes.accept_json:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
         return redirect(url_for('main.dashboard'))
 
     try:
@@ -478,10 +480,16 @@ def delete_payment(payment_id):
 
         db.session.delete(payment)
         db.session.commit()
-        flash('Pago eliminado.', 'success')
+        msg = 'Pago eliminado.'
+        flash(msg, 'success')
+        if request.accept_mimetypes.accept_json:
+            return jsonify({'success': True, 'message': msg})
     except Exception as e:
         db.session.rollback()
-        flash(f'Error al eliminar el pago: {str(e)}', 'error')
+        msg = f'Error al eliminar el pago: {str(e)}'
+        flash(msg, 'error')
+        if request.accept_mimetypes.accept_json:
+            return jsonify({'success': False, 'message': msg}), 400
 
     return redirect(request.referrer or url_for('admin.payments'))
 
