@@ -10,6 +10,7 @@ import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede } from '../../../../core/models/sede';
@@ -219,6 +220,7 @@ export class Finanzas implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private route: ActivatedRoute,
     private authService: AuthService,
+    private alertService: AlertService,
     private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,

@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Sede } from '../../../../core/models/sede';
 import { Chart, registerables } from 'chart.js';
@@ -273,6 +274,7 @@ export class Payments implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
+    private alertService: AlertService,
     private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
