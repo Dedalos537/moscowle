@@ -462,6 +462,7 @@ def update_payment_settings():
 
 
 @admin_bp.route('/payments/delete/<int:payment_id>', methods=['POST'])
+@csrf.exempt
 @login_required
 def delete_payment(payment_id):
     if current_user.role != 'admin':
