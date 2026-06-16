@@ -1,4 +1,3 @@
-from app.utils.sanitizer import sanitize_text
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -26,6 +25,7 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
+from app.utils.sanitizer import sanitize_text
 
 
 @api_bp.route('/sessions', methods=['GET'])
@@ -1240,6 +1240,56 @@ def submit_session_feedback(session_id):
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Feedback guardado'})
+
+
+@api_bp.route('/sessions/<int:session_id>/briefing', methods=['GET'])
+@login_required
+def api_session_briefing(session_id):
+    """Briefing for therapist: program text, recording status, transcription status, audit score"""
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    appt = Appointment.query.get_or_404(session_id)
+    if current_user.role == 'terapista' and appt.therapist_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No tienes permiso'}), 403
+
+    from app.models import SessionAudit
+
+    audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
+
+    return jsonify(
+        {
+            'success': True,
+            'session': {
+                'id': appt.id,
+                'title': appt.title or 'Sesión',
+                'status': appt.status,
+                'start_time': appt.start_time.isoformat() if appt.start_time else None,
+                'end_time': appt.end_time.isoformat() if appt.end_time else None,
+                'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
+                'location': appt.location,
+            },
+            'program': {
+                'has_program': bool(audit and audit.planned_text),
+                'planned_text': (audit.planned_text[:2000] + '...')
+                if audit and audit.planned_text and len(audit.planned_text) > 2000
+                else (audit.planned_text if audit else None),
+                'uploaded_at': audit.docx_uploaded_at.isoformat() if audit and audit.docx_uploaded_at else None,
+            }
+            if audit
+            else {'has_program': False},
+            'recording': {
+                'has_transcript': bool(audit and audit.transcript_text),
+                'transcript_preview': (audit.transcript_text[:500] + '...')
+                if audit and audit.transcript_text and len(audit.transcript_text) > 500
+                else (audit.transcript_text if audit else None),
+                'audit_score': audit.audit_score if audit else None,
+                'audit_status': audit.audit_status if audit else 'none',
+            }
+            if audit
+            else {'has_transcript': False, 'audit_score': None, 'audit_status': 'none'},
+        }
+    )
 
 
 @api_bp.route('/sessions/current', methods=['GET'])

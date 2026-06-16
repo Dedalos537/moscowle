@@ -261,6 +261,10 @@ def init_extensions(app: Flask) -> None:
     login_manager.init_app(app)
     csrf.init_app(app)
 
+    from app.routes.api import api_bp
+
+    csrf.exempt(api_bp)
+
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS',
@@ -325,6 +329,7 @@ def init_extensions(app: Flask) -> None:
 
     try:
         from app.db.routing import init_db_routing
+
         if app.config.get('REPLICA_DATABASE_URL'):
             init_db_routing(app)
     except Exception as e:
@@ -332,12 +337,14 @@ def init_extensions(app: Flask) -> None:
 
     try:
         from app.services.crisis_monitor import crisis_monitor
+
         crisis_monitor.init_app(app)
     except Exception as e:
         app.logger.warning(f'CrisisMonitor initialization failed: {e}')
 
     try:
         from app.auth.oauth import init_oauth
+
         if app.config.get('GOOGLE_CLIENT_ID'):
             init_oauth(app)
     except Exception as e:

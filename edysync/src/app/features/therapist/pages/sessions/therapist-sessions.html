@@ -163,6 +163,67 @@
   </div>
 </div>
 
+@if (showActiveBriefing && activeBriefing) {
+  <div class="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div class="bg-surface rounded-2xl signature-shadow border border-border/50 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 bg-primary-container/10 border-b border-border/30">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-2 h-2 rounded-full bg-success animate-pulse shrink-0"></div>
+          <span class="text-xs font-bold text-on-surface truncate">{{ activeBriefing.session?.title || 'Sesión activa' }}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button (click)="irSesionDesdeBriefing()" class="text-xs font-bold text-primary hover:text-primary/80 px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors" title="Ir a revisión">
+            <fa-icon [icon]="['fas', 'external-link-alt']" class="text-xs"></fa-icon>
+          </button>
+          <button (click)="dismissActiveBriefing()" class="text-on-surface-variant/50 hover:text-on-surface transition-colors p-1" title="Cerrar">
+            <fa-icon [icon]="['fas', 'times']" class="text-xs"></fa-icon>
+          </button>
+        </div>
+      </div>
+      <div class="p-4 max-h-96 overflow-y-auto space-y-3">
+        @if (activeBriefingLoading) {
+          <div class="flex items-center gap-2 text-sm text-on-surface-variant">
+            <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'"></fa-icon>
+            Cargando...
+          </div>
+        }
+        @if (!activeBriefingLoading && activeBriefing.program?.has_program) {
+          <div class="p-3 rounded-xl bg-info-container/15 border border-info-container/25">
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <fa-icon [icon]="['fas', 'file-alt']" class="text-info text-[10px]"></fa-icon>
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Programación</span>
+            </div>
+            <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-4">{{ activeBriefing.program.planned_text }}</p>
+          </div>
+        }
+        @if (!activeBriefingLoading && activeBriefing.recording?.has_transcript) {
+          <div class="p-3 rounded-xl bg-success-container/15 border border-success-container/25">
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <fa-icon [icon]="['fas', 'microphone-alt']" class="text-success text-[10px]"></fa-icon>
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
+            </div>
+            <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-3">{{ activeBriefing.recording.transcript_preview }}</p>
+          </div>
+        }
+        @if (!activeBriefingLoading && activeBriefing.recording?.audit_score != null) {
+          <div class="flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold"
+               [class.bg-success-container/20]="(activeBriefing.recording.audit_score || 0) >= 70"
+               [class.bg-warning-container/20]="(activeBriefing.recording.audit_score || 0) >= 40 && (activeBriefing.recording.audit_score || 0) < 70"
+               [class.bg-error-container/20]="(activeBriefing.recording.audit_score || 0) < 40">
+            Score: {{ activeBriefing.recording.audit_score }}/100
+          </div>
+        }
+        @if (activeBriefing.session?.location) {
+          <div class="text-[10px] text-on-surface-variant/60">
+            <fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>
+            {{ activeBriefing.session.location }}
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
 <app-modal [isOpen]="showEditModal" title="Editar Sesión" (close)="closeEditModal()">
   <div class="space-y-4">
     <div class="p-3 rounded text-sm font-medium"
@@ -191,15 +252,76 @@
       <label class="block text-sm font-medium text-on-surface mb-1">Estado</label>
       <app-select [(ngModel)]="editForm.status" [options]="statusOptions" class="input-field"></app-select>
     </div>
+
+    @if (showBriefing) {
+      <div class="border-t border-outline pt-4 mt-4">
+        <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Programación y Grabación</p>
+        @if (briefingLoading) {
+          <div class="flex items-center gap-2 p-3 rounded-lg bg-surface-container-low text-sm text-on-surface-variant">
+            <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'"></fa-icon>
+            Cargando briefing...
+          </div>
+        }
+        @if (briefing && !briefingLoading) {
+          <div class="space-y-3">
+            @if (briefing.program?.has_program) {
+              <div class="p-3 rounded-xl bg-info-container/20 border border-info-container/30">
+                <div class="flex items-center gap-2 mb-2">
+                  <fa-icon [icon]="['fas', 'file-alt']" class="text-info text-sm"></fa-icon>
+                  <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Programación</span>
+                </div>
+                <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-6">{{ briefing.program.planned_text }}</p>
+                @if (briefing.program.uploaded_at) {
+                  <p class="text-[10px] text-on-surface-variant/60 mt-2">Subido: {{ briefing.program.uploaded_at | date:'short' }}</p>
+                }
+              </div>
+            }
+            @if (!briefing.program?.has_program) {
+              <div class="p-3 rounded-xl bg-surface-container-low text-sm text-on-surface-variant/70">
+                <fa-icon [icon]="['fas', 'info-circle']" class="mr-1"></fa-icon>
+                Sin programación subida para esta sesión.
+              </div>
+            }
+            @if (briefing.recording?.has_transcript) {
+              <div class="p-3 rounded-xl bg-success-container/20 border border-success-container/30">
+                <div class="flex items-center gap-2 mb-2">
+                  <fa-icon [icon]="['fas', 'microphone-alt']" class="text-success text-sm"></fa-icon>
+                  <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Transcripción</span>
+                </div>
+                <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-4">{{ briefing.recording.transcript_preview }}</p>
+              </div>
+            }
+            @if (briefing.recording?.audit_score != null) {
+              <div class="flex items-center gap-2 p-3 rounded-xl"
+                   [class.bg-success-container/20]="(briefing.recording.audit_score || 0) >= 70"
+                   [class.bg-warning-container/20]="(briefing.recording.audit_score || 0) >= 40 && (briefing.recording.audit_score || 0) < 70"
+                   [class.bg-error-container/20]="(briefing.recording.audit_score || 0) < 40">
+                <fa-icon [icon]="['fas', 'star']" class="text-sm"
+                         [class.text-success]="(briefing.recording.audit_score || 0) >= 70"
+                         [class.text-warning]="(briefing.recording.audit_score || 0) >= 40 && (briefing.recording.audit_score || 0) < 70"
+                         [class.text-error]="(briefing.recording.audit_score || 0) < 40"></fa-icon>
+                <span class="text-xs font-bold">Score Auditoría: {{ briefing.recording.audit_score }}/100</span>
+              </div>
+            }
+            @if (briefing.session?.status === 'in_progress' || briefing.session?.status === 'scheduled') {
+              <div class="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs">
+                <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+                Sesión {{ briefing.session.status === 'in_progress' ? 'en curso' : 'programada' }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
   </div>
   <div modal-footer>
     <div class="flex gap-2">
-      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+      <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [animation]="deleting ? 'spin' : undefined" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
       <app-button variant="secondary" label="Revisar Sesión" [icon]="['fas', 'clipboard-check']" (clicked)="navigateToReview()"></app-button>
     </div>
     <div class="flex gap-3">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeEditModal()"></app-button>
-      <app-button variant="primary" label="Guardar Cambios" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
+      <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [animation]="submitting ? 'spin' : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
     </div>
   </div>
 </app-modal>

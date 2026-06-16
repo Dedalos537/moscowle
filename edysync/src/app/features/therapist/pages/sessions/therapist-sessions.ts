@@ -5,6 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { TherapistService } from '../../../../core/services/therapist.service';
+import { RecordingService } from '../../../../core/services/recording.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -58,10 +59,19 @@ export class TherapistSessions implements OnInit, OnDestroy {
     patient: '',
   };
 
+  showBriefing = false;
+  briefingLoading = false;
+  briefing: any = null;
+
+  activeBriefing: any = null;
+  activeBriefingLoading = false;
+  showActiveBriefing = false;
+
   private subs = new Subscription();
 
   constructor(
     private therapistService: TherapistService,
+    private recordingService: RecordingService,
     private headerService: HeaderService,
     private router: Router,
     private confirmService: ConfirmService,
@@ -77,6 +87,16 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.generarDias();
     this.loadStats();
     this.cargarSesiones();
+
+    this.subs.add(this.recordingService.activeSession$.subscribe(session => {
+      if (session && session.id) {
+        this.loadActiveBriefing(session.id);
+      } else {
+        this.showActiveBriefing = false;
+        this.activeBriefing = null;
+        this.cdr.markForCheck();
+      }
+    }));
   }
 
   ngOnDestroy() {
@@ -221,6 +241,57 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.showNotesModal = false;
   }
 
+  loadBriefing(sessionId: number) {
+    this.briefingLoading = true;
+    this.briefing = null;
+    this.showBriefing = true;
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getSessionBriefing(sessionId).subscribe({
+      next: (res: any) => {
+        this.briefing = res;
+        this.briefingLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.briefingLoading = false;
+        this.cdr.markForCheck();
+      },
+    }));
+  }
+
+  closeBriefing() {
+    this.showBriefing = false;
+    this.briefing = null;
+  }
+
+  loadActiveBriefing(sessionId: number) {
+    this.activeBriefingLoading = true;
+    this.showActiveBriefing = true;
+    this.cdr.markForCheck();
+    this.subs.add(this.therapistService.getSessionBriefing(sessionId).subscribe({
+      next: (res: any) => {
+        this.activeBriefing = res;
+        this.activeBriefingLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.activeBriefingLoading = false;
+        this.cdr.markForCheck();
+      },
+    }));
+  }
+
+  dismissActiveBriefing() {
+    this.showActiveBriefing = false;
+  }
+
+  irSesionDesdeBriefing() {
+    if (this.activeBriefing?.session?.id) {
+      this.showActiveBriefing = false;
+      this.router.navigate(['/therapist/sessions', this.activeBriefing.session.id, 'review']);
+    }
+  }
+
   statusColor(status: string): string {
     const map: any = {
       scheduled: 'var(--color-info)',
@@ -251,6 +322,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
       status: event.status || 'scheduled',
       patient: event.extendedProps?.patient || '',
     };
+    this.loadBriefing(event.id);
     this.showEditModal = true;
   }
 

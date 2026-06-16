@@ -197,6 +197,10 @@ export class TherapistService {
     return this.http.get<any>(`/api/sessions/${sessionId}/program`);
   }
 
+  getSessionBriefing(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/briefing`);
+  }
+
 
   getAnalytics(): Observable<ApiResponse<AnalyticsData>> {
     return this.http.get<ApiResponse<AnalyticsData>>('/therapist/api/analytics');
