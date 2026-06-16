@@ -1,6 +1,6 @@
 from functools import wraps
 
-from flask import g, jsonify, redirect, request, url_for
+from flask import g, jsonify, make_response, redirect, request, url_for
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from werkzeug.local import LocalProxy
 
@@ -29,12 +29,15 @@ current_user = LocalProxy(_get_current_user)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return make_response('', 204)
         try:
             verify_jwt_in_request(locations=['cookies'])
             user_id = get_jwt_identity()
             if user_id is None:
                 raise ValueError('No user identity in token')
-            from app.models import User
+            from app.models import User  # noqa: PLC0415
+
             g.current_user = User.query.get(int(user_id))
             if g.current_user is None:
                 raise ValueError('User not found')
@@ -44,6 +47,7 @@ def login_required(f):
                 return jsonify({'success': False, 'message': 'Unauthorized'}), 401
             return redirect(url_for('auth.login', next=request.url))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -53,4 +57,5 @@ def mfa_required(f):
         if not current_user.is_authenticated or not current_user.mfa_enabled:
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
+
     return decorated_function
