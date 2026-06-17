@@ -318,6 +318,7 @@ def get_therapist_dashboard():
     planned_text = ''
     session_progress = 0
     avg_compliance = 0
+    session_objectives = []
 
     try:
         avg_cmp = (
