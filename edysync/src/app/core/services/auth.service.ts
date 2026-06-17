@@ -43,6 +43,9 @@ export class AuthService {
       tap(res => {
         if (res.success) {
           localStorage.setItem('user', JSON.stringify(res.user));
+          if (res.csrf_token) {
+            localStorage.setItem('csrf_token', res.csrf_token);
+          }
           this.currentUserSubject.next(res.user);
         }
       })

@@ -22,7 +22,7 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private authService: AuthService, private router: Router) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const csrfToken = getCookie('csrf_token');
+    const csrfToken = getCookie('csrf_token') || localStorage.getItem('csrf_token');
 
     let headers: Record<string, string> = {};
 
