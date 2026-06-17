@@ -33,10 +33,15 @@ export class App implements OnInit, OnDestroy {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       this.authService.verifySession().subscribe({
+        next: (res) => {
+          if (res?.role === 'terapista') {
+            this.recordingService.onUserAuthenticated();
+          }
+        },
         error: () => {
           this.authService.clearSession();
           this.router.navigate(['/auth/login']);
-        }
+        },
       });
     }
     this.sub.add(

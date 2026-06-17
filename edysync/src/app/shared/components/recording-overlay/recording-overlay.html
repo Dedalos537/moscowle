@@ -1,55 +1,58 @@
 <ng-container>
-  @if ((state | async) === 'starting') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-info text-white">
-      <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <fa-icon [icon]="['fas', 'spinner']" class="text-white/80" animation="spin"></fa-icon>
-        <span class="text-sm font-bold">Iniciando grabación de sesión...</span>
+  @if ((sessionGateActive | async) && (sessionGateMode | async) === 'late') {
+    <div class="session-gate session-gate--blocking">
+      <div class="session-gate__card">
+        <div class="session-gate__icon session-gate__icon--late">
+          <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+        </div>
+        <h2 class="session-gate__title">Sesión en horario</h2>
+        <p class="session-gate__subtitle">Debes iniciar la grabación o marcar inasistencia para continuar.</p>
+
+        <div class="session-gate__info">
+          <p><strong>Paciente:</strong> {{ patientName | async }}</p>
+          <p><strong>Sesión:</strong> {{ sessionTitle | async }}</p>
+          <p><strong>Atraso:</strong> {{ getLateDelayLabel() }}</p>
+        </div>
+
+        <div class="session-gate__actions">
+          <app-button variant="danger" label="Marcar inasistencia" (clicked)="markAbsent()"></app-button>
+          <app-button variant="primary" label="Iniciar grabación" [icon]="['fas', 'microphone']" (clicked)="startLateSession()"></app-button>
+        </div>
       </div>
     </div>
   }
 
-  @if ((state | async) === 'recording') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-error text-white">
-      <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3 md:gap-5">
-        <div class="flex items-center gap-2.5 shrink-0">
-          <span class="w-3 h-3 rounded-full bg-white recording-pulse"></span>
-          <span class="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">En vivo</span>
-        </div>
-
-        <div class="w-px h-6 bg-white/20 shrink-0 hidden sm:block"></div>
-
-        <div class="flex items-center gap-2 min-w-0 flex-1">
-          <fa-icon [icon]="['fas', 'microphone']" class="text-white/80 text-base shrink-0 hidden sm:inline"></fa-icon>
-          <div class="min-w-0">
-            <p class="text-sm font-bold truncate leading-tight">{{ sessionTitle | async }}</p>
-            <p class="text-[11px] text-white/70 truncate leading-tight flex items-center gap-1.5">
-              <span>{{ patientName | async }}</span>
-              <span class="w-1 h-1 rounded-full bg-white/30"></span>
+  @if ((sessionGateActive | async) && (sessionGateMode | async) === 'recording' && (state | async) !== 'completed') {
+    <div class="session-gate session-gate--persistent">
+      <div class="session-gate__card session-gate__card--compact">
+        <div class="session-gate__live">
+          <span class="session-gate__pulse"></span>
+          <div>
+            <p class="session-gate__title-sm">{{ sessionTitle | async }}</p>
+            <p class="session-gate__meta">
+              {{ patientName | async }}
+              <span>·</span>
               <span class="tabular-nums font-mono">{{ elapsed | async }}</span>
             </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
-          <span class="text-[11px] text-white/70 hidden md:inline truncate max-w-[160px]">{{ chunkStatus | async }}</span>
+        <div class="session-gate__side">
+          @if ((state | async) === 'starting') {
+            <span class="session-gate__status">Iniciando micrófono...</span>
+          }
+          @if ((state | async) === 'recording') {
+            <span class="session-gate__status">{{ chunkStatus | async }}</span>
+          }
+          @if ((state | async) === 'mic_error') {
+            <app-button variant="secondary" label="Reintentar micrófono" (clicked)="retryMic()"></app-button>
+          }
           <app-button variant="ghost" (clicked)="goToSession()">
-            <fa-icon [icon]="['fas', 'external-link-alt']" class="text-sm"></fa-icon>
-            Abrir
+            <fa-icon [icon]="['fas', 'external-link-alt']"></fa-icon>
+            Abrir sesión
           </app-button>
+          <app-button variant="danger" label="Inasistencia" (clicked)="markAbsent()"></app-button>
         </div>
-      </div>
-    </div>
-  }
-
-  @if ((state | async) === 'mic_error') {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-warning text-white">
-      <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
-        <fa-icon [icon]="['fas', 'microphone-slash']" class="text-white"></fa-icon>
-        <span class="text-sm font-bold flex-1">Permiso de micrófono requerido para grabar la sesión</span>
-        <app-button variant="secondary" (clicked)="retryMic()">
-          <fa-icon [icon]="['fas', 'sync']" class="text-sm"></fa-icon>
-          Reintentar
-        </app-button>
       </div>
     </div>
   }
@@ -58,7 +61,7 @@
     <div class="fixed top-0 left-0 right-0 z-[60] bg-success text-white">
       <div class="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center gap-3">
         <fa-icon [icon]="['fas', 'check-circle']" class="text-white"></fa-icon>
-        <span class="text-sm font-bold flex-1">Sesión completada y registrada</span>
+        <span class="text-sm font-bold flex-1">Sesión completada — generando auditoría</span>
         @if ((auditScore | async); as score) {
           <span class="h-7 px-3 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1.5">
             <fa-icon [icon]="['fas', 'chart-bar']" class="text-sm"></fa-icon>
@@ -70,18 +73,18 @@
   }
 
   @if ((showAttendanceCheck | async)) {
-    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div class="bg-surface rounded-xl border border-border/30 max-w-sm w-full p-6 animate-fade-in">
         <div class="w-14 h-14 rounded-full bg-warning-container flex items-center justify-center mx-auto mb-4">
           <fa-icon [icon]="['fas', 'question-circle']" class="text-warning text-3xl"></fa-icon>
         </div>
 
         <h3 class="text-lg font-bold text-on-surface text-center mb-2">¿El paciente asistió?</h3>
-        <p class="text-sm text-on-surface-variant text-center mb-2">Luego de analizar los primeros minutos, no se detectó contenido relevante de la programación.</p>
+        <p class="text-sm text-on-surface-variant text-center mb-2">No se detectó contenido relevante de la programación en los primeros minutos.</p>
 
         <div class="mb-5">
           <div class="flex justify-between text-xs text-on-surface-variant mb-1.5">
-            <span>Se marcará como ausente automáticamente</span>
+            <span>Se marcará inasistencia automáticamente</span>
             <span class="font-mono font-bold tabular-nums">{{ (attendanceCountdown | async) }}s</span>
           </div>
           <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
@@ -92,8 +95,8 @@
         </div>
 
         <div class="flex gap-3">
-          <app-button variant="secondary" label="Ausente" (clicked)="markAbsent()"></app-button>
-          <app-button variant="primary" label="Si, esta presente" (clicked)="markPresent()"></app-button>
+          <app-button variant="secondary" label="Inasistencia" (clicked)="markAbsent()"></app-button>
+          <app-button variant="primary" label="Sí, está presente" (clicked)="markPresent()"></app-button>
         </div>
       </div>
     </div>
