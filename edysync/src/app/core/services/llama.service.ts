@@ -6,7 +6,7 @@ export interface ActionChip {
   id: string;
   label: string;
   icon: string;
-  type: 'navigation' | 'wizard' | 'modal' | 'scroll' | 'filter' | 'action';
+  type: 'navigation' | 'wizard' | 'modal' | 'scroll' | 'filter' | 'action' | 'confirm' | 'cancel' | 'toggleUser';
   target: string;
 }
 

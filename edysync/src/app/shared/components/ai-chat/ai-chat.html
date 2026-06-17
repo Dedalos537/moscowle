@@ -10,19 +10,39 @@
 </div>
 
 @if (isOpen) {
-  <div class="chat-panel">
+  <div class="chat-panel" [class.chat-panel--fullscreen]="fullScreen">
+    @if (actionFeedback) {
+      <div class="chat-toast" [class.toast--success]="actionFeedback.type === 'success'"
+        [class.toast--error]="actionFeedback.type === 'error'"
+        [class.toast--info]="actionFeedback.type === 'info'">
+        @if (actionFeedback.type === 'success') {
+          <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+        } @else if (actionFeedback.type === 'error') {
+          <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon>
+        } @else {
+          <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
+        }
+        <span>{{ actionFeedback.message }}</span>
+      </div>
+    }
+
     <div class="chat-header">
       <div class="chat-header-left">
         <div class="chat-header-icon">
-          <fa-icon [icon]="['fas', 'brain']"></fa-icon>
+          @if (fullScreen) {
+            <fa-icon [icon]="['fas', 'magic']"></fa-icon>
+          } @else {
+            <fa-icon [icon]="['fas', 'brain']"></fa-icon>
+          }
         </div>
         <div>
-          <h3>Llama Copilot</h3>
-          <p>Asistente IA</p>
+          <h3>{{ fullScreen ? 'Antigravity — Llama' : 'Llama Copilot' }}</h3>
+          <p>{{ fullScreen ? 'Asistente total del sistema' : 'Asistente IA' }}</p>
         </div>
       </div>
       <div class="chat-header-actions">
-        <button class="chat-expand" (click)="toggleFullScreen()" [title]="fullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'">
+        <button class="chat-expand" (click)="toggleFullScreen()"
+          [title]="fullScreen ? 'Salir de antigravity' : 'Antigravity — pantalla completa'">
           <fa-icon [icon]="['fas', fullScreen ? 'compress' : 'expand']"></fa-icon>
         </button>
         <button class="chat-close" (click)="togglePanel()">
@@ -33,10 +53,22 @@
 
     <div class="chat-messages" #scrollContainer>
       @if (messages.length === 0 && !loading) {
-        <div class="welcome-msg animate-fade-in">
-          <div class="icon"><fa-icon [icon]="['fas', 'robot']" class="text-3xl text-primary"></fa-icon></div>
+        <div class="welcome-msg">
+          <div class="icon"><fa-icon [icon]="['fas', 'magic']" class="text-3xl text-primary"></fa-icon></div>
           <h4>{{ welcomeMessage }}</h4>
-          <p>Pregúntame sobre finanzas, sesiones, o gestiona el centro</p>
+          <p>{{ fullScreen ? 'Estoy aquí para gestionar todo el sistema. Puedes pedirme cualquier cosa:' : 'Pregúntame sobre finanzas, sesiones, o gestiona el centro' }}</p>
+          @if (fullScreen) {
+            <div class="antigravity-capabilities">
+              <div class="capability"><fa-icon [icon]="['fas', 'dollar-sign']"></fa-icon> Registrar pagos</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'user-plus']"></fa-icon> Crear usuarios</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'calendar-plus']"></fa-icon> Crear sesiones</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'users']"></fa-icon> Buscar pacientes</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'envelope']"></fa-icon> Enviar mensajes</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'chart-line']"></fa-icon> Reportes al instante</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'ban']"></fa-icon> Desactivar usuarios</div>
+              <div class="capability"><fa-icon [icon]="['fas', 'file-alt']"></fa-icon> Subir archivos</div>
+            </div>
+          }
           @if (suggestions.length > 0) {
             <div class="suggestion-chips">
               @for (s of suggestions; track s) {
@@ -50,7 +82,7 @@
       @for (msg of messages; track msg.id || $index) {
         <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
           @if (msg.intent) {
-            <div class="intent-badge">{{ msg.intent }}</div>
+            <span class="intent-badge">{{ msg.intent }}</span>
           }
           @if (msg.error) {
             <div class="error-msg">
@@ -63,7 +95,8 @@
           @if (msg.action_chips && msg.action_chips.length > 0 && msg.role === 'assistant') {
             <div class="action-chips-row">
               @for (chip of msg.action_chips; track chip.id) {
-                <button class="action-chip" (click)="handleActionChip(chip)" [title]="chip.label">
+                <button class="action-chip" (click)="handleActionChip(chip)" [title]="chip.label"
+                  [disabled]="processingAction">
                   <fa-icon [icon]="getIcon(chip.icon)" class="chip-icon"></fa-icon>
                   <span>{{ chip.label }}</span>
                 </button>
@@ -82,7 +115,7 @@
       }
     </div>
 
-    @if (actionChips.length > 0 && messages.length > 0) {
+    @if (actionChips.length > 0 && messages.length > 0 && !fullScreen) {
       <div class="quick-actions-bar">
         @for (chip of actionChips; track chip.id) {
           <button class="quick-action-btn" (click)="handleActionChip(chip)" [title]="chip.label">
@@ -101,12 +134,16 @@
         class="chat-input"
         [(ngModel)]="inputMessage"
         (keydown.enter)="$event.preventDefault(); sendMessage()"
-        placeholder="Escribe un mensaje..."
+        [placeholder]="fullScreen ? 'Pregunta lo que sea: pagos, usuarios, sesiones...' : 'Escribe un mensaje...'"
         rows="1"
         #inputEl
       ></textarea>
-      <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading">
-        <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
+      <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading || processingAction">
+        @if (loading || processingAction) {
+          <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
+        } @else {
+          <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
+        }
       </button>
     </div>
   </div>

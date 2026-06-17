@@ -49,6 +49,10 @@ export class AdminService {
     return this.http.post<ApiResponse>('/api/admin/delete-user', { id });
   }
 
+  toggleUserStatus(userId: number): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`/admin/users/${userId}/toggle-status`, {});
+  }
+
   resetPassword(userId: number, newPassword?: string): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/api/admin/reset-password', { id: userId, new_password: newPassword });
   }

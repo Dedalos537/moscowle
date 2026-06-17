@@ -206,13 +206,22 @@
             Cargando...
           </div>
         }
-        @if (!activeBriefingLoading && activeBriefing.program?.has_program) {
-          <div class="p-3 rounded-xl bg-info-container/15 border border-info-container/25">
-            <div class="flex items-center gap-1.5 mb-1.5">
-              <fa-icon [icon]="['fas', 'file-alt']" class="text-info text-[10px]"></fa-icon>
-              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Programación</span>
-            </div>
-            <p class="text-xs text-on-surface leading-relaxed whitespace-pre-wrap line-clamp-4">{{ activeBriefing.program.planned_text }}</p>
+        @if (!activeBriefingLoading && activeBriefing.program?.objectives?.length) {
+          <div class="space-y-2">
+            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Temas de la sesión</span>
+            @for (obj of activeBriefing.program.objectives; track $index) {
+              <div class="flex items-start gap-2 p-2 rounded-lg bg-surface-container-low text-xs">
+                <fa-icon [icon]="obj.status === 'completado' ? ['fas', 'check-circle'] : obj.status === 'parcial' ? ['fas', 'exclamation-circle'] : ['far', 'circle']"
+                         [class.text-success]="obj.status === 'completado'"
+                         [class.text-warning]="obj.status === 'parcial'"
+                         [class.text-on-surface-variant]="obj.status !== 'completado' && obj.status !== 'parcial'">
+                </fa-icon>
+                <div>
+                  <p class="text-on-surface font-medium">{{ obj.name }}</p>
+                  <p class="text-[10px] uppercase font-bold text-on-surface-variant/70">{{ obj.status }}</p>
+                </div>
+              </div>
+            }
           </div>
         }
         @if (!activeBriefingLoading && activeBriefing.recording?.has_transcript) {

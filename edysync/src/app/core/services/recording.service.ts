@@ -29,6 +29,8 @@ export class RecordingService {
   private chunkCount: number = 0;
   private audioChunks: Blob[] = [];
   private checkedSessions: Set<number> = new Set();
+  private dismissedSessions: Set<number> = new Set();
+  private readonly chunkIntervalMs = 5 * 60 * 1000;
   private currentSessionId: number | null = null;
   private pendingUploads = 0;
   private finishPending = false;
@@ -42,8 +44,20 @@ export class RecordingService {
 
   iniciarPolleo() {
     this.detenerPolleo();
-    this.pollSubscription = interval(30000).subscribe(() => this.checkSessions());
+    this.pollSubscription = interval(10000).subscribe(() => this.checkSessions());
     this.checkSessions();
+  }
+
+  onUserAuthenticated() {
+    this.checkedSessions.clear();
+    this.dismissedSessions.clear();
+    this.checkSessions();
+  }
+
+  dismissLateSession(sessionId?: number) {
+    const id = sessionId || this.currentSessionId || this.pendingLateSession$.value?.id;
+    if (id) this.dismissedSessions.add(id);
+    this.pendingLateSession$.next(null);
   }
 
   detenerPolleo() {
@@ -75,13 +89,11 @@ export class RecordingService {
       next: (res) => {
         if (!res.success || !res.has_active) return;
         const s = res.session;
+        if (this.dismissedSessions.has(s.id)) return;
         if (this.checkedSessions.has(s.id)) return;
-        this.checkedSessions.add(s.id);
 
         const delayMinutes = res.delay_minutes ?? 0;
-        console.log(`[RecordingService] Session #${s.id} found, delay=${delayMinutes}min, status=${s.status}`);
 
-        // Late session warning: 0-10 min delay, session not yet in_progress
         if (s.status === 'scheduled' && delayMinutes >= 0 && delayMinutes <= 10) {
           this.currentSessionId = s.id;
           const patientName = s.patient?.name || '';
@@ -89,17 +101,15 @@ export class RecordingService {
           this.patientName$.next(patientName);
           this.activeSession$.next(s);
           this.pendingLateSession$.next(s);
-          console.log(`[RecordingService] Late session detected, showing warning`);
           return;
         }
 
-        // Normal case: auto-start recording
         this.currentSessionId = s.id;
         const patientName = s.patient?.name || '';
         this.sessionTitle$.next(s.title || 'Sesión');
         this.patientName$.next(patientName);
         this.activeSession$.next(s);
-        console.log(`[RecordingService] Auto-starting recording for session #${s.id}`);
+        this.checkedSessions.add(s.id);
         this.autoStart();
       },
       error: (err) => console.warn('[RecordingService] Error fetching current session:', err),
@@ -108,6 +118,7 @@ export class RecordingService {
 
   startRecording(session: any) {
     this.currentSessionId = session.id;
+    this.checkedSessions.add(session.id);
     const patientName = session.patient?.name || '';
     this.sessionTitle$.next(session.title || 'Sesión');
     this.patientName$.next(patientName);
@@ -177,12 +188,12 @@ export class RecordingService {
         if (this.recorder && this.recorder.state === 'recording') {
           this.recorder.stop();
         }
-      }, 30 * 1000);
+      }, this.chunkIntervalMs);
     });
 
     this.attendanceCheckTimer = setTimeout(() => {
       this.runAttendanceCheck();
-    }, 30 * 1000);
+    }, 5 * 60 * 1000);
 
     this.programarFin();
   }
@@ -259,14 +270,14 @@ export class RecordingService {
   private subirChunk(blob: Blob, retriesRemaining = 3) {
     if (!this.currentSessionId) return;
     this.pendingUploads++;
-    this.chunkStatus$.next(`Transcribiendo segmento ${this.chunkCount}...`);
+    this.chunkStatus$.next(`Transcribiendo bloque ${this.chunkCount}...`);
     const fd = new FormData();
     fd.append('audio_file', blob, `session_${this.currentSessionId}_chunk${this.chunkCount}_${Date.now()}.webm`);
     this.http.post(`/api/sessions/${this.currentSessionId}/audio`, fd).subscribe({
       next: (data: any) => {
         this.pendingUploads--;
         if (data.success) {
-          this.chunkStatus$.next(`Segmento ${this.chunkCount} transcrito`);
+          this.chunkStatus$.next(`Bloque ${this.chunkCount} transcrito`);
           this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe();
           this.http.get(`/api/sessions/${this.currentSessionId}/compare-live`).subscribe({
             next: (cmp: any) => {
@@ -281,7 +292,7 @@ export class RecordingService {
       error: () => {
         this.pendingUploads--;
         if (retriesRemaining > 1) {
-          this.chunkStatus$.next(`Reintentando segmento ${this.chunkCount}...`);
+          this.chunkStatus$.next(`Reintentando bloque ${this.chunkCount}...`);
           setTimeout(() => this.subirChunk(blob, retriesRemaining - 1), 2000);
         } else {
           this.chunkStatus$.next('Error al transcribir');
@@ -295,7 +306,9 @@ export class RecordingService {
     if (!this.currentSessionId) return;
     const session = this.activeSession$.value;
     if (!session) return;
-    const endTime = session.end ? new Date(session.end + 'Z').getTime() : new Date(session.start + 'Z').getTime() + 60 * 60 * 1000;
+    const endTime = session.end
+      ? new Date(session.end).getTime()
+      : new Date(session.start).getTime() + 60 * 60 * 1000;
     const timeLeft = endTime - Date.now();
     if (timeLeft > 0) {
       this.endTimer = setTimeout(() => {
@@ -391,6 +404,7 @@ export class RecordingService {
     this.currentSessionId = null;
     this.activeSession$.next(null);
     this.checkedSessions.clear();
+    this.dismissedSessions.clear();
     this.showAttendanceCheck$.next(false);
     this.auditScore$.next(null);
   }
@@ -401,6 +415,7 @@ export class RecordingService {
     this.recordingState$.next('idle');
     this.currentSessionId = null;
     this.checkedSessions.clear();
+    this.dismissedSessions.clear();
     this.showAttendanceCheck$.next(false);
     this.auditScore$.next(null);
   }

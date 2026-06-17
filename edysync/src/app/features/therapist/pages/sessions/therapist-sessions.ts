@@ -427,7 +427,8 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   dismissLateSession() {
-    this.recordingService.pendingLateSession$.next(null);
+    const id = this.lateSession?.id;
+    this.recordingService.dismissLateSession(id);
     this.lateSession = null;
     this.cdr.markForCheck();
   }

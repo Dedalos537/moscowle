@@ -3,12 +3,13 @@
   bottom: 24px;
   right: 24px;
   z-index: 999;
-  transition: inset 0.3s ease, z-index 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :host.fullscreen {
-  inset: 0 !important;
-  z-index: 10000;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
 
   .chat-panel {
     position: absolute;
@@ -27,6 +28,24 @@
 
   .chat-input {
     max-height: 120px;
+  }
+
+  .chat-header {
+    padding: 20px 24px;
+  }
+
+  .chat-messages {
+    padding: 20px 24px;
+  }
+
+  .message {
+    max-width: 70%;
+    font-size: 0.925rem;
+    padding: 14px 20px;
+  }
+
+  .chat-input-area {
+    padding: 16px 24px 20px;
   }
 }
 
@@ -245,6 +264,12 @@
   transform: scale(0.97);
 }
 
+.action-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
 .action-chip .chip-icon {
   font-size: 0.65rem;
 }
@@ -428,6 +453,83 @@
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+}
+
+.chat-panel--fullscreen .chat-messages {
+  max-height: none;
+  flex: 1;
+}
+
+.chat-toast {
+  position: absolute;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  animation: toast-in 0.3s cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.toast--success {
+  background: #065f46;
+  color: #d1fae5;
+}
+
+.toast--error {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+.toast--info {
+  background: #1e3a5f;
+  color: #bfdbfe;
+}
+
+.antigravity-capabilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 400px;
+  margin: 16px auto 0;
+  text-align: left;
+}
+
+.capability {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-surface-container-high);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  transition: background 0.2s;
+}
+
+.capability:hover {
+  background: var(--color-primary-container);
+  color: var(--color-primary);
+}
+
+.capability fa-icon {
+  width: 20px;
+  text-align: center;
+  color: var(--color-primary);
+  font-size: 0.7rem;
 }
 
 .typing-indicator {
