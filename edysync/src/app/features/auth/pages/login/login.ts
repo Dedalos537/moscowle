@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
+import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { Alert } from '../../../../shared/components/alert/alert';
 
 @Component({
@@ -16,6 +17,9 @@ import { Alert } from '../../../../shared/components/alert/alert';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login implements OnInit, OnDestroy {
+  private settings = inject(GlobalSettingsService);
+  hideCharts = this.settings.hideCharts;
+
   email = '';
   password = '';
   showPassword = false;
@@ -174,6 +178,10 @@ export class Login implements OnInit, OnDestroy {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
+  }
+
+  toggleHideCharts() {
+    this.settings.toggleHideCharts();
   }
 
   get isFormValid(): boolean {

@@ -181,15 +181,17 @@
           <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
           Comparación Financiera
         </h4>
-        <div class="relative" style="height: 260px">
-          <canvas
-            baseChart
-            #financialChart
-            [data]="financialChartData"
-            [options]="financialChartOptions"
-            [type]="financialChartType"
-          ></canvas>
-        </div>
+        @if (!hideCharts()) {
+          <div class="relative" style="height: 260px">
+            <canvas
+              baseChart
+              #financialChart
+              [data]="financialChartData"
+              [options]="financialChartOptions"
+              [type]="financialChartType"
+            ></canvas>
+          </div>
+        }
       </div>
     </div>
 
@@ -204,7 +206,7 @@
           <span class="text-xs text-on-surface-variant font-medium">{{ therapists.length }} registros</span>
         </div>
 
-        @if (therapists.length > 0) {
+        @if (therapists.length > 0 && !hideCharts()) {
           <div class="relative mb-4" style="height: 100px">
             <canvas
               baseChart

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -10,6 +10,7 @@ import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { Sede } from '../../../../core/models/sede';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
@@ -75,6 +76,9 @@ interface Therapist {
   imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
 })
 export class Payments implements OnInit, OnDestroy {
+  private settings = inject(GlobalSettingsService);
+  hideCharts = this.settings.hideCharts;
+
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   patients: PatientRow[] = [];

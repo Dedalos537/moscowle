@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -13,6 +13,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
+import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { Sede } from '../../../../core/models/sede';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
@@ -45,6 +46,9 @@ Chart.register(...registerables);
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Finanzas implements OnInit, OnDestroy {
+  private settings = inject(GlobalSettingsService);
+  hideCharts = this.settings.hideCharts;
+
   readonly Math = Math;
   readonly getCategoryLabel = getCategoryLabel;
   readonly getMethodBadgeClass = getMethodBadgeClass;
