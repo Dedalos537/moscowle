@@ -51,7 +51,7 @@
           <p class="stat-card__desc">Pacientes sin plan de pago</p>
         </div>
       }
-      @if (financials && financials.overdue_amount > 0) {
+      @if (financials && financials.overdue_amount > 0 && !hideCharts()) {
         <div class="stat-card stat-card--warning">
           <div class="stat-card__top">
             <span class="label-caps text-warning">Deuda Total</span>
