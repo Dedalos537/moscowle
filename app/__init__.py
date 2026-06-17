@@ -462,6 +462,9 @@ def create_app(config_class=None):
     oauth.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+    from app.routes.api import api_bp
+
+    csrf.exempt(api_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'

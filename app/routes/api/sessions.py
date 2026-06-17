@@ -426,14 +426,20 @@ def api_update_session(session_id):
 
 @api_bp.route('/sessions/<int:session_id>', methods=['DELETE'])
 @login_required
+@csrf.exempt
 def api_delete_session(session_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
-    success = appointment_service.delete_session(session_id, current_user.id)
-    if not success:
-        return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
-    return jsonify({'success': True})
+    try:
+        success = appointment_service.delete_session(session_id, current_user.id)
+        if not success:
+            return jsonify({'success': False, 'message': 'Esa sesión no existe'}), 404
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error eliminando sesión {session_id}: {e}')
+        return jsonify({'success': False, 'message': 'No se pudo eliminar la sesión'}), 400
 
 
 @api_bp.route('/sessions/<int:session_id>/cancel', methods=['POST'])
@@ -752,9 +758,10 @@ def delete_session_image(appointment_id, image_id):
 
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['POST'])
 @login_required
+@csrf.exempt
 def upload_session_program(appointment_id):
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Solo el administrador puede subir la programación'}), 403
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Solo administración puede subir la programación'}), 403
 
     appointment = Appointment.query.get_or_404(appointment_id)
 
@@ -1037,9 +1044,10 @@ def compare_session_live(appointment_id):
 
 @api_bp.route('/sessions/<int:appointment_id>/program', methods=['DELETE'])
 @login_required
+@csrf.exempt
 def delete_session_program(appointment_id):
-    if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Solo el administrador puede eliminar la programación'}), 403
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Solo administración puede eliminar la programación'}), 403
 
     from app.models import SessionAudit
 
