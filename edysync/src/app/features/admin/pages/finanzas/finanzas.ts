@@ -603,7 +603,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-  get hasMissingData(): boolean { return !this.registerForm.document_number || !this.registerForm.guardian_name; }
+  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name; }
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {
@@ -658,6 +658,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   viewPatientHistory(patient: PatientRow) { window.open(`/admin/payments/history/${patient.id}`, '_blank'); }
   getPatientName(id: number): string { return this.patients.find((p) => p.id === id)?.username || ''; }
+  get patientSelectOptions() { return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` })); }
   sedeById(id: number): string { return this.sedes.find((s) => s.id === id)?.name || ''; }
   therapistById(id: number): string { return this.therapistsList.find((t) => t.id === id)?.username || ''; }
   trackById(_: number, item: any): number { return item.id || item.patient_id; }

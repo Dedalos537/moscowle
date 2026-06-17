@@ -78,7 +78,7 @@ class Config:
 
     # ========== FILE UPLOADS ==========
     basedir = os.path.abspath(os.path.dirname(__file__))
-    UPLOAD_FOLDER = os.path.join(basedir, 'instance', 'uploads')
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(basedir, 'instance', 'uploads'))
     MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB max
     ALLOWED_UPLOAD_EXTENSIONS = {
         'png',
@@ -104,7 +104,7 @@ class Config:
 
     # ========== EMAIL CONFIGURATION ==========
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
+    MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True') == 'True'
     MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False') == 'True'
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
@@ -172,7 +172,7 @@ class Config:
 
     # ========== SECURITY HEADERS ==========
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
-    HSTS_SECONDS = int(os.getenv('HSTS_SECONDS', 31536000))
+    HSTS_SECONDS = int(os.getenv('HSTS_SECONDS', '31536000'))
     HSTS_INCLUDE_SUBDOMAINS = os.getenv('HSTS_INCLUDE_SUBDOMAINS', 'True') == 'True'
     # Allow explicit control to force HTTPS in production via env var.
     FORCE_HTTPS = os.getenv('FORCE_HTTPS', 'False') == 'True'
@@ -225,6 +225,7 @@ class ProductionConfig(Config):
     APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'change-in-production')
     JWT_COOKIE_SECURE = True
     JWT_COOKIE_SAMESITE = 'None'
+
 
 class TestingConfig(Config):
     TESTING = True

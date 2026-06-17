@@ -841,7 +841,7 @@ export class Payments implements OnInit, OnDestroy {
   }
 
   get hasMissingData(): boolean {
-    return !this.registerForm.document_number || !this.registerForm.guardian_name;
+    return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name;
   }
 
   // ─── Settings Modal (Plan Configuration) ─────────────────
@@ -982,5 +982,13 @@ export class Payments implements OnInit, OnDestroy {
 
   trackById(_: number, item: any): number {
     return item.id || item.patient_id;
+  }
+
+  get patientSelectOptions() {
+    return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` }));
+  }
+
+  getPatientName(id: number): string {
+    return this.patients.find(p => p.id === id)?.username || '';
   }
 }
