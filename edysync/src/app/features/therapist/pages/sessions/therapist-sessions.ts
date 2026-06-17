@@ -431,9 +431,4 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.lateSession = null;
     this.cdr.markForCheck();
   }
-
-  testRecording() {
-    console.log('[Manual] Triggering checkSessions()');
-    (this.recordingService as any).checkSessions();
-  }
 }
