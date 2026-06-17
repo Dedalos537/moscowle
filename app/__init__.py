@@ -569,11 +569,6 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning('Blueprint %s failed to load: %s', name, e)
 
-    from app.routes.api import api_bp
-    csrf.exempt(api_bp)
-    from app.routes.llama_routes import llama_bp
-    csrf.exempt(llama_bp)
-
     @app.cli.command('migrate-messages')
     def migrate_messages_command():
         """Backfill Chat records for existing messages without a chat_id"""

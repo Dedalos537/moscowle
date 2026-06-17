@@ -24,6 +24,7 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
+from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 
 
 @api_bp.route('/time', methods=['GET'])
@@ -103,7 +104,7 @@ def gemini_proxy():
         url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}'
         headers = {'Content-Type': 'application/json'}
         data = {'contents': [{'parts': [{'text': f'Context: {json.dumps(context)}. Prompt: {prompt}'}]}]}
-        resp = requests.post(url, headers=headers, json=data)
+        resp = requests.post(url, headers=headers, json=data, timeout=30)
         if resp.status_code == 200:
             result = resp.json()
             text = result.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
@@ -190,8 +191,8 @@ def send_message():
             current_user.username,
             (body or 'Has recibido un archivo adjunto')[:100] + ('...' if body and len(body) > 100 else ''),
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        current_app.logger.debug('attachment email failed: %s', exc)
 
     return jsonify(
         {
@@ -258,10 +259,8 @@ def contact_message():
                     notif_type='message',
                     link='',
                 )
-            except Exception:
-                pass
-
-        return jsonify({'message': '¡Mensaje recibido! Te contactamos pronto.'}), 201
+            except Exception as exc:
+                current_app.logger.debug('contact admin notification failed: %s', exc)
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
@@ -273,22 +272,23 @@ def get_therapist_dashboard():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Unauthorized'}), 403
 
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     from sqlalchemy import func as sqlfunc
 
     from app.extensions import db
     from app.models import Appointment, SessionAudit, User
+    from app.utils import get_user_today_utc_range, localize_datetime_for_display
 
-    now = datetime.now()
-    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    tomorrow = today + timedelta(days=1)
+    now_utc = datetime.utcnow()
+    today_start, today_end = get_user_today_utc_range(current_user)
+    tz_name = current_user.timezone or 'America/Lima'
 
     today_sessions = (
         Appointment.query.filter(
             Appointment.therapist_id == current_user.id,
-            Appointment.start_time >= today,
-            Appointment.start_time < tomorrow,
+            Appointment.start_time >= today_start,
+            Appointment.start_time < today_end,
             Appointment.status != 'cancelled',
         )
         .order_by(Appointment.start_time)
@@ -300,18 +300,19 @@ def get_therapist_dashboard():
 
     for s in today_sessions:
         patient = User.query.get(s.patient_id) if s.patient_id else None
-        is_current = s.start_time <= now and (s.end_time is None or s.end_time > now)
+        local_start = localize_datetime_for_display(s.start_time, tz_name)
+        is_current = s.start_time <= now_utc and (s.end_time is None or s.end_time > now_utc)
         session_info = {
             'id': s.id,
             'title': s.title or 'Sesión de Terapia',
             'patient': patient.username if patient else 'N/A',
-            'start': s.start_time.strftime('%I:%M %p'),
+            'start': local_start.strftime('%I:%M %p') if local_start else '',
             'location': s.location or '',
             'status': s.status,
             'is_current': is_current,
         }
         agenda.append(session_info)
-        if not next_session and (is_current or s.start_time > now):
+        if not next_session and (is_current or s.start_time > now_utc):
             next_session = session_info
 
     planned_text = ''
@@ -326,14 +327,17 @@ def get_therapist_dashboard():
             .scalar()
         )
         avg_compliance = float(avg_cmp) if avg_cmp else 0.0
-    except Exception:
-        pass
-
+    except Exception as exc:
+        current_app.logger.debug('dashboard avg_compliance failed: %s', exc)
     if next_session:
         audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
         if audit and audit.planned_text:
             planned_text = audit.planned_text
             session_progress = int(audit.audit_score) if audit.audit_score else 0
+
+            session_objectives = parse_objectives(audit.planned_text)
+            if audit.audit_status == 'completed':
+                enrich_objectives_from_audit(session_objectives, audit.audit_report_json)
 
     return jsonify(
         {
@@ -344,6 +348,7 @@ def get_therapist_dashboard():
                 'planned_text': planned_text,
                 'session_progress': session_progress,
                 'avg_compliance': avg_compliance,
+                'session_objectives': session_objectives,
                 'total_students': len(set([s.patient_id for s in today_sessions])),
             },
         }

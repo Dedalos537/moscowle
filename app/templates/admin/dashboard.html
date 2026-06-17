@@ -62,14 +62,14 @@
                   </div>
               </div>
               <p class="text-xs font-bold text-gray-700 mb-6 leading-relaxed">{{ action.description }}</p>
-              
+
               <div class="flex gap-2">
                   {% if action.automation_level == 'requires_confirmation' %}
                   <button onclick="executeAction({{ action.id }})" class="flex-1 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
                       Confirmar
                   </button>
                   {% endif %}
-                  
+
                   {% if action.module == 'pagos' %}
                   <a href="{{ url_for('admin.deudores_page') }}" class="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all text-center">
                       Ir a Módulo
@@ -199,7 +199,7 @@
 
   <!-- Financial & Sedes Row -->
   <div class="finance-section grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
+
       <!-- Chart: Ingresos vs Pendientes -->
       <div class="lg:col-span-2 bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between">
           <div class="flex justify-between items-center mb-4">
@@ -258,12 +258,12 @@
       <!-- Quick Payment -->
       <div class="bg-gradient-to-br from-primary to-green-600 rounded-soft shadow-soft p-6 text-white relative overflow-hidden">
           <div class="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 bg-white opacity-10 rounded-full"></div>
-          
+
           <h3 class="text-lg font-bold mb-2 flex items-center gap-2 relative z-10">
               <i class="fas fa-comment-dollar"></i> Registrar Pago Rápido
           </h3>
           <p class="text-sm text-blue-100 mb-4 relative z-10">Selecciona un paciente para ir directo al formulario de pago.</p>
-          
+
           <form action="{{ url_for('admin.payments') }}" method="get" class="relative z-10 flex gap-2">
               <div class="flex-grow">
                 <input list="patients-list" name="search_patient" class="w-full rounded-lg border-0 px-3 py-2 text-gray-800 focus:ring-2 focus:ring-white bg-white/90 placeholder-gray-500" placeholder="Buscar paciente..." required>
@@ -274,7 +274,7 @@
                 </datalist>
               </div>
               <!-- We send 'action=register' to trigger modal in payments page if implemented, or just filter -->
-              <input type="hidden" name="action" value="register"> 
+              <input type="hidden" name="action" value="register">
               <button type="submit" class="bg-white text-primary font-bold px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors shadow-sm">
                   Ir
               </button>
@@ -287,7 +287,7 @@
              <i class="far fa-calendar-alt text-blue-500"></i> Disponibilidad y Horarios
           </h3>
           <p class="text-sm text-gray-500 mb-4">Consulta la carga de trabajo y espacios libres en tiempo real.</p>
-          
+
           <div class="flex gap-3">
               <a href="{{ url_for('admin.sessions_calendar') }}" class="flex-1 text-center bg-blue-50 text-blue-600 font-bold py-2 rounded-lg hover:bg-blue-100 transition-colors">
                   Ver Calendario Global
@@ -503,7 +503,7 @@ function toggleDailyModal() {
 
 async function executeAction(actionId) {
     if (!confirm('¿Confirmas la ejecución automática de esta tarea?')) return;
-    
+
     try {
         const btn = event.target;
         const prev = btn.textContent;
@@ -515,7 +515,7 @@ async function executeAction(actionId) {
             headers: { 'Content-Type': 'application/json' }
         });
         const result = await response.json();
-        
+
         if (result.success) {
             const card = document.getElementById(`action-card-${actionId}`);
             card.classList.add('opacity-0', 'scale-90');
@@ -590,7 +590,7 @@ async function auditRegistrations() {
         const response = await fetch('/api/admin/deudores?month=curr', {
             headers: { 'Accept': 'application/json' }
         });
-        
+
         if (!response.ok) {
             console.error("Dashboard Audit HTTP Error:", response.status);
             return;
@@ -603,7 +603,7 @@ async function auditRegistrations() {
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.data.por_sede) {
             const incomplete = [];
             const today = new Date();
@@ -619,8 +619,8 @@ async function auditRegistrations() {
                     const isDateIncomplete = !d.fecha_vencimiento || d.fecha_vencimiento === 'N/A';
 
                     if (isPriceIncomplete || isPlanIncomplete || isDateIncomplete) {
-                        incomplete.push({ 
-                            ...d, 
+                        incomplete.push({
+                            ...d,
                             sede: sede.sede_name,
                             details: [
                                 isPriceIncomplete ? 'Monto' : null,
@@ -642,7 +642,7 @@ async function auditRegistrations() {
             if (incomplete.length > 0) {
                 document.getElementById('aiGuidanceBanner').classList.remove('hidden');
                 document.getElementById('incompleteCount').innerText = incomplete.length;
-                
+
                 const list = document.getElementById('incompleteList');
                 list.innerHTML = incomplete.map(u => `
                     <div class="group p-5 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border border-transparent hover:border-red-200 hover:bg-white transition-all shadow-sm">
@@ -688,7 +688,7 @@ async function auditRegistrations() {
                         </div>
                     </div>
                 `}).join('');
-                
+
                 // Show Daily Modal if not already showing Incomplete
                 if (incomplete.length <= 5) {
                     setTimeout(toggleDailyModal, 2000);

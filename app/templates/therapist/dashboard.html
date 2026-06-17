@@ -91,7 +91,7 @@
                         <span class="bg-surface-container-lowest/20 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 inline-block">Sesión Actual / Próxima</span>
                         <h2 class="text-2xl md:text-3xl font-bold mb-2">{{ next_session.title if next_session else 'No hay sesiones activas' }}</h2>
                         <p class="text-white/80 mb-8 max-w-md">Paciente: {{ next_session.patient if next_session else '-' }} • Lugar: {{ next_session.location if next_session else '-' }}</p>
-                        
+
                         <div class="flex flex-col sm:flex-row items-center gap-10">
                             <!-- Circular Progress -->
                             <div class="relative w-32 h-32 md:w-40 md:h-40">
@@ -134,43 +134,16 @@
                             <span class="material-symbols-outlined text-primary text-[24px]">task</span> Temas de la Sesión
                         </h3>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {% if session_objectives %}
-                            {% for obj in session_objectives %}
-                            <div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-2xl border-l-4 border-primary">
-                                <div class="w-6 h-6 rounded-full {{ 'bg-primary text-white' if obj.status == 'completado' else 'bg-amber-500 text-white' if obj.status == 'parcial' else 'border-2 border-outline text-on-surface-variant/70' }} flex items-center justify-center">
-                                    {% if obj.status == 'completado' %}
-                                        <span class="material-symbols-outlined text-[16px]">check</span>
-                                    {% elif obj.status == 'parcial' %}
-                                        <span class="material-symbols-outlined text-[16px]">schedule</span>
-                                    {% else %}
-                                        <i class="text-[12px] opacity-50"></i>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <div class="font-bold text-on-surface">{{ obj.name }}</div>
-                                    <div class="text-[10px] font-bold {{ 'text-primary' if obj.status == 'completado' else 'text-amber-600' if obj.status == 'parcial' else 'text-on-surface-variant/70' }} uppercase">{{ obj.status }}</div>
-                                </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="objectivesGrid">
+                        {% if planned_text %}
+                            <div class="col-span-full p-4 bg-surface-container-low text-on-surface rounded-2xl text-sm whitespace-pre-line max-h-60 overflow-y-auto">
+                                <strong>Programacion subida por admin:</strong><br>
+                                {{ planned_text }}
                             </div>
-                            {% endfor %}
                         {% else %}
-                            {% if next_session and next_session.notes %}
-                                <div class="col-span-full p-4 bg-surface-container-low text-on-surface rounded-2xl text-sm">
-                                    <strong>Notas de la cita:</strong><br>
-                                    {{ next_session.notes }}
-                                </div>
-                            {% endif %}
-                            {% if planned_text %}
-                                <div class="col-span-full p-4 bg-surface-container-low text-on-surface rounded-2xl text-sm whitespace-pre-line max-h-60 overflow-y-auto">
-                                    <strong>Programación subida por admin:</strong><br>
-                                    {{ planned_text }}
-                                </div>
-                            {% endif %}
-                            {% if not (next_session and next_session.notes) and not planned_text %}
-                                <div class="col-span-full p-4 bg-surface-container-low text-on-surface-variant rounded-2xl text-sm">
-                                    No se encontraron temas ni objetivos programados para la cita.
-                                </div>
-                            {% endif %}
+                            <div class="col-span-full p-4 bg-surface-container-low text-on-surface-variant rounded-2xl text-sm">
+                                No se encontraron temas ni objetivos programados para la cita.
+                            </div>
                         {% endif %}
                     </div>
                 </div>
@@ -185,7 +158,7 @@
                     </div>
                     <div class="relative space-y-6">
                         <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-surface-container"></div>
-                        
+
                         {% if agenda %}
                             {% for sess in agenda %}
                             <div class="relative pl-10 {{ '' if sess.is_current else 'opacity-70' }}">
@@ -207,7 +180,7 @@
                             </div>
                         {% endif %}
                     </div>
-                    
+
                     <a href="{{ url_for('therapist.sessions') }}" class="block w-full mt-10 py-3 bg-surface-container-low text-on-surface-variant text-center rounded-2xl font-bold text-sm hover:bg-surface-container transition-colors">
                         Ver Calendario Completo
                     </a>
@@ -227,7 +200,7 @@
                     <div class="mt-2 text-[10px] text-red-600 font-bold bg-red-50 px-2 py-1 rounded inline-block">Atención Requerida</div>
                 </div>
             </div>
-            
+
             <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
                 <div class="p-3 bg-primary-fixed text-primary rounded-lg">
                     <i class="fas fa-chart-line"></i>
@@ -238,7 +211,7 @@
                     <div class="mt-2 text-[10px] text-primary font-bold bg-primary-fixed px-2 py-1 rounded inline-block">Este Mes</div>
                 </div>
             </div>
-            
+
             <div class="bg-surface-container-lowest p-6 rounded-2xl shadow-sm shadow-slate-200/50 border border-outline-variant flex items-start gap-5">
                 <div class="p-3 bg-blue-50 text-blue-500 rounded-lg">
                     <i class="fas fa-robot"></i>
@@ -372,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // graceful fallback
             renderWeeklyChart([]);
         });
-    
+
     // Handle resize
     let resizeTimer;
     window.addEventListener('resize', () => {
@@ -386,11 +359,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById('weekly-chart');
         if (!el) return;
         el.innerHTML = '';
-        
+
         const w = el.clientWidth;
-        const h = el.clientHeight || 250; 
+        const h = el.clientHeight || 250;
         const padding = 30; // increased padding for labels
-        
+
         const values = (series && series.length) ? series.map(d => d.avg_accuracy) : [0,0,0,0,0,0,0];
         const dates = (series && series.length) ? series.map(d => {
             // Format date to simple Day/Month
@@ -461,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bottomY = yScale(0);
         const firstX = padding;
         areaD += ` L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
-        
+
         areaPath.setAttribute('d', areaD);
         areaPath.setAttribute('fill', primaryColor);
         areaPath.setAttribute('fill-opacity', '0.1');
@@ -479,15 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
             circle.setAttribute('fill', '#fff'); // White center
             circle.setAttribute('stroke', primaryColor);
             circle.setAttribute('stroke-width', '2');
-            
+
             // Add tooltip via title
             const title = document.createElementNS(svgNS, 'title');
             title.textContent = `${dates[i]}: ${v}%`;
             circle.appendChild(title);
-            
+
             svg.appendChild(circle);
         });
-        
+
         // Date Labels (X-Axis)
         values.forEach((_, i) => {
             if (dates[i]) {
@@ -509,23 +482,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
         // If data provided but empty, clear default 'server' list if it exists to show empty state
         // But if alerts is empty array, we probably want to show "No alerts"
-        
+
         container.innerHTML = ''; // Clear fallback or loading content
-        
+
         if (!alerts || alerts.length === 0) {
             container.innerHTML = `<p class="text-on-surface-variant text-sm italic">No hay alertas de riesgo recientes.</p>`;
             return;
         }
-        
+
         alerts.forEach(a => {
             const wrapper = document.createElement('div');
             // Ensure type is safe
             const type = a.type || 'red';
-            
+
             // Fallback classes if 'statusRed' etc aren't defined in Tailwind config:
             // We use standard tailwind colors as backup in class string
-            wrapper.className = `p-4 rounded-2xl bg-red-50 border-l-4 border-red-500`; 
-            
+            wrapper.className = `p-4 rounded-2xl bg-red-50 border-l-4 border-red-500`;
+
             // If the custom classes exist, they will apply. If not, we changed to standard utility classes for safety.
             // The user context uses 'bg-statusRed', assuming extended config.
             if (type === 'red') {
@@ -550,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- Modals -->
     <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50"></div>
-    
+
     <div id="create-modal" class="fixed inset-0 hidden z-50">
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 w-full max-w-lg relative">
@@ -576,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input name="title" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" />
               </div>
             </div>
-            
+
             <div>
               <label class="text-sm text-on-surface-variant">Fechas (Máximo 3)</label>
               <input type="text" id="multi-dates" class="w-full mt-1 border border-outline-variant rounded-2xl px-3 py-2" placeholder="Seleccionar fechas..." required />
@@ -633,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
     </div>
-    
+
     <!-- Toast -->
     <div id="toast" class="fixed bottom-4 right-4 hidden">
       <div class="bg-surface-container-lowest border border-outline-variant shadow-sm shadow-slate-200/50 rounded-2xl px-4 py-3 text-sm text-on-surface"
@@ -685,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.body.style.overflow = "";
         }
 
-        document.querySelectorAll("[data-close-modal]").forEach((btn) => 
+        document.querySelectorAll("[data-close-modal]").forEach((btn) =>
             btn.addEventListener("click", closeModals)
         );
         if (modalBackdrop) modalBackdrop.addEventListener("click", closeModals);
@@ -720,10 +693,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 const select = document.getElementById("games-select");
                 if (select && data.games) {
-                    select.innerHTML = data.games.map(g => 
+                    select.innerHTML = data.games.map(g =>
                         `<option value="${g}">${g.replace('.html', '').replace(/_/g, ' ')}</option>`
                     ).join('');
-                    
+
                     if (!gamesTomSelect) {
                         gamesTomSelect = new TomSelect(select, {
                             plugins: ['remove_button'],
@@ -748,13 +721,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error("No se pudo cargar pacientes");
             const patients = await res.json();
             const select = document.getElementById("patient-select");
-            
+
             select.innerHTML =
               '<option value="" disabled selected>Seleccione un paciente</option>' +
               patients.map(p =>
                     `<option value="${p.id}">${p.username} (${p.email})</option>`
                 ).join("");
-                
+
             if (!patientsTomSelect) {
                 patientsTomSelect = new TomSelect(select, {
                     create: false,
@@ -784,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  const pad = (n) => String(n).padStart(2, "0");
                  const start = new Date(now.getTime() + 5 * 60 * 1000);
                  const end = new Date(start.getTime() + 45 * 60 * 1000); // Default to 45 mins
-                 
+
                  if (createForm.time_start) createForm.time_start.value = `${pad(start.getHours())}:${pad(start.getMinutes())}`;
                  if (createForm.time_end) createForm.time_end.value = `${pad(end.getHours())}:${pad(end.getMinutes())}`;
                  if (createForm.status) createForm.status.value = "scheduled";
@@ -794,7 +767,7 @@ document.addEventListener('DOMContentLoaded', () => {
              ensureGamesLoaded();
           });
         }
-        
+
         // Auto-calculate end time in dashboard
         if (createForm && createForm.time_start && createForm.time_end) {
              createForm.time_start.addEventListener('change', function() {
@@ -804,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      date.setHours(hours);
                      date.setMinutes(minutes);
                      date.setMinutes(date.getMinutes() + 45); // Add 45 minutes
-                     
+
                      const pad = (n) => String(n).padStart(2, "0");
                      createForm.time_end.value = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
                  }
@@ -815,7 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createForm.addEventListener("submit", async (e) => {
               e.preventDefault();
               const formData = new FormData(createForm);
-              
+
               // NEW: Get multiple patient IDs
               let patientIds = [];
               if (patientsTomSelect) {
@@ -825,11 +798,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   const sel = document.getElementById("patient-select");
                   patientIds = Array.from(sel.selectedOptions).map(o => o.value);
               }
-              
+
               const timeStart = formData.get("time_start");
               const timeEnd = formData.get("time_end");
               const selectedDates = datePicker ? datePicker.selectedDates : [];
-              
+
               if (selectedDates.length === 0) {
                   showToast("Seleccione al menos una fecha");
                   return;
@@ -855,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      selectedGames = Array.from(gamesSelect.selectedOptions).map(opt => opt.value);
                   }
               }
-              
+
               let successCount = 0;
               let errorCount = 0;
               let lastError = "";
@@ -863,13 +836,13 @@ document.addEventListener('DOMContentLoaded', () => {
               try {
                   submitBtn.disabled = true;
                   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                  
+
                   for (const dateObj of selectedDates) {
                       const year = dateObj.getFullYear();
                       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
                       const day = String(dateObj.getDate()).padStart(2, '0');
                       const dateStr = `${year}-${month}-${day}`;
-                      
+
                       const startDate = new Date(`${dateStr}T${timeStart}:00`);
                       const endDate = new Date(`${dateStr}T${timeEnd}:00`);
 
@@ -886,15 +859,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                       const res = await fetch("{{ url_for('api.api_create_session') }}", {
                           method: "POST",
-                          headers: { 
+                          headers: {
                               "Content-Type": "application/json",
                               "X-CSRFToken": csrfToken
                           },
                           body: JSON.stringify(payload),
                       });
-                      
+
                       const data = await res.json();
-                      
+
                       if (!res.ok || !data.success) {
                           errorCount++;
                           lastError = data.message || "Error desconocido";
@@ -922,5 +895,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+    (function loadObjectives() {
+        const sessionId = {{ next_session.id if next_session else 'null' }};
+        if (!sessionId) return;
+        fetch(`/api/sessions/${sessionId}/objectives`, {
+            headers: { 'X-CSRFToken': csrfToken }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.objectives || data.objectives.length === 0) return;
+            const grid = document.getElementById('objectivesGrid');
+            if (!grid) return;
+            let html = '';
+            data.objectives.forEach(obj => {
+                const statusClass = obj.status === 'completado' ? 'bg-primary text-white' : obj.status === 'parcial' ? 'bg-amber-500 text-white' : 'border-2 border-outline text-on-surface-variant/70';
+                const iconHtml = obj.status === 'completado' ? '<span class="material-symbols-outlined text-[16px]">check</span>' : obj.status === 'parcial' ? '<span class="material-symbols-outlined text-[16px]">schedule</span>' : '';
+                const statusLabel = obj.status === 'completado' ? 'completado' : obj.status === 'parcial' ? 'parcial' : 'pendiente';
+                html += `<div class="flex items-center gap-4 p-5 bg-surface-container-low rounded-2xl border-l-4 border-primary">`;
+                html += `<div class="w-6 h-6 rounded-full ${statusClass} flex items-center justify-center">${iconHtml}</div>`;
+                html += `<div><div class="font-bold text-on-surface">${obj.name}</div>`;
+                html += `<div class="text-[10px] font-bold ${obj.status === 'completado' ? 'text-primary' : obj.status === 'parcial' ? 'text-amber-600' : 'text-on-surface-variant/70'} uppercase">${statusLabel}</div></div></div>`;
+            });
+            grid.innerHTML = html;
+        })
+        .catch(() => {});
+    })();
 </script>
 {% endblock %}
