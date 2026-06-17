@@ -297,6 +297,7 @@ def get_therapist_dashboard():
 
     agenda = []
     next_session = None
+    active_session = None
 
     for s in today_sessions:
         patient = User.query.get(s.patient_id) if s.patient_id else None
@@ -312,8 +313,13 @@ def get_therapist_dashboard():
             'is_current': is_current,
         }
         agenda.append(session_info)
+        if is_current:
+            active_session = session_info
         if not next_session and (is_current or s.start_time > now_utc):
             next_session = session_info
+
+    if not next_session and active_session:
+        next_session = active_session
 
     planned_text = ''
     session_progress = 0

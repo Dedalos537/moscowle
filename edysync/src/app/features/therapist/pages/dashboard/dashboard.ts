@@ -173,7 +173,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
   }
 
   get reportesCount(): number {
-    return this.weeklyReportsCount || 8;
+    return this.weeklyReportsCount || 0;
   }
 
   checkPendingReports() {

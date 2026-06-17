@@ -50,7 +50,7 @@ export class RecordingService {
 
   iniciarPolleo() {
     this.detenerPolleo();
-    this.pollSubscription = interval(10000).subscribe(() => this.checkSessions());
+    this.pollSubscription = interval(5000).subscribe(() => this.checkSessions());
     this.focusHandler = () => this.checkSessions();
     window.addEventListener('focus', this.focusHandler);
     this.checkSessions();
@@ -126,7 +126,7 @@ export class RecordingService {
           return;
         }
 
-        if (s.status === 'scheduled' && delayMinutes >= 0 && delayMinutes <= 10) {
+        if (s.status === 'scheduled' && delayMinutes >= 1 && delayMinutes <= 10) {
           if (this.sessionGateActive$.value && this.currentSessionId === s.id) return;
           this.activateSessionGate(s, 'late', delayMinutes);
           return;

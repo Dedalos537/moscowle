@@ -32,13 +32,15 @@ def _auto_start_session(user):
         return
     try:
         now = datetime.utcnow()
+        from sqlalchemy import or_
+
         from app.models import Appointment, SessionAudit
 
         upcoming = Appointment.query.filter(
             Appointment.therapist_id == user.id,
             Appointment.status.in_(['scheduled', 'in_progress']),
             Appointment.start_time <= now,
-            Appointment.end_time >= now,
+            or_(Appointment.end_time >= now, Appointment.end_time.is_(None)),
         ).all()
         for appt in upcoming:
             appt.status = 'in_progress'
