@@ -1,17 +1,6 @@
 <main role="main" class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
 
-  <div class="fixed bottom-5 left-5 z-10 flex items-center gap-2 bg-surface-container-lowest/90 backdrop-blur-sm rounded-xl px-3 py-2 shadow-soft border border-border/30">
-    <fa-icon [icon]="['fas', 'chart-bar']" class="text-sm text-on-surface-variant"></fa-icon>
-    <span class="text-xs font-semibold text-on-surface-variant whitespace-nowrap">Ocultar Gráficos</span>
-    <button type="button" (click)="toggleHideCharts()"
-      class="relative w-9 h-5 rounded-full transition-colors duration-200 border-none cursor-pointer"
-      [class.bg-primary]="hideCharts()"
-      [class.bg-outline-variant]="!hideCharts()"
-      [attr.aria-label]="hideCharts() ? 'Mostrar gráficos' : 'Ocultar gráficos'">
-      <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200"
-        [style.transform]="hideCharts() ? 'translateX(16px)' : 'translateX(0)'"></span>
-    </button>
-  </div>
+  <app-charts-toggle></app-charts-toggle>
 
   <button (click)="toggleDarkMode()"
     class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-soft border z-50 cursor-pointer bg-surface-container-lowest text-on-surface-variant border-border hover:bg-surface-container-high"
@@ -123,6 +112,8 @@
   <button type="button" (click)="toggleHelp()"
     class="help-btn"
     [class.help-btn--active]="showHelp"
+    [class.floating-ui--hidden]="floating.hidden()"
+    [style.bottom.px]="floating.leftStackOffset(0)"
     [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'"
     [attr.aria-label]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
     <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>

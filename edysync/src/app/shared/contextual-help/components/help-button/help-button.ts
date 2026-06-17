@@ -2,6 +2,7 @@ import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HelpStateService } from '../../services/help-state.service';
+import { FloatingUiService } from '../../../../core/services/floating-ui.service';
 
 @Component({
   selector: 'app-help-button',
@@ -12,6 +13,8 @@ import { HelpStateService } from '../../services/help-state.service';
       (click)="state.toggle()"
       class="help-fab"
       [class.is-open]="state.panelOpen()"
+      [class.floating-ui--hidden]="floating.hidden()"
+      [style.bottom.px]="floating.leftStackOffset(0)"
       title="Ayuda contextual"
       aria-label="Abrir ayuda">
       <fa-icon [icon]="state.panelOpen() ? ['fas', 'times'] : ['fas', 'question']" class="help-fab__icon"></fa-icon>
@@ -20,7 +23,6 @@ import { HelpStateService } from '../../services/help-state.service';
   styles: [`
     .help-fab {
       position: fixed;
-      bottom: 24px;
       left: 24px;
       width: 56px;
       height: 56px;
@@ -33,12 +35,20 @@ import { HelpStateService } from '../../services/help-state.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, transform 0.25s ease, background 0.25s, box-shadow 0.25s;
       z-index: 65;
+    }
+    .help-fab.floating-ui--hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.9);
     }
     .help-fab:hover {
       transform: scale(1.08);
       box-shadow: 0 6px 24px rgba(37, 99, 235, 0.45);
+    }
+    .help-fab.floating-ui--hidden:hover {
+      transform: scale(0.9);
     }
     .help-fab:active {
       transform: scale(0.95);
@@ -59,4 +69,5 @@ import { HelpStateService } from '../../services/help-state.service';
 })
 export class HelpButton {
   state = inject(HelpStateService);
+  floating = inject(FloatingUiService);
 }

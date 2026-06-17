@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -6,6 +6,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { LlamaService, ChatMessage, ActionChip } from '../../../core/services/llama.service';
 import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
+import { FloatingUiService } from '../../../core/services/floating-ui.service';
 import DOMPurify from 'dompurify';
 
 const ALLOWED_REDIRECT_PREFIXES = ['/', '/admin/', '/therapist/', '/patient/', '/auth/'];
@@ -57,6 +58,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   @ViewChild('inputEl') inputEl!: ElementRef;
 
   private wizardService = inject(WizardService);
+  private floatingUi = inject(FloatingUiService);
 
   isOpen = false;
   fullScreen = false;
@@ -79,7 +81,15 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     private llama: LlamaService,
     private admin: AdminService,
     private cdr: ChangeDetectorRef,
-  ) {}
+  ) {
+    effect(() => {
+      if (this.floatingUi.hidden() && this.isOpen) {
+        this.isOpen = false;
+        this.fullScreen = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   sanitize(html: string): string {
     return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p'], ALLOWED_ATTR: ['href'] });
@@ -99,6 +109,16 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   @HostBinding('class.fullscreen') get fullScreenClass() { return this.fullScreen; }
+  @HostBinding('class.floating-ui') readonly floatingUiClass = true;
+  @HostBinding('class.floating-ui--hidden') get floatingHidden() {
+    return this.floatingUi.hidden();
+  }
+  @HostBinding('style.bottom.px') get hostBottom() {
+    return this.fullScreen ? null : this.floatingUi.rightBaseBottom();
+  }
+  @HostBinding('style.right.px') get hostRight() {
+    return this.fullScreen ? null : this.floatingUi.rightInset();
+  }
 
   @HostListener('document:keydown.escape')
   onEscape() {
