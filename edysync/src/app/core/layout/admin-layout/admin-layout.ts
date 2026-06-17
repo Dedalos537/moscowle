@@ -12,12 +12,11 @@ import { AiChat } from '../../../shared/components/ai-chat/ai-chat';
 import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
 import { BeaconOverlay } from 'ng-beacon';
-import { ChartsToggle } from '../../../shared/components/charts-toggle/charts-toggle';
 
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat, HelpButton, HelpPanel, BeaconOverlay, ChartsToggle],
+  imports: [RouterModule, CommonModule, Sidebar, Header, Spinner, ConfirmDialog, AiChat, HelpButton, HelpPanel, BeaconOverlay],
   templateUrl: './admin-layout.html',
   styleUrl: './admin-layout.scss',
   animations: [routeAnimations],

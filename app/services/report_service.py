@@ -1,13 +1,12 @@
-
 import logging
-from datetime import datetime, timedelta, date
-from app.models import db, User, Appointment, SessionAudit, WeeklyReport, DailyReport, MonthlyReport, QuarterlyReport
+from datetime import date, datetime, timedelta
+
+from app.models import Appointment, DailyReport, MonthlyReport, QuarterlyReport, SessionAudit, User, WeeklyReport, db
 
 logger = logging.getLogger(__name__)
 
 
 class ReportService:
-
     def generate_patient_weekly_report(self, patient_id, therapist_id, week_start_date):
         if isinstance(week_start_date, str):
             week_start = datetime.strptime(week_start_date, '%Y-%m-%d').date()
@@ -18,26 +17,33 @@ class ReportService:
 
         patient = User.query.get(patient_id)
         if not patient:
-            raise ValueError(f"Paciente {patient_id} no encontrado")
+            raise ValueError(f'Paciente {patient_id} no encontrado')
 
         week_start_dt = datetime(week_start.year, week_start.month, week_start.day)
         week_end_dt = datetime(week_end.year, week_end.month, week_end.day) + timedelta(days=1)
 
-        sessions = Appointment.query.filter(
-            Appointment.patient_id == patient_id,
-            Appointment.therapist_id == therapist_id,
-            Appointment.start_time >= week_start_dt,
-            Appointment.start_time < week_end_dt,
-            Appointment.status == 'completed'
-        ).order_by(Appointment.start_time.asc()).all()
+        sessions = (
+            Appointment.query.filter(
+                Appointment.patient_id == patient_id,
+                Appointment.therapist_id == therapist_id,
+                Appointment.start_time >= week_start_dt,
+                Appointment.start_time < week_end_dt,
+                Appointment.status == 'completed',
+            )
+            .order_by(Appointment.start_time.asc())
+            .all()
+        )
 
         sessions_count = len(sessions)
 
         session_ids = [s.id for s in sessions]
-        audits = SessionAudit.query.filter(
-            SessionAudit.appointment_id.in_(session_ids),
-            SessionAudit.audit_score.isnot(None)
-        ).all() if session_ids else []
+        audits = (
+            SessionAudit.query.filter(
+                SessionAudit.appointment_id.in_(session_ids), SessionAudit.audit_score.isnot(None)
+            ).all()
+            if session_ids
+            else []
+        )
 
         scores = [a.audit_score for a in audits if a.audit_score is not None]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
@@ -53,47 +59,38 @@ class ReportService:
                         objectives_achieved += 1
 
         report_lines = [
-            f"Reporte Semanal - {patient.username}",
-            f"Periodo: {week_start.strftime('%d/%m/%Y')} - {week_end.strftime('%d/%m/%Y')}",
-            "",
-            "--- Resumen ---",
-            f"Total de sesiones: {sessions_count}",
-            f"Score promedio: {avg_score}%",
+            f'Reporte Semanal - {patient.username}',
+            f'Periodo: {week_start.strftime("%d/%m/%Y")} - {week_end.strftime("%d/%m/%Y")}',
+            '',
+            '--- Resumen ---',
+            f'Total de sesiones: {sessions_count}',
+            f'Score promedio: {avg_score}%',
         ]
         if objectives_total > 0:
-            report_lines.append(f"Objetivos logrados: {objectives_achieved}/{objectives_total}")
+            report_lines.append(f'Objetivos logrados: {objectives_achieved}/{objectives_total}')
         else:
-            report_lines.append("Objetivos: N/A")
+            report_lines.append('Objetivos: N/A')
 
-        report_lines.extend(["", "--- Detalle de Sesiones ---"])
+        report_lines.extend(['', '--- Detalle de Sesiones ---'])
         for s in sessions:
             audit = next((a for a in audits if a.appointment_id == s.id), None)
-            score_str = f"Score: {audit.audit_score}%" if audit and audit.audit_score else "Sin auditoria"
-            report_lines.append(
-                f"- {s.start_time.strftime('%d/%m %H:%M')} | {s.title or 'Sesion'} | {score_str}"
-            )
+            score_str = f'Score: {audit.audit_score}%' if audit and audit.audit_score else 'Sin auditoria'
+            report_lines.append(f'- {s.start_time.strftime("%d/%m %H:%M")} | {s.title or "Sesion"} | {score_str}')
 
         if audits:
-            report_lines.extend([
-                "",
-                "--- Recomendaciones ---",
-                "Continuar con el plan terapeutico segun la programacion establecida."
-            ])
+            report_lines.extend(
+                ['', '--- Recomendaciones ---', 'Continuar con el plan terapeutico segun la programacion establecida.']
+            )
 
-        report_text = "\n".join(report_lines)
+        report_text = '\n'.join(report_lines)
 
         report = WeeklyReport.query.filter_by(
-            patient_id=patient_id,
-            therapist_id=therapist_id,
-            week_start=week_start
+            patient_id=patient_id, therapist_id=therapist_id, week_start=week_start
         ).first()
 
         if not report:
             report = WeeklyReport(
-                patient_id=patient_id,
-                therapist_id=therapist_id,
-                week_start=week_start,
-                week_end=week_end
+                patient_id=patient_id, therapist_id=therapist_id, week_start=week_start, week_end=week_end
             )
             db.session.add(report)
 
@@ -121,10 +118,7 @@ class ReportService:
         else:
             week_start = week_start_date
 
-        report = WeeklyReport.query.filter_by(
-            patient_id=patient_id,
-            week_start=week_start
-        ).first()
+        report = WeeklyReport.query.filter_by(patient_id=patient_id, week_start=week_start).first()
 
         if not report:
             return None
@@ -155,14 +149,17 @@ class ReportService:
             Appointment.therapist_id == therapist_id,
             Appointment.start_time >= day_start,
             Appointment.start_time < day_end,
-            Appointment.status == 'completed'
+            Appointment.status == 'completed',
         ).all()
 
         session_ids = [s.id for s in sessions]
-        audits = SessionAudit.query.filter(
-            SessionAudit.appointment_id.in_(session_ids),
-            SessionAudit.audit_score.isnot(None)
-        ).all() if session_ids else []
+        audits = (
+            SessionAudit.query.filter(
+                SessionAudit.appointment_id.in_(session_ids), SessionAudit.audit_score.isnot(None)
+            ).all()
+            if session_ids
+            else []
+        )
 
         scores = [a.audit_score for a in audits if a.audit_score is not None]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
@@ -171,22 +168,14 @@ class ReportService:
         for s in sessions:
             audit = next((a for a in audits if a.appointment_id == s.id), None)
             if audit and audit.audit_score is not None:
-                notes_parts.append(f"{s.title or 'Sesion'}: {audit.audit_score}%")
+                notes_parts.append(f'{s.title or "Sesion"}: {audit.audit_score}%')
 
-        notes = "; ".join(notes_parts) if notes_parts else "Sin datos"
+        notes = '; '.join(notes_parts) if notes_parts else 'Sin datos'
 
-        report = DailyReport.query.filter_by(
-            patient_id=patient_id,
-            therapist_id=therapist_id,
-            date=report_date
-        ).first()
+        report = DailyReport.query.filter_by(patient_id=patient_id, therapist_id=therapist_id, date=report_date).first()
 
         if not report:
-            report = DailyReport(
-                patient_id=patient_id,
-                therapist_id=therapist_id,
-                date=report_date
-            )
+            report = DailyReport(patient_id=patient_id, therapist_id=therapist_id, date=report_date)
             db.session.add(report)
 
         report.sessions_count = len(sessions)
@@ -210,16 +199,14 @@ class ReportService:
 
         week_end = week_start + timedelta(days=6)
 
-        reports = WeeklyReport.query.filter(
-            WeeklyReport.week_start == week_start
-        ).all()
+        reports = WeeklyReport.query.filter(WeeklyReport.week_start == week_start).all()
 
         by_therapist = {}
         for r in reports:
             therapist = User.query.get(r.therapist_id)
             patient = User.query.get(r.patient_id)
-            tname = therapist.username if therapist else f"ID {r.therapist_id}"
-            pname = patient.username if patient else f"ID {r.patient_id}"
+            tname = therapist.username if therapist else f'ID {r.therapist_id}'
+            pname = patient.username if patient else f'ID {r.patient_id}'
 
             if tname not in by_therapist:
                 by_therapist[tname] = {
@@ -229,19 +216,21 @@ class ReportService:
                     'avg_score': 0,
                 }
 
-            by_therapist[tname]['patients'].append({
-                'patient_id': r.patient_id,
-                'patient_name': pname,
-                'avg_score': r.avg_score,
-                'sessions_count': r.sessions_count,
-                'objectives_achieved': r.objectives_achieved,
-                'objectives_total': r.objectives_total,
-            })
+            by_therapist[tname]['patients'].append(
+                {
+                    'patient_id': r.patient_id,
+                    'patient_name': pname,
+                    'avg_score': r.avg_score,
+                    'sessions_count': r.sessions_count,
+                    'objectives_achieved': r.objectives_achieved,
+                    'objectives_total': r.objectives_total,
+                }
+            )
             by_therapist[tname]['total_sessions'] += r.sessions_count
 
-        for tname in by_therapist:
-            scores = [p['avg_score'] for p in by_therapist[tname]['patients'] if p['avg_score']]
-            by_therapist[tname]['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
+        for _tname, tdata in by_therapist.items():
+            scores = [p['avg_score'] for p in tdata['patients'] if p['avg_score']]
+            tdata['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
 
         return {
             'week_start': week_start.isoformat(),
@@ -250,30 +239,75 @@ class ReportService:
             'total_reports': len(reports),
         }
 
+    def sync_daily_reports_for_range(self, start_date, end_date):
+        """Genera o actualiza reportes diarios a partir de sesiones completadas."""
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+        current = start_date
+        while current <= end_date:
+            day_start = datetime(current.year, current.month, current.day)
+            day_end = day_start + timedelta(days=1)
+
+            pairs = (
+                db.session.query(Appointment.patient_id, Appointment.therapist_id)
+                .filter(
+                    Appointment.start_time >= day_start,
+                    Appointment.start_time < day_end,
+                    Appointment.status == 'completed',
+                )
+                .distinct()
+                .all()
+            )
+
+            for patient_id, therapist_id in pairs:
+                try:
+                    self.generate_daily_report(patient_id, therapist_id, current)
+                except Exception as e:
+                    logger.warning(
+                        'Error sincronizando reporte diario %s/%s %s: %s',
+                        therapist_id,
+                        patient_id,
+                        current,
+                        e,
+                    )
+
+            current += timedelta(days=1)
+
+        return self.get_daily_reports(start_date, end_date)
+
     def get_daily_reports(self, start_date, end_date):
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         if isinstance(end_date, str):
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
 
-        reports = DailyReport.query.filter(
-            DailyReport.date >= start_date,
-            DailyReport.date <= end_date
-        ).order_by(DailyReport.date.desc()).all()
+        reports = (
+            DailyReport.query.filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
+            .order_by(DailyReport.date.desc())
+            .all()
+        )
 
         result = []
         for r in reports:
             patient = User.query.get(r.patient_id)
             therapist = User.query.get(r.therapist_id)
-            result.append({
-                'id': r.id,
-                'date': r.date.isoformat(),
-                'patient_name': patient.username if patient else 'N/A',
-                'therapist_name': therapist.username if therapist else 'N/A',
-                'sessions_count': r.sessions_count,
-                'avg_score': r.avg_score,
-                'notes': r.notes,
-            })
+            result.append(
+                {
+                    'id': r.id,
+                    'date': r.date.isoformat(),
+                    'patient_name': patient.username if patient else 'N/A',
+                    'therapist_name': therapist.username if therapist else 'N/A',
+                    'sessions_count': r.sessions_count,
+                    'avg_score': r.avg_score,
+                    'notes': r.notes,
+                }
+            )
 
         return result
 
@@ -297,7 +331,7 @@ class ReportService:
                     report = self.generate_patient_weekly_report(patient.id, therapist.id, week_start)
                     generated.append(report)
                 except Exception as e:
-                    logger.warning(f"Weekly report error {therapist.id}/{patient.id}: {e}")
+                    logger.warning(f'Weekly report error {therapist.id}/{patient.id}: {e}')
         return generated
 
     def generate_monthly_report(self, patient_id, therapist_id, year, month):
@@ -310,19 +344,26 @@ class ReportService:
         month_start_dt = datetime(year, month, 1)
         month_end_dt = datetime(year, month_end.year, month_end.month, month_end.day) + timedelta(days=1)
 
-        sessions = Appointment.query.filter(
-            Appointment.patient_id == patient_id,
-            Appointment.therapist_id == therapist_id,
-            Appointment.start_time >= month_start_dt,
-            Appointment.start_time < month_end_dt,
-            Appointment.status == 'completed'
-        ).order_by(Appointment.start_time.asc()).all()
+        sessions = (
+            Appointment.query.filter(
+                Appointment.patient_id == patient_id,
+                Appointment.therapist_id == therapist_id,
+                Appointment.start_time >= month_start_dt,
+                Appointment.start_time < month_end_dt,
+                Appointment.status == 'completed',
+            )
+            .order_by(Appointment.start_time.asc())
+            .all()
+        )
 
         session_ids = [s.id for s in sessions]
-        audits = SessionAudit.query.filter(
-            SessionAudit.appointment_id.in_(session_ids),
-            SessionAudit.audit_score.isnot(None)
-        ).all() if session_ids else []
+        audits = (
+            SessionAudit.query.filter(
+                SessionAudit.appointment_id.in_(session_ids), SessionAudit.audit_score.isnot(None)
+            ).all()
+            if session_ids
+            else []
+        )
 
         scores = [a.audit_score for a in audits if a.audit_score is not None]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
@@ -338,30 +379,29 @@ class ReportService:
                         objectives_achieved += 1
 
         patient = User.query.get(patient_id)
-        patient_name = patient.username if patient else f"ID {patient_id}"
+        patient_name = patient.username if patient else f'ID {patient_id}'
 
         report_lines = [
-            f"Reporte Mensual - {patient_name}",
-            f"Periodo: {month_start.strftime('%d/%m/%Y')} - {month_end.strftime('%d/%m/%Y')}",
-            "",
-            "--- Resumen ---",
-            f"Total de sesiones: {len(sessions)}",
-            f"Score promedio: {avg_score}%",
+            f'Reporte Mensual - {patient_name}',
+            f'Periodo: {month_start.strftime("%d/%m/%Y")} - {month_end.strftime("%d/%m/%Y")}',
+            '',
+            '--- Resumen ---',
+            f'Total de sesiones: {len(sessions)}',
+            f'Score promedio: {avg_score}%',
         ]
         if objectives_total > 0:
-            report_lines.append(f"Objetivos logrados: {objectives_achieved}/{objectives_total}")
+            report_lines.append(f'Objetivos logrados: {objectives_achieved}/{objectives_total}')
         else:
-            report_lines.append("Objetivos: N/A")
-        report_lines.extend(["", "--- Detalle de Sesiones ---"])
+            report_lines.append('Objetivos: N/A')
+        report_lines.extend(['', '--- Detalle de Sesiones ---'])
         for s in sessions:
             audit = next((a for a in audits if a.appointment_id == s.id), None)
-            score_str = f"Score: {audit.audit_score}%" if audit and audit.audit_score else "Sin auditoria"
-            report_lines.append(f"- {s.start_time.strftime('%d/%m %H:%M')} | {s.title or 'Sesion'} | {score_str}")
-        report_text = "\n".join(report_lines)
+            score_str = f'Score: {audit.audit_score}%' if audit and audit.audit_score else 'Sin auditoria'
+            report_lines.append(f'- {s.start_time.strftime("%d/%m %H:%M")} | {s.title or "Sesion"} | {score_str}')
+        report_text = '\n'.join(report_lines)
 
         report = MonthlyReport.query.filter_by(
-            patient_id=patient_id, therapist_id=therapist_id,
-            month=month, year=year
+            patient_id=patient_id, therapist_id=therapist_id, month=month, year=year
         ).first()
         if not report:
             report = MonthlyReport(patient_id=patient_id, therapist_id=therapist_id, month=month, year=year)
@@ -374,9 +414,14 @@ class ReportService:
         db.session.commit()
 
         return {
-            'id': report.id, 'report_text': report_text, 'avg_score': avg_score,
-            'sessions_count': len(sessions), 'objectives_achieved': objectives_achieved,
-            'objectives_total': objectives_total, 'month': month, 'year': year,
+            'id': report.id,
+            'report_text': report_text,
+            'avg_score': avg_score,
+            'sessions_count': len(sessions),
+            'objectives_achieved': objectives_achieved,
+            'objectives_total': objectives_total,
+            'month': month,
+            'year': year,
         }
 
     def generate_quarterly_report(self, patient_id, therapist_id, year, quarter):
@@ -390,19 +435,26 @@ class ReportService:
         quarter_start_dt = datetime(year, quarter_start.month, 1)
         quarter_end_dt = datetime(quarter_end.year, quarter_end.month, quarter_end.day) + timedelta(days=1)
 
-        sessions = Appointment.query.filter(
-            Appointment.patient_id == patient_id,
-            Appointment.therapist_id == therapist_id,
-            Appointment.start_time >= quarter_start_dt,
-            Appointment.start_time < quarter_end_dt,
-            Appointment.status == 'completed'
-        ).order_by(Appointment.start_time.asc()).all()
+        sessions = (
+            Appointment.query.filter(
+                Appointment.patient_id == patient_id,
+                Appointment.therapist_id == therapist_id,
+                Appointment.start_time >= quarter_start_dt,
+                Appointment.start_time < quarter_end_dt,
+                Appointment.status == 'completed',
+            )
+            .order_by(Appointment.start_time.asc())
+            .all()
+        )
 
         session_ids = [s.id for s in sessions]
-        audits = SessionAudit.query.filter(
-            SessionAudit.appointment_id.in_(session_ids),
-            SessionAudit.audit_score.isnot(None)
-        ).all() if session_ids else []
+        audits = (
+            SessionAudit.query.filter(
+                SessionAudit.appointment_id.in_(session_ids), SessionAudit.audit_score.isnot(None)
+            ).all()
+            if session_ids
+            else []
+        )
 
         scores = [a.audit_score for a in audits if a.audit_score is not None]
         avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
@@ -418,30 +470,29 @@ class ReportService:
                         objectives_achieved += 1
 
         patient = User.query.get(patient_id)
-        patient_name = patient.username if patient else f"ID {patient_id}"
+        patient_name = patient.username if patient else f'ID {patient_id}'
 
         report_lines = [
-            f"Reporte Trimestral - {patient_name}",
-            f"Periodo: {quarter_start.strftime('%d/%m/%Y')} - {quarter_end.strftime('%d/%m/%Y')}",
-            "",
-            "--- Resumen ---",
-            f"Total de sesiones: {len(sessions)}",
-            f"Score promedio: {avg_score}%",
+            f'Reporte Trimestral - {patient_name}',
+            f'Periodo: {quarter_start.strftime("%d/%m/%Y")} - {quarter_end.strftime("%d/%m/%Y")}',
+            '',
+            '--- Resumen ---',
+            f'Total de sesiones: {len(sessions)}',
+            f'Score promedio: {avg_score}%',
         ]
         if objectives_total > 0:
-            report_lines.append(f"Objetivos logrados: {objectives_achieved}/{objectives_total}")
+            report_lines.append(f'Objetivos logrados: {objectives_achieved}/{objectives_total}')
         else:
-            report_lines.append("Objetivos: N/A")
-        report_lines.extend(["", "--- Detalle de Sesiones ---"])
+            report_lines.append('Objetivos: N/A')
+        report_lines.extend(['', '--- Detalle de Sesiones ---'])
         for s in sessions:
             audit = next((a for a in audits if a.appointment_id == s.id), None)
-            score_str = f"Score: {audit.audit_score}%" if audit and audit.audit_score else "Sin auditoria"
-            report_lines.append(f"- {s.start_time.strftime('%d/%m %H:%M')} | {s.title or 'Sesion'} | {score_str}")
-        report_text = "\n".join(report_lines)
+            score_str = f'Score: {audit.audit_score}%' if audit and audit.audit_score else 'Sin auditoria'
+            report_lines.append(f'- {s.start_time.strftime("%d/%m %H:%M")} | {s.title or "Sesion"} | {score_str}')
+        report_text = '\n'.join(report_lines)
 
         report = QuarterlyReport.query.filter_by(
-            patient_id=patient_id, therapist_id=therapist_id,
-            quarter=quarter, year=year
+            patient_id=patient_id, therapist_id=therapist_id, quarter=quarter, year=year
         ).first()
         if not report:
             report = QuarterlyReport(patient_id=patient_id, therapist_id=therapist_id, quarter=quarter, year=year)
@@ -454,9 +505,14 @@ class ReportService:
         db.session.commit()
 
         return {
-            'id': report.id, 'report_text': report_text, 'avg_score': avg_score,
-            'sessions_count': len(sessions), 'objectives_achieved': objectives_achieved,
-            'objectives_total': objectives_total, 'quarter': quarter, 'year': year,
+            'id': report.id,
+            'report_text': report_text,
+            'avg_score': avg_score,
+            'sessions_count': len(sessions),
+            'objectives_achieved': objectives_achieved,
+            'objectives_total': objectives_total,
+            'quarter': quarter,
+            'year': year,
         }
 
     def generate_all_monthly_reports(self, year, month):
@@ -469,7 +525,7 @@ class ReportService:
                     report = self.generate_monthly_report(patient.id, therapist.id, year, month)
                     generated.append(report)
                 except Exception as e:
-                    logger.warning(f"Monthly report error {therapist.id}/{patient.id}: {e}")
+                    logger.warning(f'Monthly report error {therapist.id}/{patient.id}: {e}')
         return generated
 
     def generate_all_quarterly_reports(self, year, quarter):
@@ -482,7 +538,7 @@ class ReportService:
                     report = self.generate_quarterly_report(patient.id, therapist.id, year, quarter)
                     generated.append(report)
                 except Exception as e:
-                    logger.warning(f"Quarterly report error {therapist.id}/{patient.id}: {e}")
+                    logger.warning(f'Quarterly report error {therapist.id}/{patient.id}: {e}')
         return generated
 
     def get_monthly_summary(self, year, month):
@@ -491,19 +547,29 @@ class ReportService:
         for r in reports:
             therapist = User.query.get(r.therapist_id)
             patient = User.query.get(r.patient_id)
-            tname = therapist.username if therapist else f"ID {r.therapist_id}"
-            pname = patient.username if patient else f"ID {r.patient_id}"
+            tname = therapist.username if therapist else f'ID {r.therapist_id}'
+            pname = patient.username if patient else f'ID {r.patient_id}'
             if tname not in by_therapist:
-                by_therapist[tname] = {'therapist_id': r.therapist_id, 'patients': [], 'total_sessions': 0, 'avg_score': 0}
-            by_therapist[tname]['patients'].append({
-                'patient_id': r.patient_id, 'patient_name': pname,
-                'avg_score': r.avg_score, 'sessions_count': r.sessions_count,
-                'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
-            })
+                by_therapist[tname] = {
+                    'therapist_id': r.therapist_id,
+                    'patients': [],
+                    'total_sessions': 0,
+                    'avg_score': 0,
+                }
+            by_therapist[tname]['patients'].append(
+                {
+                    'patient_id': r.patient_id,
+                    'patient_name': pname,
+                    'avg_score': r.avg_score,
+                    'sessions_count': r.sessions_count,
+                    'objectives_achieved': r.objectives_achieved,
+                    'objectives_total': r.objectives_total,
+                }
+            )
             by_therapist[tname]['total_sessions'] += r.sessions_count
-        for tname in by_therapist:
-            scores = [p['avg_score'] for p in by_therapist[tname]['patients'] if p['avg_score']]
-            by_therapist[tname]['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
+        for _tname, tdata in by_therapist.items():
+            scores = [p['avg_score'] for p in tdata['patients'] if p['avg_score']]
+            tdata['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
         return {'month': month, 'year': year, 'by_therapist': by_therapist, 'total_reports': len(reports)}
 
     def get_quarterly_summary(self, year, quarter):
@@ -512,17 +578,27 @@ class ReportService:
         for r in reports:
             therapist = User.query.get(r.therapist_id)
             patient = User.query.get(r.patient_id)
-            tname = therapist.username if therapist else f"ID {r.therapist_id}"
-            pname = patient.username if patient else f"ID {r.patient_id}"
+            tname = therapist.username if therapist else f'ID {r.therapist_id}'
+            pname = patient.username if patient else f'ID {r.patient_id}'
             if tname not in by_therapist:
-                by_therapist[tname] = {'therapist_id': r.therapist_id, 'patients': [], 'total_sessions': 0, 'avg_score': 0}
-            by_therapist[tname]['patients'].append({
-                'patient_id': r.patient_id, 'patient_name': pname,
-                'avg_score': r.avg_score, 'sessions_count': r.sessions_count,
-                'objectives_achieved': r.objectives_achieved, 'objectives_total': r.objectives_total,
-            })
+                by_therapist[tname] = {
+                    'therapist_id': r.therapist_id,
+                    'patients': [],
+                    'total_sessions': 0,
+                    'avg_score': 0,
+                }
+            by_therapist[tname]['patients'].append(
+                {
+                    'patient_id': r.patient_id,
+                    'patient_name': pname,
+                    'avg_score': r.avg_score,
+                    'sessions_count': r.sessions_count,
+                    'objectives_achieved': r.objectives_achieved,
+                    'objectives_total': r.objectives_total,
+                }
+            )
             by_therapist[tname]['total_sessions'] += r.sessions_count
-        for tname in by_therapist:
-            scores = [p['avg_score'] for p in by_therapist[tname]['patients'] if p['avg_score']]
-            by_therapist[tname]['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
+        for _tname, tdata in by_therapist.items():
+            scores = [p['avg_score'] for p in tdata['patients'] if p['avg_score']]
+            tdata['avg_score'] = round(sum(scores) / len(scores), 1) if scores else 0
         return {'quarter': quarter, 'year': year, 'by_therapist': by_therapist, 'total_reports': len(reports)}

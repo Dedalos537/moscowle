@@ -502,6 +502,7 @@ export class Reports implements OnInit, OnDestroy {
         },
         error: () => {
           this.dailyReportsLoading = false;
+          this.toastService.show('No se pudieron cargar los reportes diarios.', 'error');
           this.cdr.markForCheck();
         },
       }),

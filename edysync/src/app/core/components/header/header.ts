@@ -10,11 +10,12 @@ import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 import { Button } from '../../../shared/components/button/button';
+import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Button],
+  imports: [CommonModule, FontAwesomeModule, Button, PreferencesMenu],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

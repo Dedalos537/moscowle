@@ -498,7 +498,7 @@ def api_daily_reports():
         from app.services.report_service import ReportService
 
         rs = ReportService()
-        reports = rs.get_daily_reports(start, end)
+        reports = rs.sync_daily_reports_for_range(start, end)
         return jsonify({'success': True, 'data': reports})
     except Exception as e:
         current_app.logger.error(f'Error fetching daily reports: {str(e)}')

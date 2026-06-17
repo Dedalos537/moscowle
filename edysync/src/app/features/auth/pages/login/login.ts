@@ -7,12 +7,12 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FloatingUiService } from '../../../../core/services/floating-ui.service';
 import { Alert } from '../../../../shared/components/alert/alert';
-import { ChartsToggle } from '../../../../shared/components/charts-toggle/charts-toggle';
+import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, ChartsToggle],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, PreferencesMenu],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,7 +29,6 @@ export class Login implements OnInit, OnDestroy {
 
   alertMessage = '';
   alertType: 'success' | 'error' | 'warning' | 'info' = 'info';
-  darkMode = false;
   emailError = '';
   passwordError = '';
 
@@ -53,8 +52,6 @@ export class Login implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.darkMode = document.documentElement.classList.contains('dark') ||
-                    localStorage.getItem('theme') === 'dark';
     this.subs.add(this.route.queryParams.subscribe(params => {
       if (params['logout'] === 'success') {
         this.alertType = 'success';
@@ -166,17 +163,6 @@ export class Login implements OnInit, OnDestroy {
     this.showHelp = !this.showHelp;
     if (this.showHelp) {
       this.dismissGuide();
-    }
-  }
-
-  toggleDarkMode() {
-    this.darkMode = !this.darkMode;
-    if (this.darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
     }
   }
 

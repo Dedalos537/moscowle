@@ -1,17 +1,6 @@
 <main role="main" class="flex min-h-screen items-center justify-center p-4 bg-background transition-colors duration-300">
 
-  <app-charts-toggle></app-charts-toggle>
-
-  <button (click)="toggleDarkMode()"
-    class="fixed top-5 right-5 w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 shadow-soft border z-50 cursor-pointer bg-surface-container-lowest text-on-surface-variant border-border hover:bg-surface-container-high"
-    [title]="darkMode ? 'Modo Claro' : 'Modo Oscuro'"
-    [attr.aria-label]="darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
-    @if (darkMode) {
-      <fa-icon [icon]="['fas', 'sun']" class="text-lg text-warning"></fa-icon>
-    } @else {
-      <fa-icon [icon]="['fas', 'moon']" class="text-lg"></fa-icon>
-    }
-  </button>
+  <app-preferences-menu [fixed]="true"></app-preferences-menu>
 
   <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300" role="region" aria-label="Formulario de inicio de sesión">
 

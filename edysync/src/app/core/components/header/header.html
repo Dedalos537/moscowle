@@ -24,6 +24,8 @@
       </div>
     }
 
+    <app-preferences-menu></app-preferences-menu>
+
     <div class="relative">
       <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
         <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0"></fa-icon>
