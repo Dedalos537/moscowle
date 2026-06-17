@@ -1,37 +1,35 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { BeaconService, BeaconStep } from 'ng-beacon';
 import { WIZARD_STEPS } from '../config/wizard-steps.config';
-import { WizardStep } from '../models/wizard-step.model';
 import { ContextDetectorService } from './context-detector.service';
 
 @Injectable({ providedIn: 'root' })
 export class WizardService {
+  private beaconService = inject(BeaconService);
   private contextDetector = inject(ContextDetectorService);
 
   private readonly STORAGE_KEY = 'edysync_wizard_completed';
 
-  private isActive = signal(false);
-  private currentIndex = signal(0);
-  private dismissed = signal(false);
-
-  steps = computed<WizardStep[]>(() => {
+  steps = computed<BeaconStep[]>(() => {
     const ctx = this.contextDetector.context();
     if (!ctx.role || !ctx.route) return [];
 
     return WIZARD_STEPS
       .filter(w => w.route === ctx.route && (!w.role || w.role === ctx.role))
-      .flatMap(w => w.steps);
+      .flatMap(w => w.steps.map(s => ({
+        id: `${ctx.route}_${s.title.replace(/\s+/g, '_').toLowerCase()}`,
+        title: s.title,
+        content: s.description,
+        position: (s.position === 'left' ? 'start' : s.position === 'right' ? 'end' : s.position === 'center' ? 'center' : s.position === 'top' ? 'above' : 'below') as 'above' | 'below' | 'start' | 'end' | 'center',
+        selector: s.selector,
+        showWithoutTarget: s.position === 'center',
+      })));
   });
 
-  active = signal(false);
-  currentStepIndex = signal(0);
-  currentStep = computed<WizardStep | null>(() => {
-    const s = this.steps();
-    const i = this.currentStepIndex();
-    return s.length > 0 && i < s.length ? s[i] : null;
-  });
-
-  totalSteps = computed(() => this.steps().length);
-  isLastStep = computed(() => this.currentStepIndex() >= this.steps().length - 1);
+  active = this.beaconService.isActive;
+  currentStepIndex = computed(() => this.beaconService.currentStepIndex() ?? 0);
+  totalSteps = this.beaconService.totalSteps;
+  isLastStep = this.beaconService.isLastStep;
 
   isPageCompleted(route: string, role: string): boolean {
     try {
@@ -63,37 +61,26 @@ export class WizardService {
     if (ctx.role && ctx.route) {
       this.markPageCompleted(ctx.route, ctx.role);
     }
-    this.currentStepIndex.set(0);
-    this.dismissed.set(false);
-    this.active.set(true);
+    const steps = this.steps();
+    if (steps.length > 0) {
+      this.beaconService.start(steps);
+    }
   }
 
   next(): void {
-    if (this.currentStepIndex() < this.steps().length - 1) {
-      this.currentStepIndex.update(i => i + 1);
-    }
+    this.beaconService.next();
   }
 
   prev(): void {
-    if (this.currentStepIndex() > 0) {
-      this.currentStepIndex.update(i => i - 1);
-    }
+    this.beaconService.prev();
   }
 
   finish(): void {
-    this.active.set(false);
-    this.currentStepIndex.set(0);
-    this.dismissed.set(true);
+    this.beaconService.stop();
   }
 
   dismiss(): void {
-    this.active.set(false);
-    this.currentStepIndex.set(0);
-    this.dismissed.set(true);
-  }
-
-  resetDismissed(): void {
-    this.dismissed.set(false);
+    this.beaconService.stop();
   }
 
   resetAll(): void {
@@ -104,8 +91,6 @@ export class WizardService {
     } catch {
       // localStorage unavailable
     }
-    this.dismissed.set(false);
-    this.active.set(false);
-    this.currentStepIndex.set(0);
+    this.beaconService.stop();
   }
 }

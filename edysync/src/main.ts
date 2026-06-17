@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideRouter, Routes } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { importProvidersFrom, ErrorHandler } from '@angular/core';
+import { provideBeacon } from 'ng-beacon';
 import * as Sentry from '@sentry/angular';
 
 import { App } from './app/app';
@@ -64,6 +65,7 @@ bootstrapApplication(App, {
     provideRouter(routes),
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),
+    provideBeacon({ backdropColor: 'rgba(0, 0, 0, 0.55)' }),
     importProvidersFrom(SharedModule, CoreModule),
     { provide: ErrorHandler, useValue: Sentry.createErrorHandler() },
   ]

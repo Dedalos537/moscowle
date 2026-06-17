@@ -294,6 +294,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 --------------------------------------------------------------------------------
+Package: ng-beacon
+License: "MIT"
+
+
+--------------------------------------------------------------------------------
 Package: rxjs
 License: "Apache-2.0"
 
@@ -498,7 +503,7 @@ License: "Apache-2.0"
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
- 
+
 
 --------------------------------------------------------------------------------
 Package: tslib

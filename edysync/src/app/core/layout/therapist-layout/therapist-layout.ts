@@ -9,7 +9,7 @@ import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
 import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
-import { WizardOverlay } from '../../../shared/contextual-help/components/wizard-overlay/wizard-overlay';
+import { BeaconOverlay } from 'ng-beacon';
 import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { Button } from '../../../shared/components/button/button';
@@ -17,7 +17,7 @@ import { Button } from '../../../shared/components/button/button';
 @Component({
   selector: 'app-therapist-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, HelpButton, HelpPanel, WizardOverlay],
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, HelpButton, HelpPanel, BeaconOverlay],
   templateUrl: './therapist-layout.html',
   styleUrl: './therapist-layout.scss',
   animations: [routeAnimations],

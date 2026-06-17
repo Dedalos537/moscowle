@@ -32,6 +32,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "chart.js": "^4.5.1",
     "dompurify": "^3.4.8",
+    "ng-beacon": "^0.1.0",
     "ng2-charts": "^10.0.0",
     "postcss": "^8.5.10",
     "rxjs": "~7.8.0",

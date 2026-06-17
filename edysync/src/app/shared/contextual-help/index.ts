@@ -1,7 +1,6 @@
 export { ContextualHelpModule } from './contextual-help.module';
 export { HelpButton } from './components/help-button/help-button';
 export { HelpPanel } from './components/help-panel/help-panel';
-export { WizardOverlay } from './components/wizard-overlay/wizard-overlay';
 export { HelpStateService } from './services/help-state.service';
 export { ContextDetectorService } from './services/context-detector.service';
 export { HelpContentService } from './services/help-content.service';
