@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -48,6 +48,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   private wizardService = inject(WizardService);
 
   isOpen = false;
+  fullScreen = false;
   messages: ChatMessage[] = [];
   inputMessage = '';
   loading = false;
@@ -83,9 +84,21 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.subs.unsubscribe();
   }
 
+  @HostBinding('class.fullscreen') get fullScreenClass() { return this.fullScreen; }
+
   @HostListener('document:keydown.escape')
   onEscape() {
-    if (this.isOpen) this.togglePanel();
+    if (this.fullScreen) {
+      this.fullScreen = false;
+      this.cdr.markForCheck();
+    } else if (this.isOpen) {
+      this.togglePanel();
+    }
+  }
+
+  toggleFullScreen() {
+    this.fullScreen = !this.fullScreen;
+    this.cdr.markForCheck();
   }
 
   togglePanel() {
@@ -248,6 +261,28 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      let content = reader.result as string;
+      if (file.type === 'application/pdf' || file.name.endsWith('.docx')) {
+        content = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      }
+      this.inputMessage = content;
+      this.cdr.markForCheck();
+      this.sendMessage();
+    };
+    if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsDataURL(file);
+    }
+    input.value = '';
   }
 
   private scrollToBottom() {

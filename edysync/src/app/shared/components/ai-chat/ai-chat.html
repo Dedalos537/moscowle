@@ -21,9 +21,14 @@
           <p>Asistente IA</p>
         </div>
       </div>
-      <button class="chat-close" (click)="togglePanel()">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
-      </button>
+      <div class="chat-header-actions">
+        <button class="chat-expand" (click)="toggleFullScreen()" [title]="fullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'">
+          <fa-icon [icon]="['fas', fullScreen ? 'compress' : 'expand']"></fa-icon>
+        </button>
+        <button class="chat-close" (click)="togglePanel()">
+          <fa-icon [icon]="['fas', 'times']"></fa-icon>
+        </button>
+      </div>
     </div>
 
     <div class="chat-messages" #scrollContainer>
@@ -88,6 +93,10 @@
     }
 
     <div class="chat-input-area">
+      <label class="chat-attach" [title]="'Subir archivo'">
+        <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+        <input type="file" (change)="onFileSelected($event)" hidden>
+      </label>
       <textarea
         class="chat-input"
         [(ngModel)]="inputMessage"
