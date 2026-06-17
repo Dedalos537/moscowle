@@ -522,7 +522,29 @@ def api_weekly_summary():
 
         rs = ReportService()
         summary = rs.get_weekly_summary(week_start)
-        return jsonify({'success': True, 'data': summary})
+        by_therapist = []
+        for tname, tdata in summary.get('by_therapist', {}).items():
+            entry = {
+                'therapist_id': tdata.get('therapist_id'),
+                'therapist_name': tname,
+                'patients': tdata.get('patients', []),
+                'total_sessions': tdata.get('total_sessions', 0),
+                'avg_score': tdata.get('avg_score', 0),
+            }
+            for p in entry['patients']:
+                p['efficiency'] = round((p.get('avg_score', 0) or 0) * 0.5, 1)
+            by_therapist.append(entry)
+        return jsonify(
+            {
+                'success': True,
+                'data': {
+                    'week_start': summary.get('week_start'),
+                    'week_end': summary.get('week_end'),
+                    'by_therapist': by_therapist,
+                    'total_reports': summary.get('total_reports', 0),
+                },
+            }
+        )
     except Exception as e:
         current_app.logger.error(f'Error fetching weekly summary: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500

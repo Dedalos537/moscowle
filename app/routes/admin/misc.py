@@ -236,38 +236,27 @@ def api_therapist_efficiency():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
-        from app.models import Appointment, SessionMetrics
+        from app.services.dashboard_service import DashboardService
 
         therapist_id = request.args.get('therapist_id', type=int)
-        query = (
-            db.session.query(
-                User.id.label('therapist_id'),
-                User.username,
-                sqlfunc.count(Appointment.id).label('total'),
-                sqlfunc.avg(SessionMetrics.accurracy).label('avg_accuracy'),
-                sqlfunc.count(sqlfunc.nullif(Appointment.status, 'cancelled')).label('completed'),
-            )
-            .join(User, Appointment.therapist_id == User.id)
-            .outerjoin(SessionMetrics, SessionMetrics.session_id == Appointment.id)
-            .filter(User.role == 'terapista')
+        ds = DashboardService()
+        therapists = (
+            [User.query.get(therapist_id)]
+            if therapist_id
+            else User.query.filter_by(role='terapista', is_active=True).all()
         )
-        if therapist_id:
-            query = query.filter(User.id == therapist_id)
-        rows = query.group_by(User.id).all()
-        total_sessions = max(sum(r.total for r in rows), 1) if rows else 1
         breakdown = []
-        for r in rows:
-            completion = (r.completed / r.total * 100) if r.total else 0
-            accuracy = r.avg_accuracy or 0
-            efficiency = round((completion * 0.4 + accuracy * 0.6), 1)
+        for t in therapists:
+            if not t:
+                continue
+            eff = ds.get_therapist_efficiency(t.id)
             breakdown.append(
                 {
-                    'therapist_id': r.therapist_id,
-                    'name': r.username,
-                    'total_sessions': r.total,
-                    'completed': r.completed,
-                    'avg_accuracy': round(accuracy, 1),
-                    'efficiency': efficiency,
+                    'therapist_id': t.id,
+                    'therapist_name': t.username,
+                    'audit_score': eff.get('avg_audit_score', 0),
+                    'feedback_score': eff.get('avg_feedback_score', 0),
+                    'efficiency': eff.get('efficiency', 0),
                 }
             )
         overall = round(sum(e['efficiency'] for e in breakdown) / len(breakdown), 1) if breakdown else 0
