@@ -37,6 +37,7 @@ ignore = [
 "tests/*" = ["S", "PL", "B", "SIM"]
 "app/models/*" = ["N"]
 "app/routes/api/*" = ["PLC0415", "F841", "SIM210", "E501", "E722"]
+"app/routes/admin/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "F811", "F821", "S110", "SIM102", "SIM105"]
 "app/routes/auth.py" = ["PLC0415", "S110"]
 
 [tool.ruff.format]

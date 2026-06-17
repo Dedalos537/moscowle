@@ -236,8 +236,25 @@ export class Reports implements OnInit, OnDestroy {
       icon: ['fas', 'chart-bar'],
       actionTemplate: this.headerActions,
     });
+    this.initReportDateDefaults();
     this.loadData();
+    this.loadWeeklySummary();
+    this.loadDailyReports();
     this.loadEfficiency();
+  }
+
+  private initReportDateDefaults() {
+    const today = new Date();
+    const monday = new Date(today);
+    const day = monday.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(monday.getDate() + diff);
+    this.selectedWeekStart = monday.toISOString().split('T')[0];
+
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 6);
+    this.dailyEndDate = today.toISOString().split('T')[0];
+    this.dailyStartDate = weekAgo.toISOString().split('T')[0];
   }
 
   ngOnDestroy() {
@@ -544,8 +561,16 @@ export class Reports implements OnInit, OnDestroy {
   }
 
   get therapistWeeklyPatients(): any[] {
-    if (!this.weeklySummary?.by_therapist) return [];
-    return this.weeklySummary.by_therapist;
+    const bt = this.weeklySummary?.by_therapist;
+    if (!bt) return [];
+    if (Array.isArray(bt)) return bt;
+    return Object.entries(bt).map(([name, data]: [string, any]) => ({
+      therapist_id: data.therapist_id,
+      therapist_name: name,
+      patients: data.patients || [],
+      total_sessions: data.total_sessions || 0,
+      avg_score: data.avg_score || 0,
+    }));
   }
 
   // ─── Monthly / Quarterly Reports ────────────────────────
