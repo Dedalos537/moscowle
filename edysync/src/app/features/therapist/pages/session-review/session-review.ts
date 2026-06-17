@@ -630,7 +630,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.auditRunning = false;
-        this.error = err.message;
+        const msg = err?.error?.error || err?.message || 'Error al ejecutar la auditoría';
+        this.toastService.show(msg, 'error');
         this.cdr.markForCheck();
       },
     }));

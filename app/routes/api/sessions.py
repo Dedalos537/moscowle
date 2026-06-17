@@ -553,7 +553,16 @@ def complete_session(session_id):
 
         audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
         if audit and audit.planned_text and audit.transcript_text and audit.audit_status == 'pending':
-            threading.Thread(target=run_audit, args=(session_id,), daemon=True).start()
+            app_obj = current_app._get_current_object()
+
+            def _run_bg_audit(sid):
+                with app_obj.app_context():
+                    try:
+                        run_audit(sid)
+                    except Exception as exc:
+                        app_obj.logger.error('auto audit failed for %s: %s', sid, exc)
+
+            threading.Thread(target=_run_bg_audit, args=(session_id,), daemon=True).start()
     except Exception as exc:
         current_app.logger.debug('auto audit trigger failed: %s', exc)
 
@@ -915,6 +924,7 @@ def upload_session_audio(appointment_id):
         return jsonify({'success': False, 'error': f'Error al transcribir: {str(e)}'}), 500
 
 
+@api_bp.route('/sessions/<int:appointment_id>/audit', methods=['POST'])
 @login_required
 def trigger_session_audit(appointment_id):
     """Disparar auditoría IA: programación vs transcripción"""
@@ -937,16 +947,20 @@ def trigger_session_audit(appointment_id):
         therapist_name = appt.therapist.username if appt and appt.therapist else 'Desconocido'
         patient_name = appt.patient.username if appt and appt.patient else 'Desconocido'
         score_str = f' — Puntuación: {score}/100' if score is not None else ''
-        from app.services.notification_service import NotificationService
 
-        ns = NotificationService()
-        msg_admin = f'Auditoría completada: {therapist_name} / {patient_name}{score_str}'
-        admins = User.query.filter_by(role='admin').all()
-        for admin in admins:
-            ns.create_notification(admin.id, msg_admin)
-        msg_therapist = f'Auditoría completada para {patient_name}{score_str}'
-        if appt and appt.therapist_id:
-            ns.create_notification(appt.therapist_id, msg_therapist)
+        try:
+            from app.services.notification_service import NotificationService
+
+            ns = NotificationService()
+            msg_admin = f'Auditoría completada: {therapist_name} / {patient_name}{score_str}'[:255]
+            admins = User.query.filter_by(role='admin').all()
+            for admin in admins:
+                ns.create_notification(admin.id, msg_admin)
+            msg_therapist = f'Auditoría completada para {patient_name}{score_str}'[:255]
+            if appt and appt.therapist_id:
+                ns.create_notification(appt.therapist_id, msg_therapist)
+        except Exception as notif_err:
+            current_app.logger.warning('Notificaciones post-auditoría omitidas: %s', notif_err)
 
         if appt and score is not None:
             try:
@@ -975,38 +989,52 @@ def get_session_audit(appointment_id):
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
-    from app.models import SessionAudit
+    try:
+        from app.models import SessionAudit
 
-    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
-    if not audit:
-        return jsonify({'success': True, 'exists': False, 'message': 'No hay registro de auditoría para esta sesión'})
+        audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+        if not audit:
+            return jsonify(
+                {'success': True, 'exists': False, 'message': 'No hay registro de auditoría para esta sesión'}
+            )
 
-    return jsonify(
-        {
-            'success': True,
-            'exists': True,
-            'audit': {
-                'id': audit.id,
-                'has_program': bool(audit.planned_text),
-                'has_transcript': bool(audit.transcript_text),
-                'planned_text_preview': (audit.planned_text[:300] + '...')
-                if audit.planned_text and len(audit.planned_text) > 300
-                else audit.planned_text,
-                'transcript_preview': (audit.transcript_text[:300] + '...')
-                if audit.transcript_text and len(audit.transcript_text) > 300
-                else audit.transcript_text,
-                'planned_text': audit.planned_text,
-                'transcript_text': audit.transcript_text,
-                'audio_duration_seconds': audit.audio_duration_seconds,
-                'audit_status': audit.audit_status,
-                'audit_score': audit.audit_score,
-                'report': audit.get_report() if audit.audit_status == 'completed' else None,
-                'docx_uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
-                'audio_transcribed_at': audit.audio_transcribed_at.isoformat() if audit.audio_transcribed_at else None,
-                'audited_at': audit.audited_at.isoformat() if audit.audited_at else None,
-            },
-        }
-    )
+        return jsonify(
+            {
+                'success': True,
+                'exists': True,
+                'audit': {
+                    'id': audit.id,
+                    'has_program': bool(audit.planned_text),
+                    'has_transcript': bool(audit.transcript_text),
+                    'planned_text_preview': (audit.planned_text[:300] + '...')
+                    if audit.planned_text and len(audit.planned_text) > 300
+                    else audit.planned_text,
+                    'transcript_preview': (audit.transcript_text[:300] + '...')
+                    if audit.transcript_text and len(audit.transcript_text) > 300
+                    else audit.transcript_text,
+                    'planned_text': audit.planned_text,
+                    'transcript_text': audit.transcript_text,
+                    'audio_duration_seconds': audit.audio_duration_seconds,
+                    'audit_status': audit.audit_status,
+                    'audit_score': audit.audit_score,
+                    'report': audit.get_report() if audit.audit_status == 'completed' else None,
+                    'docx_uploaded_at': audit.docx_uploaded_at.isoformat() if audit.docx_uploaded_at else None,
+                    'audio_transcribed_at': audit.audio_transcribed_at.isoformat()
+                    if audit.audio_transcribed_at
+                    else None,
+                    'audited_at': audit.audited_at.isoformat() if audit.audited_at else None,
+                    'feedback_engagement': audit.feedback_engagement,
+                    'feedback_progress': audit.feedback_progress,
+                    'feedback_notes': audit.feedback_notes,
+                    'feedback_submitted_at': audit.feedback_submitted_at.isoformat()
+                    if audit.feedback_submitted_at
+                    else None,
+                },
+            }
+        )
+    except Exception as e:
+        current_app.logger.error('Error obteniendo auditoría %s: %s', appointment_id, e, exc_info=True)
+        return jsonify({'success': False, 'error': 'No se pudo cargar la auditoría'}), 500
 
 
 @api_bp.route('/sessions/<int:appointment_id>/compare-live', methods=['GET'])

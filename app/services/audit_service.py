@@ -262,7 +262,7 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
             response_format={'type': 'json_object'},
         )
 
-        raw_content = response.choices[0].message.content.strip()
+        raw_content = (response.choices[0].message.content or '').strip()
 
         report = json.loads(raw_content)
 
@@ -319,9 +319,8 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
 
     except json.JSONDecodeError as e:
         audit.audit_status = 'error'
-        audit.audit_report_json = json.dumps(
-            {'error': 'El LLM no devolvió JSON válido', 'raw_response': raw_content[:500]}
-        )
+        raw_preview = (locals().get('raw_content') or '')[:500]
+        audit.audit_report_json = json.dumps({'error': 'El LLM no devolvió JSON válido', 'raw_response': raw_preview})
         db.session.commit()
         logger.error(f'Error parseando JSON de Llama: {e}')
         raise ValueError(f'Error al procesar respuesta de IA: {str(e)}')

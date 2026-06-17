@@ -38,6 +38,7 @@ ignore = [
 "app/models/*" = ["N"]
 "app/routes/api/*" = ["PLC0415", "F841", "SIM210", "E501", "E722"]
 "app/routes/admin/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "F811", "F821", "S110", "SIM102", "SIM105"]
+"app/services/audit_service.py" = ["PLC0415", "B904", "E501", "E741", "PLW2901"]
 "app/__init__.py" = ["PLC0415", "F401", "F841", "SIM103", "SIM105", "S110", "E501", "N814"]
 "app/routes/auth.py" = ["PLC0415", "S110"]
 
