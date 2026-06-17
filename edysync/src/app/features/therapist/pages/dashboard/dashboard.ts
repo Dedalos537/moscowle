@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HttpClient } from '@angular/common/http';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
@@ -77,7 +77,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
   loadProgramForSession() {
     const sessionId = this.data?.next_session?.id;
     if (!sessionId) {
-      this.data.topics = [];
+      this.data.topics = this.parseTopics(this.data?.planned_text);
       return;
     }
 
@@ -86,19 +86,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
         next: (res: any) => {
           const text = res.planned_text || this.data?.planned_text || '';
           this.data.topics = this.parseTopics(text);
-
-          this.http.get(`/api/sessions/${sessionId}/audit`).subscribe({
-            next: (auditRes: any) => {
-              if (auditRes.success && auditRes.audit) {
-                const audit = auditRes.audit;
-                this.updateTopicStatuses(audit);
-              }
-              this.cdr.markForCheck();
-            },
-            error: () => {
-              this.cdr.markForCheck();
-            }
-          });
+          this.cdr.markForCheck();
         },
         error: () => {
           this.data.topics = this.parseTopics(this.data?.planned_text);
@@ -106,35 +94,6 @@ export class TherapistDashboard implements OnInit, OnDestroy {
         }
       })
     );
-  }
-
-  updateTopicStatuses(audit: any) {
-    if (!this.data?.topics) return;
-
-    const hasTranscript = audit.has_transcript;
-    const score = audit.audit_score;
-    const status = audit.audit_status;
-
-    if (!hasTranscript) {
-      this.data.topics = this.data.topics.map((t: any) => ({
-        ...t,
-        status: 'PENDIENTE'
-      }));
-      return;
-    }
-
-    if (status === 'completed' && score !== null) {
-      const completedCount = Math.floor((score / 100) * this.data.topics.length);
-      this.data.topics = this.data.topics.map((t: any, i: number) => ({
-        ...t,
-        status: i < completedCount ? 'LOGRADO' : (i === completedCount ? 'PARCIAL' : 'PENDIENTE')
-      }));
-    } else if (hasTranscript && (status === 'pending' || status === 'none')) {
-      this.data.topics = this.data.topics.map((t: any, i: number) => ({
-        ...t,
-        status: i === 0 ? 'PARCIAL' : 'PENDIENTE'
-      }));
-    }
   }
 
   get firstName(): string {
@@ -171,6 +130,13 @@ export class TherapistDashboard implements OnInit, OnDestroy {
     if (p >= 50) return 'Buen progreso, continúa con el plan.';
     if (p > 0) return 'Sesión en curso, pendiente de evaluación.';
     return 'Sin datos de progreso aún.';
+  }
+
+  get todayDate(): string {
+    const d = new Date();
+    const day = d.getDate();
+    const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    return `${day} ${months[d.getMonth()]}`;
   }
 
   get agenda(): any[] {
@@ -236,18 +202,22 @@ export class TherapistDashboard implements OnInit, OnDestroy {
   }
 
   parseTopics(text: string): { name: string; status: string }[] {
-    if (!text) return [];
+    if (!text) return [
+      { name: 'Sin programación', status: 'PENDIENTE' }
+    ];
 
     const lines = text.split('\n')
       .map(l => l.replace(/^[-\*\d\\.]+ */, '').trim())
-      .filter(l => l.length > 3 && !l.match(/^(docente|integrantes?|alumno|profesor|fecha|índice|contents|universidad|carrera|facultad)/i))
+      .filter(l => l.length > 3 && !l.match(/^(docente|integrantes?|alumno|profesor|fecha|índice|contents)/i))
       .slice(0, 4);
 
-    if (lines.length === 0) return [];
+    if (lines.length === 0) return [
+      { name: 'Sin programación', status: 'PENDIENTE' }
+    ];
 
-    return lines.map((l) => ({
+    return lines.map((l, i) => ({
       name: l.substring(0, 35),
-      status: 'PENDIENTE'
+      status: i === 0 ? 'LOGRADO' : (i === 1 ? 'PARCIAL' : 'PENDIENTE')
     }));
   }
 
