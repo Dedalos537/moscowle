@@ -1,7 +1,9 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, DestroyRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HelpStateService } from '../../services/help-state.service';
 import { HelpContentService } from '../../services/help-content.service';
 import { WizardService } from '../../services/wizard.service';
@@ -210,10 +212,25 @@ import { WizardService } from '../../services/wizard.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HelpPanel {
+export class HelpPanel implements OnInit {
   helpState = inject(HelpStateService);
   private wizardService = inject(WizardService);
+  private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
   helpContentService = inject(HelpContentService);
+
+  ngOnInit(): void {
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => {
+      setTimeout(() => {
+        if (this.wizardService.shouldAutoStart() && !this.helpState.panelOpen()) {
+          this.wizardService.start();
+        }
+      }, 800);
+    });
+  }
 
   close(): void {
     this.helpState.close();

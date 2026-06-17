@@ -7,6 +7,8 @@ import { ContextDetectorService } from './context-detector.service';
 export class WizardService {
   private contextDetector = inject(ContextDetectorService);
 
+  private readonly STORAGE_KEY = 'edysync_wizard_completed';
+
   private isActive = signal(false);
   private currentIndex = signal(0);
   private dismissed = signal(false);
@@ -31,7 +33,36 @@ export class WizardService {
   totalSteps = computed(() => this.steps().length);
   isLastStep = computed(() => this.currentStepIndex() >= this.steps().length - 1);
 
+  isPageCompleted(route: string, role: string): boolean {
+    try {
+      const key = `${this.STORAGE_KEY}_${role}_${route}`;
+      return localStorage.getItem(key) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  markPageCompleted(route: string, role: string): void {
+    try {
+      const key = `${this.STORAGE_KEY}_${role}_${route}`;
+      localStorage.setItem(key, 'true');
+    } catch {
+      // localStorage unavailable
+    }
+  }
+
+  shouldAutoStart(): boolean {
+    const ctx = this.contextDetector.context();
+    if (!ctx.role || !ctx.route) return false;
+    if (this.steps().length === 0) return false;
+    return !this.isPageCompleted(ctx.route, ctx.role);
+  }
+
   start(): void {
+    const ctx = this.contextDetector.context();
+    if (ctx.role && ctx.route) {
+      this.markPageCompleted(ctx.route, ctx.role);
+    }
     this.currentStepIndex.set(0);
     this.dismissed.set(false);
     this.active.set(true);
@@ -63,5 +94,18 @@ export class WizardService {
 
   resetDismissed(): void {
     this.dismissed.set(false);
+  }
+
+  resetAll(): void {
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith(this.STORAGE_KEY))
+        .forEach(k => localStorage.removeItem(k));
+    } catch {
+      // localStorage unavailable
+    }
+    this.dismissed.set(false);
+    this.active.set(false);
+    this.currentStepIndex.set(0);
   }
 }

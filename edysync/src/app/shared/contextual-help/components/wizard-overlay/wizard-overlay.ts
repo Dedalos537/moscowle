@@ -1,4 +1,4 @@
-import { Component, inject, AfterViewInit, effect, signal, ChangeDetectionStrategy, ElementRef } from '@angular/core';
+import { Component, inject, AfterViewInit, effect, signal, ChangeDetectionStrategy, ElementRef, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { WizardService } from '../../services/wizard.service';
@@ -128,7 +128,7 @@ import { WizardService } from '../../services/wizard.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WizardOverlay implements AfterViewInit {
+export class WizardOverlay implements AfterViewInit, OnDestroy {
   private wizardService = inject(WizardService);
   private elementRef = inject(ElementRef);
 
@@ -142,6 +142,7 @@ export class WizardOverlay implements AfterViewInit {
   isLastStep = this.wizardService.isLastStep;
 
   private resizeObserver: ResizeObserver | null = null;
+  private scrollHandler: (() => void) | null = null;
 
   constructor() {
     effect(() => {
@@ -162,6 +163,17 @@ export class WizardOverlay implements AfterViewInit {
     this.resizeObserver.observe(document.body);
   }
 
+  ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.wizardService.active()) {
+      this.dismiss();
+    }
+  }
+
   private positionHighlight(): void {
     const step = this.wizardService.currentStep();
     if (!step) return;
@@ -178,6 +190,8 @@ export class WizardOverlay implements AfterViewInit {
       this.tooltipStyle.set({ top: '40%', left: '50%', transform: 'translate(-50%,-50%)' });
       return;
     }
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
     const rect = el.getBoundingClientRect();
 
