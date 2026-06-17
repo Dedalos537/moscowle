@@ -33,6 +33,7 @@ export class Sidebar implements OnInit, OnDestroy {
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
+  showHelp = false;
 
   private subs = new Subscription();
 
@@ -93,5 +94,10 @@ export class Sidebar implements OnInit, OnDestroy {
 
   toggleDarkMode() {
     this.themeService.toggle();
+  }
+
+  toggleHelp() {
+    this.showHelp = !this.showHelp;
+    this.cdr.markForCheck();
   }
 }

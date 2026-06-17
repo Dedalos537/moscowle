@@ -237,6 +237,7 @@ export class Reports implements OnInit, OnDestroy {
       actionTemplate: this.headerActions,
     });
     this.loadData();
+    this.loadEfficiency();
   }
 
   ngOnDestroy() {
