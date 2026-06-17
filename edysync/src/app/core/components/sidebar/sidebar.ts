@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
+import { GlobalSettingsService } from '../../services/global-settings.service';
 import { Subscription } from 'rxjs';
 import { Button } from '../../../shared/components/button/button';
 
@@ -13,6 +14,7 @@ interface NavItem {
   label: string;
   icon: IconProp;
   supervisor?: boolean;
+  hideWhenNoCharts?: boolean;
 }
 
 @Component({
@@ -24,6 +26,9 @@ interface NavItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Sidebar implements OnInit, OnDestroy {
+  private settings = inject(GlobalSettingsService);
+  hideCharts = this.settings.hideCharts;
+
   theme: string = 'light';
   userRole: string = '';
   error: string | null = null;
@@ -36,7 +41,7 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/sessions', label: 'Sesiones Globales', icon: ['fas', 'calendar-alt'], supervisor: true },
     { path: '/admin/users', label: 'Admin Usuarios', icon: ['fas', 'users'] },
     { path: '/admin/sedes', label: 'Sedes', icon: ['fas', 'building'], supervisor: true },
-    { path: '/admin/finanzas', label: 'Finanzas', icon: ['fas', 'university'], supervisor: true },
+    { path: '/admin/finanzas', label: 'Finanzas', icon: ['fas', 'university'], supervisor: true, hideWhenNoCharts: true },
 
     { path: '/admin/games', label: 'Admin Juegos', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', icon: ['fas', 'chart-bar'], supervisor: true },
@@ -45,11 +50,20 @@ export class Sidebar implements OnInit, OnDestroy {
   ];
 
   get navItems(): NavItem[] {
+    let items = this.allItems;
     if (this.userRole === 'supervisor') {
-      return this.allItems.filter(i => i.supervisor);
+      items = items.filter(i => i.supervisor);
     }
-    return this.allItems;
+    if (this.hideCharts()) {
+      items = items.filter(i => !i.hideWhenNoCharts);
+    }
+    return items;
   }
+
+  private hideChartsEffect = effect(() => {
+    this.hideCharts();
+    this.cdr.markForCheck();
+  });
 
   constructor(
     private auth: AuthService,

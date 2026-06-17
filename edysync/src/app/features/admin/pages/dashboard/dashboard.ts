@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -6,6 +6,7 @@ import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/anim
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
+import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { Sede } from '../../../../core/models/sede';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
@@ -50,6 +51,9 @@ interface DailyPending {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard implements OnInit, OnDestroy {
+  private settings = inject(GlobalSettingsService);
+  hideCharts = this.settings.hideCharts;
+
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   summary = { therapists: 0, patients: 0, sessions_total: '-' as string | number, avg_accuracy: '-' as string | number };
