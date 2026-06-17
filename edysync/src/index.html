@@ -57,5 +57,43 @@
       </div>
     </div>
   </app-root>
+  <script>
+    (function () {
+      var removed = false;
+      function removeInitSplash() {
+        if (removed) return;
+        var el = document.getElementById('initSplash');
+        if (el) {
+          el.remove();
+          removed = true;
+        }
+      }
+      function booted() {
+        return !!document.querySelector('#email, router-outlet, app-splash-screen');
+      }
+      document.addEventListener('DOMContentLoaded', function () {
+        var root = document.querySelector('app-root');
+        if (root) {
+          var obs = new MutationObserver(function () {
+            if (booted()) {
+              removeInitSplash();
+              obs.disconnect();
+            }
+          });
+          obs.observe(root, { childList: true, subtree: true });
+        }
+        setTimeout(removeInitSplash, 2500);
+        setTimeout(function () {
+          if (!booted()) {
+            var key = 'edysync_boot_retry';
+            if (!sessionStorage.getItem(key)) {
+              sessionStorage.setItem(key, '1');
+              location.reload();
+            }
+          }
+        }, 8000);
+      });
+    })();
+  </script>
 </body>
 </html>

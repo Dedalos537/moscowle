@@ -30,6 +30,10 @@ export class App implements OnInit, OnDestroy {
   ngOnInit() {
     this.floatingUi.attach();
     this.recordingService.iniciarPolleo();
+
+    // Siempre ocultar splash aunque falle auth o la sesión quede colgada
+    setTimeout(() => { this.splashReady = true; }, 1200);
+
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       this.authService.verifySession().subscribe({
@@ -49,7 +53,6 @@ export class App implements OnInit, OnDestroy {
         if (user?.role === 'terapista') {
           this.recordingService.onUserAuthenticated();
         }
-        setTimeout(() => { this.splashReady = true; }, 800);
       })
     );
   }
