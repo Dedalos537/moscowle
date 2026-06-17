@@ -1,16 +1,26 @@
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_jwt_cookies, verify_jwt_in_request
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt,
+    get_jwt_identity,
+    set_access_cookies,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+    verify_jwt_in_request,
+)
 from flask_wtf.csrf import generate_csrf
+
 from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, csrf, db, limiter
+from app.models.password_reset import PasswordReset
+from app.models.refresh_token import RefreshToken
+from app.models.user import User
 from app.schemas.auth_schema import validate_login_input
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailService
-from app.models.refresh_token import RefreshToken
-from app.models.password_reset import PasswordReset
-from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
@@ -26,7 +36,7 @@ def _auto_start_session(user):
 
         upcoming = Appointment.query.filter(
             Appointment.therapist_id == user.id,
-            Appointment.status == 'scheduled',
+            Appointment.status.in_(['scheduled', 'in_progress']),
             Appointment.start_time <= now,
             Appointment.end_time >= now,
         ).all()
@@ -38,8 +48,8 @@ def _auto_start_session(user):
                 db.session.add(audit)
         if upcoming:
             db.session.commit()
-    except Exception:
-        pass
+    except Exception as exc:
+        current_app.logger.debug('auto_start_session failed: %s', exc)
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -92,6 +102,7 @@ def _safe_next_url(target):
     host = urlparse(request.host_url)
     ref = urlparse(urljoin(request.host_url, target))
     return ref.scheme in ('http', 'https') and host.netloc == ref.netloc
+
 
 @auth_bp.route('/logout')
 @login_required
@@ -200,7 +211,6 @@ def api_auth_me():
 @auth_bp.route('/api/auth/refresh', methods=['POST'])
 @csrf.exempt
 def api_auth_refresh():
-    from flask_jwt_extended import get_jwt
     try:
         verify_jwt_in_request(refresh=True, locations=['cookies'])
         identity = get_jwt_identity()
@@ -282,12 +292,16 @@ def api_reset_password_confirm():
         if len(new_password) < 8:
             return jsonify({'success': False, 'error': 'La contraseña debe tener al menos 8 caracteres'}), 400
 
-        record = PasswordReset.query.filter(
-            PasswordReset.email == email,
-            PasswordReset.code == code,
-            PasswordReset.status == 'pending',
-            PasswordReset.expires_at > datetime.utcnow(),
-        ).order_by(PasswordReset.created_at.desc()).first()
+        record = (
+            PasswordReset.query.filter(
+                PasswordReset.email == email,
+                PasswordReset.code == code,
+                PasswordReset.status == 'pending',
+                PasswordReset.expires_at > datetime.utcnow(),
+            )
+            .order_by(PasswordReset.created_at.desc())
+            .first()
+        )
 
         if not record:
             return jsonify({'success': False, 'error': 'Código inválido o expirado'}), 400

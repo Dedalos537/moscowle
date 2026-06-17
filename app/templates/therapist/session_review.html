@@ -31,13 +31,13 @@
 <div class="flex items-center gap-2">
     <!-- Save (Icon only on mobile, text on desktop) -->
     <button onclick="saveNotes()" id="btnSave" class="h-10 px-4 bg-surface-container-lowest border border-outline-variant text-on-surface rounded-full hover:bg-surface-container-low transition-all shadow-sm font-medium flex items-center justify-center gap-2" title="Guardar cambios">
-        <i class="fas fa-save text-primary"></i> 
+        <i class="fas fa-save text-primary"></i>
         <span class="hidden md:inline">Guardar</span>
     </button>
-    
+
     <!-- File Check Input -->
     <input type="file" id="uploadImageInput" class="hidden" accept="image/*,.doc,.docx" onchange="uploadImage(this)">
-    
+
     <!-- Upload File (Round button) -->
     <button onclick="document.getElementById('uploadImageInput').click()" class="w-10 h-10 bg-surface-container-lowest border border-outline-variant text-on-surface rounded-full hover:bg-surface-container-low transition-all shadow-sm flex items-center justify-center" title="Subir archivo">
         <i class="fas fa-file-upload text-on-surface-variant hover:text-primary transition-colors"></i>
@@ -51,7 +51,7 @@
 
     <!-- Camera (Primary Round button) -->
     <button onclick="openCameraModal()" id="btnCamera" class="h-10 px-4 md:px-5 bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-sm shadow-slate-200/50 font-medium flex items-center gap-2">
-        <i class="fas fa-camera"></i> 
+        <i class="fas fa-camera"></i>
         <span class="hidden md:inline">Cámara</span>
     </button>
 </div>
@@ -59,12 +59,12 @@
 
 {% block content %}
 <div class="p-6 md:p-8 h-auto lg:h-[calc(100vh-140px)] flex flex-col">
-    
+
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-full">
-        
+
         <!-- Left Column: Context & Notes (4 cols) -->
         <div class="lg:col-span-4 flex flex-col gap-6 h-auto lg:h-full overflow-visible lg:overflow-hidden">
-            
+
             <!-- Session Info Card -->
             <div class="bg-surface-container-lowest rounded-2xl shadow-sm shadow-slate-200/50 p-5 shrink-0 border border-outline-variant">
                 <div class="flex justify-between items-start mb-4">
@@ -82,7 +82,7 @@
                         <i class="fas fa-info-circle"></i>
                     </div>
                 </div>
-                
+
                 <div class="space-y-3 pt-3 border-t border-gray-50">
                     <div>
                         <p class="text-xs text-on-surface-variant/70 uppercase tracking-wider font-bold mb-2">Juegos Asignados</p>
@@ -100,13 +100,13 @@
                     <div class="pt-3 border-t border-gray-50">
                         <p class="text-xs text-on-surface-variant/70 uppercase tracking-wider font-bold mb-2">Asistencia</p>
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="setAttendance('present')" 
+                            <button onclick="setAttendance('present')"
                                 class="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 hover:shadow-sm
                                 {% if appointment.attendance == 'present' %}bg-green-100 text-green-700 border-green-200 ring-2 ring-green-500 ring-opacity-20 border
                                 {% else %}bg-surface-container-low text-on-surface-variant hover:bg-green-50 border border-outline-variant{% endif %}">
                                 <i class="fas fa-check-circle"></i> Asistió
                             </button>
-                            <button onclick="setAttendance('absent')" 
+                            <button onclick="setAttendance('absent')"
                                 class="px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 hover:shadow-sm
                                 {% if appointment.attendance == 'absent' %}bg-red-100 text-red-700 border-red-200 ring-2 ring-red-500 ring-opacity-20 border
                                 {% else %}bg-surface-container-low text-on-surface-variant hover:bg-red-50 border border-outline-variant{% endif %}">
@@ -126,11 +126,11 @@
                     <span class="text-xs text-on-surface-variant/70 italic" id="lastSaved">Sin cambios pendientes</span>
                 </div>
                 <div class="flex-grow relative group">
-                    <textarea id="sessionNotes" 
+                    <textarea id="sessionNotes"
                         class="w-full h-full p-5 resize-none focus:outline-none text-on-surface leading-relaxed bg-transparent"
                         style="font-size: 0.95rem;"
                         placeholder="Escribe aquí las observaciones detalladas de la sesión, progreso del paciente, y recomendaciones...">{{ appointment.notes or '' }}</textarea>
-                    
+
                     <!-- Save hint -->
                     <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <span class="text-xs text-gray-300 bg-surface-container-lowest px-2 py-1 rounded shadow-sm border border-outline-variant">Auto-guardado habilitado</span>
@@ -147,16 +147,16 @@
                 </h3>
                 <span class="text-xs font-medium bg-surface-container text-on-surface-variant px-2 py-1 rounded-md">{{ images|length }} archivos</span>
             </div>
-            
+
             <!-- Main Viewer -->
             <div class="flex-grow bg-surface-container-low relative flex items-center justify-center overflow-hidden p-2 md:p-6 group select-none rounded-b-lg md:rounded-b-none md:rounded-tr-lg min-h-[300px] md:min-h-0 w-full">
                 {% if images %}
                     <div class="relative w-full h-full flex items-center justify-center">
-                        <img src="{{ url_for('static', filename=images[0].image_path) }}" 
+                        <img src="{{ url_for('static', filename=images[0].image_path) }}"
                              class="max-w-full max-h-full object-contain shadow-lg rounded-lg transition-transform duration-300"
                              id="currentImage"
                              data-id="{{ images[0].id }}"> <!-- Added data-id for deletion -->
-                        
+
                         <!-- Actions Overlay -->
                         <div class="absolute top-4 right-4 flex gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0">
                              <button onclick="toggleFullscreen()" class="w-10 h-10 bg-surface-container-lowest/90 backdrop-blur-sm text-on-surface rounded-full shadow-lg hover:bg-surface-container-lowest hover:text-primary transition-all flex items-center justify-center" title="Pantalla completa">
@@ -188,13 +188,13 @@
                 {% for img in images %}
                     <div class="relative group cursor-pointer shrink-0 h-16 w-20 rounded-lg overflow-hidden border-2 {% if loop.first %}border-primary ring-2 ring-primary ring-opacity-20{% else %}border-transparent{% endif %} hover:border-primary transition-all thumbnail-item"
                          onclick="showImage('{{ url_for('static', filename=img.image_path) }}', {{ img.id }}, this)">
-                        <img src="{{ url_for('static', filename=img.image_path) }}" 
+                        <img src="{{ url_for('static', filename=img.image_path) }}"
                              class="w-full h-full object-cover transition-opacity duration-200 {% if not loop.first %}opacity-60 group-hover:opacity-100{% endif %}">
                     </div>
                 {% endfor %}
-                
+
                 <!-- Add button in strip -->
-                <button onclick="document.getElementById('uploadImageInput').click()" 
+                <button onclick="document.getElementById('uploadImageInput').click()"
                         class="shrink-0 h-16 w-16 rounded-lg border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-on-surface-variant/70 hover:text-primary hover:border-primary hover:bg-green-50 transition-all gap-1 group">
                     <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">add</span>
                 </button>
@@ -216,7 +216,7 @@
     <div class="text-center">
         <p class="text-white text-2xl font-bold font-mono" id="recordTimer">00:00</p>
         <p class="text-white/70 text-sm mt-1">Grabando sesion...</p>
-        <p class="text-white/50 text-xs mt-1" id="chunkInfo">Segmento 1 (cada 5 min)</p>
+        <p class="text-white/50 text-xs mt-1" id="chunkInfo">Grabación continua (bloques de 5 min)</p>
     </div>
     <button onclick="toggleRecording()" class="mt-4 px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-lg transition-all flex items-center gap-2">
         <i class="fas fa-stop"></i> Detener y Transcribir
@@ -278,7 +278,7 @@
         <div class="relative w-full flex-grow bg-black overflow-hidden flex items-center justify-center">
             <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
             <canvas id="cameraCanvas" class="hidden"></canvas>
-            
+
             <!-- Guides overlay -->
             <div class="absolute inset-0 border border-white/20 pointer-events-none m-6 rounded-2xl opacity-50">
                 <!-- Corners -->
@@ -286,11 +286,11 @@
                 <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-lg"></div>
                 <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-lg"></div>
                 <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-lg"></div>
-                
+
                 <!-- Center point -->
                 <div class="absolute top-1/2 left-1/2 w-2 h-2 bg-surface-container-lowest/50 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
             </div>
-            
+
             <div class="absolute top-4 left-0 right-0 text-center pointer-events-none">
                  <span class="px-3 py-1 bg-black/50 backdrop-blur-md text-white/90 text-xs font-medium rounded-full border border-white/10">
                     Alinea el documento
@@ -304,17 +304,17 @@
             <button onclick="closeCameraModal()" class="w-12 h-12 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-surface-container-lowest/10 transition-colors">
                 <span class="material-symbols-outlined  text-[32px]">close</span>
             </button>
-            
+
             <!-- Shutter Button -->
             <button onclick="takePhoto()" class="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-transparent hover:scale-105 active:scale-95 transition-all duration-200 shadow-[0_0_20px_rgba(255,255,255,0.3)] group">
                  <div class="w-16 h-16 bg-surface-container-lowest rounded-full group-active:scale-90 transition-transform duration-150"></div>
             </button>
-            
+
             <!-- Gallery/Spacer (placeholder for future upload from camera roll) -->
             <div class="w-12 h-12 flex items-center justify-center rounded-full text-white/50">
                  <!-- Could be switch camera icon later -->
-                  <i class="fas fa-camera-rotate  opacity-0 text-[32px]"></i> 
-            </div> 
+                  <i class="fas fa-camera-rotate  opacity-0 text-[32px]"></i>
+            </div>
         </div>
     </div>
 </div>
@@ -322,10 +322,12 @@
 <script>
 const appointmentId = {{ appointment.id }};
 const csrfToken = "{{ csrf_token() }}";
+const sessionEndTime = {{ appointment.end_time.timestamp() * 1000 if appointment.end_time else 'null' }};
+const sessionStatus = "{{ appointment.status }}";
 let saveTimeout;
 let videoStream = null;
+let autoStopTimer = null;
 
-// ═══ Audio Recording State ═══
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingStartTime = null;
@@ -352,7 +354,7 @@ function performUpload(file) {
     // Show loading state on camera button just in case
     const btn = document.getElementById('btnCamera');
     const originalContent = btn ? btn.innerHTML : '';
-    
+
     // Create toast notification
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-4 right-4 bg-primary text-white px-4 py-3 rounded-2xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-up';
@@ -373,7 +375,7 @@ function performUpload(file) {
         if (data.success) {
             toast.innerHTML = '<i class="fas fa-check"></i> Imagen subida correctamente';
             toast.classList.replace('bg-primary', 'bg-green-500');
-            setTimeout(() => location.reload(), 1000); 
+            setTimeout(() => location.reload(), 1000);
         } else {
             alert('Error: ' + data.error);
             toast.remove();
@@ -391,13 +393,13 @@ function performUpload(file) {
 async function openCameraModal() {
     const modal = document.getElementById('cameraModal');
     const video = document.getElementById('cameraVideo');
-    
+
     try {
-        videoStream = await navigator.mediaDevices.getUserMedia({ 
+        videoStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment' } // Prefer back camera
         });
         video.srcObject = videoStream;
-        
+
         modal.classList.remove('hidden');
         document.body.classList.add('overflow-hidden');
         // Small delay to allow display:block to apply before opacity transition
@@ -412,16 +414,16 @@ async function openCameraModal() {
 
 function closeCameraModal() {
     const modal = document.getElementById('cameraModal');
-    
+
     // Animation out
     modal.classList.add('opacity-0');
-    
+
     // Stop stream
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
-    
+
     setTimeout(() => {
         modal.classList.add('hidden');
         document.body.classList.remove('overflow-hidden');
@@ -432,7 +434,7 @@ function takePhoto() {
     const video = document.getElementById('cameraVideo');
     const canvas = document.getElementById('cameraCanvas');
     const context = canvas.getContext('2d');
-    
+
     // Check if video is playing
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
         alert("La cámara aún se está iniciando...");
@@ -442,10 +444,10 @@ function takePhoto() {
     // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
+
     // Draw video frame to canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
+
     // Convert to blob and upload
     canvas.toBlob(blob => {
         if (blob) {
@@ -469,7 +471,7 @@ function showImage(url, id, element) {
             img.style.opacity = '1';
         }, 150);
     }
-    
+
     // Update active state in thumbnails
     document.querySelectorAll('.thumbnail-item').forEach(el => {
         el.classList.remove('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
@@ -477,7 +479,7 @@ function showImage(url, id, element) {
         el.querySelector('img').classList.add('opacity-60');
         el.querySelector('img').classList.remove('opacity-100');
     });
-    
+
     if (element) {
         element.classList.remove('border-transparent');
         element.classList.add('border-primary', 'ring-2', 'ring-primary', 'ring-opacity-20');
@@ -489,17 +491,17 @@ function showImage(url, id, element) {
 function deleteCurrentImage() {
     const img = document.getElementById('currentImage');
     if (!img) return;
-    
+
     const imageId = img.dataset.id;
     if (!imageId) return;
-    
+
     if (!confirm('¿Estás seguro de eliminar esta imagen? Esta acción no se puede deshacer.')) return;
-    
+
     // Show deleting state (optional)
     img.style.opacity = '0.3';
-    
+
     const deleteUrl = "{{ url_for('api.delete_session_image', appointment_id=appointment.id, image_id=0) }}".replace('0', imageId);
-    
+
     fetch(deleteUrl, {
         method: 'DELETE',
         headers: {
@@ -526,13 +528,13 @@ function toggleFullscreen() {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('fullscreenImage');
     const currentImg = document.getElementById('currentImage');
-    
+
     // Guard against empty state or null element
     if (!currentImg) return;
-    
+
     img.src = currentImg.src;
     modal.classList.remove('hidden');
-    
+
     // Animation frame for transition
     requestAnimationFrame(() => {
         modal.classList.remove('opacity-0');
@@ -544,11 +546,11 @@ function toggleFullscreen() {
 function closeFullscreen() {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('fullscreenImage');
-    
+
     modal.classList.add('opacity-0');
     img.classList.remove('scale-100');
     img.classList.add('scale-95');
-    
+
     setTimeout(() => {
         modal.classList.add('hidden');
     }, 300);
@@ -589,7 +591,7 @@ function saveNotes() {
     const notes = document.getElementById('sessionNotes').value;
     const btn = document.getElementById('btnSave');
     const statusLabel = document.getElementById('lastSaved');
-    
+
     const originalContent = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i> <span class="hidden sm:inline">Guardando...</span>';
     btn.disabled = true;
@@ -607,7 +609,7 @@ function saveNotes() {
         btn.innerHTML = '<span class="material-symbols-outlined text-green-500">check</span> <span class="hidden sm:inline">Guardado</span>';
         statusLabel.textContent = 'Guardado a las ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         statusLabel.classList.add('text-green-600');
-        
+
         setTimeout(() => {
             btn.innerHTML = originalContent;
             btn.disabled = false;
@@ -633,8 +635,7 @@ if (notesArea) {
     });
 }
 
-// AUDIO RECORDING — Chunked every 5 min (Web Audio API > Whisper/Groq)
-const CHUNK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const CHUNK_INTERVAL_MS = 5 * 60 * 1000;
 let chunkCount = 0;
 let chunkTimer = null;
 let isRecordingSession = false;
@@ -658,42 +659,66 @@ async function startRecording() {
 
         recordingStartTime = Date.now();
 
-        // UI: Show recording state
+        fetch(`/api/sessions/${appointmentId}/start-recording`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken }
+        }).catch(() => {});
+
         const btn = document.getElementById('btnRecord');
         btn.classList.add('bg-red-500', 'border-red-500', 'text-white');
         btn.classList.remove('bg-surface-container-lowest', 'text-on-surface');
         document.getElementById('recordIcon').className = 'fas fa-stop text-white';
         document.getElementById('recordLabel').textContent = 'Detener';
 
-        // Show overlay
         const overlay = document.getElementById('recordingOverlay');
         overlay.classList.remove('hidden');
         requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
 
-        // Start timer
         recordingTimerInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
             const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const secs = String(elapsed % 60).padStart(2, '0');
             document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
-            // Show chunk info
             const chunkInfo = document.getElementById('chunkInfo');
-            if (chunkInfo) chunkInfo.textContent = `Segmento ${chunkCount + 1} (cada 5 min)`;
+            if (chunkInfo) chunkInfo.textContent = `Bloque ${chunkCount + 1} (cada 5 min)`;
         }, 1000);
 
-        // Schedule chunk uploads every 5 minutes
         chunkTimer = setInterval(() => {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                // Stop current chunk, upload it, start new one
                 mediaRecorder.stop();
-                // startNewChunk will be called after onstop fires and upload is queued
             }
         }, CHUNK_INTERVAL_MS);
+
+        scheduleAutoStop();
 
     } catch (err) {
         console.error('Error accessing microphone:', err);
         alert('No se pudo acceder al microfono. Verifica los permisos del navegador.');
     }
+}
+
+function scheduleAutoStop() {
+    if (autoStopTimer) clearTimeout(autoStopTimer);
+    if (!sessionEndTime) return;
+    const msLeft = sessionEndTime - Date.now() + 60000;
+    if (msLeft <= 0) {
+        finishAndAudit();
+        return;
+    }
+    autoStopTimer = setTimeout(() => {
+        finishAndAudit();
+    }, msLeft);
+}
+
+function finishAndAudit() {
+    if (!isRecordingSession) return;
+    stopRecording();
+    fetch(`/api/sessions/${appointmentId}/complete`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken }
+    }).then(() => {
+        triggerAudit();
+    }).catch(() => {});
 }
 
 function startNewChunk() {
@@ -938,11 +963,23 @@ function triggerAudit() {
     });
 }
 
-// Load program section and audit panel on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadAuditPanel();
     loadProgramSection();
+    maybeAutoStartRecording();
 });
+
+function maybeAutoStartRecording() {
+    if (isRecordingSession) return;
+    const validStatuses = ['scheduled', 'in_progress'];
+    if (!validStatuses.includes(sessionStatus)) return;
+    if (!sessionEndTime) return;
+    const now = Date.now();
+    const startThreshold = sessionEndTime - (90 * 60 * 1000);
+    if (now >= startThreshold && now < sessionEndTime + 60000) {
+        startRecording();
+    }
+}
 
 function loadProgramSection() {
     fetch(`/api/sessions/${appointmentId}/program`, {

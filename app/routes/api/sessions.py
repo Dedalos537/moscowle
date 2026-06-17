@@ -1,3 +1,5 @@
+import tempfile
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -21,10 +23,10 @@ from app.routes.api._shared import (
     request,
     secure_filename,
     timedelta,
-    timezone,
     url_for,
     uuid,
 )
+from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 from app.utils.sanitizer import sanitize_text
 
 
@@ -546,8 +548,8 @@ def complete_session(session_id):
         audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
         if audit and audit.planned_text and audit.transcript_text and audit.audit_status == 'pending':
             threading.Thread(target=run_audit, args=(session_id,), daemon=True).start()
-    except Exception:
-        pass
+    except Exception as exc:
+        current_app.logger.debug('auto audit trigger failed: %s', exc)
 
     metrics = SessionMetrics.query.filter_by(user_id=appt.patient_id, session_id=session_id).all()
     if not metrics:
@@ -588,8 +590,8 @@ def complete_session(session_id):
         notification_service.create_notification(
             appt.patient_id, 'Sesión completada. ¡Buen trabajo!', link=url_for('patient.progress')
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        current_app.logger.debug('completion notifications failed: %s', exc)
 
     return jsonify({'status': 'ok', 'updated_profile': existing})
 
@@ -771,7 +773,8 @@ def upload_session_program(appointment_id):
         from app.services.audit_service import extract_docx_text
 
         temp_filename = f'temp_program_{uuid.uuid4().hex}.docx'
-        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audit')
+        upload_root = current_app.config.get('UPLOAD_FOLDER') or tempfile.gettempdir()
+        temp_dir = os.path.join(upload_root, 'temp_audit')
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, temp_filename)
         file.save(temp_path)
@@ -816,7 +819,7 @@ def upload_session_program(appointment_id):
 @login_required
 @csrf.exempt
 def completar_sesiones_vencidas():
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+    cutoff = datetime.utcnow() - timedelta(minutes=5)
     expired = Appointment.query.filter(Appointment.status == 'in_progress', Appointment.end_time < cutoff).all()
     count = 0
     for appt in expired:
@@ -856,7 +859,8 @@ def upload_session_audio(appointment_id):
         from app.services.audit_service import transcribe_audio
 
         temp_filename = f'session_audio_{appointment_id}_{uuid.uuid4().hex}.{ext}'
-        temp_dir = os.path.join(current_app.config.get('UPLOAD_FOLDER', '/tmp'), 'temp_audio')
+        upload_root = current_app.config.get('UPLOAD_FOLDER') or tempfile.gettempdir()
+        temp_dir = os.path.join(upload_root, 'temp_audio')
         os.makedirs(temp_dir, exist_ok=True)
         temp_path = os.path.join(temp_dir, temp_filename)
         file.save(temp_path)
@@ -899,12 +903,11 @@ def upload_session_audio(appointment_id):
             if 'temp_path' in locals() and os.path.exists(temp_path):
                 os.remove(temp_path)
                 current_app.logger.info(f' Audio eliminado tras error: {temp_path}')
-        except Exception:
-            pass
+        except OSError as exc:
+            current_app.logger.debug('temp audio cleanup failed: %s', exc)
         return jsonify({'success': False, 'error': f'Error al transcribir: {str(e)}'}), 500
 
 
-@api_bp.route('/sessions/<int:appointment_id>/audit', methods=['POST'])
 @login_required
 def trigger_session_audit(appointment_id):
     """Disparar auditoría IA: programación vs transcripción"""
@@ -1083,6 +1086,25 @@ def get_session_program(appointment_id):
     )
 
 
+@api_bp.route('/sessions/<int:appointment_id>/objectives', methods=['GET'])
+@login_required
+def get_session_objectives(appointment_id):
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+
+    from app.models import SessionAudit
+
+    audit = SessionAudit.query.filter_by(appointment_id=appointment_id).first()
+    if not audit or not audit.planned_text:
+        return jsonify({'success': True, 'objectives': []})
+
+    objectives = parse_objectives(audit.planned_text)
+    if audit.audit_status == 'completed':
+        enrich_objectives_from_audit(objectives, audit.audit_report_json)
+
+    return jsonify({'success': True, 'objectives': objectives})
+
+
 @api_bp.route('/sessions/<int:session_id>/start-recording', methods=['POST'])
 @login_required
 def start_session_recording(session_id):
@@ -1233,6 +1255,12 @@ def api_session_briefing(session_id):
 
     audit = SessionAudit.query.filter_by(appointment_id=session_id).first()
 
+    objectives = []
+    if audit and audit.planned_text:
+        objectives = parse_objectives(audit.planned_text)
+        if audit.audit_status == 'completed':
+            enrich_objectives_from_audit(objectives, audit.audit_report_json)
+
     return jsonify(
         {
             'success': True,
@@ -1240,8 +1268,8 @@ def api_session_briefing(session_id):
                 'id': appt.id,
                 'title': appt.title or 'Sesión',
                 'status': appt.status,
-                'start_time': appt.start_time.isoformat() if appt.start_time else None,
-                'end_time': appt.end_time.isoformat() if appt.end_time else None,
+                'start_time': appt.start_time.isoformat() + 'Z' if appt.start_time else None,
+                'end_time': appt.end_time.isoformat() + 'Z' if appt.end_time else None,
                 'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
                 'location': appt.location,
             },
@@ -1251,9 +1279,10 @@ def api_session_briefing(session_id):
                 if audit and audit.planned_text and len(audit.planned_text) > 2000
                 else (audit.planned_text if audit else None),
                 'uploaded_at': audit.docx_uploaded_at.isoformat() if audit and audit.docx_uploaded_at else None,
+                'objectives': objectives,
             }
             if audit
-            else {'has_program': False},
+            else {'has_program': False, 'objectives': []},
             'recording': {
                 'has_transcript': bool(audit and audit.transcript_text),
                 'transcript_preview': (audit.transcript_text[:500] + '...')
@@ -1273,7 +1302,7 @@ def api_session_briefing(session_id):
 def api_current_session():
     if current_user.role not in ('terapista', 'admin', 'supervisor'):
         return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.utcnow()
     from sqlalchemy import or_
 
     appt = (
@@ -1320,8 +1349,8 @@ def api_current_session():
             'session': {
                 'id': appt.id,
                 'title': appt.title or 'Sesión',
-                'start': appt.start_time.isoformat() if appt.start_time else None,
-                'end': appt.end_time.isoformat() if appt.end_time else None,
+                'start': appt.start_time.isoformat() + 'Z' if appt.start_time else None,
+                'end': appt.end_time.isoformat() + 'Z' if appt.end_time else None,
                 'status': appt.status,
                 'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
                 'location': appt.location,
