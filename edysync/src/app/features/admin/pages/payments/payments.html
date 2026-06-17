@@ -182,7 +182,7 @@
         @if (activeTab === 'pacientes') {
       <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
 
-        <div class="flex flex-col gap-4 mb-6">
+        <div class="flex flex-col gap-3 mb-6">
           <div class="flex flex-col md:flex-row gap-3">
             <div class="relative flex-1">
               <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
@@ -194,25 +194,42 @@
                 class="input-field !pl-10"
               >
             </div>
-
-            <app-select (valueChange)="selectedSedeId = $event" [options]="sedeFilterOptions" class="min-w-[160px]"></app-select>
-
-            <app-select (valueChange)="selectedTherapistId = $event" [options]="therapistFilterOptions" class="min-w-[160px]"></app-select>
           </div>
 
-          <div class="flex flex-col md:flex-row gap-3">
-            <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions" class="min-w-[160px]"></app-select>
+          <div class="flex flex-col md:flex-row gap-3 items-end">
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'building']" class="text-[10px]"></fa-icon> Sede
+              </span>
+              <app-select (valueChange)="selectedSedeId = $event" [options]="sedeFilterOptions" placeholder="Todas" class="min-w-[150px]"></app-select>
+            </div>
 
-            <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" class="min-w-[180px]"></app-select>
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'user-doctor']" class="text-[10px]"></fa-icon> Terapeuta
+              </span>
+              <app-select (valueChange)="selectedTherapistId = $event" [options]="therapistFilterOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'circle-check']" class="text-[10px]"></fa-icon> Estado
+              </span>
+              <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'arrow-down-wide-short']" class="text-[10px]"></fa-icon> Ordenar
+              </span>
+              <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" placeholder="Por nombre" class="min-w-[170px]"></app-select>
+            </div>
 
             @if (activeFilterCount > 0) {
-              <div class="flex items-center gap-2 px-3 py-1.5 bg-primary-container/15 text-primary-container rounded-lg text-xs font-bold">
-                <fa-icon [icon]="['fas', 'filter']" class="text-[14px]"></fa-icon>
-                {{ activeFilterCount }} filtro{{ activeFilterCount > 1 ? 's' : '' }} activo{{ activeFilterCount > 1 ? 's' : '' }}
-                <button (click)="clearFilters()" class="ml-1 hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer">
-                  <fa-icon [icon]="['fas', 'times']" class="text-[14px]"></fa-icon>
-                </button>
-              </div>
+              <button (click)="clearFilters()" class="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer h-[38px]">
+                <fa-icon [icon]="['fas', 'filter-circle-xmark']" class="text-[13px]"></fa-icon>
+                Limpiar ({{ activeFilterCount }})
+              </button>
             }
           </div>
         </div>
