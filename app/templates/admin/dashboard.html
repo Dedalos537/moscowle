@@ -20,6 +20,9 @@
     <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-[10px] font-bold text-gray-500 uppercase tracking-widest">
         <i class="fas fa-globe text-primary"></i> {{ current_user.timezone or 'America/Lima' }}
     </div>
+    <button id="toggleHideCharts" onclick="toggleFinanceCharts()" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all cursor-pointer">
+        <i class="fas fa-chart-bar"></i> <span id="hideChartsLabel">Ocultar Gráficos</span>
+    </button>
 </div>
 {% endblock %}
 
@@ -195,7 +198,7 @@
   </div>
 
   <!-- Financial & Sedes Row -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="finance-section grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <!-- Chart: Ingresos vs Pendientes -->
       <div class="lg:col-span-2 bg-surface rounded-soft shadow-soft p-6 flex flex-col justify-between">
@@ -449,6 +452,23 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+function toggleFinanceCharts() {
+    const sections = document.querySelectorAll('.finance-section');
+    const label = document.getElementById('hideChartsLabel');
+    const hidden = localStorage.getItem('edysync_hide_charts') === 'true';
+    const next = !hidden;
+    localStorage.setItem('edysync_hide_charts', String(next));
+    sections.forEach(s => s.style.display = next ? 'none' : '');
+    label.textContent = next ? 'Mostrar Gráficos' : 'Ocultar Gráficos';
+}
+(function initFinanceToggle() {
+    const hidden = localStorage.getItem('edysync_hide_charts') === 'true';
+    if (hidden) {
+        document.querySelectorAll('.finance-section').forEach(s => s.style.display = 'none');
+        const label = document.getElementById('hideChartsLabel');
+        if (label) label.textContent = 'Mostrar Gráficos';
+    }
+})();
 function toggleGuidanceModal() {
     const modal = document.getElementById('guidanceModal');
     const container = document.getElementById('modalContainer');
