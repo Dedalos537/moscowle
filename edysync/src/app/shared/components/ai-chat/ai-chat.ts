@@ -2,8 +2,9 @@ import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewC
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { LlamaService, ChatMessage, ActionChip } from '../../../core/services/llama.service';
+import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
 import DOMPurify from 'dompurify';
 
@@ -31,6 +32,16 @@ const FA_ICON_MAP: Record<string, string> = {
   'exclamation-triangle': 'exclamation-triangle',
   'upload': 'upload',
   'key': 'key',
+  'check': 'check',
+  'times': 'times',
+  'spinner': 'spinner',
+  'search': 'search',
+  'plus': 'plus',
+  'trash': 'trash',
+  'edit': 'edit',
+  'envelope': 'envelope',
+  'ban': 'ban',
+  'toggle-on': 'toggle-on',
 };
 
 @Component({
@@ -54,6 +65,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   loading = false;
   hasUnread = false;
   error: string | null = null;
+  processingAction = false;
+  actionFeedback: { type: 'success' | 'error' | 'info'; message: string } | null = null;
 
   suggestions: string[] = [];
   actionChips: ActionChip[] = [];
@@ -64,6 +77,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   constructor(
     private llama: LlamaService,
+    private admin: AdminService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -156,13 +170,25 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.sendMessage();
   }
 
+  private showFeedback(type: 'success' | 'error' | 'info', message: string) {
+    this.actionFeedback = { type, message };
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      this.actionFeedback = null;
+      this.cdr.markForCheck();
+    }, 4000);
+  }
+
   handleActionChip(chip: ActionChip) {
+    if (this.processingAction) return;
+
     switch (chip.type) {
       case 'navigation':
         if (chip.target && ALLOWED_REDIRECT_PREFIXES.some(p => chip.target.startsWith(p))) {
           setTimeout(() => { window.location.href = chip.target; }, 300);
         }
         break;
+
       case 'wizard':
         this.isOpen = false;
         this.cdr.markForCheck();
@@ -175,22 +201,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           }, 1500);
         }, 400);
         break;
-      case 'modal':
-        this.messages.push({
-          role: 'assistant',
-          content: `Para <b>${chip.label.toLowerCase()}</b>, te redirijo a la página correspondiente donde podrás completar la acción.`,
-        });
-        break;
+
       case 'scroll':
         const el = document.querySelector(chip.target);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         break;
-      case 'filter':
-        this.messages.push({
-          role: 'assistant',
-          content: `Filtrando por: <b>${chip.label}</b>...`,
-        });
-        break;
+
       case 'action':
         if (chip.target === 'generateReport') {
           this.inputMessage = 'Generar reporte completo';
@@ -198,13 +214,62 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         } else if (chip.target === 'exportCSV') {
           const btn = document.querySelector('button[exportCSV]') as HTMLButtonElement;
           if (btn) btn.click();
-          this.messages.push({
-            role: 'assistant',
-            content: 'Exportación CSV iniciada.',
-          });
+          this.pushAssistant('Exportación CSV iniciada.');
+        } else {
+          this.inputMessage = chip.label || chip.target;
+          this.sendMessage();
         }
         break;
+
+      case 'confirm':
+        this.inputMessage = chip.label || 'Sí, confirmar';
+        this.sendMessage();
+        break;
+
+      case 'cancel':
+        this.messages.push({
+          role: 'assistant',
+          content: 'Acción cancelada. ¿Necesitas ayuda con algo más?',
+        });
+        this.cdr.markForCheck();
+        break;
+
+      case 'toggleUser':
+        this.execToggleUser(chip);
+        break;
+
+      default:
+        this.inputMessage = chip.label || chip.target || '';
+        if (this.inputMessage) this.sendMessage();
+        break;
     }
+    this.cdr.markForCheck();
+  }
+
+  private pushAssistant(content: string) {
+    this.messages.push({ role: 'assistant', content });
+    this.cdr.markForCheck();
+  }
+
+  private async execToggleUser(chip: ActionChip) {
+    const userId = parseInt(chip.target, 10);
+    if (!userId || isNaN(userId)) return;
+    this.processingAction = true;
+    this.showFeedback('info', 'Cambiando estado del usuario...');
+    try {
+      const res: any = await firstValueFrom(this.admin.toggleUserStatus(userId));
+      if (res?.success) {
+        this.showFeedback('success', res.message || 'Estado actualizado');
+        this.pushAssistant(`✅ Usuario actualizado: <b>${res.message || 'Estado cambiado correctamente'}</b>`);
+      } else {
+        this.showFeedback('error', res?.message || 'Error al cambiar estado');
+        this.pushAssistant(`❌ Error: ${res?.message || 'No se pudo cambiar el estado'}`);
+      }
+    } catch {
+      this.showFeedback('error', 'Error de conexión');
+      this.pushAssistant('❌ Error de conexión con el servidor');
+    }
+    this.processingAction = false;
     this.cdr.markForCheck();
   }
 

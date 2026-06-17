@@ -37,7 +37,10 @@ export class App implements OnInit, OnDestroy {
       });
     }
     this.sub.add(
-      this.authService.currentUser$.subscribe(() => {
+      this.authService.currentUser$.subscribe(user => {
+        if (user?.role === 'terapista') {
+          this.recordingService.onUserAuthenticated();
+        }
         setTimeout(() => { this.splashReady = true; }, 800);
       })
     );
