@@ -23,6 +23,9 @@ export class RecordingOverlay implements OnInit, OnDestroy {
   showAttendanceCheck: Observable<boolean>;
   attendanceCountdown: Observable<number>;
   auditScore: Observable<number | null>;
+  sessionGateActive: Observable<boolean>;
+  sessionGateMode: Observable<'late' | 'recording' | null>;
+  delayMinutes: Observable<number>;
 
   constructor(
     private recordingService: RecordingService,
@@ -36,6 +39,9 @@ export class RecordingOverlay implements OnInit, OnDestroy {
     this.showAttendanceCheck = this.recordingService.showAttendanceCheck$;
     this.attendanceCountdown = this.recordingService.attendanceCountdown$;
     this.auditScore = this.recordingService.auditScore$;
+    this.sessionGateActive = this.recordingService.sessionGateActive$;
+    this.sessionGateMode = this.recordingService.sessionGateMode$;
+    this.delayMinutes = this.recordingService.delayMinutes$;
   }
 
   ngOnInit() {}
@@ -59,5 +65,13 @@ export class RecordingOverlay implements OnInit, OnDestroy {
 
   markAbsent() {
     this.recordingService.markPatientAbsent();
+  }
+
+  startLateSession() {
+    this.recordingService.confirmLateSessionStart();
+  }
+
+  getLateDelayLabel(): string {
+    return this.recordingService.getLateDelayLabel();
   }
 }

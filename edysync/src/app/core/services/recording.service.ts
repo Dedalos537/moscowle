@@ -2,6 +2,8 @@ import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, interval, Subscription } from 'rxjs';
 
+export type SessionGateMode = 'late' | 'recording' | null;
+
 @Injectable({ providedIn: 'root' })
 export class RecordingService {
   activeSession$ = new BehaviorSubject<any>(null);
@@ -16,8 +18,12 @@ export class RecordingService {
   attendanceCountdown$ = new BehaviorSubject<number>(120);
   auditScore$ = new BehaviorSubject<number | null>(null);
   pendingLateSession$ = new BehaviorSubject<any>(null);
+  sessionGateActive$ = new BehaviorSubject<boolean>(false);
+  sessionGateMode$ = new BehaviorSubject<SessionGateMode>(null);
+  delayMinutes$ = new BehaviorSubject<number>(0);
 
   private pollSubscription?: Subscription;
+  private focusHandler?: () => void;
   private recorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
   private chunkTimer: any;
@@ -28,14 +34,14 @@ export class RecordingService {
   private recordingStartTime: number = 0;
   private chunkCount: number = 0;
   private audioChunks: Blob[] = [];
-  private checkedSessions: Set<number> = new Set();
-  private dismissedSessions: Set<number> = new Set();
+  private startedSessions: Set<number> = new Set();
   private readonly chunkIntervalMs = 5 * 60 * 1000;
   private currentSessionId: number | null = null;
   private pendingUploads = 0;
   private finishPending = false;
   private finishSessionId: number | null = null;
   private finishSessionTitle = '';
+  private markedAbsent = false;
 
   constructor(
     private http: HttpClient,
@@ -45,23 +51,26 @@ export class RecordingService {
   iniciarPolleo() {
     this.detenerPolleo();
     this.pollSubscription = interval(10000).subscribe(() => this.checkSessions());
+    this.focusHandler = () => this.checkSessions();
+    window.addEventListener('focus', this.focusHandler);
     this.checkSessions();
   }
 
   onUserAuthenticated() {
-    this.checkedSessions.clear();
-    this.dismissedSessions.clear();
+    this.startedSessions.clear();
     this.checkSessions();
   }
 
   dismissLateSession(sessionId?: number) {
-    const id = sessionId || this.currentSessionId || this.pendingLateSession$.value?.id;
-    if (id) this.dismissedSessions.add(id);
-    this.pendingLateSession$.next(null);
+    void sessionId;
   }
 
   detenerPolleo() {
     this.pollSubscription?.unsubscribe();
+    if (this.focusHandler) {
+      window.removeEventListener('focus', this.focusHandler);
+      this.focusHandler = undefined;
+    }
   }
 
   private getCurrentUser(): any {
@@ -73,13 +82,27 @@ export class RecordingService {
     }
   }
 
+  private activateSessionGate(session: any, mode: SessionGateMode, delayMinutes = 0) {
+    this.currentSessionId = session.id;
+    const patientName = session.patient?.name || '';
+    this.sessionTitle$.next(session.title || 'Sesión');
+    this.patientName$.next(patientName);
+    this.activeSession$.next(session);
+    this.sessionGateActive$.next(true);
+    this.sessionGateMode$.next(mode);
+    this.delayMinutes$.next(delayMinutes);
+    if (mode === 'late') {
+      this.pendingLateSession$.next(session);
+    }
+  }
+
   private checkSessions() {
     const user = this.getCurrentUser();
     if (!user || user.role !== 'terapista') {
       this.activeSession$.next(null);
       return;
     }
-    if (this.recordingState$.value === 'recording' || this.recordingState$.value === 'starting') return;
+    if (this.recordingState$.value === 'recording') return;
 
     this.http.post('/api/sessions/auto-complete-expired', {}).subscribe({
       error: () => {},
@@ -87,42 +110,58 @@ export class RecordingService {
 
     this.http.get<any>('/api/sessions/current').subscribe({
       next: (res) => {
-        if (!res.success || !res.has_active) return;
-        const s = res.session;
-        if (this.dismissedSessions.has(s.id)) return;
-        if (this.checkedSessions.has(s.id)) return;
-
-        const delayMinutes = res.delay_minutes ?? 0;
-
-        if (s.status === 'scheduled' && delayMinutes >= 0 && delayMinutes <= 10) {
-          this.currentSessionId = s.id;
-          const patientName = s.patient?.name || '';
-          this.sessionTitle$.next(s.title || 'Sesión');
-          this.patientName$.next(patientName);
-          this.activeSession$.next(s);
-          this.pendingLateSession$.next(s);
+        if (!res.success || !res.has_active) {
+          if (!this.isRecording$.value && this.recordingState$.value === 'idle') {
+            this.sessionGateActive$.next(false);
+            this.sessionGateMode$.next(null);
+            this.pendingLateSession$.next(null);
+          }
           return;
         }
 
-        this.currentSessionId = s.id;
-        const patientName = s.patient?.name || '';
-        this.sessionTitle$.next(s.title || 'Sesión');
-        this.patientName$.next(patientName);
-        this.activeSession$.next(s);
-        this.checkedSessions.add(s.id);
+        const s = res.session;
+        const delayMinutes = res.delay_minutes ?? 0;
+
+        if (this.startedSessions.has(s.id) && this.recordingState$.value !== 'idle') {
+          return;
+        }
+
+        if (s.status === 'scheduled' && delayMinutes >= 0 && delayMinutes <= 10) {
+          if (this.sessionGateActive$.value && this.currentSessionId === s.id) return;
+          this.activateSessionGate(s, 'late', delayMinutes);
+          return;
+        }
+
+        if (this.startedSessions.has(s.id)) return;
+
+        this.activateSessionGate(s, 'recording', delayMinutes);
+        this.startedSessions.add(s.id);
         this.autoStart();
       },
       error: (err) => console.warn('[RecordingService] Error fetching current session:', err),
     });
   }
 
+  confirmLateSessionStart() {
+    const target = this.activeSession$.value;
+    this.pendingLateSession$.next(null);
+    if (!target?.id) return;
+    this.startedSessions.add(target.id);
+    this.sessionGateMode$.next('recording');
+    this.startRecording(target);
+  }
+
   startRecording(session: any) {
     this.currentSessionId = session.id;
-    this.checkedSessions.add(session.id);
+    this.startedSessions.add(session.id);
+    this.markedAbsent = false;
     const patientName = session.patient?.name || '';
     this.sessionTitle$.next(session.title || 'Sesión');
     this.patientName$.next(patientName);
     this.activeSession$.next(session);
+    this.sessionGateActive$.next(true);
+    this.sessionGateMode$.next('recording');
+    this.pendingLateSession$.next(null);
 
     this.recordingState$.next('starting');
     this.isRecording$.next(true);
@@ -133,41 +172,39 @@ export class RecordingService {
     }).catch(() => {
       this.recordingState$.next('mic_error');
       this.isRecording$.next(false);
-      this.canLogout$.next(true);
+      this.canLogout$.next(false);
+      this.sessionGateActive$.next(true);
     });
   }
 
   private autoStart() {
+    this.markedAbsent = false;
     this.recordingState$.next('starting');
     this.isRecording$.next(true);
     this.canLogout$.next(false);
+    this.sessionGateActive$.next(true);
+    this.sessionGateMode$.next('recording');
 
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       this._startRecording(stream);
     }).catch(() => {
       this.recordingState$.next('mic_error');
       this.isRecording$.next(false);
-      this.canLogout$.next(true);
+      this.canLogout$.next(false);
+      this.sessionGateActive$.next(true);
     });
   }
 
   retryMic() {
-    this.recordingState$.next('starting');
-    this.isRecording$.next(true);
-    this.canLogout$.next(false);
-
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      this._startRecording(stream);
-    }).catch(() => {
-      this.recordingState$.next('mic_error');
-      this.isRecording$.next(false);
-      this.canLogout$.next(true);
-    });
+    const session = this.activeSession$.value;
+    if (!session) return;
+    this.startRecording(session);
   }
 
   private _startRecording(stream: MediaStream) {
     this.stream = stream;
     this.recordingState$.next('recording');
+    this.sessionGateMode$.next('recording');
     this.recordingStartTime = Date.now();
     this.chunkCount = 0;
     this.startNewChunk();
@@ -199,7 +236,7 @@ export class RecordingService {
   }
 
   private runAttendanceCheck() {
-    if (!this.currentSessionId) return;
+    if (!this.currentSessionId || this.markedAbsent) return;
     if (this.showAttendanceCheck$.value) return;
     this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe({
       next: (res: any) => {
@@ -231,6 +268,7 @@ export class RecordingService {
   }
 
   markPatientAbsent() {
+    this.markedAbsent = true;
     this.showAttendanceCheck$.next(false);
     clearInterval(this.attendanceCountdownInterval);
     this.stopRecording();
@@ -251,7 +289,9 @@ export class RecordingService {
     this.recorder.onstop = () => {
       this.chunkCount++;
       const blob = new Blob(this.audioChunks, { type: this.recorder?.mimeType || 'audio/webm' });
-      this.subirChunk(blob);
+      if (!this.markedAbsent) {
+        this.subirChunk(blob);
+      }
       if (this.isRecording$.value && this.stream?.active) {
         this.startNewChunk();
       }
@@ -268,7 +308,7 @@ export class RecordingService {
   }
 
   private subirChunk(blob: Blob, retriesRemaining = 3) {
-    if (!this.currentSessionId) return;
+    if (!this.currentSessionId || this.markedAbsent) return;
     this.pendingUploads++;
     this.chunkStatus$.next(`Transcribiendo bloque ${this.chunkCount}...`);
     const fd = new FormData();
@@ -284,7 +324,7 @@ export class RecordingService {
               if (cmp.success && cmp.score_vectorial != null) {
                 this.auditScore$.next(cmp.score_vectorial);
               }
-            }
+            },
           });
         }
         this.tryFinishAfterUpload();
@@ -325,6 +365,7 @@ export class RecordingService {
   }
 
   private finishSession() {
+    if (this.markedAbsent) return;
     this.finishPending = true;
     this.finishSessionId = this.currentSessionId;
     this.finishSessionTitle = this.sessionTitle$.value;
@@ -332,7 +373,7 @@ export class RecordingService {
     this.recordingState$.next('completed');
 
     if (!this.finishSessionId) {
-      setTimeout(() => this.recordingState$.next('idle'), 3000);
+      setTimeout(() => this.closeSessionGate(), 3000);
       this.finishPending = false;
       return;
     }
@@ -352,21 +393,21 @@ export class RecordingService {
               const score = auditRes.report?.audit_score ?? auditRes.report?.score ?? null;
               if (score !== null) this.auditScore$.next(score);
               const msg = score !== null
-                ? `Auditoria completada para "${sessionTitle}" — Puntuacion: ${score}/100`
-                : `Auditoria completada para "${sessionTitle}"`;
+                ? `Auditoría completada para "${sessionTitle}" — Puntuación: ${score}/100`
+                : `Auditoría completada para "${sessionTitle}"`;
               this.http.post(`/api/notifications/create`, { message: msg }).subscribe();
             }
           },
           error: () => {
             this.http.post(`/api/notifications/create`, {
-              message: `Auditoria disponible para "${sessionTitle}" (revisar manualmente)`,
+              message: `Auditoría disponible para "${sessionTitle}" (revisar manualmente)`,
             }).subscribe();
           },
         });
-        setTimeout(() => this.reset(), 4000);
+        setTimeout(() => this.closeSessionGate(), 4000);
       },
       error: () => {
-        setTimeout(() => this.reset(), 4000);
+        setTimeout(() => this.closeSessionGate(), 4000);
       },
     });
   }
@@ -375,14 +416,13 @@ export class RecordingService {
     const id = sessionId || this.currentSessionId;
     if (!id) return;
     this.http.post(`/api/sessions/${id}/mark-absent`, {}).subscribe({
-      next: () => this.reset(),
-      error: () => this.reset(),
+      next: () => this.closeSessionGate(),
+      error: () => this.closeSessionGate(),
     });
   }
 
   stopRecording() {
     this.isRecording$.next(false);
-    this.canLogout$.next(true);
     clearInterval(this.chunkTimer);
     clearInterval(this.elapsedTimer);
     clearTimeout(this.endTimer);
@@ -398,25 +438,28 @@ export class RecordingService {
     this.recorder = null;
   }
 
-  forceStopAndLogout() {
+  private closeSessionGate() {
     this.stopRecording();
+    this.activeSession$.next(null);
     this.recordingState$.next('idle');
     this.currentSessionId = null;
-    this.activeSession$.next(null);
-    this.checkedSessions.clear();
-    this.dismissedSessions.clear();
+    this.sessionGateActive$.next(false);
+    this.sessionGateMode$.next(null);
+    this.pendingLateSession$.next(null);
     this.showAttendanceCheck$.next(false);
     this.auditScore$.next(null);
+    this.canLogout$.next(true);
+    this.markedAbsent = false;
   }
 
-  private reset() {
-    this.stopRecording();
-    this.activeSession$.next(null);
-    this.recordingState$.next('idle');
-    this.currentSessionId = null;
-    this.checkedSessions.clear();
-    this.dismissedSessions.clear();
-    this.showAttendanceCheck$.next(false);
-    this.auditScore$.next(null);
+  forceStopAndLogout() {
+    this.closeSessionGate();
+    this.startedSessions.clear();
+  }
+
+  getLateDelayLabel(): string {
+    const mins = this.delayMinutes$.value;
+    if (mins <= 0) return 'menos de 1 min';
+    return `${mins} min`;
   }
 }
