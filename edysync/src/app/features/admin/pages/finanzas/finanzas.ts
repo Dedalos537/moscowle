@@ -152,6 +152,9 @@ export class Finanzas implements OnInit, OnDestroy {
   analyzeResult: any = null;
   analyzingReceipt = false;
 
+  showPreviewModal = false;
+  previewImageUrl = '';
+
   showSettingsModal = false;
   settingsForm: SettingsForm = {
     patient_id: null, patient_name: '', payment_plan: 'Mensual',
@@ -537,6 +540,17 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   closeRegisterModal() { this.showRegisterModal = false; }
+
+  previewImage(url: string) {
+    this.previewImageUrl = url;
+    this.showPreviewModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closePreview() {
+    this.showPreviewModal = false;
+    this.previewImageUrl = '';
+  }
 
   onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] || null;

@@ -463,7 +463,13 @@
             Historial de Pagos
           </h3>
           <div class="flex gap-3 items-center">
-            <app-select (valueChange)="selectedMonth = $event" [options]="historyMonthOptions" class="min-w-[160px]"></app-select>
+            <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'plus']" (clicked)="openRegisterModal()"></app-button>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                <fa-icon [icon]="['fas', 'calendar']" class="text-[9px]"></fa-icon> Período
+              </span>
+              <app-select (valueChange)="selectedMonth = $event" [options]="historyMonthOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+            </div>
             <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
           </div>
         </div>
@@ -509,9 +515,9 @@
                   <td class="px-4 py-3.5 text-center">
                     <div class="flex items-center justify-center gap-1.5">
                       @if (p.receipt_image_path) {
-                        <a [href]="p.receipt_image_path" target="_blank" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
+                        <button (click)="previewImage(p.receipt_image_path)" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
                           <fa-icon [icon]="['fas', 'image']" class="text-[14px]"></fa-icon>
-                        </a>
+                        </button>
                       }
                       @if (p.document_number) {
                         <span class="text-[10px] text-on-surface-variant font-medium" title="DNI: {{ p.document_number }}">
@@ -664,3 +670,14 @@
     </div>
   </div>
 </app-modal>
+
+@if (showPreviewModal) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" (click)="closePreview()">
+    <div class="relative max-w-[90vw] max-h-[90vh] animate-fade-in" (click)="$event.stopPropagation()">
+      <img [src]="previewImageUrl" alt="Voucher" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain">
+      <button (click)="closePreview()" class="absolute -top-3 -right-3 w-8 h-8 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-lg hover:bg-surface-container-high transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'times']" class="text-sm text-on-surface"></fa-icon>
+      </button>
+    </div>
+  </div>
+}

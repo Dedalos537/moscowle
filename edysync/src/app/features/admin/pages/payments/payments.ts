@@ -109,6 +109,9 @@ export class Payments implements OnInit, OnDestroy {
   analyzeResult: any = null;
   analyzingReceipt = false;
 
+  showPreviewModal = false;
+  previewImageUrl = '';
+
   // ─── Settings Modal (Plan Configuration) ─────────────────
   showSettingsModal = false;
   settingsForm = {
@@ -756,6 +759,17 @@ export class Payments implements OnInit, OnDestroy {
 
   closeRegisterModal() {
     this.showRegisterModal = false;
+  }
+
+  previewImage(url: string) {
+    this.previewImageUrl = url;
+    this.showPreviewModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closePreview() {
+    this.showPreviewModal = false;
+    this.previewImageUrl = '';
   }
 
   onFileSelected(event: Event) {
