@@ -30,7 +30,7 @@
       @if (messages.length === 0 && !loading) {
         <div class="welcome-msg animate-fade-in">
           <div class="icon"><fa-icon [icon]="['fas', 'robot']" class="text-3xl text-primary"></fa-icon></div>
-          <h4>¡Hola! Soy Llama</h4>
+          <h4>{{ welcomeMessage }}</h4>
           <p>Pregúntame sobre finanzas, sesiones, o gestiona el centro</p>
           @if (suggestions.length > 0) {
             <div class="suggestion-chips">

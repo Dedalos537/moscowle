@@ -57,6 +57,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   suggestions: string[] = [];
   actionChips: ActionChip[] = [];
   currentPage = 'dashboard';
+  welcomeMessage = '¡Hola! Soy Llama';
 
   private subs = new Subscription();
 
@@ -124,12 +125,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         if (res.success) {
           this.suggestions = res.suggestions || [];
           this.actionChips = res.action_chips || [];
-          if (res.response && res.intent === 'general_chat') {
-            this.messages.push({
-              role: 'assistant',
-              content: res.response,
-              action_chips: res.action_chips,
-            });
+          if (res.response) {
+            this.welcomeMessage = res.response;
           }
         }
         this.cdr.markForCheck();
@@ -154,8 +151,16 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         }
         break;
       case 'wizard':
-        this.wizardService.resetAll();
-        setTimeout(() => { this.wizardService.start(); }, 500);
+        this.isOpen = false;
+        this.cdr.markForCheck();
+        setTimeout(() => {
+          this.wizardService.resetAll();
+          this.wizardService.start();
+          setTimeout(() => {
+            this.isOpen = true;
+            this.cdr.markForCheck();
+          }, 1500);
+        }, 400);
         break;
       case 'modal':
         this.messages.push({

@@ -736,11 +736,20 @@ def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
 
 def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg='dashboard'):
     try:
+        page_ctx = get_page_context_suggestions(pg)
+
+        if msg.strip() == 'context_init':
+            return _build_result(
+                'context_init',
+                page_ctx.get('welcome', '¡Hola! ¿En qué puedo ayudarte?'),
+                {},
+                0,
+                'context_loaded',
+            )
+
         context_text = get_cached_context_text()
         intent, params, confidence, clarification = detect_user_intent_v5(msg)
         logger.info(f'Detected v5: intent={intent}, confidence={confidence:.2f}, params={params}')
-
-        page_ctx = get_page_context_suggestions(pg)
 
         try:
             track_workflow(intent, params)
