@@ -550,6 +550,8 @@ def complete_session(session_id):
             threading.Thread(target=run_audit, args=(session_id,), daemon=True).start()
     except Exception as exc:
         current_app.logger.debug('auto audit trigger failed: %s', exc)
+
+    metrics = SessionMetrics.query.filter_by(user_id=appt.patient_id, session_id=session_id).all()
     if not metrics:
         db.session.commit()
         return jsonify({'status': 'ok', 'message': 'Sin métricas para agregar'})
