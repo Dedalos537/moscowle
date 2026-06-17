@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -62,6 +62,10 @@ export class Finanzas implements OnInit, OnDestroy {
 
   switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
+  }
+
+  goToYapeImport() {
+    this.router.navigate(['/admin/yape-import']);
   }
 
   summaryTotalDeuda = 0;
@@ -219,6 +223,7 @@ export class Finanzas implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
+    private router: Router,
     private authService: AuthService,
     private alertService: AlertService,
     private toastService: ToastService,

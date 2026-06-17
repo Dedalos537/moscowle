@@ -38,7 +38,6 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/sedes', label: 'Sedes', icon: ['fas', 'building'], supervisor: true },
     { path: '/admin/finanzas', label: 'Finanzas', icon: ['fas', 'university'], supervisor: true },
 
-    { path: '/admin/yape-import', label: 'Importar Yape', icon: ['fas', 'qrcode'] },
     { path: '/admin/games', label: 'Admin Juegos', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', icon: ['fas', 'envelope'], supervisor: true },

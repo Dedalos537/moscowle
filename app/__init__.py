@@ -207,11 +207,14 @@ def register_request_handlers(app):
 
         try:
             from flask_jwt_extended import verify_jwt_in_request as _vji
+
             _vji(locations=['cookies', 'headers'], optional=True)
             from flask_jwt_extended import get_jwt_identity as _gji
+
             _uid = _gji()
             if _uid:
                 from app.models import User as _U
+
                 _user = _U.query.get(int(_uid))
                 if _user:
                     g._login_user = _user
@@ -246,8 +249,10 @@ def register_request_handlers(app):
             _has_jwt = False
             try:
                 from flask_jwt_extended import verify_jwt_in_request as _vji
+
                 _vji(locations=['cookies', 'headers'], optional=True)
                 from flask_jwt_extended import get_jwt_identity as _gji
+
                 _has_jwt = _gji() is not None
             except Exception:
                 pass
@@ -466,7 +471,11 @@ def create_app(config_class=None):
     )
     cors.init_app(
         app,
-        resources={r'/api/*': {'origins': cors_origins}, r'/admin/*': {'origins': cors_origins}},
+        resources={
+            r'/api/*': {'origins': cors_origins},
+            r'/admin/*': {'origins': cors_origins},
+            r'/therapist/*': {'origins': cors_origins},
+        },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
