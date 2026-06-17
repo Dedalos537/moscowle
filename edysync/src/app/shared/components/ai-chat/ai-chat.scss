@@ -168,6 +168,14 @@
   border-bottom-left-radius: 4px;
 }
 
+.error-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-error);
+}
+
 .message.intent-badge {
   display: inline-block;
   font-size: 0.6rem;

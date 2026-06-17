@@ -18,6 +18,7 @@ export interface ChatMessage {
   content: string;
   intent?: string;
   timestamp?: string;
+  error?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

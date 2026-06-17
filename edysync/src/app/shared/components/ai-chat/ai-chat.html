@@ -45,7 +45,14 @@
           @if (msg.intent) {
             <div class="intent-badge">{{ msg.intent }}</div>
           }
-          <div [innerHTML]="sanitize(msg.content)"></div>
+          @if (msg.error) {
+            <div class="error-msg">
+              <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error"></fa-icon>
+              <span>{{ msg.content }}</span>
+            </div>
+          } @else {
+            <div [innerHTML]="sanitize(msg.content)"></div>
+          }
         </div>
       }
 

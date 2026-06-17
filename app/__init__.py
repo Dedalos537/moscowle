@@ -475,6 +475,7 @@ def create_app(config_class=None):
             r'/api/*': {'origins': cors_origins},
             r'/admin/*': {'origins': cors_origins},
             r'/therapist/*': {'origins': cors_origins},
+            r'/llama/*': {'origins': cors_origins},
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],

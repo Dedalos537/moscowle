@@ -128,7 +128,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         this.error = 'Error de conexion con el servidor';
         this.messages.push({
           role: 'assistant',
-          content: 'Error de conexion con el servidor',
+          content: 'No se pudo conectar con el servidor',
+          error: true,
         });
         this.cdr.markForCheck();
       },
