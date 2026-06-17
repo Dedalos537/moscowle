@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { RecordingService } from './core/services/recording.service';
 import { AuthService } from './core/services/auth.service';
+import { FloatingUiService } from './core/services/floating-ui.service';
 import { SplashScreen } from './shared/components/splash-screen/splash-screen';
 import { AlertModal } from './shared/components/alert-modal/alert-modal.component';
 import { ToastContainer } from './shared/components/toast-container/toast-container';
@@ -18,6 +19,7 @@ import { Subscription } from 'rxjs';
 export class App implements OnInit, OnDestroy {
   splashReady = false;
   private sub = new Subscription();
+  private floatingUi = inject(FloatingUiService);
 
   constructor(
     private recordingService: RecordingService,
@@ -26,6 +28,7 @@ export class App implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.floatingUi.attach();
     this.recordingService.iniciarPolleo();
     const storedUser = localStorage.getItem('user');
     if (storedUser) {

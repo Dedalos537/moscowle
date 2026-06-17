@@ -5,20 +5,20 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
-import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
+import { FloatingUiService } from '../../../../core/services/floating-ui.service';
 import { Alert } from '../../../../shared/components/alert/alert';
+import { ChartsToggle } from '../../../../shared/components/charts-toggle/charts-toggle';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Alert, ChartsToggle],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login implements OnInit, OnDestroy {
-  private settings = inject(GlobalSettingsService);
-  hideCharts = this.settings.hideCharts;
+  floating = inject(FloatingUiService);
 
   email = '';
   password = '';
@@ -178,10 +178,6 @@ export class Login implements OnInit, OnDestroy {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
-  }
-
-  toggleHideCharts() {
-    this.settings.toggleHideCharts();
   }
 
   get isFormValid(): boolean {

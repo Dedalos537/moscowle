@@ -172,7 +172,6 @@ input:focus {
 
 .help-btn {
   position: fixed;
-  bottom: 1.5rem;
   left: 1.5rem;
   width: 3rem;
   height: 3rem;
@@ -199,6 +198,12 @@ input:focus {
 .help-btn--active {
   background: var(--color-error);
   transform: scale(1);
+}
+
+.help-btn.floating-ui--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.9);
 }
 
 /* ── Help overlay panel ── */
@@ -363,7 +368,6 @@ input:focus {
 
 .help-btn {
   position: fixed;
-  bottom: 1.5rem;
   left: 1.5rem;
   width: 3rem;
   height: 3rem;
