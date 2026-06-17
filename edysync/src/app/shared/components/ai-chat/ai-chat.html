@@ -32,11 +32,13 @@
           <div class="icon"><fa-icon [icon]="['fas', 'robot']" class="text-3xl text-primary"></fa-icon></div>
           <h4>¡Hola! Soy Llama</h4>
           <p>Pregúntame sobre finanzas, sesiones, o gestiona el centro</p>
-          <div class="suggestion-chips">
-            @for (s of suggestions; track s) {
-              <span class="suggestion-chip" (click)="sendSuggestion(s)">{{ s }}</span>
-            }
-          </div>
+          @if (suggestions.length > 0) {
+            <div class="suggestion-chips">
+              @for (s of suggestions; track s) {
+                <span class="suggestion-chip" (click)="sendSuggestion(s)">{{ s }}</span>
+              }
+            </div>
+          }
         </div>
       }
 
@@ -53,6 +55,16 @@
           } @else {
             <div [innerHTML]="sanitize(msg.content)"></div>
           }
+          @if (msg.action_chips && msg.action_chips.length > 0 && msg.role === 'assistant') {
+            <div class="action-chips-row">
+              @for (chip of msg.action_chips; track chip.id) {
+                <button class="action-chip" (click)="handleActionChip(chip)" [title]="chip.label">
+                  <fa-icon [icon]="getIcon(chip.icon)" class="chip-icon"></fa-icon>
+                  <span>{{ chip.label }}</span>
+                </button>
+              }
+            </div>
+          }
         </div>
       }
 
@@ -64,6 +76,16 @@
         </div>
       }
     </div>
+
+    @if (actionChips.length > 0 && messages.length > 0) {
+      <div class="quick-actions-bar">
+        @for (chip of actionChips; track chip.id) {
+          <button class="quick-action-btn" (click)="handleActionChip(chip)" [title]="chip.label">
+            <fa-icon [icon]="getIcon(chip.icon)"></fa-icon>
+          </button>
+        }
+      </div>
+    }
 
     <div class="chat-input-area">
       <textarea

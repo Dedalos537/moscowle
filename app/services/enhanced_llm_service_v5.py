@@ -720,7 +720,7 @@ def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
         import requests
 
         ollama_resp = requests.post(
-            f"{os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')}/api/chat",
+            f'{os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")}/api/chat',
             json={'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'), 'messages': messages, 'stream': False},
             timeout=30,
         )
@@ -739,6 +739,8 @@ def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg='dashboard'):
         context_text = get_cached_context_text()
         intent, params, confidence, clarification = detect_user_intent_v5(msg)
         logger.info(f'Detected v5: intent={intent}, confidence={confidence:.2f}, params={params}')
+
+        page_ctx = get_page_context_suggestions(pg)
 
         try:
             track_workflow(intent, params)
@@ -829,6 +831,9 @@ RESPUESTAS:
             result['next_predicted_action'] = next_action
             logger.info(f'Proxima accion sugerida: {next_action}')
 
+        result['action_chips'] = page_ctx.get('action_chips', [])
+        result['suggestions'] = page_ctx.get('suggestions', [])
+
         return result
 
     except Exception as e:
@@ -910,3 +915,170 @@ def validate_expense_parameters(params):
     except (ValueError, TypeError):
         return False, 'Monto invalido'
     return True, ''
+
+
+ADMIN_PAGE_CONTEXT = {
+    'dashboard': {
+        'welcome': 'Panel de administración del Centro. Puedo ayudarte con finanzas, usuarios, sesiones y más.',
+        'suggestions': ['Ver deudores', 'Registrar pago', 'Crear usuario', 'Ir a finanzas', 'Ver reporte'],
+        'action_chips': [
+            {'id': 'fin', 'label': 'Finanzas', 'icon': 'chart-line', 'type': 'navigation', 'target': '/admin/finanzas'},
+            {'id': 'usr', 'label': 'Usuarios', 'icon': 'users', 'type': 'navigation', 'target': '/admin/users'},
+            {'id': 'ses', 'label': 'Sesiones', 'icon': 'calendar', 'type': 'navigation', 'target': '/admin/sessions'},
+            {'id': 'rep', 'label': 'Reportes', 'icon': 'chart-bar', 'type': 'navigation', 'target': '/admin/reports'},
+        ],
+    },
+    'finanzas': {
+        'welcome': 'Gestión financiera del centro. Puedo ayudarte con pagos, gastos y análisis.',
+        'suggestions': ['Ver ingresos', 'Deudores', 'Registrar pago', 'Ver gastos', 'Análisis financiero'],
+        'action_chips': [
+            {
+                'id': 'pago',
+                'label': 'Registrar Pago',
+                'icon': 'dollar-sign',
+                'type': 'modal',
+                'target': 'registerPayment',
+            },
+            {'id': 'gast', 'label': 'Ver Gastos', 'icon': 'receipt', 'type': 'navigation', 'target': '/admin/expenses'},
+            {
+                'id': 'yape',
+                'label': 'Importar Yape',
+                'icon': 'mobile',
+                'type': 'navigation',
+                'target': '/admin/yape-import',
+            },
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/finanzas'},
+        ],
+    },
+    'payments': {
+        'welcome': 'Gestión de cobros y pagos. Puedo ayudarte a registrar pagos y ver historial.',
+        'suggestions': ['Registrar pago', 'Ver historial', 'Deudores de la semana', 'Exportar datos'],
+        'action_chips': [
+            {
+                'id': 'pago',
+                'label': 'Registrar Pago',
+                'icon': 'dollar-sign',
+                'type': 'modal',
+                'target': 'registerPayment',
+            },
+            {'id': 'hist', 'label': 'Historial', 'icon': 'history', 'type': 'navigation', 'target': '/admin/payments'},
+            {'id': 'fin', 'label': 'Finanzas', 'icon': 'chart-line', 'type': 'navigation', 'target': '/admin/finanzas'},
+        ],
+    },
+    'users': {
+        'welcome': 'Gestión de usuarios del centro. Puedo ayudarte a crear, buscar o gestionar usuarios.',
+        'suggestions': ['Crear usuario', 'Ver terapeutas', 'Buscar paciente', 'Usuarios deudores'],
+        'action_chips': [
+            {'id': 'cusr', 'label': 'Crear Usuario', 'icon': 'user-plus', 'type': 'modal', 'target': 'createUser'},
+            {'id': 'ter', 'label': 'Terapeutas', 'icon': 'user-doctor', 'type': 'filter', 'target': 'terapista'},
+            {'id': 'pac', 'label': 'Pacientes', 'icon': 'user', 'type': 'filter', 'target': 'jugador'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/users'},
+        ],
+    },
+    'sedes': {
+        'welcome': 'Gestión de sedes del centro. Puedo ayudarte a crear o administrar sedes.',
+        'suggestions': ['Crear sede', 'Ver pacientes por sede', 'Estadísticas de sede'],
+        'action_chips': [
+            {'id': 'csed', 'label': 'Nueva Sede', 'icon': 'building', 'type': 'modal', 'target': 'createSede'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/sedes'},
+        ],
+    },
+    'sessions': {
+        'welcome': 'Calendario de sesiones. Puedo ayudarte a programar o gestionar sesiones.',
+        'suggestions': ['Crear sesión', 'Ver próximas', 'Sesiones de hoy', 'Buscar por paciente'],
+        'action_chips': [
+            {
+                'id': 'cses',
+                'label': 'Nueva Sesión',
+                'icon': 'calendar-plus',
+                'type': 'modal',
+                'target': 'createSession',
+            },
+            {'id': 'cal', 'label': 'Calendario', 'icon': 'calendar', 'type': 'scroll', 'target': 'calendar-widget'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/sessions'},
+        ],
+    },
+    'expenses': {
+        'welcome': 'Nómina y gastos operativos. Puedo ayudarte a registrar gastos o ver la nómina.',
+        'suggestions': ['Registrar gasto', 'Ver nómina', 'Gastos del mes', 'Pagar terapeuta'],
+        'action_chips': [
+            {'id': 'gast', 'label': 'Registrar Gasto', 'icon': 'receipt', 'type': 'modal', 'target': 'registerExpense'},
+            {'id': 'nom', 'label': 'Nómina', 'icon': 'file-invoice-dollar', 'type': 'scroll', 'target': 'table'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/expenses'},
+        ],
+    },
+    'reports': {
+        'welcome': 'Reportes y análisis del centro. Puedo generar reportes o exportar datos.',
+        'suggestions': ['Generar reporte', 'Exportar CSV', 'Análisis IA', 'Ver métricas'],
+        'action_chips': [
+            {'id': 'gen', 'label': 'Generar Reporte', 'icon': 'file-alt', 'type': 'action', 'target': 'generateReport'},
+            {'id': 'csv', 'label': 'Exportar CSV', 'icon': 'download', 'type': 'action', 'target': 'exportCSV'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/reports'},
+        ],
+    },
+    'messages': {
+        'welcome': 'Bandeja de mensajes. Puedo ayudarte a gestionar comunicaciones.',
+        'suggestions': ['Ver mensajes no leídos', 'Enviar broadcast', 'Responder por WhatsApp'],
+        'action_chips': [
+            {'id': 'bcast', 'label': 'Broadcast', 'icon': 'paper-plane', 'type': 'modal', 'target': 'broadcastMessage'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/messages'},
+        ],
+    },
+    'games': {
+        'welcome': 'Catálogo de juegos terapéuticos. Puedo ayudarte a subir o gestionar juegos.',
+        'suggestions': ['Subir juego', 'Ver catálogo', 'Juegos populares'],
+        'action_chips': [
+            {'id': 'cgame', 'label': 'Subir Juego', 'icon': 'gamepad', 'type': 'modal', 'target': 'uploadGame'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/games'},
+        ],
+    },
+    'logs': {
+        'welcome': 'Visor de logs del sistema. Puedo ayudarte a filtrar o buscar errores.',
+        'suggestions': ['Ver errores', 'Buscar warning', 'Logs recientes'],
+        'action_chips': [
+            {'id': 'err', 'label': 'Solo Errores', 'icon': 'exclamation-triangle', 'type': 'filter', 'target': 'ERROR'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/logs'},
+        ],
+    },
+    'profile': {
+        'welcome': 'Tu perfil de administrador. Puedo ayudarte a actualizar tu información.',
+        'suggestions': ['Cambiar contraseña', 'Actualizar nombre', 'Ver configuración'],
+        'action_chips': [
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/profile'},
+        ],
+    },
+    'yape-import': {
+        'welcome': 'Importación de transacciones Yape. Puedo ayudarte a subir archivos.',
+        'suggestions': ['Importar archivo', 'Ver pendientes', 'Reconciliar pagos'],
+        'action_chips': [
+            {'id': 'imp', 'label': 'Importar', 'icon': 'upload', 'type': 'modal', 'target': 'importYape'},
+            {'id': 'wiz', 'label': 'Guía', 'icon': 'question-circle', 'type': 'wizard', 'target': '/admin/yape-import'},
+        ],
+    },
+    'api-tokens': {
+        'welcome': 'Gestión de tokens de API. Puedo ayudarte a generar o revocar tokens.',
+        'suggestions': ['Generar token', 'Ver tokens activos', 'Revocar token'],
+        'action_chips': [
+            {'id': 'gen', 'label': 'Generar Token', 'icon': 'key', 'type': 'modal', 'target': 'generateToken'},
+        ],
+    },
+    'ai': {
+        'welcome': 'Entrenamiento de IA. Puedo ayudarte a mejorar las respuestas del sistema.',
+        'suggestions': ['Ver precisión', 'Entrenar modelo', 'Revisar intentos fallidos'],
+        'action_chips': [],
+    },
+    'csp-reports': {
+        'welcome': 'Reportes CSP. Puedo ayudarte a revisar reportes de contenido.',
+        'suggestions': ['Ver reportes', 'Filtrar por estado'],
+        'action_chips': [],
+    },
+}
+
+
+def get_page_context_suggestions(page: str, role: str = 'admin') -> dict:
+    ctx = ADMIN_PAGE_CONTEXT.get(page, ADMIN_PAGE_CONTEXT.get('dashboard', {}))
+    return {
+        'welcome': ctx.get('welcome', ''),
+        'suggestions': ctx.get('suggestions', []),
+        'action_chips': ctx.get('action_chips', []),
+    }

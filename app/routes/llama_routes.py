@@ -444,6 +444,8 @@ def send_message():
         params = result.get('parameters', {})
         response = result.get('response', '')
         confidence = result.get('confidence', 0)
+        action_chips = result.get('action_chips', [])
+        suggestions = result.get('suggestions', [])
 
         if not isinstance(response, str):
             response = str(response) if response else 'Algo salió mal'
@@ -508,6 +510,8 @@ def send_message():
                 'action_result': action_result,
                 'conversation_id': conversation_id,
                 'tutorial_steps': tutorial_steps,
+                'action_chips': action_chips,
+                'suggestions': suggestions,
             }
         )
 

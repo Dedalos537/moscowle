@@ -2,6 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+export interface ActionChip {
+  id: string;
+  label: string;
+  icon: string;
+  type: 'navigation' | 'wizard' | 'modal' | 'scroll' | 'filter' | 'action';
+  target: string;
+}
+
 export interface LlamaResponse {
   success: boolean;
   response: string;
@@ -10,6 +18,8 @@ export interface LlamaResponse {
   redirect?: string;
   action_result?: any;
   conversation_id?: number;
+  action_chips?: ActionChip[];
+  suggestions?: string[];
 }
 
 export interface ChatMessage {
@@ -19,6 +29,7 @@ export interface ChatMessage {
   intent?: string;
   timestamp?: string;
   error?: boolean;
+  action_chips?: ActionChip[];
 }
 
 @Injectable({ providedIn: 'root' })
