@@ -29,8 +29,9 @@ SYSTEM_PROMPTS = {
         'Eres un agente administrador con control total del Centro de Terapias Juan Pablo II.\n'
         'Tienes acceso a TODAS las herramientas del sistema.\n\n'
         'REGLAS:\n'
-        '1. Antes de responder, llama SIEMPRE UNA herramienta.\n'
-        '2. Para pagos con voucher: extrae monto (solo el numero, sin S/). '
+        '1. Si necesitas datos del sistema (buscar paciente, registrar pago, crear usuario, etc.), '
+        'llama UNA herramienta. Si es un saludo o conversacion simple, responde directamente.\n'
+        '2. Para pagos con voucher: extrae solo el numero del monto (sin S/). '
         'Si falta paciente o ID, busca con search_patients primero.\n'
         '3. Para crear usuarios: pregunta nombre y rol.\n'
         '4. Confirma antes de mutaciones destructivas.\n'
@@ -106,18 +107,16 @@ def process_agent_message(uid, message, mode='chiquito'):
         msg = choice.message
 
         if not msg.tool_calls:
-            if tool_retry_count < MAX_TOOL_RETRIES and mode == 'grande':
+            if tool_retry_count < 1 and mode == 'grande':
                 tool_retry_count += 1
-                logger.info(f'No tool calls (retry {tool_retry_count})')
-                messages.append(
-                    {
-                        'role': 'user',
-                        'content': (
-                            'Usa UNA herramienta si tienes los datos necesarios. '
-                            'Si te falta informacion, PREGUNTALE al usuario.'
-                        ),
-                    }
-                )
+                logger.info('No tool calls, one nudge')
+                messages.append({
+                    'role': 'user',
+                    'content': (
+                        'Puedes usar una herramienta si necesitas datos del sistema. '
+                        'Si no, responde normalmente.'
+                    ),
+                })
                 continue
 
             return build_result(
