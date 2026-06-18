@@ -39,6 +39,7 @@ export interface ChatMessage {
   timestamp?: string;
   error?: boolean;
   action_chips?: ActionChip[];
+  filePreview?: string;
 }
 
 @Injectable({ providedIn: 'root' })

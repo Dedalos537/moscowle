@@ -562,6 +562,16 @@
   font-size: 0.7rem;
 }
 
+.file-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  display: block;
+  object-fit: contain;
+  border: 1px solid var(--color-outline-variant);
+}
+
 .typing-indicator {
   display: flex;
   gap: 4px;

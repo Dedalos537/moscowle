@@ -77,6 +77,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   currentPage = 'dashboard';
   welcomeMessage = '¡Hola! Soy Llama';
 
+  private pendingFilePreview: string | null = null;
+
   private subs = new Subscription();
 
   constructor(
@@ -304,7 +306,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     const msg = this.inputMessage.trim();
     if (!msg || this.loading) return;
 
-    this.messages.push({ role: 'user', content: msg });
+    const userMsg: ChatMessage = { role: 'user', content: msg };
+    if (this.pendingFilePreview) {
+      userMsg.filePreview = this.pendingFilePreview;
+      this.pendingFilePreview = null;
+    }
+    this.messages.push(userMsg);
     this.inputMessage = '';
     this.loading = true;
     this.error = null;
@@ -341,20 +348,25 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
+    const isImage = file.type.startsWith('image/');
     const reader = new FileReader();
     reader.onload = () => {
-      let content = reader.result as string;
-      if (file.type === 'application/pdf' || file.name.endsWith('.docx')) {
-        content = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      if (isImage) {
+        this.pendingFilePreview = reader.result as string;
       }
-      this.inputMessage = content;
+      this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
       this.cdr.markForCheck();
       this.sendMessage();
     };
-    if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
+    if (isImage) {
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
       reader.readAsText(file);
     } else {
-      reader.readAsDataURL(file);
+      reader.onload = null;
+      this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      this.cdr.markForCheck();
+      this.sendMessage();
     }
     input.value = '';
   }
