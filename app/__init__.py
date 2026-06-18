@@ -466,6 +466,7 @@ def create_app(config_class=None):
 
     csrf.exempt(api_bp)
     from app.routes.llama_routes import llama_bp
+
     csrf.exempt(llama_bp)
     cors_origins = (
         app.config.get(
