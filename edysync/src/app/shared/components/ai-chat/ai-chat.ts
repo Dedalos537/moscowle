@@ -175,14 +175,13 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   private loadInitialContext() {
     this.currentPage = this.detectCurrentPage();
-    this.subs.add(this.llama.sendMessage('context_init', this.currentPage).subscribe({
+    const mode = this.currentMode;
+    this.subs.add(this.llama.sendAgentMessage('context_init', mode).subscribe({
       next: (res) => {
-        if (res.success) {
-          this.suggestions = res.suggestions || [];
-          this.actionChips = res.action_chips || [];
-          if (res.response) {
-            this.welcomeMessage = res.response;
-          }
+        this.suggestions = res.suggestions || [];
+        this.actionChips = res.action_chips || [];
+        if (res.response) {
+          this.welcomeMessage = res.response;
         }
         this.cdr.markForCheck();
       },
@@ -311,76 +310,31 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.error = null;
     this.cdr.markForCheck();
 
-    if (this.currentMode === 'grande') {
-      this.subs.add(this.llama.sendAgentMessage(msg, 'grande').subscribe({
-        next: (res) => {
-          this.loading = false;
-          this.messages.push({
-            role: 'assistant',
-            content: res.response,
-            intent: res.intent,
-            action_chips: res.action_chips,
-          });
-          this.suggestions = res.suggestions || this.suggestions;
-          this.actionChips = res.action_chips || this.actionChips;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.loading = false;
-          this.error = 'Error de conexion con el servidor';
-          this.messages.push({
-            role: 'assistant',
-            content: 'No se pudo conectar con el servidor',
-            error: true,
-          });
-          this.cdr.markForCheck();
-        },
-      }));
-    } else {
-      const page = this.detectCurrentPage();
-
-      this.subs.add(this.llama.sendMessage(msg, page).subscribe({
-        next: (res) => {
-          this.loading = false;
-          if (res.success) {
-            this.messages.push({
-              role: 'assistant',
-              content: res.response,
-              intent: res.intent,
-              action_chips: res.action_chips,
-            });
-
-            this.suggestions = res.suggestions || this.suggestions;
-            this.actionChips = res.action_chips || this.actionChips;
-
-            if (res.redirect) {
-              const url = res.redirect!;
-              const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(p => url.startsWith(p));
-              const isSameOrigin = url.startsWith(window.location.origin) || url.startsWith('/');
-              if (isAllowed && isSameOrigin) {
-                setTimeout(() => { window.location.href = url; }, 1500);
-              }
-            }
-          } else {
-            this.messages.push({
-              role: 'assistant',
-              content: 'Error al procesar tu mensaje',
-            });
-          }
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.loading = false;
-          this.error = 'Error de conexion con el servidor';
-          this.messages.push({
-            role: 'assistant',
-            content: 'No se pudo conectar con el servidor',
-            error: true,
-          });
-          this.cdr.markForCheck();
-        },
-      }));
-    }
+    const mode = this.currentMode;
+    this.subs.add(this.llama.sendAgentMessage(msg, mode).subscribe({
+      next: (res) => {
+        this.loading = false;
+        this.messages.push({
+          role: 'assistant',
+          content: res.response,
+          intent: res.intent,
+          action_chips: res.action_chips,
+        });
+        this.suggestions = res.suggestions || this.suggestions;
+        this.actionChips = res.action_chips || this.actionChips;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loading = false;
+        this.error = 'Error de conexion con el servidor';
+        this.messages.push({
+          role: 'assistant',
+          content: 'No se pudo conectar con el servidor',
+          error: true,
+        });
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   onFileSelected(event: Event) {

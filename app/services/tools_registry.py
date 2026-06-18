@@ -3,7 +3,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
-from flask import current_app
+from flask import current_app, session
 
 from app.auth_compat import current_user
 from app.extensions import bcrypt, db
@@ -61,6 +61,24 @@ def execute_tool(name, args):
     except Exception as e:
         logger.error(f'Tool {name} error: {e}', exc_info=True)
         return {'error': str(e)}
+
+
+def _api_get(endpoint):
+    """Make authenticated GET via test_client, forwarding current session."""
+    with current_app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess['user_id'] = session.get('user_id')
+            sess['role'] = session.get('role', 'admin')
+        return c.get(endpoint)
+
+
+def _api_post(endpoint, json=None):
+    """Make authenticated POST via test_client, forwarding current session."""
+    with current_app.test_client() as c:
+        with c.session_transaction() as sess:
+            sess['user_id'] = session.get('user_id')
+            sess['role'] = session.get('role', 'admin')
+        return c.post(endpoint, json=json or {})
 
 
 @tool(
@@ -186,7 +204,7 @@ _payment_service = PaymentService()
 )
 def handle_financial_summary():
     try:
-        resp = current_app.test_client().get('/admin/api/financial-summary')
+        resp = _api_get('/admin/api/financial-summary')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -210,7 +228,7 @@ def handle_financial_summary():
 )
 def handle_debt_report(month='current'):
     try:
-        resp = current_app.test_client().get(f'/api/admin/deudores?month={month}')
+        resp = _api_get(f'/api/admin/deudores?month={month}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -240,7 +258,7 @@ def handle_get_sessions(start=None, end=None, therapist_id=None):
         if therapist_id:
             params['therapist_id'] = therapist_id
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        resp = current_app.test_client().get(f'/admin/api/sessions?{qs}')
+        resp = _api_get(f'/admin/api/sessions?{qs}')
         data = resp.get_json() if resp else []
         return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'sessions': data}
     except Exception as e:
@@ -261,7 +279,7 @@ def handle_get_sessions(start=None, end=None, therapist_id=None):
 def handle_therapist_efficiency(therapist_id=None):
     try:
         params = f'?therapist_id={therapist_id}' if therapist_id else ''
-        resp = current_app.test_client().get(f'/admin/api/therapist-efficiency{params}')
+        resp = _api_get(f'/admin/api/therapist-efficiency{params}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -359,7 +377,7 @@ def handle_register_payment(patient_id, amount, method='IA/Copilot', reference='
 )
 def handle_get_payment_info(patient_id):
     try:
-        resp = current_app.test_client().get(f'/admin/api/payment-info/{patient_id}')
+        resp = _api_get(f'/admin/api/payment-info/{patient_id}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -374,7 +392,7 @@ def handle_get_payment_info(patient_id):
 )
 def handle_all_payments():
     try:
-        resp = current_app.test_client().get('/admin/api/payments/all')
+        resp = _api_get('/admin/api/payments/all')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -389,7 +407,7 @@ def handle_all_payments():
 )
 def handle_yape_pending():
     try:
-        resp = current_app.test_client().get('/admin/yape/pending')
+        resp = _api_get('/admin/yape/pending')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -410,7 +428,7 @@ def handle_yape_pending():
 )
 def handle_search_yape(query):
     try:
-        resp = current_app.test_client().get(f'/admin/yape/search?q={query}')
+        resp = _api_get(f'/admin/yape/search?q={query}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -540,10 +558,7 @@ def handle_assign_therapist(patient_id, therapist_ids):
     if isinstance(therapist_ids, int):
         therapist_ids = [therapist_ids]
     try:
-        resp = current_app.test_client().post(
-            '/api/admin/assign-therapist',
-            json={'patient_id': patient_id, 'therapist_ids': therapist_ids},
-        )
+        resp = _api_post('/api/admin/assign-therapist', json={'patient_id': patient_id, 'therapist_ids': therapist_ids})
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -636,7 +651,7 @@ def handle_create_appointment(patient_id=None, patient_name=None, day=None, time
 )
 def handle_dashboard_overview():
     try:
-        resp = current_app.test_client().get('/admin/api/overview')
+        resp = _api_get('/admin/api/overview')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -697,7 +712,7 @@ def handle_get_expenses(start_date=None, end_date=None, category=None):
         if category:
             params['category'] = category
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        resp = current_app.test_client().get(f'/admin/api/expenses?{qs}')
+        resp = _api_get(f'/admin/api/expenses?{qs}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -728,10 +743,7 @@ def handle_broadcast(subject, body, target='all', receiver_id=None):
         payload = {'subject': subject, 'body': body, 'target': target}
         if receiver_id:
             payload['receiver_id'] = receiver_id
-        resp = current_app.test_client().post(
-            '/api/admin/messages/broadcast',
-            json=payload,
-        )
+        resp = _api_post('/api/admin/messages/broadcast', json=payload)
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -752,7 +764,7 @@ def handle_broadcast(subject, body, target='all', receiver_id=None):
 def handle_weekly_summary(week_start=None):
     try:
         params = f'?week_start={week_start}' if week_start else ''
-        resp = current_app.test_client().get(f'/admin/api/weekly-summary{params}')
+        resp = _api_get(f'/admin/api/weekly-summary{params}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -779,7 +791,7 @@ def handle_monthly_summary(year=None, month=None):
         if month:
             params['month'] = month
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        resp = current_app.test_client().get(f'/admin/api/reports/monthly?{qs}')
+        resp = _api_get(f'/admin/api/reports/monthly?{qs}')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -794,7 +806,7 @@ def handle_monthly_summary(year=None, month=None):
 )
 def handle_generate_report():
     try:
-        resp = current_app.test_client().post('/admin/generate-ia-report')
+        resp = _api_post('/admin/generate-ia-report')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
