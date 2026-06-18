@@ -5,6 +5,17 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+MAX_AUDIT_PROMPT_CHARS = 1800
+
+
+def _truncate_audit_text(text, max_chars=MAX_AUDIT_PROMPT_CHARS):
+    """Recorta texto para caber en el límite de tokens de Groq (inicio + final)."""
+    if not text or len(text) <= max_chars:
+        return text
+    half = max_chars // 2
+    return text[:half] + '\n\n[... contenido omitido por límite de análisis ...]\n\n' + text[-half:]
+
+
 _STOP_WORDS_ES = {
     'de',
     'la',
@@ -236,14 +247,17 @@ def run_audit(appointment_id):
         ]
         photos_context = f'\n\nFOTOS DE LA SESIÓN ({len(images)} archivos):\n' + '\n'.join(photo_descriptions)
 
+    planned_for_prompt = _truncate_audit_text(audit.planned_text)
+    transcript_for_prompt = _truncate_audit_text(audit.transcript_text)
+
     user_prompt = f"""PROGRAMACIÓN PLANIFICADA (extraída del documento Word):
 ---
-{audit.planned_text}
+{planned_for_prompt}
 ---
 
 TRANSCRIPCIÓN REAL DE LA SESIÓN (audio transcrito por Whisper):
 ---
-{audit.transcript_text}
+{transcript_for_prompt}
 ---
 {photos_context}
 
@@ -363,12 +377,12 @@ def analyze_attendance(planned_text, transcript_text):
 
         user_prompt = f"""PLAN DE SESIÓN:
 ---
-{planned_text[:3000]}
+{_truncate_audit_text(planned_text)}
 ---
 
 TRANSCRIPCIÓN REAL:
 ---
-{transcript_text[:3000]}
+{_truncate_audit_text(transcript_text)}
 ---
 
 Analiza si el paciente asistió y cubrió al menos el 5% de lo planificado."""

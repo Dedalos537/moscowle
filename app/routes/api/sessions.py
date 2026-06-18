@@ -26,8 +26,16 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
+from app.utils import get_user_day_utc_range
 from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 from app.utils.sanitizer import sanitize_text
+
+
+def _is_date_only_param(value):
+    if not value:
+        return False
+    v = value.strip()
+    return len(v) <= 10 and 'T' not in v and ' ' not in v
 
 
 @api_bp.route('/sessions', methods=['GET'])
@@ -37,7 +45,6 @@ def api_get_sessions():
         return jsonify({'error': 'Acceso denegado'}), 403
     start = request.args.get('start')
     end = request.args.get('end')
-    timezone_offset = request.args.get('timezone_offset')
     try:
         start_dt = _parse_datetime(start)
         end_dt = _parse_datetime(end)
@@ -45,12 +52,23 @@ def api_get_sessions():
         start_dt = None
         end_dt = None
     if start_dt and end_dt:
-        if start_dt.date() == end_dt.date():
-            end_dt = end_dt + timedelta(days=1)
-        if current_user.role == 'terapista':
-            appts = appointment_service.get_therapist_appointments(current_user.id, start_dt, end_dt)
+        if _is_date_only_param(start) and _is_date_only_param(end):
+            start_dt, _ = get_user_day_utc_range(current_user, start[:10])
+            _, end_dt = get_user_day_utc_range(current_user, end[:10])
+            q = Appointment.query.filter(
+                Appointment.start_time >= start_dt,
+                Appointment.start_time < end_dt,
+            )
+            if current_user.role == 'terapista':
+                q = q.filter(Appointment.therapist_id == current_user.id)
+            appts = q.order_by(Appointment.start_time.asc()).all()
         else:
-            appts = appointment_service.get_all_appointments(start_dt, end_dt)
+            if start_dt.date() == end_dt.date():
+                end_dt = end_dt + timedelta(days=1)
+            if current_user.role == 'terapista':
+                appts = appointment_service.get_therapist_appointments(current_user.id, start_dt, end_dt)
+            else:
+                appts = appointment_service.get_all_appointments(start_dt, end_dt)
     else:
         q = Appointment.query
         if current_user.role == 'terapista':
@@ -170,14 +188,16 @@ def api_get_sessions_day():
         return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
 
     date_str = request.args.get('date')
-    timezone_offset = request.args.get('timezone_offset')
 
     if not date_str:
         return jsonify({'success': False, 'message': 'Falta el parámetro date'}), 400
     try:
-        day = _parse_datetime(date_str)
-        query_start = day
-        query_end = query_start + timedelta(days=1)
+        if _is_date_only_param(date_str):
+            query_start, query_end = get_user_day_utc_range(current_user, date_str[:10])
+        else:
+            day = _parse_datetime(date_str)
+            query_start = day
+            query_end = query_start + timedelta(days=1)
     except Exception:
         return jsonify({'success': False, 'message': 'Fecha malita, revisa el formato'}), 400
 

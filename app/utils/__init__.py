@@ -65,6 +65,27 @@ def get_user_now(user):
     return datetime.now(tz)
 
 
+def get_user_day_utc_range(user, date_value):
+    """
+    Rango UTC (naive) de un día calendario en la zona horaria del usuario.
+    date_value: str 'YYYY-MM-DD', date o datetime.
+    Returns: (start_utc_naive, end_utc_naive) con fin exclusivo.
+    """
+    tz = get_user_timezone(user)
+    if isinstance(date_value, str):
+        d = datetime.strptime(date_value[:10], '%Y-%m-%d').date()
+    elif isinstance(date_value, datetime):
+        d = date_value.date()
+    else:
+        d = date_value
+
+    local_start = datetime(d.year, d.month, d.day, tzinfo=tz)
+    local_end = local_start + timedelta(days=1)
+    start_utc = local_start.astimezone(UTC).replace(tzinfo=None)
+    end_utc = local_end.astimezone(UTC).replace(tzinfo=None)
+    return start_utc, end_utc
+
+
 def get_user_today_utc_range(user):
     """
     Returns the start and end of the user's current day, converted to UTC.
@@ -107,7 +128,7 @@ def normalize_datetime_for_storage(dt_input, user_timezone_str=DEFAULT_TIMEZONE)
 
     try:
         user_tz = ZoneInfo(user_timezone_str)
-    except:
+    except Exception:
         user_tz = UTC
 
     if dt.tzinfo is None:
@@ -125,13 +146,13 @@ def parse_datetime(value):
             value = value[:-1] + '+00:00'
         dt = datetime.fromisoformat(value)
         if dt.tzinfo:
-            return dt.astimezone(timezone.utc).replace(tzinfo=None)
-        return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(timezone.utc).replace(tzinfo=None)
+            return dt.astimezone(UTC).replace(tzinfo=None)
+        return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(UTC).replace(tzinfo=None)
     except Exception:
         for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
             try:
                 dt = datetime.strptime(value, fmt)
-                return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(timezone.utc).replace(tzinfo=None)
+                return dt.replace(tzinfo=timezone(timedelta(hours=-5))).astimezone(UTC).replace(tzinfo=None)
             except Exception:
                 continue
     return None
@@ -156,5 +177,5 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZO
         if dt_utc_naive.tzinfo is None:
             dt_utc_naive = dt_utc_naive.replace(tzinfo=UTC)
         return dt_utc_naive.astimezone(user_tz)
-    except:
+    except Exception:
         return dt_utc_naive
