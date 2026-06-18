@@ -13,6 +13,7 @@ from app.extensions import bcrypt, csrf, db
 
 _DEFAULT_USER_PASSWORD = os.getenv('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
 from app.models import AIChatMessage, AIConversation, Appointment, User
+from app.services.agent_orchestrator import process_agent_message
 from app.services.appointment_service import AppointmentService
 from app.services.business_analytics_service import (
     estimate_breakeven_point,
@@ -683,3 +684,35 @@ def confirm_payment():
     except Exception as e:
         current_app.logger.error(f'Error en confirm_payment: {e}')
         return jsonify({'error': f'Error: {str(e)[:100]}'}), 500
+
+
+@llama_bp.route('/agent', methods=['GET'])
+def agent_health():
+    return jsonify({'status': 'ok', 'message': 'Agent endpoint ready'})
+
+
+@llama_bp.route('/agent', methods=['POST'])
+@login_required
+def agent_message():
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({'error': 'message is required'}), 400
+
+    mode = data.get('mode', 'chiquito')
+    if mode not in ('chiquito', 'grande'):
+        return jsonify({'error': 'mode must be chiquito or grande'}), 400
+
+    try:
+        result = process_agent_message(current_user.id, message, mode)
+        return jsonify(
+            {
+                'response': result.get('response', ''),
+                'intent': result.get('intent', 'general_chat'),
+                'action_chips': result.get('action_chips', []),
+                'suggestions': result.get('suggestions', []),
+            }
+        )
+    except Exception as e:
+        current_app.logger.error(f'Error en agent_message: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
