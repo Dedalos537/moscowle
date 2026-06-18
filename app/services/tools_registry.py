@@ -1,10 +1,13 @@
 import logging
+import os
+import secrets
 from datetime import datetime, timedelta
 
 from flask import current_app
 
-from app.extensions import db
-from app.models import Payment, User
+from app.auth_compat import current_user
+from app.extensions import bcrypt, db
+from app.models import AIChatMessage, Appointment, ContactMessage, Notification, Payment, User
 from app.services.financial_service import FinancialService
 from app.services.payment_service import PaymentService
 
@@ -408,6 +411,232 @@ def handle_yape_pending():
 def handle_search_yape(query):
     try:
         resp = current_app.test_client().get(f'/admin/yape/search?q={query}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='create_user',
+    description='Crea un nuevo usuario en el sistema.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'username': {'type': 'string', 'description': 'Nombre completo del usuario'},
+            'role': {
+                'type': 'string',
+                'description': 'Rol del usuario',
+                'enum': ['jugador', 'terapista', 'admin'],
+                'default': 'jugador',
+            },
+            'email': {'type': 'string', 'description': 'Email del usuario'},
+        },
+        'required': ['username'],
+    },
+    category='write',
+)
+def handle_create_user(username, role='jugador', email=None):
+    if current_user.role != 'admin':
+        return {'error': 'Solo administradores pueden crear usuarios'}
+    _DEFAULT_USER_PASSWORD = os.environ.get('DEFAULT_USER_PASSWORD') or secrets.token_urlsafe(12)
+    if not email:
+        email = f'{username.lower().replace(" ", ".")}@centrojuanpabloii.com'
+    existing = User.query.filter(db.or_(User.username.ilike(username), User.email == email)).first()
+    if existing:
+        return {'error': f'Ya existe un usuario: {existing.username}'}
+    user = User(
+        username=username,
+        email=email,
+        password=bcrypt.generate_password_hash(_DEFAULT_USER_PASSWORD).decode('utf-8'),
+        role=role,
+        is_active=True,
+    )
+    db.session.add(user)
+    db.session.commit()
+    return {
+        'success': True,
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'temp_password': _DEFAULT_USER_PASSWORD,
+        'message': f'Usuario {username} creado como {role}',
+    }
+
+
+@tool(
+    name='toggle_user_status',
+    description='Activa o desactiva un usuario. El estado cambia al opuesto del actual.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'user_id': {'type': 'integer', 'description': 'ID del usuario'},
+        },
+        'required': ['user_id'],
+    },
+    category='write',
+)
+def handle_toggle_user_status(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return {'error': 'Usuario no encontrado'}
+    user.is_active = not user.is_active
+    db.session.commit()
+    status = 'activado' if user.is_active else 'desactivado'
+    return {
+        'success': True,
+        'user_id': user.id,
+        'username': user.username,
+        'is_active': user.is_active,
+        'message': f'Usuario {user.username} {status}',
+    }
+
+
+@tool(
+    name='delete_user',
+    description='ELIMINA un usuario permanentemente. Solo ejecutar tras confirmacion explicita.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'user_id': {'type': 'integer', 'description': 'ID del usuario a eliminar'},
+        },
+        'required': ['user_id'],
+    },
+    category='write',
+)
+def handle_delete_user(user_id):
+    if current_user.role != 'admin':
+        return {'error': 'Solo administradores pueden eliminar usuarios'}
+    user = User.query.get(user_id)
+    if not user:
+        return {'error': 'Usuario no encontrado'}
+    if user.id == current_user.id:
+        return {'error': 'No puedes eliminarte a ti mismo'}
+    for model in [AIChatMessage, Appointment, Payment, ContactMessage, Notification]:
+        model.query.filter_by(user_id=user_id).delete()
+    db.session.delete(user)
+    db.session.commit()
+    return {'success': True, 'message': f'Usuario {user.username} eliminado'}
+
+
+@tool(
+    name='assign_therapist',
+    description='Asigna uno o mas terapeutas a un paciente.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'therapist_ids': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'IDs de los terapeutas a asignar',
+            },
+        },
+        'required': ['patient_id', 'therapist_ids'],
+    },
+    category='write',
+)
+def handle_assign_therapist(patient_id, therapist_ids):
+    if isinstance(therapist_ids, int):
+        therapist_ids = [therapist_ids]
+    try:
+        resp = current_app.test_client().post(
+            '/api/admin/assign-therapist',
+            json={'patient_id': patient_id, 'therapist_ids': therapist_ids},
+        )
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='reset_password',
+    description='Resetea la contrasena de un usuario a una temporal.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'user_id': {'type': 'integer', 'description': 'ID del usuario'},
+        },
+        'required': ['user_id'],
+    },
+    category='write',
+)
+def handle_reset_password(user_id):
+    if current_user.role != 'admin':
+        return {'error': 'Solo administradores pueden resetear contrasenas'}
+    user = User.query.get(user_id)
+    if not user:
+        return {'error': 'Usuario no encontrado'}
+    new_pw = secrets.token_urlsafe(8)
+    user.password = bcrypt.generate_password_hash(new_pw).decode('utf-8')
+    db.session.commit()
+    return {
+        'success': True,
+        'message': f'Contrasena reseteada para {user.username}',
+        'temp_password': new_pw,
+    }
+
+
+@tool(
+    name='create_appointment',
+    description='Crea una sesion para un paciente con un terapeuta.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'patient_name': {'type': 'string', 'description': 'Nombre del paciente (si no sabes el ID)'},
+            'day': {'type': 'string', 'description': 'Dia de la sesion (YYYY-MM-DD)'},
+            'time': {'type': 'string', 'description': 'Hora (HH:MM)'},
+            'duration_minutes': {'type': 'integer', 'description': 'Duracion en minutos', 'default': 60},
+        },
+    },
+    category='write',
+)
+def handle_create_appointment(patient_id=None, patient_name=None, day=None, time=None, duration_minutes=60):
+    if not patient_id and not patient_name:
+        return {'error': 'Debes proporcionar patient_id o patient_name'}
+    if not patient_id:
+        patient = User.query.filter(User.username.ilike(f'%{patient_name}%'), User.role == 'jugador').first()
+        if not patient:
+            return {'error': f'Paciente "{patient_name}" no encontrado'}
+        patient_id = patient.id
+    if day and time:
+        start_str = f'{day} {time}'
+    else:
+        start_str = (datetime.now() + timedelta(hours=1)).strftime('%Y-%m-%d %H:%M')
+    try:
+        start_dt = datetime.strptime(start_str, '%Y-%m-%d %H:%M')
+    except ValueError:
+        start_dt = datetime.now() + timedelta(hours=1)
+    end_dt = start_dt + timedelta(minutes=duration_minutes)
+    patient = User.query.get(patient_id)
+    appt = Appointment(
+        therapist_id=current_user.id,
+        patient_id=patient_id,
+        title=f'Sesion con {patient.username}',
+        start_time=start_dt,
+        end_time=end_dt,
+        status='scheduled',
+    )
+    db.session.add(appt)
+    db.session.commit()
+    return {
+        'success': True,
+        'appointment_id': appt.id,
+        'message': f'Sesion creada para {patient.username} el {start_dt.strftime("%d/%m/%Y %H:%M")}',
+    }
+
+
+@tool(
+    name='get_dashboard_overview',
+    description='Resumen general del dashboard: total terapeutas, pacientes, sesiones, accuracy.',
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+)
+def handle_dashboard_overview():
+    try:
+        resp = current_app.test_client().get('/admin/api/overview')
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
