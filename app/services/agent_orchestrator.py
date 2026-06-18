@@ -78,7 +78,7 @@ SYSTEM_PROMPTS = {
 
 MODEL_MAP = {
     'chiquito': 'llama-3.1-8b-instant',
-    'grande': 'llama-3.2-11b-vision-preview',
+    'grande': 'llama-3.3-70b-versatile',
 }
 
 MAX_ITERATIONS = 5
