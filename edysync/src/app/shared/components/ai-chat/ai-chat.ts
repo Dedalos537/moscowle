@@ -62,6 +62,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   isOpen = false;
   fullScreen = false;
+  currentMode: 'chiquito' | 'grande' = 'chiquito';
   messages: ChatMessage[] = [];
   inputMessage = '';
   loading = false;
@@ -89,6 +90,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  get mode(): 'chiquito' | 'grande' {
+    return this.fullScreen ? 'grande' : 'chiquito';
   }
 
   sanitize(html: string): string {
@@ -124,6 +129,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   onEscape() {
     if (this.fullScreen) {
       this.fullScreen = false;
+      this.currentMode = 'chiquito';
       this.cdr.markForCheck();
     } else if (this.isOpen) {
       this.togglePanel();
@@ -132,6 +138,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   toggleFullScreen() {
     this.fullScreen = !this.fullScreen;
+    this.currentMode = this.fullScreen ? 'grande' : 'chiquito';
     this.cdr.markForCheck();
   }
 
@@ -303,49 +310,76 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.error = null;
     this.cdr.markForCheck();
 
-    const page = this.detectCurrentPage();
-
-    this.subs.add(this.llama.sendMessage(msg, page).subscribe({
-      next: (res) => {
-        this.loading = false;
-        if (res.success) {
+    if (this.currentMode === 'grande') {
+      this.subs.add(this.llama.sendAgentMessage(msg, 'grande').subscribe({
+        next: (res) => {
+          this.loading = false;
           this.messages.push({
             role: 'assistant',
             content: res.response,
             intent: res.intent,
             action_chips: res.action_chips,
           });
-
           this.suggestions = res.suggestions || this.suggestions;
           this.actionChips = res.action_chips || this.actionChips;
-
-          if (res.redirect) {
-            const url = res.redirect!;
-            const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(p => url.startsWith(p));
-            const isSameOrigin = url.startsWith(window.location.origin) || url.startsWith('/');
-            if (isAllowed && isSameOrigin) {
-              setTimeout(() => { window.location.href = url; }, 1500);
-            }
-          }
-        } else {
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loading = false;
+          this.error = 'Error de conexion con el servidor';
           this.messages.push({
             role: 'assistant',
-            content: 'Error al procesar tu mensaje',
+            content: 'No se pudo conectar con el servidor',
+            error: true,
           });
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.loading = false;
-        this.error = 'Error de conexion con el servidor';
-        this.messages.push({
-          role: 'assistant',
-          content: 'No se pudo conectar con el servidor',
-          error: true,
-        });
-        this.cdr.markForCheck();
-      },
-    }));
+          this.cdr.markForCheck();
+        },
+      }));
+    } else {
+      const page = this.detectCurrentPage();
+
+      this.subs.add(this.llama.sendMessage(msg, page).subscribe({
+        next: (res) => {
+          this.loading = false;
+          if (res.success) {
+            this.messages.push({
+              role: 'assistant',
+              content: res.response,
+              intent: res.intent,
+              action_chips: res.action_chips,
+            });
+
+            this.suggestions = res.suggestions || this.suggestions;
+            this.actionChips = res.action_chips || this.actionChips;
+
+            if (res.redirect) {
+              const url = res.redirect!;
+              const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(p => url.startsWith(p));
+              const isSameOrigin = url.startsWith(window.location.origin) || url.startsWith('/');
+              if (isAllowed && isSameOrigin) {
+                setTimeout(() => { window.location.href = url; }, 1500);
+              }
+            }
+          } else {
+            this.messages.push({
+              role: 'assistant',
+              content: 'Error al procesar tu mensaje',
+            });
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.loading = false;
+          this.error = 'Error de conexion con el servidor';
+          this.messages.push({
+            role: 'assistant',
+            content: 'No se pudo conectar con el servidor',
+            error: true,
+          });
+          this.cdr.markForCheck();
+        },
+      }));
+    }
   }
 
   onFileSelected(event: Event) {

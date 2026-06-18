@@ -153,6 +153,28 @@
   line-height: 1.2;
 }
 
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+}
+
+.mode-badge--chiquito {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.mode-badge--grande {
+  background: #f59e0b;
+  color: #fff;
+}
+
 .chat-header p {
   font-size: 0.7rem;
   font-weight: 600;
