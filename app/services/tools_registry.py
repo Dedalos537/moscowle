@@ -7,7 +7,7 @@ from flask import current_app
 
 from app.auth_compat import current_user
 from app.extensions import bcrypt, db
-from app.models import AIChatMessage, Appointment, ContactMessage, Notification, Payment, User
+from app.models import AIChatMessage, Appointment, ContactMessage, Notification, Payment, Sede, User
 from app.services.financial_service import FinancialService
 from app.services.payment_service import PaymentService
 
@@ -641,3 +641,184 @@ def handle_dashboard_overview():
         return {'success': True, 'data': data}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='register_expense',
+    description='Registra un gasto del centro.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'category': {'type': 'string', 'description': 'Categoria del gasto'},
+            'amount': {'type': 'number', 'description': 'Monto en soles'},
+            'description': {'type': 'string', 'description': 'Descripcion del gasto'},
+            'date': {'type': 'string', 'description': 'Fecha del gasto (YYYY-MM-DD)'},
+        },
+        'required': ['category', 'amount'],
+    },
+    category='write',
+)
+def handle_register_expense(category, amount, description='', date=None):
+    svc = FinancialService()
+    try:
+        expense_data = {
+            'category': category,
+            'amount': float(amount),
+            'date': date or datetime.now().strftime('%Y-%m-%d'),
+            'description': description or 'Gasto via Copilot',
+            'method': 'IA/Copilot',
+        }
+        svc.create_expense(expense_data)
+        return {'success': True, 'message': f'Gasto de S/. {amount} registrado en {category}'}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_expenses',
+    description='Obtiene lista de gastos del centro.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'start_date': {'type': 'string', 'description': 'Fecha inicio (YYYY-MM-DD)'},
+            'end_date': {'type': 'string', 'description': 'Fecha fin (YYYY-MM-DD)'},
+            'category': {'type': 'string', 'description': 'Filtrar por categoria'},
+        },
+    },
+    category='read',
+)
+def handle_get_expenses(start_date=None, end_date=None, category=None):
+    try:
+        params = {}
+        if start_date:
+            params['start_date'] = start_date
+        if end_date:
+            params['end_date'] = end_date
+        if category:
+            params['category'] = category
+        qs = '&'.join(f'{k}={v}' for k, v in params.items())
+        resp = current_app.test_client().get(f'/admin/api/expenses?{qs}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='broadcast_message',
+    description='Envia un mensaje a todos los pacientes, terapeutas, o un usuario especifico.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'subject': {'type': 'string', 'description': 'Asunto del mensaje'},
+            'body': {'type': 'string', 'description': 'Cuerpo del mensaje'},
+            'target': {
+                'type': 'string',
+                'description': 'Destinatarios: all, therapists, patients, specific',
+                'default': 'all',
+            },
+            'receiver_id': {'type': 'integer', 'description': 'ID del usuario si target=specific'},
+        },
+        'required': ['subject', 'body'],
+    },
+    category='write',
+)
+def handle_broadcast(subject, body, target='all', receiver_id=None):
+    try:
+        payload = {'subject': subject, 'body': body, 'target': target}
+        if receiver_id:
+            payload['receiver_id'] = receiver_id
+        resp = current_app.test_client().post(
+            '/api/admin/messages/broadcast',
+            json=payload,
+        )
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_weekly_summary',
+    description='Resumen semanal por terapeuta.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'week_start': {'type': 'string', 'description': 'Fecha de inicio de la semana (YYYY-MM-DD)'},
+        },
+    },
+    category='read',
+)
+def handle_weekly_summary(week_start=None):
+    try:
+        params = f'?week_start={week_start}' if week_start else ''
+        resp = current_app.test_client().get(f'/admin/api/weekly-summary{params}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_monthly_summary',
+    description='Resumen mensual del centro.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'year': {'type': 'integer', 'description': 'Ano'},
+            'month': {'type': 'integer', 'description': 'Mes (1-12)'},
+        },
+    },
+    category='read',
+)
+def handle_monthly_summary(year=None, month=None):
+    try:
+        params = {}
+        if year:
+            params['year'] = year
+        if month:
+            params['month'] = month
+        qs = '&'.join(f'{k}={v}' for k, v in params.items())
+        resp = current_app.test_client().get(f'/admin/api/reports/monthly?{qs}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='generate_ai_report',
+    description='Genera un reporte estrategico de inteligencia artificial del centro.',
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+)
+def handle_generate_report():
+    try:
+        resp = current_app.test_client().post('/admin/generate-ia-report')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_sedes',
+    description='Lista todas las sedes del centro.',
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+)
+def handle_get_sedes():
+    sedes = Sede.query.all()
+
+    return {
+        'success': True,
+        'sedes': [
+            {
+                'id': s.id,
+                'name': s.name,
+                'address': getattr(s, 'address', ''),
+                'patient_count': User.query.filter_by(sede_id=s.id, role='jugador').count(),
+            }
+            for s in sedes
+        ],
+    }
