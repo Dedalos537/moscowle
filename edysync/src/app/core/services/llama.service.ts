@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 export interface ActionChip {
   id: string;
@@ -22,6 +23,14 @@ export interface LlamaResponse {
   suggestions?: string[];
 }
 
+export interface AgentResponse {
+  response: string;
+  intent: string;
+  action_chips: ActionChip[];
+  suggestions: string[];
+  conversation_id: number | null;
+}
+
 export interface ChatMessage {
   id?: number;
   role: 'user' | 'assistant';
@@ -40,7 +49,16 @@ export class LlamaService {
     return this.http.get<{ success: boolean; messages: ChatMessage[] }>('/llama/chat/history');
   }
 
-  sendMessage(message: string, page: string = 'dashboard'): Observable<LlamaResponse> {
-    return this.http.post<LlamaResponse>('/llama/chat/send', { message, page });
+  sendMessage(message: string, page: string = 'dashboard', mode: 'chiquito' | 'grande' = 'chiquito'): Observable<LlamaResponse> {
+    return this.http.post<LlamaResponse>('/llama/chat/send', { message, page, mode });
+  }
+
+  sendAgentMessage(message: string, mode: 'chiquito' | 'grande' = 'chiquito'): Observable<AgentResponse> {
+    return this.http.post<AgentResponse>('/llama/agent', { message, mode, conversation_id: null }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('sendAgentMessage error:', error);
+        return throwError(() => error);
+      })
+    );
   }
 }
