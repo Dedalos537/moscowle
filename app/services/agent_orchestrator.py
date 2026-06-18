@@ -68,16 +68,14 @@ def process_agent_message(uid, message, mode='chiquito'):
     ]
 
     tool_retry_count = 0
-    has_run_tool = False
 
     for _ in range(MAX_ITERATIONS):
-        force_tool = not has_run_tool and mode == 'grande' and bool(tools)
         try:
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
                 tools=tools if tools else None,
-                tool_choice='required' if force_tool else ('auto' if tools else None),
+                tool_choice='auto' if tools else None,
                 parallel_tool_calls=False,
                 temperature=0.3,
                 max_tokens=2048,
@@ -85,18 +83,21 @@ def process_agent_message(uid, message, mode='chiquito'):
         except BadRequestError as e:
             error_str = str(e)
             logger.error(f'Groq BadRequestError: {error_str[:500]}')
-            if 'Failed to call a function' in error_str:
-                nudge = (
-                    'ERROR de parametros. Solo puedes pasar valores del tipo correcto: '
-                    'strings van con comillas, numbers van sin comillas ni simbolos (2026, no "S/ 2026"). '
-                    'Si el schema dice "type: integer", pasa un numero entero. '
-                    'Si "type: number", pasa un numero decimal sin simbolos. '
-                    'Usa search_patients para obtener el patient_id exacto. '
-                    'Intenta de nuevo con UNA sola herramienta.'
+            if 'Failed to call a function' in error_str or 'tool call validation' in error_str:
+                messages.append(
+                    {
+                        'role': 'user',
+                        'content': (
+                            'La herramienta que intentaste usar rechazo los parametros. '
+                            'NO vuelvas a intentar con los mismos datos. '
+                            'PREGUNTALE al usuario QUE LE FALTA. '
+                            'Por ejemplo: "Necesito el monto exacto" o "A nombre de quien?". '
+                            'Luego cuando tengas los datos correctos, llama la herramienta de nuevo.'
+                        ),
+                    }
                 )
-                messages.append({'role': 'user', 'content': nudge})
                 continue
-            return build_result(f'Error del asistente: {error_str[:100]}')
+            return build_result(f'Error del asistente: {error_str[:120]}')
         except Exception as e:
             logger.error(f'Groq API error: {e}', exc_info=True)
             return build_result(f'Error al contactar al asistente: {str(e)[:100]}')
@@ -105,27 +106,24 @@ def process_agent_message(uid, message, mode='chiquito'):
         msg = choice.message
 
         if not msg.tool_calls:
-            if has_run_tool:
-                return build_result(
-                    response=msg.content or 'Listo.',
-                    intent='general_chat',
-                )
-
-            if tool_retry_count < MAX_TOOL_RETRIES:
+            if tool_retry_count < MAX_TOOL_RETRIES and mode == 'grande':
                 tool_retry_count += 1
                 logger.info(f'No tool calls (retry {tool_retry_count})')
-                messages.append({
-                    'role': 'user',
-                    'content': 'DEBES llamar UNA herramienta disponible. No respondas solo con texto.'
-                })
+                messages.append(
+                    {
+                        'role': 'user',
+                        'content': (
+                            'Usa UNA herramienta si tienes los datos necesarios. '
+                            'Si te falta informacion, PREGUNTALE al usuario.'
+                        ),
+                    }
+                )
                 continue
 
             return build_result(
                 response=msg.content or 'No se que responder.',
                 intent='general_chat',
             )
-
-        has_run_tool = True
 
         for tool_call in msg.tool_calls:
             try:
@@ -136,18 +134,22 @@ def process_agent_message(uid, message, mode='chiquito'):
                 result = execute_tool(func_name, func_args)
                 result_str = json.dumps(result, ensure_ascii=False, default=str)
 
-                messages.append({
-                    'role': 'tool',
-                    'tool_call_id': tool_call.id,
-                    'content': result_str,
-                })
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': tool_call.id,
+                        'content': result_str,
+                    }
+                )
             except Exception as e:
                 logger.error(f'Error executing tool {tool_call.function.name}: {e}', exc_info=True)
-                messages.append({
-                    'role': 'tool',
-                    'tool_call_id': tool_call.id,
-                    'content': json.dumps({'error': str(e)}),
-                })
+                messages.append(
+                    {
+                        'role': 'tool',
+                        'tool_call_id': tool_call.id,
+                        'content': json.dumps({'error': str(e)}),
+                    }
+                )
 
     return build_result(
         'La operacion requiere muchos pasos. Por favor, intenta con una instruccion mas directa.',
