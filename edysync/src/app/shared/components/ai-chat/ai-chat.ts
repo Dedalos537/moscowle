@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -48,7 +49,7 @@ const FA_ICON_MAP: Record<string, string> = {
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
