@@ -28,14 +28,13 @@ SYSTEM_PROMPTS = {
     'grande': (
         'Eres un agente administrador con control total del Centro de Terapias Juan Pablo II.\n'
         'Tienes acceso a TODAS las herramientas del sistema.\n\n'
-        'REGLAS ESTRICTAS:\n'
-        '1. Llama herramientas SIEMPRE antes de responder. NUNCA respondas sin usar una herramienta.\n'
-        '2. Para pagos con voucher: analiza → extrae monto → '
-        'si falta paciente, pregunta → solo cuando tengas todo, ejecuta register_payment\n'
-        '3. Para crear usuarios: pregunta por nombre y rol explicitamente\n'
-        '4. Siempre confirma con el usuario antes de ejecutar mutaciones destructivas (delete, desactivar)\n'
-        '5. Se conciso y directo. Usa español.\n'
-        '6. Cada vez que recibas una pregunta, DEBES seleccionar la herramienta mas adecuada y llamarla.'
+        'REGLAS:\n'
+        '1. Antes de responder, llama SIEMPRE UNA herramienta.\n'
+        '2. Para pagos con voucher: extrae monto (solo el numero, sin S/). '
+        'Si falta paciente o ID, busca con search_patients primero.\n'
+        '3. Para crear usuarios: pregunta nombre y rol.\n'
+        '4. Confirma antes de mutaciones destructivas.\n'
+        '5. Se conciso. Usa español.'
     ),
 }
 
@@ -69,34 +68,33 @@ def process_agent_message(uid, message, mode='chiquito'):
     ]
 
     tool_retry_count = 0
+    has_run_tool = False
 
     for _ in range(MAX_ITERATIONS):
+        force_tool = not has_run_tool and mode == 'grande' and bool(tools)
         try:
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
                 tools=tools if tools else None,
-                tool_choice='required' if tools and mode == 'grande' else ('auto' if tools else None),
+                tool_choice='required' if force_tool else ('auto' if tools else None),
+                parallel_tool_calls=False,
                 temperature=0.3,
                 max_tokens=2048,
             )
         except BadRequestError as e:
             error_str = str(e)
-            logger.error(f'Groq BadRequestError: {error_str[:200]}')
-            if 'Failed to call a function' in error_str or 'tool_choice' in error_str.lower():
-                messages.append(
-                    {
-                        'role': 'user',
-                        'content': (
-                            'ERROR: La funcion que intentaste llamar tiene parametros invalidos. '
-                            'Revisa: (1) los tipos de datos coinciden con la definicion '
-                            '(integer, number, string, enum), (2) los nombres de parametros '
-                            'son exactos. No pases strings donde se espera integer/number. '
-                            'Si no tienes el patient_id exacto, usa search_patients primero '
-                            'para obtenerlo, o usa patient_name como string.'
-                        ),
-                    }
+            logger.error(f'Groq BadRequestError: {error_str[:500]}')
+            if 'Failed to call a function' in error_str:
+                nudge = (
+                    'ERROR de parametros. Solo puedes pasar valores del tipo correcto: '
+                    'strings van con comillas, numbers van sin comillas ni simbolos (2026, no "S/ 2026"). '
+                    'Si el schema dice "type: integer", pasa un numero entero. '
+                    'Si "type: number", pasa un numero decimal sin simbolos. '
+                    'Usa search_patients para obtener el patient_id exacto. '
+                    'Intenta de nuevo con UNA sola herramienta.'
                 )
+                messages.append({'role': 'user', 'content': nudge})
                 continue
             return build_result(f'Error del asistente: {error_str[:100]}')
         except Exception as e:
@@ -107,32 +105,32 @@ def process_agent_message(uid, message, mode='chiquito'):
         msg = choice.message
 
         if not msg.tool_calls:
-            if tools and tool_retry_count < MAX_TOOL_RETRIES:
+            if has_run_tool:
+                return build_result(
+                    response=msg.content or 'Listo.',
+                    intent='general_chat',
+                )
+
+            if tool_retry_count < MAX_TOOL_RETRIES:
                 tool_retry_count += 1
-                logger.info(f'Model returned no tool calls (retry {tool_retry_count}/{MAX_TOOL_RETRIES})')
+                logger.info(f'No tool calls (retry {tool_retry_count})')
                 messages.append(
-                    {
-                        'role': 'user',
-                        'content': (
-                            'Para responder a esta pregunta, DEBES usar UNA de las herramientas '
-                            'disponibles. No respondas solo con texto. Revisa la lista de '
-                            'herramientas, elige la mas adecuada y llamala ahora.'
-                        ),
-                    }
+                    {'role': 'user', 'content': 'DEBES llamar UNA herramienta disponible. No respondas solo con texto.'}
                 )
                 continue
+
             return build_result(
                 response=msg.content or 'No se que responder.',
                 intent='general_chat',
             )
 
-        tool_retry_count = 0
+        has_run_tool = True
 
         for tool_call in msg.tool_calls:
             try:
                 func_name = tool_call.function.name
                 func_args = json.loads(tool_call.function.arguments)
-                logger.info(f'Tool call: {func_name}({json.dumps(func_args, ensure_ascii=False)[:200]})')
+                logger.info(f'Tool call: {func_name}({json.dumps(func_args, ensure_ascii=False)[:300]})')
 
                 result = execute_tool(func_name, func_args)
                 result_str = json.dumps(result, ensure_ascii=False, default=str)
