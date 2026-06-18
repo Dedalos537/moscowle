@@ -349,25 +349,57 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
     const isImage = file.type.startsWith('image/');
+
+    if (!isImage) {
+      if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.inputMessage = reader.result as string;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        };
+        reader.readAsText(file);
+      } else {
+        this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+        this.cdr.markForCheck();
+        this.sendMessage();
+      }
+      input.value = '';
+      return;
+    }
+
+    // Image file: read preview, upload for OCR, then send enriched message to agent
     const reader = new FileReader();
     reader.onload = () => {
-      if (isImage) {
-        this.pendingFilePreview = reader.result as string;
-      }
+      this.pendingFilePreview = reader.result as string;
       this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      this.loading = true;
       this.cdr.markForCheck();
-      this.sendMessage();
+
+      this.llama.uploadVoucher(file).subscribe({
+        next: (res) => {
+          this.loading = false;
+          const amount = res.extracted?.amount;
+          const payer = res.extracted?.payer || '';
+          const ocrText = res.ocr_text || '';
+          let enrichedMsg = `[Voucher: ${file.name}]\n\n--- Datos extraídos del voucher ---\n`;
+          if (amount) enrichedMsg += `- Monto: S/ ${amount.toFixed(2)}\n`;
+          if (payer) enrichedMsg += `- Pagador: ${payer}\n`;
+          enrichedMsg += `- Texto OCR: ${ocrText.slice(0, 500)}\n`;
+          enrichedMsg += `\nUsa estos datos para registrar el pago. Pregunta al usuario si falta información. Luego ejecuta register_payment con todos los datos confirmados.`;
+
+          this.inputMessage = enrichedMsg;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        },
+      });
     };
-    if (isImage) {
-      reader.readAsDataURL(file);
-    } else if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
-      reader.readAsText(file);
-    } else {
-      reader.onload = null;
-      this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
-      this.cdr.markForCheck();
-      this.sendMessage();
-    }
+    reader.readAsDataURL(file);
     input.value = '';
   }
 

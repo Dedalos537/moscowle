@@ -42,6 +42,18 @@ export interface ChatMessage {
   filePreview?: string;
 }
 
+export interface AgentUploadResponse {
+  success: boolean;
+  filename: string;
+  ocr_text: string;
+  extracted: {
+    amount: number | null;
+    payer: string;
+    confidence: number;
+    image_type: string;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class LlamaService {
   constructor(private http: HttpClient) {}
@@ -58,6 +70,17 @@ export class LlamaService {
     return this.http.post<AgentResponse>('/llama/agent', { message, mode, conversation_id: null }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('sendAgentMessage error:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  uploadVoucher(file: File): Observable<AgentUploadResponse> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<AgentUploadResponse>('/llama/agent/upload', fd).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('uploadVoucher error:', error);
         return throwError(() => error);
       })
     );
