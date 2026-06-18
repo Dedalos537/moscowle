@@ -15,6 +15,10 @@ logger = logging.getLogger('app')
 
 TOOL_REGISTRY = {}
 
+# Holds the current user_id during agent tool execution
+# Set by execute_tool() — consumed by _api_get/_api_post
+_CURRENT_UID = None
+
 
 def tool(name, description, parameters, category='read'):
     """Decorator to register a tool."""
@@ -51,8 +55,10 @@ def get_tools_for_mode(mode):
     return tools
 
 
-def execute_tool(name, args):
+def execute_tool(name, args, uid=None):
     """Execute a tool by name with given args. Returns dict result."""
+    global _CURRENT_UID
+    _CURRENT_UID = uid
     t = TOOL_REGISTRY.get(name)
     if not t:
         return {'error': f'Unknown tool: {name}'}
@@ -65,19 +71,23 @@ def execute_tool(name, args):
 
 def _api_get(endpoint):
     """Make authenticated GET via test_client, forwarding current session."""
+    user_id = _CURRENT_UID or session.get('user_id')
+    role = session.get('role', 'admin')
     with current_app.test_client() as c:
         with c.session_transaction() as sess:
-            sess['user_id'] = session.get('user_id')
-            sess['role'] = session.get('role', 'admin')
+            sess['user_id'] = user_id
+            sess['role'] = role
         return c.get(endpoint)
 
 
 def _api_post(endpoint, json=None):
     """Make authenticated POST via test_client, forwarding current session."""
+    user_id = _CURRENT_UID or session.get('user_id')
+    role = session.get('role', 'admin')
     with current_app.test_client() as c:
         with c.session_transaction() as sess:
-            sess['user_id'] = session.get('user_id')
-            sess['role'] = session.get('role', 'admin')
+            sess['user_id'] = user_id
+            sess['role'] = role
         return c.post(endpoint, json=json or {})
 
 

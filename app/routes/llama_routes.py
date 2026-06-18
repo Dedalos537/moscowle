@@ -691,6 +691,65 @@ def agent_health():
     return jsonify({'status': 'ok', 'message': 'Agent endpoint ready'})
 
 
+@llama_bp.route('/agent/upload', methods=['POST'])
+@csrf.exempt
+@login_required
+def agent_upload():
+    """Upload a file (voucher/image) for the agent. Runs OCR and returns extracted data."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({'error': 'Empty file'}), 400
+
+    try:
+        import uuid as uuid_mod
+        filename = secure_filename(f'agent_{uuid_mod.uuid4().hex}_{file.filename}')
+        upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'agent')
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+
+        from app.services.smart_image_analysis_service import SmartImageAnalyzer
+
+        analysis = SmartImageAnalyzer.analyze_complete(filepath)
+
+        raw_text = analysis.get('raw_text', '')
+        amount = analysis.get('amount')
+        image_type = analysis.get('image_type', 'generic')
+        confidence = analysis.get('confidence', 0)
+
+        payer = ''
+        if raw_text:
+            lines = raw_text.split('\n')
+            for line in lines[:20]:
+                stripped = line.strip()
+                if stripped and len(stripped) > 3 and not any(
+                    x in stripped.lower() for x in ['s/', 'yape', 'plin', 'bim', 'total', 'monto', 'gracias', 'recibo',
+                                                     'boleta', 'factura', 'vuelto', 'cambio', 'operacion']
+                ):
+                    payer = stripped
+                    break
+
+        ocr_text = raw_text[:1000] if raw_text else ''
+
+        return jsonify({
+            'success': True,
+            'filename': file.filename,
+            'ocr_text': ocr_text,
+            'extracted': {
+                'amount': amount,
+                'payer': payer,
+                'confidence': confidence,
+                'image_type': image_type,
+            },
+        })
+    except Exception as e:
+        current_app.logger.error(f'Error in agent_upload: {e}', exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 @llama_bp.route('/agent', methods=['POST'])
 @login_required
 def agent_message():
