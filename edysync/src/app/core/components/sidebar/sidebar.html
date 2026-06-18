@@ -31,15 +31,6 @@
   </nav>
 
   <div class="sidebar-footer">
-    <app-button variant="ghost" (clicked)="toggleDarkMode()">
-      @if (theme === 'light') {
-        <fa-icon [icon]="['fas', 'moon']" class="text-sm"></fa-icon>
-        <span class="text-sm">Modo Oscuro</span>
-      } @else {
-        <fa-icon [icon]="['fas', 'sun']" class="text-sm"></fa-icon>
-        <span class="text-sm">Modo Claro</span>
-      }
-    </app-button>
     <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
       [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'"
       [attr.aria-label]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">

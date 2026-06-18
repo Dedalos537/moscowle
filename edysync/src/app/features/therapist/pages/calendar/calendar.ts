@@ -7,6 +7,7 @@ import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widg
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { toLocalDateString } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-therapist-calendar',
@@ -45,8 +46,8 @@ export class TherapistCalendarPage implements OnInit, OnDestroy {
 
   private loadSessions() {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
+    const start = toLocalDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    const end = toLocalDateString(new Date(now.getFullYear(), now.getMonth() + 2, 0));
 
     this.subs.add(this.therapistService.getSessions(start, end).subscribe({
       next: (events) => {

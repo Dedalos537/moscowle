@@ -6,7 +6,6 @@ import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { SidebarService } from '../../services/sidebar.service';
-import { ThemeService } from '../../services/theme.service';
 import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
 import { BeaconOverlay } from 'ng-beacon';
@@ -24,7 +23,6 @@ import { Button } from '../../../shared/components/button/button';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TherapistLayout implements OnInit, OnDestroy {
-  theme: string = 'light';
   routeLoading = false;
   loadStartTime = 0;
   loadElapsed = '';
@@ -38,15 +36,10 @@ export class TherapistLayout implements OnInit, OnDestroy {
     private router: Router,
     public confirmService: ConfirmService,
     public sidebarService: SidebarService,
-    private themeService: ThemeService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
-    this.subs.add(this.themeService.theme$.subscribe(t => {
-      this.theme = t;
-      this.cdr.markForCheck();
-    }));
     this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {
         this.routeLoading = true;
@@ -72,9 +65,5 @@ export class TherapistLayout implements OnInit, OnDestroy {
 
   prepareRoute() {
     return;
-  }
-
-  toggleDarkMode() {
-    this.themeService.toggle();
   }
 }

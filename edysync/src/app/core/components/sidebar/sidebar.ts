@@ -4,10 +4,8 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
-import { ThemeService } from '../../services/theme.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
 import { Subscription } from 'rxjs';
-import { Button } from '../../../shared/components/button/button';
 
 interface NavItem {
   path: string;
@@ -20,7 +18,7 @@ interface NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterModule, FontAwesomeModule, Button],
+  imports: [RouterModule, FontAwesomeModule],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,7 +27,6 @@ export class Sidebar implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
   hideCharts = this.settings.hideCharts;
 
-  theme: string = 'light';
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
@@ -69,15 +66,10 @@ export class Sidebar implements OnInit, OnDestroy {
   constructor(
     private auth: AuthService,
     public sidebarService: SidebarService,
-    private themeService: ThemeService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
-    this.subs.add(this.themeService.theme$.subscribe(t => {
-      this.theme = t;
-      this.cdr.markForCheck();
-    }));
     this.subs.add(this.auth.currentUser$.subscribe(u => {
       this.userRole = u?.role || '';
       this.cdr.markForCheck();
@@ -90,10 +82,6 @@ export class Sidebar implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
-  }
-
-  toggleDarkMode() {
-    this.themeService.toggle();
   }
 
   toggleHelp() {

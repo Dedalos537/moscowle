@@ -14,6 +14,7 @@ import { SelectOption } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Select } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
+import { toLocalDateString } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-therapist-sessions',
@@ -200,7 +201,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   cargarSesiones() {
     this.loading = true;
     this.cdr.markForCheck();
-    const f = this.fechaSeleccionada.toISOString().split('T')[0];
+    const f = toLocalDateString(this.fechaSeleccionada);
     this.subs.add(this.therapistService.getSessions(f, f).subscribe({
       next: (events) => {
         this.agendaEvents = [...events].sort((a: any, b: any) => {
@@ -218,7 +219,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   openCreateModal() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
     this.editForm = {
       id: 0,
       title: '',
@@ -319,7 +320,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.editForm = {
       id: event.id,
       title: event.title,
-      date: new Date(event.start).toISOString().split('T')[0],
+      date: toLocalDateString(new Date(event.start)),
       start_time: event.start ? new Date(event.start).toTimeString().substring(0, 5) : '',
       end_time: event.end ? new Date(event.end).toTimeString().substring(0, 5) : '',
       status: event.status || 'scheduled',
