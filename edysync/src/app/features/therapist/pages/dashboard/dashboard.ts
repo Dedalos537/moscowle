@@ -9,6 +9,32 @@ import { RecordingService } from '../../../../core/services/recording.service';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 
+interface TopicItem {
+  name: string;
+  status: string;
+  status_label: string;
+}
+
+interface EmptyState {
+  reason: string;
+  message: string | null;
+  hint: string;
+}
+
+interface DashboardData {
+  next_session?: { id: number; title: string; start: string; patient?: string; location?: string };
+  agenda: any[];
+  today_label: string;
+  avg_compliance: number;
+  session_topics: { items: TopicItem[]; empty_state: EmptyState | null };
+  session_progress: number;
+  weekly_progress: { percent: number; completed_sessions: number; audited_sessions: number };
+  progress: { label: string; weekly_label: string; description: string };
+  pending_reports: { count: number; label: string; badge: string | null };
+  academic_progress: { delta: number; label: string; subtitle: string; avg_this_month?: number | null };
+  ai_coach: { count: number; label: string; badge: string | null };
+}
+
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: true,
@@ -20,17 +46,15 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 })
 export class TherapistDashboard implements OnInit, OnDestroy {
   loading = true;
-  data: any = null;
+  data: DashboardData | null = null;
   currentUser: any = null;
   error: string | null = null;
 
-  weeklyReportsPending = false;
-  weeklyReportsCount = 0;
   weeklyReportWeekStart = '';
   weeklyReportWeekEnd = '';
+  weeklyReportLabel = '';
   showWeeklyReviewModal = false;
   weeklyReportDetail: any = null;
-  weeklyReportDetailLoading = false;
 
   private subs = new Subscription();
 
@@ -54,28 +78,12 @@ export class TherapistDashboard implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     }));
 
-    this.subs.add(this.http.get('/api/therapist/dashboard').subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.data = res.data;
-          this.applyObjectives(res.data.session_objectives);
-          this.loadObjectivesForSession(res.data?.next_session?.id);
-        }
-        this.loading = false;
-        this.cdr.markForCheck();
-        this.checkPendingReports();
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = err.message;
-        this.cdr.markForCheck();
-      }
-    }));
+    this.loadDashboard();
 
     this.subs.add(this.recordingService.auditScore$.subscribe(score => {
       if (score != null && this.data) {
-        this.data.session_progress = score;
-        this.loadObjectivesForSession(this.data?.next_session?.id);
+        this.data.session_progress = Math.round(score);
+        this.refreshSessionTopics(this.data.next_session?.id);
       }
     }));
   }
@@ -84,41 +92,45 @@ export class TherapistDashboard implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
-  private loadObjectivesForSession(sessionId?: number) {
-    if (!sessionId) return;
+  private loadDashboard() {
+    this.subs.add(this.http.get('/api/therapist/dashboard').subscribe({
+      next: (res: any) => {
+        if (res.success) {
+          this.data = res.data;
+        }
+        this.loading = false;
+        this.cdr.markForCheck();
+        this.checkWeeklyReports();
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.message;
+        this.cdr.markForCheck();
+      }
+    }));
+  }
+
+  private refreshSessionTopics(sessionId?: number) {
+    if (!sessionId || !this.data) return;
     this.subs.add(
       this.http.get(`/api/sessions/${sessionId}/objectives`).subscribe({
         next: (res: any) => {
-          if (res.success && res.objectives?.length) {
-            this.applyObjectives(res.objectives);
-            this.cdr.markForCheck();
+          if (!res.success || !this.data) return;
+          if (res.objectives?.length) {
+            this.data.session_topics = {
+              items: res.objectives.map((o: TopicItem) => ({
+                name: o.name,
+                status: o.status,
+                status_label: o.status_label,
+              })),
+              empty_state: null,
+            };
           }
+          this.cdr.markForCheck();
         },
         error: () => {},
       })
     );
-  }
-
-  private applyObjectives(objectives: any[] | undefined) {
-    if (!this.data) return;
-    if (objectives?.length) {
-      this.data.topics = objectives.map(o => ({
-        name: o.name,
-        status: this.mapObjectiveStatus(o.status),
-      }));
-    } else if (this.data.planned_text) {
-      this.data.topics = this.parseTopics(this.data.planned_text);
-    } else {
-      this.data.topics = [{ name: 'Sin programación', status: 'PENDIENTE' }];
-    }
-  }
-
-  private mapObjectiveStatus(status: string): string {
-    switch (status) {
-      case 'completado': return 'LOGRADO';
-      case 'parcial': return 'PARCIAL';
-      default: return 'PENDIENTE';
-    }
   }
 
   get firstName(): string {
@@ -131,7 +143,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
   }
 
   get nextSessionTitle(): string {
-    return this.data?.next_session?.title || 'Sesión de Terapia';
+    return this.data?.next_session?.title || 'Sin sesión hoy';
   }
 
   get nextSessionTime(): string {
@@ -140,7 +152,7 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   get nextSessionSubtitle(): string {
     const s = this.data?.next_session;
-    if (!s) return '';
+    if (!s) return 'No hay citas programadas para hoy';
     const parts = [s.location, s.patient].filter(Boolean);
     return parts.join(' • ') || 'Sesión programada';
   }
@@ -149,41 +161,94 @@ export class TherapistDashboard implements OnInit, OnDestroy {
     return this.data?.session_progress || 0;
   }
 
+  get weeklyProgress(): number {
+    return this.data?.weekly_progress?.percent || 0;
+  }
+
   get sessionDescription(): string {
-    const p = this.sessionProgress;
-    if (p >= 80) return 'Excelente avance en el módulo actual.';
-    if (p >= 50) return 'Buen progreso, continúa con el plan.';
-    if (p > 0) return 'Sesión en curso, pendiente de evaluación.';
-    return 'Sin datos de progreso aún.';
+    return this.data?.progress?.description || '';
+  }
+
+  get progressLabel(): string {
+    return this.data?.progress?.label || 'Cobertura';
+  }
+
+  get weeklyProgressLabel(): string {
+    return this.data?.progress?.weekly_label || 'Meta semanal';
   }
 
   get todayDate(): string {
-    const d = new Date();
-    const day = d.getDate();
-    const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-    return `${day} ${months[d.getMonth()]}`;
+    return this.data?.today_label || '';
   }
 
   get agenda(): any[] {
     return this.data?.agenda || [];
   }
 
-  get topics(): { name: string; status: string }[] {
-    return this.data?.topics || [];
+  get topics(): TopicItem[] {
+    return this.data?.session_topics?.items || [];
+  }
+
+  get topicsEmptyState(): EmptyState | null {
+    return this.data?.session_topics?.empty_state || null;
+  }
+
+  get topicsHint(): string | null {
+    const empty = this.topicsEmptyState;
+    if (empty?.message) return empty.message;
+    if (!this.topics.length && empty?.hint) return empty.hint;
+    if (this.topics.length && empty?.hint) return empty.hint;
+    return null;
   }
 
   get reportesCount(): number {
-    return this.weeklyReportsCount || 0;
+    return this.data?.pending_reports?.count ?? 0;
   }
 
-  checkPendingReports() {
+  get reportesLabel(): string {
+    return this.data?.pending_reports?.label || 'Reportes pendientes';
+  }
+
+  get reportesBadge(): string | null {
+    return this.data?.pending_reports?.badge ?? null;
+  }
+
+  get academicDelta(): number {
+    return this.data?.academic_progress?.delta ?? 0;
+  }
+
+  get academicDeltaLabel(): string {
+    const d = this.academicDelta;
+    return d > 0 ? `+${d}%` : `${d}%`;
+  }
+
+  get academicLabel(): string {
+    return this.data?.academic_progress?.subtitle || 'Progreso académico';
+  }
+
+  get academicPeriod(): string {
+    return this.data?.academic_progress?.label || '';
+  }
+
+  get aiCoachCount(): number {
+    return this.data?.ai_coach?.count ?? 0;
+  }
+
+  get aiCoachLabel(): string {
+    return this.data?.ai_coach?.label || 'AI Coach';
+  }
+
+  get aiCoachBadge(): string | null {
+    return this.data?.ai_coach?.badge ?? null;
+  }
+
+  checkWeeklyReports() {
     this.subs.add(this.http.get('/api/therapist/weekly-reports/pending').subscribe({
       next: (res: any) => {
         if (res.success && res.has_pending) {
-          this.weeklyReportsPending = true;
-          this.weeklyReportsCount = res.reports_count;
           this.weeklyReportWeekStart = res.week_start;
           this.weeklyReportWeekEnd = res.week_end;
+          this.weeklyReportLabel = res.label || '';
           setTimeout(() => {
             this.showWeeklyReviewModal = true;
             this.cdr.markForCheck();
@@ -204,14 +269,11 @@ export class TherapistDashboard implements OnInit, OnDestroy {
 
   dismissWeeklyReview() {
     this.showWeeklyReviewModal = false;
-    this.weeklyReportsPending = false;
   }
 
   generateWeeklyReport() {
-    this.weeklyReportsPending = true;
     this.subs.add(this.http.post('/api/therapist/weekly-reports/generate', {}).subscribe({
       next: (res: any) => {
-        this.weeklyReportsPending = false;
         if (res.success) {
           this.showWeeklyReviewModal = true;
           this.weeklyReportDetail = res.report;
@@ -219,24 +281,10 @@ export class TherapistDashboard implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        this.weeklyReportsPending = false;
         this.error = err.message;
         this.cdr.markForCheck();
       }
     }));
-  }
-
-  parseTopics(text: string): { name: string; status: string }[] {
-    if (!text) return [{ name: 'Sin programación', status: 'PENDIENTE' }];
-
-    const lines = text.split('\n')
-      .map(l => l.replace(/^[-\*\d\\.]+ */, '').trim())
-      .filter(l => l.length > 3 && !l.match(/^(docente|integrantes?|alumno|profesor|fecha|índice|contents)/i))
-      .slice(0, 8);
-
-    if (lines.length === 0) return [{ name: 'Sin programación', status: 'PENDIENTE' }];
-
-    return lines.map(l => ({ name: l.substring(0, 80), status: 'PENDIENTE' }));
   }
 
   getTopicIcon(status: string): any {

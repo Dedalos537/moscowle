@@ -38,7 +38,6 @@
       <p class="text-white/70 text-sm mb-8">{{ nextSessionSubtitle }}</p>
 
       <div class="flex items-center gap-8">
-        <!-- SVG Donut -->
         <div class="relative w-28 h-28 shrink-0">
           <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
             <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
@@ -48,19 +47,18 @@
           </svg>
           <div class="absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-2xl font-black">{{ sessionProgress }}%</span>
-            <span class="text-[8px] uppercase tracking-wider text-white/50">Cobertura</span>
+            <span class="text-[8px] uppercase tracking-wider text-white/50">{{ progressLabel }}</span>
           </div>
         </div>
 
-        <!-- Progress bar -->
         <div class="flex-1 min-w-0">
           <div class="flex justify-between text-sm mb-2">
-            <span class="text-white/80 font-medium">Meta Semanal</span>
-            <span class="font-bold text-[#4ade80]">{{ sessionProgress }}%</span>
+            <span class="text-white/80 font-medium">{{ weeklyProgressLabel }}</span>
+            <span class="font-bold text-[#4ade80]">{{ weeklyProgress }}%</span>
           </div>
           <div class="w-full h-2 bg-white/15 rounded-full overflow-hidden">
             <div class="h-full bg-[#4ade80] rounded-full transition-all duration-700"
-                 [style.width.%]="sessionProgress"></div>
+                 [style.width.%]="weeklyProgress"></div>
           </div>
           <p class="text-xs text-white/40 mt-3 leading-relaxed">{{ sessionDescription }}</p>
         </div>
@@ -118,63 +116,80 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      @for (topic of topics; track $index) {
-        <div class="p-4 rounded-2xl border border-border/30 bg-surface hover:border-primary/30 transition-colors cursor-pointer">
-          <div class="flex items-center gap-2 mb-2">
-            <fa-icon [icon]="getTopicIcon(topic.status)"
-                     [class.text-success]="topic.status === 'LOGRADO'"
-                     [class.text-warning]="topic.status === 'PARCIAL'"
-                     [class.text-on-surface-variant/30]="topic.status === 'PENDIENTE'">
-            </fa-icon>
-            <span class="font-semibold text-sm text-on-surface truncate">{{ topic.name }}</span>
+    @if (topics.length) {
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        @for (topic of topics; track $index) {
+          <div class="p-4 rounded-2xl border border-border/30 bg-surface hover:border-primary/30 transition-colors">
+            <div class="flex items-center gap-2 mb-2">
+              <fa-icon [icon]="getTopicIcon(topic.status)"
+                       [class.text-success]="topic.status === 'LOGRADO'"
+                       [class.text-warning]="topic.status === 'PARCIAL'"
+                       [class.text-on-surface-variant/30]="topic.status === 'PENDIENTE'">
+              </fa-icon>
+              <span class="font-semibold text-sm text-on-surface truncate">{{ topic.name }}</span>
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-wider"
+                  [class.text-success]="topic.status === 'LOGRADO'"
+                  [class.text-warning]="topic.status === 'PARCIAL'"
+                  [class.text-on-surface-variant/50]="topic.status === 'PENDIENTE'">
+              {{ topic.status_label }}
+            </span>
           </div>
-          <span class="text-[10px] font-bold uppercase tracking-wider"
-                [class.text-success]="topic.status === 'LOGRADO'"
-                [class.text-warning]="topic.status === 'PARCIAL'"
-                [class.text-on-surface-variant/50]="topic.status === 'PENDIENTE'">
-            {{ topic.status }}
-          </span>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    } @else if (topicsEmptyState) {
+      <div class="rounded-2xl border border-dashed border-border/50 bg-surface p-6 text-center">
+        <fa-icon [icon]="['fas', 'file-upload']" class="text-2xl text-on-surface-variant/30 mb-3"></fa-icon>
+        @if (topicsEmptyState.message) {
+          <p class="font-semibold text-on-surface mb-1">{{ topicsEmptyState.message }}</p>
+        }
+        <p class="text-sm text-on-surface-variant/70">{{ topicsEmptyState.hint }}</p>
+      </div>
+    }
+
+    @if (topics.length && topicsEmptyState?.hint) {
+      <p class="text-xs text-on-surface-variant/60 mt-4">{{ topicsEmptyState!.hint }}</p>
+    }
   </div>
 
   <!-- Section 4: Bottom Stats -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4" @fadeInUp>
-    <!-- Reportes Pendientes -->
     <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
       <div class="w-12 h-12 rounded-xl bg-warning-container flex items-center justify-center shrink-0">
         <fa-icon [icon]="['fas', 'file-alt']" class="text-warning"></fa-icon>
       </div>
       <div>
         <p class="text-2xl font-black text-on-surface">{{ reportesCount }}</p>
-        <p class="text-xs text-on-surface-variant/60">Reportes Pendientes</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-error-container text-on-error-container text-[9px] font-bold rounded-full uppercase">Prioridad Alta</span>
+        <p class="text-xs text-on-surface-variant/60">{{ reportesLabel }}</p>
+        @if (reportesBadge) {
+          <span class="inline-block mt-1 px-2 py-0.5 bg-error-container text-on-error-container text-[9px] font-bold rounded-full uppercase">{{ reportesBadge }}</span>
+        }
       </div>
     </div>
 
-    <!-- Progreso Académico -->
     <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
       <div class="w-12 h-12 rounded-xl bg-success-container flex items-center justify-center shrink-0">
         <fa-icon [icon]="['fas', 'chart-line']" class="text-success"></fa-icon>
       </div>
       <div>
-        <p class="text-2xl font-black text-on-surface">+{{ compliancePercent }}%</p>
-        <p class="text-xs text-on-surface-variant/60">Progreso Académico</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">Este Mes</span>
+        <p class="text-2xl font-black text-on-surface">{{ academicDeltaLabel }}</p>
+        <p class="text-xs text-on-surface-variant/60">{{ academicLabel }}</p>
+        @if (academicPeriod) {
+          <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">{{ academicPeriod }}</span>
+        }
       </div>
     </div>
 
-    <!-- AI Coach -->
     <div class="bg-surface-container-lowest rounded-2xl p-5 flex items-center gap-4 signature-shadow">
       <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
         <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
       </div>
       <div>
-        <p class="text-lg font-black text-on-surface">AI Coach</p>
-        <p class="text-xs text-on-surface-variant/60">Nuevas sugerencias</p>
-        <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">3 Tips Listos</span>
+        <p class="text-lg font-black text-on-surface">{{ aiCoachCount }}</p>
+        <p class="text-xs text-on-surface-variant/60">{{ aiCoachLabel }}</p>
+        @if (aiCoachBadge) {
+          <span class="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full uppercase">{{ aiCoachBadge }}</span>
+        }
       </div>
     </div>
   </div>

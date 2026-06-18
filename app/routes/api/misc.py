@@ -24,7 +24,6 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
-from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 
 
 @api_bp.route('/time', methods=['GET'])
@@ -272,91 +271,9 @@ def get_therapist_dashboard():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Unauthorized'}), 403
 
-    from datetime import datetime
-
-    from sqlalchemy import func as sqlfunc
-
-    from app.extensions import db
-    from app.models import Appointment, SessionAudit, User
-    from app.utils import get_user_today_utc_range, localize_datetime_for_display
-
-    now_utc = datetime.utcnow()
-    today_start, today_end = get_user_today_utc_range(current_user)
-    tz_name = current_user.timezone or 'America/Lima'
-
-    today_sessions = (
-        Appointment.query.filter(
-            Appointment.therapist_id == current_user.id,
-            Appointment.start_time >= today_start,
-            Appointment.start_time < today_end,
-            Appointment.status != 'cancelled',
-        )
-        .order_by(Appointment.start_time)
-        .all()
-    )
-
-    agenda = []
-    next_session = None
-    active_session = None
-
-    for s in today_sessions:
-        patient = User.query.get(s.patient_id) if s.patient_id else None
-        local_start = localize_datetime_for_display(s.start_time, tz_name)
-        is_current = s.start_time <= now_utc and (s.end_time is None or s.end_time > now_utc)
-        session_info = {
-            'id': s.id,
-            'title': s.title or 'Sesión de Terapia',
-            'patient': patient.username if patient else 'N/A',
-            'start': local_start.strftime('%I:%M %p') if local_start else '',
-            'location': s.location or '',
-            'status': s.status,
-            'is_current': is_current,
-        }
-        agenda.append(session_info)
-        if is_current:
-            active_session = session_info
-        if not next_session and (is_current or s.start_time > now_utc):
-            next_session = session_info
-
-    if not next_session and active_session:
-        next_session = active_session
-
-    planned_text = ''
-    session_progress = 0
-    avg_compliance = 0
-    session_objectives = []
-
     try:
-        avg_cmp = (
-            db.session.query(sqlfunc.avg(SessionAudit.audit_score))
-            .join(Appointment, SessionAudit.appointment_id == Appointment.id)
-            .filter(Appointment.therapist_id == current_user.id, SessionAudit.audit_score.isnot(None))
-            .scalar()
-        )
-        avg_compliance = float(avg_cmp) if avg_cmp else 0.0
+        data = dashboard_service.get_therapist_dashboard_data(current_user)
+        return jsonify({'success': True, 'data': data})
     except Exception as exc:
-        current_app.logger.debug('dashboard avg_compliance failed: %s', exc)
-    if next_session:
-        audit = SessionAudit.query.filter_by(appointment_id=next_session['id']).first()
-        if audit and audit.planned_text:
-            planned_text = audit.planned_text
-            session_progress = int(audit.audit_score) if audit.audit_score else 0
-
-            session_objectives = parse_objectives(audit.planned_text)
-            if audit.audit_status == 'completed':
-                enrich_objectives_from_audit(session_objectives, audit.audit_report_json)
-
-    return jsonify(
-        {
-            'success': True,
-            'data': {
-                'next_session': next_session,
-                'agenda': agenda,
-                'planned_text': planned_text,
-                'session_progress': session_progress,
-                'avg_compliance': avg_compliance,
-                'session_objectives': session_objectives,
-                'total_students': len(set([s.patient_id for s in today_sessions])),
-            },
-        }
-    )
+        current_app.logger.error('therapist dashboard failed: %s', exc, exc_info=True)
+        return jsonify({'success': False, 'error': 'Error al cargar el dashboard'}), 500

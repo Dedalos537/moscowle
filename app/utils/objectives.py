@@ -37,6 +37,15 @@ def map_classification(classification):
     return mapping.get(classification, 'pendiente')
 
 
+def objective_status_to_ui(status):
+    """Mapea estado interno a código y etiqueta para la UI."""
+    if status == 'completado':
+        return 'LOGRADO', 'Logrado'
+    if status == 'parcial':
+        return 'PARCIAL', 'Parcial'
+    return 'PENDIENTE', 'Pendiente'
+
+
 def enrich_objectives_from_audit(objectives, audit_report_json):
     if not audit_report_json:
         return objectives
