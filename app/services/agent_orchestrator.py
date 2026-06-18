@@ -55,7 +55,7 @@ def build_result(response, intent='general_chat', action_chips=None, suggestions
     }
 
 
-def process_agent_message(uid, message, mode='chiquito'):
+def process_agent_message(uid, message, mode='chiquito', history=None):
     """Main ReAct loop. Sends to Groq with tools, handles tool calls, returns final response."""
     groq_api_key = os.environ.get('GROQ_API_KEY')
     if not groq_api_key:
@@ -66,14 +66,18 @@ def process_agent_message(uid, message, mode='chiquito'):
     system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS['chiquito'])
     tools = get_tools_for_mode(mode)
 
-    messages = [
-        {'role': 'system', 'content': system_prompt},
-        {'role': 'user', 'content': message},
-    ]
+    messages = [{'role': 'system', 'content': system_prompt}]
+
+    if history:
+        for h in history:
+            if h.get('role') in ('user', 'assistant') and h.get('content'):
+                messages.append({'role': h['role'], 'content': h['content']})
+
+    messages.append({'role': 'user', 'content': message})
 
     tool_retry_count = 0
 
-    for iteration in range(MAX_ITERATIONS):
+    for _iteration in range(MAX_ITERATIONS):
         attempt = 0
 
         while attempt < 4:
@@ -89,7 +93,7 @@ def process_agent_message(uid, message, mode='chiquito'):
                 )
                 break
             except RateLimitError:
-                wait = 2 ** attempt
+                wait = 2**attempt
                 logger.warning(f'Rate limited on {model}, retry {attempt}/3 in {wait}s')
                 time.sleep(wait)
                 attempt += 1
@@ -120,9 +124,7 @@ def process_agent_message(uid, message, mode='chiquito'):
                 logger.warning(f'Falling back from {model} to {FALLBACK_MODEL}')
                 model = FALLBACK_MODEL
                 continue
-            return build_result(
-                'El asistente esta sobrecargado. Espera un momento e intenta de nuevo.'
-            )
+            return build_result('El asistente esta sobrecargado. Espera un momento e intenta de nuevo.')
 
         choice = response.choices[0]
         msg = choice.message
