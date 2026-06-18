@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 
 from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, current_app, flash, jsonify, make_response, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 from sqlalchemy import case, func, or_
 
+from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, csrf
 from app.models import Appointment, Message, MonthlyReport, QuarterlyReport, SessionMetrics, User, WeeklyReport, db
 from app.services.appointment_service import AppointmentService
@@ -1012,6 +1012,7 @@ def update_patient(patient_id):
     data = request.json
 
     from app.utils.sanitizer import sanitize_text
+
     if 'phone' in data:
         patient.phone = sanitize_text(data['phone'], 20)
     if 'date_of_birth' in data and data['date_of_birth']:
@@ -1275,9 +1276,37 @@ def api_weekly_reports_pending():
 
         today = datetime.utcnow().date()
         monday = today - timedelta(days=today.weekday())
-        reports = WeeklyReport.query.filter(
-            WeeklyReport.therapist_id == therapist_id, WeeklyReport.week_start == monday
-        ).count()
+        week_end = monday + timedelta(days=6)
+
+        week_start_dt = datetime(monday.year, monday.month, monday.day)
+        week_end_dt = datetime(week_end.year, week_end.month, week_end.day) + timedelta(days=1)
+
+        from app.models import Appointment
+
+        patients_with_sessions = {
+            row[0]
+            for row in db.session.query(Appointment.patient_id)
+            .filter(
+                Appointment.therapist_id == therapist_id,
+                Appointment.status == 'completed',
+                Appointment.start_time >= week_start_dt,
+                Appointment.start_time < week_end_dt,
+                Appointment.patient_id.isnot(None),
+            )
+            .distinct()
+            .all()
+        }
+
+        patients_with_reports = {
+            row[0]
+            for row in db.session.query(WeeklyReport.patient_id)
+            .filter(WeeklyReport.therapist_id == therapist_id, WeeklyReport.week_start == monday)
+            .distinct()
+            .all()
+        }
+
+        missing_weekly = patients_with_sessions - patients_with_reports
+        reports = len(missing_weekly)
         notification = (
             Notification.query.filter(
                 Notification.user_id == current_user.id, Notification.type == 'reportes', Notification.is_read == False
@@ -1292,7 +1321,8 @@ def api_weekly_reports_pending():
                 'reports_count': reports,
                 'has_notification': notification is not None,
                 'week_start': monday.isoformat(),
-                'week_end': (monday + timedelta(days=6)).isoformat(),
+                'week_end': week_end.isoformat(),
+                'label': 'Pacientes con sesiones esta semana sin reporte semanal',
             }
         )
     except Exception as e:

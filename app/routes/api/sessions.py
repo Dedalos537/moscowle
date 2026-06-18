@@ -1158,7 +1158,14 @@ def get_session_objectives(appointment_id):
     if audit.audit_status == 'completed':
         enrich_objectives_from_audit(objectives, audit.audit_report_json)
 
-    return jsonify({'success': True, 'objectives': objectives})
+    from app.utils.objectives import objective_status_to_ui
+
+    items = []
+    for obj in objectives:
+        code, label = objective_status_to_ui(obj.get('status', 'pendiente'))
+        items.append({'name': obj['name'], 'status': code, 'status_label': label, 'evidence': obj.get('evidence', '')})
+
+    return jsonify({'success': True, 'objectives': items})
 
 
 @api_bp.route('/sessions/<int:session_id>/start-recording', methods=['POST'])

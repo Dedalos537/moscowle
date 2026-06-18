@@ -281,7 +281,7 @@ def api_weekly_reports_pending():
         from sqlalchemy import inspect as sa_inspect
 
         from app.extensions import db
-        from app.models import Notification, WeeklyReport
+        from app.models import Appointment, Notification, WeeklyReport
 
         inspector = sa_inspect(db.engine)
         if 'weekly_report' not in inspector.get_table_names():
@@ -290,9 +290,35 @@ def api_weekly_reports_pending():
 
         week_start = datetime.utcnow().date()
         monday = week_start - timedelta(days=week_start.weekday())
-        reports = WeeklyReport.query.filter(
-            WeeklyReport.therapist_id == therapist_id, WeeklyReport.week_start == monday
-        ).count()
+        week_end = monday + timedelta(days=6)
+
+        week_start_dt = datetime(monday.year, monday.month, monday.day)
+        week_end_dt = datetime(week_end.year, week_end.month, week_end.day) + timedelta(days=1)
+
+        patients_with_sessions = {
+            row[0]
+            for row in db.session.query(Appointment.patient_id)
+            .filter(
+                Appointment.therapist_id == therapist_id,
+                Appointment.status == 'completed',
+                Appointment.start_time >= week_start_dt,
+                Appointment.start_time < week_end_dt,
+                Appointment.patient_id.isnot(None),
+            )
+            .distinct()
+            .all()
+        }
+
+        patients_with_reports = {
+            row[0]
+            for row in db.session.query(WeeklyReport.patient_id)
+            .filter(WeeklyReport.therapist_id == therapist_id, WeeklyReport.week_start == monday)
+            .distinct()
+            .all()
+        }
+
+        missing_weekly = patients_with_sessions - patients_with_reports
+        reports = len(missing_weekly)
         notification = (
             Notification.query.filter(
                 Notification.user_id == current_user.id, Notification.type == 'reportes', Notification.is_read == False
@@ -307,7 +333,8 @@ def api_weekly_reports_pending():
                 'reports_count': reports,
                 'has_notification': notification is not None,
                 'week_start': monday.isoformat(),
-                'week_end': (monday + timedelta(days=6)).isoformat(),
+                'week_end': week_end.isoformat(),
+                'label': 'Pacientes con sesiones esta semana sin reporte semanal',
             }
         )
     except Exception as e:
