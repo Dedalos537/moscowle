@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+import time
 
-from groq import BadRequestError, Groq
+from groq import BadRequestError, Groq, RateLimitError
 
 from app.services.tools_registry import execute_tool, get_tools_for_mode
 
@@ -12,6 +13,8 @@ MODEL_MAP = {
     'chiquito': 'llama-3.1-8b-instant',
     'grande': 'llama-3.3-70b-versatile',
 }
+
+FALLBACK_MODEL = 'llama-3.1-8b-instant'
 
 SYSTEM_PROMPTS = {
     'chiquito': (
@@ -70,38 +73,54 @@ def process_agent_message(uid, message, mode='chiquito'):
 
     tool_retry_count = 0
 
-    for _ in range(MAX_ITERATIONS):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                tools=tools if tools else None,
-                tool_choice='auto' if tools else None,
-                parallel_tool_calls=False,
-                temperature=0.3,
-                max_tokens=2048,
-            )
-        except BadRequestError as e:
-            error_str = str(e)
-            logger.error(f'Groq BadRequestError: {error_str[:500]}')
-            if 'Failed to call a function' in error_str or 'tool call validation' in error_str:
-                messages.append(
-                    {
-                        'role': 'user',
-                        'content': (
-                            'La herramienta que intentaste usar rechazo los parametros. '
-                            'NO vuelvas a intentar con los mismos datos. '
-                            'PREGUNTALE al usuario QUE LE FALTA. '
-                            'Por ejemplo: "Necesito el monto exacto" o "A nombre de quien?". '
-                            'Luego cuando tengas los datos correctos, llama la herramienta de nuevo.'
-                        ),
-                    }
+    for _iteration in range(MAX_ITERATIONS):
+        attempt = 0
+
+        while attempt < 4:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    tools=tools if tools else None,
+                    tool_choice='auto' if tools else None,
+                    parallel_tool_calls=False,
+                    temperature=0.3,
+                    max_tokens=2048,
                 )
+                break
+            except RateLimitError:
+                wait = 2**attempt
+                logger.warning(f'Rate limited on {model}, retry {attempt}/3 in {wait}s')
+                time.sleep(wait)
+                attempt += 1
+            except BadRequestError as e:
+                error_str = str(e)
+                logger.error(f'Groq BadRequestError: {error_str[:500]}')
+                if 'Failed to call a function' in error_str or 'tool call validation' in error_str:
+                    messages.append(
+                        {
+                            'role': 'user',
+                            'content': (
+                                'La herramienta que intentaste usar rechazo los parametros. '
+                                'NO vuelvas a intentar con los mismos datos. '
+                                'PREGUNTALE al usuario QUE LE FALTA. '
+                                'Por ejemplo: "Necesito el monto exacto" o "A nombre de quien?". '
+                                'Luego cuando tengas los datos correctos, llama la herramienta de nuevo.'
+                            ),
+                        }
+                    )
+                    break
+                return build_result(f'Error del asistente: {error_str[:120]}')
+            except Exception as e:
+                logger.error(f'Groq API error: {e}', exc_info=True)
+                return build_result(f'Error al contactar al asistente: {str(e)[:100]}')
+
+        if attempt == 4:
+            if model != FALLBACK_MODEL:
+                logger.warning(f'Falling back from {model} to {FALLBACK_MODEL}')
+                model = FALLBACK_MODEL
                 continue
-            return build_result(f'Error del asistente: {error_str[:120]}')
-        except Exception as e:
-            logger.error(f'Groq API error: {e}', exc_info=True)
-            return build_result(f'Error al contactar al asistente: {str(e)[:100]}')
+            return build_result('El asistente esta sobrecargado. Espera un momento e intenta de nuevo.')
 
         choice = response.choices[0]
         msg = choice.message
