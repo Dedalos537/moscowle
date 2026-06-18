@@ -76,7 +76,7 @@ def process_agent_message(uid, message, mode='chiquito'):
                 model=model,
                 messages=messages,
                 tools=tools if tools else None,
-                tool_choice='auto' if tools else None,
+                tool_choice='required' if tools and mode == 'grande' else ('auto' if tools else None),
                 temperature=0.3,
                 max_tokens=2048,
             )
@@ -88,10 +88,12 @@ def process_agent_message(uid, message, mode='chiquito'):
                     {
                         'role': 'user',
                         'content': (
-                            'La funcion que intentaste llamar tenia parametros invalidos. '
-                            'Revisa la definicion de las tools y llama a la funcion de nuevo '
-                            'con argumentos correctos. Asegurate de que los tipos y nombres '
-                            'coincidan exactamente con lo definido.'
+                            'ERROR: La funcion que intentaste llamar tiene parametros invalidos. '
+                            'Revisa: (1) los tipos de datos coinciden con la definicion '
+                            '(integer, number, string, enum), (2) los nombres de parametros '
+                            'son exactos. No pases strings donde se espera integer/number. '
+                            'Si no tienes el patient_id exacto, usa search_patients primero '
+                            'para obtenerlo, o usa patient_name como string.'
                         ),
                     }
                 )

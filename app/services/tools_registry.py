@@ -321,35 +321,58 @@ def handle_payment_history(patient_id):
 
 @tool(
     name='register_payment',
-    description='Registra un pago para un paciente. SOLO cuando tengas patient_id y amount confirmados.',
+    description='Registra pago para paciente. Usa patient_id (de search_patients) o patient_name + amount.',
     parameters={
         'type': 'object',
         'properties': {
-            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
-            'amount': {'type': 'number', 'description': 'Monto del pago en soles'},
+            'patient_id': {
+                'type': 'integer',
+                'description': 'ID numerico del paciente (obtenido via search_patients)',
+            },
+            'patient_name': {
+                'type': 'string',
+                'description': 'Nombre del paciente (alternativa a patient_id)',
+            },
+            'amount': {'type': 'number', 'description': 'Monto del pago en soles (numerico, sin simbolos)'},
             'method': {
                 'type': 'string',
                 'description': 'Metodo de pago',
                 'enum': ['Efectivo', 'Yape', 'Transferencia', 'IA/Copilot', 'IA/Copilot + OCR'],
-                'default': 'IA/Copilot',
             },
-            'reference': {'type': 'string', 'description': 'Referencia del pago'},
+            'reference': {'type': 'string', 'description': 'Referencia opcional del pago'},
+            'discount': {
+                'type': 'number',
+                'description': 'Descuento opcional (en soles)',
+            },
+            'payment_date': {
+                'type': 'string',
+                'description': 'Fecha del pago opcional (YYYY-MM-DD)',
+            },
         },
-        'required': ['patient_id', 'amount'],
+        'required': ['amount'],
     },
     category='write',
 )
-def handle_register_payment(patient_id, amount, method='IA/Copilot', reference=''):
-    patient = User.query.get(patient_id)
+def handle_register_payment(
+    amount, patient_id=None, patient_name=None, method='IA/Copilot', reference='', discount=0.0, payment_date=None
+):
+    if not patient_id and not patient_name:
+        return {'error': 'Debes proporcionar patient_id o patient_name'}
+    if patient_id:
+        patient = User.query.get(patient_id)
+    else:
+        patient = User.query.filter(User.username.ilike(f'%{patient_name}%')).first()
     if not patient:
-        return {'error': 'Paciente no encontrado'}
+        return {'error': 'Paciente no encontrado. Usa search_patients para encontrar el ID correcto.'}
     try:
         success, result = _payment_service.register_payment(
-            patient_id=patient_id,
+            patient_id=patient.id,
             amount=float(amount),
             method=method,
             reference=reference or 'Copilot',
             next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+            discount=float(discount),
+            payment_date=payment_date,
         )
         if success:
             return {
