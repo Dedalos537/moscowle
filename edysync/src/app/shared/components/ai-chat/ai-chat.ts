@@ -63,7 +63,6 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   isOpen = false;
   fullScreen = false;
-  currentMode: 'chiquito' | 'grande' = 'chiquito';
   messages: ChatMessage[] = [];
   inputMessage = '';
   loading = false;
@@ -95,7 +94,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     });
   }
 
-  get mode(): 'chiquito' | 'grande' {
+  get currentMode(): 'chiquito' | 'grande' {
     return this.fullScreen ? 'grande' : 'chiquito';
   }
 
@@ -132,7 +131,6 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   onEscape() {
     if (this.fullScreen) {
       this.fullScreen = false;
-      this.currentMode = 'chiquito';
       this.cdr.markForCheck();
     } else if (this.isOpen) {
       this.togglePanel();
@@ -141,7 +139,6 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   toggleFullScreen() {
     this.fullScreen = !this.fullScreen;
-    this.currentMode = this.fullScreen ? 'grande' : 'chiquito';
     this.cdr.markForCheck();
   }
 
