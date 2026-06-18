@@ -465,6 +465,8 @@ def create_app(config_class=None):
     from app.routes.api import api_bp
 
     csrf.exempt(api_bp)
+    from app.routes.llama_routes import llama_bp
+    csrf.exempt(llama_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
