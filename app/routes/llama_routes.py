@@ -703,8 +703,12 @@ def agent_message():
     if mode not in ('chiquito', 'grande'):
         return jsonify({'error': 'mode must be chiquito or grande'}), 400
 
+    history = data.get('history')
+    if not isinstance(history, list):
+        history = None
+
     try:
-        result = process_agent_message(current_user.id, message, mode)
+        result = process_agent_message(current_user.id, message, mode, history)
         return jsonify(
             {
                 'response': result.get('response', ''),

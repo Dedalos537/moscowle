@@ -66,8 +66,12 @@ export class LlamaService {
     return this.http.post<LlamaResponse>('/llama/chat/send', { message, page, mode });
   }
 
-  sendAgentMessage(message: string, mode: 'chiquito' | 'grande' = 'chiquito'): Observable<AgentResponse> {
-    return this.http.post<AgentResponse>('/llama/agent', { message, mode, conversation_id: null }).pipe(
+  sendAgentMessage(
+    message: string,
+    mode: 'chiquito' | 'grande' = 'chiquito',
+    history?: { role: string; content: string }[]
+  ): Observable<AgentResponse> {
+    return this.http.post<AgentResponse>('/llama/agent', { message, mode, history }).pipe(
       catchError((error: HttpErrorResponse) => {
         console.error('sendAgentMessage error:', error);
         return throwError(() => error);

@@ -315,7 +315,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
 
     const mode = this.currentMode;
-    this.subs.add(this.llama.sendAgentMessage(msg, mode).subscribe({
+    const history = this.messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+    this.subs.add(this.llama.sendAgentMessage(msg, mode, history).subscribe({
       next: (res) => {
         this.loading = false;
         this.messages.push({

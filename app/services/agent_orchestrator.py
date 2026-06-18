@@ -55,7 +55,7 @@ def build_result(response, intent='general_chat', action_chips=None, suggestions
     }
 
 
-def process_agent_message(uid, message, mode='chiquito'):
+def process_agent_message(uid, message, mode='chiquito', history=None):
     """Main ReAct loop. Sends to Groq with tools, handles tool calls, returns final response."""
     groq_api_key = os.environ.get('GROQ_API_KEY')
     if not groq_api_key:
@@ -66,10 +66,14 @@ def process_agent_message(uid, message, mode='chiquito'):
     system_prompt = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS['chiquito'])
     tools = get_tools_for_mode(mode)
 
-    messages = [
-        {'role': 'system', 'content': system_prompt},
-        {'role': 'user', 'content': message},
-    ]
+    messages = [{'role': 'system', 'content': system_prompt}]
+
+    if history:
+        for h in history:
+            if h.get('role') in ('user', 'assistant') and h.get('content'):
+                messages.append({'role': h['role'], 'content': h['content']})
+
+    messages.append({'role': 'user', 'content': message})
 
     tool_retry_count = 0
 
