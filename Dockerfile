@@ -22,7 +22,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN addgroup --system --gid 1001 app && \
+RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    addgroup --system --gid 1001 app && \
     adduser --system --uid 1001 app && \
     mkdir -p /app/backups /app/logs /app/uploads /app/instance && \
     chown -R app:app /app
