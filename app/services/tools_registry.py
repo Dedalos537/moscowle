@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 from flask import current_app
 
@@ -295,3 +296,119 @@ def handle_payment_history(patient_id):
             for p in payments
         ],
     }
+
+
+@tool(
+    name='register_payment',
+    description='Registra un pago para un paciente. SOLO cuando tengas patient_id y amount confirmados.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'amount': {'type': 'number', 'description': 'Monto del pago en soles'},
+            'method': {
+                'type': 'string',
+                'description': 'Metodo de pago',
+                'enum': ['Efectivo', 'Yape', 'Transferencia', 'IA/Copilot', 'IA/Copilot + OCR'],
+                'default': 'IA/Copilot',
+            },
+            'reference': {'type': 'string', 'description': 'Referencia del pago'},
+        },
+        'required': ['patient_id', 'amount'],
+    },
+    category='write',
+)
+def handle_register_payment(patient_id, amount, method='IA/Copilot', reference=''):
+    patient = User.query.get(patient_id)
+    if not patient:
+        return {'error': 'Paciente no encontrado'}
+    try:
+        success, result = _payment_service.register_payment(
+            patient_id=patient_id,
+            amount=float(amount),
+            method=method,
+            reference=reference or 'Copilot',
+            next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+        )
+        if success:
+            return {
+                'success': True,
+                'message': f'Pago de S/. {amount:.2f} registrado para {patient.username}',
+                'payment_id': result.id if hasattr(result, 'id') else None,
+            }
+        else:
+            return {'error': str(result)}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_payment_info',
+    description='Obtiene configuracion de pago de un paciente (monto, fecha de vencimiento, plan).',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+        },
+        'required': ['patient_id'],
+    },
+    category='read',
+)
+def handle_get_payment_info(patient_id):
+    try:
+        resp = current_app.test_client().get(f'/admin/api/payment-info/{patient_id}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_all_payments',
+    description='Lista los ultimos pagos registrados en el sistema.',
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+)
+def handle_all_payments():
+    try:
+        resp = current_app.test_client().get('/admin/api/payments/all')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='get_yape_pending',
+    description='Transacciones Yape pendientes de asignar a pacientes.',
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+)
+def handle_yape_pending():
+    try:
+        resp = current_app.test_client().get('/admin/yape/pending')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='search_yape_transactions',
+    description='Busca transacciones Yape por query (operacion, monto, etc).',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'query': {'type': 'string', 'description': 'Termino de busqueda'},
+        },
+        'required': ['query'],
+    },
+    category='read',
+)
+def handle_search_yape(query):
+    try:
+        resp = current_app.test_client().get(f'/admin/yape/search?q={query}')
+        data = resp.get_json() if resp else {}
+        return {'success': True, 'data': data}
+    except Exception as e:
+        return {'error': str(e)}
