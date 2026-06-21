@@ -641,17 +641,27 @@
       </div>
     }
 
-    @if (analyzeResult && !analyzingReceipt) {
-      <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-        <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
-        <div>
-          <p class="text-xs font-bold text-on-success-container">OCR Completado</p>
-          <p class="text-xs text-on-success-container mt-0.5">
-            Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
-          </p>
-        </div>
-      </div>
-    }
+      @if (analyzeResult && !analyzingReceipt) {
+        @if (analyzeResult.warning) {
+          <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
+            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+            <div>
+              <p class="text-xs font-bold text-warning">OCR no disponible</p>
+              <p class="text-xs text-warning mt-0.5">{{ analyzeResult.warning }}</p>
+            </div>
+          </div>
+        } @else {
+          <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
+            <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+            <div>
+              <p class="text-xs font-bold text-success">OCR Completado</p>
+              <p class="text-xs text-success mt-0.5">
+                Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
+              </p>
+            </div>
+          </div>
+        }
+      }
 
     @if (lastPaymentReceiptUrl) {
       <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
