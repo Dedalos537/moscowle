@@ -252,6 +252,13 @@ export class QuickPayment implements OnDestroy {
           if (res.success) {
             this.registerStatus = 'Pago registrado exitosamente';
             this.lastPaymentReceiptUrl = res.receipt_url || '';
+            if (this.lastPaymentReceiptUrl) {
+              const a = document.createElement('a');
+              a.href = this.lastPaymentReceiptUrl;
+              a.target = '_blank';
+              a.rel = 'noopener';
+              a.click();
+            }
             this.toastService.show('Pago registrado correctamente', 'success');
             setTimeout(() => {
               this.closePaymentForm();

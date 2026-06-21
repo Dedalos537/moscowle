@@ -916,7 +916,7 @@
                       <td class="px-4 py-3.5 text-center">
                         <div class="flex items-center justify-center gap-1.5">
                           @if (p.receipt_image_path) {
-                            <button (click)="previewImage(p.receipt_image_path)" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
+                            <button (click)="previewImage('/uploads/' + p.receipt_image_path)" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
                               <fa-icon [icon]="['fas', 'image']" class="text-[14px]"></fa-icon>
                             </button>
                           }
