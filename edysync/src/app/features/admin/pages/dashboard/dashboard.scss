@@ -242,3 +242,9 @@
 .icon-btn--success:hover { opacity: .9; }
 .icon-btn--primary { background-color: var(--color-surface-container-lowest); color: var(--color-primary); border: 1px solid color-mix(in srgb,var(--color-primary) 30%,transparent); }
 .icon-btn--primary:hover { background-color: var(--color-primary); color: var(--color-on-primary); }
+
+.gauge { position: relative; width: 120px; height: 120px; color: var(--color-primary); }
+.gauge--high { color: var(--color-error); }
+.gauge--mid { color: var(--color-warning); }
+.gauge__svg { width: 100%; height: 100%; }
+.gauge__label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.375rem; font-weight: 800; color: var(--color-on-surface); }

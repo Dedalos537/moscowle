@@ -414,4 +414,8 @@ export class AdminService {
     return this.http.get<any>('/admin/api/therapist-efficiency', { params });
   }
 
+  getRailwayMetrics(): Observable<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; environment_id: string; service_id: string }; error?: string }> {
+    return this.http.get<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; environment_id: string; service_id: string }; error?: string }>('/admin/api/railway-metrics');
+  }
+
 }

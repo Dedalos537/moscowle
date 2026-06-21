@@ -301,6 +301,67 @@
       </a>
     </div>
   </section>
+
+  @if (railwayMetrics$ | async; as rm) {
+    @if (rm.success && rm.data) {
+      <section class="dashboard-section">
+        <h3 class="section-label">Infraestructura Railway</h3>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card__header">
+              <fa-icon [icon]="['fas', 'microchip']" class="text-primary"></fa-icon>
+              <span class="label-caps">CPU</span>
+            </div>
+            <div class="card__body" style="align-items: center; text-align: center; gap: 0.75rem;">
+              <div class="gauge" [class.gauge--high]="rm.data.cpu.percentage > 80" [class.gauge--mid]="rm.data.cpu.percentage > 50 && rm.data.cpu.percentage <= 80">
+                <svg viewBox="0 0 120 120" class="gauge__svg">
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" stroke-width="8"/>
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="8"
+                    stroke-linecap="round" [attr.stroke-dasharray]="339.292" [attr.stroke-dashoffset]="339.292 - (339.292 * rm.data.cpu.percentage / 100)"
+                    transform="rotate(-90 60 60)" style="transition: stroke-dashoffset 0.6s ease;"/>
+                </svg>
+                <span class="gauge__label">{{ rm.data.cpu.percentage }}%</span>
+              </div>
+              <p class="text-sm" style="color: var(--color-on-surface-variant);">{{ rm.data.cpu.usage }} / {{ rm.data.cpu.limit }} cores</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__header">
+              <fa-icon [icon]="['fas', 'memory']" class="text-info"></fa-icon>
+              <span class="label-caps">Memoria</span>
+            </div>
+            <div class="card__body" style="align-items: center; text-align: center; gap: 0.75rem;">
+              <div class="gauge" [class.gauge--high]="rm.data.memory.percentage > 80" [class.gauge--mid]="rm.data.memory.percentage > 50 && rm.data.memory.percentage <= 80">
+                <svg viewBox="0 0 120 120" class="gauge__svg">
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" stroke-width="8"/>
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="currentColor" stroke-width="8"
+                    stroke-linecap="round" [attr.stroke-dasharray]="339.292" [attr.stroke-dashoffset]="339.292 - (339.292 * rm.data.memory.percentage / 100)"
+                    transform="rotate(-90 60 60)" style="transition: stroke-dashoffset 0.6s ease;"/>
+                </svg>
+                <span class="gauge__label">{{ rm.data.memory.percentage }}%</span>
+              </div>
+              <p class="text-sm" style="color: var(--color-on-surface-variant);">{{ rm.data.memory.usage_gb }} / {{ rm.data.memory.limit_gb }} GB</p>
+            </div>
+          </div>
+          <div class="card" style="justify-content: center; align-items: center; text-align: center;">
+            <fa-icon [icon]="['fas', 'train']" class="text-3xl mb-2" style="color: var(--color-outline); opacity: 0.4;"></fa-icon>
+            <p class="label-caps" style="color: var(--color-on-surface-variant); opacity: 0.6;">Railway</p>
+            <p class="text-xs" style="color: var(--color-on-surface-variant); opacity: 0.5;">Env: {{ rm.data.environment_id | slice:0:8 }}…</p>
+          </div>
+        </div>
+      </section>
+    } @else if (rm.error) {
+      <section class="dashboard-section">
+        <div class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+          <fa-icon [icon]="['fas', 'train']" class="text-lg" style="color: var(--color-outline);"></fa-icon>
+          <div>
+            <p class="label-caps">Railway</p>
+            <p class="text-xs" style="color: var(--color-on-surface-variant);">{{ rm.error }}</p>
+          </div>
+        </div>
+      </section>
+    }
+  }
 </div>
 
 @if (showGuidanceModal) {

@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/animations';
-import { Subscription } from 'rxjs';
+import { Subscription, Observable, timer } from 'rxjs';
+import { switchMap, shareReplay } from 'rxjs/operators';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
@@ -71,6 +72,11 @@ export class Dashboard implements OnInit, OnDestroy {
   today = new Date();
   showGuidanceModal = false;
   showDailyModal = false;
+
+  railwayMetrics$: Observable<any> = timer(0, 60_000).pipe(
+    switchMap(() => this.adminService.getRailwayMetrics()),
+    shareReplay(1),
+  );
 
   private subscriptions = new Subscription();
 
