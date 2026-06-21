@@ -566,6 +566,17 @@ def profile():
     return render_template('admin/profile.html', active_page='admin_dashboard')
 
 
+@admin_bp.route('/api/railway-metrics')
+@login_required
+def api_railway_metrics():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    from app.services.railway_service import get_railway_metrics
+
+    result = get_railway_metrics()
+    return jsonify(result)
+
+
 @admin_bp.route('/api/logs', methods=['GET'])
 @login_required
 def admin_api_logs():
