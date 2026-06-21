@@ -33,27 +33,28 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
             textColor=colors.HexColor('#65a30d'),
         )
     )
-    styles.add(ParagraphStyle(name='NormalSmall', parent=styles['Normal'], fontSize=9, textColor=colors.gray))
+    styles.add(ParagraphStyle(name='NormalSmall', parent=styles['Normal'], fontSize=9, textColor=colors.grey))
 
-    logo_path = ''
+    logo_loaded = False
     try:
         logo_path = os.path.join(current_app.root_path, 'static', 'img', 'logo.png')
         if os.path.exists(logo_path):
             img = Image(logo_path, width=1.5 * inch, height=1.5 * inch)
             img.hAlign = 'CENTER'
             elements.append(img)
+            logo_loaded = True
         else:
             elements.append(
                 Paragraph("<font size=20 color='#86c246'><b>CENTRO DE TERAPIAS</b></font>", styles['Center'])
             )
             elements.append(Paragraph("<font size=16 color='#86c246'><b>JUAN PABLO II</b></font>", styles['Center']))
             elements.append(Spacer(1, 10))
+            logo_loaded = True
     except Exception:
-        pass
+        import traceback
+        traceback.print_exc()
 
-    if not os.path.exists(logo_path):
-        pass
-    else:
+    if logo_loaded:
         elements.append(Paragraph('CENTRO DE TERAPIAS JUAN PABLO II', styles['ReceiptTitle']))
 
     elements.append(Paragraph('RUC: 10740365512', styles['Center']))
@@ -144,9 +145,9 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
     elements.append(t_payment)
     elements.append(Spacer(1, 20))
 
-    amount_str = f'S/ {payment.amount:.2f}'
-    discount_str = f'S/ {payment.discount:.2f}' if payment.discount else None
-    net_str = f'S/ {payment.amount - (payment.discount or 0):.2f}'
+    amount_str = f'S/ {(payment.amount or 0):.2f}'
+    discount_str = f'S/ {(payment.discount or 0):.2f}' if payment.discount else None
+    net_str = f'S/ {((payment.amount or 0) - (payment.discount or 0)):.2f}'
 
     total_rows = [['', 'Subtotal:', amount_str]]
     if discount_str:
@@ -156,10 +157,10 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
     t_total.setStyle(
         TableStyle(
             [
-                ('FONT', (1, 1), (2, 1), 'Helvetica-Bold'),
-                ('TEXTCOLOR', (1, 1), (2, 1), colors.HexColor('#65a30d')),
+                ('FONT', (1, -1), (2, -1), 'Helvetica-Bold'),
+                ('TEXTCOLOR', (1, -1), (2, -1), colors.HexColor('#65a30d')),
                 ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
-                ('LINEABOVE', (1, 1), (2, 1), 1, colors.black),
+                ('LINEABOVE', (1, -1), (2, -1), 1, colors.black),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ]
         )
