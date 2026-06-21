@@ -24,11 +24,11 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
-import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm } from './finanzas.models';
+import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm, MonthCell } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays, buildPatientYearGrid,
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -90,6 +90,14 @@ export class Finanzas implements OnInit, OnDestroy {
   paymentsLoading = true;
   historyLoading = true;
   pagosTab: 'pacientes' | 'historial' = 'pacientes';
+  expandedPatientId: number | null = null;
+  expandedPatientGrid: MonthCell[] = [];
+  expandedPatient: PatientRow | null = null;
+  expandedPatientLoading = false;
+
+  get expandedPaidCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'paid').length; }
+  get expandedMissingCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'missing').length; }
+  get expandedYear(): string { return this.expandedPatientGrid[0]?.year?.toString() || ''; }
 
   searchQuery = '';
   selectedSedeId: number | null = null;
@@ -681,7 +689,38 @@ export class Finanzas implements OnInit, OnDestroy {
     this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
   }
 
-  viewPatientHistory(patient: PatientRow) { window.open(`/admin/payments/history/${patient.id}`, '_blank'); }
+  togglePatientHistory(patient: PatientRow) {
+    if (this.expandedPatientId === patient.id) {
+      this.expandedPatientId = null;
+      this.expandedPatientGrid = [];
+      this.expandedPatient = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.expandedPatientId = patient.id;
+    this.expandedPatient = patient;
+    this.expandedPatientLoading = true;
+    this.subscriptions.add(
+      this.adminService.getPaymentHistory(patient.id).subscribe({
+        next: (res) => {
+          const payments: PaymentHistoryRow[] = (res as any)?.payments?.map((p: any) => ({
+            id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || patient.username,
+            amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
+            reference: p.reference, date: p.date || '', status: p.status || 'completed',
+            receipt_image_path: p.receipt_image_path, document_number: p.document_number,
+            guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
+          })) || [];
+          this.expandedPatientGrid = buildPatientYearGrid(payments, patient);
+          this.expandedPatientLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.expandedPatientLoading = false;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
   getPatientName(id: number): string { return this.patients.find((p) => p.id === id)?.username || ''; }
   get patientSelectOptions() { return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` })); }
   sedeById(id: number): string { return this.sedes.find((s) => s.id === id)?.name || ''; }

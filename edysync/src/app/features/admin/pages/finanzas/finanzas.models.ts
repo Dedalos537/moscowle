@@ -71,3 +71,12 @@ export interface ExpenseForm {
   description: string;
   receipt: File | null;
 }
+
+export interface MonthCell {
+  monthKey: string;
+  label: string;
+  year: number;
+  month: number;
+  payment: PaymentHistoryRow | null;
+  status: 'paid' | 'missing' | 'future' | 'na';
+}

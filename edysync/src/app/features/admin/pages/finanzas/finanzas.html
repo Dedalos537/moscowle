@@ -590,14 +590,80 @@
                           </button>
                           <button
                             class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            [class.bg-primary-container/30]="expandedPatientId === p.id"
                             title="Ver Historial"
-                            (click)="viewPatientHistory(p)"
+                            (click)="togglePatientHistory(p)"
                           >
-                            <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+                            <fa-icon [icon]="['fas', expandedPatientId === p.id ? 'chevron-up' : 'history']" class="text-[16px]"></fa-icon>
                           </button>
                         </div>
                       </td>
                     </tr>
+                    @if (expandedPatientId === p.id) {
+                      <tr class="accordion-row">
+                        <td colspan="9" class="px-4 py-0">
+                          @if (expandedPatientLoading) {
+                            <div class="flex justify-center py-6">
+                              <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+                            </div>
+                          } @else {
+                            <div class="py-4">
+                              <div class="flex items-center gap-2 mb-3">
+                                <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary text-sm"></fa-icon>
+                                <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                                  Historial {{ expandedYear }}
+                                </span>
+                                <span class="text-[10px] text-on-surface-variant">
+                                  ({{ expandedPaidCount }} pagados,
+                                  {{ expandedMissingCount }} faltantes)
+                                </span>
+                              </div>
+                              <div class="grid grid-cols-4 gap-2">
+                                @for (cell of expandedPatientGrid; track cell.monthKey) {
+                                  <div
+                                    class="rounded-lg border p-2.5 text-center transition-all duration-150"
+                                    [class.bg-success-container/20]="cell.status === 'paid'"
+                                    [class.border-success/30]="cell.status === 'paid'"
+                                    [class.bg-warning-container/15]="cell.status === 'missing'"
+                                    [class.border-warning/30]="cell.status === 'missing'"
+                                    [class.bg-surface-container-high/20]="cell.status === 'future' || cell.status === 'na'"
+                                    [class.border-border/20]="cell.status === 'future' || cell.status === 'na'"
+                                  >
+                                    <div class="text-[10px] font-bold text-on-surface-variant uppercase mb-1">
+                                      {{ cell.label }}
+                                    </div>
+                                    @if (cell.status === 'paid') {
+                                      <div class="text-xs font-bold text-success">
+                                        <fa-icon [icon]="['fas', 'check-circle']" class="mr-0.5"></fa-icon>
+                                        S/ {{ (cell.payment!.amount - (cell.payment!.discount || 0)).toFixed(0) }}
+                                      </div>
+                                      @if (cell.payment!.method) {
+                                        <div class="text-[9px] text-on-surface-variant/60 mt-0.5">
+                                          {{ getMethodLabel(cell.payment!.method) }}
+                                        </div>
+                                      }
+                                    } @else if (cell.status === 'missing') {
+                                      <div class="text-xs font-bold text-warning">
+                                        <fa-icon [icon]="['fas', 'exclamation-circle']" class="mr-0.5"></fa-icon>
+                                        Faltante
+                                      </div>
+                                    } @else if (cell.status === 'future') {
+                                      <div class="text-xs text-on-surface-variant/40">
+                                        <fa-icon [icon]="['fas', 'minus']"></fa-icon>
+                                      </div>
+                                    } @else {
+                                      <div class="text-xs text-on-surface-variant/30">
+                                        —
+                                      </div>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </td>
+                      </tr>
+                    }
                   } @empty {
                     <tr>
                       <td colspan="9" class="px-4 py-16 text-center">
@@ -694,10 +760,58 @@
                   <div class="flex gap-2 pt-2 border-t border-border/20">
                     <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
                     <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
-                    <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
-                      <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+                    <button class="btn-ghost !px-3 !py-2" [class.bg-primary-container/30]="expandedPatientId === p.id" (click)="togglePatientHistory(p)" title="Ver Historial">
+                      <fa-icon [icon]="['fas', expandedPatientId === p.id ? 'chevron-up' : 'history']" class="text-[16px]"></fa-icon>
                     </button>
                   </div>
+
+                  @if (expandedPatientId === p.id) {
+                    <div class="mt-3 pt-3 border-t border-border/20">
+                      @if (expandedPatientLoading) {
+                        <div class="flex justify-center py-4">
+                          <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+                        </div>
+                      } @else {
+                        <div class="flex items-center gap-2 mb-3">
+                          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary text-sm"></fa-icon>
+                          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                            Historial {{ expandedYear }}
+                          </span>
+                          <span class="text-[9px] text-on-surface-variant">
+                            ({{ expandedPaidCount }} pagados,
+                            {{ expandedMissingCount }} faltantes)
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                          @for (cell of expandedPatientGrid; track cell.monthKey) {
+                            <div
+                              class="rounded-lg border p-2 text-center transition-all duration-150"
+                              [class.bg-success-container/20]="cell.status === 'paid'"
+                              [class.border-success/30]="cell.status === 'paid'"
+                              [class.bg-warning-container/15]="cell.status === 'missing'"
+                              [class.border-warning/30]="cell.status === 'missing'"
+                              [class.bg-surface-container-high/20]="cell.status === 'future' || cell.status === 'na'"
+                              [class.border-border/20]="cell.status === 'future' || cell.status === 'na'"
+                            >
+                              <div class="text-[9px] font-bold text-on-surface-variant uppercase mb-0.5">
+                                {{ cell.label }}
+                              </div>
+                              @if (cell.status === 'paid') {
+                                <div class="text-[10px] font-bold text-success">
+                                  <fa-icon [icon]="['fas', 'check-circle']" class="mr-0.5"></fa-icon>
+                                  S/ {{ (cell.payment!.amount - (cell.payment!.discount || 0)).toFixed(0) }}
+                                </div>
+                              } @else if (cell.status === 'missing') {
+                                <div class="text-[10px] font-bold text-warning">Faltante</div>
+                              } @else {
+                                <div class="text-[10px] text-on-surface-variant/30">—</div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
               } @empty {
                 <div class="text-center py-12">

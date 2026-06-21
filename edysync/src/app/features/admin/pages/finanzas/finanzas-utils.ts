@@ -1,4 +1,4 @@
-import { PatientRow, PaymentHistoryRow } from './finanzas.models';
+import { PatientRow, PaymentHistoryRow, MonthCell } from './finanzas.models';
 
 export function getCategoryLabel(key: string): string {
   const map: Record<string, string> = {
@@ -105,4 +105,39 @@ export function getOverdueDays(p: PatientRow): number {
   if (!p.next_due_date) return 0;
   const diff = new Date().getTime() - new Date(p.next_due_date).getTime();
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
+export function buildPatientYearGrid(payments: PaymentHistoryRow[], patient: PatientRow): MonthCell[] {
+  const now = new Date();
+  const year = now.getFullYear();
+  const grid: MonthCell[] = [];
+  const payByMonth = new Map<string, PaymentHistoryRow>();
+  for (const p of payments) {
+    if (p.date) {
+      const key = p.date.substring(0, 7);
+      payByMonth.set(key, p);
+    }
+  }
+  const isRetirado = patient.status === 'retirado' || patient.status === 'inactive';
+  for (let m = 0; m < 12; m++) {
+    const monthKey = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const payment = payByMonth.get(monthKey) || null;
+    let status: MonthCell['status'] = 'missing';
+    if (payment) {
+      status = 'paid';
+    } else if (monthKey > `${year}-${String(now.getMonth() + 1).padStart(2, '0')}`) {
+      status = 'future';
+    } else if (isRetirado) {
+      status = 'na';
+    }
+    grid.push({
+      monthKey,
+      label: new Date(year, m, 1).toLocaleDateString('es-PE', { month: 'short' }),
+      year,
+      month: m + 1,
+      payment,
+      status,
+    });
+  }
+  return grid;
 }
