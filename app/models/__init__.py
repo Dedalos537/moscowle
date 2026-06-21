@@ -8,5 +8,6 @@ from app.models.report import *
 from app.models.admin import *
 from app.models.ai import *
 from app.models.service_request import *
+from app.models.contract import *
 from app.models.refresh_token import RefreshToken
 from app.models.password_reset import PasswordReset

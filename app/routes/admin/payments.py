@@ -202,8 +202,9 @@ def api_all_payments():
                 'date': p.date.strftime('%Y-%m-%dT%H:%M:%S') if p.date else '',
                 'status': p.status or 'completed',
                 'receipt_image_path': p.receipt_image_path or '',
-                'document_number': getattr(p, 'document_number', '') or '',
-                'guardian_name': getattr(p, 'guardian_name', '') or '',
+                'document_number': patient.document_number or '' if patient else '',
+                'guardian_name': patient.guardian_name or '' if patient else '',
+                'guardian_dni': patient.guardian_dni or '' if patient else '',
             }
         )
     return jsonify({'success': True, 'payments': result})
@@ -343,14 +344,17 @@ def register_payment():
 
     document_number = request.form.get('document_number')
     guardian_name = request.form.get('guardian_name')
+    guardian_dni = request.form.get('guardian_dni')
 
-    if document_number or guardian_name:
+    if document_number or guardian_name or guardian_dni:
         patient = User.query.get(patient_id)
         if patient:
             if document_number:
                 patient.document_number = document_number
             if guardian_name:
                 patient.guardian_name = guardian_name
+            if guardian_dni:
+                patient.guardian_dni = guardian_dni
             db.session.commit()
 
     success, result_or_payment = payment_service.register_payment(
@@ -543,12 +547,15 @@ def download_receipt(payment_id):
     if request.method == 'POST':
         doc_number = request.form.get('document_number')
         g_name = request.form.get('guardian_name')
+        g_dni = request.form.get('guardian_dni')
         concept = request.form.get('concept')
 
         if doc_number:
             patient.document_number = doc_number
         if g_name:
             patient.guardian_name = g_name
+        if g_dni:
+            patient.guardian_dni = g_dni
         if concept:
             payment.notes = concept
 

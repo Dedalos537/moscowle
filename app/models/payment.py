@@ -15,6 +15,7 @@ class Payment(db.Model, AuditMixin):
     status = db.Column(db.String(50), default='completed')
     notes = db.Column(db.Text, nullable=True)
     discount = db.Column(db.Float, default=0.0)
+    installment_id = db.Column(db.Integer, db.ForeignKey('installment.id'), nullable=True, index=True)
 
 class Expense(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)

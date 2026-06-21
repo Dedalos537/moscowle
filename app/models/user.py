@@ -23,6 +23,11 @@ class Sede(db.Model, AuditMixin):
 
 
 class User(db.Model, UserMixin, AuditMixin):
+    __table_args__ = (
+        db.Index('idx_user_role_active', 'role', 'is_active'),
+        db.Index('idx_user_role', 'role'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -38,6 +43,7 @@ class User(db.Model, UserMixin, AuditMixin):
     phone = db.Column(db.String(50), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
     guardian_name = db.Column(db.String(150), nullable=True)
+    guardian_dni = db.Column(db.String(15), nullable=True)
     guardian_contact = db.Column(db.String(150), nullable=True)
     document_number = db.Column(db.String(20), nullable=True)
     therapy_goals = db.Column(db.Text, nullable=True)

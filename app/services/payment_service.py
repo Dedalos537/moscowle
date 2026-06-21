@@ -13,9 +13,29 @@ class PaymentService:
         self.notification_service = NotificationService()
 
     def get_patients_payment_status(self):
-        """Estado de pago de pacientes"""
+        """Estado de pago de pacientes — bulk queries, sin N+1"""
         patients = User.query.filter_by(role='jugador').all()
         today = datetime.utcnow().date()
+        patient_ids = [p.id for p in patients]
+
+        latest_by_patient = {}
+        if patient_ids:
+            latest_subq = db.session.query(
+                Payment.patient_id,
+                func.max(Payment.id).label('max_id')
+            ).filter(Payment.patient_id.in_(patient_ids)).group_by(Payment.patient_id).subquery()
+            latest_payments = db.session.query(Payment).join(
+                latest_subq, Payment.id == latest_subq.c.max_id
+            ).all()
+            latest_by_patient = {p.patient_id: p for p in latest_payments}
+
+        totals_by_patient = {}
+        if patient_ids:
+            totals = db.session.query(
+                Payment.patient_id,
+                func.sum(Payment.amount).label('total')
+            ).filter(Payment.patient_id.in_(patient_ids)).group_by(Payment.patient_id).all()
+            totals_by_patient = {pid: total for pid, total in totals}
 
         results = []
         for p in patients:
@@ -28,7 +48,7 @@ class PaymentService:
                 status = 'overdue'
                 days_overdue = (today - p.payment_due_date).days
 
-            latest_payment = Payment.query.filter_by(patient_id=p.id).order_by(Payment.date.desc()).first()
+            latest_payment = latest_by_patient.get(p.id)
 
             attended_1 = p.sessions_attended or 0
             attended_2 = p.sessions_attended_2 or 0
@@ -49,9 +69,7 @@ class PaymentService:
                     consumed_2 = attended_2 * cost_2
 
             total_consumed = consumed_1 + consumed_2
-
-            total_paid = db.session.query(func.sum(Payment.amount)).filter(Payment.patient_id == p.id).scalar() or 0
-
+            total_paid = totals_by_patient.get(p.id, 0) or 0
             debt = total_consumed - total_paid
 
             plan_label = p.payment_plan or 'Mensual'
@@ -249,6 +267,7 @@ class PaymentService:
             else 0,
             'document_number': user.document_number,
             'guardian_name': user.guardian_name,
+            'guardian_dni': user.guardian_dni,
         }
 
     def get_financial_summary(self):

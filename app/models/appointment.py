@@ -56,7 +56,7 @@ class Appointment(db.Model, AuditMixin):
     title = db.Column(db.String(200), nullable=True)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String(50), default='scheduled')
+    status = db.Column(db.String(50), default='scheduled', index=True)
     location = db.Column(db.String(200), nullable=True)
     notes = db.Column(db.Text, nullable=True)
 

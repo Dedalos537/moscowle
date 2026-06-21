@@ -9,9 +9,10 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
-def generate_receipt_pdf(payment, patient):
+def generate_receipt_pdf(payment, patient, installment=None, contract=None):
     """
     Generates a PDF receipt for a given payment.
+    Optionally includes installment/contract data.
     Returns: BytesIO object containing the PDF data
     """
     buffer = BytesIO()
@@ -65,11 +66,13 @@ def generate_receipt_pdf(payment, patient):
 
     client_name = patient.guardian_name or patient.username
     client_doc = patient.document_number or patient.id
+    guardian_dni = patient.guardian_dni or ''
 
     client_data = [
         [Paragraph('<b>DATOS DEL CLIENTE:</b>', styles['Normal'])],
         ['Nombre/Apoderado:', client_name],
-        ['DNI/Documento:', client_doc],
+        ['DNI Apoderado:', guardian_dni],
+        ['DNI Paciente:', str(client_doc)],
         ['Paciente Asignado:', patient.username],
     ]
     t_client = Table(client_data, colWidths=[2 * inch, 4 * inch])
@@ -87,6 +90,25 @@ def generate_receipt_pdf(payment, patient):
     )
     elements.append(t_client)
     elements.append(Spacer(1, 20))
+
+    if contract and installment:
+        contract_data = [
+            [Paragraph('<b>CONTRATO / CUOTA:</b>', styles['Normal'])],
+            ['Contrato:', contract.name or f'ID {contract.id}'],
+            ['Cuota N°:', f'{installment.number} de {contract.installment_count}'],
+            ['Vencimiento:', installment.due_date.strftime('%d/%m/%Y') if hasattr(installment.due_date, 'strftime') else str(installment.due_date)],
+        ]
+        t_contract = Table(contract_data, colWidths=[2 * inch, 4 * inch])
+        t_contract.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('SPAN', (0, 0), (1, 0)),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t_contract)
+        elements.append(Spacer(1, 15))
 
     date_str = payment.date.strftime('%d/%m/%Y %H:%M')
 
@@ -114,8 +136,14 @@ def generate_receipt_pdf(payment, patient):
     elements.append(Spacer(1, 20))
 
     amount_str = f'S/ {payment.amount:.2f}'
-    total_data = [['', 'Subtotal:', amount_str], ['', 'TOTAL PAGADO:', amount_str]]
-    t_total = Table(total_data, colWidths=[3.5 * inch, 1.5 * inch, 1 * inch])
+    discount_str = f'S/ {payment.discount:.2f}' if payment.discount else None
+    net_str = f'S/ {payment.amount - (payment.discount or 0):.2f}'
+
+    total_rows = [['', 'Subtotal:', amount_str]]
+    if discount_str:
+        total_rows.append(['', 'Descuento:', f'-{discount_str}'])
+    total_rows.append(['', 'TOTAL PAGADO:', net_str])
+    t_total = Table(total_rows, colWidths=[3.5 * inch, 1.5 * inch, 1 * inch])
     t_total.setStyle(
         TableStyle(
             [
