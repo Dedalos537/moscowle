@@ -18,13 +18,7 @@ try:
 except ImportError:
     Groq = None
 
-try:
-    import ollama
-    from ollama import Client
-    client = Client(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
-    client.list()
-except (ImportError, Exception):
-    client = None
+client = None  # lazy init in analyze_receipt_image
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -58,15 +52,31 @@ def analyze_transaction_message(message):
     return "{}"
 
 
+def _ensure_ollama_client():
+    global client
+    if client is not None:
+        return
+    try:
+        import ollama
+        from ollama import Client as OllamaClient
+        c = OllamaClient(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
+        c.list()
+        client = c
+    except Exception:
+        client = None
+
+
 def analyze_receipt_image(image_path):
     start = time.time()
     print(f"[analyze_receipt_image] Analizando: {image_path}")
-    result = {'status': 'success', 'provider': None, 'response_time': None}
+    fallback = {'amount': None, 'reference': None, 'method': 'transfer', 'date': datetime.now().strftime('%Y-%m-%d'), 'sender_name': None, 'confidence': 'baja', 'provider': None, 'response_time': None, 'warning': 'No se pudo analizar el voucher. Ingresa los datos manualmente.'}
     try:
         from PIL import Image
         with open(image_path, 'rb') as f:
             img_bytes = f.read()
         print(f"[analyze_receipt_image] Leídos {len(img_bytes)} bytes")
+        if len(img_bytes) == 0:
+            return fallback
         ext = os.path.splitext(image_path)[1].lower()
         mime = 'image/png' if ext == '.png' else 'image/jpeg'
         prompt = (
@@ -81,6 +91,7 @@ def analyze_receipt_image(image_path):
             'Example: {"amount": 150.00, "reference": "123456", "method": "yape", "date": "2024-01-15", "sender_name": "Juan Perez", "confidence": "alta"}'
         )
         parsed = None
+        _ensure_ollama_client()
         if client:
             try:
                 t0 = time.time()
@@ -156,15 +167,28 @@ def analyze_receipt_image(image_path):
                 print(f"[analyze_receipt_image] Groq falló: {e}")
         elapsed = round(time.time() - start, 2)
         print(f"[analyze_receipt_image] Todos los proveedores fallaron ({elapsed}s), devolviendo vacío")
-        result['response_time'] = elapsed
-        return result
+        fallback['response_time'] = elapsed
+        # Try tesseract as last resort
+        try:
+            import pytesseract
+            from PIL import Image as PilImage
+            ocr_text = pytesseract.image_to_string(PilImage.open(image_path))
+            print(f"[analyze_receipt_image] Tesseract raw: {ocr_text[:200]}")
+            extracted = _parse_tesseract_output(ocr_text)
+            if extracted.get('amount') or extracted.get('reference'):
+                fallback.update(extracted)
+                fallback['provider'] = 'tesseract'
+                fallback['warning'] = None
+        except Exception as tess_err:
+            print(f"[analyze_receipt_image] Tesseract falló: {tess_err}")
+        return fallback
     except Exception as e:
         elapsed = round(time.time() - start, 2)
         print(f"[analyze_receipt_image] ERROR: {e}")
         import traceback
         traceback.print_exc()
-        result['response_time'] = elapsed
-        return result
+        fallback['response_time'] = elapsed
+        return fallback
 
 
 def _parse_json_response(raw):
@@ -180,6 +204,53 @@ def _parse_json_response(raw):
         return json.loads(raw)
     except Exception:
         return None
+
+
+def _parse_tesseract_output(text):
+    import re
+    result = {'amount': None, 'reference': None, 'method': 'transfer', 'date': None, 'sender_name': None, 'confidence': 'baja'}
+    amount_patterns = [
+        r'(?:S/|s/|\.?S\.?)\s*(\d+[.,]\d{2})',
+        r'(?:total|monto|importe|pago)\s*:?\s*S/?\s*(\d+[.,]\d{2})',
+        r'(\d+[.,]\d{2})\s*(?:sol|Soles)',
+        r'S/\s*(\d+)',
+    ]
+    for pat in amount_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            try:
+                result['amount'] = float(m.group(1).replace(',', '.'))
+                break
+            except ValueError:
+                pass
+    ref_patterns = [
+        r'(?:operacion|operación|nro|n[°º]|#)\s*:?\s*(\w{4,20})',
+        r'(?:ref|referencia)\s*:?\s*(\w{4,20})',
+        r'(?:voucher|transacci[oó]n)\s*:?\s*(\w{4,20})',
+    ]
+    for pat in ref_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            result['reference'] = m.group(1)
+            break
+    date_patterns = [
+        r'(\d{2}/\d{2}/\d{4})',
+        r'(\d{4}-\d{2}-\d{2})',
+        r'(\d{2}/\d{2}/\d{2})',
+    ]
+    for pat in date_patterns:
+        m = re.search(pat, text)
+        if m:
+            result['date'] = m.group(1).replace('/', '-')
+            break
+    if re.search(r'yape|plin', text, re.IGNORECASE):
+        result['method'] = 'yape/plin'
+    elif re.search(r'transferencia|deposito|depósito|banco', text, re.IGNORECASE):
+        result['method'] = 'transfer'
+    elif re.search(r'efectivo|cash', text, re.IGNORECASE):
+        result['method'] = 'cash'
+    return result
+
 
 def generate_weekly_report(data):
     """Arma el reporte estratégico con los datos"""
