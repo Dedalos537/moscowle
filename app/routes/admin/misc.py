@@ -594,10 +594,23 @@ def api_railway_metrics():
 
 
 @admin_bp.route('/api/logs', methods=['GET'])
-@login_required
 def admin_api_logs():
-    if current_user.role not in ('admin', 'supervisor'):
-        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    user = None
+    try:
+        if current_user.is_authenticated:
+            user = current_user
+    except Exception:
+        pass
+    if user is None:
+        try:
+            verify_jwt_in_request(locations=['cookies'], optional=True)
+            uid = get_jwt_identity()
+            if uid is not None:
+                user = User.query.get(int(uid))
+        except Exception:
+            pass
+    if user is None or user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 401
     from app.services.log_service import log_capture_handler
 
     level = request.args.get('level')
