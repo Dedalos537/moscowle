@@ -1,0 +1,1366 @@
+<ng-template #headerActions>
+  <app-button variant="ghost" label="Ayuda" [icon]="['fas', 'question-circle']" (clicked)="showHelp()"></app-button>
+  <app-button variant="primary" label="Generar Reporte" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
+</ng-template>
+
+<div class="p-4 md:p-8">
+
+  <div class="chrome-tab-bar">
+    <button class="chrome-tab" [class.active]="activeTab === 'resumen'" (click)="switchTab('resumen')">
+      <fa-icon [icon]="['fas', 'th-large']"></fa-icon>
+      <span>Dashboard</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'pagos'" (click)="switchTab('pagos')">
+      <fa-icon [icon]="['fas', 'wallet']"></fa-icon>
+      <span>Pagos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'yape'" (click)="switchTab('yape')">
+      <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
+      <span>Yape</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'gastos'" (click)="switchTab('gastos')">
+      <fa-icon [icon]="['fas', 'receipt']"></fa-icon>
+      <span>Gastos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'contratos'" (click)="switchTab('contratos')">
+      <fa-icon [icon]="['fas', 'file-contract']"></fa-icon>
+      <span>Contratos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+  </div>
+
+  @if (activeTab === 'resumen') {
+    <div class="space-y-6" [@fadeInUp]>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-error">Deuda Total</span>
+            <span class="w-9 h-9 rounded-lg bg-error-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryTotalDeuda.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-error">
+              <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px]"></fa-icon> Pendiente
+            </span>
+            <span class="text-xs text-on-surface-variant">de cobro</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-success">Ingresos Reales</span>
+            <span class="w-9 h-9 rounded-lg bg-success-container  flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryIngresos.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-success">
+              <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px]"></fa-icon> Recaudado
+            </span>
+            <span class="text-xs text-on-surface-variant">del período</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-warning ">Gastos</span>
+            <span class="w-9 h-9 rounded-lg bg-warning-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'receipt']" class="text-warning text-xl"></fa-icon>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ summaryGastos.toFixed(2) }}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold text-warning">
+              <fa-icon [icon]="['fas', 'arrow-down']" class="text-[14px]"></fa-icon> Operativos
+            </span>
+            <span class="text-xs text-on-surface-variant">y terapeutas</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-info ">Balance Neto</span>
+            <span class="w-9 h-9 rounded-lg bg-info-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'university']" class="text-info text-xl"></fa-icon>
+            </span>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight"
+            [class.text-success]="summaryBalance >= 0"
+            [class.text-error]="summaryBalance < 0">
+            S/ {{ summaryBalance.toFixed(2) }}
+          </p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="flex items-center gap-0.5 text-[11px] font-bold"
+              [class.text-success]="summaryBalance >= 0"
+              [class.text-error]="summaryBalance < 0">
+              <fa-icon [icon]="summaryBalance >= 0 ? ['fas', 'arrow-up'] : ['fas', 'arrow-down']" class="text-[14px]"></fa-icon>
+              {{ summaryBalance >= 0 ? 'Positivo' : 'Negativo' }}
+            </span>
+            <span class="text-xs text-on-surface-variant">Ingresos - Gastos</span>
+          </div>
+        </div>
+      </div>
+
+      @if (!isSupervisor && !hideCharts()) {
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'chart-line']" class="text-primary text-lg"></fa-icon>
+              Ingresos vs Gastos
+            </h3>
+            <div class="flex items-center gap-3">
+              <span class="flex items-center gap-1.5 text-[11px]">
+                <span class="w-3 h-0.5 rounded-full bg-primary"></span>
+                <span class="text-on-surface-variant font-medium">Ingresos</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-[11px]">
+                <span class="w-3 h-0.5 rounded-full bg-error"></span>
+                <span class="text-on-surface-variant font-medium">Gastos</span>
+              </span>
+            </div>
+          </div>
+          <div class="relative" style="height: 260px">
+            <canvas baseChart [data]="dashIncomeExpenseChart" [options]="dashIncomeExpenseOpt" [type]="dashIncomeExpenseType"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'chart-pie']" class="text-primary text-lg"></fa-icon>
+              Gastos por Categoria
+            </h3>
+          </div>
+          <div class="relative" style="height: 220px">
+            <canvas baseChart [data]="dashExpenseCategoryChart" [options]="dashExpenseCategoryOpt" [type]="dashExpenseCategoryType"></canvas>
+          </div>
+          @if (dashExpenseStats.total > 0) {
+            <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/20">
+              <div class="text-center">
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Terapeutas</p>
+                <p class="text-sm font-bold text-success">S/ {{ dashExpenseStats.therapistPayments.toFixed(0) }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Operativos</p>
+                <p class="text-sm font-bold text-info ">S/ {{ dashExpenseStats.operational.toFixed(0) }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      }
+
+      @if (!isSupervisor && !hideCharts()) {
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+                <fa-icon [icon]="['fas', 'tachometer-alt']" class="text-primary text-lg"></fa-icon>
+                Eficiencia de Cobranza
+              </h3>
+              <span class="text-2xl font-black text-on-surface">{{ dashCollectionRate.toFixed(0) }}%</span>
+            </div>
+            <div class="w-full h-2.5 bg-surface-container-high rounded-full overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-1000"
+                [class.bg-success]="dashCollectionRate >= 75"
+                [class.bg-warning]="dashCollectionRate >= 40 && dashCollectionRate < 75"
+                [class.bg-error-container0]="dashCollectionRate < 40"
+                [style.width.%]="dashCollectionRate"
+              ></div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mt-3">
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Recaudado</p>
+                <p class="text-sm font-bold text-success">S/ {{ (financials?.income_real || 0).toFixed(2) }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Proyectado</p>
+                <p class="text-sm font-bold text-on-surface">S/ {{ (financials?.income_expected || 0).toFixed(2) }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-label-caps text-on-surface-variant">Pendiente</p>
+                <p class="text-sm font-bold text-warning">S/ {{ Math.max(0, (financials?.income_expected || 0) - (financials?.income_real || 0)).toFixed(2) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+            <fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
+            Transacciones Recientes
+          </h3>
+          @if (dashRecentTransactions.length > 0) {
+            <span class="text-[11px] font-bold text-on-surface-variant">{{ dashRecentTransactions.length }} última(s)</span>
+          }
+        </div>
+        @if (dashRecentTransactions.length > 0) {
+          <div class="divide-y divide-border/10">
+            @for (t of dashRecentTransactions; track t.id) {
+              <div class="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-surface-container-low/30 -mx-2 px-2 rounded-lg transition-colors">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm"
+                  [class.bg-secondary/10]="t.method === 'yape' || t.method === 'plin'"
+                  [class.bg-info-container]="t.method === 'transfer'"
+                  [class.bg-success-container]="t.method === 'cash'"
+                  [class.bg-info-container]="t.method === 'card'"
+                  [class.bg-surface-container-high]="!['yape','plin','transfer','cash','card'].includes(t.method)">
+                  @switch (t.method) {
+                    @case ('yape') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-lg"></fa-icon> }
+                    @case ('plin') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-lg"></fa-icon> }
+                    @case ('transfer') { <fa-icon [icon]="['fas', 'university']" class="text-lg"></fa-icon> }
+                    @case ('cash') { <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-lg"></fa-icon> }
+                    @case ('card') { <fa-icon [icon]="['fas', 'credit-card']" class="text-lg"></fa-icon> }
+                    @default { <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon> }
+                  }
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-on-surface truncate">{{ t.patient_name || 'Paciente' }}</p>
+                  <p class="text-[11px] text-on-surface-variant">{{ t.date | date:'dd/MM/yyyy' }} · {{ getMethodLabel(t.method) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm font-bold text-on-surface">S/ {{ (t.amount - (t.discount || 0)).toFixed(2) }}</p>
+                  @if (t.reference) {
+                    <p class="text-[10px] text-on-surface-variant/60 truncate max-w-[100px]">{{ t.reference }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="text-center py-8">
+            <fa-icon [icon]="['fas', 'receipt']" class="text-3xl text-on-surface-variant/40 block mb-2"></fa-icon>
+            <p class="text-sm font-medium text-on-surface-variant">Sin transacciones recientes</p>
+            <p class="text-xs text-on-surface-variant/60 mt-0.5">Los pagos registrados aparecerán aquí</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (activeTab === 'pagos') {
+    <div #pagosSection class="p-4 md:p-8 -mx-4 md:-mx-8 -mb-8 space-y-6 animate-fade-in" [@fadeInUp]>
+
+        @if (incompletePlanPatients.length > 0) {
+          <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
+            <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-warning">
+                {{ incompletePlanPatients.length }} pacientes sin configuración de pago
+              </p>
+              <p class="text-xs text-warning mt-0.5">Configura el monto, plan, y fecha de vencimiento para estos pacientes.</p>
+            </div>
+          </div>
+        }
+
+        @if (!hideCharts()) {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-success">Total Recaudado (Mes)</span>
+              <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-success text-xl"></fa-icon>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalIncomeReal.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <fa-icon [icon]="['fas', 'arrow-up']" class="text-[14px] text-success"></fa-icon>
+              Ingresos del período actual
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-info ">Pendiente por Cobrar</span>
+              <fa-icon [icon]="['fas', 'wallet']" class="text-info text-xl"></fa-icon>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalPending.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <fa-icon [icon]="['fas', 'clock']" class="text-[14px] text-info"></fa-icon>
+              Monto total pendiente
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-error">Total Deuda</span>
+              <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-xl"></fa-icon>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ totalDebt.toFixed(2) }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <fa-icon [icon]="['fas', 'users']" class="text-[14px] text-error"></fa-icon>
+              {{ financials?.overdue_users_count || 0 }} pacientes morosos
+            </p>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <div class="flex items-start justify-between mb-3">
+              <span class="text-label-caps text-primary">Pacientes Registrados</span>
+              <fa-icon [icon]="['fas', 'heartbeat']" class="text-primary text-xl"></fa-icon>
+            </div>
+            <p class="text-3xl font-black text-on-surface tracking-tight">{{ totalPatients }}</p>
+            <p class="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+              <fa-icon [icon]="['fas', 'check-circle']" class="text-[14px] text-primary"></fa-icon>
+              En el sistema de pagos
+            </p>
+          </div>
+        </div>
+        }
+
+        @if (!isSupervisor && !hideCharts()) {
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+              <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+                <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
+                Estado de Pagos
+              </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
+              Deuda por Sede
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
+              Antigüedad de Vencimientos
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
+              Historial de Ingresos (6 Meses)
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
+              Ingresos por Tipo de Plan
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
+              Proyección vs Real
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 lg:col-start-2">
+            <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+              <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
+              Ingresos por Sede
+            </h4>
+            <div class="relative" style="height: 220px">
+              <canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas>
+            </div>
+          </div>
+        </div>
+        }
+
+        <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
+          <button
+            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+            [class.bg-surface-container-lowest]="pagosTab === 'pacientes'"
+            [class.text-on-surface]="pagosTab === 'pacientes'"
+            [class.text-on-surface-variant]="pagosTab !== 'pacientes'"
+            [class.shadow-soft]="pagosTab === 'pacientes'"
+            (click)="pagosTab = 'pacientes'"
+          >
+            <fa-icon [icon]="['fas', 'users']" class="text-[18px]"></fa-icon>
+            Pacientes
+          </button>
+          <button
+            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+            [class.bg-surface-container-lowest]="pagosTab === 'historial'"
+            [class.text-on-surface]="pagosTab === 'historial'"
+            [class.text-on-surface-variant]="pagosTab !== 'historial'"
+            [class.shadow-soft]="pagosTab === 'historial'"
+            (click)="pagosTab = 'historial'"
+          >
+            <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
+            Historial
+            @if (paymentHistory.length > 0) {
+              <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
+            }
+          </button>
+        </div>
+
+        @if (pagosTab === 'pacientes') {
+          @if (paymentsLoading) {
+            <div class="flex justify-center py-24">
+              <app-spinner size="md" colorClass="text-primary"></app-spinner>
+            </div>
+          } @else {
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
+
+            <div class="flex flex-col gap-3 mb-6">
+              <div class="flex flex-col md:flex-row gap-3">
+                <div class="relative flex-1">
+                  <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
+                  <input
+                    (input)="searchQuery = $any($event.target).value"
+                    [value]="searchQuery"
+                    type="text"
+                    placeholder="Buscar paciente..."
+                    class="input-field !pl-10"
+                  >
+                </div>
+              </div>
+
+              <div class="flex flex-col md:flex-row gap-3 items-end">
+                <div class="flex flex-col gap-1">
+                  <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                    <fa-icon [icon]="['fas', 'building']" class="text-[10px]"></fa-icon> Sede
+                  </span>
+                  <app-select (valueChange)="selectedSedeId = $event" [options]="sedeFilterOptions" placeholder="Todas" class="min-w-[150px]"></app-select>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                    <fa-icon [icon]="['fas', 'user-doctor']" class="text-[10px]"></fa-icon> Terapeuta
+                  </span>
+                  <app-select (valueChange)="selectedTherapistId = $event" [options]="therapistFilterOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                    <fa-icon [icon]="['fas', 'circle-check']" class="text-[10px]"></fa-icon> Estado
+                  </span>
+                  <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                    <fa-icon [icon]="['fas', 'arrow-down-wide-short']" class="text-[10px]"></fa-icon> Ordenar
+                  </span>
+                  <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" placeholder="Por nombre" class="min-w-[170px]"></app-select>
+                </div>
+
+                @if (activeFilterCount > 0) {
+                  <button (click)="clearFilters()" class="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer h-[38px]">
+                    <fa-icon [icon]="['fas', 'filter-circle-xmark']" class="text-[13px]"></fa-icon>
+                    Limpiar ({{ activeFilterCount }})
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
+              <table class="w-full min-w-[1000px]">
+                <thead>
+                  <tr class="bg-surface-container-high/50">
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Estado</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Deuda Est.</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Próx. Venc.</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Plan</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Progreso</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/20">
+                  @for (p of filteredPatients; track p.id) {
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                      <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-3">
+                          <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
+                            {{ getInitials(p.username) }}
+                          </div>
+                          <div class="min-w-0">
+                            <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                            <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                        <div class="flex flex-col items-center gap-0.5">
+                          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                            [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                            <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                            {{ getStatusInfo(p).label }}
+                          </span>
+                          @if (isOverdue(p)) {
+                            <span class="text-[10px] font-black text-error">{{ getOverdueDays(p) }} días vencido</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-right">
+                        @if (p.payment_amount <= 0) {
+                          <span class="text-sm text-on-surface-variant">—</span>
+                        } @else {
+                          <span
+                            class="text-sm font-bold"
+                            [class.text-success]="p.payment_amount < 100"
+                            [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                            [class.text-error]="p.payment_amount >= 300"
+                          >
+                            S/ {{ p.payment_amount.toFixed(2) }}
+                          </span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                        @if (p.next_due_date) {
+                          <div class="flex flex-col items-center">
+                            <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+                            @if (isOverdue(p)) {
+                              <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+                            }
+                          </div>
+                        } @else {
+                          <span class="text-sm text-on-surface-variant">—</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5">
+                        <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
+                        @if (p.plan_frequency) {
+                          <span class="text-xs text-on-surface-variant block">{{ p.plan_frequency }}</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-2 justify-center">
+                          <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                            <div
+                              class="h-full rounded-full transition-all duration-700"
+                              [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                              [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                              [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                              [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
+                            ></div>
+                          </div>
+                          <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
+                            {{ p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100).toFixed(0) : '0' }}%
+                          </span>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
+                      <td class="px-4 py-3.5 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Registrar Pago"
+                            (click)="openRegisterModal(p)"
+                          >
+                            <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[16px]"></fa-icon>
+                          </button>
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Configurar Plan"
+                            (click)="openSettingsModal(p)"
+                          >
+                            <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
+                          </button>
+                          <button
+                            class="btn-ghost !px-2.5 !py-1.5 text-xs"
+                            title="Ver Historial"
+                            (click)="viewPatientHistory(p)"
+                          >
+                            <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="9" class="px-4 py-16 text-center">
+                        <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+                        <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+                        <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="md:hidden space-y-3">
+              @for (p of filteredPatients; track p.id) {
+                <div
+                  class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200"
+                  [class.border-l-4]="isOverdue(p)"
+                  [class.border-l-red-500]="isOverdue(p)"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
+                        {{ getInitials(p.username) }}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                        <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
+                      </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 shrink-0">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                        <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                        {{ getStatusInfo(p).label }}
+                      </span>
+                      @if (isOverdue(p)) {
+                        <span class="text-[9px] font-black text-error">{{ getOverdueDays(p) }}d vencido</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mb-3">
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Deuda</span>
+                      <p class="text-sm font-bold"
+                        [class.text-success]="p.payment_amount < 100"
+                        [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                        [class.text-error]="p.payment_amount >= 300">
+                        S/ {{ p.payment_amount.toFixed(2) }}
+                      </p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Plan</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.plan_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Sede</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.sede_name || '—' }}</p>
+                    </div>
+                    <div>
+                      <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
+                      <p class="text-sm font-medium text-on-surface">{{ p.therapist_name || '—' }}</p>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <div class="flex justify-between text-xs text-on-surface-variant mb-1">
+                      <span>Progreso</span>
+                      <span class="font-bold">{{ p.sessions_attended }}/{{ p.sessions_total }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all"
+                        [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                        [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                        [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                        [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"
+                      ></div>
+                    </div>
+                  </div>
+
+                  @if (p.next_due_date) {
+                    <div class="flex items-center gap-2 mb-3 text-xs">
+                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
+                      <span class="text-on-surface-variant">Próx. venc.:</span>
+                      <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+                      @if (isOverdue(p)) {
+                        <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full">VENCIDO</span>
+                      }
+                    </div>
+                  }
+
+                  <div class="flex gap-2 pt-2 border-t border-border/20">
+                    <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']" (clicked)="openRegisterModal(p)"></app-button>
+                    <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']" (clicked)="openSettingsModal(p)"></app-button>
+                    <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
+                      <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="text-center py-12">
+                  <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+                  <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+                  <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
+                </div>
+              }
+            </div>
+
+          </div>
+          }
+        }
+
+        @if (pagosTab === 'historial') {
+          @if (historyLoading) {
+            <div class="flex justify-center py-24">
+              <app-spinner size="md" colorClass="text-primary"></app-spinner>
+            </div>
+          } @else {
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
+
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+<fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
+                Historial de Pagos
+              </h3>
+              <div class="flex gap-2 items-center">
+                <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'plus']" (clicked)="openRegisterModal()"></app-button>
+                <app-button variant="ghost" label="Exportar" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                    <fa-icon [icon]="['fas', 'calendar']" class="text-[9px]"></fa-icon> Período
+                  </span>
+                  <app-select (valueChange)="historyMonth = $event" [options]="historyMonthOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+                </div>
+                <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-border/30">
+              <table class="w-full min-w-[800px]">
+                <thead>
+                  <tr class="bg-surface-container-high/50">
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Monto</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Método</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Referencia</th>
+                    <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Documentos</th>
+                    <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Fecha</th>
+                    <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border/20">
+                  @for (p of filteredHistory; track p.id) {
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                      <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ p.patient_name || '—' }}</td>
+                      <td class="px-4 py-3.5 text-right">
+                        <span class="text-sm font-bold text-on-surface">S/ {{ (p.amount - (p.discount || 0)).toFixed(2) }}</span>
+                        @if (p.discount > 0) {
+                          <span class="text-[10px] text-on-surface-variant block">Desc: S/ {{ p.discount.toFixed(2) }}</span>
+                        }
+                      </td>
+                      <td class="px-4 py-3.5 text-center">
+                          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                            [class]="getMethodBadgeClass(p.method)">
+                            @switch (p.method) {
+                              @case ('yape') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
+                              @case ('plin') { <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon> }
+                              @case ('transfer') { <fa-icon [icon]="['fas', 'university']" class="text-[12px]"></fa-icon> }
+                              @case ('cash') { <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px]"></fa-icon> }
+                              @case ('card') { <fa-icon [icon]="['fas', 'credit-card']" class="text-[12px]"></fa-icon> }
+                              @default { <fa-icon [icon]="['fas', 'receipt']" class="text-[12px]"></fa-icon> }
+                            }
+                            {{ getMethodLabel(p.method) }}
+                          </span>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.reference || '—' }}</td>
+                      <td class="px-4 py-3.5 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                          @if (p.receipt_image_path) {
+                            <button (click)="previewImage(p.receipt_image_path)" class="btn-ghost !px-2 !py-1 text-xs" title="Ver Voucher">
+                              <fa-icon [icon]="['fas', 'image']" class="text-[14px]"></fa-icon>
+                            </button>
+                          }
+                          @if (p.document_number) {
+                            <span class="text-[10px] text-on-surface-variant font-medium" title="DNI: {{ p.document_number }}">
+                              <fa-icon [icon]="['fas', 'id-card']" class="text-[12px]"></fa-icon>
+                            </span>
+                          }
+                          @if (!p.receipt_image_path && !p.document_number) {
+                            <span class="text-xs text-on-surface-variant">—</span>
+                          }
+                        </div>
+                      </td>
+                      <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.date | date:'dd/MM/yyyy' }}</td>
+                      <td class="px-4 py-3.5 text-right">
+                        <button (click)="deletePayment(p.id)" class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container " title="Eliminar">
+                          <fa-icon [icon]="['fas', 'trash-alt']" class="text-[16px]"></fa-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="px-4 py-16 text-center">
+                        <fa-icon [icon]="['fas', 'receipt']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+                        <p class="text-sm font-medium text-on-surface-variant">No hay historial de pagos</p>
+                        <p class="text-xs text-on-surface-variant mt-1">Los pagos registrados aparecerán aquí.</p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          }
+        }
+
+    </div>
+  }
+
+  <app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
+    <div class="space-y-4">
+      <div class="flex flex-col gap-1">
+        <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+          <fa-icon [icon]="['fas', 'user']" class="text-[10px]"></fa-icon> Paciente
+        </span>
+        <app-select [(ngModel)]="registerForm.patient_id" [options]="patientSelectOptions" placeholder="Seleccionar paciente..."></app-select>
+      </div>
+      @if (registerForm.patient_id) {
+        <div class="flex items-center gap-3 p-3 bg-primary-container/15 border border-primary-container/30 rounded-lg">
+          <fa-icon [icon]="['fas', 'user-check']" class="text-primary text-lg shrink-0"></fa-icon>
+          <div>
+            <p class="text-xs font-bold text-primary">Paciente seleccionado</p>
+            <p class="text-sm font-semibold text-on-surface">{{ getPatientName(registerForm.patient_id) }}</p>
+          </div>
+        </div>
+      }
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
+        <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
+        <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Apoderado (secundario)</label>
+        <input [(ngModel)]="registerForm.guardian_dni" type="text" placeholder="87654321" class="input-field" maxlength="15">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de Pago</label>
+        <input [(ngModel)]="registerForm.payment_date" type="date" class="input-field">
+      </div>
+      <app-input id="amount" label="Monto (S/)" type="number" [(value)]="registerForm.amount"></app-input>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Método</label>
+          <app-select [(ngModel)]="registerForm.method" [options]="paymentMethodOptions"></app-select>
+        </div>
+        <app-input id="discount" label="Descuento (S/)" type="number" [(value)]="registerForm.discount"></app-input>
+      </div>
+      <app-input id="reference" label="Referencia" [(value)]="registerForm.reference" placeholder="N° de operación"></app-input>
+      <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
+
+      @if (needsRecalculation) {
+        <div class="flex items-start gap-3 p-3 bg-info-container border border-info-container rounded-lg">
+          <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-lg shrink-0"></fa-icon>
+          <p class="text-xs text-info">
+            <strong>Recálculo:</strong> El monto final considera el descuento aplicado. Total neto: S/ {{ (registerForm.amount - registerForm.discount).toFixed(2) }}
+          </p>
+        </div>
+      }
+
+      @if (hasMissingData) {
+        <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
+          <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
+          <div>
+            <p class="text-xs font-bold text-warning">Datos faltantes</p>
+            <p class="text-xs text-warning mt-0.5">
+              @if (!registerForm.patient_id) { • Paciente<br> }
+              @if (!registerForm.document_number) { • DNI del paciente<br> }
+              @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
+              @if (!registerForm.guardian_dni) { • DNI del apoderado<br> }
+              Se recomienda completar estos campos para el comprobante.
+            </p>
+          </div>
+        </div>
+      }
+
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
+        <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
+      </div>
+
+      @if (analyzingReceipt) {
+        <div class="flex items-center gap-3 p-3 bg-secondary/5 border border-accent-container rounded-lg">
+          <app-spinner size="sm" colorClass="text-secondary"></app-spinner>
+          <span class="text-xs font-medium text-secondary">Analizando voucher con OCR...</span>
+        </div>
+      }
+
+      @if (analyzeResult && !analyzingReceipt) {
+        <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+          <div>
+            <p class="text-xs font-bold text-success">OCR Completado</p>
+            <p class="text-xs text-success mt-0.5">
+              Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
+            </p>
+          </div>
+        </div>
+      }
+    </div>
+    <div modal-footer>
+      <div class="flex items-center justify-between w-full">
+        <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
+        <div class="flex gap-2">
+          <app-button variant="ghost" label="Cancelar" (clicked)="closeRegisterModal()"></app-button>
+          <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount" (clicked)="submitRegisterPayment()"></app-button>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+
+  <app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
+    <div class="space-y-4">
+      <p class="text-sm text-on-surface-variant">
+        Configurando plan para <strong class="text-on-surface">{{ settingsForm.patient_name }}</strong>
+      </p>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Frecuencia de Pago</label>
+        <app-select [(ngModel)]="settingsForm.payment_plan" [options]="planFrequencyOptions"></app-select>
+      </div>
+      <app-input id="settings-amount" label="Monto Acordado (S/)" type="number" [(value)]="settingsForm.payment_amount"></app-input>
+      <app-input id="settings-due" label="Fecha de Vencimiento Actual" type="date" [(value)]="settingsForm.payment_due_date"></app-input>
+    </div>
+    <div modal-footer>
+      <div class="flex items-center justify-between w-full">
+        <span class="text-xs text-on-surface-variant">{{ settingsStatus }}</span>
+        <div class="flex gap-2">
+          <app-button variant="ghost" label="Cancelar" (clicked)="closeSettingsModal()"></app-button>
+          <app-button variant="primary" label="Guardar Configuración" [icon]="['fas', 'save']" [disabled]="!settingsForm.payment_amount" (clicked)="submitSettings()"></app-button>
+        </div>
+      </div>
+    </div>
+  </app-modal>
+
+  @if (activeTab === 'yape') {
+    <div class="p-4 md:p-8 -mx-4 md:-mx-8 -mb-8 space-y-6 animate-fade-in" [@fadeInUp]>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="bg-surface-container-lowest rounded-xl border border-accent/20 shadow-soft p-5" style="border-color: color-mix(in srgb, #d97757 20%, transparent)">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-accent">Total Yape / Plin</span>
+            <div class="w-9 h-9 rounded-lg bg-accent-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'mobile-alt']" class="text-accent text-xl"></fa-icon>
+            </div>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ yapeTotal.toFixed(2) }}</p>
+          <p class="text-xs text-on-surface-variant mt-1">Recaudado por Yape y Plin</p>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-accent/20 shadow-soft p-5" style="border-color: color-mix(in srgb, #d97757 20%, transparent)">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-accent">Este Mes</span>
+            <div class="w-9 h-9 rounded-lg bg-accent-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-accent text-xl"></fa-icon>
+            </div>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">S/ {{ yapeMonthlyTotal.toFixed(2) }}</p>
+          <p class="text-xs text-on-surface-variant mt-1">Recaudado vía Yape en el mes actual</p>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-accent/20 shadow-soft p-5" style="border-color: color-mix(in srgb, #d97757 20%, transparent)">
+          <div class="flex items-start justify-between mb-3">
+            <span class="text-label-caps text-accent">Transacciones</span>
+            <div class="w-9 h-9 rounded-lg bg-accent-container flex items-center justify-center">
+              <fa-icon [icon]="['fas', 'receipt']" class="text-accent text-xl"></fa-icon>
+            </div>
+          </div>
+          <p class="text-3xl font-black text-on-surface tracking-tight">{{ yapeCount }}</p>
+          <p class="text-xs text-on-surface-variant mt-1">Total de transacciones registradas</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <app-button variant="primary" label="Importar Yape" [icon]="['fas', 'upload']" (clicked)="goToYapeImport()"></app-button>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
+        <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 mb-4 font-accent">
+          <fa-icon [icon]="['fas', 'mobile-alt']" class="text-accent text-lg"></fa-icon>
+          Transacciones Yape / Plin
+        </h3>
+        @if (yapeTransactions.length > 0) {
+          <div class="overflow-x-auto rounded-xl border border-border/30">
+            <table class="w-full min-w-[600px]">
+              <thead>
+                <tr class="bg-surface-container-high/50">
+                  <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+                  <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Monto</th>
+                  <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Método</th>
+                  <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Referencia</th>
+                  <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Fecha</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/20">
+                @for (t of yapeTransactions; track t.id) {
+                  <tr class="hover:bg-surface-container-low/50 transition-colors">
+                    <td class="px-4 py-3.5 text-sm font-semibold text-on-surface">{{ t.patient_name || '—' }}</td>
+                    <td class="px-4 py-3.5 text-right text-sm font-bold text-on-surface">S/ {{ (t.amount - (t.discount || 0)).toFixed(2) }}</td>
+                    <td class="px-4 py-3.5 text-center">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                        [class]="getMethodBadgeClass(t.method)">
+                        <fa-icon [icon]="['fas', 'mobile-alt']" class="text-[12px]"></fa-icon>
+                        {{ getMethodLabel(t.method) }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ t.reference || '—' }}</td>
+                    <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ t.date | date:'dd/MM/yyyy' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="text-center py-16">
+            <fa-icon [icon]="['fas', 'mobile-alt']" class="text-4xl text-on-surface-variant/40 mb-2 block"></fa-icon>
+            <p class="text-sm font-medium text-on-surface-variant">No hay transacciones Yape / Plin</p>
+            <p class="text-xs text-on-surface-variant/60 mt-1">Los pagos con Yape o Plin aparecerán aquí</p>
+          </div>
+        }
+      </div>
+
+    </div>
+  }
+
+  @if (activeTab === 'gastos') {
+    <div class="p-4 md:p-8 -mx-4 md:-mx-8 -mb-8 space-y-8" [@fadeInUp]>
+
+      @if (expensesLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else {
+        <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+          <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h3 class="text-lg font-bold text-on-surface font-accent">Nómina de Terapeutas (Mes Actual)</h3>
+            <app-button variant="secondary" label="Registrar Gasto Operativo" [icon]="['fas', 'plus']" (clicked)="openOperationalModal()"></app-button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-border/20">
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Terapeuta</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Contrato</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Horas Trab.</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">A Pagar (Est.)</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pagado</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Pendiente</th>
+                  <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/10">
+                @for (t of therapistFinancials; track t.therapist.id) {
+                  <tr class="hover:bg-surface-container-high/50">
+                    <td class="px-6 py-4 font-medium text-on-surface">{{ t.therapist.username }}</td>
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">
+                      @if (t.contract_hours > 0) {
+                        S/ {{ t.rate.toFixed(2) }}/hr
+                        <div class="text-xs text-on-surface-variant/60">{{ t.contract_hours }} hrs base / S/ {{ t.therapist.salary_base }}</div>
+                      } @else {
+                        <span class="text-xs text-warning bg-warning-container px-2 py-1 rounded">Sin contrato</span>
+                      }
+                    </td>
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">{{ t.worked_hours.toFixed(1) }} hrs</td>
+                    <td class="px-6 py-4 text-sm font-bold text-on-surface">S/ {{ t.projected_pay.toFixed(2) }}</td>
+                    <td class="px-6 py-4 text-sm text-success">S/ {{ t.paid.toFixed(2) }}</td>
+                    <td class="px-6 py-4 text-sm" [class.text-error]="t.balance > 0" [class.text-success]="t.balance <= 0">
+                      S/ {{ t.balance.toFixed(2) }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      @if (t.balance > 0) {
+                        <app-button variant="primary" label="Pagar" [icon]="['fas', 'hand-holding-usd']" (clicked)="openTherapistPaymentModal(t)"></app-button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="7" class="px-6 py-8 text-center text-on-surface-variant/60">No hay terapeutas activos.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-lg shadow-soft p-6 overflow-hidden">
+          <h3 class="text-lg font-bold text-on-surface mb-6 font-accent">Historial de Gastos Recientes</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-border/20">
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Fecha</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Categoría</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Descripción</th>
+                  <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Monto</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/10">
+                @for (e of recentExpenses; track e.id) {
+                  <tr class="hover:bg-surface-container-high/50">
+                    <td class="px-6 py-4 text-sm text-on-surface-variant">{{ e.date }}</td>
+                    <td class="px-6 py-4 text-sm capitalize">
+                      <span class="px-2 py-1 rounded text-xs font-bold"
+                        [class.bg-info-container]="e.category === 'therapist_payment'" [class.text-info]="e.category === 'therapist_payment'"
+                        [class.bg-surface-container-high]="e.category === 'operational'" [class.text-on-surface]="e.category === 'operational'"
+                        [class.bg-success-container]="e.category === 'bonus'" [class.text-success]="e.category === 'bonus'"
+                        [class.bg-warning-container]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'"
+                        [class.text-warning]="e.category !== 'therapist_payment' && e.category !== 'operational' && e.category !== 'bonus'">
+                        {{ e.category.replace('_', ' ') }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-on-surface">
+                      {{ e.description }}
+                      @if (e.therapist) {
+                        <span class="text-on-surface-variant/60 text-xs block">Destino: {{ e.therapist.username }}</span>
+                      }
+                      <div class="mt-1 flex items-center gap-2">
+                        @if (e.method) {
+                          <span class="text-xs border px-1 rounded text-on-surface-variant bg-surface-container-lowest">
+                            {{ e.method === 'transfer' ? 'Transferencia' : e.method === 'yape_plin' ? 'Yape/Plin' : e.method === 'cash' ? 'Efectivo' : e.method }}
+                          </span>
+                        }
+                        @if (e.receipt_image_path) {
+                          <button (click)="previewImage('/uploads/' + e.receipt_image_path)" class="text-primary hover:text-success" title="Ver Comprobante">
+                            <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+                          </button>
+                        }
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">S/ {{ e.amount.toFixed(2) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4" class="px-6 py-8 text-center text-on-surface-variant/60">No hay gastos registrados.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (activeTab === 'contratos') {
+    <div class="space-y-6" [@fadeInUp]>
+      <div class="flex items-center gap-4 mb-4">
+        <div class="flex-1">
+          <input [(ngModel)]="contractSearchQuery" (input)="filterContractPatients()"
+            type="text" placeholder="Buscar paciente por nombre..."
+            class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm">
+        </div>
+        <app-button variant="primary" label="Nuevo Contrato" [icon]="['fas', 'plus']" (clicked)="openNewContractModal()"></app-button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft">
+            <div class="px-4 py-3 border-b border-border/20">
+              <h3 class="text-sm font-bold text-on-surface">Pacientes</h3>
+            </div>
+            <div class="divide-y divide-border/10 max-h-[60vh] overflow-y-auto">
+              @for (p of filteredContractPatients; track p.id) {
+                <button class="w-full text-left px-4 py-3 hover:bg-surface-container-high/50 transition-colors"
+                  [class.bg-primary-container/20]="selectedContractPatient?.id === p.id"
+                  (click)="selectContractPatient(p)">
+                  <p class="text-sm font-medium text-on-surface">{{ p.username }}</p>
+                  <p class="text-xs text-on-surface-variant/60">{{ p.sede_name || 'Sin sede' }}</p>
+                </button>
+              } @empty {
+                <div class="px-4 py-8 text-center text-on-surface-variant/60 text-sm">No se encontraron pacientes.</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2">
+          @if (selectedContractPatient) {
+            @if (patientContracts.length === 0) {
+              <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-8 text-center">
+                <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant/30 mb-3"></fa-icon>
+                <p class="text-on-surface-variant/60 mb-4">Este paciente no tiene contratos aún.</p>
+                <app-button variant="primary" label="Crear Primer Contrato" (clicked)="openNewContractModal()"></app-button>
+              </div>
+            }
+            @for (c of patientContracts; track c.id) {
+              <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft mb-4 overflow-hidden">
+                <div class="px-5 py-4 border-b border-border/20 flex items-center justify-between">
+                  <div>
+                    <h3 class="font-bold text-on-surface">{{ c.name }}</h3>
+                    <p class="text-xs text-on-surface-variant/60">
+                      S/ {{ c.total_amount.toFixed(2) }} · {{ c.installment_count }} cuotas ·
+                      {{ c.paid_count }} pagadas · {{ c.overdue_count }} vencidas
+                    </p>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold"
+                    [class.bg-success-container]="c.status === 'active'" [class.text-success]="c.status === 'active'"
+                    [class.bg-surface-container-high]="c.status === 'completed'" [class.text-on-surface-variant]="c.status === 'completed'"
+                    [class.bg-error-container]="c.status === 'cancelled'" [class.text-error]="c.status === 'cancelled'">
+                    {{ c.status === 'active' ? 'Activo' : c.status === 'completed' ? 'Completado' : 'Cancelado' }}
+                  </span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-surface-container-high/30">
+                      <tr>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-on-surface-variant uppercase tracking-wider">N°</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-on-surface-variant uppercase tracking-wider">Vencimiento</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Monto</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pagado</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/10">
+                      @for (inst of c.installments; track inst.id) {
+                        <tr class="hover:bg-surface-container-high/30">
+                          <td class="px-4 py-3 font-mono">{{ inst.number }}</td>
+                          <td class="px-4 py-3 text-on-surface-variant">{{ inst.due_date }}</td>
+                          <td class="px-4 py-3 text-right font-mono">S/ {{ inst.amount.toFixed(2) }}</td>
+                          <td class="px-4 py-3 text-right font-mono">
+                            @if (inst.paid_amount > 0) {
+                              S/ {{ inst.paid_amount.toFixed(2) }}
+                            }
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-0.5 rounded text-xs font-bold"
+                              [class.bg-success-container]="inst.status === 'paid'" [class.text-success]="inst.status === 'paid'"
+                              [class.bg-warning-container]="inst.status === 'pending'" [class.text-warning]="inst.status === 'pending'"
+                              [class.bg-error-container]="inst.status === 'overdue'" [class.text-error]="inst.status === 'overdue'"
+                              [class.bg-info-container]="inst.status === 'partial'" [class.text-info]="inst.status === 'partial'">
+                              {{ inst.status === 'paid' ? 'Pagada' : inst.status === 'pending' ? 'Pendiente' : inst.status === 'overdue' ? 'Vencida' : 'Parcial' }}
+                            </span>
+                          </td>
+                          <td class="px-4 py-3 text-right">
+                            @if (inst.status !== 'paid') {
+                              <app-button variant="ghost" size="sm" label="Pagar" (clicked)="openPayInstallmentModal(c, inst)"></app-button>
+                            }
+                            @if (inst.payment_id) {
+                              <app-button variant="ghost" size="sm" label="Recibo" [icon]="['fas', 'file-pdf']" (clicked)="downloadInstallmentReceipt(inst.payment_id)"></app-button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-8 text-center">
+              <fa-icon [icon]="['fas', 'hand-point-left']" class="text-4xl text-on-surface-variant/30 mb-3"></fa-icon>
+              <p class="text-on-surface-variant/60">Selecciona un paciente de la lista para ver sus contratos.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+    <app-modal [isOpen]="showExpenseModal" [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'" (close)="closeExpenseModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Categoría</label>
+          <app-select [(ngModel)]="expenseForm.category" [options]="expenseCategoryOptions" class="w-full"></app-select>
+        </div>
+
+        @if (expenseForm.therapist_id) {
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Destinatario</label>
+            <input type="text" [value]="expenseForm.therapist_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+          </div>
+        }
+
+        <app-input id="expense-amount" label="Monto (S/)" type="number" [(value)]="expenseForm.amount"></app-input>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
+          <app-select [(ngModel)]="expenseForm.method" [options]="expenseMethodOptions" class="w-full"></app-select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Comprobante (Imagen)</label>
+          <input type="file" (change)="onExpenseFileSelected($event)" accept="image/*" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm text-on-surface-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-container/15 file:text-primary-container hover:file:bg-success-container">
+        </div>
+
+        <app-input id="expense-date" label="Fecha" type="date" [(value)]="expenseForm.date"></app-input>
+
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas / Descripción</label>
+          <textarea [(ngModel)]="expenseForm.description" rows="2" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary" placeholder="Detalles del pago o gasto..."></textarea>
+        </div>
+
+        <app-button variant="primary" label="Registrar" [disabled]="submitting" (clicked)="submitExpenseForm()"></app-button>
+      </div>
+    </app-modal>
+
+  @if (showNewContractModal) {
+    <app-modal [isOpen]="showNewContractModal" title="Nuevo Contrato" (close)="closeNewContractModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente</label>
+          <input type="text" [value]="newContractForm.patient_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+        </div>
+        <app-input id="contract-name" label="Nombre del Contrato" [(value)]="newContractForm.name" placeholder="Plan Terapias Ene 2026"></app-input>
+        <app-input id="contract-total" label="Monto Total (S/)" type="number" [(value)]="newContractForm.total_amount" placeholder="800"></app-input>
+        <app-input id="contract-installments" label="N° de Cuotas" type="number" [(value)]="newContractForm.installment_count" placeholder="4"></app-input>
+        <app-input id="contract-start" label="Fecha de Inicio" type="date" [(value)]="newContractForm.start_date"></app-input>
+
+        <div class="p-3 bg-info-container border border-info-container rounded-lg">
+          <p class="text-xs text-info">
+            <strong>Resumen:</strong> {{ newContractForm.installment_count }} cuotas de
+            S/ {{ (newContractForm.total_amount / newContractForm.installment_count).toFixed(2) }} cada una.
+          </p>
+        </div>
+
+        <app-button variant="primary" label="Crear Contrato" [disabled]="contractSubmitting" (clicked)="submitNewContract()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  @if (showPayInstallmentModal && selectedInstallment) {
+    <app-modal [isOpen]="showPayInstallmentModal" title="Pagar Cuota" (close)="closePayInstallmentModal()">
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm text-on-surface-variant">
+            Contrato: <strong>{{ selectedContract?.name }}</strong><br>
+            Cuota N° {{ selectedInstallment.number }} · Vence: {{ selectedInstallment.due_date }}
+          </p>
+        </div>
+        <app-input id="pay-amount" label="Monto (S/)" type="number" [(value)]="payInstallmentForm.amount"></app-input>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método</label>
+            <app-select [(ngModel)]="payInstallmentForm.method" [options]="paymentMethodOptions"></app-select>
+          </div>
+          <app-input id="pay-reference" label="Referencia" [(value)]="payInstallmentForm.reference"></app-input>
+        </div>
+        <app-input id="pay-discount" label="Descuento (S/)" type="number" [(value)]="payInstallmentForm.discount"></app-input>
+
+        <app-button variant="primary" label="Pagar Cuota" [disabled]="contractSubmitting" (clicked)="submitPayInstallment()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  @if (showPreviewModal) {
+    <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" (click)="closePreview()">
+      <div class="relative max-w-[90vw] max-h-[90vh] animate-fade-in" (click)="$event.stopPropagation()">
+        <img [src]="previewImageUrl" alt="Voucher" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain">
+        <button (click)="closePreview()" class="absolute -top-3 -right-3 w-8 h-8 bg-surface-container-lowest rounded-full flex items-center justify-center shadow-lg hover:bg-surface-container-high transition-colors cursor-pointer">
+          <fa-icon [icon]="['fas', 'times']" class="text-sm text-on-surface"></fa-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+</div>

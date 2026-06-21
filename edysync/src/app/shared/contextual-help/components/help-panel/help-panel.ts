@@ -1,12 +1,11 @@
-import { Component, inject, ChangeDetectionStrategy, DestroyRef, OnInit } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { RouterModule, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterModule } from '@angular/router';
 import { HelpStateService } from '../../services/help-state.service';
 import { HelpContentService } from '../../services/help-content.service';
 import { WizardService } from '../../services/wizard.service';
+import { ContextDetectorService } from '../../services/context-detector.service';
 
 @Component({
   selector: 'app-help-panel',
@@ -192,6 +191,23 @@ import { WizardService } from '../../services/wizard.service';
     .help-wizard-btn:active {
       transform: translateY(0);
     }
+    .help-wizard-done {
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--color-surface-container-high, #e5e7eb);
+      color: var(--color-on-surface-variant, #6b7280);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    .help-wizard-done fa-icon {
+      color: var(--color-success, #16a34a);
+    }
     .help-empty {
       text-align: center;
       padding: 40px 20px;
@@ -212,24 +228,15 @@ import { WizardService } from '../../services/wizard.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HelpPanel implements OnInit {
+export class HelpPanel {
   helpState = inject(HelpStateService);
-  private wizardService = inject(WizardService);
-  private router = inject(Router);
-  private destroyRef = inject(DestroyRef);
+  wizardService = inject(WizardService);
   helpContentService = inject(HelpContentService);
+  private contextDetector = inject(ContextDetectorService);
 
-  ngOnInit(): void {
-    this.router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(() => {
-      setTimeout(() => {
-        if (this.wizardService.shouldAutoStart() && !this.helpState.panelOpen()) {
-          this.wizardService.start();
-        }
-      }, 800);
-    });
+  get wizardCompleted(): boolean {
+    const ctx = this.contextDetector.context();
+    return !!(ctx.role && ctx.route && this.wizardService.isPageCompleted(ctx.route, ctx.role));
   }
 
   close(): void {

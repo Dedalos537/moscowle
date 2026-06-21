@@ -63,10 +63,17 @@
           </div>
         }
 
-        <button class="help-wizard-btn" (click)="startWizard()">
-          <fa-icon [icon]="['fas', 'compass']"></fa-icon>
-          Iniciar tour guiado
-        </button>
+        @if (wizardCompleted) {
+          <div class="help-wizard-done">
+            <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+            Tour completado
+          </div>
+        } @else {
+          <button class="help-wizard-btn" (click)="startWizard()">
+            <fa-icon [icon]="['fas', 'compass']"></fa-icon>
+            Iniciar tour guiado
+          </button>
+        }
       } @else {
         <div class="help-empty">
           <fa-icon [icon]="['fas', 'map-signs']"></fa-icon>
