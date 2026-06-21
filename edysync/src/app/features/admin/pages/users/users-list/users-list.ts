@@ -632,8 +632,8 @@ export class UsersList implements OnInit, OnDestroy {
           }
           this.cdr.markForCheck();
         },
-        error: () => {
-          this.createStatus = 'Error de conexión';
+        error: (err: any) => {
+          this.createStatus = 'Error: ' + (err.error?.message || 'Error de conexión');
           this.cdr.markForCheck();
         },
       }),

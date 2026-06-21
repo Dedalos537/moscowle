@@ -7,6 +7,7 @@
   justify-content: center;
   padding: 1rem;
   background-color: rgba(0, 0, 0, 0.35);
+  animation: confirmFadeIn 0.2s ease;
 }
 
 .confirm-panel {
@@ -16,6 +17,17 @@
   max-width: 24rem;
   width: 100%;
   padding: 1.5rem;
+  animation: confirmSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirmSlideIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .confirm-icon {

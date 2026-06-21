@@ -94,6 +94,7 @@ export class Finanzas implements OnInit, OnDestroy {
   expandedPatientGrid: MonthCell[] = [];
   expandedPatient: PatientRow | null = null;
   expandedPatientLoading = false;
+  selectedPaymentDetail: number | null = null;
 
   get expandedPaidCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'paid').length; }
   get expandedMissingCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'missing').length; }
@@ -694,11 +695,13 @@ export class Finanzas implements OnInit, OnDestroy {
       this.expandedPatientId = null;
       this.expandedPatientGrid = [];
       this.expandedPatient = null;
+      this.selectedPaymentDetail = null;
       this.cdr.markForCheck();
       return;
     }
     this.expandedPatientId = patient.id;
     this.expandedPatient = patient;
+    this.selectedPaymentDetail = null;
     this.expandedPatientLoading = true;
     this.subscriptions.add(this.adminService.getAllPayments().subscribe({
       next: (res) => {
