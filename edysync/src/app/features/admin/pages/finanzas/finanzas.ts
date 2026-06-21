@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -28,7 +28,7 @@ import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, E
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays,
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -58,14 +58,21 @@ export class Finanzas implements OnInit, OnDestroy {
   readonly getPatientStatus = getPatientStatus;
   readonly getStatusInfo = getStatusInfo;
   readonly isOverdue = isOverdue;
+  readonly getOverdueDays = getOverdueDays;
 
   isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
+  @ViewChild('pagosSection', { static: false }) pagosSection?: ElementRef<HTMLElement>;
 
   activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' = 'resumen';
 
   switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
+    if (tab === 'pagos') {
+      setTimeout(() => {
+        this.pagosSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
   }
 
   goToYapeImport() {

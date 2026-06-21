@@ -100,3 +100,9 @@ export function isOverdue(p: PatientRow): boolean {
   if (!p.next_due_date || p.payment_amount <= 0) return false;
   return new Date(p.next_due_date) < new Date();
 }
+
+export function getOverdueDays(p: PatientRow): number {
+  if (!p.next_due_date) return 0;
+  const diff = new Date().getTime() - new Date(p.next_due_date).getTime();
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
