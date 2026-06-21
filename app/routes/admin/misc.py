@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from flask_login import current_user, login_required
 
 from app.extensions import bcrypt, db
@@ -567,10 +568,25 @@ def profile():
 
 
 @admin_bp.route('/api/railway-metrics')
-@login_required
 def api_railway_metrics():
-    if current_user.role not in ('admin', 'supervisor'):
-        return jsonify({'error': 'Unauthorized'}), 403
+    user = None
+    try:
+        from flask_login import current_user as flask_user
+        if flask_user.is_authenticated:
+            user = flask_user
+    except Exception:
+        pass
+    if user is None:
+        try:
+            verify_jwt_in_request(locations=['cookies'], optional=True)
+            uid = get_jwt_identity()
+            if uid is not None:
+                from app.models import User
+                user = User.query.get(int(uid))
+        except Exception:
+            pass
+    if user is None or user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     from app.services.railway_service import get_railway_metrics
 
     result = get_railway_metrics()
