@@ -276,37 +276,24 @@
   </section>
 
   <section class="dashboard-section">
-    <h3 class="section-label">Sistema & Seguridad</h3>
-    <div class="grid-2">
-      <a routerLink="/admin/csp-reports" class="link-card">
-        <div class="link-card__icon">
-          <fa-icon [icon]="['fas', 'bug']"></fa-icon>
+    <div class="dashboard-section__header">
+      <div class="dashboard-section__title">
+        <div class="icon-box icon-box--primary">
+          <fa-icon [icon]="['fas', 'desktop']" class="text-sm"></fa-icon>
         </div>
-        <div class="link-card__text">
-          <h3 class="link-card__title">CSP Reports</h3>
-          <p class="link-card__desc">Monitoreo de seguridad y violaciones de contenido.</p>
-        </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
-      </a>
-
-      <a routerLink="/admin/api-tokens" class="link-card">
-        <div class="link-card__icon">
-          <fa-icon [icon]="['fas', 'key']"></fa-icon>
-        </div>
-        <div class="link-card__text">
-          <h3 class="link-card__title">API Tokens</h3>
-          <p class="link-card__desc">Gestión de credenciales para integraciones externas.</p>
-        </div>
-        <fa-icon [icon]="['fas', 'external-link-alt']" class="link-card__arrow"></fa-icon>
-      </a>
+        <h3>Centro de Operaciones</h3>
+      </div>
+      <div class="ops-actions">
+        <a routerLink="/admin/logs" class="ops-link">
+          <fa-icon [icon]="['fas', 'terminal']"></fa-icon>
+          Ver todos los logs
+        </a>
+      </div>
     </div>
-  </section>
 
-  @if (railwayMetrics$ | async; as rm) {
-    @if (rm.success && rm.data) {
-      <section class="dashboard-section">
-        <h3 class="section-label">Infraestructura Railway</h3>
-        <div class="grid-3">
+    @if (railwayMetrics$ | async; as rm) {
+      <div class="grid-3" style="margin-bottom: 0.75rem;">
+        @if (rm.success && rm.data) {
           <div class="card">
             <div class="card__header">
               <fa-icon [icon]="['fas', 'microchip']" class="text-primary"></fa-icon>
@@ -346,22 +333,66 @@
           <div class="card" style="justify-content: center; align-items: center; text-align: center;">
             <fa-icon [icon]="['fas', 'train']" class="text-3xl mb-2" style="color: var(--color-outline); opacity: 0.4;"></fa-icon>
             <p class="label-caps" style="color: var(--color-on-surface-variant); opacity: 0.6;">Railway</p>
-            <p class="text-xs" style="color: var(--color-on-surface-variant); opacity: 0.5;">Env: {{ rm.data.environment_id | slice:0:8 }}…</p>
+            <p class="text-xs" style="color: var(--color-on-surface-variant); opacity: 0.5;">Activo</p>
           </div>
-        </div>
-      </section>
-    } @else if (rm.error) {
-      <section class="dashboard-section">
-        <div class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
-          <fa-icon [icon]="['fas', 'train']" class="text-lg" style="color: var(--color-outline);"></fa-icon>
-          <div>
-            <p class="label-caps">Railway</p>
-            <p class="text-xs" style="color: var(--color-on-surface-variant);">{{ rm.error }}</p>
+        } @else if (rm.error) {
+          <div class="card" style="padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <fa-icon [icon]="['fas', 'train']" class="text-lg" style="color: var(--color-outline);"></fa-icon>
+            <div>
+              <p class="label-caps" style="color: var(--color-warning);">Railway</p>
+              <p class="text-xs" style="color: var(--color-on-surface-variant);">{{ rm.error }}</p>
+            </div>
           </div>
-        </div>
-      </section>
+        }
+      </div>
     }
-  }
+
+    <div class="ops-log-section">
+      <div class="ops-log-header">
+        <fa-icon [icon]="['fas', 'terminal']" class="text-xs" style="color: var(--color-outline);"></fa-icon>
+        <span class="label-caps" style="color: var(--color-outline);">Logs recientes</span>
+        <span class="text-xs" style="color: var(--color-on-surface-variant); opacity: 0.6;">Actualiza cada 10s</span>
+      </div>
+      <div class="ops-log-list">
+        @if (recentLogs$ | async; as logs) {
+          @for (log of logs; track $index) {
+            <div class="ops-log-entry">
+              <span class="ops-log-level" [style.color]="logLevelColor(log.level)">{{ log.level }}</span>
+              <span class="ops-log-msg">{{ log.short_message || log.message }}</span>
+            </div>
+          } @empty {
+            <div class="ops-log-empty">
+              <fa-icon [icon]="['fas', 'check-circle']" class="text-xs"></fa-icon>
+              <span>Sin registros recientes</span>
+            </div>
+          }
+        } @else {
+          <div class="ops-log-empty">
+            <fa-icon [icon]="['fas', 'spinner']" class="text-xs fa-spin"></fa-icon>
+            <span>Cargando...</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="ops-bottom-links">
+      <a routerLink="/admin/logs" class="ops-bottom-link">
+        <fa-icon [icon]="['fas', 'terminal']"></fa-icon>
+        <span>Visor de Logs</span>
+        <fa-icon [icon]="['fas', 'chevron-right']" class="ops-bottom-arrow"></fa-icon>
+      </a>
+      <a routerLink="/admin/csp-reports" class="ops-bottom-link">
+        <fa-icon [icon]="['fas', 'bug']"></fa-icon>
+        <span>CSP Reports</span>
+        <fa-icon [icon]="['fas', 'chevron-right']" class="ops-bottom-arrow"></fa-icon>
+      </a>
+      <a routerLink="/admin/api-tokens" class="ops-bottom-link">
+        <fa-icon [icon]="['fas', 'key']"></fa-icon>
+        <span>API Tokens</span>
+        <fa-icon [icon]="['fas', 'chevron-right']" class="ops-bottom-arrow"></fa-icon>
+      </a>
+    </div>
+  </section>
 </div>
 
 @if (showGuidanceModal) {

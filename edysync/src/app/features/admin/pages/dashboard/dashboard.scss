@@ -248,3 +248,23 @@
 .gauge--mid { color: var(--color-warning); }
 .gauge__svg { width: 100%; height: 100%; }
 .gauge__label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.375rem; font-weight: 800; color: var(--color-on-surface); }
+
+.ops-actions { display: flex; align-items: center; gap: .75rem; }
+.ops-link { font-size: .75rem; font-weight: 600; color: var(--color-primary); text-decoration: none; display: flex; align-items: center; gap: .375rem; }
+.ops-link:hover { text-decoration: underline; }
+
+.ops-log-section { background: var(--color-surface-container-high); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: .75rem; }
+.ops-log-header { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border-bottom: 1px solid color-mix(in srgb,var(--color-border) 30%,transparent); }
+.ops-log-list { display: flex; flex-direction: column; max-height: 140px; overflow-y: auto; }
+.ops-log-entry { display: flex; align-items: center; gap: .625rem; padding: .375rem .75rem; border-bottom: 1px solid color-mix(in srgb,var(--color-border) 15%,transparent); font-size: .8125rem; }
+.ops-log-entry:last-child { border-bottom: none; }
+.ops-log-level { font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; min-width: 4.5rem; flex-shrink: 0; }
+.ops-log-msg { color: var(--color-on-surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ops-log-empty { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; font-size: .8125rem; color: var(--color-on-surface-variant); opacity: .6; }
+
+.ops-bottom-links { display: flex; gap: .5rem; flex-wrap: wrap; }
+.ops-bottom-link { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; background: var(--color-surface-container-lowest); border: 1px solid var(--color-border); border-radius: var(--radius); text-decoration: none; transition: border-color .2s ease; font-size: .8125rem; color: var(--color-on-surface); }
+.ops-bottom-link:hover { border-color: var(--color-primary); }
+.ops-bottom-link fa-icon:first-child { color: var(--color-on-surface-variant); font-size: .75rem; width: 1rem; text-align: center; }
+.ops-bottom-arrow { margin-left: auto; color: var(--color-outline); font-size: .6875rem; }
+.ops-bottom-link:hover .ops-bottom-arrow { color: var(--color-primary); }
