@@ -20,21 +20,23 @@ class PaymentService:
 
         latest_by_patient = {}
         if patient_ids:
-            latest_subq = db.session.query(
-                Payment.patient_id,
-                func.max(Payment.id).label('max_id')
-            ).filter(Payment.patient_id.in_(patient_ids)).group_by(Payment.patient_id).subquery()
-            latest_payments = db.session.query(Payment).join(
-                latest_subq, Payment.id == latest_subq.c.max_id
-            ).all()
+            latest_subq = (
+                db.session.query(Payment.patient_id, func.max(Payment.id).label('max_id'))
+                .filter(Payment.patient_id.in_(patient_ids))
+                .group_by(Payment.patient_id)
+                .subquery()
+            )
+            latest_payments = db.session.query(Payment).join(latest_subq, Payment.id == latest_subq.c.max_id).all()
             latest_by_patient = {p.patient_id: p for p in latest_payments}
 
         totals_by_patient = {}
         if patient_ids:
-            totals = db.session.query(
-                Payment.patient_id,
-                func.sum(Payment.amount).label('total')
-            ).filter(Payment.patient_id.in_(patient_ids)).group_by(Payment.patient_id).all()
+            totals = (
+                db.session.query(Payment.patient_id, func.sum(Payment.amount).label('total'))
+                .filter(Payment.patient_id.in_(patient_ids))
+                .group_by(Payment.patient_id)
+                .all()
+            )
             totals_by_patient = {pid: total for pid, total in totals}
 
         results = []

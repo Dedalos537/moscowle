@@ -25,8 +25,8 @@ interface RegisterForm {
   next_due_date: string;
   payment_date: string;
   discount: number;
-  document_number: string;
   guardian_name: string;
+  guardian_dni: string;
   receipt: File | null;
 }
 
@@ -49,6 +49,7 @@ export class QuickPayment implements OnDestroy {
   showPaymentForm = false;
   selectedPatient: PatientHit | null = null;
   analyzingReceipt = false;
+  lastPaymentReceiptUrl = '';
   analyzeResult: any = null;
   registerStatus = '';
 
@@ -68,8 +69,8 @@ export class QuickPayment implements OnDestroy {
     next_due_date: '',
     payment_date: new Date().toISOString().substring(0, 10),
     discount: 0,
-    document_number: '',
     guardian_name: '',
+    guardian_dni: '',
     receipt: null,
   };
 
@@ -139,18 +140,35 @@ export class QuickPayment implements OnDestroy {
       next_due_date: '',
       payment_date: new Date().toISOString().substring(0, 10),
       discount: 0,
-      document_number: '',
       guardian_name: '',
+      guardian_dni: '',
       receipt: null,
     };
+    this.lastPaymentReceiptUrl = '';
     this.analyzeResult = null;
     this.analyzingReceipt = false;
     this.registerStatus = '';
     this.showPaymentForm = true;
+    if (this.selectedPatient?.id) this.onPatientSelected(this.selectedPatient.id);
+    this.cdr.markForCheck();
   }
 
   closePaymentForm() {
     this.showPaymentForm = false;
+  }
+
+  onPatientSelected(patientId: number) {
+    this.subscriptions.add(
+      this.adminService.getPaymentInfo(patientId).subscribe({
+        next: (res: any) => {
+          if (res.guardian_name) this.registerForm.guardian_name = res.guardian_name;
+          if (res.guardian_dni) this.registerForm.guardian_dni = res.guardian_dni;
+          if (res.current_amount && !this.registerForm.amount) this.registerForm.amount = parseFloat(res.current_amount);
+          if (res.suggested_date && !this.registerForm.next_due_date) this.registerForm.next_due_date = res.suggested_date;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
   }
 
   clearSearch() {
@@ -224,8 +242,8 @@ export class QuickPayment implements OnDestroy {
     if (this.registerForm.next_due_date) formData.append('next_due_date', this.registerForm.next_due_date);
     if (this.registerForm.payment_date) formData.append('payment_date', this.registerForm.payment_date);
     formData.append('discount', String(this.registerForm.discount));
-    if (this.registerForm.document_number) formData.append('document_number', this.registerForm.document_number);
     if (this.registerForm.guardian_name) formData.append('guardian_name', this.registerForm.guardian_name);
+    if (this.registerForm.guardian_dni) formData.append('guardian_dni', this.registerForm.guardian_dni);
     if (this.registerForm.receipt) formData.append('receipt', this.registerForm.receipt);
 
     this.subscriptions.add(
@@ -233,6 +251,7 @@ export class QuickPayment implements OnDestroy {
         next: (res: any) => {
           if (res.success) {
             this.registerStatus = 'Pago registrado exitosamente';
+            this.lastPaymentReceiptUrl = res.receipt_url || '';
             this.toastService.show('Pago registrado correctamente', 'success');
             setTimeout(() => {
               this.closePaymentForm();
@@ -261,6 +280,6 @@ export class QuickPayment implements OnDestroy {
   }
 
   get hasMissingData(): boolean {
-    return !this.registerForm.document_number || !this.registerForm.guardian_name;
+    return !this.registerForm.patient_id || !this.registerForm.guardian_name || !this.registerForm.guardian_dni;
   }
 }

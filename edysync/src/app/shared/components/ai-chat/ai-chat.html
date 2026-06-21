@@ -36,7 +36,7 @@
           }
         </div>
         <div>
-          <h3>{{ fullScreen ? 'Antigravity — Llama' : 'Llama Copilot' }}</h3>
+          <h3>{{ fullScreen ? 'Antigravity — Llama' : 'Llama Copilot' }}<span class="mode-badge" [ngClass]="fullScreen ? 'mode-badge--grande' : 'mode-badge--chiquito'">{{ fullScreen ? 'Admin' : 'Consulta' }}</span></h3>
           <p>{{ fullScreen ? 'Asistente total del sistema' : 'Asistente IA' }}</p>
         </div>
       </div>
@@ -90,6 +90,9 @@
               <span>{{ msg.content }}</span>
             </div>
           } @else {
+            @if (msg.filePreview) {
+              <img [src]="msg.filePreview" class="file-preview" alt="Archivo adjunto">
+            }
             <div [innerHTML]="sanitize(msg.content)"></div>
           }
           @if (msg.action_chips && msg.action_chips.length > 0 && msg.role === 'assistant') {

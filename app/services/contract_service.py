@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 from calendar import monthrange
+from datetime import datetime
 
 from sqlalchemy import func
 
@@ -7,9 +7,7 @@ from app.models import Contract, Installment, Payment, User, db
 
 
 class ContractService:
-
-    def create_contract(self, patient_id, total_amount, installment_count=4,
-                        name=None, start_date=None, notes=None):
+    def create_contract(self, patient_id, total_amount, installment_count=4, name=None, start_date=None, notes=None):
         """Create contract and auto-generate installments"""
         patient = User.query.get(patient_id)
         if not patient:
@@ -62,19 +60,21 @@ class ContractService:
             total = len(c.installments)
             paid = sum(1 for i in c.installments if i.status == 'paid')
             overdue = sum(1 for i in c.installments if i.status == 'overdue')
-            result.append({
-                'id': c.id,
-                'name': c.name,
-                'total_amount': c.total_amount,
-                'installment_count': total,
-                'installment_amount': c.installment_amount,
-                'paid_count': paid,
-                'overdue_count': overdue,
-                'status': c.status,
-                'start_date': c.start_date.strftime('%Y-%m-%d') if c.start_date else None,
-                'end_date': c.end_date.strftime('%Y-%m-%d') if c.end_date else None,
-                'notes': c.notes,
-            })
+            result.append(
+                {
+                    'id': c.id,
+                    'name': c.name,
+                    'total_amount': c.total_amount,
+                    'installment_count': total,
+                    'installment_amount': c.installment_amount,
+                    'paid_count': paid,
+                    'overdue_count': overdue,
+                    'status': c.status,
+                    'start_date': c.start_date.strftime('%Y-%m-%d') if c.start_date else None,
+                    'end_date': c.end_date.strftime('%Y-%m-%d') if c.end_date else None,
+                    'notes': c.notes,
+                }
+            )
         return result
 
     def get_contract_detail(self, contract_id):
@@ -85,17 +85,19 @@ class ContractService:
 
         installments = []
         for inst in contract.installments:
-            installments.append({
-                'id': inst.id,
-                'number': inst.number,
-                'due_date': inst.due_date.strftime('%Y-%m-%d'),
-                'amount': inst.amount,
-                'paid_amount': inst.paid_amount,
-                'paid_date': inst.paid_date.strftime('%Y-%m-%d %H:%M') if inst.paid_date else None,
-                'status': inst.status,
-                'reminder_sent': inst.reminder_sent,
-                'payment_id': inst.payment_id,
-            })
+            installments.append(
+                {
+                    'id': inst.id,
+                    'number': inst.number,
+                    'due_date': inst.due_date.strftime('%Y-%m-%d'),
+                    'amount': inst.amount,
+                    'paid_amount': inst.paid_amount,
+                    'paid_date': inst.paid_date.strftime('%Y-%m-%d %H:%M') if inst.paid_date else None,
+                    'status': inst.status,
+                    'reminder_sent': inst.reminder_sent,
+                    'payment_id': inst.payment_id,
+                }
+            )
 
         return {
             'id': contract.id,
@@ -110,8 +112,9 @@ class ContractService:
             'installments': installments,
         }
 
-    def pay_installment(self, installment_id, amount, method, reference=None,
-                        payment_date=None, discount=0.0, receipt_path=None):
+    def pay_installment(
+        self, installment_id, amount, method, reference=None, payment_date=None, discount=0.0, receipt_path=None
+    ):
         """Register payment against an installment"""
         installment = Installment.query.get(installment_id)
         if not installment:
@@ -140,9 +143,10 @@ class ContractService:
             installment.paid_date = payment_datetime
             installment.payment_id = new_payment.id
 
-            total_paid = db.session.query(func.sum(Payment.amount)).filter(
-                Payment.installment_id == installment.id
-            ).scalar() or 0
+            total_paid = (
+                db.session.query(func.sum(Payment.amount)).filter(Payment.installment_id == installment.id).scalar()
+                or 0
+            )
 
             if total_paid >= installment.amount:
                 installment.status = 'paid'
@@ -162,47 +166,57 @@ class ContractService:
         if not reference_date:
             reference_date = datetime.utcnow().date()
 
-        overdue = Installment.query.filter(
-            Installment.status.in_(['pending', 'partial']),
-            Installment.due_date < reference_date
-        ).order_by(Installment.due_date.asc()).all()
+        overdue = (
+            Installment.query.filter(
+                Installment.status.in_(['pending', 'partial']), Installment.due_date < reference_date
+            )
+            .order_by(Installment.due_date.asc())
+            .all()
+        )
 
         result = []
         for inst in overdue:
             contract = Contract.query.get(inst.contract_id)
             patient = User.query.get(contract.patient_id) if contract else None
             days_overdue = (reference_date - inst.due_date).days if inst.due_date else 0
-            result.append({
-                'installment_id': inst.id,
-                'contract_id': inst.contract_id,
-                'contract_name': contract.name if contract else '',
-                'patient_id': patient.id if patient else None,
-                'patient_name': patient.username if patient else '',
-                'patient_phone': patient.phone if patient else '',
-                'due_date': inst.due_date.strftime('%Y-%m-%d') if inst.due_date else None,
-                'amount': inst.amount,
-                'paid_amount': inst.paid_amount,
-                'remaining': inst.amount - (inst.paid_amount or 0),
-                'days_overdue': days_overdue,
-                'number': inst.number,
-                'reminder_sent': inst.reminder_sent,
-            })
+            result.append(
+                {
+                    'installment_id': inst.id,
+                    'contract_id': inst.contract_id,
+                    'contract_name': contract.name if contract else '',
+                    'patient_id': patient.id if patient else None,
+                    'patient_name': patient.username if patient else '',
+                    'patient_phone': patient.phone if patient else '',
+                    'due_date': inst.due_date.strftime('%Y-%m-%d') if inst.due_date else None,
+                    'amount': inst.amount,
+                    'paid_amount': inst.paid_amount,
+                    'remaining': inst.amount - (inst.paid_amount or 0),
+                    'days_overdue': days_overdue,
+                    'number': inst.number,
+                    'reminder_sent': inst.reminder_sent,
+                }
+            )
         return result
 
     def get_debt_summary(self):
         """Aggregate debt across all contracts — replaces get_patients_payment_status debt calc"""
         today = datetime.utcnow().date()
 
-        patients_with_debt = db.session.query(
-            Installment.contract_id,
-            Contract.patient_id,
-            func.sum(Installment.amount - func.coalesce(Installment.paid_amount, 0)).label('total_debt')
-        ).join(Contract, Installment.contract_id == Contract.id
-        ).filter(
-            Contract.status == 'active',
-            Installment.status.in_(['pending', 'partial']),
-            Installment.due_date < today
-        ).group_by(Installment.contract_id, Contract.patient_id).all()
+        patients_with_debt = (
+            db.session.query(
+                Installment.contract_id,
+                Contract.patient_id,
+                func.sum(Installment.amount - func.coalesce(Installment.paid_amount, 0)).label('total_debt'),
+            )
+            .join(Contract, Installment.contract_id == Contract.id)
+            .filter(
+                Contract.status == 'active',
+                Installment.status.in_(['pending', 'partial']),
+                Installment.due_date < today,
+            )
+            .group_by(Installment.contract_id, Contract.patient_id)
+            .all()
+        )
 
         return [
             {

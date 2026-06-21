@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from flask_login import current_user, login_required
+from flask_login import login_required
 
 from app.routes.admin import admin_bp
 from app.services.contract_service import ContractService
@@ -45,15 +45,21 @@ def create_contract():
         return jsonify({'success': False, 'error': 'patient_id y total_amount requeridos'}), 400
 
     success, result = contract_service.create_contract(
-        patient_id, total_amount, installment_count,
-        name=name, start_date=start_date, notes=notes,
+        patient_id,
+        total_amount,
+        installment_count,
+        name=name,
+        start_date=start_date,
+        notes=notes,
     )
     if success:
-        return jsonify({
-            'success': True,
-            'contract': {'id': result.id, 'name': result.name},
-            'installments_generated': result.installment_count,
-        })
+        return jsonify(
+            {
+                'success': True,
+                'contract': {'id': result.id, 'name': result.name},
+                'installments_generated': result.installment_count,
+            }
+        )
     return jsonify({'success': False, 'error': result}), 400
 
 
@@ -71,14 +77,19 @@ def pay_installment(installment_id):
         return jsonify({'success': False, 'error': 'amount requerido'}), 400
 
     success, result = contract_service.pay_installment(
-        installment_id, amount, method,
-        reference=reference, discount=discount,
+        installment_id,
+        amount,
+        method,
+        reference=reference,
+        discount=discount,
     )
     if success:
-        return jsonify({
-            'success': True,
-            'payment': {'id': result.id, 'amount': result.amount},
-        })
+        return jsonify(
+            {
+                'success': True,
+                'payment': {'id': result.id, 'amount': result.amount},
+            }
+        )
     return jsonify({'success': False, 'error': result}), 400
 
 

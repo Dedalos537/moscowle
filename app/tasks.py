@@ -351,6 +351,7 @@ def send_whatsapp_debt_reminders(app):
                 )
                 if result.get('sent'):
                     from app.models.contract import Installment
+
                     installment = Installment.query.get(inst['installment_id'])
                     if installment:
                         installment.reminder_sent = True
@@ -361,6 +362,7 @@ def send_whatsapp_debt_reminders(app):
         except Exception as e:
             print(f'Error in send_whatsapp_debt_reminders: {e}')
             import traceback
+
             traceback.print_exc()
 
 
@@ -383,6 +385,8 @@ def init_scheduler(app):
 
     scheduler.add_job(func=lambda: run_notification_cleanup(app), trigger='cron', day_of_week='sun', hour=4, minute=0)
 
-    scheduler.add_job(func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza')
+    scheduler.add_job(
+        func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza'
+    )
 
     scheduler.start()

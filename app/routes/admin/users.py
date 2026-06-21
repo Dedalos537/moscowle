@@ -20,8 +20,18 @@ def users():
     per_page = min(per_page, 500)
 
     query = User.query.options(
-        load_only('id', 'username', 'email', 'role', 'is_active', 'phone', 'sede_id',
-                  'payment_amount', 'payment_due_date', 'created_at')
+        load_only(
+            'id',
+            'username',
+            'email',
+            'role',
+            'is_active',
+            'phone',
+            'sede_id',
+            'payment_amount',
+            'payment_due_date',
+            'created_at',
+        )
     )
 
     if sede_filter and sede_filter.isdigit():

@@ -1,4 +1,3 @@
-from datetime import datetime
 from app.extensions import db
 from app.models.base import AuditMixin
 
@@ -18,12 +17,11 @@ class Contract(db.Model, AuditMixin):
     status = db.Column(db.String(20), default='active', index=True)
     notes = db.Column(db.Text, nullable=True)
 
-    patient = db.relationship('User', foreign_keys=[patient_id],
-                              backref=db.backref('contracts', lazy=True))
+    patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('contracts', lazy=True))
 
-    installments = db.relationship('Installment', backref='contract',
-                                   lazy=True, cascade='all, delete-orphan',
-                                   order_by='Installment.number')
+    installments = db.relationship(
+        'Installment', backref='contract', lazy=True, cascade='all, delete-orphan', order_by='Installment.number'
+    )
 
 
 class Installment(db.Model, AuditMixin):

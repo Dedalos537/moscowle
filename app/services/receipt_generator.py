@@ -96,17 +96,26 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
             [Paragraph('<b>CONTRATO / CUOTA:</b>', styles['Normal'])],
             ['Contrato:', contract.name or f'ID {contract.id}'],
             ['Cuota N°:', f'{installment.number} de {contract.installment_count}'],
-            ['Vencimiento:', installment.due_date.strftime('%d/%m/%Y') if hasattr(installment.due_date, 'strftime') else str(installment.due_date)],
+            [
+                'Vencimiento:',
+                installment.due_date.strftime('%d/%m/%Y')
+                if hasattr(installment.due_date, 'strftime')
+                else str(installment.due_date),
+            ],
         ]
         t_contract = Table(contract_data, colWidths=[2 * inch, 4 * inch])
-        t_contract.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
-            ('SPAN', (0, 0), (1, 0)),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
+        t_contract.setStyle(
+            TableStyle(
+                [
+                    ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+                    ('SPAN', (0, 0), (1, 0)),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ]
+            )
+        )
         elements.append(t_contract)
         elements.append(Spacer(1, 15))
 

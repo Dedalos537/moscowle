@@ -56,26 +56,32 @@ class FinanceService:
         paid_by_therapist = {}
 
         if therapist_ids:
-            minutes_rows = db.session.query(
-                Appointment.therapist_id,
-                func.sum(Appointment.duration_minutes).label('total_minutes')
-            ).filter(
-                Appointment.therapist_id.in_(therapist_ids),
-                Appointment.status == 'completed',
-                Appointment.start_time >= start_date,
-                Appointment.start_time < end_date
-            ).group_by(Appointment.therapist_id).all()
+            minutes_rows = (
+                db.session.query(
+                    Appointment.therapist_id, func.sum(Appointment.duration_minutes).label('total_minutes')
+                )
+                .filter(
+                    Appointment.therapist_id.in_(therapist_ids),
+                    Appointment.status == 'completed',
+                    Appointment.start_time >= start_date,
+                    Appointment.start_time < end_date,
+                )
+                .group_by(Appointment.therapist_id)
+                .all()
+            )
             minutes_by_therapist = {row.therapist_id: row.total_minutes or 0 for row in minutes_rows}
 
-            paid_rows = db.session.query(
-                Expense.therapist_id,
-                func.sum(Expense.amount).label('total_paid')
-            ).filter(
-                Expense.therapist_id.in_(therapist_ids),
-                Expense.category == 'therapist_payment',
-                Expense.date >= start_date,
-                Expense.date < end_date
-            ).group_by(Expense.therapist_id).all()
+            paid_rows = (
+                db.session.query(Expense.therapist_id, func.sum(Expense.amount).label('total_paid'))
+                .filter(
+                    Expense.therapist_id.in_(therapist_ids),
+                    Expense.category == 'therapist_payment',
+                    Expense.date >= start_date,
+                    Expense.date < end_date,
+                )
+                .group_by(Expense.therapist_id)
+                .all()
+            )
             paid_by_therapist = {row.therapist_id: row.total_paid or 0 for row in paid_rows}
 
         results = []

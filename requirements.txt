@@ -44,6 +44,6 @@ redis>=5.0.0
 sentry-sdk[flask]>=2.0.0
 flasgger>=0.9.7.1
 scikit-learn
-pytesseract>=0.3.10
 pytest>=8.0.0
 pytest-cov>=5.0.0
+pytesseract>=0.3.10

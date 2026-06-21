@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -48,7 +49,7 @@ const FA_ICON_MAP: Record<string, string> = {
 @Component({
   selector: 'app-ai-chat',
   standalone: true,
-  imports: [FormsModule, FontAwesomeModule],
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './ai-chat.html',
   styleUrl: './ai-chat.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -75,6 +76,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   currentPage = 'dashboard';
   welcomeMessage = '¡Hola! Soy Llama';
 
+  private pendingFilePreview: string | null = null;
+
   private subs = new Subscription();
 
   constructor(
@@ -89,6 +92,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  get currentMode(): 'chiquito' | 'grande' {
+    return this.fullScreen ? 'grande' : 'chiquito';
   }
 
   sanitize(html: string): string {
@@ -167,14 +174,13 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   private loadInitialContext() {
     this.currentPage = this.detectCurrentPage();
-    this.subs.add(this.llama.sendMessage('context_init', this.currentPage).subscribe({
+    const mode = this.currentMode;
+    this.subs.add(this.llama.sendAgentMessage('context_init', mode).subscribe({
       next: (res) => {
-        if (res.success) {
-          this.suggestions = res.suggestions || [];
-          this.actionChips = res.action_chips || [];
-          if (res.response) {
-            this.welcomeMessage = res.response;
-          }
+        this.suggestions = res.suggestions || [];
+        this.actionChips = res.action_chips || [];
+        if (res.response) {
+          this.welcomeMessage = res.response;
         }
         this.cdr.markForCheck();
       },
@@ -297,42 +303,30 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     const msg = this.inputMessage.trim();
     if (!msg || this.loading) return;
 
-    this.messages.push({ role: 'user', content: msg });
+    const userMsg: ChatMessage = { role: 'user', content: msg };
+    if (this.pendingFilePreview) {
+      userMsg.filePreview = this.pendingFilePreview;
+      this.pendingFilePreview = null;
+    }
+    this.messages.push(userMsg);
     this.inputMessage = '';
     this.loading = true;
     this.error = null;
     this.cdr.markForCheck();
 
-    const page = this.detectCurrentPage();
-
-    this.subs.add(this.llama.sendMessage(msg, page).subscribe({
+    const mode = this.currentMode;
+    const history = this.messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
+    this.subs.add(this.llama.sendAgentMessage(msg, mode, history).subscribe({
       next: (res) => {
         this.loading = false;
-        if (res.success) {
-          this.messages.push({
-            role: 'assistant',
-            content: res.response,
-            intent: res.intent,
-            action_chips: res.action_chips,
-          });
-
-          this.suggestions = res.suggestions || this.suggestions;
-          this.actionChips = res.action_chips || this.actionChips;
-
-          if (res.redirect) {
-            const url = res.redirect!;
-            const isAllowed = ALLOWED_REDIRECT_PREFIXES.some(p => url.startsWith(p));
-            const isSameOrigin = url.startsWith(window.location.origin) || url.startsWith('/');
-            if (isAllowed && isSameOrigin) {
-              setTimeout(() => { window.location.href = url; }, 1500);
-            }
-          }
-        } else {
-          this.messages.push({
-            role: 'assistant',
-            content: 'Error al procesar tu mensaje',
-          });
-        }
+        this.messages.push({
+          role: 'assistant',
+          content: res.response,
+          intent: res.intent,
+          action_chips: res.action_chips,
+        });
+        this.suggestions = res.suggestions || this.suggestions;
+        this.actionChips = res.action_chips || this.actionChips;
         this.cdr.markForCheck();
       },
       error: () => {
@@ -352,21 +346,58 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
+    const isImage = file.type.startsWith('image/');
+
+    if (!isImage) {
+      if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.inputMessage = reader.result as string;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        };
+        reader.readAsText(file);
+      } else {
+        this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+        this.cdr.markForCheck();
+        this.sendMessage();
+      }
+      input.value = '';
+      return;
+    }
+
+    // Image file: read preview, upload for OCR, then send enriched message to agent
     const reader = new FileReader();
     reader.onload = () => {
-      let content = reader.result as string;
-      if (file.type === 'application/pdf' || file.name.endsWith('.docx')) {
-        content = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
-      }
-      this.inputMessage = content;
+      this.pendingFilePreview = reader.result as string;
+      this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
+      this.loading = true;
       this.cdr.markForCheck();
-      this.sendMessage();
+
+      this.llama.uploadVoucher(file).subscribe({
+        next: (res) => {
+          this.loading = false;
+          const amount = res.extracted?.amount;
+          const payer = res.extracted?.payer || '';
+          const ocrText = res.ocr_text || '';
+          let enrichedMsg = `[Voucher: ${file.name}]\n\n--- Datos extraídos del voucher ---\n`;
+          if (amount) enrichedMsg += `- Monto: S/ ${amount.toFixed(2)}\n`;
+          if (payer) enrichedMsg += `- Pagador: ${payer}\n`;
+          enrichedMsg += `- Texto OCR: ${ocrText.slice(0, 500)}\n`;
+          enrichedMsg += `\nUsa estos datos para registrar el pago. Pregunta al usuario si falta información. Luego ejecuta register_payment con todos los datos confirmados.`;
+
+          this.inputMessage = enrichedMsg;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.cdr.markForCheck();
+          this.sendMessage();
+        },
+      });
     };
-    if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
-      reader.readAsText(file);
-    } else {
-      reader.readAsDataURL(file);
-    }
+    reader.readAsDataURL(file);
     input.value = '';
   }
 

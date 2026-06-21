@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app.extensions import db
 from app.models.base import AuditMixin
 
@@ -17,6 +18,7 @@ class Payment(db.Model, AuditMixin):
     discount = db.Column(db.Float, default=0.0)
     installment_id = db.Column(db.Integer, db.ForeignKey('installment.id'), nullable=True, index=True)
 
+
 class Expense(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     is_active = db.Column(db.Boolean, default=True)
@@ -31,7 +33,6 @@ class Expense(db.Model, AuditMixin):
 
 
 class YapeTransaction(db.Model, AuditMixin):
-
     __tablename__ = 'yape_transaction'
 
     id = db.Column(db.Integer, primary_key=True)

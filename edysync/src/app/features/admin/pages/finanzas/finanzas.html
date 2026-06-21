@@ -962,7 +962,7 @@
         <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
           <fa-icon [icon]="['fas', 'user']" class="text-[10px]"></fa-icon> Paciente
         </span>
-        <app-select [(ngModel)]="registerForm.patient_id" [options]="patientSelectOptions" placeholder="Seleccionar paciente..."></app-select>
+        <app-select [(ngModel)]="registerForm.patient_id" (ngModelChange)="onPatientSelected($event)" [options]="patientSelectOptions" placeholder="Seleccionar paciente..."></app-select>
       </div>
       @if (registerForm.patient_id) {
         <div class="flex items-center gap-3 p-3 bg-primary-container/15 border border-primary-container/30 rounded-lg">
@@ -973,10 +973,6 @@
           </div>
         </div>
       }
-      <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
-        <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
-      </div>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
         <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
@@ -1016,7 +1012,6 @@
             <p class="text-xs font-bold text-warning">Datos faltantes</p>
             <p class="text-xs text-warning mt-0.5">
               @if (!registerForm.patient_id) { • Paciente<br> }
-              @if (!registerForm.document_number) { • DNI del paciente<br> }
               @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
               @if (!registerForm.guardian_dni) { • DNI del apoderado<br> }
               Se recomienda completar estos campos para el comprobante.
@@ -1026,8 +1021,11 @@
       }
 
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher (opcional)</label>
-        <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer">
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+          <fa-icon [icon]="['fas', 'camera']" class="mr-1"></fa-icon>
+          Sube tu voucher — se auto-llenará con OCR
+        </label>
+        <input type="file" (change)="onFileSelected($event)" accept="image/*" class="w-full px-4 py-2.5 bg-surface-container-low border-2 border-dashed border-primary/40 rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer hover:border-primary transition-colors">
       </div>
 
       @if (analyzingReceipt) {
@@ -1045,6 +1043,17 @@
             <p class="text-xs text-success mt-0.5">
               Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{ analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method || '—' }}
             </p>
+          </div>
+        </div>
+      }
+      @if (lastPaymentReceiptUrl) {
+        <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
+          <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
+          <div class="flex-1">
+            <p class="text-xs font-bold text-success">Pago registrado</p>
+            <a [href]="lastPaymentReceiptUrl" target="_blank" class="text-xs text-success underline inline-flex items-center gap-1 mt-0.5">
+              <fa-icon [icon]="['fas', 'file-pdf']"></fa-icon> Descargar recibo
+            </a>
           </div>
         </div>
       }

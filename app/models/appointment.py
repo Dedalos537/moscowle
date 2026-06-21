@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from app.extensions import db
 from app.models.base import AuditMixin
 
@@ -16,7 +17,9 @@ class SessionMetrics(db.Model, AuditMixin):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
     game = db.relationship('Game', backref=db.backref('metrics', lazy=True))
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('metrics', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship(
+        'User', foreign_keys=[user_id], backref=db.backref('metrics', lazy=True, cascade='all, delete-orphan')
+    )
 
 
 class AppointmentGame(db.Model, AuditMixin):
@@ -28,7 +31,9 @@ class AppointmentGame(db.Model, AuditMixin):
     config = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(50), default='pending')
 
-    appointment = db.relationship('Appointment', backref=db.backref('appointment_games', lazy=True, cascade="all, delete-orphan"))
+    appointment = db.relationship(
+        'Appointment', backref=db.backref('appointment_games', lazy=True, cascade='all, delete-orphan')
+    )
     game = db.relationship('Game', backref=db.backref('game_appointments', lazy=True))
 
 
@@ -43,8 +48,12 @@ class SessionImage(db.Model, AuditMixin):
     uploaded_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     notes = db.Column(db.Text, nullable=True)
 
-    appointment = db.relationship('Appointment', backref=db.backref('session_images', lazy=True, cascade="all, delete-orphan"))
-    uploaded_by = db.relationship('User', foreign_keys=[uploaded_by_id], backref=db.backref('uploaded_images', lazy=True))
+    appointment = db.relationship(
+        'Appointment', backref=db.backref('session_images', lazy=True, cascade='all, delete-orphan')
+    )
+    uploaded_by = db.relationship(
+        'User', foreign_keys=[uploaded_by_id], backref=db.backref('uploaded_images', lazy=True)
+    )
 
 
 class Appointment(db.Model, AuditMixin):
@@ -68,8 +77,16 @@ class Appointment(db.Model, AuditMixin):
     status_changed_at = db.Column(db.DateTime, nullable=True)
     status_changed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
 
-    therapist = db.relationship('User', foreign_keys=[therapist_id], backref=db.backref('appointments_as_therapist', lazy=True, cascade="all, delete-orphan"))
-    patient = db.relationship('User', foreign_keys=[patient_id], backref=db.backref('appointments_as_patient', lazy=True, cascade="all, delete-orphan"))
+    therapist = db.relationship(
+        'User',
+        foreign_keys=[therapist_id],
+        backref=db.backref('appointments_as_therapist', lazy=True, cascade='all, delete-orphan'),
+    )
+    patient = db.relationship(
+        'User',
+        foreign_keys=[patient_id],
+        backref=db.backref('appointments_as_patient', lazy=True, cascade='all, delete-orphan'),
+    )
 
     @property
     def games_list(self):
@@ -77,6 +94,7 @@ class Appointment(db.Model, AuditMixin):
             return [ag.game.filename for ag in self.appointment_games]
         if self.games:
             import json
+
             try:
                 return json.loads(self.games)
             except:

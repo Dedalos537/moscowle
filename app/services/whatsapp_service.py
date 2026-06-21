@@ -2,11 +2,7 @@ import json
 import logging
 import os
 import subprocess
-import tempfile
 import threading
-from datetime import datetime
-
-from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +43,7 @@ class WhatsAppService:
             threading.Thread(target=self._read_output, daemon=True).start()
             return True
         except FileNotFoundError:
-            logger.error("Node.js not found. Install Node.js to use WhatsApp.")
+            logger.error('Node.js not found. Install Node.js to use WhatsApp.')
             return False
 
     def _read_output(self):
@@ -91,23 +87,24 @@ class WhatsAppService:
 
         return self._generate_wa_link(phone, message)
 
-    def send_installment_reminder(self, patient_name, patient_phone, installment_number,
-                                  due_date, amount, days_overdue=0):
+    def send_installment_reminder(
+        self, patient_name, patient_phone, installment_number, due_date, amount, days_overdue=0
+    ):
         """Send a debt reminder for an installment"""
         if days_overdue <= 0:
             msg = (
-                f"Hola {patient_name}, 👋\\n\\n"
-                f"Recordarte que tu cuota N°{installment_number} de S/ {amount:.2f} "
-                f"vence el {due_date}.\\n\\n"
-                f"¡Gracias por confiar en nosotros! 🙌"
+                f'Hola {patient_name}, 👋\\n\\n'
+                f'Recordarte que tu cuota N°{installment_number} de S/ {amount:.2f} '
+                f'vence el {due_date}.\\n\\n'
+                f'¡Gracias por confiar en nosotros! 🙌'
             )
         else:
             msg = (
-                f"Hola {patient_name}, 👋\\n\\n"
-                f"Tu cuota N°{installment_number} de S/ {amount:.2f} "
-                f"tiene {days_overdue} días de atraso (vencía el {due_date}).\\n\\n"
-                f"Por favor regulariza tu situación para evitar bloqueos. "
-                f"¡Estamos para ayudarte! 🙌"
+                f'Hola {patient_name}, 👋\\n\\n'
+                f'Tu cuota N°{installment_number} de S/ {amount:.2f} '
+                f'tiene {days_overdue} días de atraso (vencía el {due_date}).\\n\\n'
+                f'Por favor regulariza tu situación para evitar bloqueos. '
+                f'¡Estamos para ayudarte! 🙌'
             )
 
         return self.send_message(patient_phone, msg)
@@ -116,6 +113,7 @@ class WhatsAppService:
     def _generate_wa_link(phone, message):
         """Fallback: generate wa.me link for manual sending"""
         import urllib.parse
+
         clean_phone = ''.join(filter(str.isdigit, phone))
         if clean_phone.startswith('0'):
             clean_phone = '51' + clean_phone[1:]

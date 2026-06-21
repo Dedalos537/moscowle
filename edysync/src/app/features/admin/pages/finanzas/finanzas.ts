@@ -171,6 +171,7 @@ export class Finanzas implements OnInit, OnDestroy {
   registerStatus = '';
   analyzeResult: any = null;
   analyzingReceipt = false;
+  lastPaymentReceiptUrl = '';
 
   showPreviewModal = false;
   previewImageUrl = '';
@@ -568,11 +569,27 @@ export class Finanzas implements OnInit, OnDestroy {
     this.analyzeResult = null;
     this.analyzingReceipt = false;
     this.registerStatus = '';
+    this.lastPaymentReceiptUrl = '';
     this.showRegisterModal = true;
+    if (patient?.id) this.onPatientSelected(patient.id);
     this.cdr.markForCheck();
   }
 
   closeRegisterModal() { this.showRegisterModal = false; }
+
+  onPatientSelected(patientId: number) {
+    this.subscriptions.add(
+      this.adminService.getPaymentInfo(patientId).subscribe({
+        next: (res: any) => {
+          if (res.guardian_name) this.registerForm.guardian_name = res.guardian_name;
+          if (res.guardian_dni) this.registerForm.guardian_dni = res.guardian_dni;
+          if (res.current_amount && !this.registerForm.amount) this.registerForm.amount = parseFloat(res.current_amount);
+          if (res.suggested_date && !this.registerForm.next_due_date) this.registerForm.next_due_date = res.suggested_date;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
 
   previewImage(url: string) {
     this.previewImageUrl = url;
@@ -617,7 +634,6 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.registerForm.next_due_date) fd.append('next_due_date', this.registerForm.next_due_date);
     if (this.registerForm.payment_date) fd.append('payment_date', this.registerForm.payment_date);
     fd.append('discount', String(this.registerForm.discount));
-    if (this.registerForm.document_number) fd.append('document_number', this.registerForm.document_number);
     if (this.registerForm.guardian_name) fd.append('guardian_name', this.registerForm.guardian_name);
     if (this.registerForm.guardian_dni) fd.append('guardian_dni', this.registerForm.guardian_dni);
     if (this.registerForm.receipt) fd.append('receipt', this.registerForm.receipt);
@@ -626,6 +642,7 @@ export class Finanzas implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.success) {
           this.registerStatus = 'Pago registrado exitosamente';
+          this.lastPaymentReceiptUrl = res.receipt_url || '';
           setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); }, 1500);
         } else {
           this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
@@ -637,7 +654,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
+  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {
