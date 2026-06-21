@@ -700,26 +700,31 @@ export class Finanzas implements OnInit, OnDestroy {
     this.expandedPatientId = patient.id;
     this.expandedPatient = patient;
     this.expandedPatientLoading = true;
-    this.subscriptions.add(
-      this.adminService.getPaymentHistory(patient.id).subscribe({
+    if (this.paymentHistory.length === 0) {
+      this.subscriptions.add(this.adminService.getAllPayments().subscribe({
         next: (res) => {
-          const payments: PaymentHistoryRow[] = (res as any)?.payments?.map((p: any) => ({
-            id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || patient.username,
-            amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
-            reference: p.reference, date: p.date || '', status: p.status || 'completed',
-            receipt_image_path: p.receipt_image_path, document_number: p.document_number,
-            guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
-          })) || [];
-          this.expandedPatientGrid = buildPatientYearGrid(payments, patient);
+          if (res.success && res.payments) {
+            this.paymentHistory = res.payments.map((p: any) => ({
+              id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || '',
+              amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
+              reference: p.reference, date: p.date || '', status: p.status || 'completed',
+              receipt_image_path: p.receipt_image_path, document_number: p.document_number,
+              guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
+            }));
+          }
+          const pts = this.paymentHistory.filter(p => p.patient_id === patient.id);
+          this.expandedPatientGrid = buildPatientYearGrid(pts, patient);
           this.expandedPatientLoading = false;
           this.cdr.markForCheck();
         },
-        error: () => {
-          this.expandedPatientLoading = false;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
+        error: () => { this.expandedPatientLoading = false; this.cdr.markForCheck(); },
+      }));
+    } else {
+      const pts = this.paymentHistory.filter(p => p.patient_id === patient.id);
+      this.expandedPatientGrid = buildPatientYearGrid(pts, patient);
+      this.expandedPatientLoading = false;
+      this.cdr.markForCheck();
+    }
   }
   getPatientName(id: number): string { return this.patients.find((p) => p.id === id)?.username || ''; }
   get patientSelectOptions() { return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` })); }
