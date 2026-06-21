@@ -1,19 +1,22 @@
 from flask_login import UserMixin
-from datetime import datetime
+
 from app.extensions import db
 from app.models.base import AuditMixin
 
-patient_therapist = db.Table('patient_therapist',
+patient_therapist = db.Table(
+    'patient_therapist',
     db.Column('patient_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    extend_existing=True
+    extend_existing=True,
 )
 
-therapist_sede = db.Table('therapist_sede',
+therapist_sede = db.Table(
+    'therapist_sede',
     db.Column('therapist_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('sede_id', db.Integer, db.ForeignKey('sede.id'), primary_key=True),
-    extend_existing=True
+    extend_existing=True,
 )
+
 
 class Sede(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -23,6 +26,11 @@ class Sede(db.Model, AuditMixin):
 
 
 class User(db.Model, UserMixin, AuditMixin):
+    __table_args__ = (
+        db.Index('idx_user_role_active', 'role', 'is_active'),
+        db.Index('idx_user_role', 'role'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -38,6 +46,7 @@ class User(db.Model, UserMixin, AuditMixin):
     phone = db.Column(db.String(50), nullable=True)
     date_of_birth = db.Column(db.Date, nullable=True)
     guardian_name = db.Column(db.String(150), nullable=True)
+    guardian_dni = db.Column(db.String(15), nullable=True)
     guardian_contact = db.Column(db.String(150), nullable=True)
     document_number = db.Column(db.String(20), nullable=True)
     therapy_goals = db.Column(db.Text, nullable=True)
@@ -45,17 +54,19 @@ class User(db.Model, UserMixin, AuditMixin):
     notes = db.Column(db.Text, nullable=True)
     assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     assigned_therapist = db.relationship(
-        'User', remote_side=[id], foreign_keys=[assigned_therapist_id],
+        'User',
+        remote_side=[id],
+        foreign_keys=[assigned_therapist_id],
         backref=db.backref('assigned_patients', lazy=True),
     )
 
     therapists = db.relationship(
         'User',
         secondary='patient_therapist',
-        primaryjoin="User.id==patient_therapist.c.patient_id",
-        secondaryjoin="User.id==patient_therapist.c.therapist_id",
+        primaryjoin='User.id==patient_therapist.c.patient_id',
+        secondaryjoin='User.id==patient_therapist.c.therapist_id',
         backref=db.backref('associated_patients', lazy='dynamic'),
-        lazy='dynamic'
+        lazy='dynamic',
     )
 
     game_profile = db.Column(db.Text, nullable=True)
@@ -93,10 +104,7 @@ class User(db.Model, UserMixin, AuditMixin):
     sede_item = db.relationship('Sede', foreign_keys=[sede_id], backref=db.backref('patients_assigned', lazy='dynamic'))
 
     assigned_sedes = db.relationship(
-        'Sede',
-        secondary='therapist_sede',
-        backref=db.backref('therapists_assigned', lazy='dynamic'),
-        lazy='dynamic'
+        'Sede', secondary='therapist_sede', backref=db.backref('therapists_assigned', lazy='dynamic'), lazy='dynamic'
     )
 
     payments = db.relationship('Payment', foreign_keys='Payment.patient_id', backref='patient', lazy=True)

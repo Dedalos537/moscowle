@@ -43,8 +43,8 @@ class FinanceService:
         if not year:
             year = datetime.now().year
 
-        therapists = User.query.filter_by(role='terapista').filter_by(is_active=True).all()
-        results = []
+        therapists = User.query.filter_by(role='terapista', is_active=True).all()
+        therapist_ids = [t.id for t in therapists]
 
         start_date = datetime(year, month, 1)
         if month == 12:
@@ -52,34 +52,48 @@ class FinanceService:
         else:
             end_date = datetime(year, month + 1, 1)
 
+        minutes_by_therapist = {}
+        paid_by_therapist = {}
+
+        if therapist_ids:
+            minutes_rows = (
+                db.session.query(
+                    Appointment.therapist_id, func.sum(Appointment.duration_minutes).label('total_minutes')
+                )
+                .filter(
+                    Appointment.therapist_id.in_(therapist_ids),
+                    Appointment.status == 'completed',
+                    Appointment.start_time >= start_date,
+                    Appointment.start_time < end_date,
+                )
+                .group_by(Appointment.therapist_id)
+                .all()
+            )
+            minutes_by_therapist = {row.therapist_id: row.total_minutes or 0 for row in minutes_rows}
+
+            paid_rows = (
+                db.session.query(Expense.therapist_id, func.sum(Expense.amount).label('total_paid'))
+                .filter(
+                    Expense.therapist_id.in_(therapist_ids),
+                    Expense.category == 'therapist_payment',
+                    Expense.date >= start_date,
+                    Expense.date < end_date,
+                )
+                .group_by(Expense.therapist_id)
+                .all()
+            )
+            paid_by_therapist = {row.therapist_id: row.total_paid or 0 for row in paid_rows}
+
+        results = []
         for t in therapists:
             rate = 0
             if t.salary_base and t.contract_hours and t.contract_hours > 0:
                 rate = t.salary_base / t.contract_hours
 
-            worked_minutes = (
-                db.session.query(func.sum(Appointment.duration_minutes))
-                .filter(Appointment.therapist_id == t.id)
-                .filter(Appointment.status == 'completed')
-                .filter(Appointment.start_time >= start_date)
-                .filter(Appointment.start_time < end_date)
-                .scalar()
-                or 0
-            )
-
+            worked_minutes = minutes_by_therapist.get(t.id, 0) or 0
             worked_hours = worked_minutes / 60
-
             projected_pay = rate * worked_hours
-
-            paid_amount = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(Expense.therapist_id == t.id)
-                .filter(Expense.category == 'therapist_payment')
-                .filter(Expense.date >= start_date)
-                .filter(Expense.date < end_date)
-                .scalar()
-                or 0
-            )
+            paid_amount = paid_by_therapist.get(t.id, 0) or 0
 
             results.append(
                 {

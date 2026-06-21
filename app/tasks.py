@@ -325,6 +325,47 @@ def run_notification_cleanup(app):
             print(f'Error in run_notification_cleanup: {e}')
 
 
+def send_whatsapp_debt_reminders(app):
+    """Send WhatsApp reminders for overdue installments (daily at 9am)."""
+    with app.app_context():
+        try:
+            from app.services.contract_service import ContractService
+            from app.services.whatsapp_service import whatsapp_service
+
+            cs = ContractService()
+            due = cs.get_due_installments()
+            sent = 0
+            for inst in due:
+                if not inst['patient_phone']:
+                    continue
+                if inst['reminder_sent'] and inst['days_overdue'] % 7 != 0:
+                    continue
+
+                result = whatsapp_service.send_installment_reminder(
+                    patient_name=inst['patient_name'],
+                    patient_phone=inst['patient_phone'],
+                    installment_number=inst['number'],
+                    due_date=inst['due_date'],
+                    amount=inst['remaining'],
+                    days_overdue=inst['days_overdue'],
+                )
+                if result.get('sent'):
+                    from app.models.contract import Installment
+
+                    installment = Installment.query.get(inst['installment_id'])
+                    if installment:
+                        installment.reminder_sent = True
+                        db.session.commit()
+                    sent += 1
+
+            print(f'WhatsApp reminders: {sent} sent, {len(due)} due')
+        except Exception as e:
+            print(f'Error in send_whatsapp_debt_reminders: {e}')
+            import traceback
+
+            traceback.print_exc()
+
+
 def init_scheduler(app):
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger='cron', hour=8, minute=0)
 
@@ -343,5 +384,9 @@ def init_scheduler(app):
     )
 
     scheduler.add_job(func=lambda: run_notification_cleanup(app), trigger='cron', day_of_week='sun', hour=4, minute=0)
+
+    scheduler.add_job(
+        func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza'
+    )
 
     scheduler.start()

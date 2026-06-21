@@ -26,6 +26,11 @@
       <span>Gastos</span>
       <div class="chrome-tab-indicator"></div>
     </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'contratos'" (click)="switchTab('contratos')">
+      <fa-icon [icon]="['fas', 'file-contract']"></fa-icon>
+      <span>Contratos</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
   </div>
 
   @if (activeTab === 'resumen') {
@@ -832,12 +837,16 @@
         </div>
       }
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Apoderado</label>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
         <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
       </div>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
         <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Apoderado (secundario)</label>
+        <input [(ngModel)]="registerForm.guardian_dni" type="text" placeholder="87654321" class="input-field" maxlength="15">
       </div>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de Pago</label>
@@ -870,8 +879,9 @@
             <p class="text-xs font-bold text-warning">Datos faltantes</p>
             <p class="text-xs text-warning mt-0.5">
               @if (!registerForm.patient_id) { • Paciente<br> }
-              @if (!registerForm.document_number) { • DNI del apoderado<br> }
+              @if (!registerForm.document_number) { • DNI del paciente<br> }
               @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
+              @if (!registerForm.guardian_dni) { • DNI del apoderado<br> }
               Se recomienda completar estos campos para el comprobante.
             </p>
           </div>
@@ -1139,6 +1149,123 @@
         </div>
       }
     </div>
+  }
+
+  @if (activeTab === 'contratos') {
+    <div class="space-y-6" [@fadeInUp]>
+      <div class="flex items-center gap-4 mb-4">
+        <div class="flex-1">
+          <input [(ngModel)]="contractSearchQuery" (input)="filterContractPatients()"
+            type="text" placeholder="Buscar paciente por nombre..."
+            class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm">
+        </div>
+        <app-button variant="primary" label="Nuevo Contrato" [icon]="['fas', 'plus']" (clicked)="openNewContractModal()"></app-button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft">
+            <div class="px-4 py-3 border-b border-border/20">
+              <h3 class="text-sm font-bold text-on-surface">Pacientes</h3>
+            </div>
+            <div class="divide-y divide-border/10 max-h-[60vh] overflow-y-auto">
+              @for (p of filteredContractPatients; track p.id) {
+                <button class="w-full text-left px-4 py-3 hover:bg-surface-container-high/50 transition-colors"
+                  [class.bg-primary-container/20]="selectedContractPatient?.id === p.id"
+                  (click)="selectContractPatient(p)">
+                  <p class="text-sm font-medium text-on-surface">{{ p.username }}</p>
+                  <p class="text-xs text-on-surface-variant/60">{{ p.sede_name || 'Sin sede' }}</p>
+                </button>
+              } @empty {
+                <div class="px-4 py-8 text-center text-on-surface-variant/60 text-sm">No se encontraron pacientes.</div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2">
+          @if (selectedContractPatient) {
+            @if (patientContracts.length === 0) {
+              <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-8 text-center">
+                <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant/30 mb-3"></fa-icon>
+                <p class="text-on-surface-variant/60 mb-4">Este paciente no tiene contratos aún.</p>
+                <app-button variant="primary" label="Crear Primer Contrato" (clicked)="openNewContractModal()"></app-button>
+              </div>
+            }
+            @for (c of patientContracts; track c.id) {
+              <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft mb-4 overflow-hidden">
+                <div class="px-5 py-4 border-b border-border/20 flex items-center justify-between">
+                  <div>
+                    <h3 class="font-bold text-on-surface">{{ c.name }}</h3>
+                    <p class="text-xs text-on-surface-variant/60">
+                      S/ {{ c.total_amount.toFixed(2) }} · {{ c.installment_count }} cuotas ·
+                      {{ c.paid_count }} pagadas · {{ c.overdue_count }} vencidas
+                    </p>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold"
+                    [class.bg-success-container]="c.status === 'active'" [class.text-success]="c.status === 'active'"
+                    [class.bg-surface-container-high]="c.status === 'completed'" [class.text-on-surface-variant]="c.status === 'completed'"
+                    [class.bg-error-container]="c.status === 'cancelled'" [class.text-error]="c.status === 'cancelled'">
+                    {{ c.status === 'active' ? 'Activo' : c.status === 'completed' ? 'Completado' : 'Cancelado' }}
+                  </span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-surface-container-high/30">
+                      <tr>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-on-surface-variant uppercase tracking-wider">N°</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-on-surface-variant uppercase tracking-wider">Vencimiento</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Monto</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pagado</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-on-surface-variant uppercase tracking-wider">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/10">
+                      @for (inst of c.installments; track inst.id) {
+                        <tr class="hover:bg-surface-container-high/30">
+                          <td class="px-4 py-3 font-mono">{{ inst.number }}</td>
+                          <td class="px-4 py-3 text-on-surface-variant">{{ inst.due_date }}</td>
+                          <td class="px-4 py-3 text-right font-mono">S/ {{ inst.amount.toFixed(2) }}</td>
+                          <td class="px-4 py-3 text-right font-mono">
+                            @if (inst.paid_amount > 0) {
+                              S/ {{ inst.paid_amount.toFixed(2) }}
+                            }
+                          </td>
+                          <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-0.5 rounded text-xs font-bold"
+                              [class.bg-success-container]="inst.status === 'paid'" [class.text-success]="inst.status === 'paid'"
+                              [class.bg-warning-container]="inst.status === 'pending'" [class.text-warning]="inst.status === 'pending'"
+                              [class.bg-error-container]="inst.status === 'overdue'" [class.text-error]="inst.status === 'overdue'"
+                              [class.bg-info-container]="inst.status === 'partial'" [class.text-info]="inst.status === 'partial'">
+                              {{ inst.status === 'paid' ? 'Pagada' : inst.status === 'pending' ? 'Pendiente' : inst.status === 'overdue' ? 'Vencida' : 'Parcial' }}
+                            </span>
+                          </td>
+                          <td class="px-4 py-3 text-right">
+                            @if (inst.status !== 'paid') {
+                              <app-button variant="ghost" size="sm" label="Pagar" (clicked)="openPayInstallmentModal(c, inst)"></app-button>
+                            }
+                            @if (inst.payment_id) {
+                              <app-button variant="ghost" size="sm" label="Recibo" [icon]="['fas', 'file-pdf']" (clicked)="downloadInstallmentReceipt(inst.payment_id)"></app-button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-8 text-center">
+              <fa-icon [icon]="['fas', 'hand-point-left']" class="text-4xl text-on-surface-variant/30 mb-3"></fa-icon>
+              <p class="text-on-surface-variant/60">Selecciona un paciente de la lista para ver sus contratos.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 
     <app-modal [isOpen]="showExpenseModal" [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'" (close)="closeExpenseModal()">
       <div class="space-y-4">
@@ -1174,6 +1301,54 @@
         </div>
 
         <app-button variant="primary" label="Registrar" [disabled]="submitting" (clicked)="submitExpenseForm()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  @if (showNewContractModal) {
+    <app-modal [isOpen]="showNewContractModal" title="Nuevo Contrato" (close)="closeNewContractModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente</label>
+          <input type="text" [value]="newContractForm.patient_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+        </div>
+        <app-input id="contract-name" label="Nombre del Contrato" [(value)]="newContractForm.name" placeholder="Plan Terapias Ene 2026"></app-input>
+        <app-input id="contract-total" label="Monto Total (S/)" type="number" [(value)]="newContractForm.total_amount" placeholder="800"></app-input>
+        <app-input id="contract-installments" label="N° de Cuotas" type="number" [(value)]="newContractForm.installment_count" placeholder="4"></app-input>
+        <app-input id="contract-start" label="Fecha de Inicio" type="date" [(value)]="newContractForm.start_date"></app-input>
+
+        <div class="p-3 bg-info-container border border-info-container rounded-lg">
+          <p class="text-xs text-info">
+            <strong>Resumen:</strong> {{ newContractForm.installment_count }} cuotas de
+            S/ {{ (newContractForm.total_amount / newContractForm.installment_count).toFixed(2) }} cada una.
+          </p>
+        </div>
+
+        <app-button variant="primary" label="Crear Contrato" [disabled]="contractSubmitting" (clicked)="submitNewContract()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  @if (showPayInstallmentModal && selectedInstallment) {
+    <app-modal [isOpen]="showPayInstallmentModal" title="Pagar Cuota" (close)="closePayInstallmentModal()">
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm text-on-surface-variant">
+            Contrato: <strong>{{ selectedContract?.name }}</strong><br>
+            Cuota N° {{ selectedInstallment.number }} · Vence: {{ selectedInstallment.due_date }}
+          </p>
+        </div>
+        <app-input id="pay-amount" label="Monto (S/)" type="number" [(value)]="payInstallmentForm.amount"></app-input>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método</label>
+            <app-select [(ngModel)]="payInstallmentForm.method" [options]="paymentMethodOptions"></app-select>
+          </div>
+          <app-input id="pay-reference" label="Referencia" [(value)]="payInstallmentForm.reference"></app-input>
+        </div>
+        <app-input id="pay-discount" label="Descuento (S/)" type="number" [(value)]="payInstallmentForm.discount"></app-input>
+
+        <app-button variant="primary" label="Pagar Cuota" [disabled]="contractSubmitting" (clicked)="submitPayInstallment()"></app-button>
       </div>
     </app-modal>
   }

@@ -99,6 +99,28 @@ export class AdminService {
     return this.http.post<ApiResponse>('/admin/payments/delete/' + paymentId, {});
   }
 
+  getPatientContracts(patientId: number): Observable<{ success: boolean; contracts: any[] }> {
+    return this.http.get<{ success: boolean; contracts: any[] }>('/admin/api/contracts', {
+      params: new HttpParams().set('patient_id', patientId),
+    });
+  }
+
+  getContractDetail(contractId: number): Observable<{ success: boolean; contract: any }> {
+    return this.http.get<{ success: boolean; contract: any }>(`/admin/api/contracts/${contractId}`);
+  }
+
+  createContract(data: { patient_id: number; total_amount: number; installment_count: number; name?: string; start_date?: string }): Observable<{ success: boolean; contract: any; installments_generated: number; error?: string }> {
+    return this.http.post<{ success: boolean; contract: any; installments_generated: number }>('/admin/api/contracts', data);
+  }
+
+  payInstallment(installmentId: number, data: { amount: number; method: string; reference?: string; discount?: number }): Observable<{ success: boolean; payment: any; error?: string }> {
+    return this.http.post<{ success: boolean; payment: any }>(`/admin/api/installments/${installmentId}/pay`, data);
+  }
+
+  getDueInstallments(): Observable<{ success: boolean; installments: any[] }> {
+    return this.http.get<{ success: boolean; installments: any[] }>('/admin/api/installments/due');
+  }
+
   updatePaymentSettings(patientId: number, data: { payment_amount?: number; payment_due_date?: string; payment_plan?: string }): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/admin/payments/settings', { patient_id: patientId, ...data });
   }

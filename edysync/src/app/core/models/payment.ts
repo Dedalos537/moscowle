@@ -27,6 +27,7 @@ export interface PatientPaymentStatus {
   status: string;
   phone?: string;
   guardian_name?: string;
+  guardian_dni?: string;
 }
 
 export interface PaymentFormData {
@@ -40,6 +41,7 @@ export interface PaymentFormData {
   receipt?: File;
   document_number?: string;
   guardian_name?: string;
+  guardian_dni?: string;
 }
 
 export interface DebtReport {
