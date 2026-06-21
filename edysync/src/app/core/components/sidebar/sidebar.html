@@ -32,59 +32,9 @@
 
   <div class="sidebar-footer">
     <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
-      [title]="showHelp ? 'Cerrar ayuda' : 'Ayuda'"
-      [attr.aria-label]="showHelp ? 'Cerrar ayuda' : 'Ayuda'">
-      <fa-icon [icon]="['fas', showHelp ? 'times' : 'question']"></fa-icon>
+      [title]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'"
+      [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
+      <fa-icon [icon]="['fas', helpState.panelOpen() ? 'times' : 'question']"></fa-icon>
     </button>
   </div>
-
-  @if (showHelp) {
-    <div class="help-overlay" (click)="toggleHelp()">
-      <div class="help-panel" (click)="$event.stopPropagation()">
-        <div class="help-character">
-          <fa-icon [icon]="['fas', 'lightbulb']" class="help-icon"></fa-icon>
-        </div>
-        <h4 class="help-title">¿Cómo usar EdySync?</h4>
-        <p class="help-subtitle">Guía rápida de navegación</p>
-
-        <div class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
-            <strong>Panel Admin</strong>
-            <p>Visualiza el resumen general de la plataforma: pacientes, terapeutas y sesiones activas.</p>
-          </div>
-        </div>
-
-        <div class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
-            <strong>Sesiones Globales</strong>
-            <p>Administra y revisa todas las sesiones de terapia programadas.</p>
-          </div>
-        </div>
-
-        <div class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
-            <strong>Admin Usuarios</strong>
-            <p>Crea, edita y gestiona cuentas de terapeutas, pacientes y supervisores.</p>
-          </div>
-        </div>
-
-        <div class="help-step">
-          <div class="help-step-num">4</div>
-          <div class="help-step-content">
-            <strong>Reportes</strong>
-            <p>Consulta métricas, eficiencia de terapeutas y reportes semanales/mensuales.</p>
-          </div>
-        </div>
-
-        <div class="help-footer">
-          <fa-icon [icon]="['fas', 'envelope']"></fa-icon>
-          ¿Más dudas? Escríbenos a
-          <a href="mailto:info@centrojuanpabloii.com" class="help-email">info@centrojuanpabloii.com</a>
-        </div>
-      </div>
-    </div>
-  }
 </aside>

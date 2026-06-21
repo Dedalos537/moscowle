@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -28,7 +28,7 @@ import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, E
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays,
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -58,14 +58,21 @@ export class Finanzas implements OnInit, OnDestroy {
   readonly getPatientStatus = getPatientStatus;
   readonly getStatusInfo = getStatusInfo;
   readonly isOverdue = isOverdue;
+  readonly getOverdueDays = getOverdueDays;
 
   isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
+  @ViewChild('pagosSection', { static: false }) pagosSection?: ElementRef<HTMLElement>;
 
-  activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' = 'resumen';
+  activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' | 'contratos' = 'resumen';
 
-  switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
+  switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos' | 'contratos') {
     this.activeTab = tab;
+    if (tab === 'pagos') {
+      setTimeout(() => {
+        this.pagosSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
   }
 
   goToYapeImport() {
@@ -150,7 +157,7 @@ export class Finanzas implements OnInit, OnDestroy {
   registerForm: RegisterForm = {
     patient_id: null, amount: 0, method: 'transfer', reference: '',
     next_due_date: '', payment_date: '', discount: 0,
-    document_number: '', guardian_name: '', receipt: null,
+    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
   };
   registerStatus = '';
   analyzeResult: any = null;
@@ -158,6 +165,18 @@ export class Finanzas implements OnInit, OnDestroy {
 
   showPreviewModal = false;
   previewImageUrl = '';
+
+  contractSearchQuery = '';
+  filteredContractPatients: PatientRow[] = [];
+  selectedContractPatient: PatientRow | null = null;
+  patientContracts: any[] = [];
+  showNewContractModal = false;
+  newContractForm = { patient_id: null as number | null, patient_name: '', name: '', total_amount: 0, installment_count: 4, start_date: new Date().toISOString().substring(0, 10) };
+  showPayInstallmentModal = false;
+  selectedContract: any = null;
+  selectedInstallment: any = null;
+  payInstallmentForm = { amount: 0, method: 'transfer', reference: '', discount: 0 };
+  contractSubmitting = false;
 
   showSettingsModal = false;
   settingsForm: SettingsForm = {
@@ -379,6 +398,7 @@ export class Finanzas implements OnInit, OnDestroy {
               has_plan_config: !!(u.payment_plan || u.payment_amount),
             };
           });
+          this.filteredContractPatients = this.patients;
           this.updateCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
@@ -404,7 +424,7 @@ export class Finanzas implements OnInit, OnDestroy {
             id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || '',
             amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
             reference: p.reference, date: p.date || '', status: p.status || 'completed',
-            receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name,
+            receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
           }));
         }
         this.historyLoading = false;
@@ -534,7 +554,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.registerForm = {
       patient_id: patient?.id || null, amount: patient?.payment_amount || 0, method: 'transfer', reference: '',
       next_due_date: '', payment_date: new Date().toISOString().substring(0, 10), discount: 0,
-      document_number: '', guardian_name: '', receipt: null,
+    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
     };
     this.analyzeResult = null;
     this.analyzingReceipt = false;
@@ -590,6 +610,7 @@ export class Finanzas implements OnInit, OnDestroy {
     fd.append('discount', String(this.registerForm.discount));
     if (this.registerForm.document_number) fd.append('document_number', this.registerForm.document_number);
     if (this.registerForm.guardian_name) fd.append('guardian_name', this.registerForm.guardian_name);
+    if (this.registerForm.guardian_dni) fd.append('guardian_dni', this.registerForm.guardian_dni);
     if (this.registerForm.receipt) fd.append('receipt', this.registerForm.receipt);
 
     this.subscriptions.add(this.adminService.registerPayment(fd).subscribe({
@@ -607,7 +628,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name; }
+  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {
@@ -705,5 +726,120 @@ export class Finanzas implements OnInit, OnDestroy {
       next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.cdr.markForCheck(); },
       error: () => { this.submitting = false; this.cdr.markForCheck(); },
     }));
+  }
+
+  filterContractPatients() {
+    const q = this.contractSearchQuery.toLowerCase().trim();
+    if (!q) {
+      this.filteredContractPatients = this.patients;
+      return;
+    }
+    this.filteredContractPatients = this.patients.filter(p =>
+      p.username.toLowerCase().includes(q)
+    );
+  }
+
+  selectContractPatient(patient: PatientRow) {
+    this.selectedContractPatient = patient;
+    this.loadPatientContracts(patient.id);
+  }
+
+  private loadPatientContracts(patientId: number) {
+    this.subscriptions.add(this.adminService.getPatientContracts(patientId).subscribe({
+      next: (res) => {
+        if (res.success && res.contracts) {
+          this.patientContracts = res.contracts;
+          this.patientContracts.forEach(c => {
+            if (c.id) {
+              this.subscriptions.add(this.adminService.getContractDetail(c.id).subscribe({
+                next: (detail) => {
+                  if (detail.success && detail.contract) {
+                    c.installments = detail.contract.installments || [];
+                  }
+                },
+              }));
+            }
+          });
+        }
+        this.cdr.markForCheck();
+      },
+    }));
+  }
+
+  openNewContractModal() {
+    if (!this.selectedContractPatient) return;
+    this.newContractForm = {
+      patient_id: this.selectedContractPatient.id,
+      patient_name: this.selectedContractPatient.username,
+      total_amount: this.selectedContractPatient.payment_amount * 4 || 800,
+      installment_count: 4,
+      start_date: new Date().toISOString().substring(0, 10),
+      name: `Plan ${this.selectedContractPatient.username} ${new Date().toLocaleDateString('es-PE', { month: 'short', year: 'numeric' })}`,
+    };
+    this.showNewContractModal = true;
+  }
+
+  closeNewContractModal() { this.showNewContractModal = false; }
+
+  submitNewContract() {
+    this.contractSubmitting = true;
+    const data = {
+      patient_id: this.newContractForm.patient_id!,
+      total_amount: this.newContractForm.total_amount,
+      installment_count: this.newContractForm.installment_count,
+      name: this.newContractForm.name,
+      start_date: this.newContractForm.start_date,
+    };
+    this.subscriptions.add(this.adminService.createContract(data).subscribe({
+      next: (res) => {
+        this.contractSubmitting = false;
+        if (res.success) {
+          this.closeNewContractModal();
+          if (this.selectedContractPatient) this.loadPatientContracts(this.selectedContractPatient.id);
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => { this.contractSubmitting = false; this.cdr.markForCheck(); },
+    }));
+  }
+
+  openPayInstallmentModal(contract: any, installment: any) {
+    this.selectedContract = contract;
+    this.selectedInstallment = installment;
+    this.payInstallmentForm = {
+      amount: installment.amount - (installment.paid_amount || 0),
+      method: 'transfer',
+      reference: '',
+      discount: 0,
+    };
+    this.showPayInstallmentModal = true;
+  }
+
+  closePayInstallmentModal() { this.showPayInstallmentModal = false; }
+
+  submitPayInstallment() {
+    if (!this.selectedInstallment) return;
+    this.contractSubmitting = true;
+    const data = {
+      amount: this.payInstallmentForm.amount,
+      method: this.payInstallmentForm.method,
+      reference: this.payInstallmentForm.reference || undefined,
+      discount: this.payInstallmentForm.discount,
+    };
+    this.subscriptions.add(this.adminService.payInstallment(this.selectedInstallment.id, data).subscribe({
+      next: (res) => {
+        this.contractSubmitting = false;
+        if (res.success) {
+          this.closePayInstallmentModal();
+          if (this.selectedContractPatient) this.loadPatientContracts(this.selectedContractPatient.id);
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => { this.contractSubmitting = false; this.cdr.markForCheck(); },
+    }));
+  }
+
+  downloadInstallmentReceipt(paymentId: number) {
+    window.open(`/admin/payments/${paymentId}/download`, '_blank');
   }
 }

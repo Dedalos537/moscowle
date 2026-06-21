@@ -5,6 +5,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
+import { HelpStateService } from '../../../shared/contextual-help/services/help-state.service';
 import { Subscription } from 'rxjs';
 
 interface NavItem {
@@ -30,7 +31,6 @@ export class Sidebar implements OnInit, OnDestroy {
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
-  showHelp = false;
 
   private subs = new Subscription();
 
@@ -63,6 +63,8 @@ export class Sidebar implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   });
 
+  helpState = inject(HelpStateService);
+
   constructor(
     private auth: AuthService,
     public sidebarService: SidebarService,
@@ -85,7 +87,6 @@ export class Sidebar implements OnInit, OnDestroy {
   }
 
   toggleHelp() {
-    this.showHelp = !this.showHelp;
-    this.cdr.markForCheck();
+    this.helpState.toggle();
   }
 }
