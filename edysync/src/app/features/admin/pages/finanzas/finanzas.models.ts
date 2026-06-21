@@ -29,6 +29,7 @@ export interface PaymentHistoryRow {
   receipt_image_path?: string;
   document_number?: string;
   guardian_name?: string;
+  guardian_dni?: string;
 }
 
 export interface Therapist {
@@ -48,6 +49,7 @@ export interface RegisterForm {
   discount: number;
   document_number: string;
   guardian_name: string;
+  guardian_dni: string;
   receipt: File | null;
 }
 
