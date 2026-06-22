@@ -57,8 +57,8 @@ def get_railway_metrics():
             'CPU_LIMIT',
             'MEMORY_USAGE_GB',
             'MEMORY_LIMIT_GB',
-            'NETWORK_RX_BYTES',
-            'NETWORK_TX_BYTES',
+            'NETWORK_RX_GB',
+            'NETWORK_TX_GB',
         ],
     }
     if service_id:
@@ -75,7 +75,8 @@ def get_railway_metrics():
         return {'success': False, 'error': f'Railway API request failed: {str(e)}'}
 
     if response.status_code != 200:
-        return {'success': False, 'error': f'Railway API returned {response.status_code}'}
+        body = response.text[:500]
+        return {'success': False, 'error': f'Railway API returned {response.status_code}: {body}'}
 
     data = response.json()
     if 'errors' in data:
@@ -158,8 +159,8 @@ def get_railway_metrics_history(from_dt=None, to_dt=None, bucket='15m'):
             'CPU_LIMIT',
             'MEMORY_USAGE_GB',
             'MEMORY_LIMIT_GB',
-            'NETWORK_RX_BYTES',
-            'NETWORK_TX_BYTES',
+            'NETWORK_RX_GB',
+            'NETWORK_TX_GB',
         ],
     }
     if service_id:
@@ -176,7 +177,8 @@ def get_railway_metrics_history(from_dt=None, to_dt=None, bucket='15m'):
         return {'success': False, 'error': f'Railway API request failed: {str(e)}'}
 
     if response.status_code != 200:
-        return {'success': False, 'error': f'Railway API returned {response.status_code}'}
+        body = response.text[:500]
+        return {'success': False, 'error': f'Railway API returned {response.status_code}: {body}'}
 
     data = response.json()
     if 'errors' in data:

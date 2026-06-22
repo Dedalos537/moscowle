@@ -212,22 +212,22 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     }
 
     // Network
-    if (s.NETWORK_RX_BYTES?.length) {
-      const rx = s.NETWORK_RX_BYTES.map((v: any) => +(v.value / 1_000_000).toFixed(3));
-      const tx = s.NETWORK_TX_BYTES?.length ? s.NETWORK_TX_BYTES.map((v: any) => +(v.value / 1_000_000).toFixed(3)) : [];
+    if (s.NETWORK_RX_GB?.length) {
+      const rx = s.NETWORK_RX_GB.map((v: any) => +(v.value).toFixed(3));
+      const tx = s.NETWORK_TX_GB?.length ? s.NETWORK_TX_GB.map((v: any) => +(v.value).toFixed(3)) : [];
       const allNet = [...rx, ...tx].filter((v: number) => v > 0);
       this.netChartData = {
         labels: ts,
-        datasets: [
-          { label: 'RX (Mbps)', data: rx, borderColor: 'rgb(139, 92, 246)', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 },
-          ...(tx.length ? [{ label: 'TX (Mbps)', data: tx, borderColor: 'rgb(251, 146, 60)', backgroundColor: 'rgba(251,146,60,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] : []),
+          datasets: [
+            { label: 'RX (GB)', data: rx, borderColor: 'rgb(139, 92, 246)', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 },
+            ...(tx.length ? [{ label: 'TX (GB)', data: tx, borderColor: 'rgb(251, 146, 60)', backgroundColor: 'rgba(251,146,60,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] : []),
         ],
       };
       this.netChartOptions = {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 10, weight: 700 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} Mbps` } } },
-        scales: { x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { beginAtZero: true, suggestedMax: Math.ceil(Math.max(...allNet, 1) * 1.3), grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: (v) => `${v} Mbps` } } },
+        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 10, weight: 700 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} GB` } } },
+        scales: { x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { beginAtZero: true, suggestedMax: Math.ceil(Math.max(...allNet, 1) * 1.3), grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: (v) => `${v} GB` } } },
       };
       this.netChartRef?.update();
     }
