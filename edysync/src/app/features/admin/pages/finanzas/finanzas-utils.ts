@@ -106,6 +106,7 @@ export function getOverdueDays(p: PatientRow): number {
   const diff = new Date().getTime() - new Date(p.next_due_date).getTime();
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
+<<<<<<< HEAD
 
 export function buildPatientYearGrid(payments: PaymentHistoryRow[], patient: PatientRow): MonthCell[] {
   const now = new Date();
@@ -141,3 +142,5 @@ export function buildPatientYearGrid(payments: PaymentHistoryRow[], patient: Pat
   }
   return grid;
 }
+=======
+>>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80

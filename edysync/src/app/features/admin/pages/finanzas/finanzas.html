@@ -974,6 +974,13 @@
         </div>
       }
       <div>
+<<<<<<< HEAD
+=======
+        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
+        <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
+      </div>
+      <div>
+>>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
         <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
       </div>
@@ -1012,6 +1019,10 @@
             <p class="text-xs font-bold text-warning">Datos faltantes</p>
             <p class="text-xs text-warning mt-0.5">
               @if (!registerForm.patient_id) { • Paciente<br> }
+<<<<<<< HEAD
+=======
+              @if (!registerForm.document_number) { • DNI del paciente<br> }
+>>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
               @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
               @if (!registerForm.guardian_dni) { • DNI del apoderado<br> }
               Se recomienda completar estos campos para el comprobante.
@@ -1459,6 +1470,54 @@
         <app-button variant="primary" label="Registrar" [disabled]="submitting" (clicked)="submitExpenseForm()"></app-button>
       </div>
     </app-modal>
+
+  @if (showNewContractModal) {
+    <app-modal [isOpen]="showNewContractModal" title="Nuevo Contrato" (close)="closeNewContractModal()">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente</label>
+          <input type="text" [value]="newContractForm.patient_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+        </div>
+        <app-input id="contract-name" label="Nombre del Contrato" [(value)]="newContractForm.name" placeholder="Plan Terapias Ene 2026"></app-input>
+        <app-input id="contract-total" label="Monto Total (S/)" type="number" [(value)]="newContractForm.total_amount" placeholder="800"></app-input>
+        <app-input id="contract-installments" label="N° de Cuotas" type="number" [(value)]="newContractForm.installment_count" placeholder="4"></app-input>
+        <app-input id="contract-start" label="Fecha de Inicio" type="date" [(value)]="newContractForm.start_date"></app-input>
+
+        <div class="p-3 bg-info-container border border-info-container rounded-lg">
+          <p class="text-xs text-info">
+            <strong>Resumen:</strong> {{ newContractForm.installment_count }} cuotas de
+            S/ {{ (newContractForm.total_amount / newContractForm.installment_count).toFixed(2) }} cada una.
+          </p>
+        </div>
+
+        <app-button variant="primary" label="Crear Contrato" [disabled]="contractSubmitting" (clicked)="submitNewContract()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  @if (showPayInstallmentModal && selectedInstallment) {
+    <app-modal [isOpen]="showPayInstallmentModal" title="Pagar Cuota" (close)="closePayInstallmentModal()">
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm text-on-surface-variant">
+            Contrato: <strong>{{ selectedContract?.name }}</strong><br>
+            Cuota N° {{ selectedInstallment.number }} · Vence: {{ selectedInstallment.due_date }}
+          </p>
+        </div>
+        <app-input id="pay-amount" label="Monto (S/)" type="number" [(value)]="payInstallmentForm.amount"></app-input>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método</label>
+            <app-select [(ngModel)]="payInstallmentForm.method" [options]="paymentMethodOptions"></app-select>
+          </div>
+          <app-input id="pay-reference" label="Referencia" [(value)]="payInstallmentForm.reference"></app-input>
+        </div>
+        <app-input id="pay-discount" label="Descuento (S/)" type="number" [(value)]="payInstallmentForm.discount"></app-input>
+
+        <app-button variant="primary" label="Pagar Cuota" [disabled]="contractSubmitting" (clicked)="submitPayInstallment()"></app-button>
+      </div>
+    </app-modal>
+  }
 
   @if (showNewContractModal) {
     <app-modal [isOpen]="showNewContractModal" title="Nuevo Contrato" (close)="closeNewContractModal()">

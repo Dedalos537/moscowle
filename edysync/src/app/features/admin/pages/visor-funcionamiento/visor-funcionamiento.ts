@@ -197,7 +197,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         legend: {
           display: true,
           position: 'top',
-          labels: { usePointStyle: true, padding: 16, font: { family: 'var(--font-accent)', size: 12, weight: '700' } },
+          labels: { usePointStyle: true, padding: 16, font: { family: 'var(--font-accent)', size: 12, weight: 700 } },
         },
         tooltip: {
           callbacks: {
