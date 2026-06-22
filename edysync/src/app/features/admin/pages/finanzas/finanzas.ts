@@ -28,11 +28,7 @@ import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, E
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-<<<<<<< HEAD
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays, buildPatientYearGrid,
-=======
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays,
->>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -665,11 +661,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-<<<<<<< HEAD
-  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
-=======
   get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
->>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {

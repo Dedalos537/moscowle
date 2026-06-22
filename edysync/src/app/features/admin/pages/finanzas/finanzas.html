@@ -974,13 +974,10 @@
         </div>
       }
       <div>
-<<<<<<< HEAD
-=======
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del Paciente</label>
         <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field" maxlength="8">
       </div>
       <div>
->>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
         <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del Apoderado</label>
         <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor" class="input-field">
       </div>
@@ -1019,10 +1016,7 @@
             <p class="text-xs font-bold text-warning">Datos faltantes</p>
             <p class="text-xs text-warning mt-0.5">
               @if (!registerForm.patient_id) { • Paciente<br> }
-<<<<<<< HEAD
-=======
               @if (!registerForm.document_number) { • DNI del paciente<br> }
->>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
               @if (!registerForm.guardian_name) { • Nombre del apoderado<br> }
               @if (!registerForm.guardian_dni) { • DNI del apoderado<br> }
               Se recomienda completar estos campos para el comprobante.
