@@ -46,9 +46,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   @ViewChild('cpuChart') cpuChartRef?: BaseChartDirective;
   @ViewChild('memChart') memChartRef?: BaseChartDirective;
   @ViewChild('netChart') netChartRef?: BaseChartDirective;
-  @ViewChild('reqChart') reqChartRef?: BaseChartDirective;
-  @ViewChild('errChart') errChartRef?: BaseChartDirective;
-  @ViewChild('rtChart') rtChartRef?: BaseChartDirective;
 
   // --- Railway history ---
   railwayLoading = true;
@@ -63,12 +60,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   memChartOptions: ChartConfiguration<'line'>['options'] = {};
   netChartData: ChartData<'line'> = { labels: [], datasets: [] };
   netChartOptions: ChartConfiguration<'line'>['options'] = {};
-  reqChartData: ChartData<'line'> = { labels: [], datasets: [] };
-  reqChartOptions: ChartConfiguration<'line'>['options'] = {};
-  errChartData: ChartData<'line'> = { labels: [], datasets: [] };
-  errChartOptions: ChartConfiguration<'line'>['options'] = {};
-  rtChartData: ChartData<'line'> = { labels: [], datasets: [] };
-  rtChartOptions: ChartConfiguration<'line'>['options'] = {};
 
   // --- Logs ---
   logs: LogEntry[] = [];
@@ -125,9 +116,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   switchTab(tab: TabId) {
     this.activeTab = tab;
     if (tab === 'railway') {
-      setTimeout(() => {
-        [this.cpuChartRef, this.memChartRef, this.netChartRef, this.reqChartRef, this.errChartRef, this.rtChartRef].forEach(c => c?.update());
-      }, 100);
+      setTimeout(() => { [this.cpuChartRef, this.memChartRef, this.netChartRef].forEach(c => c?.update()); }, 100);
     }
   }
 
@@ -241,34 +230,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         scales: { x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { beginAtZero: true, suggestedMax: Math.ceil(Math.max(...allNet, 1) * 1.3), grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: (v) => `${v} Mbps` } } },
       };
       this.netChartRef?.update();
-    }
-
-    // Requests
-    if (s.REQUEST_COUNT?.length) {
-      const reqVals = s.REQUEST_COUNT.map((v: any) => v.value);
-      this.reqChartData = { labels: ts, datasets: [{ label: 'Solicitudes', data: reqVals, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-      this.reqChartOptions = this.lineOptions(reqVals, '');
-      this.reqChartRef?.update();
-    }
-
-    // Error Rate
-    if (s.REQUEST_ERROR_COUNT?.length && s.REQUEST_COUNT?.length) {
-      const errRate = s.REQUEST_COUNT.map((v: any, i: number) => {
-        const total = v.value;
-        const err = s.REQUEST_ERROR_COUNT[i]?.value || 0;
-        return total > 0 ? +((err / total) * 100).toFixed(2) : 0;
-      });
-      this.errChartData = { labels: ts, datasets: [{ label: 'Error %', data: errRate, borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-      this.errChartOptions = this.lineOptions(errRate, '%');
-      this.errChartRef?.update();
-    }
-
-    // Response Time
-    if (s.RESPONSE_TIME_MS?.length) {
-      const rtVals = s.RESPONSE_TIME_MS.map((v: any) => v.value);
-      this.rtChartData = { labels: ts, datasets: [{ label: 'ms', data: rtVals, borderColor: 'rgb(20, 184, 166)', backgroundColor: 'rgba(20,184,166,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-      this.rtChartOptions = this.lineOptions(rtVals, 'ms');
-      this.rtChartRef?.update();
     }
   }
 

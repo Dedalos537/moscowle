@@ -127,36 +127,6 @@
               </div>
             </div>
 
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'globe']" class="text-sm" style="color: rgb(245, 158, 11);"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Requests</h3>
-              </div>
-              <div class="chart-container" style="position: relative; height: 200px;">
-                <canvas baseChart #reqChart type="line" [data]="reqChartData" [options]="reqChartOptions"></canvas>
-              </div>
-            </div>
-
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-sm text-error"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Request Error Rate</h3>
-              </div>
-              <div class="chart-container" style="position: relative; height: 200px;">
-                <canvas baseChart #errChart type="line" [data]="errChartData" [options]="errChartOptions"></canvas>
-              </div>
-            </div>
-
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'clock']" class="text-sm" style="color: rgb(20, 184, 166);"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Response Time</h3>
-              </div>
-              <div class="chart-container" style="position: relative; height: 200px;">
-                <canvas baseChart #rtChart type="line" [data]="rtChartData" [options]="rtChartOptions"></canvas>
-              </div>
-            </div>
-
           </div>
         }
       </div>

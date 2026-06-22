@@ -393,43 +393,37 @@
         </div>
         }
 
-        <div #pagosSubTabs class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
-          <button
-            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
-            [class.bg-surface-container-lowest]="pagosTab === 'pacientes'"
-            [class.text-on-surface]="pagosTab === 'pacientes'"
-            [class.text-on-surface-variant]="pagosTab !== 'pacientes'"
-            [class.shadow-soft]="pagosTab === 'pacientes'"
-            (click)="pagosTab = 'pacientes'"
-          >
-            <fa-icon [icon]="['fas', 'users']" class="text-[18px]"></fa-icon>
-            Pacientes
-          </button>
-          <button
-            class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
-            [class.bg-surface-container-lowest]="pagosTab === 'historial'"
-            [class.text-on-surface]="pagosTab === 'historial'"
-            [class.text-on-surface-variant]="pagosTab !== 'historial'"
-            [class.shadow-soft]="pagosTab === 'historial'"
-            (click)="pagosTab = 'historial'"
-          >
-            <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
-            Historial
-            @if (paymentHistory.length > 0) {
-              <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
-            }
-          </button>
-        </div>
+        <div class="tab-sticky">
+          <div #pagosSubTabs class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
+            <button
+              class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+              [class.bg-surface-container-lowest]="pagosTab === 'pacientes'"
+              [class.text-on-surface]="pagosTab === 'pacientes'"
+              [class.text-on-surface-variant]="pagosTab !== 'pacientes'"
+              [class.shadow-soft]="pagosTab === 'pacientes'"
+              (click)="pagosTab = 'pacientes'"
+            >
+              <fa-icon [icon]="['fas', 'users']" class="text-[18px]"></fa-icon>
+              Pacientes
+            </button>
+            <button
+              class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+              [class.bg-surface-container-lowest]="pagosTab === 'historial'"
+              [class.text-on-surface]="pagosTab === 'historial'"
+              [class.text-on-surface-variant]="pagosTab !== 'historial'"
+              [class.shadow-soft]="pagosTab === 'historial'"
+              (click)="pagosTab = 'historial'"
+            >
+              <fa-icon [icon]="['fas', 'history']" class="text-[18px]"></fa-icon>
+              Historial
+              @if (paymentHistory.length > 0) {
+                <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{ paymentHistory.length }}</span>
+              }
+            </button>
+          </div>
 
-        @if (pagosTab === 'pacientes') {
-          @if (paymentsLoading) {
-            <div class="flex justify-center py-24">
-              <app-spinner size="md" colorClass="text-primary"></app-spinner>
-            </div>
-          } @else {
-          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
-
-            <div class="flex flex-col gap-3 mb-6">
+          @if (pagosTab === 'pacientes' && !paymentsLoading) {
+            <div class="flex flex-col gap-3 mt-4 p-5 md:p-6 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft">
               <div class="flex flex-col md:flex-row gap-3">
                 <div class="relative flex-1">
                   <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
@@ -480,6 +474,36 @@
                 }
               </div>
             </div>
+          }
+
+          @if (pagosTab === 'historial' && !historyLoading) {
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4 p-5 md:p-6 bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+                <fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
+                Historial de Pagos
+              </h3>
+              <div class="flex gap-2 items-center">
+                <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'plus']" (clicked)="openRegisterModal()"></app-button>
+                <app-button variant="ghost" label="Exportar" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+                    <fa-icon [icon]="['fas', 'calendar']" class="text-[9px]"></fa-icon> Período
+                  </span>
+                  <app-select (valueChange)="historyMonth = $event" [options]="historyMonthOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
+                </div>
+                <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (pagosTab === 'pacientes') {
+          @if (paymentsLoading) {
+            <div class="flex justify-center py-24">
+              <app-spinner size="md" colorClass="text-primary"></app-spinner>
+            </div>
+          } @else {
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
 
             <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
               <table class="w-full min-w-[1000px]">
@@ -856,24 +880,6 @@
             </div>
           } @else {
           <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
-
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
-<fa-icon [icon]="['fas', 'receipt']" class="text-primary text-lg"></fa-icon>
-                Historial de Pagos
-              </h3>
-              <div class="flex gap-2 items-center">
-                <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'plus']" (clicked)="openRegisterModal()"></app-button>
-                <app-button variant="ghost" label="Exportar" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
-                    <fa-icon [icon]="['fas', 'calendar']" class="text-[9px]"></fa-icon> Período
-                  </span>
-                  <app-select (valueChange)="historyMonth = $event" [options]="historyMonthOptions" placeholder="Todos" class="min-w-[150px]"></app-select>
-                </div>
-                <span class="text-xs text-on-surface-variant font-medium">{{ filteredHistory.length }} registros</span>
-              </div>
-            </div>
 
             <div class="overflow-x-auto rounded-xl border border-border/30">
               <table class="w-full min-w-[800px]">
