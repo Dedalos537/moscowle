@@ -1,0 +1,355 @@
+<div class="p-4 md:p-8" @fadeInUp>
+
+  <div class="chrome-tab-bar">
+    <button class="chrome-tab" [class.active]="activeTab === 'railway'" (click)="switchTab('railway')">
+      <fa-icon [icon]="['fas', 'train']"></fa-icon>
+      <span>Railway</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'logs'" (click)="switchTab('logs')">
+      <fa-icon [icon]="['fas', 'terminal']"></fa-icon>
+      <span>Logs</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'csp'" (click)="switchTab('csp')">
+      <fa-icon [icon]="['fas', 'bug']"></fa-icon>
+      <span>CSP Reports</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'tokens'" (click)="switchTab('tokens')">
+      <fa-icon [icon]="['fas', 'key']"></fa-icon>
+      <span>API Tokens</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
+  </div>
+
+  @if (activeTab === 'railway') {
+    <div class="space-y-6" @fadeInUp>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'train']" class="text-primary"></fa-icon> Railway Metrics
+          </h2>
+          <p class="text-sm text-on-surface-variant">Monitoreo de infraestructura en el tiempo</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-on-surface-variant font-bold">Desde</label>
+            <input type="datetime-local" [(ngModel)]="railwayDateFrom" class="input-field !py-1.5 !text-xs !h-auto">
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-on-surface-variant font-bold">Hasta</label>
+            <input type="datetime-local" [(ngModel)]="railwayDateTo" class="input-field !py-1.5 !text-xs !h-auto">
+          </div>
+          <app-button variant="primary" label="Filtrar" [icon]="['fas', 'search']" (clicked)="loadRailwayHistory()"></app-button>
+          <app-button variant="ghost" label="Refrescar" [icon]="['fas', 'sync']" (clicked)="loadRailwayHistory()"></app-button>
+        </div>
+      </div>
+
+      @if (railwaySnapshot?.data) {
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-4 flex items-center gap-4">
+            <fa-icon [icon]="['fas', 'microchip']" class="text-2xl text-primary"></fa-icon>
+            <div>
+              <span class="text-label-caps text-on-surface-variant">CPU actual</span>
+              <p class="text-lg font-bold text-on-surface">{{ railwaySnapshot.data.cpu.percentage }}%</p>
+            </div>
+          </div>
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-4 flex items-center gap-4">
+            <fa-icon [icon]="['fas', 'memory']" class="text-2xl text-info"></fa-icon>
+            <div>
+              <span class="text-label-caps text-on-surface-variant">Memoria actual</span>
+              <p class="text-lg font-bold text-on-surface">{{ railwaySnapshot.data.memory.percentage }}%</p>
+            </div>
+          </div>
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-4 flex items-center gap-4">
+            <fa-icon [icon]="['fas', 'server']" class="text-2xl" style="color: var(--color-outline);"></fa-icon>
+            <div>
+              <span class="text-label-caps text-on-surface-variant">Servicio</span>
+              <p class="text-sm font-bold text-success flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-success"></span> Activo
+              </p>
+            </div>
+          </div>
+          <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-4 flex items-center gap-4">
+            <fa-icon [icon]="['fas', 'clock']" class="text-2xl text-on-surface-variant"></fa-icon>
+            <div>
+              <span class="text-label-caps text-on-surface-variant">Rango</span>
+              <p class="text-sm font-mono text-on-surface">{{ railwayDateFrom | slice:0:10 }} — {{ railwayDateTo | slice:0:10 }}</p>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (railwayLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else if (railwayError) {
+        <div class="flex flex-col items-center py-16 text-center">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-3"></fa-icon>
+          <p class="text-error font-semibold">{{ railwayError }}</p>
+          <app-button variant="primary" label="Reintentar" (clicked)="loadRailwayHistory()" class="mt-3"></app-button>
+        </div>
+      } @else {
+        <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-6">
+          <div class="chart-container" style="position: relative; height: 380px;">
+            <canvas baseChart #railwayChart
+              type="bar"
+              [data]="railwayChartData"
+              [options]="railwayChartOptions">
+            </canvas>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  @if (activeTab === 'logs') {
+    <div class="space-y-4" @fadeInUp>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'terminal']" class="text-primary"></fa-icon> Visor de Logs
+          </h2>
+          <p class="text-sm text-on-surface-variant">Registros del servidor</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm"></fa-icon>
+            <input type="text" placeholder="Buscar..." [(ngModel)]="logsSearchQuery" (keyup.enter)="searchLogs()" class="input-field !pl-9 !py-2 !text-sm !h-auto">
+          </div>
+          <app-button variant="ghost" label="Refrescar" [icon]="['fas', 'sync']" (clicked)="loadLogs()"></app-button>
+        </div>
+      </div>
+
+      <div class="flex gap-1 bg-surface-container-high rounded-lg p-1 w-fit">
+        @for (l of logsLevels; track l) {
+          <button class="px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer"
+            [class.bg-surface-container-lowest]="logsLevelFilter === l"
+            [class.text-on-surface]="logsLevelFilter === l"
+            [class.text-on-surface-variant]="logsLevelFilter !== l"
+            (click)="setLogsLevel(l)">
+            {{ l || 'Todos' }}
+          </button>
+        }
+      </div>
+
+      <p class="text-xs text-on-surface-variant">{{ logs.length }} entradas</p>
+
+      @if (logsLoading) {
+        <div class="space-y-2">
+          @for (_ of [1,2,3,4,5]; track $index) {
+            <div class="h-10 bg-surface-container-high rounded-lg animate-pulse"></div>
+          }
+        </div>
+      } @else if (logsError) {
+        <div class="flex flex-col items-center py-12 text-center">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-3xl mb-3"></fa-icon>
+          <p class="text-error font-semibold">{{ logsError }}</p>
+          <app-button variant="primary" label="Reintentar" (clicked)="loadLogs()" class="mt-3"></app-button>
+        </div>
+      } @else {
+        <div class="bg-surface-container-high rounded-xl border border-border/20 overflow-hidden">
+          @for (log of logs; track $index) {
+            <div class="border-b border-border/10 last:border-b-0" (click)="toggleLogExpand($index)" [class.bg-surface-container-lowest]="logsExpandedIndex === $index">
+              <div class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-surface-container-low/50 transition-colors">
+                <span class="text-[11px] font-bold uppercase min-w-[4.5rem]" [style.color]="logLevelColor(log.level)">{{ log.level }}</span>
+                <span class="text-xs text-on-surface-variant/60 font-mono">{{ log.timestamp }}</span>
+                <span class="text-sm text-on-surface flex-1 truncate">{{ log.short_message }}</span>
+              </div>
+              @if (logsExpandedIndex === $index && log.exc_info) {
+                <div class="px-4 pb-3">
+                  <pre class="text-xs text-on-surface-variant bg-surface-container-high rounded-lg p-3 overflow-x-auto">{{ log.message }}</pre>
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="flex flex-col items-center py-12 text-center text-on-surface-variant/60">
+              <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl mb-2"></fa-icon>
+              <p class="text-sm font-medium">Sin registros</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (activeTab === 'csp') {
+    <div class="space-y-6" @fadeInUp>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'bug']" class="text-primary"></fa-icon> CSP Reports
+          </h2>
+          <p class="text-sm text-on-surface-variant">Monitoreo de seguridad y violaciones de contenido</p>
+        </div>
+        <app-button variant="secondary" label="Exportar CSV" [icon]="['fas', 'file-csv']" (clicked)="exportCspCsv()"></app-button>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-lg shadow-soft border border-border/20 p-4 flex flex-wrap gap-4 items-center">
+        <app-input id="vf-filter-directive" placeholder="Directiva" [(value)]="cspFilter.directive" (valueChange)="onCspFilterChange()"></app-input>
+        <app-input id="vf-filter-uri" placeholder="URI Bloqueada" [(value)]="cspFilter.blocked_uri" (valueChange)="onCspFilterChange()"></app-input>
+        <app-input id="vf-filter-since" type="date" [(value)]="cspFilter.since" (valueChange)="onCspFilterChange()"></app-input>
+      </div>
+
+      @if (cspLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else if (cspError) {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+          <p class="text-error font-semibold text-lg">{{ cspError }}</p>
+          <app-button variant="primary" label="Reintentar" (clicked)="loadCspReports()" class="mt-4"></app-button>
+        </div>
+      } @else {
+        <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+              <thead>
+                <tr class="bg-surface-container-high">
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Fecha</th>
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Documento</th>
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Directiva</th>
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">URI Bloqueada</th>
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">IP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/20">
+                @for (r of cspReports; track r.id) {
+                  <tr class="hover:bg-surface-container-high/80 text-sm">
+                    <td class="px-5 py-4 text-on-surface whitespace-nowrap">{{ r.received_at }}</td>
+                    <td class="px-5 py-4 text-on-surface max-w-[200px] truncate" [title]="r.document_uri">{{ r.document_uri }}</td>
+                    <td class="px-5 py-4">
+                      <span class="px-2 py-1 text-[10px] font-bold rounded bg-error-container text-error">{{ r.violated_directive }}</span>
+                    </td>
+                    <td class="px-5 py-4 text-on-surface max-w-[200px] truncate" [title]="r.blocked_uri">{{ r.blocked_uri }}</td>
+                    <td class="px-5 py-4 text-on-surface-variant font-mono text-xs">{{ r.ip_address || '—' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="px-5 py-16 text-center text-on-surface-variant/60">
+                      <fa-icon [icon]="['fas', 'shield-alt']" class="text-3xl mb-2"></fa-icon>
+                      <p class="text-sm font-medium">No hay reportes CSP</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        @if (cspPages > 1) {
+          <div class="flex justify-center gap-2">
+            @for (p of [].constructor(cspPages); track $index) {
+              <button (click)="goToCspPage($index + 1)" class="px-3 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer"
+                [class.bg-primary]="cspPage === $index + 1" [class.text-on-primary]="cspPage === $index + 1"
+                [class.bg-surface-container-high]="cspPage !== $index + 1" [class.text-on-surface]="cspPage !== $index + 1">
+                {{ $index + 1 }}
+              </button>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  @if (activeTab === 'tokens') {
+    <div class="space-y-6" @fadeInUp>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon> API Tokens
+          </h2>
+          <p class="text-sm text-on-surface-variant">Gestión de tokens de acceso para integraciones externas</p>
+        </div>
+        <app-button variant="primary" label="Generar Token" [icon]="['fas', 'plus']" (clicked)="openCreateTokenModal()"></app-button>
+      </div>
+
+      @if (tokensLoading) {
+        <div class="flex justify-center py-16">
+          <app-spinner size="md" colorClass="text-primary"></app-spinner>
+        </div>
+      } @else if (tokensError) {
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+          <p class="text-error font-semibold text-lg">{{ tokensError }}</p>
+          <app-button variant="primary" label="Reintentar" (clicked)="loadTokens()" class="mt-4"></app-button>
+        </div>
+      } @else {
+        <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/20 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[600px]">
+              <thead>
+                <tr class="bg-surface-container-high">
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">ID</th>
+                  <th class="px-5 py-4 text-left text-xs font-bold text-on-surface-variant uppercase">Creado</th>
+                  <th class="px-5 py-4 text-center text-xs font-bold text-on-surface-variant uppercase">Estado</th>
+                  <th class="px-5 py-4 text-right text-xs font-bold text-on-surface-variant uppercase">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/20">
+                @for (t of tokens; track t.id) {
+                  <tr class="hover:bg-surface-container-high/80 text-sm">
+                    <td class="px-5 py-4 font-mono text-on-surface">#{{ t.id }}</td>
+                    <td class="px-5 py-4 text-on-surface">{{ t.created_at }}</td>
+                    <td class="px-5 py-4 text-center">
+                      @if (t.is_active) {
+                        <span class="px-2 py-1 text-[10px] font-bold rounded bg-success-container text-success">Activo</span>
+                      } @else {
+                        <span class="px-2 py-1 text-[10px] font-bold rounded bg-surface-container-high text-on-surface-variant">Inactivo</span>
+                      }
+                    </td>
+                    <td class="px-5 py-4 text-right">
+                      @if (t.is_active) {
+                        <app-button variant="danger" label="Desactivar" (clicked)="deactivateToken(t.id)"></app-button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="px-5 py-16 text-center text-on-surface-variant/60">
+                      <fa-icon [icon]="['fas', 'key']" class="text-3xl mb-2"></fa-icon>
+                      <p class="text-sm font-medium">No hay tokens registrados</p>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<app-modal [isOpen]="showCreateModal" title="Generar Token" (close)="closeCreateTokenModal()">
+  @if (!newToken) {
+    <div class="space-y-4">
+      <p class="text-sm text-on-surface">Se generará un nuevo token de acceso. El token solo se mostrará una vez.</p>
+      <label class="flex items-center gap-3">
+        <input type="checkbox" [(ngModel)]="rotate" class="rounded text-primary focus:ring-primary">
+        <span class="text-sm text-on-surface">Desactivar tokens existentes</span>
+      </label>
+    </div>
+  } @else {
+    <div class="space-y-4">
+      <app-alert type="warning" message="Copia este token ahora. No se volverá a mostrar."></app-alert>
+      <div class="flex gap-2">
+        <input [value]="newToken" readonly class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+        <app-button variant="primary" label="Copiar" (clicked)="copyToken(newToken)"></app-button>
+      </div>
+    </div>
+  }
+
+  <div modal-footer>
+    @if (!newToken) {
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateTokenModal()"></app-button>
+      <app-button variant="primary" label="Generar" [disabled]="creating" (clicked)="createToken()"></app-button>
+    } @else {
+      <app-button variant="primary" label="Cerrar" (clicked)="closeCreateTokenModal()"></app-button>
+    }
+  </div>
+</app-modal>

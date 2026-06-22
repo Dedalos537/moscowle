@@ -3,12 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/animations';
-import { Subscription, Observable, timer } from 'rxjs';
-import { switchMap, shareReplay, map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
-import { LogViewerService, LogEntry } from '../../../../core/services/log-viewer.service';
 import { Sede } from '../../../../core/models/sede';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
@@ -74,23 +72,11 @@ export class Dashboard implements OnInit, OnDestroy {
   showGuidanceModal = false;
   showDailyModal = false;
 
-  railwayMetrics$: Observable<any> = timer(0, 60_000).pipe(
-    switchMap(() => this.adminService.getRailwayMetrics()),
-    shareReplay(1),
-  );
-
-  recentLogs$: Observable<LogEntry[]> = timer(0, 10_000).pipe(
-    switchMap(() => this.logViewer.getLogs(undefined, 5)),
-    map(res => res.logs),
-    shareReplay(1),
-  );
-
   private subscriptions = new Subscription();
 
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
-    private logViewer: LogViewerService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -288,16 +274,5 @@ export class Dashboard implements OnInit, OnDestroy {
 
   trackById(_index: number, item: any): number {
     return item.id;
-  }
-
-  logLevelColor(level: string): string {
-    const map: Record<string, string> = {
-      ERROR: 'var(--color-error)',
-      WARNING: 'var(--color-warning)',
-      INFO: 'var(--color-info)',
-      DEBUG: 'var(--color-outline)',
-      CRITICAL: 'var(--color-error)',
-    };
-    return map[level] || 'var(--color-on-surface-variant)';
   }
 }

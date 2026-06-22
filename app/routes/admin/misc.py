@@ -567,11 +567,11 @@ def profile():
     return render_template('admin/profile.html', active_page='admin_dashboard')
 
 
-@admin_bp.route('/api/railway-metrics')
-def api_railway_metrics():
+def _resolve_admin_user():
     user = None
     try:
         from flask_login import current_user as flask_user
+
         if flask_user.is_authenticated:
             user = flask_user
     except Exception:
@@ -582,14 +582,37 @@ def api_railway_metrics():
             uid = get_jwt_identity()
             if uid is not None:
                 from app.models import User
+
                 user = User.query.get(int(uid))
         except Exception:
             pass
+    return user
+
+
+@admin_bp.route('/api/railway-metrics')
+def api_railway_metrics():
+    user = _resolve_admin_user()
     if user is None or user.role not in ('admin', 'supervisor'):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 401
     from app.services.railway_service import get_railway_metrics
 
     result = get_railway_metrics()
+    return jsonify(result)
+
+
+@admin_bp.route('/api/railway-metrics/history')
+def api_railway_metrics_history():
+    user = _resolve_admin_user()
+    if user is None or user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+
+    from_dt = request.args.get('from')
+    to_dt = request.args.get('to')
+    bucket = request.args.get('bucket', '15m')
+
+    from app.services.railway_service import get_railway_metrics_history
+
+    result = get_railway_metrics_history(from_dt=from_dt, to_dt=to_dt, bucket=bucket)
     return jsonify(result)
 
 

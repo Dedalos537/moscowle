@@ -418,4 +418,27 @@ export class AdminService {
     return this.http.get<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; environment_id: string; service_id: string }; error?: string }>('/admin/api/railway-metrics');
   }
 
+  getRailwayMetricsHistory(from?: string, to?: string, bucket?: string): Observable<{
+    success: boolean;
+    data?: {
+      environment_id: string;
+      service_id: string;
+      start: string;
+      end: string;
+      series: {
+        CPU_USAGE: { ts: string; value: number }[];
+        CPU_LIMIT: { ts: string; value: number }[];
+        MEMORY_USAGE_GB: { ts: string; value: number }[];
+        MEMORY_LIMIT_GB: { ts: string; value: number }[];
+      };
+    };
+    error?: string;
+  }> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    if (bucket) params = params.set('bucket', bucket);
+    return this.http.get<any>('/admin/api/railway-metrics/history', { params });
+  }
+
 }
