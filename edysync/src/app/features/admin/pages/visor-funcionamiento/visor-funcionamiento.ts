@@ -160,7 +160,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   private timestamps(values: any[]): string[] {
     return values.map((v: any) => {
       const d = new Date(v.ts);
-      return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+      return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' });
     });
   }
 
@@ -194,20 +194,18 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     if (!s?.CPU_USAGE) { this.railwayError = 'No hay datos'; return; }
 
     const ts = this.timestamps(s.CPU_USAGE);
-    const cpuLimit = s.CPU_LIMIT?.[0]?.value || 1;
 
     // CPU
     const cpuVals = s.CPU_USAGE.map((v: any) => +(v.value).toFixed(3));
     this.cpuChartData = { labels: ts, datasets: [{ label: 'vCPU', data: cpuVals, borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-    this.cpuChartOptions = this.lineOptions(cpuVals, 'vCPU', cpuLimit);
+    this.cpuChartOptions = this.lineOptions(cpuVals, 'vCPU');
     this.cpuChartRef?.update();
 
     // Memory
     if (s.MEMORY_USAGE_GB?.length) {
       const memVals = s.MEMORY_USAGE_GB.map((v: any) => +(v.value).toFixed(3));
-      const memLimit = s.MEMORY_LIMIT_GB?.[0]?.value || 1;
       this.memChartData = { labels: ts, datasets: [{ label: 'GB', data: memVals, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-      this.memChartOptions = this.lineOptions(memVals, 'GB', memLimit);
+      this.memChartOptions = this.lineOptions(memVals, 'GB');
       this.memChartRef?.update();
     }
 

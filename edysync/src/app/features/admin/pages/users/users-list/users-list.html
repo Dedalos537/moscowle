@@ -76,31 +76,34 @@
     </div>
   }
 
-  <div class="card animate-fade-in" style="animation-delay:0.2s">
-    <div class="p-6 xl:p-8">
-      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-6 border-b border-border/20 pb-6">
-        <h3 class="text-h3 text-on-surface flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
-        </h3>
+  <div class="tab-sticky">
+    <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+      <h3 class="text-h3 text-on-surface flex items-center gap-2">
+        <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
+      </h3>
 
-        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
-          <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes" [clearable]="true" class="w-48"></app-select>
+      <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
+        <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes" [clearable]="true" class="w-48"></app-select>
 
-          <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions" placeholder="Todos los terapeutas" [clearable]="true" class="w-48"></app-select>
+        <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions" placeholder="Todos los terapeutas" [clearable]="true" class="w-48"></app-select>
 
-          <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full sm:w-56"></app-input>
+        <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)" class="w-full sm:w-56"></app-input>
 
-          <div class="flex gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
-            <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">Todos</button>
-            <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">Pacientes</button>
-            <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">Terapeutas</button>
-            <button (click)="setFilter('deudores')" class="btn-filter" [class.active]="activeFilter === 'deudores'">Deudores</button>
-            <button (click)="setFilter('retirados')" class="btn-filter" [class.active]="activeFilter === 'retirados'">Retirados</button>
-            <button (click)="setFilter('supervisor')" class="btn-filter" [class.active]="activeFilter === 'supervisor'">Supervisores</button>
-            <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">Admin</button>
-          </div>
+        <div class="flex gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
+          <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">Todos</button>
+          <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">Pacientes</button>
+          <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">Terapeutas</button>
+          <button (click)="setFilter('deudores')" class="btn-filter" [class.active]="activeFilter === 'deudores'">Deudores</button>
+          <button (click)="setFilter('retirados')" class="btn-filter" [class.active]="activeFilter === 'retirados'">Retirados</button>
+          <button (click)="setFilter('supervisor')" class="btn-filter" [class.active]="activeFilter === 'supervisor'">Supervisores</button>
+          <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">Admin</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="card animate-fade-in" style="animation-delay:0.2s">
+    <div class="p-6 xl:p-8">
 
       @if (loading) {
         <div class="flex justify-center py-20">
