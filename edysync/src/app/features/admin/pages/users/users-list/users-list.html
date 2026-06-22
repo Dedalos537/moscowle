@@ -1,5 +1,4 @@
 <div class="space-y-6 animate-fade-in" [@fadeInUp]>
-
   @if (!loading) {
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="stat-card animate-fade-in" style="animation-delay:0.02s">
@@ -76,7 +75,7 @@
     </div>
   }
 
-  <div class="tab-sticky">
+  <div class="tab-sticky bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
       <h3 class="text-h3 text-on-surface flex items-center gap-2">
         <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon> Directorio
