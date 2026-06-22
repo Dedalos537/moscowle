@@ -18,7 +18,6 @@ import { ApiTokens } from './pages/api-tokens/api-tokens';
 import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
-import { Logs } from './pages/logs/logs';
 import { VisorFuncionamiento } from './pages/visor-funcionamiento/visor-funcionamiento';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
 
@@ -46,7 +45,6 @@ const routes: Routes = [
       { path: 'profile', component: Profile },
       { path: 'yape-import', component: YapeImport },
       { path: 'ai', component: AiTraining },
-      { path: 'logs', component: Logs },
       { path: 'visor-funcionamiento', component: VisorFuncionamiento },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

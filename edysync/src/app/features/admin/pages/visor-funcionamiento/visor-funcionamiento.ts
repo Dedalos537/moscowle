@@ -11,7 +11,7 @@ import { LogViewerService, LogEntry } from '../../../../core/services/log-viewer
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { CSPReport, CSPReportFilter } from '../../../../core/models/csp-report';
 import { AdminAPIToken } from '../../../../core/models/api-token';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom, interval } from 'rxjs';
 import { fadeInUp, scaleIn, listStagger, cardEnter } from '../../../../core/animations';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
@@ -44,6 +44,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   private subs = new Subscription();
 
   @ViewChild('railwayChart') railwayChart?: BaseChartDirective;
+  @ViewChild('networkChart') networkChart?: BaseChartDirective;
 
   // --- Railway history ---
   railwayLoading = true;
@@ -52,6 +53,8 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   railwayDateTo = '';
   railwayChartData: ChartData<'bar'> = { labels: [], datasets: [] };
   railwayChartOptions: ChartConfiguration<'bar'>['options'] = {};
+  networkChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  networkChartOptions: ChartConfiguration<'line'>['options'] = {};
   railwaySnapshot: any = null;
 
   // --- Logs ---
@@ -61,8 +64,11 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   logsLevelFilter = '';
   logsSearchQuery = '';
   logsExpandedIndex: number | null = null;
+  logsAutoRefresh = false;
+  private logsRefreshSub?: Subscription;
   readonly logsLevels = ['', 'ERROR', 'WARNING', 'INFO', 'DEBUG'];
 
+  // --- CSP ---
   cspReports: CSPReport[] = [];
   cspLoading = false;
   cspError: string | null = null;
@@ -71,6 +77,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   cspPages = 1;
   cspFilter: CSPReportFilter = { directive: '', blocked_uri: '', since: '' };
 
+  // --- Tokens ---
   tokens: AdminAPIToken[] = [];
   tokensLoading = false;
   tokensError: string | null = null;
@@ -81,7 +88,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.headerService.setConfig({
-      title: 'Visor de Funcionamiento',
+      title: 'Centro de Operaciones',
       subtitle: 'Métricas, logs y seguridad del sistema',
       icon: ['fas', 'desktop'],
     });
@@ -99,12 +106,13 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.headerService.reset();
     this.subs.unsubscribe();
+    this.logsRefreshSub?.unsubscribe();
   }
 
   switchTab(tab: TabId) {
     this.activeTab = tab;
     if (tab === 'railway') {
-      setTimeout(() => this.railwayChart?.update(), 100);
+      setTimeout(() => { this.railwayChart?.update(); this.networkChart?.update(); }, 100);
     }
   }
 
@@ -134,6 +142,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
             return;
           }
           this.buildRailwayChart(res.data);
+          this.buildNetworkChart(res.data);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -145,7 +154,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  private buildRailwayChart(data: NonNullable<any>) {
+  private buildRailwayChart(data: any) {
     const series = data.series;
     if (!series?.CPU_USAGE || !series?.MEMORY_USAGE_GB) {
       this.railwayError = 'No hay datos históricos disponibles';
@@ -157,13 +166,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
     });
 
-    const cpuValues = series.CPU_USAGE.map((v: any) => +(v.value * (series.CPU_LIMIT?.[0]?.value || 1)).toFixed(2));
     const cpuLimit = series.CPU_LIMIT?.[0]?.value || 1;
     const cpuPercentage = series.CPU_USAGE.map((v: any) => +(v.value / cpuLimit * 100).toFixed(1));
 
-    const memValues = series.MEMORY_USAGE_GB.map((v: any) => +v.value.toFixed(3));
     const memLimit = series.MEMORY_LIMIT_GB?.[0]?.value || 1;
     const memPercentage = series.MEMORY_USAGE_GB.map((v: any) => +(v.value / memLimit * 100).toFixed(1));
+
+    const allValues = [...cpuPercentage, ...memPercentage];
+    const maxVal = Math.max(...allValues, 1);
+    const suggestedMax = Math.ceil(maxVal * 1.3);
 
     this.railwayChartData = {
       labels: timestamps,
@@ -175,7 +186,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
           borderColor: 'rgb(59, 130, 246)',
           borderWidth: 1,
           borderRadius: 4,
-          order: 1,
         },
         {
           label: 'Memoria (%)',
@@ -184,7 +194,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
           borderColor: 'rgb(16, 185, 129)',
           borderWidth: 1,
           borderRadius: 4,
-          order: 2,
         },
       ],
     };
@@ -212,16 +221,94 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         },
         y: {
           beginAtZero: true,
-          max: 100,
+          suggestedMax,
           grid: { color: 'rgba(0,0,0,0.06)' },
           ticks: { callback: (v) => `${v}%` },
         },
       },
     };
 
-    if (this.railwayChart) {
-      this.railwayChart.update();
-    }
+    if (this.railwayChart) this.railwayChart.update();
+  }
+
+  private buildNetworkChart(data: any) {
+    const series = data.series;
+    const rxRaw = series?.NETWORK_RX_BYTES;
+    const txRaw = series?.NETWORK_TX_BYTES;
+
+    if (!rxRaw?.length) return;
+
+    const timestamps = rxRaw.map((v: any) => {
+      const d = new Date(v.ts);
+      return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+    });
+
+    const rxData = rxRaw.map((v: any) => +(v.value / 1_000_000).toFixed(3));
+    const txData = txRaw?.length ? txRaw.map((v: any) => +(v.value / 1_000_000).toFixed(3)) : [];
+
+    const allNet = [...rxData, ...txData].filter(v => v > 0);
+    const maxNet = allNet.length ? Math.max(...allNet) : 1;
+    const suggestedMaxNet = Math.ceil(maxNet * 1.3);
+
+    this.networkChartData = {
+      labels: timestamps,
+      datasets: [
+        {
+          label: 'RX (Mbps)',
+          data: rxData,
+          backgroundColor: 'rgba(139, 92, 246, 0.15)',
+          borderColor: 'rgb(139, 92, 246)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+        },
+        {
+          label: 'TX (Mbps)',
+          data: txData,
+          backgroundColor: 'rgba(251, 146, 60, 0.15)',
+          borderColor: 'rgb(251, 146, 60)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+        },
+      ],
+    };
+
+    this.networkChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { usePointStyle: true, padding: 16, font: { family: 'var(--font-accent)', size: 12, weight: 700 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} Mbps`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { maxRotation: 45, font: { size: 10 } },
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: suggestedMaxNet,
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          ticks: { callback: (v) => `${v} Mbps` },
+        },
+      },
+    };
+
+    if (this.networkChart) this.networkChart.update();
   }
 
   // --- Logs ---
@@ -247,6 +334,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   toggleLogExpand(index: number) {
     this.logsExpandedIndex = this.logsExpandedIndex === index ? null : index;
+  }
+
+  toggleLogsAutoRefresh() {
+    this.logsAutoRefresh = !this.logsAutoRefresh;
+    if (this.logsAutoRefresh) {
+      this.logsRefreshSub = interval(5000).subscribe(() => this.loadLogs());
+    } else {
+      this.logsRefreshSub?.unsubscribe();
+    }
   }
 
   logLevelColor(level: string): string {
