@@ -43,19 +43,32 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   private subs = new Subscription();
 
-  @ViewChild('railwayChart') railwayChart?: BaseChartDirective;
-  @ViewChild('networkChart') networkChart?: BaseChartDirective;
+  @ViewChild('cpuChart') cpuChartRef?: BaseChartDirective;
+  @ViewChild('memChart') memChartRef?: BaseChartDirective;
+  @ViewChild('netChart') netChartRef?: BaseChartDirective;
+  @ViewChild('reqChart') reqChartRef?: BaseChartDirective;
+  @ViewChild('errChart') errChartRef?: BaseChartDirective;
+  @ViewChild('rtChart') rtChartRef?: BaseChartDirective;
 
   // --- Railway history ---
   railwayLoading = true;
   railwayError: string | null = null;
   railwayDateFrom = '';
   railwayDateTo = '';
-  railwayChartData: ChartData<'bar'> = { labels: [], datasets: [] };
-  railwayChartOptions: ChartConfiguration<'bar'>['options'] = {};
-  networkChartData: ChartData<'line'> = { labels: [], datasets: [] };
-  networkChartOptions: ChartConfiguration<'line'>['options'] = {};
   railwaySnapshot: any = null;
+
+  cpuChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  cpuChartOptions: ChartConfiguration<'line'>['options'] = {};
+  memChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  memChartOptions: ChartConfiguration<'line'>['options'] = {};
+  netChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  netChartOptions: ChartConfiguration<'line'>['options'] = {};
+  reqChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  reqChartOptions: ChartConfiguration<'line'>['options'] = {};
+  errChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  errChartOptions: ChartConfiguration<'line'>['options'] = {};
+  rtChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  rtChartOptions: ChartConfiguration<'line'>['options'] = {};
 
   // --- Logs ---
   logs: LogEntry[] = [];
@@ -112,7 +125,9 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   switchTab(tab: TabId) {
     this.activeTab = tab;
     if (tab === 'railway') {
-      setTimeout(() => { this.railwayChart?.update(); this.networkChart?.update(); }, 100);
+      setTimeout(() => {
+        [this.cpuChartRef, this.memChartRef, this.netChartRef, this.reqChartRef, this.errChartRef, this.rtChartRef].forEach(c => c?.update());
+      }, 100);
     }
   }
 
@@ -141,8 +156,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
             this.cdr.markForCheck();
             return;
           }
-          this.buildRailwayChart(res.data);
-          this.buildNetworkChart(res.data);
+          this.buildAllCharts(res.data);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -154,161 +168,108 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  private buildRailwayChart(data: any) {
-    const series = data.series;
-    if (!series?.CPU_USAGE || !series?.MEMORY_USAGE_GB) {
-      this.railwayError = 'No hay datos históricos disponibles';
-      return;
-    }
-
-    const timestamps = series.CPU_USAGE.map((v: any) => {
+  private timestamps(values: any[]): string[] {
+    return values.map((v: any) => {
       const d = new Date(v.ts);
       return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
     });
-
-    const cpuLimit = series.CPU_LIMIT?.[0]?.value || 1;
-    const cpuPercentage = series.CPU_USAGE.map((v: any) => +(v.value / cpuLimit * 100).toFixed(1));
-
-    const memLimit = series.MEMORY_LIMIT_GB?.[0]?.value || 1;
-    const memPercentage = series.MEMORY_USAGE_GB.map((v: any) => +(v.value / memLimit * 100).toFixed(1));
-
-    const allValues = [...cpuPercentage, ...memPercentage];
-    const maxVal = Math.max(...allValues, 1);
-    const suggestedMax = Math.ceil(maxVal * 1.3);
-
-    this.railwayChartData = {
-      labels: timestamps,
-      datasets: [
-        {
-          label: 'CPU (%)',
-          data: cpuPercentage,
-          backgroundColor: 'rgba(59, 130, 246, 0.7)',
-          borderColor: 'rgb(59, 130, 246)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: 'Memoria (%)',
-          data: memPercentage,
-          backgroundColor: 'rgba(16, 185, 129, 0.7)',
-          borderColor: 'rgb(16, 185, 129)',
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    };
-
-    this.railwayChartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: { usePointStyle: true, padding: 16, font: { family: 'var(--font-accent)', size: 12, weight: 700 } },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}%`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { maxRotation: 45, font: { size: 10 } },
-        },
-        y: {
-          beginAtZero: true,
-          suggestedMax,
-          grid: { color: 'rgba(0,0,0,0.06)' },
-          ticks: { callback: (v) => `${v}%` },
-        },
-      },
-    };
-
-    if (this.railwayChart) this.railwayChart.update();
   }
 
-  private buildNetworkChart(data: any) {
-    const series = data.series;
-    const rxRaw = series?.NETWORK_RX_BYTES;
-    const txRaw = series?.NETWORK_TX_BYTES;
-
-    if (!rxRaw?.length) return;
-
-    const timestamps = rxRaw.map((v: any) => {
-      const d = new Date(v.ts);
-      return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
-    });
-
-    const rxData = rxRaw.map((v: any) => +(v.value / 1_000_000).toFixed(3));
-    const txData = txRaw?.length ? txRaw.map((v: any) => +(v.value / 1_000_000).toFixed(3)) : [];
-
-    const allNet = [...rxData, ...txData].filter(v => v > 0);
-    const maxNet = allNet.length ? Math.max(...allNet) : 1;
-    const suggestedMaxNet = Math.ceil(maxNet * 1.3);
-
-    this.networkChartData = {
-      labels: timestamps,
-      datasets: [
-        {
-          label: 'RX (Mbps)',
-          data: rxData,
-          backgroundColor: 'rgba(139, 92, 246, 0.15)',
-          borderColor: 'rgb(139, 92, 246)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-        },
-        {
-          label: 'TX (Mbps)',
-          data: txData,
-          backgroundColor: 'rgba(251, 146, 60, 0.15)',
-          borderColor: 'rgb(251, 146, 60)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-        },
-      ],
-    };
-
-    this.networkChartOptions = {
+  private lineOptions(data: number[], unit: string, suggestedMaxOverride?: number): ChartConfiguration<'line'>['options'] {
+    const filtered = data.filter(v => v > 0);
+    const maxVal = filtered.length ? Math.max(...filtered) : 1;
+    return {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: { usePointStyle: true, padding: 16, font: { family: 'var(--font-accent)', size: 12, weight: 700 } },
-        },
+        legend: { display: false },
         tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} Mbps`,
-          },
+          callbacks: { label: (ctx) => `${ctx.parsed.y} ${unit}` },
         },
       },
       scales: {
-        x: {
-          grid: { display: false },
-          ticks: { maxRotation: 45, font: { size: 10 } },
-        },
+        x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
         y: {
           beginAtZero: true,
-          suggestedMax: suggestedMaxNet,
+          suggestedMax: suggestedMaxOverride ?? Math.ceil(maxVal * 1.3),
           grid: { color: 'rgba(0,0,0,0.06)' },
-          ticks: { callback: (v) => `${v} Mbps` },
+          ticks: { font: { size: 10 }, callback: (v) => `${v}${unit ? ' ' + unit : ''}` },
         },
       },
     };
+  }
 
-    if (this.networkChart) this.networkChart.update();
+  private buildAllCharts(data: any) {
+    const s = data.series;
+    if (!s?.CPU_USAGE) { this.railwayError = 'No hay datos'; return; }
+
+    const ts = this.timestamps(s.CPU_USAGE);
+    const cpuLimit = s.CPU_LIMIT?.[0]?.value || 1;
+
+    // CPU
+    const cpuVals = s.CPU_USAGE.map((v: any) => +(v.value).toFixed(3));
+    this.cpuChartData = { labels: ts, datasets: [{ label: 'vCPU', data: cpuVals, borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
+    this.cpuChartOptions = this.lineOptions(cpuVals, 'vCPU', cpuLimit);
+    this.cpuChartRef?.update();
+
+    // Memory
+    if (s.MEMORY_USAGE_GB?.length) {
+      const memVals = s.MEMORY_USAGE_GB.map((v: any) => +(v.value).toFixed(3));
+      const memLimit = s.MEMORY_LIMIT_GB?.[0]?.value || 1;
+      this.memChartData = { labels: ts, datasets: [{ label: 'GB', data: memVals, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
+      this.memChartOptions = this.lineOptions(memVals, 'GB', memLimit);
+      this.memChartRef?.update();
+    }
+
+    // Network
+    if (s.NETWORK_RX_BYTES?.length) {
+      const rx = s.NETWORK_RX_BYTES.map((v: any) => +(v.value / 1_000_000).toFixed(3));
+      const tx = s.NETWORK_TX_BYTES?.length ? s.NETWORK_TX_BYTES.map((v: any) => +(v.value / 1_000_000).toFixed(3)) : [];
+      const allNet = [...rx, ...tx].filter((v: number) => v > 0);
+      this.netChartData = {
+        labels: ts,
+        datasets: [
+          { label: 'RX (Mbps)', data: rx, borderColor: 'rgb(139, 92, 246)', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 },
+          ...(tx.length ? [{ label: 'TX (Mbps)', data: tx, borderColor: 'rgb(251, 146, 60)', backgroundColor: 'rgba(251,146,60,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] : []),
+        ],
+      };
+      this.netChartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 10, weight: 700 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} Mbps` } } },
+        scales: { x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { beginAtZero: true, suggestedMax: Math.ceil(Math.max(...allNet, 1) * 1.3), grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: (v) => `${v} Mbps` } } },
+      };
+      this.netChartRef?.update();
+    }
+
+    // Requests
+    if (s.REQUEST_COUNT?.length) {
+      const reqVals = s.REQUEST_COUNT.map((v: any) => v.value);
+      this.reqChartData = { labels: ts, datasets: [{ label: 'Solicitudes', data: reqVals, borderColor: 'rgb(245, 158, 11)', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
+      this.reqChartOptions = this.lineOptions(reqVals, '');
+      this.reqChartRef?.update();
+    }
+
+    // Error Rate
+    if (s.REQUEST_ERROR_COUNT?.length && s.REQUEST_COUNT?.length) {
+      const errRate = s.REQUEST_COUNT.map((v: any, i: number) => {
+        const total = v.value;
+        const err = s.REQUEST_ERROR_COUNT[i]?.value || 0;
+        return total > 0 ? +((err / total) * 100).toFixed(2) : 0;
+      });
+      this.errChartData = { labels: ts, datasets: [{ label: 'Error %', data: errRate, borderColor: 'rgb(239, 68, 68)', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
+      this.errChartOptions = this.lineOptions(errRate, '%');
+      this.errChartRef?.update();
+    }
+
+    // Response Time
+    if (s.RESPONSE_TIME_MS?.length) {
+      const rtVals = s.RESPONSE_TIME_MS.map((v: any) => v.value);
+      this.rtChartData = { labels: ts, datasets: [{ label: 'ms', data: rtVals, borderColor: 'rgb(20, 184, 166)', backgroundColor: 'rgba(20,184,166,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
+      this.rtChartOptions = this.lineOptions(rtVals, 'ms');
+      this.rtChartRef?.update();
+    }
   }
 
   // --- Logs ---

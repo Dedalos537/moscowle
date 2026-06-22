@@ -63,6 +63,7 @@ export class Finanzas implements OnInit, OnDestroy {
   isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
   @ViewChild('pagosSection', { static: false }) pagosSection?: ElementRef<HTMLElement>;
+  @ViewChild('pagosSubTabs', { static: false }) pagosSubTabs?: ElementRef<HTMLElement>;
 
   activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' | 'contratos' = 'resumen';
 
@@ -70,7 +71,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.activeTab = tab;
     if (tab === 'pagos') {
       setTimeout(() => {
-        this.pagosSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        (this.pagosSubTabs?.nativeElement ?? this.pagosSection?.nativeElement)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 150);
     }
   }

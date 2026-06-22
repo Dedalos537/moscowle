@@ -52,7 +52,7 @@ def get_railway_metrics():
         'environmentId': environment_id,
         'startDate': start_date,
         'endDate': end_date,
-        'measurements': ['CPU_USAGE', 'CPU_LIMIT', 'MEMORY_USAGE_GB', 'MEMORY_LIMIT_GB', 'NETWORK_RX_BYTES', 'NETWORK_TX_BYTES'],
+        'measurements': ['CPU_USAGE', 'CPU_LIMIT', 'MEMORY_USAGE_GB', 'MEMORY_LIMIT_GB', 'NETWORK_RX_BYTES', 'NETWORK_TX_BYTES', 'REQUEST_COUNT', 'REQUEST_ERROR_COUNT', 'RESPONSE_TIME_MS'],
     }
     if service_id:
         variables['serviceId'] = service_id
@@ -146,7 +146,7 @@ def get_railway_metrics_history(from_dt=None, to_dt=None, bucket='15m'):
         'environmentId': environment_id,
         'startDate': start_date,
         'endDate': end_date,
-        'measurements': ['CPU_USAGE', 'CPU_LIMIT', 'MEMORY_USAGE_GB', 'MEMORY_LIMIT_GB', 'NETWORK_RX_BYTES', 'NETWORK_TX_BYTES'],
+        'measurements': ['CPU_USAGE', 'CPU_LIMIT', 'MEMORY_USAGE_GB', 'MEMORY_LIMIT_GB', 'NETWORK_RX_BYTES', 'NETWORK_TX_BYTES', 'REQUEST_COUNT', 'REQUEST_ERROR_COUNT', 'RESPONSE_TIME_MS'],
     }
     if service_id:
         variables['serviceId'] = service_id

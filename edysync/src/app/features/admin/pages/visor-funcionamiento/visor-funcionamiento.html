@@ -95,31 +95,69 @@
             <app-button variant="primary" label="Reintentar" (clicked)="loadRailwayHistory()" class="mt-3"></app-button>
           </div>
         } @else {
-          <div class="chart-card">
-            <div class="chart-container" style="position: relative; height: 320px;">
-              <canvas baseChart #railwayChart
-                type="bar"
-                [data]="railwayChartData"
-                [options]="railwayChartOptions">
-              </canvas>
-            </div>
-          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          @if (networkChartData.labels?.length) {
             <div class="chart-card">
-              <div class="flex items-center gap-2 mb-4">
-                <fa-icon [icon]="['fas', 'network-wired']" class="text-sm" style="color: rgb(139, 92, 246);"></fa-icon>
-                <h3 class="text-sm font-bold text-on-surface">Tráfico de Red Pública</h3>
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'microchip']" class="text-sm text-primary"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">CPU</h3>
               </div>
-              <div class="chart-container" style="position: relative; height: 280px;">
-                <canvas baseChart #networkChart
-                  type="line"
-                  [data]="networkChartData"
-                  [options]="networkChartOptions">
-                </canvas>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #cpuChart type="line" [data]="cpuChartData" [options]="cpuChartOptions"></canvas>
               </div>
             </div>
-          }
+
+            <div class="chart-card">
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'memory']" class="text-sm text-info"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Memory</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #memChart type="line" [data]="memChartData" [options]="memChartOptions"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'network-wired']" class="text-sm" style="color: rgb(139, 92, 246);"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Public Network Traffic</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #netChart type="line" [data]="netChartData" [options]="netChartOptions"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'globe']" class="text-sm" style="color: rgb(245, 158, 11);"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Requests</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #reqChart type="line" [data]="reqChartData" [options]="reqChartOptions"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-sm text-error"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Request Error Rate</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #errChart type="line" [data]="errChartData" [options]="errChartOptions"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="flex items-center gap-2 mb-3">
+                <fa-icon [icon]="['fas', 'clock']" class="text-sm" style="color: rgb(20, 184, 166);"></fa-icon>
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Response Time</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #rtChart type="line" [data]="rtChartData" [options]="rtChartOptions"></canvas>
+              </div>
+            </div>
+
+          </div>
         }
       </div>
     </div>
