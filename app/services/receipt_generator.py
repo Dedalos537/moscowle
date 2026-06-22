@@ -145,15 +145,9 @@ def generate_receipt_pdf(payment, patient, installment=None, contract=None):
     elements.append(t_payment)
     elements.append(Spacer(1, 20))
 
-<<<<<<< HEAD
     amount_str = f'S/ {(payment.amount or 0):.2f}'
     discount_str = f'S/ {(payment.discount or 0):.2f}' if payment.discount else None
     net_str = f'S/ {((payment.amount or 0) - (payment.discount or 0)):.2f}'
-=======
-    amount_str = f'S/ {payment.amount:.2f}'
-    discount_str = f'S/ {payment.discount:.2f}' if payment.discount else None
-    net_str = f'S/ {payment.amount - (payment.discount or 0):.2f}'
->>>>>>> f1b7e09aa59329bf2cf74e154e23714089f13e80
 
     total_rows = [['', 'Subtotal:', amount_str]]
     if discount_str:
