@@ -96,6 +96,11 @@ export class Sedes implements OnInit, OnDestroy {
   }
 
   private loadAllAnalytics() {
+    const total = this.sedes.length;
+    if (!total) return;
+    let completed = 0;
+    let failures = 0;
+
     for (const sede of this.sedes) {
       this.subscriptions.add(
         this.adminService.getSedeAnalytics(sede.id).subscribe({
@@ -103,9 +108,26 @@ export class Sedes implements OnInit, OnDestroy {
             if (res.success && res.analytics) {
               sede.stats = res.analytics;
             }
+            completed++;
+            if (completed === total && failures > 0) {
+              this.toastService.show(
+                `${failures} de ${total} sedes no pudieron cargar analytics`,
+                'warning',
+              );
+            }
             this.cdr.markForCheck();
           },
-          error: () => this.cdr.markForCheck(),
+          error: () => {
+            completed++;
+            failures++;
+            if (completed === total) {
+              this.toastService.show(
+                `Error al cargar analytics de ${failures} sede${failures > 1 ? 's' : ''}`,
+                'error',
+              );
+            }
+            this.cdr.markForCheck();
+          },
         }),
       );
     }

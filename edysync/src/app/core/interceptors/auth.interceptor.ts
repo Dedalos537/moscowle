@@ -4,12 +4,16 @@ import {
   HttpHandler,
   HttpEvent,
   HttpInterceptor,
-  HttpErrorResponse
+  HttpErrorResponse,
+  HttpClient
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+
+let isRefreshing = false;
+let pendingRequests: Array<{ resolve: (value: boolean) => void }> = [];
 
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -19,7 +23,11 @@ function getCookie(name: string): string | null {
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private http: HttpClient,
+  ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const csrfToken = getCookie('csrf_token') || localStorage.getItem('csrf_token');
@@ -34,11 +42,50 @@ export class AuthInterceptor implements HttpInterceptor {
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401) {
-          this.router.navigate(['/auth/login']);
+        if (error.status === 401 && !request.url.includes('/api/auth/refresh')) {
+          return this.handle401(request, next);
         }
         return throwError(() => error);
       })
     );
+  }
+
+  private handle401(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    if (!isRefreshing) {
+      isRefreshing = true;
+
+      return this.http.post('/api/auth/refresh', {}, { withCredentials: true }).pipe(
+        switchMap(() => {
+          isRefreshing = false;
+          pendingRequests.forEach(p => p.resolve(true));
+          pendingRequests = [];
+          return next.handle(request);
+        }),
+        catchError((refreshError) => {
+          isRefreshing = false;
+          pendingRequests.forEach(p => p.resolve(false));
+          pendingRequests = [];
+          this.authService.clearSession();
+          this.router.navigate(['/auth/login']);
+          return throwError(() => refreshError);
+        }),
+      );
+    }
+
+    return new Observable<HttpEvent<unknown>>(observer => {
+      pendingRequests.push({
+        resolve: (success: boolean) => {
+          if (success) {
+            next.handle(request).subscribe({
+              next: e => observer.next(e),
+              error: e => observer.error(e),
+              complete: () => observer.complete(),
+            });
+          } else {
+            observer.error(request as any);
+          }
+        },
+      });
+    });
   }
 }
