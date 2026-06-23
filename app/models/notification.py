@@ -20,7 +20,9 @@ class Notification(db.Model, AuditMixin):
     metadata_json = db.Column(db.JSON, nullable=True)
 
     user = db.relationship(
-        'User', foreign_keys=[user_id], backref=db.backref('notifications', lazy=True, cascade='all, delete-orphan')
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'),
     )
 
 
@@ -36,5 +38,7 @@ class UserNotificationPreference(db.Model, AuditMixin):
     browser_notifications = db.Column(db.Boolean, default=False)
 
     user = db.relationship(
-        'User', backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan')
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'),
     )
