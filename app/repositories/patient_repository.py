@@ -1,5 +1,7 @@
-from app.models import User, Payment, Sede
 from sqlalchemy import func
+
+from app.models import Payment, Sede, User
+
 
 class PatientRepository:
     """Repository providing queries related to patients and payments."""

@@ -20,6 +20,8 @@ def handle_connect():
 
         emit('users:online', {'user_ids': list(online_users.keys())})
 
+        join_room(f'user_{user_id}')
+
         chats = Chat.query.join(ChatParticipant).filter(ChatParticipant.user_id == user_id).all()
         for chat in chats:
             join_room(f'chat_{chat.id}')

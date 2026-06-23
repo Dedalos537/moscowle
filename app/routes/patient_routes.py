@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 import uuid
@@ -65,9 +66,8 @@ def dashboard():
         s_end_aware = s_end_val.replace(tzinfo=UTC)
 
         is_active = False
-        if s.status == 'scheduled':
-            if s_start_aware <= now <= s_end_aware:
-                is_active = True
+        if s.status == 'scheduled' and s_start_aware <= now <= s_end_aware:
+            is_active = True
 
         sessions_data.append(
             {
@@ -363,7 +363,7 @@ def messages():
     )
 
     Message.query.filter(
-        Message.receiver_id == current_user.id, Message.sender_id == therapist.id, Message.is_read == False
+        Message.receiver_id == current_user.id, Message.sender_id == therapist.id, not Message.is_read
     ).update({'is_read': True})
     db.session.commit()
 
@@ -469,10 +469,8 @@ def api_patient_dashboard():
     now = get_user_now(current_user)
     for s in today_sessions:
         games = []
-        try:
+        with contextlib.suppress(BaseException):
             games = json.loads(s.games) if s.games else []
-        except:
-            pass
         s_start_aware = s.start_time.replace(tzinfo=UTC)
         s_end_val = s.end_time or (s.start_time + timedelta(hours=1))
         s_end_aware = s_end_val.replace(tzinfo=UTC)

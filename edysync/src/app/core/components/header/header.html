@@ -55,23 +55,24 @@
               <div (click)="markOneRead(notif.id)" class="p-3 hover:bg-primary-container/5 rounded-xl transition-colors border-b border-border/10 last:border-0 cursor-pointer">
                 <div class="flex items-start gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                       [class.bg-primary-container/15]="!notif.type || notif.type === 'default'"
-                       [class.bg-warning-container]="notif.type === 'debt'"
-                       [class.bg-info/10]="notif.type === 'activity'">
-                    @if (notif.type === 'debt') {
-                      <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning text-sm"></fa-icon>
-                    } @else if (notif.type === 'activity') {
-                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info text-sm"></fa-icon>
-                    } @else {
-                      <fa-icon [icon]="['fas', 'bell']" class="text-primary-container text-sm"></fa-icon>
-                    }
+                       [style.background]="'color-mix(in srgb, ' + getCatColor(notif.category) + ' 15%, transparent)'">
+                      <fa-icon [icon]="getCatIcon(notif.category)" class="text-sm"
+                               [style.color]="getCatColor(notif.category)"></fa-icon>
                   </div>
                   <div class="flex-1 min-w-0">
+                    @if (notif.title) {
+                      <p class="text-xs font-semibold text-on-surface mb-0.5">{{ notif.title }}</p>
+                    }
                     <p class="text-body-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
                     <p class="text-label-caps text-on-surface-variant mt-1 flex items-center gap-1">
                       <fa-icon [icon]="['fas', 'clock']" class="text-xs leading-none"></fa-icon> {{ notif.timestamp }}
                     </p>
                   </div>
+                  @if (notif.priority === 'urgent') {
+                    <span class="w-2 h-2 rounded-full bg-error shrink-0 mt-2"></span>
+                  } @else if (notif.priority === 'high') {
+                    <span class="w-2 h-2 rounded-full bg-warning shrink-0 mt-2"></span>
+                  }
                 </div>
               </div>
             } @empty {

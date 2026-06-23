@@ -1,6 +1,8 @@
 
 from functools import wraps
-from flask import redirect, url_for, jsonify
+
+from flask import jsonify, redirect, url_for
+
 from app.auth_compat import current_user
 
 
@@ -59,7 +61,7 @@ def therapist_required(f):
         if not current_user.is_authenticated or current_user.role != 'terapista':
             return jsonify({'error': 'Therapist access required'}), 403
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 
@@ -70,5 +72,5 @@ def patient_required(f):
         if not current_user.is_authenticated or current_user.role != 'jugador':
             return jsonify({'error': 'Patient access required'}), 403
         return f(*args, **kwargs)
-    
+
     return decorated_function

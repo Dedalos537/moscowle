@@ -22,7 +22,7 @@ class UserDAO(BaseDAO[User]):
             stmt = (
                 select(User)
                 .where(User.role == 'terapista')
-                .where(User.is_active == True)
+                .where(User.is_active)
                 .offset(skip)
                 .limit(limit)
                 .options(selectinload(User.assigned_sedes))

@@ -1,7 +1,6 @@
-import os
+from flask import current_app, has_request_context
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from flask import current_app, has_request_context
 
 
 class RoutingSession(Session):

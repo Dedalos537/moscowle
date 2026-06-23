@@ -187,7 +187,7 @@ Centro de Terapias"""
             if not phone_number.startswith('+'):
                 phone_number = f'+{phone_number}'
 
-            message = self.twilio_client.messages.create(body=message_body, from_=self.from_phone, to=phone_number)
+            self.twilio_client.messages.create(body=message_body, from_=self.from_phone, to=phone_number)
 
             current_app.logger.info(f' Payment confirmation SMS sent to {phone_number}')
             return True
@@ -224,7 +224,7 @@ Centro de Terapias"""
 
                 whatsapp_to = f'whatsapp:{phone_number}'
 
-                message = self.twilio_client.messages.create(
+                self.twilio_client.messages.create(
                     body=message_body, from_=self.whatsapp_from, to=whatsapp_to
                 )
 

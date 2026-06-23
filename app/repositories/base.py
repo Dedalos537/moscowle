@@ -1,5 +1,7 @@
-from typing import Generic, TypeVar, Optional, Type
+from typing import Generic, Type, TypeVar
+
 from flask import abort
+
 from app.extensions import db
 
 T = TypeVar('T')
@@ -9,7 +11,7 @@ class BaseRepository(Generic[T]):
     def __init__(self, model_class: Type[T]):
         self.model = model_class
 
-    def get_by_id(self, id_val: int) -> Optional[T]:
+    def get_by_id(self, id_val: int) -> T | None:
         return self.model.query.get(id_val)
 
     def get_by_id_or_404(self, id_val: int) -> T:

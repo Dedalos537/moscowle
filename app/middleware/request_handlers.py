@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from flask import Flask, g, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
 from app.auth_compat import current_user
 
 
@@ -23,9 +24,7 @@ def _is_api_request() -> bool:
     if request.is_json:
         return True
     accept = request.headers.get('Accept', '')
-    if '*/*' in accept:
-        return True
-    return False
+    return '*/*' in accept
 
 
 def register_request_handlers(app: Flask) -> None:

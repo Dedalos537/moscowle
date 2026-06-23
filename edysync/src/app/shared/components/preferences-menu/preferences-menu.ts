@@ -1,6 +1,7 @@
 import {
   Component,
   inject,
+  signal,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   input,
@@ -11,6 +12,9 @@ import { AsyncPipe } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ThemeService } from '../../../core/services/theme.service';
 import { GlobalSettingsService } from '../../../core/services/global-settings.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { NotificationPreferences } from '../../../core/models/notification';
 
 @Component({
   selector: 'app-preferences-menu',
@@ -32,7 +36,7 @@ import { GlobalSettingsService } from '../../../core/services/global-settings.se
 
       @if (open) {
         <div
-          class="absolute right-0 mt-3 w-72 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
+          class="absolute right-0 mt-3 w-80 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col animate-fade-in"
           (click)="$event.stopPropagation()"
         >
           <div class="p-4 border-b border-border/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
@@ -47,7 +51,7 @@ import { GlobalSettingsService } from '../../../core/services/global-settings.se
             </button>
           </div>
 
-          <div class="p-3 space-y-1">
+          <div class="p-3 space-y-1 max-h-[60vh] overflow-y-auto">
             <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
@@ -93,6 +97,138 @@ import { GlobalSettingsService } from '../../../core/services/global-settings.se
                 <span class="pref-switch__knob"></span>
               </button>
             </div>
+
+            @if (userRole() === 'admin') {
+              <div class="border-t border-border/20 pt-3 mt-3">
+                <div class="px-3 mb-2">
+                  <p class="text-xs font-bold text-on-surface uppercase tracking-wider">Notificaciones</p>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-warning-container flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning text-sm"></fa-icon>
+                    </div>
+                    <p class="text-sm font-semibold text-on-surface">Deudas</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleCategory('debt')"
+                    [class.pref-switch--on]="prefs.debt_enabled"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info text-sm"></fa-icon>
+                    </div>
+                    <p class="text-sm font-semibold text-on-surface">Actividad</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleCategory('activity')"
+                    [class.pref-switch--on]="prefs.activity_enabled"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'cog']" class="text-primary text-sm"></fa-icon>
+                    </div>
+                    <p class="text-sm font-semibold text-on-surface">Sistema</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleCategory('system')"
+                    [class.pref-switch--on]="prefs.system_enabled"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-error-container flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error text-sm"></fa-icon>
+                    </div>
+                    <p class="text-sm font-semibold text-on-surface">Alertas</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleCategory('alert')"
+                    [class.pref-switch--on]="prefs.alert_enabled"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-tertiary-container flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'credit-card']" class="text-tertiary text-sm"></fa-icon>
+                    </div>
+                    <p class="text-sm font-semibold text-on-surface">Pagos</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleCategory('payment')"
+                    [class.pref-switch--on]="prefs.payment_enabled"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                <div class="border-t border-border/10 pt-2 mt-2 space-y-1">
+                  <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                        <fa-icon [icon]="['fas', 'volume-up']" class="text-on-surface-variant text-sm"></fa-icon>
+                      </div>
+                      <p class="text-sm font-semibold text-on-surface">Sonido</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="pref-switch"
+                      (click)="toggleSound()"
+                      [class.pref-switch--on]="prefs.sound_enabled"
+                    >
+                      <span class="pref-switch__knob"></span>
+                    </button>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-8 h-8 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
+                        <fa-icon [icon]="['fas', 'desktop']" class="text-on-surface-variant text-sm"></fa-icon>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-semibold text-on-surface">Notif. Escritorio</p>
+                        <p class="text-xs text-on-surface-variant">Notificaciones del navegador</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="pref-switch"
+                      (click)="toggleBrowserNotif()"
+                      [class.pref-switch--on]="prefs.browser_notifications"
+                    >
+                      <span class="pref-switch__knob"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
           </div>
         </div>
       }
@@ -146,10 +282,27 @@ export class PreferencesMenu {
   open = false;
   theme = inject(ThemeService);
   settings = inject(GlobalSettingsService);
+  notifService = inject(NotificationService);
+  auth = inject(AuthService);
   hideCharts = this.settings.hideCharts;
+  userRole = signal('');
+
+  get prefs() {
+    return this.notifService.preferences() || {
+      debt_enabled: true, activity_enabled: true, system_enabled: true,
+      alert_enabled: true, payment_enabled: true, sound_enabled: true, browser_notifications: false
+    };
+  }
 
   private cdr = inject(ChangeDetectorRef);
   private el = inject(ElementRef);
+
+  constructor() {
+    this.auth.currentUser$.subscribe(u => {
+      this.userRole.set(u?.role || '');
+      this.cdr.markForCheck();
+    });
+  }
 
   toggle(event: MouseEvent): void {
     event.stopPropagation();
@@ -171,6 +324,35 @@ export class PreferencesMenu {
   toggleCharts(): void {
     this.settings.toggleHideCharts();
     this.cdr.markForCheck();
+  }
+
+  toggleCategory(cat: string): void {
+    const prefs = this.notifService.preferences();
+    if (!prefs) return;
+    const key = `${cat}_enabled` as keyof NotificationPreferences;
+    this.notifService.updatePreferences({ [key]: !prefs[key] }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
+  }
+
+  toggleSound(): void {
+    const prefs = this.notifService.preferences();
+    if (!prefs) return;
+    this.notifService.updatePreferences({ sound_enabled: !prefs.sound_enabled }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
+  }
+
+  toggleBrowserNotif(): void {
+    const prefs = this.notifService.preferences();
+    if (!prefs) return;
+    const newVal = !prefs.browser_notifications;
+    if (newVal) {
+      this.notifService.requestBrowserPermission();
+    }
+    this.notifService.updatePreferences({ browser_notifications: newVal }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
   }
 
   @HostListener('document:click', ['$event'])

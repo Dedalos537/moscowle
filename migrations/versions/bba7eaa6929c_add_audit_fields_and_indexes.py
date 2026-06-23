@@ -11,9 +11,8 @@ down_revision = 'bba7eaa6929b'
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 TABLES = [
     'user', 'sede', 'smart_action', 'csp_report', 'admin_api_token',

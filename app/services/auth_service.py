@@ -1,4 +1,3 @@
-import secrets
 
 from app.extensions import bcrypt
 from app.repositories.user_repository import UserRepository

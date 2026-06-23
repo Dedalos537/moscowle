@@ -1,5 +1,6 @@
 import re
-from marshmallow import Schema, fields, validate, ValidationError
+
+from marshmallow import Schema, ValidationError, fields, validate
 
 
 def validate_password_strength(value):

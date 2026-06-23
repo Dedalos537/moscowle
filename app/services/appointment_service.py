@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 from datetime import datetime, timedelta
@@ -103,7 +104,7 @@ class AppointmentService:
             Appointment.status == 'scheduled',
             or_(
                 Appointment.end_time < now,
-                and_(Appointment.end_time == None, Appointment.start_time < now - timedelta(hours=1)),
+                and_(Appointment.end_time is None, Appointment.start_time < now - timedelta(hours=1)),
             ),
         ).all()
 
@@ -246,12 +247,10 @@ class AppointmentService:
 
         db.session.commit()
 
-        try:
+        with contextlib.suppress(Exception):
             self.notification_service.create_notification(
                 appt.patient_id, f'Se actualizó la sesión: {appt.title}', link=url_for('patient.calendar')
             )
-        except Exception:
-            pass
 
         return appt
 
@@ -355,10 +354,9 @@ class AppointmentService:
                 return appt
             raise ValueError(f"Transición inválida: no se puede cambiar de '{current_status}' a '{new_status}'")
 
-        if new_status == 'completed':
-            if appt.end_time and appt.end_time > datetime.utcnow():
-                if appt.end_time > datetime.utcnow() + timedelta(minutes=15):
-                    raise ValueError('No se puede completar una sesión futura')
+        if new_status == 'completed' and appt.end_time and appt.end_time > datetime.utcnow():
+            if appt.end_time > datetime.utcnow() + timedelta(minutes=15):
+                raise ValueError('No se puede completar una sesión futura')
 
         old_status = appt.status
         appt.status = new_status

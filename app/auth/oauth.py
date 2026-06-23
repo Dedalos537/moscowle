@@ -1,6 +1,7 @@
-from flask import Blueprint, redirect, request, jsonify, url_for, current_app
 from authlib.integrations.flask_client import OAuth
-from flask_jwt_extended import create_access_token, set_access_cookies, create_refresh_token, set_refresh_cookies
+from flask import Blueprint, redirect, url_for
+from flask_jwt_extended import create_access_token, create_refresh_token, set_access_cookies, set_refresh_cookies
+
 from app.extensions import db
 from app.models.user import User
 
@@ -64,7 +65,7 @@ def facebook_login():
 
 @oauth_bp.route('/callback/facebook')
 def facebook_callback():
-    token = _facebook.authorize_access_token()
+    _facebook.authorize_access_token()
     resp = _facebook.get('https://graph.facebook.com/me?fields=id,name,email')
     profile = resp.json()
     user = _find_or_create_oauth_user(

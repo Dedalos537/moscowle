@@ -1,5 +1,5 @@
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
-from flask_jwt_extended import create_access_token, set_access_cookies, verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import create_access_token, set_access_cookies
 
 from app.auth_compat import current_user, login_required
 from app.extensions import db

@@ -1,12 +1,14 @@
-from datetime import datetime, timezone
-from app.extensions import db
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import declared_attr
+
+from app.extensions import db
 
 
 class AuditMixin:
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
-    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc), nullable=True)
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(UTC), nullable=True)
 
     @declared_attr
     def created_by(cls):

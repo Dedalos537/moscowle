@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, Signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
+import { NotificationService } from '../../services/notification.service';
 import { HelpStateService } from '../../../shared/contextual-help/services/help-state.service';
 import { Subscription } from 'rxjs';
 
@@ -31,6 +32,13 @@ export class Sidebar implements OnInit, OnDestroy {
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
+  notifCount = 0;
+
+  private notifService = inject(NotificationService);
+  private notifEffect = effect(() => {
+    this.notifCount = this.notifService.unreadCount();
+    this.cdr.markForCheck();
+  });
 
   private subs = new Subscription();
 

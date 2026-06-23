@@ -6,6 +6,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 # Errors are printed to stderr (visible in Railway logs); the blueprint is still
 # registered with whatever routes loaded successfully.
 import sys as _sys
+
 _modules = ['sessions', 'admin', 'reports', 'payments', 'games', 'notifications', 'misc']
 for _mod in _modules:
     try:

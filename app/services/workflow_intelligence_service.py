@@ -27,7 +27,7 @@ class WorkflowPattern:
         self.intent_sequence.append(intent)
         self.session_start = timestamp
 
-        for key, value in params.items():
+        for _key, value in params.items():
             if isinstance(value, (str, int, float)):
                 self.common_parameters[intent][str(value)] += 1
 

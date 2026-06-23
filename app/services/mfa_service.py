@@ -1,6 +1,7 @@
-import io
 import base64
+import io
 from datetime import datetime, timedelta
+
 import pyotp
 import qrcode
 

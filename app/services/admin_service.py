@@ -1,3 +1,4 @@
+import contextlib
 import uuid
 from datetime import datetime, timedelta
 
@@ -90,9 +91,8 @@ class AdminService:
         role = data.get('role')
         username = data.get('username')
 
-        if email:
-            if User.query.filter_by(email=email).first():
-                return False, 'El correo ya está registrado'
+        if email and User.query.filter_by(email=email).first():
+            return False, 'El correo ya está registrado'
 
         is_active = True
         plain_password = None
@@ -180,7 +180,7 @@ class AdminService:
         db.session.add(user)
         db.session.commit()
 
-        if role == 'jugador' and data.get('generate_schedule') == True:
+        if role == 'jugador' and data.get('generate_schedule'):
             try:
                 start_date_str = data.get('start_date')
                 start_time_str = data.get('start_time')
@@ -195,10 +195,8 @@ class AdminService:
                 print(f'Error generating schedule: {e}')
 
         if is_active and 'noemail_' not in email:
-            try:
+            with contextlib.suppress(Exception):
                 self.email_service.send_welcome_email(email, plain_password, user.username)
-            except Exception:
-                pass
 
         return True, {'user': user, 'temp_password': plain_password if is_active else 'N/A (Presencial)'}
 

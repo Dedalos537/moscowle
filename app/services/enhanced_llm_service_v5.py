@@ -470,7 +470,7 @@ def get_semantic_confidence(message: str, intent_key: str) -> float:
 
 
 def detect_user_intent_v5(message: str) -> tuple:
-    msg_lower = message.lower()
+    message.lower()
     scores = {k: get_semantic_confidence(message, k) for k in SEMANTIC_MAPS}
     valid_intents = [(k, v) for k, v in scores.items() if v > 0.0]
     valid_intents.sort(key=lambda x: x[1], reverse=True)

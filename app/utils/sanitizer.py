@@ -1,6 +1,6 @@
-import bleach
 import html
 
+import bleach
 
 ALLOWED_TAGS = []
 ALLOWED_ATTRIBUTES = {}

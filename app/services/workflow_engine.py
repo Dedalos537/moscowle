@@ -50,7 +50,7 @@ class WorkflowEngine:
 
         critical_patients = User.query.filter(
             User.role == 'jugador',
-            User.is_active == True,
+            User.is_active,
             User.sessions_total > 0,
             User.sessions_attended >= User.sessions_total,
         ).all()
@@ -69,7 +69,7 @@ class WorkflowEngine:
             )
             actions_generated += 1
 
-        if today.day == 1 or today.day == 15:
+        if today.day in {1, 15}:
             self._create_smart_action(
                 module='finanzas',
                 description=f'Recordatorio mensual: Registrar gastos de servicios (Luz/Agua/Internet) del día {today.day}.',

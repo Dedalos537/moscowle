@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify
-from app.auth_compat import login_required, g
+from flask import Blueprint, jsonify, request
+
+from app.auth_compat import g, login_required
 from app.repositories.service_request_repo import service_request_repo
 from app.utils.api_helpers import api_response
 

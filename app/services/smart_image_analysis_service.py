@@ -129,9 +129,9 @@ class SmartImageAnalyzer:
             from PIL import ImageFilter
 
             img_filtered = img_gray.filter(ImageFilter.SHARPEN)
-            img_enhanced = Image.new('L', img_filtered.size, 255)
+            Image.new('L', img_filtered.size, 255)
 
-            img_mixed = Image.blend(img_gray.convert('RGB'), img_filtered.convert('RGB'), 0.7)
+            Image.blend(img_gray.convert('RGB'), img_filtered.convert('RGB'), 0.7)
 
             return None
 

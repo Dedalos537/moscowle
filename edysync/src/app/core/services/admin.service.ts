@@ -12,6 +12,7 @@ import { CSPReport, CSPReportFilter, CSPReportResponse } from '../models/csp-rep
 import { AdminAPIToken, CreateTokenResponse } from '../models/api-token';
 import { YapeTransaction, YapeImportStats, YapeDashboardStats } from '../models/yape';
 import { AITrainingStatus, TrainResponse } from '../models/ai-training';
+import { NotificationItem, NotificationPreferences } from '../models/notification';
 
 @Injectable({
   providedIn: 'root',
@@ -174,8 +175,24 @@ export class AdminService {
     return this.http.post<any>('/admin/analyze-receipt', formData);
   }
 
-  getNotifications(): Observable<any[]> {
-    return this.http.get<any[]>('/api/notifications');
+  getNotifications(): Observable<NotificationItem[]> {
+    return this.http.get<NotificationItem[]>('/api/notifications');
+  }
+
+  getNotificationCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>('/api/notifications/count');
+  }
+
+  getNotificationsByCategory(category: string): Observable<NotificationItem[]> {
+    return this.http.get<NotificationItem[]>(`/api/notifications/category/${category}`);
+  }
+
+  getNotificationPreferences(): Observable<NotificationPreferences> {
+    return this.http.get<NotificationPreferences>('/api/notifications/preferences');
+  }
+
+  updateNotificationPreferences(data: Partial<NotificationPreferences>): Observable<any> {
+    return this.http.put('/api/notifications/preferences', data);
   }
 
   markNotificationsRead(): Observable<ApiResponse> {

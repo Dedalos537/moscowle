@@ -410,7 +410,7 @@ class YapeService:
     def get_unattached_expenses(self, limit=50):
         """Yape sin comprobante adjunto"""
         return (
-            YapeTransaction.query.filter(YapeTransaction.receipt_image_path == None, YapeTransaction.is_expense == True)
+            YapeTransaction.query.filter(YapeTransaction.receipt_image_path is None, YapeTransaction.is_expense)
             .order_by(YapeTransaction.transaction_date.desc())
             .limit(limit)
             .all()

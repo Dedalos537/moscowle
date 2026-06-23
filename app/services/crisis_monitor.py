@@ -2,8 +2,9 @@ import logging
 import threading
 import time
 from datetime import datetime, timedelta
-from flask import current_app
+
 from sqlalchemy import text
+
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 def send_slack_alert(webhook_url, alert):
     import requests
     payload = {
-        "text": f"*🚨 CrisisMonitor Alert*",
+        "text": "*🚨 CrisisMonitor Alert*",
         "blocks": [
             {
                 "type": "header",
@@ -61,6 +62,7 @@ def send_telegram_alert(bot_token, chat_id, alert):
 def send_email_alert(recipient, alert):
     try:
         from flask_mail import Message as MailMessage
+
         from app.extensions import mail
         subject = f"[CrisisMonitor] {alert['type'].replace('_', ' ').title()}"
         body = (

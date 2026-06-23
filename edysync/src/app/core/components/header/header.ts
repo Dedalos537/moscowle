@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../services/header.service';
@@ -11,6 +11,8 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 import { Button } from '../../../shared/components/button/button';
 import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
+import { NotificationService } from '../../services/notification.service';
+import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationItem } from '../../models/notification';
 
 @Component({
   selector: 'app-header',
@@ -34,6 +36,14 @@ export class Header implements OnInit, OnDestroy {
   private recordingSub!: Subscription;
   private subs = new Subscription();
 
+  CATEGORY_ICONS = CATEGORY_ICONS;
+  CATEGORY_COLORS = CATEGORY_COLORS;
+  private notifEffect = effect(() => {
+    this.notifications = this.notifService.notifications();
+    this.unreadCount = this.notifService.unreadCount();
+    this.cdr.markForCheck();
+  });
+
   constructor(
     public headerService: HeaderService,
     private adminService: AdminService,
@@ -43,6 +53,7 @@ export class Header implements OnInit, OnDestroy {
     private router: Router,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
+    public notifService: NotificationService,
   ) {}
 
   toggleSidebar() {
@@ -58,7 +69,7 @@ export class Header implements OnInit, OnDestroy {
       this.isRecording = state === 'recording' || state === 'starting' || state === 'mic_error';
       this.cdr.markForCheck();
     });
-    this.fetchNotifications();
+    this.notifService.fetchNotifications();
   }
 
   ngOnDestroy() {
@@ -71,38 +82,16 @@ export class Header implements OnInit, OnDestroy {
     this.showNotifications = !this.showNotifications;
     this.showUserMenu = false;
     if (this.showNotifications) {
-      this.fetchNotifications();
+      this.notifService.fetchNotifications();
     }
   }
 
   markAllAsRead() {
-    this.subs.add(this.adminService.markNotificationsRead().subscribe({
-      next: () => {
-        this.unreadCount = 0;
-        this.notifications = [];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-        this.fetchNotifications();
-      },
-    }));
+    this.notifService.markAllRead();
   }
 
   markOneRead(notifId: number) {
-    this.subs.add(this.adminService.markOneNotificationRead(notifId).subscribe({
-      next: () => {
-        this.notifications = this.notifications.filter(n => n.id !== notifId);
-        this.unreadCount = this.notifications.length;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-        this.fetchNotifications();
-      },
-    }));
+    this.notifService.markOneRead(notifId);
   }
 
   toggleUserMenu() {
@@ -110,24 +99,16 @@ export class Header implements OnInit, OnDestroy {
     this.showNotifications = false;
   }
 
-  fetchNotifications() {
-    this.subs.add(this.adminService.getNotifications().subscribe({
-      next: (data) => {
-        this.notifications = data || [];
-        this.unreadCount = this.notifications.length;
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.notifications = [];
-        this.unreadCount = 0;
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
   isString(value: any): boolean {
     return typeof value === 'string';
+  }
+
+  getCatIcon(cat: string): any {
+    return (CATEGORY_ICONS as any)[cat] || ['fas', 'bell'];
+  }
+
+  getCatColor(cat: string): string {
+    return (CATEGORY_COLORS as any)[cat] || 'var(--color-primary-container)';
   }
 
   async logout() {

@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime, timedelta
 
 from sqlalchemy import func
@@ -144,12 +145,10 @@ class PaymentService:
 
             db.session.commit()
 
-            try:
+            with contextlib.suppress(Exception):
                 self.email_service.send_payment_confirmation(
                     user.email, user.username, amount, new_payment.date, method
                 )
-            except Exception:
-                pass
 
             return True, new_payment
         except Exception as e:
@@ -180,7 +179,7 @@ class PaymentService:
         """Desactivar usuarios vencidos"""
         today = datetime.utcnow().date()
         overdue_users = User.query.filter(
-            User.role == 'jugador', User.is_active == True, User.payment_due_date < today
+            User.role == 'jugador', User.is_active, User.payment_due_date < today
         ).all()
 
         count = 0
@@ -196,7 +195,7 @@ class PaymentService:
     def check_upcoming_due_dates(self):
         """Revisar próximos pagos para recordatorios"""
         target_users = User.query.filter(
-            User.role == 'jugador', User.is_active == True, User.payment_due_date.isnot(None)
+            User.role == 'jugador', User.is_active, User.payment_due_date.isnot(None)
         ).all()
         today = datetime.utcnow().date()
 
@@ -207,7 +206,7 @@ class PaymentService:
 
             delta = (user.payment_due_date - today).days
 
-            if delta == 3 or delta == 0:
+            if delta in {3, 0}:
                 is_urgent = delta == 0
 
                 self.email_service.send_payment_reminder(

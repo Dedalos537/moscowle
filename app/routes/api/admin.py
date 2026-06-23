@@ -1,3 +1,5 @@
+import contextlib
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -264,12 +266,10 @@ def api_admin_update_profile():
     if new_password:
         current_user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
         changed = True
-        try:
+        with contextlib.suppress(Exception):
             EmailService.send_password_change_email(
                 current_user.email, new_password, current_user.username or 'Administrador'
             )
-        except Exception:
-            pass
     if changed:
         db.session.commit()
     return jsonify({'success': True})

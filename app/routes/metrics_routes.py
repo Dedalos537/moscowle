@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, Response, current_app, jsonify
 
@@ -9,7 +9,7 @@ metrics_bp = Blueprint('metrics', __name__, url_prefix='')
 def health():
     return jsonify({
         'status': 'ok',
-        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'timestamp': datetime.now(UTC).isoformat(),
         'app': current_app.name,
     })
 
@@ -19,7 +19,7 @@ def metrics():
     import os
     import time
 
-    pid = os.getpid()
+    os.getpid()
     now = time.time()
     uptime = current_app.config.get('START_TIME', now)
 
@@ -44,6 +44,7 @@ def metrics():
 
     try:
         import sqlalchemy
+
         from app.extensions import db
         engine = db.get_engine()
         with engine.connect() as conn:

@@ -1,9 +1,10 @@
-import os
-import json
 import base64
+import json
+import os
 import time
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from dotenv import load_dotenv
 
 warnings.filterwarnings('ignore', message='.*google.generativeai.*has ended.*')
@@ -57,7 +58,6 @@ def _ensure_ollama_client():
     if client is not None:
         return
     try:
-        import ollama
         from ollama import Client as OllamaClient
         c = OllamaClient(host=os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434'))
         c.list()
@@ -321,7 +321,7 @@ def generate_weekly_report(data):
     if gen.get('sessions_this_month', 0) < gen.get('total_sessions', 0) * 0.1:
         recs.append(f"-  **Baja actividad mensual:** Solo {gen.get('sessions_this_month', 0)} sesiones este mes. Considera campañas de retención.")
     if balance < 0:
-        recs.append(f"-  **Balance negativo:** Los gastos superan a los ingresos. Revisa los gastos operativos.")
+        recs.append("-  **Balance negativo:** Los gastos superan a los ingresos. Revisa los gastos operativos.")
     if not notes:
         recs.append("-  **Falta de notas:** No hay notas de sesión recientes. Motiva a los terapeutas a documentar sus sesiones.")
     if fin.get('total_expenses', 0) > fin.get('income_last_30d', 0) * 0.8:

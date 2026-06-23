@@ -145,6 +145,9 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   togglePanel() {
     this.isOpen = !this.isOpen;
     this.hasUnread = false;
+    if (!this.isOpen) {
+      this.fullScreen = false;
+    }
     if (this.isOpen && this.messages.length === 0) {
       this.loadInitialContext();
     }

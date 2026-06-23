@@ -1,7 +1,8 @@
 import logging
+import traceback
 from collections import deque
 from datetime import datetime
-import traceback
+
 
 class LogCaptureHandler(logging.Handler):
     def __init__(self, capacity=500):

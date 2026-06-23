@@ -1,3 +1,5 @@
+import contextlib
+
 from flask import url_for
 
 from app.models import Message, db
@@ -13,12 +15,10 @@ class MessageService:
         db.session.add(msg)
         db.session.commit()
 
-        try:
+        with contextlib.suppress(Exception):
             self.notification_service.create_notification(
                 receiver_id, f'Nuevo mensaje: {subject}', link=url_for('main.messages_list')
             )
-        except Exception:
-            pass
 
         return msg
 

@@ -63,6 +63,9 @@ export class ChatService {
   private _connectionStatus = new BehaviorSubject<boolean>(false);
   connectionStatus$ = this._connectionStatus.asObservable();
 
+  private _notificationEvent = new Subject<any>();
+  notificationEvent$ = this._notificationEvent.asObservable();
+
   constructor(private http: HttpClient) {}
 
   connect() {
@@ -124,6 +127,10 @@ export class ChatService {
 
     this.socket.on('user:stop_typing', (data: { chat_id: number; user_id: number }) => {
       this._userStoppedTyping.next(data);
+    });
+
+    this.socket.on('notification:new', (data: any) => {
+      this._notificationEvent.next(data);
     });
   }
 

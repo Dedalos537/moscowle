@@ -1,14 +1,20 @@
-from flask import Blueprint, request, jsonify, current_app, url_for
-from app.auth_compat import login_required, current_user
-from app.extensions import db, csrf
-from app.models import User, Message, Chat, ChatParticipant
-from app.utils.sanitizer import sanitize_text
+import contextlib
+import logging
+import os
+import traceback
+import uuid
+from datetime import datetime
+
+from flask import Blueprint, current_app, jsonify, request, url_for
 from sqlalchemy import case, text
+from werkzeug.utils import secure_filename
+
+from app.auth_compat import current_user, login_required
+from app.extensions import csrf, db
+from app.models import Chat, ChatParticipant, Message, User
 from app.services.notification_service import NotificationService
 from app.socketio_events import online_users
-from datetime import datetime
-import os, uuid, logging, traceback
-from werkzeug.utils import secure_filename
+from app.utils.sanitizer import sanitize_text
 
 chat_bp = Blueprint('chat', __name__)
 notification_service = NotificationService()
@@ -22,7 +28,7 @@ def get_last_error():
 
 def get_contact_list(role_filter=None):
     if current_user.role in ('admin', 'supervisor'):
-        q = User.query.filter(User.id != current_user.id, User.is_active == True)
+        q = User.query.filter(User.id != current_user.id, User.is_active)
         if role_filter and role_filter != 'todos':
             q = q.filter(User.role == role_filter)
         return q.order_by(User.role, User.username).all()
@@ -31,19 +37,19 @@ def get_contact_list(role_filter=None):
         associated_ids = [p.id for p in current_user.associated_patients if p.is_active]
         all_patient_ids = set(patient_ids + associated_ids)
         admin_super_ids = [u.id for u in User.query.filter(
-            User.role.in_(['admin', 'supervisor']), User.is_active == True
+            User.role.in_(['admin', 'supervisor']), User.is_active
         ).all()]
         ids = set(all_patient_ids) | set(admin_super_ids)
         ids.discard(current_user.id)
         if not ids:
             return []
-        q = User.query.filter(User.id.in_(ids), User.is_active == True)
+        q = User.query.filter(User.id.in_(ids), User.is_active)
         if role_filter and role_filter != 'todos':
             q = q.filter(User.role == role_filter)
         return q.order_by(User.role, User.username).all()
     else:
         admin_super_ids = [u.id for u in User.query.filter(
-            User.role.in_(['admin', 'supervisor']), User.is_active == True
+            User.role.in_(['admin', 'supervisor']), User.is_active
         ).all()]
         ids = set(admin_super_ids)
         if current_user.assigned_therapist_id:
@@ -51,7 +57,7 @@ def get_contact_list(role_filter=None):
         ids.discard(current_user.id)
         if not ids:
             return []
-        q = User.query.filter(User.id.in_(ids), User.is_active == True)
+        q = User.query.filter(User.id.in_(ids), User.is_active)
         if role_filter and role_filter != 'todos':
             q = q.filter(User.role == role_filter)
         return q.order_by(User.role, User.username).all()
@@ -471,7 +477,7 @@ def send_message(chat_id):
             logger.warning(f"SocketIO emit failed: {str(e)}")
 
         for row in other_participant_rows:
-            try:
+            with contextlib.suppress(Exception):
                 notification_service.create_notification(
                     user_id=row.user_id,
                     title=f'Nuevo mensaje de {current_user.username}',
@@ -479,8 +485,6 @@ def send_message(chat_id):
                     notif_type='message',
                     link='/messages'
                 )
-            except Exception:
-                pass
 
         return jsonify({
             'success': True,

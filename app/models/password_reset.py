@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta
 import secrets
 import string
+from datetime import datetime, timedelta
 
 from app.extensions import db
 

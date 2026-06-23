@@ -1,7 +1,8 @@
-from app.repositories.base import BaseRepository
-from app.models.service_request import ServiceRequest
-from app.extensions import db
 from datetime import datetime
+
+from app.extensions import db
+from app.models.service_request import ServiceRequest
+from app.repositories.base import BaseRepository
 
 
 class ServiceRequestRepository(BaseRepository[ServiceRequest]):

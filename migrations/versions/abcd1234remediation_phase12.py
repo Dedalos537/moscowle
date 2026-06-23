@@ -5,9 +5,10 @@ Revises: 7cf46fd2e754
 Create Date: 2026-06-10 14:00:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
+import contextlib
 
+import sqlalchemy as sa
+from alembic import op
 
 revision = 'abcd1234remediation'
 down_revision = '7cf46fd2e754'
@@ -35,24 +36,16 @@ def upgrade():
         )
 
     # --- User: MFA lockout fields (try/except for idempotency) ---
-    try:
+    with contextlib.suppress(Exception):
         op.add_column('user', sa.Column('mfa_failed_attempts', sa.Integer(), server_default='0', nullable=True))
-    except Exception:
-        pass
-    try:
+    with contextlib.suppress(Exception):
         op.add_column('user', sa.Column('mfa_locked_until', sa.DateTime(), nullable=True))
-    except Exception:
-        pass
 
     # --- Composite indexes ---
-    try:
+    with contextlib.suppress(Exception):
         op.create_index('ix_appointment_therapist_start', 'appointment', ['therapist_id', 'start_time'])
-    except Exception:
-        pass
-    try:
+    with contextlib.suppress(Exception):
         op.create_index('ix_payment_patient_status', 'payment', ['patient_id', 'status'])
-    except Exception:
-        pass
 
 
 def downgrade():
@@ -63,7 +56,5 @@ def downgrade():
         lambda: op.drop_column('user', 'mfa_failed_attempts'),
         lambda: op.drop_table('refresh_token'),
     ]:
-        try:
+        with contextlib.suppress(Exception):
             action()
-        except Exception:
-            pass

@@ -16,6 +16,7 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { ProgressBar } from '../../../../shared/components/progress-bar/progress-bar';
+import { Sede } from '../../../../core/models/sede';
 
 @Component({
   selector: 'app-sessions',
@@ -43,7 +44,8 @@ export class Sessions implements OnInit, OnDestroy {
   showCreateModal = false;
   showEditModal = false;
 
-  sedes = ['Piura', 'Talara'];
+  sedes: Sede[] = [];
+  sedesLoading = false;
 
   get therapistOptions(): SelectOption[] {
     return [{value: null, label: 'Todos'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
@@ -58,7 +60,7 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   get sedeCreateOptions(): SelectOption[] {
-    return [{value: null, label: 'Seleccionar sede'}, ...this.sedes.map(s => ({value: s, label: s}))];
+    return [{value: null, label: 'Seleccionar sede'}, ...this.sedes.map(s => ({value: s.name, label: s.name}))];
   }
 
   statusOptions: SelectOption[] = [
@@ -122,6 +124,7 @@ export class Sessions implements OnInit, OnDestroy {
       actionTemplate: this.headerActions,
     });
     this.loadTherapists();
+    this.loadSedes();
     this.loadSessions();
     this.buildCalendarGrid();
   }
@@ -139,6 +142,23 @@ export class Sessions implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: () => { this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  private loadSedes() {
+    this.sedesLoading = true;
+    this.subscriptions.add(
+      this.adminService.getSedes().subscribe({
+        next: (res) => {
+          this.sedes = res.filter(s => s.active);
+          this.sedesLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.sedesLoading = false;
+          this.cdr.markForCheck();
+        },
       })
     );
   }

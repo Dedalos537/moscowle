@@ -140,7 +140,7 @@ El administrador del Centro de Terapias puede usar este asistente para:
 """
 
         groups = {}
-        for func_key, func_info in ADMIN_FUNCTIONS.items():
+        for _func_key, func_info in ADMIN_FUNCTIONS.items():
             group = func_info['group']
             if group not in groups:
                 groups[group] = []

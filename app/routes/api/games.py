@@ -1,3 +1,5 @@
+import contextlib
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -89,14 +91,12 @@ def save_game():
                 appt.status = 'completed'
                 appt.end_time = datetime.utcnow()
                 db.session.add(appt)
-                try:
+                with contextlib.suppress(Exception):
                     notification_service.create_notification(
                         appt.therapist_id,
                         f'Sesión #{appt.id} completada por {current_user.username}',
                         link=url_for('therapist.patients', _external=False),
                     )
-                except Exception:
-                    pass
 
         db.session.commit()
 

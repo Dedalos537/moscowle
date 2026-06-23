@@ -1,14 +1,16 @@
-from flask import Blueprint, request, jsonify, current_app, url_for
-from app.auth_compat import login_required, current_user
-from app.models import db, User, Notification, Appointment, Message, Game, SessionMetrics, SessionImage, ContactMessage, Sede, Payment
-from app.services.appointment_service import AppointmentService
-from app.services.game_service import GameService
+import json
+import os
+import time
+import warnings
+
 from app.services.admin_service import AdminService
+from app.services.appointment_service import AppointmentService
+from app.services.dashboard_service import DashboardService
+from app.services.game_service import GameService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
-from app.services.dashboard_service import DashboardService
 from app.services.report_service import ReportService
-import json, os, time, warnings
+
 warnings.filterwarnings('ignore', message='.*google.generativeai.*ended.*')
 try:
     import google.generativeai as genai
@@ -24,21 +26,14 @@ try:
     _ollama_client.list()
 except Exception:
     _ollama_client = None
-from app.services.google_drive_service import GoogleDriveService
-from app.services.ai_service import predict_level, start_async_training
-from app.utils import get_user_today_utc_range, get_user_now, localize_datetime_for_display, get_user_timezone, parse_datetime
-from app.utils.sanitizer import sanitize_for_prompt
-from app.schemas import AssignTherapistSchema, UpdateUserSchema, SendMessageSchema
-from app.extensions import bcrypt, limiter, csrf
-from app.services.email_service import EmailService
+
+
 from app.services.financial_service import FinancialService
-from app.utils.api_helpers import api_response
-from app.services.availability_service import AvailabilityService
-from datetime import datetime, timedelta, timezone
-import uuid
-from werkzeug.utils import secure_filename
-import requests
-from sqlalchemy import or_, func
+from app.services.google_drive_service import GoogleDriveService
+from app.utils import (
+    parse_datetime,
+)
+from app.utils.sanitizer import sanitize_for_prompt
 
 appointment_service = AppointmentService()
 game_service = GameService()

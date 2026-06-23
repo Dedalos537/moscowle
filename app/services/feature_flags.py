@@ -1,7 +1,9 @@
 import json
 import os
 from functools import wraps
-from flask import current_app, abort
+
+from flask import abort
+
 from app.auth_compat import current_user
 
 _FLAGS_CACHE = None

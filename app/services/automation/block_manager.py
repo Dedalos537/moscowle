@@ -51,7 +51,7 @@ class PatientBlockManager:
         if not self.patient:
             return
 
-        new_sessions = self.calculate_sessions(frequency)
+        self.calculate_sessions(frequency)
 
         pass
 

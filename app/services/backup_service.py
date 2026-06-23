@@ -1,8 +1,11 @@
-import os
 import json
+import os
 from datetime import datetime
-from app.extensions import db
+
 from sqlalchemy import inspect, text
+
+from app.extensions import db
+
 
 def run_backup():
     try:

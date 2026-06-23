@@ -52,7 +52,7 @@ def get_sessions_api():
             except Exception:
                 pass
 
-        if therapist_id and therapist_id != 'all' and therapist_id != 'undefined':
+        if therapist_id and therapist_id not in {'all', 'undefined'}:
             try:
                 tid = int(therapist_id)
                 query = query.filter(Appointment.therapist_id == tid)

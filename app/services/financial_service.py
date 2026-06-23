@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models import Expense, User, Appointment
+from app.models import Appointment, Expense, User
 from app.repositories.patient_repository import PatientRepository
 from app.services.automation.financial_analysis import PatientFinancialStatus
 

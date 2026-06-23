@@ -267,7 +267,7 @@ def _handle_assign_therapist(params):
             'action_result': {'status': 'patient_not_found'},
         }
 
-    therapist = User.query.filter(User.role.in_(['terapista', 'admin']), User.is_active == True).first()
+    therapist = User.query.filter(User.role.in_(['terapista', 'admin']), User.is_active).first()
     if not therapist:
         return {
             'response': 'No hay terapeutas disponibles para asignar.',
@@ -481,7 +481,7 @@ def send_message():
 
         INTENT_HANDLERS_NO_ACTION = {
             'generate_report': lambda: _handle_generate_report(conversation_id),
-            'schedule_optimization': lambda: _handle_schedule_optimization(),
+            'schedule_optimization': _handle_schedule_optimization,
             'breakeven_analysis': lambda: _handle_breakeven(params, user_message),
         }
 
