@@ -4,6 +4,7 @@ from app.models.appointment import *
 from app.models.chat import *
 from app.models.contract import *
 from app.models.game import *
+from app.models.incidente import *
 from app.models.notification import *
 from app.models.password_reset import PasswordReset
 from app.models.payment import *
