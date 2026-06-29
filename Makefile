@@ -25,6 +25,24 @@ format-check:
 dev:
 	python run.py
 
+dev-docker:
+	docker compose -f docker-compose.dev.yml up --watch
+
+dev-docker-build:
+	docker compose -f docker-compose.dev.yml build
+
+dev-docker-up:
+	docker compose -f docker-compose.dev.yml up -d
+
+dev-docker-down:
+	docker compose -f docker-compose.dev.yml down
+
+dev-docker-logs:
+	docker compose -f docker-compose.dev.yml logs -f
+
+dev-docker-db:
+	docker compose -f docker-compose.dev.yml exec db psql -U moscowle
+
 docker-build:
 	docker compose build
 

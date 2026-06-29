@@ -109,3 +109,6 @@ test_venv/
 
 # Old PythonAnywhere reference
 wsgi.py
+
+# Obsidian vault (separate repo)
+obsidian-vault/

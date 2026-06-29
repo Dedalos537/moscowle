@@ -14,4 +14,26 @@ class Notification(db.Model, AuditMixin):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     link = db.Column(db.String(255), nullable=True)
 
-    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('notifications', lazy=True, cascade="all, delete-orphan"))
+    user = db.relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('notifications', cascade='all, delete-orphan'),
+    )
+
+
+class UserNotificationPreference(db.Model, AuditMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    debt_enabled = db.Column(db.Boolean, default=True)
+    activity_enabled = db.Column(db.Boolean, default=True)
+    system_enabled = db.Column(db.Boolean, default=True)
+    alert_enabled = db.Column(db.Boolean, default=True)
+    payment_enabled = db.Column(db.Boolean, default=True)
+    sound_enabled = db.Column(db.Boolean, default=True)
+    browser_notifications = db.Column(db.Boolean, default=False)
+
+    user = db.relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'),
+    )

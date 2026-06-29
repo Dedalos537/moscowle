@@ -500,13 +500,9 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
-        try:
-            from flask_migrate import upgrade as migrate_upgrade
-
-            migrate_upgrade()
-            app.logger.info('Pending migrations applied')
-        except Exception as e:
-            app.logger.warning(f'Migration skipped (non-fatal): {e}')
+        # Migraciones ya aplicadas vía flask db upgrade
+        # db.create_all() mantiene el schema actualizado
+        app.logger.info('Schema managed via db.create_all()')
 
         db.session.remove()
 

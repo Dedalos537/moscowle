@@ -5,11 +5,10 @@ from app import create_app
 app = create_app()
 
 if __name__ == '__main__':
-    import os
-    is_dev = os.getenv('FLASK_ENV', 'development') == 'development'
     app.run(
         host='0.0.0.0',
         port=int(os.getenv('PORT', '5001')),
-        debug=is_dev,
-        use_reloader=False,
+        debug=True,
+        use_reloader=True,
+        extra_files=['/app/config.py'],
     )
