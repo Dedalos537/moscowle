@@ -1,0 +1,220 @@
+<div class="incident-detail-page" @fadeInUp>
+
+  <!-- Back button -->
+  <div class="mb-4">
+    <a routerLink="/admin/incidents" class="back-link">
+      <fa-icon [icon]="['fas', 'arrow-left']"></fa-icon> Volver a Incidencias
+    </a>
+  </div>
+
+  @if (loading) {
+    <div class="flex justify-center py-12"><app-spinner></app-spinner></div>
+  }
+
+  @if (error) {
+    <app-alert type="error" [message]="error" class="my-4"></app-alert>
+  }
+
+  @if (incident) {
+    <div class="detail-grid">
+
+      <!-- Main Info -->
+      <div class="detail-main">
+        <div class="detail-card">
+          <div class="detail-header">
+            <div>
+              <h1 class="detail-title">{{ incident.titulo }}</h1>
+              <div class="detail-meta">
+                <span class="badge" [style.background-color]="prioridadColor(incident.prioridad)" style="color: white;">
+                  {{ prioridadLabel(incident.prioridad) }}
+                </span>
+                <span class="badge" [style.background-color]="estadoColor(incident.estado)" style="color: white;">
+                  {{ incident.estado }}
+                </span>
+                <span class="badge badge-category">{{ incident.categoria }}</span>
+                @if (incident.subcategoria) {
+                  <span class="badge badge-sub">{{ incident.subcategoria }}</span>
+                }
+              </div>
+            </div>
+            @if (incident.estado !== 'CERRADO' && incident.estado !== 'RESUELTO') {
+              <app-button variant="primary" label="Cambiar Estado" [icon]="['fas', 'exchange-alt']" (clicked)="openStatusModal()"></app-button>
+            }
+          </div>
+
+          <div class="detail-section">
+            <h3 class="section-title">Descripción</h3>
+            <p class="detail-description">{{ incident.descripcion }}</p>
+          </div>
+
+          @if (incident.evidencia_original) {
+            <div class="detail-section">
+              <h3 class="section-title">Evidencia</h3>
+              <div class="evidence-box">
+                <span class="evidence-type badge badge-category">{{ incident.evidencia_tipo }}</span>
+                <pre class="evidence-text">{{ incident.evidencia_original }}</pre>
+              </div>
+            </div>
+          }
+
+          <!-- Timeline -->
+          <div class="detail-section">
+            <h3 class="section-title">Historial</h3>
+            <div class="timeline">
+              @for (entry of incident.historial; track entry.id) {
+                <div class="timeline-entry">
+                  <div class="timeline-dot" [style.background-color]="estadoColor(entry.estado_nuevo)"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="font-medium">{{ entry.estado_anterior || '—' }} → {{ entry.estado_nuevo }}</span>
+                      <span class="text-xs text-on-surface-variant">{{ formatDate(entry.changed_at) }}</span>
+                    </div>
+                    @if (entry.comentario) {
+                      <p class="text-sm text-on-surface-variant mt-1">{{ entry.comentario }}</p>
+                    }
+                    <span class="text-xs text-on-surface-variant">por {{ entry.changed_by || 'Sistema' }}</span>
+                  </div>
+                </div>
+              }
+              @if (incident.historial.length === 0) {
+                <p class="text-sm text-on-surface-variant">Sin eventos en el historial</p>
+              }
+            </div>
+          </div>
+
+          <!-- Comments -->
+          <div class="detail-section">
+            <h3 class="section-title">Comentarios ({{ incident.comentarios.length }})</h3>
+
+            <!-- Comment form -->
+            <div class="comment-form">
+              <textarea
+                [(ngModel)]="newComment"
+                class="input-field"
+                rows="3"
+                placeholder="Escribir comentario..."
+              ></textarea>
+              <div class="comment-form-actions">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="isInternal">
+                  <span>Interno (solo visible para admin/terapeuta)</span>
+                </label>
+                <app-button
+                  variant="primary"
+                  label="Comentar"
+                  [loading]="submittingComment"
+                  [disabled]="!newComment.trim()"
+                  (clicked)="addComment()"
+                ></app-button>
+              </div>
+            </div>
+
+            <!-- Comments list -->
+            <div class="comments-list">
+              @for (c of incident.comentarios; track c.id) {
+                <div class="comment-card" [class.internal]="c.es_interno">
+                  <div class="comment-header">
+                    <span class="font-medium">{{ c.autor || 'Anónimo' }}</span>
+                    @if (c.es_interno) {
+                      <span class="badge badge-internal">Interno</span>
+                    }
+                    <span class="text-xs text-on-surface-variant">{{ formatDate(c.created_at) }}</span>
+                  </div>
+                  <p class="comment-body">{{ c.contenido }}</p>
+                </div>
+              }
+              @if (incident.comentarios.length === 0) {
+                <p class="text-sm text-on-surface-variant py-3">Sin comentarios aún</p>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="detail-sidebar">
+        <div class="sidebar-card">
+          <h3 class="sidebar-title">Información</h3>
+          <div class="sidebar-field">
+            <span class="sidebar-label">ID</span>
+            <span class="sidebar-value font-mono">#{{ incident.id }}</span>
+          </div>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Responsable</span>
+            <span class="sidebar-value">{{ incident.responsable_name || 'Sin asignar' }}</span>
+          </div>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Creado por</span>
+            <span class="sidebar-value">{{ incident.user_name || '—' }}</span>
+          </div>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Escalamiento</span>
+            <span class="sidebar-value">Nivel {{ incident.escalamiento_nivel }}</span>
+          </div>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Horas invertidas</span>
+            <span class="sidebar-value">{{ incident.horas_invertidas }}h</span>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h3 class="sidebar-title">SLA</h3>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Fecha límite</span>
+            <span class="sidebar-value">{{ formatDate(incident.fecha_limite_sla) }}</span>
+          </div>
+          <div class="sidebar-field">
+            <span class="sidebar-label">Estado SLA</span>
+            @if (incident.esta_vencido) {
+              <span class="sla-badge breached">VENCIDO</span>
+            } @else if (incident.horas_restantes_sla !== null) {
+              <span class="sla-badge ok">{{ incident.horas_restantes_sla }}h restantes</span>
+            } @else {
+              <span class="sidebar-value">—</span>
+            }
+          </div>
+          @if (incident.fecha_resolucion) {
+            <div class="sidebar-field">
+              <span class="sidebar-label">Resuelto</span>
+              <span class="sidebar-value">{{ formatDate(incident.fecha_resolucion) }}</span>
+            </div>
+          }
+          <div class="sidebar-field">
+            <span class="sidebar-label">Creado</span>
+            <span class="sidebar-value">{{ formatDate(incident.fecha_creacion) }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  }
+
+  <!-- Status Modal -->
+  @if (showStatusModal && incident) {
+    <app-modal title="Cambiar Estado" (close)="closeStatusModal()">
+      <div class="modal-form">
+        <p class="text-sm text-on-surface-variant mb-3">
+          Cambiar estado de <strong>#{{ incident.id }}</strong> desde <strong>{{ incident.estado }}</strong>
+        </p>
+        <div class="form-group">
+          <label class="form-label">Nuevo Estado</label>
+          <select [(ngModel)]="newStatus" class="input-field">
+            <option value="">Seleccionar...</option>
+            @for (s of getValidTransitions(incident.estado); track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Comentario</label>
+          <textarea [(ngModel)]="statusComment" class="input-field" rows="3" placeholder="Comentario opcional"></textarea>
+        </div>
+      </div>
+      <div slot="footer" class="modal-actions">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeStatusModal()"></app-button>
+        <app-button variant="primary" label="Actualizar" [loading]="updating" [disabled]="!newStatus" (clicked)="updateStatus()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+</div>

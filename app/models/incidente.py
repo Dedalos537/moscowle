@@ -4,6 +4,11 @@ from app.extensions import db
 from app.models.base import AuditMixin, SoftDeleteMixin
 
 
+def _utcnow():
+    """Return naive UTC now for SQLite compatibility, aware for MySQL."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
     """Modelo principal de incidencias del sistema."""
 
@@ -35,7 +40,7 @@ class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
     evidencia_metadata = db.Column(db.Text, nullable=True)  # JSON como Text
 
     # SLA y escalamiento
-    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=_utcnow, nullable=False)
     fecha_limite_sla = db.Column(db.DateTime, nullable=True, index=True)
     fecha_resolucion = db.Column(db.DateTime, nullable=True)
     escalamiento_nivel = db.Column(db.Integer, default=0)
@@ -62,7 +67,7 @@ class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
         """Calcula las horas restantes antes de vencer el SLA."""
         if not self.fecha_limite_sla:
             return None
-        ahora = datetime.now(UTC)
+        ahora = datetime.now(UTC).replace(tzinfo=None)
         delta = self.fecha_limite_sla - ahora
         return delta.total_seconds() / 3600
 
@@ -71,7 +76,7 @@ class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
         """Verifica si el incidente ha superado su SLA."""
         if not self.fecha_limite_sla:
             return False
-        return datetime.now(UTC) > self.fecha_limite_sla
+        return datetime.now(UTC).replace(tzinfo=None) > self.fecha_limite_sla
 
 
 class IncidenteHistorial(db.Model):
@@ -88,8 +93,8 @@ class IncidenteHistorial(db.Model):
     estado_nuevo = db.Column(db.String(50), nullable=False)
     comentario = db.Column(db.Text, nullable=True)
 
-    changed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    changed_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False, index=True)
+    changed_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    changed_at = db.Column(db.DateTime, default=_utcnow, nullable=False, index=True)
 
     # Datos de escalamiento
     escalamiento_nivel = db.Column(db.Integer, nullable=True)

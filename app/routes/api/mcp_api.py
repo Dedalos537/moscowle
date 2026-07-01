@@ -5,6 +5,7 @@ Autenticación por API key (no requiere login de usuario).
 
 import hmac
 import os
+from datetime import datetime, timedelta
 
 from app.routes.api import api_bp
 from app.routes.api._shared import (
@@ -280,4 +281,191 @@ def mcp_listar_juegos():
             }
             for j in juegos
         ]
+    )
+
+
+# ============================================================
+# MCP API - Incidencias
+# ============================================================
+
+
+@api_bp.route('/mcp/incidencias', methods=['GET'])
+@require_api_key
+def mcp_listar_incidencias():
+    """Listar incidencias con filtros (MCP)."""
+    from app.models.incidente import Incidente
+
+    estado = request.args.get('estado')
+    prioridad = request.args.get('prioridad', type=int)
+    categoria = request.args.get('categoria')
+    limite = request.args.get('limite', 20, type=int)
+
+    query = Incidente.query.filter(Incidente.is_active)
+
+    if estado:
+        query = query.filter(Incidente.estado == estado)
+    if prioridad:
+        query = query.filter(Incidente.prioridad == prioridad)
+    if categoria:
+        query = query.filter(Incidente.categoria == categoria)
+
+    incidentes = query.order_by(Incidente.created_at.desc()).limit(limite).all()
+
+    return jsonify(
+        [
+            {
+                'id': i.id_incidente,
+                'titulo': i.titulo,
+                'categoria': i.categoria,
+                'subcategoria': i.subcategoria,
+                'prioridad': i.prioridad,
+                'estado': i.estado,
+                'responsable': i.responsable.username if i.responsable else None,
+                'fecha_creacion': i.fecha_creacion.isoformat() if i.fecha_creacion else None,
+                'fecha_limite_sla': i.fecha_limite_sla.isoformat() if i.fecha_limite_sla else None,
+                'escalamiento_nivel': i.escalamiento_nivel,
+                'esta_vencido': i.esta_vencido,
+            }
+            for i in incidentes
+        ]
+    )
+
+
+@api_bp.route('/mcp/incidente/<int:incident_id>', methods=['GET'])
+@require_api_key
+def mcp_obtener_incidencia(incident_id):
+    """Obtener detalle de una incidencia (MCP)."""
+    from app.models.incidente import Incidente
+
+    incidente = Incidente.query.filter_by(id_incidente=incident_id, is_active=True).first()
+
+    if not incidente:
+        return jsonify({'error': 'Incidente no encontrado'}), 404
+
+    return jsonify(
+        {
+            'id': incidente.id_incidente,
+            'titulo': incidente.titulo,
+            'descripcion': incidente.descripcion,
+            'categoria': incidente.categoria,
+            'subcategoria': incidente.subcategoria,
+            'prioridad': incidente.prioridad,
+            'estado': incidente.estado,
+            'responsable': incidente.responsable.username if incidente.responsable else None,
+            'creado_por': incidente.user.username if incidente.user else None,
+            'fecha_creacion': incidente.fecha_creacion.isoformat() if incidente.fecha_creacion else None,
+            'fecha_limite_sla': incidente.fecha_limite_sla.isoformat() if incidente.fecha_limite_sla else None,
+            'fecha_resolucion': incidente.fecha_resolucion.isoformat() if incidente.fecha_resolucion else None,
+            'escalamiento_nivel': incidente.escalamiento_nivel,
+            'horas_invertidas': incidente.horas_invertidas,
+            'esta_vencido': incidente.esta_vencido,
+            'historial': [
+                {
+                    'estado_anterior': h.estado_anterior,
+                    'estado_nuevo': h.estado_nuevo,
+                    'comentario': h.comentario,
+                    'changed_by': h.changed_by.username if h.changed_by else None,
+                    'changed_at': h.changed_at.isoformat() if h.changed_at else None,
+                }
+                for h in sorted(incidente.historial, key=lambda x: x.changed_at or '', reverse=True)
+            ],
+        }
+    )
+
+
+@api_bp.route('/mcp/incidencias/estadisticas', methods=['GET'])
+@require_api_key
+def mcp_estadisticas_incidencias():
+    """KPIs del sistema de incidencias (MCP)."""
+    from app.models.incidente import Incidente
+
+    ahora = datetime.utcnow()
+
+    total_abiertos = Incidente.query.filter(
+        Incidente.estado.in_(['NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR']),
+        Incidente.is_active,
+    ).count()
+
+    vencidos = Incidente.query.filter(
+        Incidente.estado.in_(['NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR']),
+        Incidente.fecha_limite_sla < ahora,
+        Incidente.is_active,
+    ).count()
+
+    por_categoria = dict(
+        db.session.query(Incidente.categoria, db.func.count(Incidente.id_incidente))
+        .filter(
+            Incidente.is_active,
+            Incidente.estado.in_(['NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR']),
+        )
+        .group_by(Incidente.categoria)
+        .all()
+    )
+
+    total_7d = Incidente.query.filter(
+        Incidente.created_at >= ahora - timedelta(days=7),
+        Incidente.is_active,
+    ).count()
+    resueltos_7d = Incidente.query.filter(
+        Incidente.estado.in_(['RESUELTO', 'CERRADO']),
+        Incidente.fecha_resolucion >= ahora - timedelta(days=7),
+        Incidente.is_active,
+    ).count()
+
+    sla_compliance = round(resueltos_7d / total_7d * 100, 1) if total_7d > 0 else 100.0
+
+    return jsonify(
+        {
+            'total_abiertos': total_abiertos,
+            'vencidos': vencidos,
+            'sla_compliance_7d': sla_compliance,
+            'por_categoria': por_categoria,
+        }
+    )
+
+
+@api_bp.route('/mcp/incidencias/tendencia', methods=['GET'])
+@require_api_key
+def mcp_tendencia_incidencias():
+    """Análisis de tendencia de incidencias (MCP)."""
+    from app.models.incidente import Incidente
+
+    dias = request.args.get('dias', 30, type=int)
+    desde = datetime.utcnow() - timedelta(days=dias)
+
+    por_dia = (
+        db.session.query(
+            db.func.date(Incidente.created_at).label('dia'),
+            db.func.count(Incidente.id_incidente).label('total'),
+        )
+        .filter(Incidente.created_at >= desde, Incidente.is_active)
+        .group_by(db.func.date(Incidente.created_at))
+        .order_by(db.func.date(Incidente.created_at))
+        .all()
+    )
+
+    por_categoria = dict(
+        db.session.query(Incidente.categoria, db.func.count(Incidente.id_incidente))
+        .filter(Incidente.created_at >= desde, Incidente.is_active)
+        .group_by(Incidente.categoria)
+        .all()
+    )
+
+    repetidos = (
+        db.session.query(Incidente.titulo, db.func.count(Incidente.id_incidente).label('cnt'))
+        .filter(Incidente.created_at >= desde, Incidente.is_active)
+        .group_by(Incidente.titulo)
+        .having(db.func.count(Incidente.id_incidente) > 1)
+        .order_by(db.desc('cnt'))
+        .limit(10)
+        .all()
+    )
+
+    return jsonify(
+        {
+            'periodo_dias': dias,
+            'por_dia': [{'dia': str(p.dia), 'total': p.total} for p in por_dia],
+            'por_categoria': por_categoria,
+            'patrones_recurrentes': [{'titulo': r.titulo, 'veces': r.cnt} for r in repetidos],
+        }
     )

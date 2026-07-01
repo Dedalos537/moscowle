@@ -1,0 +1,261 @@
+<div class="incidents-page" @fadeInUp>
+
+  <!-- KPI Cards -->
+  @if (dashboard) {
+    <div class="kpi-grid" @listStagger>
+      <div class="kpi-card" @cardEnter>
+        <div class="kpi-icon bg-blue-100 text-blue-600">
+          <fa-icon [icon]="['fas', 'folder-open']"></fa-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Abiertos</span>
+          <span class="kpi-value">{{ dashboard.total_abiertos }}</span>
+        </div>
+      </div>
+      <div class="kpi-card" @cardEnter>
+        <div class="kpi-icon bg-red-100 text-red-600">
+          <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Vencidos</span>
+          <span class="kpi-value text-red-600">{{ dashboard.vencidos }}</span>
+        </div>
+      </div>
+      <div class="kpi-card" @cardEnter>
+        <div class="kpi-icon bg-green-100 text-green-600">
+          <fa-icon [icon]="['fas', 'check-circle']"></fa-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">Resueltos Hoy</span>
+          <span class="kpi-value text-green-600">{{ dashboard.resueltos_hoy }}</span>
+        </div>
+      </div>
+      <div class="kpi-card" @cardEnter>
+        <div class="kpi-icon" [class]="dashboard.sla_compliance_7d >= 90 ? 'bg-green-100 text-green-600' : dashboard.sla_compliance_7d >= 70 ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'">
+          <fa-icon [icon]="['fas', 'gauge-high']"></fa-icon>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-label">SLA Compliance 7d</span>
+          <span class="kpi-value">{{ dashboard.sla_compliance_7d }}%</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Toolbar -->
+  <div class="incidents-toolbar">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h2 class="text-lg font-bold text-on-surface flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'list']" class="text-primary"></fa-icon> Lista de Incidencias
+        </h2>
+        <p class="text-sm text-on-surface-variant">{{ totalItems }} incidencia(s) encontrada(s)</p>
+      </div>
+      <app-button variant="primary" label="Nueva Incidencia" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <select [(ngModel)]="filterEstado" class="input-field !py-1.5 !text-xs">
+        <option value="">Todos los estados</option>
+        @for (e of ESTADOS; track e) {
+          <option [value]="e">{{ e }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterPrioridad" class="input-field !py-1.5 !text-xs">
+        <option [ngValue]="null">Todas las prioridades</option>
+        @for (p of PRIORIDADES; track p.value) {
+          <option [ngValue]="p.value">{{ p.label }}</option>
+        }
+      </select>
+      <select [(ngModel)]="filterCategoria" class="input-field !py-1.5 !text-xs">
+        <option value="">Todas las categorías</option>
+        @for (c of CATEGORIAS; track c) {
+          <option [value]="c">{{ c }}</option>
+        }
+      </select>
+      <app-button variant="primary" label="Filtrar" [icon]="['fas', 'search']" size="sm" (clicked)="applyFilters()"></app-button>
+      <app-button variant="ghost" label="Limpiar" [icon]="['fas', 'times']" size="sm" (clicked)="clearFilters()"></app-button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="flex justify-center py-12">
+      <app-spinner></app-spinner>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error) {
+    <app-alert type="error" [message]="error" class="my-4"></app-alert>
+  }
+
+  <!-- Incidents Table -->
+  @if (!loading && incidents.length > 0) {
+    <div class="incidents-table-wrapper">
+      <table class="incidents-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Título</th>
+            <th>Categoría</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th>Responsable</th>
+            <th>SLA</th>
+            <th>Creado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inc of incidents; track inc.id) {
+            <tr [class.sla-breached]="inc.esta_vencido">
+              <td class="font-mono text-xs">{{ inc.id }}</td>
+              <td>
+                <a [routerLink]="['/admin/incidents', inc.id]" class="incident-link font-medium">
+                  {{ inc.titulo }}
+                </a>
+              </td>
+              <td>
+                <span class="badge badge-category">
+                  <fa-icon [icon]="['fas', categoriaIcon(inc.categoria)]" class="mr-1"></fa-icon>
+                  {{ inc.categoria }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [style.background-color]="prioridadColor(inc.prioridad)" style="color: white;">
+                  {{ prioridadLabel(inc.prioridad) }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [style.background-color]="estadoColor(inc.estado)" style="color: white;">
+                  {{ inc.estado }}
+                </span>
+              </td>
+              <td class="text-sm">{{ inc.responsable_name || '—' }}</td>
+              <td>
+                @if (inc.esta_vencido) {
+                  <span class="text-red-600 font-bold text-xs">VENCIDO</span>
+                } @else if (inc.horas_restantes_sla !== null) {
+                  <span class="text-xs">{{ inc.horas_restantes_sla }}h restantes</span>
+                } @else {
+                  <span class="text-on-surface-variant text-xs">—</span>
+                }
+              </td>
+              <td class="text-xs text-on-surface-variant">{{ timeAgo(inc.fecha_creacion) }}</td>
+              <td>
+                <div class="flex gap-1">
+                  <a [routerLink]="['/admin/incidents', inc.id]" class="action-btn" title="Ver detalle">
+                    <fa-icon [icon]="['fas', 'eye']"></fa-icon>
+                  </a>
+                  @if (inc.estado !== 'CERRADO' && inc.estado !== 'RESUELTO') {
+                    <button class="action-btn" title="Cambiar estado" (click)="openStatusModal(inc)">
+                      <fa-icon [icon]="['fas', 'exchange-alt']"></fa-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage === 1" (click)="goToPage(currentPage - 1)">
+          <fa-icon [icon]="['fas', 'chevron-left']"></fa-icon>
+        </button>
+        @for (p of [].constructor(totalPages); track $index) {
+          @if ($index + 1 === currentPage || Math.abs($index + 1 - currentPage) <= 2 || $index === 0 || $index === totalPages - 1) {
+            <button class="page-btn" [class.active]="$index + 1 === currentPage" (click)="goToPage($index + 1)">
+              {{ $index + 1 }}
+            </button>
+          } @else if (Math.abs($index + 1 - currentPage) === 3) {
+            <span class="page-ellipsis">...</span>
+          }
+        }
+        <button class="page-btn" [disabled]="currentPage === totalPages" (click)="goToPage(currentPage + 1)">
+          <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Empty State -->
+  @if (!loading && incidents.length === 0 && !error) {
+    <div class="empty-state">
+      <fa-icon [icon]="['fas', 'check-double']" class="text-4xl text-green-400 mb-3"></fa-icon>
+      <p class="text-on-surface-variant">No hay incidencias que mostrar</p>
+    </div>
+  }
+
+  <!-- Create Modal -->
+  @if (showCreateModal) {
+    <app-modal title="Nueva Incidencia" (close)="closeCreateModal()">
+      <div class="modal-form">
+        <div class="form-group">
+          <label class="form-label">Título *</label>
+          <input type="text" [(ngModel)]="newIncident.titulo" class="input-field" placeholder="Título del incidente">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descripción *</label>
+          <textarea [(ngModel)]="newIncident.descripcion" class="input-field" rows="4" placeholder="Descripción detallada"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Categoría</label>
+            <select [(ngModel)]="newIncident.categoria" class="input-field">
+              @for (c of CATEGORIAS; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label class="form-label">Prioridad</label>
+            <select [(ngModel)]="newIncident.prioridad" class="input-field">
+              @for (p of PRIORIDADES; track p.value) {
+                <option [ngValue]="p.value">{{ p.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+      <div slot="footer" class="modal-actions">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
+        <app-button variant="primary" label="Crear" [loading]="creating" (clicked)="createIncident()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+  <!-- Status Change Modal -->
+  @if (showStatusModal && selectedIncident) {
+    <app-modal title="Cambiar Estado" (close)="closeStatusModal()">
+      <div class="modal-form">
+        <p class="text-sm text-on-surface-variant mb-3">
+          Cambiar estado de <strong>#{{ selectedIncident.id }}</strong>
+        </p>
+        <div class="form-group">
+          <label class="form-label">Nuevo Estado</label>
+          <select [(ngModel)]="newStatus" class="input-field">
+            <option value="">Seleccionar...</option>
+            @for (s of getValidTransitions(selectedIncident.estado); track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Comentario</label>
+          <textarea [(ngModel)]="statusComment" class="input-field" rows="3" placeholder="Comentario opcional"></textarea>
+        </div>
+      </div>
+      <div slot="footer" class="modal-actions">
+        <app-button variant="ghost" label="Cancelar" (clicked)="closeStatusModal()"></app-button>
+        <app-button variant="primary" label="Actualizar" [loading]="updating" [disabled]="!newStatus" (clicked)="updateStatus()"></app-button>
+      </div>
+    </app-modal>
+  }
+
+</div>

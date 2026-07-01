@@ -19,6 +19,8 @@ import { Profile } from './pages/profile/profile';
 import { YapeImport } from './pages/yape-import/yape-import';
 import { AiTraining } from './pages/ai-training/ai-training';
 import { VisorFuncionamiento } from './pages/visor-funcionamiento/visor-funcionamiento';
+import { Incidents } from './pages/incidents/incidents';
+import { IncidentDetailPage } from './pages/incidents/incident-detail';
 import { AdminLayout } from '../../core/layout/admin-layout/admin-layout';
 
 const routes: Routes = [
@@ -46,6 +48,8 @@ const routes: Routes = [
       { path: 'yape-import', component: YapeImport },
       { path: 'ai', component: AiTraining },
       { path: 'visor-funcionamiento', component: VisorFuncionamiento },
+      { path: 'incidents', component: Incidents },
+      { path: 'incidents/:id', component: IncidentDetailPage },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   }

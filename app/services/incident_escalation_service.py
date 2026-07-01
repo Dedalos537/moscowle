@@ -7,6 +7,11 @@ from app.models.incidente import Incidente, IncidenteHistorial
 logger = logging.getLogger(__name__)
 
 
+def _utcnow():
+    """Return naive UTC now for SQLite compatibility."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class IncidentEscalationService:
     """
     Servicio de escalamiento automático de incidencias.
@@ -36,7 +41,7 @@ class IncidentEscalationService:
         Evalúa todos los incidentes activos y ejecuta escalamientos necesarios.
         Debe ejecutarse cada 15 minutos via cron/worker.
         """
-        ahora = datetime.now(UTC)
+        ahora = _utcnow()
         incidentes_escalados = []
 
         incidentes_criticos = Incidente.query.filter(
@@ -57,7 +62,7 @@ class IncidentEscalationService:
     @classmethod
     def _escalate_incident(cls, incidente: Incidente) -> dict | None:
         """Escala un incidente específico."""
-        ahora = datetime.now(UTC)
+        ahora = _utcnow()
         horas_transcurridas = (ahora - incidente.fecha_creacion).total_seconds() / 3600
 
         horas_sla = cls.SLA_HOURS.get(incidente.categoria, {}).get(incidente.prioridad, 48)

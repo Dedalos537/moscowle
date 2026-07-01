@@ -22,7 +22,7 @@ class Notification(db.Model, AuditMixin):
     user = db.relationship(
         'User',
         foreign_keys=[user_id],
-        backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'),
+        backref=db.backref('notifications', cascade='all, delete-orphan'),
     )
 
 

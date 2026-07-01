@@ -366,6 +366,49 @@ def send_whatsapp_debt_reminders(app):
             traceback.print_exc()
 
 
+def run_incident_detection(app):
+    """Run automated incident detection checks."""
+    with app.app_context():
+        try:
+            from app.services.incident_detection_service import IncidentDetectionService
+
+            IncidentDetectionService.run_daily_checks()
+            print('Incident detection checks completed.')
+        except Exception as e:
+            print(f'Error in run_incident_detection: {e}')
+
+
+def run_incident_detection_realtime(app):
+    """Run real-time incident checks (latency, model errors, SLA breaches)."""
+    with app.app_context():
+        try:
+            from app.services.incident_detection_service import IncidentDetectionService
+
+            IncidentDetectionService.run_realtime_checks()
+        except Exception as e:
+            print(f'Error in run_incident_detection_realtime: {e}')
+
+
+def run_incident_escalation(app):
+    """Check and escalate incidents that have breached their SLA."""
+    with app.app_context():
+        try:
+            from app.services.incident_escalation_service import IncidentEscalationService
+            from app.services.incident_notification_service import IncidentNotificationService
+
+            escalados = IncidentEscalationService.check_escalations()
+            for e in escalados:
+                from app.models.incidente import Incidente
+
+                incidente = Incidente.query.get(e['id_incidente'])
+                if incidente:
+                    IncidentNotificationService.notify_escalation(incidente, e['escalamiento_nivel'] - 1)
+            if escalados:
+                print(f'Incident escalation: {len(escalados)} incidents escalated.')
+        except Exception as e:
+            print(f'Error in run_incident_escalation: {e}')
+
+
 def init_scheduler(app):
     scheduler.add_job(func=lambda: check_upcoming_payments(app), trigger='cron', hour=8, minute=0)
 
@@ -387,6 +430,29 @@ def init_scheduler(app):
 
     scheduler.add_job(
         func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza'
+    )
+
+    # --- Incident Monitoring Jobs ---
+    scheduler.add_job(
+        func=lambda: run_incident_detection(app),
+        trigger='cron',
+        hour=7,
+        minute=0,
+        id='incident_daily_detection',
+    )
+
+    scheduler.add_job(
+        func=lambda: run_incident_detection_realtime(app),
+        trigger='interval',
+        minutes=15,
+        id='incident_realtime_detection',
+    )
+
+    scheduler.add_job(
+        func=lambda: run_incident_escalation(app),
+        trigger='interval',
+        minutes=15,
+        id='incident_escalation',
     )
 
     scheduler.start()

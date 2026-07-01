@@ -197,6 +197,13 @@ def register_error_handlers(app):
 
 def register_request_handlers(app):
     """Handlers de request/response lifecycle"""
+    try:
+        from app.middleware.metrics_middleware import init_metrics_middleware
+
+        init_metrics_middleware(app)
+        app.logger.info('Metrics middleware initialized')
+    except Exception as e:
+        app.logger.warning(f'Metrics middleware initialization failed: {e}')
 
     @app.before_request
     def before_request():
@@ -482,6 +489,7 @@ def create_app(config_class=None):
             r'/admin/*': {'origins': cors_origins},
             r'/therapist/*': {'origins': cors_origins},
             r'/llama/*': {'origins': cors_origins},
+            r'/uploads/*': {'origins': cors_origins},
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
@@ -566,6 +574,7 @@ def create_app(config_class=None):
         ('public', 'app.routes.public_routes', 'public_bp'),
         ('spa', 'app.routes.public_routes', 'spa_bp'),
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
+        ('metrics', 'app.routes.metrics_routes', 'metrics_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:

@@ -11,6 +11,11 @@ from app.services.incident_escalation_service import IncidentEscalationService
 logger = logging.getLogger(__name__)
 
 
+def _utcnow():
+    """Return naive UTC now for SQLite compatibility."""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class IncidentDetectionService:
     """
     Servicio de detección automática de incidencias.
@@ -23,7 +28,17 @@ class IncidentDetectionService:
         logger.info('Iniciando verificaciones diarias de incidencias')
         cls._check_low_compliance_sessions()
         cls._check_scheduling_gaps()
+        cls._check_model_errors()
+        cls._check_weekly_attendance()
+        cls._check_expired_slas()
         logger.info('Verificaciones diarias de incidencias completadas')
+
+    @classmethod
+    def run_realtime_checks(cls):
+        """Checks más frecuentes (cada 15 min)."""
+        cls._check_api_latency()
+        cls._check_model_errors()
+        cls._check_expired_slas()
 
     @classmethod
     def _check_low_compliance_sessions(cls):
@@ -39,7 +54,7 @@ class IncidentDetectionService:
                 func.avg(SessionMetrics.accurracy).label('avg_accuracy'),
                 func.count(SessionMetrics.id).label('total_metrics'),
             )
-            .filter(SessionMetrics.date > datetime.now(UTC) - timedelta(hours=24))
+            .filter(SessionMetrics.date > _utcnow() - timedelta(hours=24))
             .group_by(SessionMetrics.session_id)
             .having(func.avg(SessionMetrics.accurracy) < umbral_cumplimiento)
             .all()
@@ -82,8 +97,8 @@ class IncidentDetectionService:
                 User.is_active,
                 ~User.id.in_(
                     db.session.query(Appointment.patient_id).filter(
-                        Appointment.start_time > datetime.now(UTC),
-                        Appointment.start_time < datetime.now(UTC) + timedelta(days=7),
+                        Appointment.start_time > _utcnow(),
+                        Appointment.start_time < _utcnow() + timedelta(days=7),
                     )
                 ),
             )
@@ -107,6 +122,134 @@ class IncidentDetectionService:
             )
 
     @classmethod
+    def _check_api_latency(cls):
+        """
+        Detecta latencia API elevada.
+        Umbral: p95 > 800ms por más de 2 minutos.
+        """
+        try:
+            from app.middleware.metrics_middleware import collector
+
+            snap = collector.get_snapshot()
+            latency = snap.get('latency', {})
+
+            high_latency_paths = []
+            for path_key, lat in latency.items():
+                p95 = lat.get('p95_ms', 0)
+                if p95 > 800:
+                    high_latency_paths.append(f'{path_key}: p95={p95}ms')
+
+            if high_latency_paths:
+                cls._create_incident(
+                    titulo='Latencia API elevada detectada',
+                    descripcion='Paths con p95 > 800ms:\n' + '\n'.join(high_latency_paths),
+                    categoria='SOFTWARE',
+                    subcategoria='api_timeout',
+                    prioridad=2,
+                    evidencia_tipo='MONITORING',
+                    evidencia_original='\n'.join(high_latency_paths),
+                )
+        except Exception:
+            logger.exception('Failed to check API latency')
+
+    @classmethod
+    def _check_model_errors(cls):
+        """
+        Detecta errores del modelo SVM/IA.
+        Umbral: > 5% errores de predicción en 30 min.
+        """
+        recent_metrics = SessionMetrics.query.filter(SessionMetrics.date > _utcnow() - timedelta(minutes=30)).all()
+
+        if not recent_metrics:
+            return
+
+        total = len(recent_metrics)
+        errors = sum(1 for m in recent_metrics if m.accurracy < 0.1)
+        error_rate = errors / total if total > 0 else 0
+
+        if error_rate > 0.15:
+            prioridad = 1
+        elif error_rate > 0.05:
+            prioridad = 2
+        else:
+            return
+
+        cls._create_incident(
+            titulo='Errores elevados en modelo de predicción',
+            descripcion=(
+                f'Tasa de error: {error_rate:.1%} ({errors}/{total} predicciones con accuracy < 10% en últimos 30 min)'
+            ),
+            categoria='SOFTWARE',
+            subcategoria='ai_model',
+            prioridad=prioridad,
+            evidencia_tipo='MONITORING',
+            evidencia_original=f'error_rate={error_rate:.4f}, errors={errors}, total={total}',
+        )
+
+    @classmethod
+    def _check_weekly_attendance(cls):
+        """
+        Detecta tasa de asistencia semanal baja.
+        Umbral: < 80% en la semana actual.
+        """
+        now = _utcnow()
+        week_start = now - timedelta(days=now.weekday())
+        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        total_sessions = Appointment.query.filter(
+            Appointment.start_time >= week_start,
+            Appointment.start_time <= now,
+            Appointment.is_active,
+        ).count()
+
+        if total_sessions == 0:
+            return
+
+        attended = Appointment.query.filter(
+            Appointment.start_time >= week_start,
+            Appointment.start_time <= now,
+            Appointment.attendance == 'present',
+            Appointment.is_active,
+        ).count()
+
+        attendance_rate = attended / total_sessions
+
+        if attendance_rate < 0.70:
+            prioridad = 2
+        elif attendance_rate < 0.80:
+            prioridad = 3
+        else:
+            return
+
+        cls._create_incident(
+            titulo='Tasa de asistencia semanal baja',
+            descripcion=(f'Asistencia: {attendance_rate:.1%} ({attended}/{total_sessions} sesiones esta semana)'),
+            categoria='OPERACIONES',
+            subcategoria='no_show',
+            prioridad=prioridad,
+            evidencia_tipo='EVALUATION',
+            evidencia_original=f'attendance_rate={attendance_rate:.4f}, attended={attended}, total={total_sessions}',
+        )
+
+    @classmethod
+    def _check_expired_slas(cls):
+        """
+        Detecta incidentes con SLA vencido que no han sido escalados.
+        """
+        ahora = _utcnow()
+        vencidos = Incidente.query.filter(
+            Incidente.estado.in_(['NUEVO', 'EN_CURSO']),
+            Incidente.fecha_limite_sla < ahora,
+            Incidente.escalamiento_nivel < 2,
+            Incidente.is_active,
+        ).all()
+
+        for incidente in vencidos:
+            from app.services.incident_notification_service import IncidentNotificationService
+
+            IncidentNotificationService.notify_sla_breach(incidente)
+
+    @classmethod
     def _create_incident(cls, **kwargs) -> Incidente:
         """Crea un incidente y calcula su SLA."""
         titulo = kwargs.get('titulo')
@@ -114,13 +257,13 @@ class IncidentDetectionService:
         existente = Incidente.query.filter(
             Incidente.titulo == titulo,
             Incidente.estado.in_(['NUEVO', 'EN_CURSO']),
-            Incidente.created_at > datetime.now(UTC) - timedelta(hours=24),
+            Incidente.created_at > _utcnow() - timedelta(hours=24),
         ).first()
 
         if existente:
             return existente
 
-        fecha_creacion = datetime.now(UTC)
+        fecha_creacion = _utcnow()
         fecha_limite = IncidentEscalationService.calculate_sla_deadline(
             categoria=kwargs.get('categoria'),
             prioridad=kwargs.get('prioridad', 3),
@@ -134,7 +277,7 @@ class IncidentDetectionService:
             subcategoria=kwargs.get('subcategoria'),
             prioridad=kwargs.get('prioridad', 3),
             estado='NUEVO',
-            user_id=kwargs.get('user_id'),
+            user_id=kwargs.get('user_id', 1),
             appointment_id=kwargs.get('appointment_id'),
             evidencia_tipo=kwargs.get('evidencia_tipo'),
             evidencia_original=kwargs.get('evidencia_original'),
@@ -151,5 +294,12 @@ class IncidentDetectionService:
             incidente.titulo,
             fecha_limite.isoformat(),
         )
+
+        try:
+            from app.services.incident_notification_service import IncidentNotificationService
+
+            IncidentNotificationService.notify_new_incident(incidente)
+        except Exception:
+            logger.exception('Failed to send notification for new incident')
 
         return incidente
