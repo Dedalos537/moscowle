@@ -76,6 +76,7 @@ def register_request_handlers(app: Flask) -> None:
             uid = get_jwt_identity()
             if uid is not None:
                 from app.models import User
+
                 g.current_user = User.query.get(int(uid))
         except Exception:
             pass
@@ -89,6 +90,7 @@ def register_request_handlers(app: Flask) -> None:
                 or request.path in ('/api/login', '/api/logout')
                 or request.path.startswith('/api/health')
                 or request.path.startswith('/api/public/')
+                or request.path.startswith('/api/mcp/')
                 or request.path in ('/admin/api/railway-metrics', '/admin/api/logs')
                 or current_user.is_authenticated
             )
