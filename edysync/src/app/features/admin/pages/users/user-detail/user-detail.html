@@ -122,7 +122,7 @@
   }
 </div>
 
-<app-modal [isOpen]="showEditModal" title="Editar Usuario" (close)="closeEditModal()">
+<app-modal [isOpen]="showEditModal" [allowOverflow]="true" title="Editar Usuario" (close)="closeEditModal()">
   <div class="space-y-4">
     <div class="grid grid-cols-2 gap-4">
       <app-input id="edit-name" label="Nombre" [(value)]="editData.username"></app-input>
