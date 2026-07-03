@@ -1,0 +1,33 @@
+@if (isOpen()) {
+  <div class="drawer-overlay">
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+
+    <div class="drawer-panel {{ sizeClass }}" [style.max-width]="customWidth">
+      <div class="drawer-header">
+        @if (hasCustomHeader) {
+          <ng-content select="[drawer-header]"></ng-content>
+        } @else {
+          @if (title()) {
+            <h3 class="drawer-title">
+              @if (icon()) {
+                <fa-icon [icon]="icon()!" [class]="iconColor()"></fa-icon>
+              }
+              {{ title() }}
+            </h3>
+          }
+          <button class="drawer-close" (click)="closeDrawer()">
+            <fa-icon [icon]="['fas', 'times']" class="drawer-close-icon"></fa-icon>
+          </button>
+        }
+      </div>
+
+      <div class="drawer-body">
+        <ng-content></ng-content>
+      </div>
+
+      <div class="drawer-footer">
+        <ng-content select="[drawer-footer]"></ng-content>
+      </div>
+    </div>
+  </div>
+}

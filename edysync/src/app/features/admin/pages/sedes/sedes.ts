@@ -10,6 +10,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede, SedeAnalytics } from '../../../../core/models/sede';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Drawer } from '../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { SedeCard } from './components/sede-card/sede-card';
@@ -17,7 +18,7 @@ import { SedeCard } from './components/sede-card/sede-card';
 @Component({
   selector: 'app-sedes',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, SedeCard],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, SedeCard, Drawer],
   templateUrl: './sedes.html',
   styleUrl: './sedes.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

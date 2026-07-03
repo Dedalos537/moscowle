@@ -14,6 +14,7 @@ import { firstValueFrom } from 'rxjs';
 import { SelectOption } from '../../../../../shared/components/select/select';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { Spinner } from '../../../../../shared/components/spinner/spinner';
+import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
@@ -52,7 +53,7 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input],
+  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
