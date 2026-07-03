@@ -1,6 +1,6 @@
 export const environment = {
-  production: false,
-  docker: false,
+  production: true,
+  docker: true,
   apiBaseUrl: '',
   sentryDsn: '',
 };

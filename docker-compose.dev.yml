@@ -1,4 +1,5 @@
 services:
+  # ── PostgreSQL (lightweight for development) ────────────────────────────────
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -10,12 +11,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moscowle-dev
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U moscowle"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  # ── Backend (Flask dev server with hot-reload) ──────────────────────────────
   backend:
     build:
       context: .
@@ -28,9 +32,9 @@ services:
       PORT: 5001
       SQLALCHEMY_DATABASE_URI: postgresql://moscowle:moscowlepass@db:5432/moscowle
       SECRET_KEY: dev-moscowle-local-123
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      CORS_ORIGINS: http://localhost:4200
-      SOCKET_CORS_ORIGINS: http://localhost:4200
+      RUN_MIGRATIONS: "true"
+      CORS_ORIGINS: http://localhost:4200 http://localhost:5001
+      SOCKET_CORS_ORIGINS: http://localhost:4200 http://localhost:5001
       WTF_CSRF_ENABLED: "False"
       SESSION_COOKIE_SAMESITE: Lax
       SESSION_COOKIE_SECURE: "False"
@@ -44,15 +48,19 @@ services:
       - ./app:/app/app
       - ./config.py:/app/config.py
       - ./run_dev.py:/app/run_dev.py
-      - ./wsgi.py:/app/wsgi.py
+      - ./seed_docker.py:/app/seed_docker.py
       - ./migrations:/app/migrations
+      - ./docker/entrypoint.sh:/entrypoint.sh
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
       - backend_instance:/app/instance
+    networks:
+      - moscowle-dev
     depends_on:
       db:
         condition: service_healthy
 
+  # ── Angular Frontend (with hot-reload) ──────────────────────────────────────
   frontend:
     build:
       context: .
@@ -66,6 +74,9 @@ services:
       - ./edysync/angular.json:/app/angular.json
     environment:
       PROXY_TARGET: http://backend:5001
+      CHOKIDAR_USEPOLLING: "true"
+    networks:
+      - moscowle-dev
     depends_on:
       - backend
 
@@ -74,3 +85,7 @@ volumes:
   backend_uploads:
   backend_logs:
   backend_instance:
+
+networks:
+  moscowle-dev:
+    driver: bridge

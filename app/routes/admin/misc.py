@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken, Appointment, ContactMessage, CSPReport, Sede, SmartAction, User, db

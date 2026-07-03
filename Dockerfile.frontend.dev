@@ -1,10 +1,15 @@
+# syntax=docker/dockerfile:1
+
 FROM node:20-alpine
+LABEL maintainer="Moscowle Team" \
+      description="Moscowle IA - Angular frontend dev image"
 
 WORKDIR /app
 
 COPY edysync/package*.json edysync/angular.json edysync/tsconfig*.json edysync/.postcssrc.json ./
 
-RUN npm ci --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps
 
 EXPOSE 4200
 

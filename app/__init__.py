@@ -200,8 +200,6 @@ def register_request_handlers(app):
 
     @app.before_request
     def before_request():
-        app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
 
@@ -236,6 +234,8 @@ def register_request_handlers(app):
                 or request.path in ('/api/login', '/api/logout')
                 or request.path.startswith('/api/health')
                 or request.path.startswith('/api/public/')
+                or request.path.startswith('/admin/api/')
+                or request.path.startswith('/api/admin/')
                 or current_user.is_authenticated
             )
             if not skip_appkey:
@@ -458,6 +458,13 @@ def create_app(config_class=None):
         app.logger.debug('flask-wtf not available, skipping csrf_token injection')
     cache.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*')
+
+    try:
+        from app.celery_app import init_celery
+        init_celery(app)
+        app.logger.info('Celery initialized')
+    except Exception as e:
+        app.logger.warning(f'Celery initialization failed (non-fatal): {e}')
 
     from importlib import import_module
 

@@ -1,5 +1,5 @@
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import db
 from app.models import Payment, Sede, SessionMetrics, User, db

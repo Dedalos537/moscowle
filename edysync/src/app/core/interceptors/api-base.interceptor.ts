@@ -45,7 +45,7 @@ export class ApiBaseInterceptor implements HttpInterceptor {
     });
   }
 
-  private async getAppKey(): Promise<string> {
+  private async getAppKey(): Promise<string | null> {
     const now = Math.floor(Date.now() / 1000);
     if (cachedAppKey && now < cachedAppKeyExpiry) {
       return cachedAppKey;
@@ -58,9 +58,7 @@ export class ApiBaseInterceptor implements HttpInterceptor {
       cachedAppKeyExpiry = now + data.expires_in - 10;
       return data.app_key;
     } catch {
-      const timestamp = Math.floor(Date.now() / 1000 / 300);
-      const appKey = `${timestamp}.fallback`;
-      return appKey;
+      return null;
     }
   }
 }

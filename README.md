@@ -707,7 +707,146 @@ FileNotFoundError: ai_models/svm_model.pkl
 
 ---
 
-## 📧 Contacto y Soporte
+## 🐳 Docker (Cross-Platform)
+
+El proyecto está completamente dockerizado para correr en **Windows**, **macOS** (Intel y Apple Silicon), y **Linux**.
+
+### Prerrequisitos por OS
+
+| OS | Requisito | Instalación |
+|----|-----------|-------------|
+| **Linux** | Docker Engine + Docker Compose | `sudo apt install docker.io docker-compose-v2` |
+| **macOS** | Docker Desktop for Mac | [Descargar](https://docs.docker.com/desktop/setup/install/mac-install/) |
+| **Windows** | Docker Desktop (WSL2 backend) | [Descargar](https://docs.docker.com/desktop/setup/install/windows-install/) |
+
+> **Windows**: Usa Git Bash, WSL2, o PowerShell. Los scripts `.sh` requieren Git Bash o WSL2.
+
+### Entorno de Desarrollo
+
+```bash
+# 1. Clonar el repositorio
+git clone <repo-url> && cd moscowle_ia
+
+# 2. Configurar variables de entorno
+cp .env.example .env.local
+# Editar .env.local con tus credenciales (las necesarias para desarrollo)
+
+# 3. Iniciar stack de desarrollo (hot-reload activo)
+make dev-docker-up
+
+# Alternativa:
+./dev.sh start
+```
+
+Esto levanta:
+- **PostgreSQL 16** en `localhost:5432`
+- **Backend Flask** en `http://localhost:5001` (hot-reload)
+- **Frontend Angular** en `http://localhost:4200` (hot-reload)
+
+```bash
+# Ver logs
+make dev-docker-logs
+# o
+./dev.sh logs
+
+# Detener
+make dev-docker-down
+# o
+./dev.sh stop
+
+# Acceder a la base de datos
+make dev-docker-db
+# o
+./dev.sh db
+```
+
+### Entorno de Producción
+
+```bash
+# 1. Configurar variables de producción
+cp .env.example .env.production
+# Editar .env.production con credenciales reales
+
+# 2. Construir imágenes
+make docker-build
+
+# 3. Iniciar stack
+make docker-up
+```
+
+Esto levanta:
+- **MariaDB 10.11** en `localhost:3307`
+- **Redis 7** en `localhost:6380`
+- **Backend + Angular SPA** servidos por **nginx** en `http://localhost:80`
+- **Celery Worker** para tareas asíncronas
+
+```bash
+# Ver logs del backend
+make docker-logs
+
+# Detener
+make docker-down
+```
+
+### Arquitectura Docker
+
+```
+                         nginx :80
+                        /    |    \
+                       /     |     \
+        Angular SPA (/)   API (/api/)   WebSocket (/socket.io/)
+                       \     |     /
+                        \    |    /
+                      backend :8080
+                       /    |    \
+                      /     |     \
+                 MariaDB    Redis    Celery Worker
+```
+
+La SPA de Angular se build con `--configuration=docker` (apiBaseUrl=''), lo que significa que todas las peticiones van al **mismo origen** (nginx). nginx se encarga de:
+- Servir archivos estáticos de Angular en `/`
+- Proxy inverso de `/api/*`, `/admin/*`, `/llama/*` al backend Flask
+- Upgrade de conexiones WebSocket (`/socket.io/`) al backend
+- Proxy de `/login`, `/logout`, `/uploads`, `/therapist/*`
+
+### Comandos Rápidos (Makefile)
+
+| Comando | Descripción |
+|---------|-------------|
+| `make dev-docker-up` | Inicia entorno desarrollo |
+| `make dev-docker-down` | Detiene entorno desarrollo |
+| `make dev-docker-logs` | Logs de desarrollo |
+| `make docker-build` | Construye imágenes producción |
+| `make docker-up` | Inicia entorno producción |
+| `make docker-down` | Detiene entorno producción |
+| `make docker-logs` | Logs de producción |
+
+### Troubleshooting Cross-Platform
+
+**Apple Silicon (M1/M2/M3/M4)**:
+- Todas las imágenes base (`python:3.11-slim`, `node:20-alpine`, `mariadb:10.11`, `redis:7-alpine`, `nginx:1.25-alpine`) tienen soporte nativo ARM64.
+- MariaDB reemplaza a MySQL por tener imagen ARM64 nativa.
+
+**Windows**:
+- Usa **WSL2** con Docker Desktop para mejor rendimiento.
+- Los scripts `.sh` requieren Git Bash o WSL2 (no PowerShell nativo).
+- Si los volúmenes bind mount no funcionan, configura Shared Drives en Docker Desktop.
+
+**Permisos**:
+- En Linux, asegúrate de que tu usuario esté en el grupo `docker`:
+  ```bash
+  sudo usermod -aG docker $USER
+  # Cerrar sesión y volver a entrar
+  ```
+
+**Puertos ocupados**:
+- Si los puertos por defecto están ocupados, usa `docker-compose.override.yml` para cambiarlos:
+  ```bash
+  cp docker-compose.override.yml.example docker-compose.override.yml
+  # Editar y personalizar puertos
+  ```
+
+---
 
 **Centro de Terapias Juan Pablo II**
 - Email: info@centrojuanpabloii.com
