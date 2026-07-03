@@ -107,9 +107,8 @@
 .drawer-footer {
   padding: 1.25rem;
   border-top: 1px solid var(--color-border);
-  flex: none;
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 

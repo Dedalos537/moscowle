@@ -319,6 +319,20 @@ def admin_sedes():
         return jsonify({'error': str(e), 'data': []}), 500
 
 
+@api_bp.route('/admin/sedes/active', methods=['GET'])
+@login_required
+def admin_sedes_active():
+    try:
+        if current_user.role not in ('admin', 'supervisor'):
+            return jsonify({'success': False, 'message': 'Forbidden'}), 403
+        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
+        result = [{'id': s.id, 'name': s.name, 'address': s.address} for s in sedes]
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f'Error in admin_sedes_active: {str(e)}')
+        return jsonify({'error': str(e), 'data': []}), 500
+
+
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
 @login_required
 def admin_sedes_detail(sede_id):

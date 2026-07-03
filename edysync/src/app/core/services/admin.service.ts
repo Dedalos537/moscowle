@@ -61,6 +61,10 @@ export class AdminService {
     return this.http.get<Sede[]>('/api/admin/sedes');
   }
 
+  getActiveSedes(): Observable<Pick<Sede, 'id' | 'name'>[]> {
+    return this.http.get<Pick<Sede, 'id' | 'name'>[]>('/api/admin/sedes/active');
+  }
+
   createSede(data: { name: string; address?: string }): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/api/admin/sedes', data);
   }

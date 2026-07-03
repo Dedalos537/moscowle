@@ -65,6 +65,7 @@ export class UsersList implements OnInit, OnDestroy {
   users: UserRow[] = [];
   filteredUsers: UserRow[] = [];
   sedes: Sede[] = [];
+  activeSedes: Pick<Sede, 'id' | 'name'>[] = [];
   therapists: { id: number; username: string; email: string }[] = [];
   activeFilter = 'all';
   searchQuery = '';
@@ -145,11 +146,11 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   get patientSedeOptions(): SelectOption[] {
-    return [{value: null, label: '— Sin asignar —'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+    return [{value: null, label: '— Sin asignar —'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
   }
 
   get multiSedeOptions(): SelectOption[] {
-    return this.sedes.map(s => ({value: s.id, label: s.name}));
+    return this.activeSedes.map(s => ({value: s.id, label: s.name}));
   }
 
   get scheduleTherapistOptions(): SelectOption[] {
@@ -233,6 +234,16 @@ export class UsersList implements OnInit, OnDestroy {
       this.adminService.getSedes().subscribe({
         next: (list) => {
           this.sedes = list;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
+
+    this.subscriptions.add(
+      this.adminService.getActiveSedes().subscribe({
+        next: (list) => {
+          this.activeSedes = list;
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),
