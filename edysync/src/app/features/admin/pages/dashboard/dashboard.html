@@ -88,54 +88,22 @@
   <section class="dashboard-section">
     <h3 class="section-label">Resumen General</h3>
     <div class="grid-4">
-      <div class="summary-card summary-card--stagger" style="--i:0">
-        <div class="summary-card__body">
-          <p class="label-caps">Terapeutas</p>
-          <h3 class="summary-card__value">
-            @if (!loading) { {{ summary.therapists }} } @else { <app-spinner size="sm"></app-spinner> }
-          </h3>
-        </div>
-        <div class="icon-circle icon-circle--primary">
-          <fa-icon [icon]="['fas', 'user-md']" class="text-lg"></fa-icon>
-        </div>
-      </div>
+      <app-summary-card label="Terapeutas" [value]="summary.therapists" [loading]="loading"
+                        [subtitle]=""
+                        [icon]="['fas', 'user-md']" variant="primary" />
 
-      <div class="summary-card summary-card--stagger" style="--i:1">
-        <div class="summary-card__body">
-          <p class="label-caps">Pacientes</p>
-          <h3 class="summary-card__value">
-            @if (!loading) { {{ summary.patients }} } @else { <app-spinner size="sm"></app-spinner> }
-          </h3>
-        </div>
-        <div class="icon-circle icon-circle--secondary">
-          <fa-icon [icon]="['fas', 'users']" class="text-lg"></fa-icon>
-        </div>
-      </div>
+      <app-summary-card label="Pacientes" [value]="summary.patients" [loading]="loading"
+                        [subtitle]=""
+                        [icon]="['fas', 'users']" variant="secondary" />
 
-      <div class="summary-card summary-card--stagger" style="--i:2">
-        <div class="summary-card__body">
-          <p class="label-caps">Sesiones</p>
-          <h3 class="summary-card__value">
-            @if (!loading) { {{ summary.sessions_total }} } @else { <app-spinner size="sm"></app-spinner> }
-          </h3>
-        </div>
-        <div class="icon-circle icon-circle--info">
-          <fa-icon [icon]="['fas', 'calendar-check']" class="text-lg"></fa-icon>
-        </div>
-      </div>
+      <app-summary-card label="Sesiones" [value]="summary.sessions_total" [loading]="loading"
+                        [subtitle]=""
+                        [icon]="['fas', 'calendar-check']" variant="info" />
 
-      <div class="summary-card summary-card--stagger" style="--i:3">
-        <div class="summary-card__body">
-          <p class="label-caps">Cumplimiento IA</p>
-          <h3 class="summary-card__value">
-            @if (!loading) { {{ avgAuditCompliance ?? '—' }}% } @else { <app-spinner size="sm"></app-spinner> }
-          </h3>
-          <p class="summary-card__sub">{{ auditsCount }} auditorías</p>
-        </div>
-        <div class="icon-circle icon-circle--primary">
-          <fa-icon [icon]="['fas', 'brain']" class="text-lg"></fa-icon>
-        </div>
-      </div>
+      <app-summary-card label="Cumplimiento IA"
+                        [value]="(avgAuditCompliance ?? '—') + '%'" [loading]="loading"
+                        [subtitle]="auditsCount + ' auditorías'"
+                        [icon]="['fas', 'brain']" variant="primary" />
     </div>
   </section>
 

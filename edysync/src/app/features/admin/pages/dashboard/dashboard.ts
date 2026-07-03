@@ -10,6 +10,7 @@ import { Sede } from '../../../../core/models/sede';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { QuickPayment } from '../../components/quick-payment/quick-payment';
+import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
 
 interface SedeStat {
   id: number;
@@ -43,7 +44,7 @@ interface DailyPending {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment, SummaryCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
