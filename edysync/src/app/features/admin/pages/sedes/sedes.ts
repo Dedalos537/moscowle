@@ -194,20 +194,20 @@ export class Sedes implements OnInit, OnDestroy {
   }
 
   async toggleActive(sede: Sede) {
-    const label = sede.active ? 'desactivar' : 'activar';
+    const activating = !sede.active;
     const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: `${sede.active ? 'Desactivar' : 'Activar'} Sede`,
-      message: `¿Estás seguro de ${label} la sede "${sede.name}"?`,
-      confirmText: sede.active ? 'Desactivar' : 'Activar',
-      variant: 'warning',
-      icon: ['fas', sede.active ? 'pause' : 'play'],
+      title: `${activating ? 'Activar' : 'Desactivar'} Sede`,
+      message: `¿Estás seguro de ${activating ? 'activar' : 'desactivar'} la sede "${sede.name}"?`,
+      confirmText: activating ? 'Activar' : 'Desactivar',
+      variant: activating ? 'primary' : 'danger',
+      icon: ['fas', activating ? 'play' : 'pause'],
     }));
     if (!confirmed) return;
     this.subscriptions.add(
       this.adminService.updateSede(sede.id, { active: !sede.active }).subscribe({
         next: (res) => {
           if (res.success) {
-            sede.active = !sede.active;
+            this.sedes = this.sedes.map(s => s.id === sede.id ? { ...s, active: !s.active } : s);
             this.toastService.show(
               `Sede ${sede.active ? 'activada' : 'desactivada'} correctamente`,
               'success',
