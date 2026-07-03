@@ -1,0 +1,43 @@
+@if (data().length > 0) {
+  <div class="table-wrapper">
+    <table>
+      <colgroup>
+        @for (col of columns(); track col.key) {
+          <col [style.width]="col.width ?? 'auto'" />
+        }
+      </colgroup>
+      <thead>
+        <tr>
+          @for (col of columns(); track col.key) {
+            <th [style.text-align]="col.align ?? 'left'" [style.width]="col.width ?? 'auto'"
+                [class]="col.class ?? ''">
+              {{ col.label }}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of data(); let i = $index; track (trackBy() ?? defaultTrackBy)(i, row)) {
+          <tr [style.animation-delay]="i * staggerDelay() + 's'"
+              [class]="computeRowClass(row, i)">
+            @for (col of columns(); track col.key) {
+              <td [style.text-align]="col.align ?? 'left'">
+                @let tpl = getTemplate(col.key);
+                @if (tpl) {
+                  <ng-container *ngTemplateOutlet="tpl; context: {$implicit: row, $index: i}" />
+                } @else {
+                  {{ getValue(row, col.key) }}
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <div class="table-empty">
+    <fa-icon [icon]="emptyIcon()" class="table-empty__icon"></fa-icon>
+    <p class="table-empty__text">{{ emptyMessage() }}</p>
+  </div>
+}

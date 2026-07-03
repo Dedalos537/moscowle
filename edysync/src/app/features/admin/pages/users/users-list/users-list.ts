@@ -18,6 +18,7 @@ import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
+import { Table, TableCell } from '../../../../../shared/components/table/table';
 
 Chart.register(...registerables);
 
@@ -53,7 +54,7 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer],
+  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer, Table, TableCell],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -704,4 +705,27 @@ export class UsersList implements OnInit, OnDestroy {
   trackById(_: number, u: UserRow): number {
     return u.id;
   }
+
+  columns = [
+    {key: 'usuario', label: 'Usuario', width: '15%'},
+    {key: 'email', label: 'Email', width: '15%'},
+    {key: 'rol', label: 'Rol', width: '12%'},
+    {key: 'sede', label: 'Sede', width: '11%'},
+    {key: 'estado', label: 'Estado', width: '11%'},
+    {key: 'terapeuta', label: 'Terapeuta', width: '16%'},
+    {key: 'activo', label: 'Activo', align: 'center' as const, width: '10%'},
+    {key: 'acciones', label: 'Acciones', align: 'right' as const, width: '10%'},
+  ];
+
+  getRowClass = (u: UserRow, i: number): string => {
+    const classes: string[] = [];
+    if (i % 2 === 1 && u.account_status === 'active' && u.is_active) classes.push('bg-surface-container-high/30');
+    if (u.account_status === 'debtor') classes.push('bg-error-container/20');
+    if (u.account_status === 'retired') classes.push('bg-surface-container-highest/40');
+    if (!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired') classes.push('bg-warning-container/30');
+    if (u.account_status === 'active' && u.is_active) classes.push('hover:bg-surface-container-highest/50');
+    return classes.join(' ');
+  };
+
+  trackUser = (i: number, u: UserRow): number => u.id;
 }

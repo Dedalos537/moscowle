@@ -161,6 +161,11 @@ body { font-size: 16px; }
   *, *::before, *::after {
     border-color: var(--color-outline-variant);
   }
+
+  table th:nth-child(n + 2),
+  table td:nth-child(n + 2) {
+    text-align: center !important;
+  }
 }
 
 @layer components {
