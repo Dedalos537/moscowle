@@ -19,6 +19,7 @@ import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
 import { Table, TableCell } from '../../../../../shared/components/table/table';
+import { UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
 
 Chart.register(...registerables);
 
@@ -54,7 +55,7 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer, Table, TableCell],
+  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer, Table, TableCell, UsersStatsCards],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -135,7 +136,7 @@ export class UsersList implements OnInit, OnDestroy {
   ];
 
   get sedeOptions(): SelectOption[] {
-    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+    return [{value: null, label: 'Todas las Sedes'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
   }
 
   get therapistOptions(): SelectOption[] {

@@ -1,43 +1,6 @@
-<div class="space-y-6 animate-fade-in" [@fadeInUp]>
+<div class="flex flex-col gap-6 animate-fade-in" [@fadeInUp]>
   @if (!loading) {
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.02s">
-      <p class="text-label-caps text-on-surface-variant">Total</p>
-      <p class="text-h3 text-on-surface mt-1">{{ stats.total }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.06s">
-      <p class="text-label-caps text-on-surface-variant">Activos</p>
-      <p class="text-h3 text-primary mt-1">{{ stats.active }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.1s">
-      <p class="text-label-caps text-on-surface-variant">Inactivos</p>
-      <p class="text-h3 text-tertiary mt-1">{{ stats.inactive }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.14s">
-      <p class="text-label-caps text-on-surface-variant">Pacientes</p>
-      <p class="text-h3 text-secondary mt-1">{{ stats.patients }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.18s">
-      <p class="text-label-caps text-on-surface-variant">Terapeutas</p>
-      <p class="text-h3 text-info mt-1">{{ stats.therapists }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.22s">
-      <p class="text-label-caps text-on-surface-variant">Deudores</p>
-      <p class="text-h3 text-error mt-1">{{ stats.debtors }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.26s">
-      <p class="text-label-caps text-on-surface-variant">Retirados</p>
-      <p class="text-h3 text-on-surface-variant mt-1">{{ stats.retired }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.3s">
-      <p class="text-label-caps text-on-surface-variant">Admins</p>
-      <p class="text-h3 text-warning mt-1">{{ stats.admins }}</p>
-    </div>
-    <div class="stat-card animate-fade-in" style="animation-delay: 0.34s">
-      <p class="text-label-caps text-on-surface-variant">Supervisores</p>
-      <p class="text-h3 text-accent mt-1">{{ stats.supervisors }}</p>
-    </div>
-  </div>
+    <app-users-stats-cards [stats]="stats" />
   } @if (!loading) {
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <div class="card animate-fade-in" style="max-height: 280px; animation-delay: 0.05s">

@@ -1,13 +1,13 @@
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 1.5rem;
 }
 
 .dashboard-section { 
   display: flex; 
   flex-direction: column; 
-  gap: .5rem; 
+  gap: 1rem; 
 }
 
 .dashboard-section__header {
@@ -100,7 +100,7 @@
   padding: 1rem 1.5rem; border-bottom: 1px solid color-mix(in srgb,var(--color-border) 50%,transparent);
 }
 
-.card__body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
+.card__body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
 .card__body--chart { flex: 1; display: flex; align-items: flex-end; }
 
 .pill-label {
@@ -127,6 +127,11 @@
 .finance-box--info { background-color: color-mix(in srgb,var(--color-info) 5%,transparent); border: 1px solid color-mix(in srgb,var(--color-info) 15%,transparent); }
 .finance-note { font-size: .875rem; color: color-mix(in srgb,var(--color-on-surface-variant) 50%,transparent); font-style: italic; text-align: center; padding: 0 1.5rem 1rem; margin: 0; }
 
+.sedes-grid-wrapper {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
 .sedes-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; }
 @media (min-width: 640px) { .sedes-grid { grid-template-columns: repeat(3,1fr); } }
 @media (min-width: 768px) { .sedes-grid { grid-template-columns: repeat(4,1fr); } }
@@ -140,14 +145,14 @@
 }
 
 .sede-card:hover { border-color: color-mix(in srgb,var(--color-primary) 40%,transparent); background-color: var(--color-surface-container-lowest); }
-.sede-card__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: .25rem; }
-.sede-card__name { font-weight: 700; color: var(--color-on-surface); font-size: .875rem; text-transform: uppercase; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sede-card__icon { color: color-mix(in srgb,var(--color-on-surface-variant) 30%,transparent); font-size: .75rem; }
+.sede-card__top { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
+.sede-card__name { font-weight: 700; color: var(--color-on-surface); font-size: .875rem; text-transform: uppercase; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.sede-card__icon { color: color-mix(in srgb,var(--color-on-surface-variant) 75%,transparent); font-size: .75rem; flex-shrink: 0; }
 .sede-card:hover .sede-card__icon { color: var(--color-primary); }
 .sede-card__bottom { display: flex; align-items: flex-end; gap: .5rem; }
 .sede-card__count { font-size: 1.5rem; font-weight: 800; color: var(--color-on-surface); }
 .sede-card:hover .sede-card__count { color: var(--color-primary); }
-.sede-card__label { font-size: .875rem; color: color-mix(in srgb,var(--color-on-surface-variant) 50%,transparent); margin-bottom: .125rem; }
+.sede-card__label { font-size: .875rem; color: color-mix(in srgb,var(--color-on-surface-variant)); margin-bottom: .125rem; }
 .sede-card__empty { font-size: .875rem; color: color-mix(in srgb,var(--color-on-surface-variant) 50%,transparent); padding: 2rem 0; text-align: center; grid-column: 1 / -1; }
 
 .quick-payment-card {
