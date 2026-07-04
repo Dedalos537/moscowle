@@ -551,3 +551,7 @@ tr {
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+.finanzas-body {
+  @apply flex flex-col gap-6;
+}

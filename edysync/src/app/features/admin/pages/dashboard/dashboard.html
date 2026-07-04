@@ -29,40 +29,20 @@
 
     <div class="grid-4" [@listStagger]="dailyPendings.length">
       @if (dailyPendings.length > 0) {
-      <div class="stat-card stat-card--warning" [@cardEnter]>
-        <div class="stat-card__top">
-          <span class="label-caps text-warning">Cobros Hoy</span>
-          <span class="icon-badge icon-badge--warning">
-            <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-lg"></fa-icon>
-          </span>
-        </div>
-        <p class="stat-card__value">{{ dailyPendings.length }}</p>
-        <p class="stat-card__desc">Pacientes con vencimiento hoy</p>
-      </div>
+      <app-summary-card [@cardEnter] label="Cobros Hoy" [value]="dailyPendings.length"
+        [icon]="['fas', 'money-bill-wave']" variant="warning"
+        subtitle="Pacientes con vencimiento hoy" />
       }
       @if (financials && incompletePatients.length > 0) {
-      <div class="stat-card stat-card--error">
-        <div class="stat-card__top">
-          <span class="label-caps text-error">Sin Configurar</span>
-          <span class="icon-badge icon-badge--error">
-            <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-lg"></fa-icon>
-          </span>
-        </div>
-        <p class="stat-card__value">{{ incompletePatients.length }}</p>
-        <p class="stat-card__desc">Pacientes sin plan de pago</p>
-      </div>
+      <app-summary-card [@cardEnter] label="Sin Configurar" [value]="incompletePatients.length"
+        [icon]="['fas', 'exclamation-triangle']" variant="error"
+        subtitle="Pacientes sin plan de pago" />
       }
       @if (financials && financials.overdue_amount > 0) {
-      <div class="stat-card stat-card--warning">
-        <div class="stat-card__top">
-          <span class="label-caps text-warning">Deuda Total</span>
-          <span class="icon-badge icon-badge--warning">
-            <fa-icon [icon]="['fas', 'wallet']" class="text-lg"></fa-icon>
-          </span>
-        </div>
-        <p class="stat-card__value">S/ {{ financials.overdue_amount.toFixed(2) }}</p>
-        <p class="stat-card__desc">{{ financials.overdue_users_count }} pacientes morosos</p>
-      </div>
+      <app-summary-card [@cardEnter] label="Deuda Total"
+        [value]="financials.overdue_amount.toFixed(2)" prefix="S/ "
+        [icon]="['fas', 'wallet']" variant="warning"
+        [subtitle]="financials.overdue_users_count + ' pacientes morosos'" />
       }
       @if (!dailyPendings.length && !incompletePatients.length && (!financials || financials.overdue_amount <= 0)) {
         <div class="empty-state lg\:col-span-4">
