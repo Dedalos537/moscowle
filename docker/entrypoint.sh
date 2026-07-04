@@ -1,0 +1,70 @@
+#!/bin/sh
+set -e
+
+# ---------------------------------------------------------------
+# Moscowle IA — Docker Entrypoint
+# Uses only POSIX sh features — works on Linux, macOS, Windows/WSL
+# ---------------------------------------------------------------
+
+# --- Wait for database ---
+if [ -n "$SQLALCHEMY_DATABASE_URI" ]; then
+    echo "Waiting for database..."
+    python -c "
+import os, time, sqlalchemy
+uri = os.environ['SQLALCHEMY_DATABASE_URI']
+for i in range(30):
+    try:
+        sqlalchemy.create_engine(uri).connect()
+        print('Database available')
+        break
+    except Exception as e:
+        if i == 29:
+            print(f'Database timeout: {e}')
+            exit(1)
+        time.sleep(1)
+"
+fi
+
+# --- Run database migrations (non-fatal: create_app() -> db.create_all() runs first) ---
+if [ "${RUN_MIGRATIONS}" = "true" ]; then
+    echo "Running database migrations..."
+    flask db upgrade || echo "Warning: migrations incomplete (db.create_all() handles schema)"
+
+    # --- Seed database if no admin user exists ---
+    echo "Checking if seed is needed..."
+    python -c "
+import os
+from app import create_app
+from app.extensions import db
+from flask_bcrypt import Bcrypt
+
+app = create_app()
+bcrypt = Bcrypt(app)
+with app.app_context():
+    from app.models import User
+    if not User.query.filter_by(role='admin').first():
+        admin_email = os.environ.get('ADMIN_EMAIL', 'diegocenteno537@gmail.com')
+        admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        admin = User(
+            email=admin_email,
+            password=bcrypt.generate_password_hash(admin_pass).decode('utf-8'),
+            username='admin',
+            role='admin',
+            is_active=True
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print(f'Admin created: {admin_email} / {admin_pass}')
+    else:
+        print('Admin already exists, skipping seed')
+" || echo "Warning: seed failed (non-fatal)"
+fi
+
+# --- Start nginx in background (production mode) ---
+if [ "${FLASK_ENV}" = "production" ]; then
+    echo "Starting nginx..."
+    nginx -g "daemon off;" &
+fi
+
+# --- Execute the main command ---
+exec "$@"

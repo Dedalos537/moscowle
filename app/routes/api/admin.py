@@ -21,6 +21,7 @@ from app.routes.api._shared import (
     os,
     request,
 )
+from app.models.user import therapist_sede
 
 
 def _serialize_user(u):
@@ -293,7 +294,7 @@ def admin_sedes():
                         created_at_iso = str(s.created_at)
 
                 result.append(
-                    {'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active, 'created_at': created_at_iso}
+                    {'id': s.id, 'name': s.name, 'address': s.address, 'active': s.is_active, 'created_at': created_at_iso}
                 )
             return jsonify(result)
 
@@ -319,6 +320,20 @@ def admin_sedes():
         return jsonify({'error': str(e), 'data': []}), 500
 
 
+@api_bp.route('/admin/sedes/active', methods=['GET'])
+@login_required
+def admin_sedes_active():
+    try:
+        if current_user.role not in ('admin', 'supervisor'):
+            return jsonify({'success': False, 'message': 'Forbidden'}), 403
+        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
+        result = [{'id': s.id, 'name': s.name, 'address': s.address} for s in sedes]
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f'Error in admin_sedes_active: {str(e)}')
+        return jsonify({'error': str(e), 'data': []}), 500
+
+
 @api_bp.route('/admin/sedes/<int:sede_id>', methods=['PUT', 'GET'])
 @login_required
 def admin_sedes_detail(sede_id):
@@ -332,7 +347,7 @@ def admin_sedes_detail(sede_id):
                 return jsonify({'success': False, 'message': 'Forbidden'}), 403
             data = request.get_json() or {}
             if 'active' in data:
-                s.active = bool(data['active'])
+                s.is_active = bool(data['active'])
             if 'name' in data and data['name']:
                 s.name = data['name']
             if 'address' in data:
@@ -343,7 +358,7 @@ def admin_sedes_detail(sede_id):
 
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        return jsonify({'id': s.id, 'name': s.name, 'address': s.address, 'active': s.active})
+        return jsonify({'id': s.id, 'name': s.name, 'address': s.address, 'active': s.is_active})
     except Exception as e:
         current_app.logger.error(f'Error in admin_sedes_detail: {str(e)}')
         return jsonify({'error': str(e), 'data': []}), 500
@@ -453,6 +468,28 @@ def admin_deudores_por_sede():
 
         current_app.logger.error(traceback.format_exc())
         return api_response(success=False, error=str(e), data={'por_sede': {}}, status=500)
+
+
+@api_bp.route('/admin/sedes/stats', methods=['GET'])
+@login_required
+def admin_sedes_stats():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    try:
+        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
+        result = []
+        for s in sedes:
+            direct = db.session.query(User.id).filter(User.sede_id == s.id)
+            indirect = db.session.query(therapist_sede.c.therapist_id).filter(
+                therapist_sede.c.sede_id == s.id
+            )
+            union = direct.union(indirect).subquery()
+            count = db.session.query(union).count()
+            result.append({'id': s.id, 'name': s.name, 'count': count})
+        return jsonify({'success': True, 'data': result})
+    except Exception as e:
+        current_app.logger.error(f'Error in admin_sedes_stats: {str(e)}')
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @api_bp.route('/admin/metrics/capacity', methods=['GET'])

@@ -1,20 +1,71 @@
+# Version control
 .git/
 .gitignore
+.gitattributes
+
+# Environment files (contain secrets)
 .env
-.venv/
+.env.local
+.env.production
+.env.docker
+
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.idea/
 .DS_Store
+
+# Node / Angular
 node_modules/
 .angular/
+edysync/node_modules/
+edysync/.angular/
+
+# Testing
 .pytest_cache/
 .coverage
+htmlcov/
+coverage_report/
+playwright-results/
+test-results/
+
+# Database
 instance/
 *.db
+*.sqlite
+*.sqlite3
+
+# Logs
 logs/*
 !logs/.gitkeep
-design/
-documento_proyecto.md
-generar_docx.py
+
+# Uploads
+uploads/receipts/
+uploads/messages/
+uploads/*.webm
+uploads/*.jpeg
+uploads/*.jpg
+uploads/*.png
+
+# Docker secrets (never in build)
+secrets/
+
+# Documentation (not needed in image)
 README.md
+CONTRIBUTING.md
+docs/
+PRPs/
+
+# Scripts
+dev.sh
+*.md
+design/

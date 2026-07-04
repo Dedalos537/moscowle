@@ -1,5 +1,5 @@
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import db
 from app.models import Payment, Sede, SessionMetrics, User, db
@@ -27,7 +27,7 @@ def users():
             patient_therapist_map[u.id] = [t.id for t in u.therapists]
 
     therapists = User.query.filter_by(role='terapista').order_by(User.username.asc()).all()
-    sedes = Sede.query.filter_by(active=True).order_by(Sede.name.asc()).all()
+    sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
 
     return render_template(
         'admin/users.html',

@@ -55,78 +55,46 @@
 
 </div>
 
-@if (showCreateDrawer) {
-  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeCreateDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
-    <div class="flex-none p-6 border-b border-border/20 flex justify-between items-center bg-surface-container-high/50">
-      <h3 class="text-xl font-bold text-on-surface flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'building']" class="text-primary"></fa-icon>
-        </div>
-        Crear Nueva Sede
-      </h3>
-      <button (click)="closeCreateDrawer()" class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
-      </button>
-    </div>
+<app-drawer [isOpen]="showCreateDrawer" title="Crear Nueva Sede" [icon]="['fas', 'building']" (close)="closeCreateDrawer()" size="lg">
 
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-        <input [(ngModel)]="newSede.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
-      </div>
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
-        <input [(ngModel)]="newSede.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
-      </div>
-    </div>
-
-    <div class="flex-none p-6 border-t border-border/20 bg-surface-container-high/50 flex flex-col gap-2">
-      <div class="flex justify-end gap-3">
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
-        <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'save']" (clicked)="createSede()"></app-button>
-      </div>
-      @if (createStatus) {
-        <span class="text-right text-sm text-on-surface-variant font-medium">{{ createStatus }}</span>
-      }
-    </div>
+  <div>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
+    <input [(ngModel)]="newSede.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
   </div>
-}
-
-@if (showEditDrawer) {
-  <div class="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" (click)="closeEditDrawer()"></div>
-  <div class="fixed top-0 right-0 w-full max-w-lg h-full bg-surface-container-lowest shadow-soft z-[101] flex flex-col border-l border-border/20">
-    <div class="flex-none p-6 border-b border-border/20 flex justify-between items-center bg-surface-container-high/50">
-      <h3 class="text-xl font-bold text-on-surface flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
-          <fa-icon [icon]="['fas', 'pencil']" class="text-primary"></fa-icon>
-        </div>
-        Editar Sede
-      </h3>
-      <button (click)="closeEditDrawer()" class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer">
-        <fa-icon [icon]="['fas', 'times']"></fa-icon>
-      </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
-        <input [(ngModel)]="editSedeData.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
-      </div>
-      <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
-        <input [(ngModel)]="editSedeData.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
-      </div>
-    </div>
-
-    <div class="flex-none p-6 border-t border-border/20 bg-surface-container-high/50 flex flex-col gap-2">
-      <div class="flex justify-end gap-3">
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
-        <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="updateSede()"></app-button>
-      </div>
-      @if (editStatus) {
-        <span class="text-right text-sm text-on-surface-variant font-medium">{{ editStatus }}</span>
-      }
-    </div>
+  <div>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
+    <input [(ngModel)]="newSede.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
   </div>
-}
+
+  <div drawer-footer>
+    <div class="flex justify-end gap-3">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
+      <app-button variant="primary" label="Crear Sede" [icon]="['fas', 'save']" (clicked)="createSede()"></app-button>
+    </div>
+    @if (createStatus) {
+      <span class="text-right text-sm text-on-surface-variant font-medium">{{ createStatus }}</span>
+    }
+  </div>
+</app-drawer>
+
+<app-drawer [isOpen]="showEditDrawer" title="Editar Sede" [icon]="['fas', 'pencil']" (close)="closeEditDrawer()" size="lg">
+
+  <div>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre</label>
+    <input [(ngModel)]="editSedeData.name" type="text" class="input-field text-sm" placeholder="Nombre de la sede">
+  </div>
+  <div>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Direccion</label>
+    <input [(ngModel)]="editSedeData.address" type="text" class="input-field text-sm" placeholder="Direccion (opcional)">
+  </div>
+
+  <div drawer-footer>
+    <div class="flex justify-end gap-3">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
+      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']" (clicked)="updateSede()"></app-button>
+    </div>
+    @if (editStatus) {
+      <span class="text-right text-sm text-on-surface-variant font-medium">{{ editStatus }}</span>
+    }
+  </div>
+</app-drawer>

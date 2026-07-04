@@ -1,7 +1,7 @@
 from threading import Thread
 
 from flask import Blueprint, current_app, jsonify, request
-from flask_login import login_required
+from app.auth_compat import login_required
 
 from app.services.ai_service import _train_lock, _train_thread, train_model
 

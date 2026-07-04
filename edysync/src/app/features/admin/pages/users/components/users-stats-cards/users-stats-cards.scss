@@ -1,0 +1,15 @@
+.stat-card {
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+.stat-card--primary   { --card-color: var(--color-primary); }
+.stat-card--secondary { --card-color: var(--color-secondary); }
+.stat-card--info      { --card-color: var(--color-info); }
+.stat-card--warning   { --card-color: var(--color-warning); }
+.stat-card--error     { --card-color: var(--color-error); }
+.stat-card--accent    { --card-color: var(--color-accent); }
+.stat-card--muted     { --card-color: var(--color-on-surface-variant); }
+.stat-card--default   { --card-color: var(--color-on-surface); }

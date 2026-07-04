@@ -1,0 +1,119 @@
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.2s ease;
+}
+
+.drawer-panel {
+  position: relative;
+  height: 100%;
+  background-color: var(--color-surface-container-lowest);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 101;
+  animation: slideInRight 0.2s ease-out;
+  box-shadow: var(--shadow-soft, -4px 0 24px rgba(0, 0, 0, 0.08));
+}
+
+.drawer-sm {
+  width: 280px;
+}
+
+.drawer-md {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.drawer-lg {
+  width: 100%;
+  max-width: 32rem;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+
+.drawer-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drawer-close {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg, 0.5rem);
+  color: var(--color-on-surface-variant);
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.drawer-close:hover {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+}
+
+.drawer-close-icon {
+  font-size: 1.125rem;
+}
+
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  gap: 0.75rem;
+  padding: 1.25rem;
+}
+
+.drawer-body > :where(:not(:last-child)) {
+  margin-bottom: 1.25rem;
+}
+
+.drawer-footer {
+  padding: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.drawer-footer > :first-child {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

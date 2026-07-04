@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required, logout_user
+from app.auth_compat import current_user, login_required
 
 from app.extensions import bcrypt
 from app.models import db
@@ -41,8 +41,11 @@ def game():
 @main_bp.route('/logout')
 @login_required
 def logout():
-    logout_user()
-    return redirect(url_for('auth.login'))
+    from flask_jwt_extended import unset_jwt_cookies
+
+    response = redirect(url_for('auth.login'))
+    unset_jwt_cookies(response)
+    return response
 
 
 @main_bp.route('/messages')

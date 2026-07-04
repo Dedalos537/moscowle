@@ -1,0 +1,24 @@
+<div class="summary-card" [style.--i]="staggerIndex()"
+     [class.summary-card--primary]="variant() === 'primary'"
+     [class.summary-card--secondary]="variant() === 'secondary'"
+     [class.summary-card--info]="variant() === 'info'"
+     [class.summary-card--warning]="variant() === 'warning'"
+     [class.summary-card--error]="variant() === 'error'">
+  <div class="summary-card__body">
+    <p class="label-caps">{{ label() }}</p>
+    <h3 class="summary-card__value">
+      @if (!loading()) { {{ value() }} } @else { <app-spinner size="sm"></app-spinner> }
+    </h3>
+    @if (subtitle(); as sub) {
+      <p class="summary-card__sub">{{ sub }}</p>
+    }
+  </div>
+  <div class="icon-circle"
+       [class.icon-circle--primary]="variant() === 'primary'"
+       [class.icon-circle--secondary]="variant() === 'secondary'"
+       [class.icon-circle--info]="variant() === 'info'"
+       [class.icon-circle--warning]="variant() === 'warning'"
+       [class.icon-circle--error]="variant() === 'error'">
+    <fa-icon [icon]="icon()" class="text-lg"></fa-icon>
+  </div>
+</div>

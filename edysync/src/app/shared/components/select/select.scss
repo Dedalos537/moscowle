@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .select-wrap {
   position: relative;
   font-family: Manrope, sans-serif;
@@ -125,6 +129,7 @@
 
 .select__dropdown {
   position: fixed;
+  z-index: 9999;
   background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: var(--radius-lg);

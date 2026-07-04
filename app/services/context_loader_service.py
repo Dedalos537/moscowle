@@ -125,7 +125,7 @@ class ContextLoader:
     @staticmethod
     def get_sedes_context() -> dict:
         """Obtiene contexto de sedes/ubicaciones"""
-        sedes = Sede.query.filter_by(active=True).all()
+        sedes = Sede.query.filter_by(is_active=True).all()
 
         context = {'total': len(sedes), 'sedes': []}
 

@@ -37,6 +37,7 @@ export class Select implements ControlValueAccessor {
 
   @ViewChild('dropdownPanel') dropdownPanel?: ElementRef;
   @ViewChild('searchInput') searchInput?: ElementRef;
+  @ViewChild('triggerRef') triggerRef?: ElementRef<HTMLElement>;
 
   isOpen = false;
   selectedValue: any = null;
@@ -44,23 +45,10 @@ export class Select implements ControlValueAccessor {
   searchQuery = '';
   highlightedIndex = -1;
 
-  dropdownTop = 0;
-  dropdownLeft = 0;
-  dropdownWidth = 0;
-
   private onChange: any = () => {};
   private onTouched: any = () => {};
 
   constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {}
-
-  private updateDropdownPosition() {
-    const trigger = this.elementRef.nativeElement.querySelector('.select__trigger');
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    this.dropdownTop = rect.bottom + 6;
-    this.dropdownLeft = rect.left;
-    this.dropdownWidth = rect.width;
-  }
 
   get filteredOptions(): SelectOption[] {
     if (!Array.isArray(this.options())) return [];
@@ -113,11 +101,11 @@ export class Select implements ControlValueAccessor {
     this.highlightedIndex = -1;
     this.searchQuery = '';
     if (this.isOpen) {
-      this.updateDropdownPosition();
       if (this.searchable()) {
         setTimeout(() => this.searchInput?.nativeElement?.focus());
       }
     }
+    this.cdr.markForCheck();
   }
 
   open() {
@@ -125,10 +113,10 @@ export class Select implements ControlValueAccessor {
     this.isOpen = true;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    this.updateDropdownPosition();
     if (this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
+    this.cdr.markForCheck();
   }
 
   close() {
@@ -179,22 +167,6 @@ export class Select implements ControlValueAccessor {
   onDocumentClick(event: Event) {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.close();
-      this.cdr.markForCheck();
-    }
-  }
-
-  @HostListener('window:scroll')
-  onWindowScroll() {
-    if (this.isOpen) {
-      this.updateDropdownPosition();
-      this.cdr.markForCheck();
-    }
-  }
-
-  @HostListener('window:resize')
-  onWindowResize() {
-    if (this.isOpen) {
-      this.updateDropdownPosition();
       this.cdr.markForCheck();
     }
   }

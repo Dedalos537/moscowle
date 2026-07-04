@@ -1,7 +1,7 @@
 import os
 
 from flask import Blueprint, abort, current_app, send_from_directory
-from flask_login import login_required
+from app.auth_compat import login_required
 
 uploads_bp = Blueprint('uploads', __name__)
 

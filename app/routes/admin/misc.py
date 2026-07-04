@@ -5,7 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken, Appointment, ContactMessage, CSPReport, Sede, SmartAction, User, db
@@ -46,7 +46,7 @@ def dashboard():
 
     sedes_stats = []
     try:
-        sedes = Sede.query.filter_by(active=True).order_by(Sede.name.asc()).all()
+        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
         for s in sedes:
             count = User.query.filter_by(sede_id=s.id, role='jugador', is_active=True).count()
             sedes_stats.append({'id': s.id, 'name': s.name, 'count': count})
