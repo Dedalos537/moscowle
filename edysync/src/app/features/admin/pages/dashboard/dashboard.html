@@ -189,45 +189,10 @@
 <section class="dashboard-section">
   <h3 class="section-label">Gestión Operativa</h3>
   <div class="grid-4">
-    <a routerLink="/admin/users" class="action-card">
-      <div class="action-card__icon action-card__icon--primary">
-        <fa-icon [icon]="['fas', 'users']" class="text-lg"></fa-icon>
-      </div>
-      <h3 class="action-card__title">Usuarios</h3>
-      <p class="action-card__desc">Gestionar perfiles de terapeutas y pacientes.</p>
-      <span class="action-card__action">Acceder <fa-icon [icon]="['fas', 'chevron-right']"
-          class="ml-1 text-xs"></fa-icon></span>
-    </a>
-
-    <a routerLink="/admin/games" class="action-card">
-      <div class="action-card__icon action-card__icon--primary">
-        <fa-icon [icon]="['fas', 'gamepad']" class="text-lg"></fa-icon>
-      </div>
-      <h3 class="action-card__title">Juegos</h3>
-      <p class="action-card__desc">Configurar actividades y niveles disponibles.</p>
-      <span class="action-card__action">Configurar <fa-icon [icon]="['fas', 'chevron-right']"
-          class="ml-1 text-xs"></fa-icon></span>
-    </a>
-
-    <a routerLink="/admin/reports" class="action-card">
-      <div class="action-card__icon action-card__icon--info">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-lg"></fa-icon>
-      </div>
-      <h3 class="action-card__title">Reportes</h3>
-      <p class="action-card__desc">Analíticas detalladas de pacientes.</p>
-      <span class="action-card__action">Analizar <fa-icon [icon]="['fas', 'chevron-right']"
-          class="ml-1 text-xs"></fa-icon></span>
-    </a>
-
-    <a routerLink="/admin/messages" class="action-card">
-      <div class="action-card__icon action-card__icon--warning">
-        <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
-      </div>
-      <h3 class="action-card__title">Mensajería</h3>
-      <p class="action-card__desc">Comunicación interna y avisos globales.</p>
-      <span class="action-card__action">Enviar <fa-icon [icon]="['fas', 'chevron-right']"
-          class="ml-1 text-xs"></fa-icon></span>
-    </a>
+    <app-action-card routerLink="/admin/users"   [icon]="['fas', 'users']"     variant="primary" title="Usuarios"   description="Gestionar perfiles de terapeutas y pacientes." actionText="Acceder"></app-action-card>
+    <app-action-card routerLink="/admin/games"   [icon]="['fas', 'gamepad']"   variant="primary" title="Juegos"     description="Configurar actividades y niveles disponibles."   actionText="Configurar"></app-action-card>
+    <app-action-card routerLink="/admin/reports" [icon]="['fas', 'chart-line']" variant="info"    title="Reportes"   description="Analíticas detalladas de pacientes."            actionText="Analizar"></app-action-card>
+    <app-action-card routerLink="/admin/messages" [icon]="['fas', 'envelope']"  variant="warning" title="Mensajería" description="Comunicación interna y avisos globales."        actionText="Enviar"></app-action-card>
   </div>
 </section>
 

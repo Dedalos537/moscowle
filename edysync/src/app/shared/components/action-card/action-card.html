@@ -1,0 +1,11 @@
+<a [routerLink]="routerLink()" class="action-card">
+  <div class="action-card__icon"
+    [class.action-card__icon--primary]="variant() === 'primary'"
+    [class.action-card__icon--info]="variant() === 'info'"
+    [class.action-card__icon--warning]="variant() === 'warning'">
+    <fa-icon [icon]="icon()" class="text-lg"></fa-icon>
+  </div>
+  <h3 class="action-card__title">{{ title() }}</h3>
+  <p class="action-card__desc">{{ description() }}</p>
+  <span class="action-card__action">{{ actionText() }} <fa-icon [icon]="['fas', 'chevron-right']" class="ml-1 text-xs"></fa-icon></span>
+</a>

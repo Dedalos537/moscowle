@@ -13,11 +13,12 @@ import { WizardOverlay } from '../../../shared/contextual-help/components/wizard
 import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { Button } from '../../../shared/components/button/button';
+import { ConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 
 @Component({
   selector: 'app-patient-layout',
   standalone: true,
-  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, HelpButton, HelpPanel, WizardOverlay],
+  imports: [RouterModule, CommonModule, FontAwesomeModule, Header, Spinner, Button, ConfirmDialog, HelpButton, HelpPanel, WizardOverlay],
   templateUrl: './patient-layout.html',
   styleUrl: './patient-layout.scss',
   animations: [routeAnimations],

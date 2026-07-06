@@ -11,26 +11,11 @@
 
 @if (confirmService.state$ | async; as confirmState) {
   @if (confirmState.visible) {
-    <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="confirmService.close(false)">
-      <div class="bg-surface-container-lowest rounded-xl border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
-        <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-             [class.bg-error-container]="confirmState.options.variant === 'danger'"
-             [class.bg-warning-container]="confirmState.options.variant === 'warning'"
-             [class.bg-primary-container/15]="confirmState.options.variant === 'primary'">
-          <fa-icon [icon]="$any(confirmState.options.icon || ['fas', 'exclamation-triangle'])"
-                   class="text-2xl"
-                   [class.text-error]="confirmState.options.variant === 'danger'"
-                   [class.text-warning]="confirmState.options.variant === 'warning'"
-                   [class.text-primary-container]="confirmState.options.variant === 'primary'"></fa-icon>
-        </div>
-        <h3 class="text-lg font-bold text-on-surface text-center mb-2">{{ confirmState.options.title }}</h3>
-        <p class="text-sm text-on-surface-variant text-center mb-6">{{ confirmState.options.message }}</p>
-        <div class="flex gap-3">
-          <app-button variant="secondary" class="flex-1" [label]="confirmState.options.cancelText || 'Cancelar'" (clicked)="confirmService.close(false)"></app-button>
-          <app-button [variant]="confirmState.options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="confirmState.options.confirmText || 'Confirmar'" (clicked)="confirmService.close(true)"></app-button>
-        </div>
-      </div>
-    </div>
+    <app-confirm-dialog
+      [state]="confirmState"
+      (confirm)="confirmService.close(true)"
+      (cancel)="confirmService.close(false)"
+    ></app-confirm-dialog>
   }
 }
 
