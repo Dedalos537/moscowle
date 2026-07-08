@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -47,7 +47,7 @@ export class IncidentDetailPage implements OnInit, OnDestroy {
     private router: Router,
     private headerService: HeaderService,
     private incidentService: IncidentService,
-    private cdr: inject(ChangeDetectorRef),
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {

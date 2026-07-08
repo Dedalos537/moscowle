@@ -16,6 +16,7 @@ export class Button {
   variant = input<'primary' | 'secondary' | 'danger' | 'ghost'>('primary');
   icon = input<IconProp>();
   disabled = input(false);
+  loading = input(false);
   type = input<'button' | 'submit'>('button');
 
   clicked = output<Event>();

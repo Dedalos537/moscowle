@@ -1,10 +1,14 @@
 <button
   [type]="type()"
   [class]="btnClass"
-  [disabled]="disabled()"
+  [disabled]="disabled() || loading()"
   (click)="onClick($event)">
 
-  @if (icon()) {
+  @if (loading()) {
+    <span class="btn-spinner"></span>
+  }
+
+  @if (icon() && !loading()) {
     <fa-icon [icon]="icon()"></fa-icon>
   }
 

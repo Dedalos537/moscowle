@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -22,6 +22,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Incidents implements OnInit, OnDestroy {
+  readonly Math = Math;
   dashboard: IncidentDashboard | null = null;
   incidents: Incident[] = [];
   loading = true;
@@ -66,7 +67,7 @@ export class Incidents implements OnInit, OnDestroy {
   constructor(
     private headerService: HeaderService,
     private incidentService: IncidentService,
-    private cdr: inject(ChangeDetectorRef),
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
