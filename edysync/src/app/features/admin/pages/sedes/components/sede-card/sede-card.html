@@ -35,21 +35,27 @@
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'users']" class="text-info"></fa-icon> Pacientes
       </span>
-      <span class="font-bold text-on-surface">{{ sede().stats?.patients?.total ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.patients?.total ?? '—' }}
+      </span>
     </div>
 
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'calendar-alt']" class="text-success"></fa-icon> Sesiones
       </span>
-      <span class="font-bold text-on-surface">{{ sede().stats?.sessions?.total_completed ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.sessions?.total_completed != null ? sede().stats?.sessions?.total_completed : '—' }}
+      </span>
     </div>
 
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning"></fa-icon> Ingresos
       </span>
-      <span class="font-bold text-on-surface">S/. {{ sede().stats?.payments?.total_revenue ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.payments?.total_revenue != null ? ('S/. ' + sede().stats?.payments?.total_revenue) : '—' }}
+      </span>
     </div>
 
   </div>

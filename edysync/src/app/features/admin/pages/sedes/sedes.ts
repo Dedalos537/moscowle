@@ -98,15 +98,20 @@ export class Sedes implements OnInit, OnDestroy {
 
   private loadAllAnalytics() {
     for (const sede of this.sedes) {
+      const sedeId = sede.id;
       this.subscriptions.add(
-        this.adminService.getSedeAnalytics(sede.id).subscribe({
+        this.adminService.getSedeAnalytics(sedeId).subscribe({
           next: (res) => {
-            if (res.success && res.analytics) {
-              sede.stats = res.analytics;
+            if (res?.success && res?.analytics) {
+              // Mutamos y creamos nueva referencia para forzar detección
+              const updated = { ...sede, stats: res.analytics };
+              this.sedes = this.sedes.map(s => s.id === sedeId ? updated : s);
             }
             this.cdr.markForCheck();
           },
-          error: () => this.cdr.markForCheck(),
+          error: () => {
+            this.cdr.markForCheck();
+          },
         }),
       );
     }

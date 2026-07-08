@@ -555,3 +555,9 @@ tr {
 .finanzas-body {
   @apply flex flex-col gap-6;
 }
+
+.buttons_footer_drawer {
+  display: flex;
+  justify-content: end;
+  gap: 0.5rem;
+}

@@ -488,9 +488,11 @@
   }
 
   <div drawer-footer>
-    <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
-    <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']"
-      (clicked)="saveEditUser()"></app-button>
+    <div class="buttons_footer_drawer">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeEditDrawer()"></app-button>
+      <app-button variant="primary" label="Guardar Cambios" [icon]="['fas', 'save']"
+        (clicked)="saveEditUser()"></app-button>
+    </div>
   </div>
 </app-drawer>
 
@@ -540,9 +542,11 @@
   }
 
   <div drawer-footer>
-    <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
-    <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'exchange-alt']"
-      (clicked)="confirmResetPassword()"></app-button>
+    <div class="buttons_footer_drawer">
+      <app-button variant="ghost" label="Cancelar" (clicked)="closeResetDrawer()"></app-button>
+      <app-button variant="primary" label="Confirmar Reseteo" [icon]="['fas', 'exchange-alt']"
+        (clicked)="confirmResetPassword()"></app-button>
+    </div>
   </div>
 </app-drawer>
 
@@ -668,7 +672,7 @@
   }
 
   <div drawer-footer>
-    <div class="flex justify-end gap-3">
+    <div class="buttons_footer_drawer">
       <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateDrawer()"></app-button>
       <app-button variant="primary" label="Crear Usuario" [icon]="['fas', 'save']"
         (clicked)="createUser()"></app-button>

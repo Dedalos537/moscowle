@@ -574,7 +574,7 @@ export class Finanzas implements OnInit, OnDestroy {
       next: (res: any) => {
         if (res.success) {
           this.registerStatus = 'Pago registrado exitosamente';
-          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); }, 1500);
+          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); this.loadSummaryData(); }, 1500);
         } else {
           this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
         }
@@ -679,7 +679,7 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.expenseForm.receipt) fd.append('receipt', this.expenseForm.receipt);
 
     this.subscriptions.add(this.adminService.createExpense(fd).subscribe({
-      next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.cdr.markForCheck(); },
+      next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.loadSummaryData(); this.cdr.markForCheck(); },
       error: () => { this.submitting = false; this.cdr.markForCheck(); },
     }));
   }
