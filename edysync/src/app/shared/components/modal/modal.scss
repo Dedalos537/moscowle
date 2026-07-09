@@ -11,7 +11,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 20000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,12 +74,17 @@
   overflow-y: auto;
 }
 
+.modal-panel--allow-overflow {
+  overflow: visible;
+}
+
+.modal-body--allow-overflow {
+  overflow: visible;
+}
+
 .modal-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--color-border);
-  background-color: color-mix(in srgb, var(--color-surface-container-low) 30%, transparent);
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }

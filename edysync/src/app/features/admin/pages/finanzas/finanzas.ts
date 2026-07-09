@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -13,7 +13,6 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { AlertService } from '../../../../core/services/alert.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
-import { GlobalSettingsService } from '../../../../core/services/global-settings.service';
 import { Sede } from '../../../../core/models/sede';
 import { Expense, TherapistFinancial } from '../../../../core/models/expense';
 import { User } from '../../../../core/models/user';
@@ -24,11 +23,12 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
 import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
-import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm, MonthCell } from './finanzas.models';
+import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
+import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, getOverdueDays, buildPatientYearGrid,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue,
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -39,16 +39,13 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Finanzas implements OnInit, OnDestroy {
-  private settings = inject(GlobalSettingsService);
-  hideCharts = this.settings.hideCharts;
-
   readonly Math = Math;
   readonly getCategoryLabel = getCategoryLabel;
   readonly getMethodBadgeClass = getMethodBadgeClass;
@@ -58,26 +55,14 @@ export class Finanzas implements OnInit, OnDestroy {
   readonly getPatientStatus = getPatientStatus;
   readonly getStatusInfo = getStatusInfo;
   readonly isOverdue = isOverdue;
-  readonly getOverdueDays = getOverdueDays;
 
   isSupervisor = false;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
-  @ViewChild('pagosSection', { static: false }) pagosSection?: ElementRef<HTMLElement>;
-  @ViewChild('pagosSubTabs', { static: false }) pagosSubTabs?: ElementRef<HTMLElement>;
 
-  activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' | 'contratos' = 'resumen';
+  activeTab: 'resumen' | 'pagos' | 'yape' | 'gastos' = 'resumen';
 
-  switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos' | 'contratos') {
+  switchTab(tab: 'resumen' | 'pagos' | 'yape' | 'gastos') {
     this.activeTab = tab;
-    if (tab === 'pagos') {
-      setTimeout(() => {
-        (this.pagosSubTabs?.nativeElement ?? this.pagosSection?.nativeElement)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 150);
-    }
-  }
-
-  goToYapeImport() {
-    this.router.navigate(['/admin/yape-import']);
   }
 
   summaryTotalDeuda = 0;
@@ -91,15 +76,6 @@ export class Finanzas implements OnInit, OnDestroy {
   paymentsLoading = true;
   historyLoading = true;
   pagosTab: 'pacientes' | 'historial' = 'pacientes';
-  expandedPatientId: number | null = null;
-  expandedPatientGrid: MonthCell[] = [];
-  expandedPatient: PatientRow | null = null;
-  expandedPatientLoading = false;
-  selectedPaymentDetail: number | null = null;
-
-  get expandedPaidCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'paid').length; }
-  get expandedMissingCount(): number { return this.expandedPatientGrid.filter(c => c.status === 'missing').length; }
-  get expandedYear(): string { return this.expandedPatientGrid[0]?.year?.toString() || ''; }
 
   searchQuery = '';
   selectedSedeId: number | null = null;
@@ -167,27 +143,11 @@ export class Finanzas implements OnInit, OnDestroy {
   registerForm: RegisterForm = {
     patient_id: null, amount: 0, method: 'transfer', reference: '',
     next_due_date: '', payment_date: '', discount: 0,
-    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
+    document_number: '', guardian_name: '', receipt: null,
   };
   registerStatus = '';
   analyzeResult: any = null;
   analyzingReceipt = false;
-  lastPaymentReceiptUrl = '';
-
-  showPreviewModal = false;
-  previewImageUrl = '';
-
-  contractSearchQuery = '';
-  filteredContractPatients: PatientRow[] = [];
-  selectedContractPatient: PatientRow | null = null;
-  patientContracts: any[] = [];
-  showNewContractModal = false;
-  newContractForm = { patient_id: null as number | null, patient_name: '', name: '', total_amount: 0, installment_count: 4, start_date: new Date().toISOString().substring(0, 10) };
-  showPayInstallmentModal = false;
-  selectedContract: any = null;
-  selectedInstallment: any = null;
-  payInstallmentForm = { amount: 0, method: 'transfer', reference: '', discount: 0 };
-  contractSubmitting = false;
 
   showSettingsModal = false;
   settingsForm: SettingsForm = {
@@ -260,7 +220,6 @@ export class Finanzas implements OnInit, OnDestroy {
     private adminService: AdminService,
     private headerService: HeaderService,
     private route: ActivatedRoute,
-    private router: Router,
     private authService: AuthService,
     private alertService: AlertService,
     private toastService: ToastService,
@@ -409,7 +368,6 @@ export class Finanzas implements OnInit, OnDestroy {
               has_plan_config: !!(u.payment_plan || u.payment_amount),
             };
           });
-          this.filteredContractPatients = this.patients;
           this.updateCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
@@ -435,7 +393,7 @@ export class Finanzas implements OnInit, OnDestroy {
             id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || '',
             amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
             reference: p.reference, date: p.date || '', status: p.status || 'completed',
-            receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
+            receipt_image_path: p.receipt_image_path, document_number: p.document_number, guardian_name: p.guardian_name,
           }));
         }
         this.historyLoading = false;
@@ -565,43 +523,16 @@ export class Finanzas implements OnInit, OnDestroy {
     this.registerForm = {
       patient_id: patient?.id || null, amount: patient?.payment_amount || 0, method: 'transfer', reference: '',
       next_due_date: '', payment_date: new Date().toISOString().substring(0, 10), discount: 0,
-    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
+      document_number: '', guardian_name: '', receipt: null,
     };
     this.analyzeResult = null;
     this.analyzingReceipt = false;
     this.registerStatus = '';
-    this.lastPaymentReceiptUrl = '';
     this.showRegisterModal = true;
-    if (patient?.id) this.onPatientSelected(patient.id);
     this.cdr.markForCheck();
   }
 
   closeRegisterModal() { this.showRegisterModal = false; }
-
-  onPatientSelected(patientId: number) {
-    this.subscriptions.add(
-      this.adminService.getPaymentInfo(patientId).subscribe({
-        next: (res: any) => {
-          if (res.guardian_name) this.registerForm.guardian_name = res.guardian_name;
-          if (res.guardian_dni) this.registerForm.guardian_dni = res.guardian_dni;
-          if (res.current_amount && !this.registerForm.amount) this.registerForm.amount = parseFloat(res.current_amount);
-          if (res.suggested_date && !this.registerForm.next_due_date) this.registerForm.next_due_date = res.suggested_date;
-          this.cdr.markForCheck();
-        },
-      }),
-    );
-  }
-
-  previewImage(url: string) {
-    this.previewImageUrl = url;
-    this.showPreviewModal = true;
-    this.cdr.markForCheck();
-  }
-
-  closePreview() {
-    this.showPreviewModal = false;
-    this.previewImageUrl = '';
-  }
 
   onFileSelected(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0] || null;
@@ -635,23 +566,15 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.registerForm.next_due_date) fd.append('next_due_date', this.registerForm.next_due_date);
     if (this.registerForm.payment_date) fd.append('payment_date', this.registerForm.payment_date);
     fd.append('discount', String(this.registerForm.discount));
+    if (this.registerForm.document_number) fd.append('document_number', this.registerForm.document_number);
     if (this.registerForm.guardian_name) fd.append('guardian_name', this.registerForm.guardian_name);
-    if (this.registerForm.guardian_dni) fd.append('guardian_dni', this.registerForm.guardian_dni);
     if (this.registerForm.receipt) fd.append('receipt', this.registerForm.receipt);
 
     this.subscriptions.add(this.adminService.registerPayment(fd).subscribe({
       next: (res: any) => {
         if (res.success) {
           this.registerStatus = 'Pago registrado exitosamente';
-          this.lastPaymentReceiptUrl = res.receipt_url || '';
-          if (this.lastPaymentReceiptUrl) {
-            const a = document.createElement('a');
-            a.href = this.lastPaymentReceiptUrl;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.click();
-          }
-          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); }, 1500);
+          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); this.loadSummaryData(); }, 1500);
         } else {
           this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
         }
@@ -662,7 +585,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-  get hasMissingData(): boolean { return !this.registerForm.patient_id || !this.registerForm.document_number || !this.registerForm.guardian_name || !this.registerForm.guardian_dni; }
+  get hasMissingData(): boolean { return !this.registerForm.document_number || !this.registerForm.guardian_name; }
 
   openSettingsModal(patient: PatientRow) {
     this.settingsForm = {
@@ -715,40 +638,8 @@ export class Finanzas implements OnInit, OnDestroy {
     this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
   }
 
-  togglePatientHistory(patient: PatientRow) {
-    if (this.expandedPatientId === patient.id) {
-      this.expandedPatientId = null;
-      this.expandedPatientGrid = [];
-      this.expandedPatient = null;
-      this.selectedPaymentDetail = null;
-      this.cdr.markForCheck();
-      return;
-    }
-    this.expandedPatientId = patient.id;
-    this.expandedPatient = patient;
-    this.selectedPaymentDetail = null;
-    this.expandedPatientLoading = true;
-    this.subscriptions.add(this.adminService.getAllPayments().subscribe({
-      next: (res) => {
-        if (res.success && res.payments) {
-          this.paymentHistory = res.payments.map((p: any) => ({
-            id: p.id, patient_id: p.patient_id, patient_name: p.patient_name || '',
-            amount: p.amount || 0, discount: p.discount || 0, method: p.method || '',
-            reference: p.reference, date: p.date || '', status: p.status || 'completed',
-            receipt_image_path: p.receipt_image_path, document_number: p.document_number,
-            guardian_name: p.guardian_name, guardian_dni: p.guardian_dni,
-          }));
-        }
-        const pts = this.paymentHistory.filter(p => p.patient_id === patient.id);
-        this.expandedPatientGrid = buildPatientYearGrid(pts, patient);
-        this.expandedPatientLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => { this.expandedPatientLoading = false; this.cdr.markForCheck(); },
-    }));
-  }
+  viewPatientHistory(patient: PatientRow) { window.open(`/admin/payments/history/${patient.id}`, '_blank'); }
   getPatientName(id: number): string { return this.patients.find((p) => p.id === id)?.username || ''; }
-  get patientSelectOptions() { return this.patients.map(p => ({ value: p.id, label: `${p.username} — ${p.email || 'sin email'}` })); }
   sedeById(id: number): string { return this.sedes.find((s) => s.id === id)?.name || ''; }
   therapistById(id: number): string { return this.therapistsList.find((t) => t.id === id)?.username || ''; }
   trackById(_: number, item: any): number { return item.id || item.patient_id; }
@@ -788,123 +679,8 @@ export class Finanzas implements OnInit, OnDestroy {
     if (this.expenseForm.receipt) fd.append('receipt', this.expenseForm.receipt);
 
     this.subscriptions.add(this.adminService.createExpense(fd).subscribe({
-      next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.cdr.markForCheck(); },
+      next: () => { this.submitting = false; this.closeExpenseModal(); this.loadExpensesData(); this.loadSummaryData(); this.cdr.markForCheck(); },
       error: () => { this.submitting = false; this.cdr.markForCheck(); },
     }));
-  }
-
-  filterContractPatients() {
-    const q = this.contractSearchQuery.toLowerCase().trim();
-    if (!q) {
-      this.filteredContractPatients = this.patients;
-      return;
-    }
-    this.filteredContractPatients = this.patients.filter(p =>
-      p.username.toLowerCase().includes(q)
-    );
-  }
-
-  selectContractPatient(patient: PatientRow) {
-    this.selectedContractPatient = patient;
-    this.loadPatientContracts(patient.id);
-  }
-
-  private loadPatientContracts(patientId: number) {
-    this.subscriptions.add(this.adminService.getPatientContracts(patientId).subscribe({
-      next: (res) => {
-        if (res.success && res.contracts) {
-          this.patientContracts = res.contracts;
-          this.patientContracts.forEach(c => {
-            if (c.id) {
-              this.subscriptions.add(this.adminService.getContractDetail(c.id).subscribe({
-                next: (detail) => {
-                  if (detail.success && detail.contract) {
-                    c.installments = detail.contract.installments || [];
-                  }
-                },
-              }));
-            }
-          });
-        }
-        this.cdr.markForCheck();
-      },
-    }));
-  }
-
-  openNewContractModal() {
-    if (!this.selectedContractPatient) return;
-    this.newContractForm = {
-      patient_id: this.selectedContractPatient.id,
-      patient_name: this.selectedContractPatient.username,
-      total_amount: this.selectedContractPatient.payment_amount * 4 || 800,
-      installment_count: 4,
-      start_date: new Date().toISOString().substring(0, 10),
-      name: `Plan ${this.selectedContractPatient.username} ${new Date().toLocaleDateString('es-PE', { month: 'short', year: 'numeric' })}`,
-    };
-    this.showNewContractModal = true;
-  }
-
-  closeNewContractModal() { this.showNewContractModal = false; }
-
-  submitNewContract() {
-    this.contractSubmitting = true;
-    const data = {
-      patient_id: this.newContractForm.patient_id!,
-      total_amount: this.newContractForm.total_amount,
-      installment_count: this.newContractForm.installment_count,
-      name: this.newContractForm.name,
-      start_date: this.newContractForm.start_date,
-    };
-    this.subscriptions.add(this.adminService.createContract(data).subscribe({
-      next: (res) => {
-        this.contractSubmitting = false;
-        if (res.success) {
-          this.closeNewContractModal();
-          if (this.selectedContractPatient) this.loadPatientContracts(this.selectedContractPatient.id);
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => { this.contractSubmitting = false; this.cdr.markForCheck(); },
-    }));
-  }
-
-  openPayInstallmentModal(contract: any, installment: any) {
-    this.selectedContract = contract;
-    this.selectedInstallment = installment;
-    this.payInstallmentForm = {
-      amount: installment.amount - (installment.paid_amount || 0),
-      method: 'transfer',
-      reference: '',
-      discount: 0,
-    };
-    this.showPayInstallmentModal = true;
-  }
-
-  closePayInstallmentModal() { this.showPayInstallmentModal = false; }
-
-  submitPayInstallment() {
-    if (!this.selectedInstallment) return;
-    this.contractSubmitting = true;
-    const data = {
-      amount: this.payInstallmentForm.amount,
-      method: this.payInstallmentForm.method,
-      reference: this.payInstallmentForm.reference || undefined,
-      discount: this.payInstallmentForm.discount,
-    };
-    this.subscriptions.add(this.adminService.payInstallment(this.selectedInstallment.id, data).subscribe({
-      next: (res) => {
-        this.contractSubmitting = false;
-        if (res.success) {
-          this.closePayInstallmentModal();
-          if (this.selectedContractPatient) this.loadPatientContracts(this.selectedContractPatient.id);
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => { this.contractSubmitting = false; this.cdr.markForCheck(); },
-    }));
-  }
-
-  downloadInstallmentReceipt(paymentId: number) {
-    window.open(`/admin/payments/${paymentId}/download`, '_blank');
   }
 }

@@ -14,9 +14,12 @@ import { firstValueFrom } from 'rxjs';
 import { SelectOption } from '../../../../../shared/components/select/select';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { Spinner } from '../../../../../shared/components/spinner/spinner';
+import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
+import { Table, TableCell } from '../../../../../shared/components/table/table';
+import { UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
 
 Chart.register(...registerables);
 
@@ -52,7 +55,7 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input],
+  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer, Table, TableCell, UsersStatsCards],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -64,6 +67,7 @@ export class UsersList implements OnInit, OnDestroy {
   users: UserRow[] = [];
   filteredUsers: UserRow[] = [];
   sedes: Sede[] = [];
+  activeSedes: Pick<Sede, 'id' | 'name'>[] = [];
   therapists: { id: number; username: string; email: string }[] = [];
   activeFilter = 'all';
   searchQuery = '';
@@ -132,7 +136,7 @@ export class UsersList implements OnInit, OnDestroy {
   ];
 
   get sedeOptions(): SelectOption[] {
-    return [{value: null, label: 'Todas las Sedes'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+    return [{value: null, label: 'Todas las Sedes'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
   }
 
   get therapistOptions(): SelectOption[] {
@@ -144,11 +148,11 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   get patientSedeOptions(): SelectOption[] {
-    return [{value: null, label: '— Sin asignar —'}, ...this.sedes.map(s => ({value: s.id, label: s.name}))];
+    return [{value: null, label: '— Sin asignar —'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
   }
 
   get multiSedeOptions(): SelectOption[] {
-    return this.sedes.map(s => ({value: s.id, label: s.name}));
+    return this.activeSedes.map(s => ({value: s.id, label: s.name}));
   }
 
   get scheduleTherapistOptions(): SelectOption[] {
@@ -232,6 +236,16 @@ export class UsersList implements OnInit, OnDestroy {
       this.adminService.getSedes().subscribe({
         next: (list) => {
           this.sedes = list;
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
+
+    this.subscriptions.add(
+      this.adminService.getActiveSedes().subscribe({
+        next: (list) => {
+          this.activeSedes = list;
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),
@@ -692,4 +706,27 @@ export class UsersList implements OnInit, OnDestroy {
   trackById(_: number, u: UserRow): number {
     return u.id;
   }
+
+  columns = [
+    {key: 'usuario', label: 'Usuario', width: '15%'},
+    {key: 'email', label: 'Email', width: '15%'},
+    {key: 'rol', label: 'Rol', width: '12%'},
+    {key: 'sede', label: 'Sede', width: '11%'},
+    {key: 'estado', label: 'Estado', width: '11%'},
+    {key: 'terapeuta', label: 'Terapeuta', width: '16%'},
+    {key: 'activo', label: 'Activo', align: 'center' as const, width: '10%'},
+    {key: 'acciones', label: 'Acciones', align: 'right' as const, width: '10%'},
+  ];
+
+  getRowClass = (u: UserRow, i: number): string => {
+    const classes: string[] = [];
+    if (i % 2 === 1 && u.account_status === 'active' && u.is_active) classes.push('bg-surface-container-high/30');
+    if (u.account_status === 'debtor') classes.push('bg-error-container/20');
+    if (u.account_status === 'retired') classes.push('bg-surface-container-highest/40');
+    if (!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired') classes.push('bg-warning-container/30');
+    if (u.account_status === 'active' && u.is_active) classes.push('hover:bg-surface-container-highest/50');
+    return classes.join(' ');
+  };
+
+  trackUser = (i: number, u: UserRow): number => u.id;
 }

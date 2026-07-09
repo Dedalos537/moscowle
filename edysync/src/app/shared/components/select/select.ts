@@ -37,6 +37,7 @@ export class Select implements ControlValueAccessor {
 
   @ViewChild('dropdownPanel') dropdownPanel?: ElementRef;
   @ViewChild('searchInput') searchInput?: ElementRef;
+  @ViewChild('triggerRef') triggerRef?: ElementRef<HTMLElement>;
 
   isOpen = false;
   selectedValue: any = null;
@@ -99,9 +100,12 @@ export class Select implements ControlValueAccessor {
     this.isOpen = !this.isOpen;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    if (this.isOpen && this.searchable()) {
-      setTimeout(() => this.searchInput?.nativeElement?.focus());
+    if (this.isOpen) {
+      if (this.searchable()) {
+        setTimeout(() => this.searchInput?.nativeElement?.focus());
+      }
     }
+    this.cdr.markForCheck();
   }
 
   open() {
@@ -112,6 +116,7 @@ export class Select implements ControlValueAccessor {
     if (this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
+    this.cdr.markForCheck();
   }
 
   close() {
@@ -162,20 +167,6 @@ export class Select implements ControlValueAccessor {
   onDocumentClick(event: Event) {
     if (!this.elementRef.nativeElement.contains(event.target)) {
       this.close();
-      this.cdr.markForCheck();
-    }
-  }
-
-  @HostListener('window:scroll')
-  onWindowScroll() {
-    if (this.isOpen) {
-      this.cdr.markForCheck();
-    }
-  }
-
-  @HostListener('window:resize')
-  onWindowResize() {
-    if (this.isOpen) {
       this.cdr.markForCheck();
     }
   }

@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .select-wrap {
   position: relative;
   font-family: Manrope, sans-serif;
@@ -124,10 +128,8 @@
 }
 
 .select__dropdown {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  margin-top: 6px;
+  position: fixed;
+  z-index: 9999;
   background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: var(--radius-lg);
@@ -135,7 +137,6 @@
   z-index: 9999;
   animation: selectFadeIn 0.12s ease;
   overflow: hidden;
-  min-width: 100%;
 }
 
 .select__search {

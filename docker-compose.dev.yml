@@ -1,0 +1,91 @@
+services:
+  # ── PostgreSQL (lightweight for development) ────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: moscowle
+      POSTGRES_USER: moscowle
+      POSTGRES_PASSWORD: moscowlepass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moscowle-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moscowle"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend (Flask dev server with hot-reload) ──────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      FLASK_ENV: development
+      PORT: 5001
+      SQLALCHEMY_DATABASE_URI: postgresql://moscowle:moscowlepass@db:5432/moscowle
+      SECRET_KEY: dev-moscowle-local-123
+      RUN_MIGRATIONS: "true"
+      CORS_ORIGINS: http://localhost:4200 http://localhost:5001
+      SOCKET_CORS_ORIGINS: http://localhost:4200 http://localhost:5001
+      WTF_CSRF_ENABLED: "False"
+      SESSION_COOKIE_SAMESITE: Lax
+      SESSION_COOKIE_SECURE: "False"
+      REMEMBER_COOKIE_SECURE: "False"
+      FORCE_HTTPS: "False"
+      PREFERRED_URL_SCHEME: http
+      CACHE_TYPE: simple
+      RATELIMIT_STORAGE_URL: memory://
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./app:/app/app
+      - ./config.py:/app/config.py
+      - ./run_dev.py:/app/run_dev.py
+      - ./seed_docker.py:/app/seed_docker.py
+      - ./migrations:/app/migrations
+      - ./docker/entrypoint.sh:/entrypoint.sh
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+      - backend_instance:/app/instance
+    networks:
+      - moscowle-dev
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Angular Frontend (with hot-reload) ──────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./edysync/src:/app/src
+      - ./edysync/public:/app/public
+      - ./edysync/proxy.conf.js:/app/proxy.conf.js
+      - ./edysync/angular.json:/app/angular.json
+    environment:
+      PROXY_TARGET: http://backend:5001
+      CHOKIDAR_USEPOLLING: "true"
+    networks:
+      - moscowle-dev
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  backend_uploads:
+  backend_logs:
+  backend_instance:
+
+networks:
+  moscowle-dev:
+    driver: bridge

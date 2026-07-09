@@ -1,6 +1,5 @@
 from flask import flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
-from sqlalchemy.orm import load_only
+from app.auth_compat import current_user, login_required
 
 from app.extensions import db
 from app.models import Payment, Sede, SessionMetrics, User, db
@@ -15,29 +14,12 @@ def users():
         return redirect(url_for('main.dashboard'))
 
     sede_filter = request.args.get('sede_id')
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 200, type=int)
-    per_page = min(per_page, 500)
-
-    query = User.query.options(
-        load_only(
-            'id',
-            'username',
-            'email',
-            'role',
-            'is_active',
-            'phone',
-            'sede_id',
-            'payment_amount',
-            'payment_due_date',
-            'created_at',
-        )
-    )
+    query = User.query
 
     if sede_filter and sede_filter.isdigit():
         query = query.filter(User.sede_id == int(sede_filter))
 
-    users = query.order_by(User.created_at.desc()).limit(per_page).offset((page - 1) * per_page).all()
+    users = query.order_by(User.created_at.desc()).all()
 
     patient_therapist_map = {}
     for u in users:
@@ -53,8 +35,6 @@ def users():
         therapists=therapists,
         patient_therapist_map=patient_therapist_map,
         sedes=sedes,
-        page=page,
-        per_page=per_page,
         active_page='admin_users',
     )
 

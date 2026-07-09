@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
 

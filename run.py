@@ -5,8 +5,11 @@ from app import create_app
 app = create_app()
 
 if __name__ == '__main__':
+    import os
+    is_dev = os.getenv('FLASK_ENV', 'development') == 'development'
     app.run(
         host='0.0.0.0',
         port=int(os.getenv('PORT', '5001')),
-        debug=os.getenv('FLASK_ENV', 'development') == 'development',
+        debug=is_dev,
+        use_reloader=False,
     )

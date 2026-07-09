@@ -12,6 +12,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 export class Modal {
   isOpen = input(false);
   title = input<string>('');
+  allowOverflow = input(false);
 
   close = output<void>();
 

@@ -11,6 +11,8 @@ import { Sede } from '../../../../core/models/sede';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { QuickPayment } from '../../components/quick-payment/quick-payment';
+import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
+import { ActionCard } from '../../../../shared/components/action-card/action-card';
 
 interface SedeStat {
   id: number;
@@ -44,7 +46,7 @@ interface DailyPending {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, QuickPayment, SummaryCard, ActionCard],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
@@ -100,6 +102,7 @@ export class Dashboard implements OnInit, OnDestroy {
     this.error = null;
     this.loadUserCounts();
     this.loadSedes();
+    this.loadSedesStats();
     this.loadDebtData();
   }
 
@@ -163,6 +166,20 @@ export class Dashboard implements OnInit, OnDestroy {
     );
   }
 
+  private loadSedesStats() {
+    this.subscriptions.add(
+      this.adminService.getSedesStats().subscribe({
+        next: (res) => {
+          if (res.success && res.data) {
+            this.sedesStats = res.data;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      }),
+    );
+  }
+
   private loadDebtData() {
     this.subscriptions.add(
       this.adminService.getDebtReport('all').subscribe({
@@ -175,14 +192,12 @@ export class Dashboard implements OnInit, OnDestroy {
           let incomeExpected = 0;
           let overdueAmount = 0;
           let overdueCount = 0;
-          const stats: SedeStat[] = [];
           const incomplete: IncompletePatient[] = [];
           const daily: DailyPending[] = [];
 
           Object.values(porSede).forEach((group: any) => {
             const sedeName = group.sede_name || '';
             const deudores: any[] = group.deudores || [];
-            stats.push({ id: group.sede_id || 0, name: sedeName, count: deudores.length });
 
             deudores.forEach((d: any) => {
               const amount = d.monto || 0;
@@ -211,7 +226,6 @@ export class Dashboard implements OnInit, OnDestroy {
           });
 
           this.financials = { income_real: 0, income_expected: incomeExpected, overdue_amount: overdueAmount, overdue_users_count: overdueCount };
-          this.sedesStats = stats;
           this.incompletePatients = incomplete;
           this.dailyPendings = daily;
 

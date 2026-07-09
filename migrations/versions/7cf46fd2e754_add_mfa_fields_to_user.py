@@ -5,10 +5,11 @@ Revises: aece1345c853
 Create Date: 2026-06-10 12:17:45.598093
 
 """
-import sqlalchemy as sa
-from alembic import op
+import contextlib
 
-# revision identifiers, used by Alembic.
+from alembic import op
+import sqlalchemy as sa
+
 revision = '7cf46fd2e754'
 down_revision = 'aece1345c853'
 branch_labels = None
@@ -16,10 +17,14 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('user', sa.Column('mfa_enabled', sa.Boolean(), nullable=True, server_default=sa.text('0')))
-    op.add_column('user', sa.Column('otp_secret', sa.String(length=32), nullable=True))
+    with contextlib.suppress(Exception):
+        op.add_column('user', sa.Column('mfa_enabled', sa.Boolean(), nullable=True, server_default=sa.text('0')))
+    with contextlib.suppress(Exception):
+        op.add_column('user', sa.Column('otp_secret', sa.String(length=32), nullable=True))
 
 
 def downgrade():
-    op.drop_column('user', 'otp_secret')
-    op.drop_column('user', 'mfa_enabled')
+    with contextlib.suppress(Exception):
+        op.drop_column('user', 'otp_secret')
+    with contextlib.suppress(Exception):
+        op.drop_column('user', 'mfa_enabled')

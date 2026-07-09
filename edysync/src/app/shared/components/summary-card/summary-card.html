@@ -1,0 +1,57 @@
+<div
+  class="flex flex-row justify-between bg-surface-container-lowest rounded-xl h-full border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow"
+  [class.border-l-4]="border()" [style.--i]="staggerIndex()" [class.border-l-error]="border() && variant() === 'error'"
+  [class.border-l-success]="border() && variant() === 'success'"
+  [class.border-l-warning]="border() && variant() === 'warning'"
+  [class.border-l-info]="border() && variant() === 'info'"
+  [class.border-l-primary]="border() && variant() === 'primary'"
+  [class.border-l-secondary]="border() && variant() === 'secondary'"
+  [class.border-l-accent]="border() && variant() === 'accent'">
+  <div class="flex flex-col items-start gap-4" style="align-self: center">
+    <span class="text-label-caps" [class.text-error]="variant() === 'error'"
+      [class.text-success]="variant() === 'success'" [class.text-warning]="variant() === 'warning'"
+      [class.text-info]="variant() === 'info'" [class.text-primary]="variant() === 'primary'"
+      [class.text-secondary]="variant() === 'secondary'" [class.text-accent]="variant() === 'accent'">
+      {{ label() }}
+    </span>
+    <div>
+      @if (!loading()) {
+      <p class="text-3xl font-black tracking-tight" [class.text-on-surface]="!valueColor()"
+        [class.text-success]="valueColor() === 'success'" [class.text-error]="valueColor() === 'error'"
+        [class.text-warning]="valueColor() === 'warning'" [class.text-info]="valueColor() === 'info'">
+        {{ prefix() }}{{ value() }}
+      </p>
+      } @else {
+      <div class="py-1">
+        <app-spinner size="sm"></app-spinner>
+      </div>
+      }
+
+      @if (subtitle(); as sub) {
+      <p class="text-xs text-on-surface-variant mt-1">{{ sub }}</p>
+      }
+
+      @if (trend(); as t) {
+      <div class="flex items-center gap-2 mt-1">
+        <span class="flex items-center gap-0.5 text-[11px] font-bold"
+          [class.text-success]="t.color === 'success' || !t.color" [class.text-error]="t.color === 'error'"
+          [class.text-warning]="t.color === 'warning'" [class.text-info]="t.color === 'info'">
+          <fa-icon [icon]="t.icon" class="text-[14px]"></fa-icon>
+          {{ t.label }}
+        </span>
+        <span class="text-xs text-on-surface-variant">{{ t.subtitle }}</span>
+      </div>
+      }
+    </div>
+  </div>
+  <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="align-self: center" [class.bg-error/15]="variant() === 'error'"
+    [class.bg-success/15]="variant() === 'success'" [class.bg-warning/15]="variant() === 'warning'"
+    [class.bg-info/15]="variant() === 'info'" [class.bg-primary/15]="variant() === 'primary'"
+    [class.bg-secondary/15]="variant() === 'secondary'" [class.bg-accent/15]="variant() === 'accent'">
+    <fa-icon [icon]="icon()" class="text-xl" [class.text-error]="variant() === 'error'"
+      [class.text-success]="variant() === 'success'" [class.text-warning]="variant() === 'warning'"
+      [class.text-info]="variant() === 'info'" [class.text-primary]="variant() === 'primary'"
+      [class.text-secondary]="variant() === 'secondary'" [class.text-accent]="variant() === 'accent'">
+    </fa-icon>
+  </span>
+</div>

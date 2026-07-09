@@ -9,9 +9,9 @@ export interface Sede {
 
 export interface SedeStats {
   patients: { total: number; active?: number };
-  sessions: { total_completed: number; total_scheduled?: number };
-  payments: { total_revenue: number; pending?: number };
-  therapists?: string[];
+  sessions: { total_completed: number; total_scheduled?: number; pending?: number; this_month?: number; total?: number };
+  payments: { total_revenue: number; pending?: number; this_month?: number; transactions?: number };
+  therapists?: { count?: number; names?: string[] };
 }
 
 export interface SedeAnalytics {

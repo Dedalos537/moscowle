@@ -2,6 +2,14 @@
 .env
 .env.local
 .env.*.local
+.env.production
+.env.docker
+
+# Docker secrets
+secrets/
+
+# Docker Compose overrides
+docker-compose.override.yml
 
 # Python
 __pycache__/
@@ -109,3 +117,6 @@ test_venv/
 
 # Old PythonAnywhere reference
 wsgi.py
+
+# Obsidian vault (separate repo)
+obsidian-vault/

@@ -1,0 +1,28 @@
+# =============================================================================
+# MOSCOWLE IA — Docker Compose Override Template
+# =============================================================================
+# Copy this file to docker-compose.override.yml and customize:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+# This file is auto-merged with docker-compose.yml by Docker Compose.
+# Never commit docker-compose.override.yml to version control.
+# =============================================================================
+
+services:
+  # Customize exposed ports
+  nginx:
+    ports:
+      - "8080:80"   # instead of port 80
+
+  # Add Ollama for local LLM
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - backend
+
+# volumes:
+#   ollama_data:

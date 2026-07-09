@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
@@ -531,7 +531,7 @@ def analyze_receipt():
 @login_required
 def download_receipt(payment_id):
     from flask import flash, redirect, url_for
-    from flask_login import current_user
+    from app.auth_compat import current_user
 
     if current_user.role not in ('admin', 'supervisor'):
         flash('Acceso denegado.', 'error')

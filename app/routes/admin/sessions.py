@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import csrf, db
 from app.models import Appointment, User, db

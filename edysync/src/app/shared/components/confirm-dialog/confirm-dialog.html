@@ -9,8 +9,8 @@
     <h3 class="confirm-title">{{ state().options.title }}</h3>
     <p class="confirm-message">{{ state().options.message }}</p>
     <div class="confirm-actions">
-      <app-button variant="secondary" class="flex-1" [label]="state().options.cancelText || 'Cancelar'" (clicked)="cancel.emit()"></app-button>
-      <app-button [variant]="state().options.variant === 'primary' ? 'primary' : 'danger'" class="flex-1" [label]="state().options.confirmText || 'Confirmar'" (clicked)="confirm.emit()"></app-button>
+      <app-button variant="secondary" [label]="state().options.cancelText || 'Cancelar'" (clicked)="cancel.emit()"></app-button>
+      <app-button [variant]="state().options.variant === 'danger' ? 'danger' : 'primary'" [label]="state().options.confirmText || 'Confirmar'" (clicked)="confirm.emit()"></app-button>
     </div>
   </div>
 </div>

@@ -47,3 +47,4 @@ scikit-learn
 pytest>=8.0.0
 pytest-cov>=5.0.0
 pytesseract>=0.3.10
+psycopg2-binary>=2.9.0

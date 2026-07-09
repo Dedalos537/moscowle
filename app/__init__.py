@@ -207,8 +207,6 @@ def register_request_handlers(app):
 
     @app.before_request
     def before_request():
-        app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-
         g.request_id = str(uuid4())[:8]
         g.request_start_time = datetime.utcnow()
 
@@ -271,6 +269,8 @@ def register_request_handlers(app):
                 or request.path in ('/api/login', '/api/logout')
                 or request.path.startswith('/api/health')
                 or request.path.startswith('/api/public/')
+                or request.path.startswith('/admin/api/')
+                or request.path.startswith('/api/admin/')
                 or current_user.is_authenticated
                 or _has_jwt
             )
@@ -507,6 +507,13 @@ def create_app(config_class=None):
     cache.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*')
 
+    try:
+        from app.celery_app import init_celery
+        init_celery(app)
+        app.logger.info('Celery initialized')
+    except Exception as e:
+        app.logger.warning(f'Celery initialization failed (non-fatal): {e}')
+
     from importlib import import_module
 
     try:
@@ -548,13 +555,9 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
-        try:
-            from flask_migrate import upgrade as migrate_upgrade
-
-            migrate_upgrade()
-            app.logger.info('Pending migrations applied')
-        except Exception as e:
-            app.logger.warning(f'Migration skipped (non-fatal): {e}')
+        # Migraciones ya aplicadas vía flask db upgrade
+        # db.create_all() mantiene el schema actualizado
+        app.logger.info('Schema managed via db.create_all()')
 
         db.session.remove()
 

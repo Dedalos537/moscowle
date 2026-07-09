@@ -5,8 +5,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from flask_login import current_user, login_required
+from app.auth_compat import current_user, login_required
 
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken, Appointment, ContactMessage, CSPReport, Sede, SmartAction, User, db
@@ -237,27 +236,38 @@ def api_therapist_efficiency():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
-        from app.services.dashboard_service import DashboardService
+        from app.models import Appointment, SessionMetrics
 
         therapist_id = request.args.get('therapist_id', type=int)
-        ds = DashboardService()
-        therapists = (
-            [User.query.get(therapist_id)]
-            if therapist_id
-            else User.query.filter_by(role='terapista', is_active=True).all()
+        query = (
+            db.session.query(
+                User.id.label('therapist_id'),
+                User.username,
+                sqlfunc.count(Appointment.id).label('total'),
+                sqlfunc.avg(SessionMetrics.accurracy).label('avg_accuracy'),
+                sqlfunc.count(sqlfunc.nullif(Appointment.status, 'cancelled')).label('completed'),
+            )
+            .join(User, Appointment.therapist_id == User.id)
+            .outerjoin(SessionMetrics, SessionMetrics.session_id == Appointment.id)
+            .filter(User.role == 'terapista')
         )
+        if therapist_id:
+            query = query.filter(User.id == therapist_id)
+        rows = query.group_by(User.id).all()
+        total_sessions = max(sum(r.total for r in rows), 1) if rows else 1
         breakdown = []
-        for t in therapists:
-            if not t:
-                continue
-            eff = ds.get_therapist_efficiency(t.id)
+        for r in rows:
+            completion = (r.completed / r.total * 100) if r.total else 0
+            accuracy = r.avg_accuracy or 0
+            efficiency = round((completion * 0.4 + accuracy * 0.6), 1)
             breakdown.append(
                 {
-                    'therapist_id': t.id,
-                    'therapist_name': t.username,
-                    'audit_score': eff.get('avg_audit_score', 0),
-                    'feedback_score': eff.get('avg_feedback_score', 0),
-                    'efficiency': eff.get('efficiency', 0),
+                    'therapist_id': r.therapist_id,
+                    'name': r.username,
+                    'total_sessions': r.total,
+                    'completed': r.completed,
+                    'avg_accuracy': round(accuracy, 1),
+                    'efficiency': efficiency,
                 }
             )
         overall = round(sum(e['efficiency'] for e in breakdown) / len(breakdown), 1) if breakdown else 0
@@ -567,73 +577,11 @@ def profile():
     return render_template('admin/profile.html', active_page='admin_dashboard')
 
 
-def _resolve_admin_user():
-    user = None
-    try:
-        from flask_login import current_user as flask_user
-
-        if flask_user.is_authenticated:
-            user = flask_user
-    except Exception:
-        pass
-    if user is None:
-        try:
-            verify_jwt_in_request(locations=['cookies'], optional=True)
-            uid = get_jwt_identity()
-            if uid is not None:
-                from app.models import User
-
-                user = User.query.get(int(uid))
-        except Exception:
-            pass
-    return user
-
-
-@admin_bp.route('/api/railway-metrics')
-def api_railway_metrics():
-    user = _resolve_admin_user()
-    if user is None or user.role not in ('admin', 'supervisor'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-    from app.services.railway_service import get_railway_metrics
-
-    result = get_railway_metrics()
-    return jsonify(result)
-
-
-@admin_bp.route('/api/railway-metrics/history')
-def api_railway_metrics_history():
-    user = _resolve_admin_user()
-    if user is None or user.role not in ('admin', 'supervisor'):
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-
-    from_dt = request.args.get('from')
-    to_dt = request.args.get('to')
-    bucket = request.args.get('bucket', '15m')
-
-    from app.services.railway_service import get_railway_metrics_history
-
-    result = get_railway_metrics_history(from_dt=from_dt, to_dt=to_dt, bucket=bucket)
-    return jsonify(result)
-
-
 @admin_bp.route('/api/logs', methods=['GET'])
+@login_required
 def admin_api_logs():
-    user = None
-    try:
-        if current_user.is_authenticated:
-            user = current_user
-    except Exception:
-        pass
-    if user is None:
-        try:
-            verify_jwt_in_request(locations=['cookies'], optional=True)
-            uid = get_jwt_identity()
-            if uid is not None:
-                user = User.query.get(int(uid))
-        except Exception:
-            pass
-    if user is None or user.role not in ('admin', 'supervisor'):
-        return jsonify({'success': False, 'error': 'Acceso denegado'}), 401
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
     from app.services.log_service import log_capture_handler
 
     level = request.args.get('level')

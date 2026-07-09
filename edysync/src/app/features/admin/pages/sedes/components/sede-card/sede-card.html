@@ -6,14 +6,10 @@
         <div class="w-12 h-12 rounded-full bg-primary-container/15 flex items-center justify-center">
           <fa-icon [icon]="['fas', 'home']" class="text-primary text-xl"></fa-icon>
         </div>
-        <span class="px-3 py-1 text-xs font-bold rounded-full"
-          [class.bg-success-container]="sede().active"
-          [class.text-on-success-container]="sede().active"
-          [class.bg-error-container]="!sede().active"
-          [class.text-error]="!sede().active"
-        >
-          {{ sede().active ? 'Activa' : 'Inactiva' }}
-        </span>
+        <app-pill-status
+          [status]="sede().active ? 'completed' : 'error'"
+          [label]="sede().active ? 'Activa' : 'Inactiva'"
+        />
       </div>
       <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button (click)="$event.stopPropagation(); toggle.emit(sede())"
@@ -25,11 +21,6 @@
           class="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
           title="Editar">
           <fa-icon [icon]="['fas', 'pencil']" class="text-sm"></fa-icon>
-        </button>
-        <button (click)="$event.stopPropagation(); delete.emit(sede())"
-          class="w-8 h-8 rounded-full hover:bg-error/10 text-on-surface-variant hover:text-error flex items-center justify-center transition-colors cursor-pointer"
-          title="Eliminar">
-          <fa-icon [icon]="['fas', 'trash']" class="text-sm"></fa-icon>
         </button>
       </div>
     </div>
@@ -44,21 +35,27 @@
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'users']" class="text-info"></fa-icon> Pacientes
       </span>
-      <span class="font-bold text-on-surface">{{ sede().stats?.patients?.total ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.patients?.total ?? '—' }}
+      </span>
     </div>
 
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'calendar-alt']" class="text-success"></fa-icon> Sesiones
       </span>
-      <span class="font-bold text-on-surface">{{ sede().stats?.sessions?.total_completed ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.sessions?.total_completed != null ? sede().stats?.sessions?.total_completed : '—' }}
+      </span>
     </div>
 
     <div class="flex justify-between items-center text-sm">
       <span class="flex items-center gap-3 text-on-surface-variant font-medium">
         <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning"></fa-icon> Ingresos
       </span>
-      <span class="font-bold text-on-surface">S/. {{ sede().stats?.payments?.total_revenue ?? '—' }}</span>
+      <span class="font-bold text-on-surface">
+        {{ sede().stats?.payments?.total_revenue != null ? ('S/. ' + sede().stats?.payments?.total_revenue) : '—' }}
+      </span>
     </div>
 
   </div>

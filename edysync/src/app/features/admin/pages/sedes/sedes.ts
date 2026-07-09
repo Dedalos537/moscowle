@@ -10,6 +10,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { Sede, SedeAnalytics } from '../../../../core/models/sede';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { Drawer } from '../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { SedeCard } from './components/sede-card/sede-card';
@@ -17,7 +18,7 @@ import { SedeCard } from './components/sede-card/sede-card';
 @Component({
   selector: 'app-sedes',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, SedeCard],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, SedeCard, Drawer],
   templateUrl: './sedes.html',
   styleUrl: './sedes.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -96,36 +97,19 @@ export class Sedes implements OnInit, OnDestroy {
   }
 
   private loadAllAnalytics() {
-    const total = this.sedes.length;
-    if (!total) return;
-    let completed = 0;
-    let failures = 0;
-
     for (const sede of this.sedes) {
+      const sedeId = sede.id;
       this.subscriptions.add(
-        this.adminService.getSedeAnalytics(sede.id).subscribe({
+        this.adminService.getSedeAnalytics(sedeId).subscribe({
           next: (res) => {
-            if (res.success && res.analytics) {
-              sede.stats = res.analytics;
-            }
-            completed++;
-            if (completed === total && failures > 0) {
-              this.toastService.show(
-                `${failures} de ${total} sedes no pudieron cargar analytics`,
-                'warning',
-              );
+            if (res?.success && res?.analytics) {
+              // Mutamos y creamos nueva referencia para forzar detección
+              const updated = { ...sede, stats: res.analytics };
+              this.sedes = this.sedes.map(s => s.id === sedeId ? updated : s);
             }
             this.cdr.markForCheck();
           },
           error: () => {
-            completed++;
-            failures++;
-            if (completed === total) {
-              this.toastService.show(
-                `Error al cargar analytics de ${failures} sede${failures > 1 ? 's' : ''}`,
-                'error',
-              );
-            }
             this.cdr.markForCheck();
           },
         }),
@@ -216,20 +200,20 @@ export class Sedes implements OnInit, OnDestroy {
   }
 
   async toggleActive(sede: Sede) {
-    const label = sede.active ? 'desactivar' : 'activar';
+    const activating = !sede.active;
     const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: `${sede.active ? 'Desactivar' : 'Activar'} Sede`,
-      message: `¿Estás seguro de ${label} la sede "${sede.name}"?`,
-      confirmText: sede.active ? 'Desactivar' : 'Activar',
-      variant: 'warning',
-      icon: ['fas', sede.active ? 'pause' : 'play'],
+      title: `${activating ? 'Activar' : 'Desactivar'} Sede`,
+      message: `¿Estás seguro de ${activating ? 'activar' : 'desactivar'} la sede "${sede.name}"?`,
+      confirmText: activating ? 'Activar' : 'Desactivar',
+      variant: activating ? 'primary' : 'danger',
+      icon: ['fas', activating ? 'play' : 'pause'],
     }));
     if (!confirmed) return;
     this.subscriptions.add(
       this.adminService.updateSede(sede.id, { active: !sede.active }).subscribe({
         next: (res) => {
           if (res.success) {
-            sede.active = !sede.active;
+            this.sedes = this.sedes.map(s => s.id === sede.id ? { ...s, active: !s.active } : s);
             this.toastService.show(
               `Sede ${sede.active ? 'activada' : 'desactivada'} correctamente`,
               'success',

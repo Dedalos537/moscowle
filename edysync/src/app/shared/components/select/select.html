@@ -2,7 +2,7 @@
   @if (label()) {
     <label class="select__label" (click)="open()">{{ label() }}</label>
   }
-  <div class="select__trigger" (click)="toggle()" role="combobox" [attr.aria-expanded]="isOpen" tabindex="0" [attr.aria-disabled]="disabled()">
+  <div #triggerRef class="select__trigger" (click)="toggle()" role="combobox" [attr.aria-expanded]="isOpen" tabindex="0" [attr.aria-disabled]="disabled()">
     <div class="select__trigger-content">
       @if (selectedOption?.icon) {
         <fa-icon [icon]="selectedOption!.icon!" class="select__trigger-icon"></fa-icon>
