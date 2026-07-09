@@ -6,7 +6,7 @@ FROM node:20-alpine AS angular-builder
 WORKDIR /app
 
 COPY edysync/package*.json edysync/
-RUN --mount=type=cache,target=/root/.npm \
+RUN --mount=type=cache,id=npm-cache,target=/root/.npm \
     cd edysync && npm ci --legacy-peer-deps
 
 COPY edysync/ edysync/
@@ -18,7 +18,7 @@ FROM python:3.11-slim AS python-builder
 WORKDIR /app
 
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,id=pip-cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r requirements.txt
 
 # ========== STAGE 3: Final image ==========
