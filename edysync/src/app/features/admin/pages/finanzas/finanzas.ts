@@ -143,7 +143,7 @@ export class Finanzas implements OnInit, OnDestroy {
   registerForm: RegisterForm = {
     patient_id: null, amount: 0, method: 'transfer', reference: '',
     next_due_date: '', payment_date: '', discount: 0,
-    document_number: '', guardian_name: '', receipt: null,
+    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
   };
   registerStatus = '';
   analyzeResult: any = null;
@@ -523,7 +523,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.registerForm = {
       patient_id: patient?.id || null, amount: patient?.payment_amount || 0, method: 'transfer', reference: '',
       next_due_date: '', payment_date: new Date().toISOString().substring(0, 10), discount: 0,
-      document_number: '', guardian_name: '', receipt: null,
+      document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
     };
     this.analyzeResult = null;
     this.analyzingReceipt = false;
