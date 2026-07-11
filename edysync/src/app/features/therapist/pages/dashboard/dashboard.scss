@@ -18,3 +18,13 @@
 svg circle {
   transition: stroke-dasharray 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+.greeting-title {
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+
+  @media (min-width: 768px) {
+    font-size: 2.75rem;
+  }
+}
