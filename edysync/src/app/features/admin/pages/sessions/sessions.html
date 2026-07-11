@@ -139,6 +139,31 @@
       <input type="file" id="createProgramFileInput" class="hidden" accept=".docx" (change)="onCreateFileSelected($event)">
     </div>
 
+    <div class="rounded-xl border p-4" style="background:var(--color-info-container);border-color:var(--color-info)">
+      <div class="flex items-center gap-2 mb-2">
+        <fa-icon [icon]="['fas', 'info-circle']" style="color:var(--color-info)"></fa-icon>
+        <span class="text-sm font-bold" style="color:var(--color-on-info-container)">Requisitos de Grabación</span>
+      </div>
+      <ul class="text-xs space-y-1.5" style="color:var(--color-on-info-container)">
+        <li class="flex items-start gap-2">
+          <fa-icon [icon]="['fas', 'microphone']" class="mt-0.5 shrink-0"></fa-icon>
+          <span>La sesión será grabada automáticamente al iniciar el terapeuta</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <fa-icon [icon]="['fas', 'clock']" class="mt-0.5 shrink-0"></fa-icon>
+          <span>La grabación se detendrá al finalizar la sesión programada</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <fa-icon [icon]="['fas', 'file-audio']" class="mt-0.5 shrink-0"></fa-icon>
+          <span>Los fragmentos se transcriben cada 5 minutos en segundo plano</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <fa-icon [icon]="['fas', 'search']" class="mt-0.5 shrink-0"></fa-icon>
+          <span>La auditoría IA se ejecuta periódicamente y al finalizar</span>
+        </li>
+      </ul>
+    </div>
+
   </div>
 
   @if (submitting) {

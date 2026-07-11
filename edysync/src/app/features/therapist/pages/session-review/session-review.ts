@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -40,26 +40,14 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   showCameraModal = false;
   private videoStream: MediaStream | null = null;
 
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
-  private audioStream: MediaStream | null = null;
-  private recordingStartTime: number | null = null;
-  private recordingTimerInterval: any = null;
-  private chunkTimer: any = null;
   isRecording = false;
-  accumulatedTranscript = '';
-  chunkCount = 0;
   recordingElapsed = '00:00';
-  uploadingChunk = false;
   chunkUploadStatus = '';
-  autoStarted = false;
-
-  private pendingAutoAudit = false;
+  chunkCount = 0;
 
   showWarningModal = false;
   warningCountdown = 1200;
   private warningInterval: any = null;
-  private lastAttendanceCheck: number | null = null;
 
   audit: any = null;
   auditLoading = false;
@@ -90,7 +78,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     private therapistService: TherapistService,
     private headerService: HeaderService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone,
     private toastService: ToastService,
     private recordingService: RecordingService,
     private confirmService: ConfirmService,
@@ -103,16 +90,35 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       return;
     }
     this.loadSession();
+    this.subscribeToRecordingService();
   }
 
   ngOnDestroy() {
     this.headerService.reset();
-    this.stopRecording();
     this.clearWarningTimer();
     this.liveScoreSub?.unsubscribe();
     this.subs.unsubscribe();
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     if (this.videoStream) this.videoStream.getTracks().forEach(t => t.stop());
+  }
+
+  private subscribeToRecordingService() {
+    this.subs.add(this.recordingService.isRecording$.subscribe(recording => {
+      this.isRecording = recording;
+      this.cdr.markForCheck();
+    }));
+    this.subs.add(this.recordingService.elapsedTime$.subscribe(time => {
+      this.recordingElapsed = time;
+      this.cdr.markForCheck();
+    }));
+    this.subs.add(this.recordingService.chunkStatus$.subscribe(status => {
+      this.chunkUploadStatus = status;
+      this.cdr.markForCheck();
+    }));
+    this.subs.add(this.recordingService.auditScore$.subscribe(score => {
+      this.liveScore = score;
+      this.cdr.markForCheck();
+    }));
   }
 
   private loadSession() {
@@ -155,19 +161,9 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   }
 
   private maybeAutoStartRecording() {
-    if (!this.session || this.autoStarted) return;
+    if (!this.session) return;
 
     if (this.recordingService.isRecording$.value && this.recordingService.activeSession$.value?.id === this.sessionId) {
-      this.autoStarted = true;
-      this.isRecording = true;
-      this.subs.add(this.recordingService.elapsedTime$.subscribe(t => {
-        this.recordingElapsed = t;
-        this.cdr.markForCheck();
-      }));
-      this.subs.add(this.recordingService.chunkStatus$.subscribe(s => {
-        this.chunkUploadStatus = s;
-        this.cdr.markForCheck();
-      }));
       return;
     }
 
@@ -177,10 +173,9 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       const end = this.session.end_time ? new Date(this.session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
 
       if (start <= now && now <= end && this.attendance !== 'absent') {
-        this.autoStarted = true;
         this.subs.add(this.therapistService.startRecording(this.sessionId).subscribe({
           next: () => {
-            this.startRecording();
+            this.recordingService.startRecording(this.session);
           },
           error: (err) => {
             this.error = err.message;
@@ -338,167 +333,18 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   toggleRecording() {
     if (this.isRecording) {
-      this.stopRecording(true);
+      this.recordingService.finishSession();
     } else {
-      this.startRecording();
-      if (!this.autoStarted) {
-        this.subs.add(this.therapistService.startRecording(this.sessionId).subscribe({
-          error: (err) => {
-            this.error = err.message;
-            this.cdr.markForCheck();
-          }
-        }));
-      }
-    }
-  }
-
-  private startRecording() {
-    this.isRecording = true;
-    this.chunkCount = 0;
-    this.accumulatedTranscript = '';
-    this.recordingElapsed = '00:00';
-    this.chunkUploadStatus = '';
-    this.cdr.detectChanges();
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then((stream) => {
-        this.audioStream = stream;
-        this.recordingStartTime = Date.now();
-        this.startNewChunk();
-
-        this.ngZone.runOutsideAngular(() => {
-          this.recordingTimerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.recordingStartTime!) / 1000);
-            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const secs = String(elapsed % 60).padStart(2, '0');
-            this.recordingElapsed = `${mins}:${secs}`;
-            this.cdr.detectChanges();
-          }, 1000);
-
-          this.chunkTimer = setInterval(() => {
-            if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-              this.mediaRecorder.stop();
-            }
-          }, 5 * 60 * 1000);
-        });
-      })
-      .catch(() => {
-        this.isRecording = false;
-        this.cdr.detectChanges();
-        this.toastService.show('No se pudo acceder al micrófono. Verifica los permisos.', 'error');
-      });
-  }
-
-  private getSupportedMimeType(): string {
-    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
-    for (const t of types) {
-      if (MediaRecorder.isTypeSupported(t)) return t;
-    }
-    return '';
-  }
-
-  private startNewChunk() {
-    this.audioChunks = [];
-    const mimeType = this.getSupportedMimeType();
-    this.mediaRecorder = new MediaRecorder(this.audioStream!, mimeType ? { mimeType } : {});
-
-    this.mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) this.audioChunks.push(e.data);
-    };
-
-    this.mediaRecorder.onstop = () => {
-      this.chunkCount++;
-      const blob = new Blob(this.audioChunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' });
-      this.subirChunkAudio(blob, this.chunkCount);
-      if (this.isRecording && this.audioStream?.active) {
-        this.startNewChunk();
-      }
-    };
-
-    this.mediaRecorder.start(1000);
-  }
-
-  private stopRecording(fromDestroy = false) {
-    this.isRecording = false;
-    this.ngZone.runOutsideAngular(() => {
-      clearInterval(this.chunkTimer);
-      clearInterval(this.recordingTimerInterval);
-    });
-    this.chunkTimer = null;
-    this.recordingTimerInterval = null;
-
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-      this.mediaRecorder.stop();
-    }
-    if (this.audioStream) {
-      this.audioStream.getTracks().forEach(t => t.stop());
-      this.audioStream = null;
-    }
-    this.clearWarningTimer();
-    if (!fromDestroy) this.cdr.detectChanges();
-  }
-
-  private subirChunkAudio(blob: Blob, chunkNum: number, retriesRemaining = 3) {
-    this.uploadingChunk = true;
-    this.chunkUploadStatus = `Transcribiendo segmento ${chunkNum}...`;
-    this.cdr.markForCheck();
-
-    this.subs.add(this.therapistService.uploadAudioChunk(this.sessionId, blob, chunkNum).subscribe({
-      next: (data) => {
-        this.uploadingChunk = false;
-        if (data.success && data.transcript_text) {
-          this.accumulatedTranscript += (this.accumulatedTranscript ? ' ' : '') + data.transcript_text;
-          this.chunkUploadStatus = `Segmento ${chunkNum} transcrito`;
-
-          if (!this.isRecording) {
-            if (this.accumulatedTranscript) {
-              const separator = this.notes.trim() ? '\n\n--- Transcripción de sesión ---\n\n' : '';
-              this.notes = this.notes.trimEnd() + separator + this.accumulatedTranscript;
-              setTimeout(() => this.saveNotes(), 500);
-            }
-            this.chunkUploadStatus = 'Grabacion completa. Audio eliminado.';
-            this.pendingAutoAudit = true;
-            setTimeout(() => {
-              this.chunkUploadStatus = '';
-              this.cdr.markForCheck();
-              this.loadAudit();
-            }, 3000);
-          } else {
-            setTimeout(() => { this.chunkUploadStatus = ''; this.cdr.markForCheck(); }, 2000);
-            this.checkAttendance();
-          }
-        } else {
-          this.chunkUploadStatus = `Error: ${data.error || 'desconocido'}`;
-        }
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        if (retriesRemaining > 1) {
-          this.chunkUploadStatus = `Reintentando segmento ${chunkNum}...`;
-          this.cdr.markForCheck();
-          setTimeout(() => this.subirChunkAudio(blob, chunkNum, retriesRemaining - 1), 2000);
-        } else {
-          this.uploadingChunk = false;
+      this.subs.add(this.therapistService.startRecording(this.sessionId).subscribe({
+        next: () => {
+          this.recordingService.startRecording(this.session);
+        },
+        error: (err) => {
           this.error = err.message;
-          this.chunkUploadStatus = 'Error de conexión';
           this.cdr.markForCheck();
         }
-      },
-    }));
-  }
-
-  private checkAttendance() {
-    this.subs.add(this.therapistService.analyzeAttendance(this.sessionId).subscribe({
-      next: (data) => {
-        if (data.success && data.suggested_attendance === 'absent' && this.attendance !== 'present') {
-          this.startWarningTimer(data.reason || 'Sin actividad detectada');
-        }
-      },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-      }
-    }));
+      }));
+    }
   }
 
   private startWarningTimer(reason: string) {
@@ -506,7 +352,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
     this.showWarningModal = true;
     this.warningCountdown = 1200;
-    this.lastAttendanceCheck = Date.now();
     this.cdr.markForCheck();
 
     setTimeout(() => {
@@ -515,14 +360,12 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       }
     }, 20 * 60 * 1000);
 
-    this.ngZone.runOutsideAngular(() => {
-      this.warningInterval = setInterval(() => {
-        this.warningCountdown--;
-        if (this.warningCountdown <= 0) {
-          this.clearWarningTimer();
-        }
-      }, 1000);
-    });
+    this.warningInterval = setInterval(() => {
+      this.warningCountdown--;
+      if (this.warningCountdown <= 0) {
+        this.clearWarningTimer();
+      }
+    }, 1000);
   }
 
   private clearWarningTimer() {
@@ -542,7 +385,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
       next: () => {
         this.attendance = 'absent';
         this.session.status = 'completed';
-        this.stopRecording();
         this.showWarningModal = false;
         this.clearWarningTimer();
         this.cdr.markForCheck();
@@ -574,17 +416,6 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
           this.feedbackProgress = data.audit.feedback_progress || null;
           this.feedbackNotes = data.audit.feedback_notes || '';
           this.feedbackSubmitted = !!(data.audit.feedback_engagement || data.audit.feedback_progress);
-          if (this.pendingAutoAudit && data.audit.has_program && data.audit.has_transcript && data.audit.audit_status === 'pending') {
-            this.pendingAutoAudit = false;
-            this.triggerAudit();
-          } else if (this.pendingAutoAudit) {
-            this.pendingAutoAudit = false;
-            if (!data.audit.has_program) {
-              this.toastService.show('No se puede auditar: no hay programación (.docx) subida para esta sesión.', 'warning');
-            } else if (!data.audit.has_transcript) {
-              this.toastService.show('No se puede auditar: no hay transcripción de audio disponible.', 'warning');
-            }
-          }
         } else {
           this.audit = null;
         }
@@ -606,15 +437,8 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         if (res.success) this.liveScore = res.score_vectorial;
         this.cdr.markForCheck();
       },
-      error: (err) => {
-        this.error = err.message;
-        this.cdr.markForCheck();
-      }
+      error: () => {},
     }));
-    this.liveScoreSub = this.recordingService.auditScore$.subscribe(score => {
-      this.liveScore = score;
-      this.cdr.markForCheck();
-    });
   }
 
   triggerAudit() {
