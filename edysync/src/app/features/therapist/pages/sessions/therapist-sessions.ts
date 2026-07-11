@@ -9,7 +9,7 @@ import { RecordingService } from '../../../../core/services/recording.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { ConfirmService } from '../../../../core/services/confirm.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
+import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter, viewSlide, statsSlide } from '../../../../core/animations';
 import { SelectOption } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Select } from '../../../../shared/components/select/select';
@@ -25,7 +25,7 @@ import { toLocalDateString } from '../../../../core/utils/date.util';
   imports: [CommonModule, FormsModule, FontAwesomeModule, Modal, Select, Button, CalendarWidget, Spinner],
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
-  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
+  animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter, viewSlide, statsSlide],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TherapistSessions implements OnInit, OnDestroy {

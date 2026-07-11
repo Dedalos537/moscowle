@@ -140,3 +140,23 @@ export const shimmerBar = trigger('shimmerBar', [
     animate(`${DURATION} ${EASE}`, style({ width: '100%' }))
   ])
 ]);
+
+export const viewSlide = trigger('viewSlide', [
+  transition(':enter', [
+    style({ opacity: 0, transform: 'translateX(30px) scale(0.97)', filter: 'blur(4px)' }),
+    animate(`400ms ${EASE}`, style({ opacity: 1, transform: 'translateX(0) scale(1)', filter: 'blur(0px)' }))
+  ]),
+  transition(':leave', [
+    animate(`250ms ${EASE}`, style({ opacity: 0, transform: 'translateX(-30px) scale(0.97)', filter: 'blur(4px)' }))
+  ])
+]);
+
+export const statsSlide = trigger('statsSlide', [
+  transition(':enter', [
+    style({ opacity: 0, transform: 'translateY(16px) scale(0.95)' }),
+    animate(`350ms 100ms ${EASE}`, style({ opacity: 1, transform: 'translateY(0) scale(1)' }))
+  ]),
+  transition(':leave', [
+    animate(`200ms ${EASE}`, style({ opacity: 0, transform: 'translateY(-10px) scale(0.95)' }))
+  ])
+]);
