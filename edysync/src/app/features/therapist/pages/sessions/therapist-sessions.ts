@@ -71,6 +71,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   showCalendar = false;
   calendarEvents: CalendarWidgetEvent[] = [];
   calendarLoading = false;
+  monthStats = { total: 0, completed: 0, pending: 0, cancelled: 0, completionRate: 0, busiestDay: '' };
 
   activeBriefing: any = null;
   activeBriefingLoading = false;
@@ -283,6 +284,10 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  onCalendarEventClick(event: CalendarWidgetEvent) {
+    this.router.navigate(['/therapist/sessions', event.id, 'review']);
+  }
+
   private loadCalendarEvents() {
     this.calendarLoading = true;
     this.cdr.markForCheck();
@@ -301,6 +306,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
           therapist: e.extendedProps?.therapist,
           patient: e.extendedProps?.patient,
         }));
+        this.computeMonthStats();
         this.calendarLoading = false;
         this.cdr.markForCheck();
       },
@@ -309,6 +315,31 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  private computeMonthStats() {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthEvents = this.calendarEvents.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+    const total = monthEvents.length;
+    const completed = monthEvents.filter(e => e.status === 'completed').length;
+    const pending = monthEvents.filter(e => e.status === 'scheduled').length;
+    const cancelled = monthEvents.filter(e => e.status === 'cancelled').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const dayCounts: Record<string, number> = {};
+    monthEvents.forEach(e => {
+      const dayName = dayNames[new Date(e.date).getDay()];
+      dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
+    });
+    const busiestDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+    this.monthStats = { total, completed, pending, cancelled, completionRate, busiestDay };
   }
 
   loadActiveBriefing(sessionId: number) {

@@ -63,134 +63,160 @@
           <app-calendar-widget
             [events]="calendarEvents"
             [role]="'therapist'"
-            [readonly]="true"
+            [readonly]="false"
+            (eventClick)="onCalendarEventClick($event)"
           ></app-calendar-widget>
         }
       }
     </div>
 
     <div class="col-span-12 lg:col-span-4 grid grid-cols-2 gap-4">
-      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Hoy</p>
-        <p class="text-3xl font-black text-primary">{{ stats.sessions_today }}</p>
-      </div>
-      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Completas</p>
-        <p class="text-3xl font-black text-success">{{ stats.completed_sessions }}</p>
-      </div>
-      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
-        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pendientes</p>
-        <p class="text-3xl font-black text-warning">{{ stats.pending_sessions }}</p>
-      </div>
-      <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between border-2 border-primary/10">
-        <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pacientes</p>
-        <p class="text-3xl font-black text-primary">{{ stats.active_patients }}</p>
-      </div>
+      @if (showCalendar) {
+        <div class="col-span-2 bg-surface-container-lowest p-5 rounded-2xl signature-shadow">
+          <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-3">Resumen del Mes</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="text-center p-3 rounded-xl bg-primary/5">
+              <p class="text-2xl font-black text-primary">{{ monthStats.total }}</p>
+              <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Total</p>
+            </div>
+            <div class="text-center p-3 rounded-xl bg-success/5">
+              <p class="text-2xl font-black text-success">{{ monthStats.completionRate }}%</p>
+              <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Completadas</p>
+            </div>
+            <div class="text-center p-3 rounded-xl bg-warning/5">
+              <p class="text-2xl font-black text-warning">{{ monthStats.pending }}</p>
+              <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Pendientes</p>
+            </div>
+            <div class="text-center p-3 rounded-xl bg-tertiary/5">
+              <p class="text-sm font-bold text-tertiary mt-1">{{ monthStats.busiestDay }}</p>
+              <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Día más ocupado</p>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+          <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Hoy</p>
+          <p class="text-3xl font-black text-primary">{{ stats.sessions_today }}</p>
+        </div>
+        <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+          <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Completas</p>
+          <p class="text-3xl font-black text-success">{{ stats.completed_sessions }}</p>
+        </div>
+        <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
+          <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pendientes</p>
+          <p class="text-3xl font-black text-warning">{{ stats.pending_sessions }}</p>
+        </div>
+        <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between border-2 border-primary/10">
+          <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pacientes</p>
+          <p class="text-3xl font-black text-primary">{{ stats.active_patients }}</p>
+        </div>
+      }
     </div>
   </div>
 
-  <div class="relative">
-    <div class="absolute left-[39px] top-4 bottom-4 w-0.5 bg-border hidden md:block"></div>
+  @if (!showCalendar) {
+    <div class="relative">
+      <div class="absolute left-[39px] top-4 bottom-4 w-0.5 bg-border hidden md:block"></div>
 
-    @if (loading) {
-      <div class="flex justify-center py-24">
-        <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
-      </div>
-    }
-
-    @if (!loading && agendaEvents.length === 0) {
-      <div class="flex flex-col items-center justify-center py-24 text-center">
-        <div class="w-32 h-32 bg-surface-container-low rounded-full flex items-center justify-center mb-6">
-          <fa-icon [icon]="['fas', 'calendar-times']" class="text-5xl text-on-surface-variant/30"></fa-icon>
+      @if (loading) {
+        <div class="flex justify-center py-24">
+          <div class="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style="border-color:var(--color-primary);border-top-color:transparent"></div>
         </div>
-        <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
-        <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
+      }
 
-      </div>
-    }
-
-    @for (e of agendaEvents; track e.id; let last = $last) {
-      <div class="relative flex flex-col md:flex-row items-start gap-6 mb-6">
-        <div class="hidden md:flex flex-col items-center z-10 pt-4">
-          <div class="w-5 h-5 rounded-full border-4 border-white"
-               [style.background]="statusColor(e.status)"
-               [style.boxShadow]="'0 0 0 4px ' + statusColor(e.status) + '33'"
-               [class.animate-pulse]="e.status === 'in_progress'">
+      @if (!loading && agendaEvents.length === 0) {
+        <div class="flex flex-col items-center justify-center py-24 text-center">
+          <div class="w-32 h-32 bg-surface-container-low rounded-full flex items-center justify-center mb-6">
+            <fa-icon [icon]="['fas', 'calendar-times']" class="text-5xl text-on-surface-variant/30"></fa-icon>
           </div>
+          <h3 class="text-xl font-bold text-on-surface mb-1">Sin sesiones para esta fecha</h3>
+          <p class="text-on-surface-variant/70 max-w-md mb-6">Parece que tienes el día libre o aún no has agendado actividades.</p>
         </div>
+      }
 
-        <div class="flex-1 w-full bg-surface p-6 rounded-3xl signature-shadow border border-border/50 hover:border-primary-container/30 transition-all group"
-             [class.border-2]="e.status === 'in_progress'"
-             [class.border-amber-200]="e.status === 'in_progress'">
-          @if (e.status === 'in_progress') {
-            <div class="flex justify-end -mt-2 -mr-2 mb-2">
-              <span class="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                <span class="w-1.5 h-1.5 bg-amber-600 rounded-full animate-ping"></span> EN CURSO
-              </span>
-            </div>
-          }
-
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div class="flex items-center gap-4">
-              <div class="w-14 h-14 rounded-2xl bg-secondary-container flex items-center justify-center text-xl font-bold text-secondary shrink-0">
-                {{ initials(e.title) }}
-              </div>
-              <div>
-                <h4 class="text-lg font-bold text-on-surface">{{ e.title }}</h4>
-                <p class="text-sm text-on-surface-variant/70 flex items-center gap-2">
-                  <fa-icon [icon]="['fas', 'clock']" class="text-xs"></fa-icon>
-                  {{ formatTime(e.start) }}{{ e.end ? ' - ' + formatTime(e.end) : '' }}
-                  @if (e.start && e.end) {
-                    <span class="text-on-surface-variant/50">({{ duration(e.start, e.end) }})</span>
-                  }
-                </p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <span class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide"
-                    [style.background]="statusColor(e.status) + '1A'"
-                    [style.color]="statusColor(e.status)">
-                {{ statusLabel(e.status) }}
-              </span>
-              <div class="flex gap-1">
-                <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-v']" class="text-on-surface-variant"></fa-icon></button>
-              </div>
+      @for (e of agendaEvents; track e.id; let last = $last) {
+        <div class="relative flex flex-col md:flex-row items-start gap-6 mb-6">
+          <div class="hidden md:flex flex-col items-center z-10 pt-4">
+            <div class="w-5 h-5 rounded-full border-4 border-white"
+                 [style.background]="statusColor(e.status)"
+                 [style.boxShadow]="'0 0 0 4px ' + statusColor(e.status) + '33'"
+                 [class.animate-pulse]="e.status === 'in_progress'">
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-y border-border/30">
-            @if (e.location) {
+          <div class="flex-1 w-full bg-surface p-6 rounded-3xl signature-shadow border border-border/50 hover:border-primary-container/30 transition-all group"
+               [class.border-2]="e.status === 'in_progress'"
+               [class.border-amber-200]="e.status === 'in_progress'">
+            @if (e.status === 'in_progress') {
+              <div class="flex justify-end -mt-2 -mr-2 mb-2">
+                <span class="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                  <span class="w-1.5 h-1.5 bg-amber-600 rounded-full animate-ping"></span> EN CURSO
+                </span>
+              </div>
+            }
+
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-secondary-container flex items-center justify-center text-xl font-bold text-secondary shrink-0">
+                  {{ initials(e.title) }}
+                </div>
+                <div>
+                  <h4 class="text-lg font-bold text-on-surface">{{ e.title }}</h4>
+                  <p class="text-sm text-on-surface-variant/70 flex items-center gap-2">
+                    <fa-icon [icon]="['fas', 'clock']" class="text-xs"></fa-icon>
+                    {{ formatTime(e.start) }}{{ e.end ? ' - ' + formatTime(e.end) : '' }}
+                    @if (e.start && e.end) {
+                      <span class="text-on-surface-variant/50">({{ duration(e.start, e.end) }})</span>
+                    }
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wide"
+                      [style.background]="statusColor(e.status) + '1A'"
+                      [style.color]="statusColor(e.status)">
+                  {{ statusLabel(e.status) }}
+                </span>
+                <div class="flex gap-1">
+                  <button class="p-2 hover:bg-surface-container-low rounded-full transition-colors"><fa-icon [icon]="['fas', 'ellipsis-v']" class="text-on-surface-variant"></fa-icon></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 border-y border-border/30">
+              @if (e.location) {
+                <div class="flex items-center gap-2">
+                  <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                  <span class="text-sm text-on-surface-variant/70">{{ e.location }}</span>
+                </div>
+              }
               <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                <span class="text-sm text-on-surface-variant/70">{{ e.location }}</span>
+                <fa-icon [icon]="['fas', 'magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                <span class="text-sm text-on-surface-variant/70">Auditoría IA: {{ e.extendedProps?.audit_score || '—' }}</span>
               </div>
-            }
-            <div class="flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
-              <span class="text-sm text-on-surface-variant/70">Auditoría IA: {{ e.extendedProps?.audit_score || '—' }}</span>
+              <div class="flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'sticky-note']" class="text-sm text-on-surface-variant/70"></fa-icon>
+                <span class="text-sm italic text-on-surface-variant/70 truncate">{{ e.notes ? ('"' + e.notes + '"') : 'Sin notas' }}</span>
+              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'sticky-note']" class="text-sm text-on-surface-variant/70"></fa-icon>
-              <span class="text-sm italic text-on-surface-variant/70 truncate">{{ e.notes ? ('"' + e.notes + '"') : 'Sin notas' }}</span>
-            </div>
-          </div>
 
-          <div class="mt-4 flex flex-wrap gap-3 justify-end">
-            @if (e.notes) {
-              <button class="px-5 py-2.5 rounded-xl border border-border hover:bg-surface-container-low transition-colors text-sm font-bold" (click)="viewNotes(e)">
-                Ver Notas
+            <div class="mt-4 flex flex-wrap gap-3 justify-end">
+              @if (e.notes) {
+                <button class="px-5 py-2.5 rounded-xl border border-border hover:bg-surface-container-low transition-colors text-sm font-bold" (click)="viewNotes(e)">
+                  Ver Notas
+                </button>
+              }
+              <button class="px-5 py-2.5 rounded-xl bg-primary text-on-primary flex items-center gap-2 shadow-md hover:translate-y-[-2px] active:scale-95 transition-all text-sm font-bold"
+                      (click)="irSesion(e.id)">
+                <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
+                Revisar Sesión
               </button>
-            }
-            <button class="px-5 py-2.5 rounded-xl bg-primary text-on-primary flex items-center gap-2 shadow-md hover:translate-y-[-2px] active:scale-95 transition-all text-sm font-bold"
-                    (click)="irSesion(e.id)">
-              <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
-              Revisar Sesión
-            </button>
+            </div>
           </div>
         </div>
-      </div>
-    }
-  </div>
+      }
+    </div>
+  }
 </div>
 
 @if (showActiveBriefing && activeBriefing) {
