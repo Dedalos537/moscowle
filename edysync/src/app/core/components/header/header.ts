@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, effect, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../services/header.service';
@@ -45,6 +45,7 @@ export class Header implements OnInit, OnDestroy {
   });
 
   constructor(
+    private el: ElementRef,
     public headerService: HeaderService,
     private adminService: AdminService,
     private authService: AuthService,
@@ -55,6 +56,15 @@ export class Header implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     public notifService: NotificationService,
   ) {}
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(e: MouseEvent) {
+    if (!this.el.nativeElement.contains(e.target)) {
+      this.showNotifications = false;
+      this.showUserMenu = false;
+      this.cdr.markForCheck();
+    }
+  }
 
   toggleSidebar() {
     this.sidebarService.toggle();
