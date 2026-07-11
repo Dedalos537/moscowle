@@ -14,12 +14,15 @@ import { SelectOption } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Select } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
+import { CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
+import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { toLocalDateString } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-therapist-sessions',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Modal, Select, Button],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Modal, Select, Button, CalendarWidget, Spinner],
   templateUrl: './therapist-sessions.html',
   styleUrl: './therapist-sessions.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -64,6 +67,10 @@ export class TherapistSessions implements OnInit, OnDestroy {
   showBriefing = false;
   briefingLoading = false;
   briefing: any = null;
+
+  showCalendar = false;
+  calendarEvents: CalendarWidgetEvent[] = [];
+  calendarLoading = false;
 
   activeBriefing: any = null;
   activeBriefingLoading = false;
@@ -266,6 +273,42 @@ export class TherapistSessions implements OnInit, OnDestroy {
   closeBriefing() {
     this.showBriefing = false;
     this.briefing = null;
+  }
+
+  toggleCalendar() {
+    this.showCalendar = !this.showCalendar;
+    if (this.showCalendar && this.calendarEvents.length === 0) {
+      this.loadCalendarEvents();
+    }
+    this.cdr.markForCheck();
+  }
+
+  private loadCalendarEvents() {
+    this.calendarLoading = true;
+    this.cdr.markForCheck();
+    const now = new Date();
+    const start = toLocalDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    const end = toLocalDateString(new Date(now.getFullYear(), now.getMonth() + 2, 0));
+    this.subs.add(this.therapistService.getSessions(start, end).subscribe({
+      next: (events) => {
+        this.calendarEvents = events.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          date: new Date(e.start),
+          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
+          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+          status: e.extendedProps?.status || 'scheduled',
+          therapist: e.extendedProps?.therapist,
+          patient: e.extendedProps?.patient,
+        }));
+        this.calendarLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.calendarLoading = false;
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   loadActiveBriefing(sessionId: number) {
