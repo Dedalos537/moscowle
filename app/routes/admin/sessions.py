@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 
+from app.auth_compat import current_user, login_required
 from app.extensions import csrf, db
 from app.models import Appointment, User, db
 from app.routes.admin import admin_bp
+from app.utils import normalize_datetime_for_storage
 
 
 @admin_bp.route('/sessions')
@@ -143,10 +144,12 @@ def batch_create_sessions():
                 return jsonify({'error': 'Máximo 5 fechas'}), 400
             for date_str in specific_dates:
                 current_date = datetime.strptime(date_str, '%Y-%m-%d')
-                session_start = current_date.replace(hour=start_h, minute=start_m)
-                session_end = current_date.replace(hour=end_h, minute=end_m)
-                if session_end < session_start:
-                    session_end += timedelta(days=1)
+                local_start = current_date.replace(hour=start_h, minute=start_m)
+                local_end = current_date.replace(hour=end_h, minute=end_m)
+                if local_end < local_start:
+                    local_end += timedelta(days=1)
+                session_start = normalize_datetime_for_storage(local_start)
+                session_end = normalize_datetime_for_storage(local_end)
                 session_title = (
                     title if title else (f'{title_prefix} - {date_str}' if title_prefix else f'Sesión {date_str}')
                 )
@@ -195,10 +198,12 @@ def batch_create_sessions():
 
         while current_date_iter < end_date_iter:
             if current_date_iter.weekday() in days_of_week:
-                session_start = current_date_iter.replace(hour=start_h, minute=start_m)
-                session_end = current_date_iter.replace(hour=end_h, minute=end_m)
-                if session_end < session_start:
-                    session_end += timedelta(days=1)
+                local_start = current_date_iter.replace(hour=start_h, minute=start_m)
+                local_end = current_date_iter.replace(hour=end_h, minute=end_m)
+                if local_end < local_start:
+                    local_end += timedelta(days=1)
+                session_start = normalize_datetime_for_storage(local_start)
+                session_end = normalize_datetime_for_storage(local_end)
                 if title_prefix and title_prefix.strip():
                     title_text = f'{title_prefix} ({session_counter}/{total_sessions})'
                 else:

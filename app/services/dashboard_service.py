@@ -246,7 +246,7 @@ class DashboardService:
             .scalar()
             or 0
         )
-        avg_compliance = round(float(avg_compliance), 1)
+        avg_compliance = max(0, round(float(avg_compliance), 1))
 
         academic_progress = self._academic_progress_delta(user.id)
         weekly_progress = self._weekly_audit_progress(user.id, today_start)
