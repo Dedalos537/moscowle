@@ -37,30 +37,31 @@
       <h2 class="text-xl font-bold mb-1">Sesión Actual: {{ nextSessionTitle }}</h2>
       <p class="text-white/60 text-sm mb-6">{{ nextSessionSubtitle }}</p>
 
-      <div class="flex items-center gap-6">
-        <div class="relative w-24 h-24 shrink-0">
+      <div class="flex items-center gap-8">
+        <div class="relative w-[140px] h-[140px] shrink-0">
           <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2.5"/>
-            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4ade80" stroke-width="2.5"
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4ade80" stroke-width="3"
                     [attr.stroke-dasharray]="sessionProgress + ', 100'"
-                    stroke-linecap="round"/>
+                    stroke-linecap="round"
+                    style="transition: stroke-dasharray 0.8s cubic-bezier(0.4, 0, 0.2, 1)"/>
           </svg>
           <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-2xl font-black">{{ sessionProgress }}%</span>
-            <span class="text-[8px] uppercase tracking-wider text-white/50">{{ progressLabel }}</span>
+            <span class="text-[2rem] font-black leading-none">{{ sessionProgress }}%</span>
+            <span class="text-[9px] uppercase tracking-widest text-white/50 mt-1">{{ progressLabel }}</span>
           </div>
         </div>
 
         <div class="flex-1 min-w-0">
-          <div class="flex justify-between text-sm mb-2">
-            <span class="text-white/80 font-medium">{{ weeklyProgressLabel }}</span>
-            <span class="font-bold text-[#4ade80]">{{ weeklyProgress }}%</span>
+          <div class="flex justify-between items-baseline mb-2.5">
+            <span class="text-sm font-semibold text-white/80">{{ weeklyProgressLabel }}</span>
+            <span class="text-sm font-black text-[#4ade80]">{{ weeklyProgress }}%</span>
           </div>
-          <div class="w-full h-2 bg-white/15 rounded-full overflow-hidden">
-            <div class="h-full bg-[#4ade80] rounded-full transition-all duration-700"
+          <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div class="h-full bg-[#4ade80] rounded-full transition-all duration-700 ease-out"
                  [style.width.%]="weeklyProgress"></div>
           </div>
-          <p class="text-xs text-white/40 mt-2 leading-relaxed">{{ sessionDescription }}</p>
+          <p class="text-xs text-white/40 mt-3 leading-relaxed italic">{{ sessionDescription }}</p>
         </div>
       </div>
     </div>
