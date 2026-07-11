@@ -95,14 +95,17 @@
         </div>
 
         @if (audit) {
-          <div class="card p-3">
-            <div class="text-label text-on-surface-variant mb-2">Auditoria IA
-              @if (liveScore !== null) {
-                <span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                      [style.background]="'var(--color-surface-container-high)'"
-                      [style.color]="liveScore >= 70 ? 'var(--color-success)' : liveScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">{{ liveScore }}%</span>
-              }
+          <div class="card overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-border" style="background:var(--color-surface-container-low)">
+              <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Auditoria IA
+                @if (liveScore !== null) {
+                  <span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        [style.background]="'var(--color-surface-container-high)'"
+                        [style.color]="liveScore >= 70 ? 'var(--color-success)' : liveScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">{{ liveScore }}%</span>
+                }
+              </div>
             </div>
+            <div class="p-3">
             @if (audit?.audit_status === 'completed' && report) {
               <div class="text-center py-2">
                 <div class="text-2xl font-bold" style="color:var(--color-primary)">{{ audit.audit_score }}%</div>
@@ -127,36 +130,39 @@
                 }
               </div>
             }
+            </div>
           </div>
         }
 
         @if (hasProgram) {
-          <div class="card p-3 cursor-pointer hover:shadow-hover transition-shadow" (click)="openProgramModal()">
-            <div class="text-label text-on-surface-variant">Programacion</div>
-            <div class="text-xs mt-1 text-on-surface-variant line-clamp-2">{{ programPreview || 'Ver documento' }}</div>
+          <div class="card overflow-hidden cursor-pointer hover:shadow-hover transition-shadow" (click)="openProgramModal()">
+            <div class="px-4 py-2.5 border-b border-border" style="background:var(--color-surface-container-low)">
+              <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Programacion</div>
+            </div>
+            <div class="p-3 text-xs text-on-surface-variant line-clamp-2">{{ programPreview || 'Ver documento' }}</div>
           </div>
         }
       </div>
 
       <div class="flex-1 space-y-3 min-w-0">
-        <div class="card">
-          <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
-            <div class="text-label text-on-surface-variant">Notas Clinicas</div>
+        <div class="card overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-border flex items-center justify-between" style="background:var(--color-surface-container-low)">
+            <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Notas Clinicas</div>
             <span class="text-[10px] text-on-surface-variant italic">{{ lastSavedLabel }}</span>
           </div>
           <textarea [(ngModel)]="notes" (input)="onNotesInput()"
-                    class="w-full p-3 resize-none text-sm focus:outline-none min-h-[140px] leading-relaxed"
+                    class="w-full p-4 resize-none text-sm focus:outline-none min-h-[160px] leading-relaxed border-0"
                     style="background:var(--color-surface-container-lowest);color:var(--color-on-surface)"
                     placeholder="Escribe tus observaciones..."></textarea>
         </div>
 
         @if (audit?.transcript_text) {
-          <div class="card">
-            <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
-              <div class="text-label text-on-surface-variant">Transcripcion</div>
+          <div class="card overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-border flex items-center justify-between" style="background:var(--color-surface-container-low)">
+              <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Transcripcion</div>
               <span class="text-[10px] text-on-surface-variant">{{ audit?.audio_duration_seconds || 0 }}s grabados</span>
             </div>
-            <div class="p-3 text-sm leading-relaxed max-h-48 overflow-y-auto"
+            <div class="p-4 text-sm leading-relaxed max-h-48 overflow-y-auto"
                  style="color:var(--color-on-surface)">
               {{ audit.transcript_text }}
             </div>
@@ -164,9 +170,9 @@
         }
 
         @if (audit?.audit_status === 'completed' && report) {
-          <div class="card">
-            <div class="px-3 py-2 border-b" style="background:var(--color-surface-container-low)">
-              <div class="text-label text-on-surface-variant">Objetivos</div>
+          <div class="card overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-border" style="background:var(--color-surface-container-low)">
+              <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Objetivos</div>
             </div>
             <div class="p-3 space-y-2 max-h-48 overflow-y-auto">
               @for (obj of report.objectives; track $index) {
@@ -183,8 +189,8 @@
         }
 
         <div class="card overflow-hidden">
-          <div class="px-3 py-2 border-b flex items-center justify-between" style="background:var(--color-surface-container-low)">
-            <div class="text-label text-on-surface-variant">Evidencia</div>
+          <div class="px-4 py-2.5 border-b border-border flex items-center justify-between" style="background:var(--color-surface-container-low)">
+            <div class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Evidencia</div>
             <span class="text-[10px] text-on-surface-variant">{{ images.length }} archivos</span>
           </div>
           <div class="p-3" style="background:var(--color-surface-container-lowest)">
