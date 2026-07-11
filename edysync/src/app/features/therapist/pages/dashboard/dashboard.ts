@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RecordingService } from '../../../../core/services/recording.service';
+import { RouterModule } from '@angular/router';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 
@@ -38,7 +39,7 @@ interface DashboardData {
 @Component({
   selector: 'app-therapist-dashboard',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Spinner],
+  imports: [CommonModule, FontAwesomeModule, RouterModule, Spinner],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],

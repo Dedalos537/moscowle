@@ -14,3 +14,33 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
+
+.program-content {
+  :host ::ng-deep & {
+    h3 {
+      color: var(--color-primary);
+      font-weight: 700;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      margin: 0.25rem 0;
+      color: var(--color-on-surface);
+    }
+    .table-wrap {
+      overflow-x: auto;
+      margin: 0.5rem 0;
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+        td {
+          border: 1px solid var(--color-border);
+          padding: 0.25rem 0.5rem;
+          color: var(--color-on-surface);
+        }
+      }
+    }
+  }
+}

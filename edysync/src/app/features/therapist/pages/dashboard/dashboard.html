@@ -117,26 +117,31 @@
     </div>
 
     @if (topics.length) {
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <ul class="space-y-2">
         @for (topic of topics; track $index) {
-          <div class="p-3 rounded-2xl border border-border/30 bg-surface hover:border-primary/30 transition-colors">
-            <div class="flex items-center gap-2 mb-1.5">
-              <fa-icon [icon]="getTopicIcon(topic.status)"
-                       [class.text-success]="topic.status === 'LOGRADO'"
-                       [class.text-warning]="topic.status === 'PARCIAL'"
-                       [class.text-on-surface-variant/30]="topic.status === 'PENDIENTE'">
-              </fa-icon>
-              <span class="font-semibold text-sm text-on-surface truncate">{{ topic.name }}</span>
-            </div>
-            <span class="text-[10px] font-bold uppercase tracking-wider"
+          <li class="flex items-center gap-3 text-sm">
+            <fa-icon [icon]="getTopicIcon(topic.status)" class="text-xs shrink-0"
+                     [class.text-success]="topic.status === 'LOGRADO'"
+                     [class.text-warning]="topic.status === 'PARCIAL'"
+                     [class.text-on-surface-variant/30]="topic.status === 'PENDIENTE'">
+            </fa-icon>
+            <span class="text-on-surface">{{ topic.name }}</span>
+            <span class="ml-auto text-[10px] font-bold uppercase tracking-wider shrink-0"
                   [class.text-success]="topic.status === 'LOGRADO'"
                   [class.text-warning]="topic.status === 'PARCIAL'"
                   [class.text-on-surface-variant/50]="topic.status === 'PENDIENTE'">
               {{ topic.status_label }}
             </span>
-          </div>
+          </li>
         }
-      </div>
+      </ul>
+      @if (data?.next_session?.id) {
+        <a [routerLink]="['/therapist/session-review', data!.next_session!.id]"
+           class="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-primary hover:text-primary/80 transition-colors">
+          Ver detalles
+          <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px]"></fa-icon>
+        </a>
+      }
     } @else if (topicsEmptyState) {
       <div class="rounded-2xl border border-dashed border-border/50 bg-surface p-5 text-center">
         <fa-icon [icon]="['fas', 'file-upload']" class="text-2xl text-on-surface-variant/30 mb-2"></fa-icon>

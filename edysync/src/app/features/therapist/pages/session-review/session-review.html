@@ -315,30 +315,48 @@
   </div>
 }
 
-<ng-template #programModal>
+@if (showProgramModal) {
   <div class="fixed inset-0 z-[100] flex items-center justify-center p-4"
-       style="background:var(--color-surface-container-lowest);backdrop-filter:blur(4px)"
+       style="background:rgba(0,0,0,0.4);backdrop-filter:blur(4px)"
        (click)="closeProgramModal()">
     <div class="rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
          style="background:var(--color-surface-container-lowest)"
          (click)="$event.stopPropagation()">
       <div class="px-4 py-3 border-b flex justify-between items-center shrink-0"
            style="background:var(--color-surface-container-low)">
-        <h3 class="text-sm font-bold text-on-surface">Programacion</h3>
-        <button class="btn-ghost text-xs" (click)="closeProgramModal()">Cerrar</button>
+        <div class="flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'file-word']" class="text-primary"></fa-icon>
+          <h3 class="text-sm font-bold text-on-surface">Programacion de la Sesion</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          @if (programText) {
+            <button class="btn-ghost text-xs" (click)="printProgram()">
+              <fa-icon [icon]="['fas', 'print']" class="mr-1"></fa-icon>Imprimir
+            </button>
+          }
+          <button class="btn-ghost text-xs" (click)="closeProgramModal()">Cerrar</button>
+        </div>
       </div>
       @if (programText) {
-        <div class="p-4 overflow-y-auto text-sm leading-relaxed text-on-surface">
-          {{ programText }}
+        <div id="programPrintContent" class="p-4 overflow-y-auto text-sm leading-relaxed text-on-surface program-content"
+             [innerHTML]="formatProgramText(programText)">
         </div>
+        @if (programUploadedAt) {
+          <div class="px-4 py-2 border-t text-[10px] text-on-surface-variant shrink-0"
+               style="background:var(--color-surface-container-low)">
+            Subido: {{ programUploadedAt }}
+          </div>
+        }
       } @else {
         @if (programLoading) {
           <div class="p-8 text-center text-on-surface-variant">Cargando...</div>
+        } @else {
+          <div class="p-8 text-center text-on-surface-variant">Sin programacion disponible</div>
         }
       }
     </div>
   </div>
-</ng-template>
+}
 
 @if (loading) {
   <div class="flex justify-center items-center h-64">
