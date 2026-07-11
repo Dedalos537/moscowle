@@ -23,14 +23,14 @@
     </div>
   </div>
   @if (isOpen) {
-    <div class="select__dropdown" #dropdownPanel>
+    <div class="select__dropdown" #dropdownPanel [style.top.px]="dropdownTop" [style.left.px]="dropdownLeft" [style.width.px]="dropdownWidth">
       @if (searchable() && options().length > 5) {
         <div class="select__search">
           <fa-icon [icon]="['fas', 'search']" class="select__search-icon"></fa-icon>
           <input #searchInput [(ngModel)]="searchQuery" [ngModelOptions]="{standalone: true}" (keydown)="$event.stopPropagation()" type="text" class="select__search-input" placeholder="Buscar..." autocomplete="off">
         </div>
       }
-      <div class="select__options" [class.select__options--searching]="searchable() && options().length > 5">
+      <div class="select__options" [class.select__options--searching]="searchable() && options().length > 5" (scroll)="$event.stopPropagation()">
         @for (option of filteredOptions; track option.value; let i = $index) {
           <div class="select__option"
             [class.select__option--selected]="isSelected(option.value)"

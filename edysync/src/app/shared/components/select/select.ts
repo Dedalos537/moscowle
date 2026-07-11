@@ -44,6 +44,9 @@ export class Select implements ControlValueAccessor {
   selectedValues: any[] = [];
   searchQuery = '';
   highlightedIndex = -1;
+  dropdownTop = 0;
+  dropdownLeft = 0;
+  dropdownWidth = 0;
 
   private onChange: any = () => {};
   private onTouched: any = () => {};
@@ -101,6 +104,7 @@ export class Select implements ControlValueAccessor {
     this.highlightedIndex = -1;
     this.searchQuery = '';
     if (this.isOpen) {
+      this.updateDropdownPosition();
       if (this.searchable()) {
         setTimeout(() => this.searchInput?.nativeElement?.focus());
       }
@@ -113,6 +117,7 @@ export class Select implements ControlValueAccessor {
     this.isOpen = true;
     this.highlightedIndex = -1;
     this.searchQuery = '';
+    this.updateDropdownPosition();
     if (this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
@@ -215,5 +220,21 @@ export class Select implements ControlValueAccessor {
       const el = this.dropdownPanel?.nativeElement?.children[this.highlightedIndex];
       el?.scrollIntoView?.({ block: 'nearest' });
     });
+  }
+
+  private updateDropdownPosition() {
+    const trigger = this.triggerRef?.nativeElement;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const viewportH = window.innerHeight;
+    const spaceBelow = viewportH - rect.bottom;
+    const dropdownMaxH = 288;
+    this.dropdownWidth = rect.width;
+    this.dropdownLeft = rect.left;
+    if (spaceBelow < dropdownMaxH && rect.top > spaceBelow) {
+      this.dropdownTop = rect.top - dropdownMaxH - 4;
+    } else {
+      this.dropdownTop = rect.bottom + 4;
+    }
   }
 }

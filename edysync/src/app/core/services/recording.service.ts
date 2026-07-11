@@ -38,12 +38,14 @@ export class RecordingService {
   private startedSessions: Set<number> = new Set();
   private readonly chunkIntervalMs = 5 * 60 * 1000;
   private readonly periodicAuditIntervalMs = 15 * 60 * 1000;
+  private readonly pollIntervalMs = 30 * 1000;
   private currentSessionId: number | null = null;
   private pendingUploads = 0;
   private finishPending = false;
   private finishSessionId: number | null = null;
   private finishSessionTitle = '';
   private markedAbsent = false;
+  private lastAutoCompleteTime = 0;
 
   constructor(
     private http: HttpClient,
@@ -52,7 +54,7 @@ export class RecordingService {
 
   iniciarPolleo() {
     this.detenerPolleo();
-    this.pollSubscription = interval(5000).subscribe(() => this.checkSessions());
+    this.pollSubscription = interval(this.pollIntervalMs).subscribe(() => this.checkSessions());
     this.focusHandler = () => this.checkSessions();
     window.addEventListener('focus', this.focusHandler);
     this.checkSessions();
@@ -106,9 +108,13 @@ export class RecordingService {
     }
     if (this.recordingState$.value === 'recording') return;
 
-    this.http.post('/api/sessions/auto-complete-expired', {}).subscribe({
-      error: () => {},
-    });
+    const now = Date.now();
+    if (now - this.lastAutoCompleteTime > 60_000) {
+      this.lastAutoCompleteTime = now;
+      this.http.post('/api/sessions/auto-complete-expired', {}).subscribe({
+        error: () => {},
+      });
+    }
 
     this.http.get<any>('/api/sessions/current').subscribe({
       next: (res) => {
