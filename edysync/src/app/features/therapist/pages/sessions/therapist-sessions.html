@@ -2,8 +2,9 @@
 
   <div class="grid grid-cols-12 gap-6 mb-8">
     <div class="col-span-12 lg:col-span-8 glass-card rounded-2xl p-6 signature-shadow overflow-hidden">
-      @if (!showCalendar) {
-        <div @viewSlide>
+      <div class="view-switcher">
+        <!-- Week View -->
+        <div [class.view-active]="!showCalendar" [class.view-hidden]="showCalendar">
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-2">
               <fa-icon [icon]="['fas', 'calendar-alt']" class="text-primary"></fa-icon>
@@ -39,9 +40,9 @@
             }
           </div>
         </div>
-      }
-      @if (showCalendar) {
-        <div @viewSlide>
+
+        <!-- Calendar View -->
+        <div [class.view-active]="showCalendar" [class.view-hidden-right]="!showCalendar">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold flex items-center gap-2">
               <fa-icon [icon]="['fas', 'calendar-day']" class="text-primary"></fa-icon>
@@ -65,54 +66,50 @@
             ></app-calendar-widget>
           }
         </div>
-      }
+      </div>
     </div>
 
-    <div class="col-span-12 lg:col-span-4 grid grid-cols-2 gap-4">
+    <div class="col-span-12 lg:col-span-4">
       @if (showCalendar) {
-        <div class="col-span-2" @statsSlide>
-          <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow">
-            <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-3">Resumen del Mes</p>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="text-center p-3 rounded-xl bg-primary/5">
-                <p class="text-2xl font-black text-primary">{{ monthStats.total }}</p>
-                <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Total</p>
-              </div>
-              <div class="text-center p-3 rounded-xl bg-success/5">
-                <p class="text-2xl font-black text-success">{{ monthStats.completionRate }}%</p>
-                <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Completadas</p>
-              </div>
-              <div class="text-center p-3 rounded-xl bg-warning/5">
-                <p class="text-2xl font-black text-warning">{{ monthStats.pending }}</p>
-                <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Pendientes</p>
-              </div>
-              <div class="text-center p-3 rounded-xl bg-tertiary/5">
-                <p class="text-sm font-bold text-tertiary mt-1">{{ monthStats.busiestDay }}</p>
-                <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Día más ocupado</p>
+        <div class="stats-switcher" style="grid-template-columns: 1fr 1fr">
+          <div class="col-span-2 stats-active">
+            <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow">
+              <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-3">Resumen del Mes</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="text-center p-3 rounded-xl bg-primary/5">
+                  <p class="text-2xl font-black text-primary">{{ monthStats.total }}</p>
+                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Total</p>
+                </div>
+                <div class="text-center p-3 rounded-xl bg-success/5">
+                  <p class="text-2xl font-black text-success">{{ monthStats.completionRate }}%</p>
+                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Completadas</p>
+                </div>
+                <div class="text-center p-3 rounded-xl bg-warning/5">
+                  <p class="text-2xl font-black text-warning">{{ monthStats.pending }}</p>
+                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Pendientes</p>
+                </div>
+                <div class="text-center p-3 rounded-xl bg-tertiary/5">
+                  <p class="text-sm font-bold text-tertiary mt-1">{{ monthStats.busiestDay }}</p>
+                  <p class="text-[10px] font-bold text-on-surface-variant/70 uppercase">Día más ocupado</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       } @else {
-        <div @statsSlide>
+        <div class="grid grid-cols-2 gap-4">
           <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
             <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Hoy</p>
             <p class="text-3xl font-black text-primary">{{ stats.sessions_today }}</p>
           </div>
-        </div>
-        <div @statsSlide>
           <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
             <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Completas</p>
             <p class="text-3xl font-black text-success">{{ stats.completed_sessions }}</p>
           </div>
-        </div>
-        <div @statsSlide>
           <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between">
             <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pendientes</p>
             <p class="text-3xl font-black text-warning">{{ stats.pending_sessions }}</p>
           </div>
-        </div>
-        <div @statsSlide>
           <div class="bg-surface-container-lowest p-5 rounded-2xl signature-shadow flex flex-col justify-between border-2 border-primary/10">
             <p class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Pacientes</p>
             <p class="text-3xl font-black text-primary">{{ stats.active_patients }}</p>
@@ -122,8 +119,8 @@
     </div>
   </div>
 
-  @if (!showCalendar) {
-    <div class="relative" @viewSlide>
+  <div class="agenda-wrapper" [class.view-active]="!showCalendar" [class.view-hidden]="showCalendar">
+    <div class="relative">
       <div class="absolute left-[39px] top-4 bottom-4 w-0.5 bg-border hidden md:block"></div>
 
       @if (loading) {
@@ -224,7 +221,7 @@
         </div>
       }
     </div>
-  }
+  </div>
 </div>
 
 @if (showActiveBriefing && activeBriefing) {

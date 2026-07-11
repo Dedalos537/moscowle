@@ -114,3 +114,71 @@
 .late-session-actions .btn-secondary:hover {
   background: var(--color-surface-container-highest);
 }
+
+.view-switcher {
+  display: grid;
+
+  & > * {
+    grid-row: 1;
+    grid-column: 1;
+    transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+.view-active {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.view-hidden {
+  opacity: 0;
+  transform: translateX(-24px) scale(0.97);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.view-hidden-right {
+  opacity: 0;
+  transform: translateX(24px) scale(0.97);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stats-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  & > * {
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+.stats-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.stats-hidden {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+}
+
+.agenda-wrapper {
+  transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 2000px;
+  overflow: hidden;
+}
+
+.agenda-wrapper.view-hidden {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
