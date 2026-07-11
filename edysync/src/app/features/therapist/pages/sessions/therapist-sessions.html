@@ -197,16 +197,34 @@
               }
               <div class="flex items-center gap-2">
                 <fa-icon [icon]="['fas', 'magic']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                <span class="text-sm text-on-surface-variant/70">Auditoría IA: {{ e.extendedProps?.audit_score || '—' }}</span>
+                @if (e.audit_score != null) {
+                  <span class="text-sm font-bold"
+                        [style.color]="e.audit_score >= 70 ? 'var(--color-success)' : e.audit_score >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
+                    Auditoría IA: {{ e.audit_score }}%
+                  </span>
+                } @else if (e.extendedProps?.audit_score != null) {
+                  <span class="text-sm font-bold"
+                        [style.color]="e.extendedProps.audit_score >= 70 ? 'var(--color-success)' : e.extendedProps.audit_score >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
+                    Auditoría IA: {{ e.extendedProps.audit_score }}%
+                  </span>
+                } @else {
+                  <span class="text-sm text-on-surface-variant/70">Auditoría IA: —</span>
+                }
               </div>
               <div class="flex items-center gap-2">
                 <fa-icon [icon]="['fas', 'sticky-note']" class="text-sm text-on-surface-variant/70"></fa-icon>
-                <span class="text-sm italic text-on-surface-variant/70 truncate">{{ e.notes ? ('"' + e.notes + '"') : 'Sin notas' }}</span>
+                @if (e.notes) {
+                  <span class="text-sm italic text-on-surface-variant/70 truncate">"{{ e.notes }}"</span>
+                } @else if (e.extendedProps?.feedback_notes) {
+                  <span class="text-sm italic text-on-surface-variant/70 truncate">"{{ e.extendedProps.feedback_notes }}"</span>
+                } @else {
+                  <span class="text-sm italic text-on-surface-variant/70">Sin notas</span>
+                }
               </div>
             </div>
 
             <div class="mt-4 flex flex-wrap gap-3 justify-end">
-              @if (e.notes) {
+              @if (e.notes || e.extendedProps?.feedback_notes) {
                 <button class="px-5 py-2.5 rounded-xl border border-border hover:bg-surface-container-low transition-colors text-sm font-bold" (click)="viewNotes(e)">
                   Ver Notas
                 </button>

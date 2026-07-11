@@ -319,7 +319,7 @@
   <div class="fixed inset-0 z-[100] flex items-center justify-center p-4"
        style="background:rgba(0,0,0,0.4);backdrop-filter:blur(4px)"
        (click)="closeProgramModal()">
-    <div class="rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+    <div class="rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
          style="background:var(--color-surface-container-lowest)"
          (click)="$event.stopPropagation()">
       <div class="px-4 py-3 border-b flex justify-between items-center shrink-0"
@@ -337,22 +337,68 @@
           <button class="btn-ghost text-xs" (click)="closeProgramModal()">Cerrar</button>
         </div>
       </div>
-      @if (programText) {
-        <div id="programPrintContent" class="p-4 overflow-y-auto text-sm leading-relaxed text-on-surface program-content"
-             [innerHTML]="formatProgramText(programText)">
-        </div>
-        @if (programUploadedAt) {
-          <div class="px-4 py-2 border-t text-[10px] text-on-surface-variant shrink-0"
-               style="background:var(--color-surface-container-low)">
-            Subido: {{ programUploadedAt }}
+
+      @if (programAuditScore != null) {
+        <div class="px-4 py-3 border-b flex items-center gap-4 shrink-0"
+             style="background:var(--color-surface-container-low)">
+          <div class="flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'clipboard-check']" class="text-sm"
+                     [style.color]="programAuditScore >= 70 ? 'var(--color-success)' : programAuditScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)'"></fa-icon>
+            <span class="text-xs font-bold">Score de Cobertura:</span>
+            <span class="text-sm font-black"
+                  [style.color]="programAuditScore >= 70 ? 'var(--color-success)' : programAuditScore >= 40 ? 'var(--color-warning)' : 'var(--color-error)'">
+              {{ programAuditScore }}%
+            </span>
           </div>
+          @if (programObjectives.length) {
+            <span class="text-[10px] text-on-surface-variant">
+              {{ programObjectivesAchieved }}/{{ programObjectives.length }} objetivos logrados
+            </span>
+          }
+        </div>
+      }
+
+      <div class="flex-1 overflow-y-auto">
+        @if (programObjectives.length) {
+          <div class="px-4 pt-4 pb-2">
+            <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Resumen de Objetivos</p>
+            <div class="space-y-1.5">
+              @for (obj of programObjectives; track $index) {
+                <div class="flex items-center gap-2.5 p-2 rounded-lg text-xs"
+                     [style.background]="obj.status === 'LOGRADO' ? 'var(--color-success-container)' : obj.status === 'PARCIAL' ? 'var(--color-warning-container)' : 'var(--color-surface-container-low)'">
+                  <fa-icon [icon]="obj.status === 'LOGRADO' ? ['fas', 'check-circle'] : obj.status === 'PARCIAL' ? ['fas', 'exclamation-circle'] : ['far', 'circle']"
+                           class="text-xs shrink-0"
+                           [style.color]="obj.status === 'LOGRADO' ? 'var(--color-success)' : obj.status === 'PARCIAL' ? 'var(--color-warning)' : 'var(--color-on-surface-variant)'"></fa-icon>
+                  <span class="font-medium text-on-surface flex-1">{{ obj.name }}</span>
+                  <span class="text-[10px] font-bold uppercase shrink-0"
+                        [style.color]="obj.status === 'LOGRADO' ? 'var(--color-success)' : obj.status === 'PARCIAL' ? 'var(--color-warning)' : 'var(--color-on-surface-variant)'">
+                    {{ obj.status_label }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+          <div class="mx-4 my-3 border-t" style="border-color:var(--color-border)"></div>
         }
-      } @else {
-        @if (programLoading) {
-          <div class="p-8 text-center text-on-surface-variant">Cargando...</div>
+
+        @if (programText) {
+          <div id="programPrintContent" class="px-4 pb-4 text-sm leading-relaxed text-on-surface program-content"
+               [innerHTML]="formatProgramText(programText)">
+          </div>
         } @else {
-          <div class="p-8 text-center text-on-surface-variant">Sin programacion disponible</div>
+          @if (programLoading) {
+            <div class="p-8 text-center text-on-surface-variant">Cargando...</div>
+          } @else {
+            <div class="p-8 text-center text-on-surface-variant">Sin programacion disponible</div>
+          }
         }
+      </div>
+
+      @if (programUploadedAt) {
+        <div class="px-4 py-2 border-t text-[10px] text-on-surface-variant shrink-0"
+             style="background:var(--color-surface-container-low)">
+          Subido: {{ programUploadedAt }}
+        </div>
       }
     </div>
   </div>

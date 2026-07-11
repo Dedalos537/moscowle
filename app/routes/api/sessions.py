@@ -85,6 +85,14 @@ def api_get_sessions():
         }
         return colors.get(status, '#9CA3AF')
 
+    from app.models import SessionAudit
+
+    appt_ids = [a.id for a in appts]
+    audit_map = {}
+    if appt_ids:
+        audits = SessionAudit.query.filter(SessionAudit.appointment_id.in_(appt_ids)).all()
+        audit_map = {audit.appointment_id: audit for audit in audits}
+
     for a in appts:
         start_iso = a.start_time.isoformat() if a.start_time else None
         end_iso = a.end_time.isoformat() if a.end_time else None
@@ -92,6 +100,11 @@ def api_get_sessions():
             games_list = json.loads(a.games) if a.games else []
         except (json.JSONDecodeError, TypeError):
             games_list = []
+        audit = audit_map.get(a.id)
+        audit_score = audit.audit_score if audit and audit.audit_score is not None else None
+        has_transcript = bool(audit and audit.transcript_text)
+        has_program = bool(audit and audit.planned_text)
+        feedback_notes = (audit.feedback_notes or '').strip() if audit else ''
         results.append(
             {
                 'id': a.id,
@@ -107,12 +120,19 @@ def api_get_sessions():
                     'patient': a.patient.username if a.patient else '',
                     'status': a.status,
                     'notes': a.notes or '',
+                    'audit_score': audit_score,
+                    'has_transcript': has_transcript,
+                    'has_program': has_program,
+                    'feedback_notes': feedback_notes,
                 },
                 'status': a.status,
                 'attendance': a.attendance,
                 'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
                 'location': a.location,
                 'notes': a.notes,
+                'audit_score': audit_score,
+                'has_transcript': has_transcript,
+                'has_program': has_program,
                 'games': games_list,
                 'is_holiday': True if a.notes and 'Scheduled on Holiday' in a.notes else False,
             }

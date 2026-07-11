@@ -245,7 +245,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   viewNotes(e: any) {
-    this.selectedNote = e.notes || e.extendedProps?.notes || '';
+    this.selectedNote = e.notes || e.extendedProps?.feedback_notes || e.extendedProps?.notes || '';
     this.showNotesModal = true;
   }
 

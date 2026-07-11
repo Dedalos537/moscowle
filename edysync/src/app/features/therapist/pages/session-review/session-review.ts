@@ -66,6 +66,12 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   programText = '';
   programUploadedAt = '';
   programLoading = false;
+  programObjectives: any[] = [];
+  programAuditScore: number | null = null;
+
+  get programObjectivesAchieved(): number {
+    return this.programObjectives.filter(o => o.status === 'LOGRADO').length;
+  }
 
   showFullscreen = false;
 
@@ -548,7 +554,10 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   openProgramModal() {
     this.showProgramModal = true;
     this.programLoading = true;
+    this.programObjectives = [];
+    this.programAuditScore = null;
     this.cdr.markForCheck();
+
     this.subs.add(this.therapistService.getSessionProgram(this.sessionId).subscribe({
       next: (data) => {
         this.programLoading = false;
@@ -566,6 +575,19 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.programText = '';
         this.cdr.markForCheck();
       },
+    }));
+
+    this.subs.add(this.http.get(`/api/sessions/${this.sessionId}/objectives`).subscribe({
+      next: (res: any) => {
+        if (res.success && res.objectives?.length) {
+          this.programObjectives = res.objectives;
+        }
+        if (this.audit?.audit_score != null) {
+          this.programAuditScore = this.audit.audit_score;
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {},
     }));
   }
 
