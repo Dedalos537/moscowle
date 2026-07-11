@@ -73,6 +73,10 @@ export class TherapistSessions implements OnInit, OnDestroy {
   calendarLoading = false;
   monthStats = { total: 0, completed: 0, pending: 0, cancelled: 0, completionRate: 0, busiestDay: '' };
 
+  weekSessionCounts: Record<string, number> = {};
+  agendaTransitioning = false;
+  agendaSlideDirection: 'left' | 'right' = 'right';
+
   activeBriefing: any = null;
   activeBriefingLoading = false;
   showActiveBriefing = false;
@@ -97,6 +101,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     });
     this.generarDias();
     this.loadStats();
+    this.loadWeekSessionCounts();
     this.cargarSesiones();
 
     this.subs.add(this.recordingService.activeSession$.subscribe(session => {
@@ -139,6 +144,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
     d.setDate(d.getDate() - 7);
     this.fechaSeleccionada = d;
     this.generarDias();
+    this.loadWeekSessionCounts();
     this.cargarSesiones();
   }
 
@@ -147,13 +153,17 @@ export class TherapistSessions implements OnInit, OnDestroy {
     d.setDate(d.getDate() + 7);
     this.fechaSeleccionada = d;
     this.generarDias();
+    this.loadWeekSessionCounts();
     this.cargarSesiones();
   }
 
   cambiarFecha(d: Date) {
+    const prevIdx = this.diasSemana.findIndex(dd => dd.toDateString() === this.fechaSeleccionada.toDateString());
+    const newIdx = this.diasSemana.findIndex(dd => dd.toDateString() === d.toDateString());
+    this.agendaSlideDirection = newIdx >= prevIdx ? 'right' : 'left';
     this.fechaSeleccionada = d;
     this.generarDias();
-    this.cargarSesiones();
+    this.cargarSesionesWithTransition();
   }
 
   irHoy() {
@@ -224,6 +234,62 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  cargarSesionesWithTransition() {
+    if (this.agendaEvents.length === 0) {
+      this.cargarSesiones();
+      return;
+    }
+    this.agendaTransitioning = true;
+    this.cdr.markForCheck();
+    setTimeout(() => {
+      const f = toLocalDateString(this.fechaSeleccionada);
+      this.subs.add(this.therapistService.getSessions(f, f).subscribe({
+        next: (events) => {
+          this.agendaEvents = [...events].sort((a: any, b: any) => {
+            return new Date(a.start).getTime() - new Date(b.start).getTime();
+          });
+          this.agendaTransitioning = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.agendaTransitioning = false;
+          this.error = err.message;
+          this.cdr.markForCheck();
+        },
+      }));
+    }, 220);
+  }
+
+  private loadWeekSessionCounts() {
+    const monday = new Date(this.diasSemana[0]);
+    const sunday = new Date(this.diasSemana[6]);
+    sunday.setHours(23, 59, 59, 999);
+    const startStr = toLocalDateString(monday);
+    const endStr = toLocalDateString(sunday);
+    this.subs.add(this.therapistService.getSessions(startStr, endStr).subscribe({
+      next: (events: any[]) => {
+        const counts: Record<string, number> = {};
+        events.forEach(e => {
+          if (e.start) {
+            const dateKey = new Date(e.start).toDateString();
+            counts[dateKey] = (counts[dateKey] || 0) + 1;
+          }
+        });
+        this.weekSessionCounts = counts;
+        this.cdr.markForCheck();
+      },
+      error: () => {},
+    }));
+  }
+
+  hasSessionsOnDay(d: Date): boolean {
+    return (this.weekSessionCounts[d.toDateString()] || 0) > 0;
+  }
+
+  sessionCountOnDay(d: Date): number {
+    return this.weekSessionCounts[d.toDateString()] || 0;
   }
 
   openCreateModal() {
