@@ -5,8 +5,8 @@ from datetime import datetime
 from functools import wraps
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 
+from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt, db
 from app.models import AdminAPIToken, Appointment, ContactMessage, CSPReport, Sede, SmartAction, User, db
 from app.routes.admin import admin_bp, dashboard_service, payment_service
@@ -589,3 +589,26 @@ def admin_api_logs():
     search = request.args.get('search')
     logs = log_capture_handler.get_logs(level=level, limit=limit, search=search)
     return jsonify({'success': True, 'logs': logs})
+
+
+@admin_bp.route('/api/railway-metrics', methods=['GET'])
+@login_required
+def admin_railway_metrics():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.railway_service import get_railway_metrics
+
+    return jsonify(get_railway_metrics())
+
+
+@admin_bp.route('/api/railway-metrics/history', methods=['GET'])
+@login_required
+def admin_railway_metrics_history():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.services.railway_service import get_railway_metrics_history
+
+    from_dt = request.args.get('from')
+    to_dt = request.args.get('to')
+    bucket = request.args.get('bucket', '15m')
+    return jsonify(get_railway_metrics_history(from_dt=from_dt, to_dt=to_dt, bucket=bucket))

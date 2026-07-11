@@ -25,14 +25,9 @@ for i in range(30):
 "
 fi
 
-# --- Run database migrations (non-fatal: create_app() -> db.create_all() runs first) ---
-if [ "${RUN_MIGRATIONS}" = "true" ]; then
-    echo "Running database migrations..."
-    flask db upgrade || echo "Warning: migrations incomplete (db.create_all() handles schema)"
-
-    # --- Seed database if no admin user exists ---
-    echo "Checking if seed is needed..."
-    python -c "
+# --- Seed database if no admin user exists ---
+echo "Checking if seed is needed..."
+python -c "
 import os
 from app import create_app
 from app.extensions import db
@@ -58,7 +53,6 @@ with app.app_context():
     else:
         print('Admin already exists, skipping seed')
 " || echo "Warning: seed failed (non-fatal)"
-fi
 
 # --- Start nginx in background (production mode) ---
 if [ "${FLASK_ENV}" = "production" ]; then
