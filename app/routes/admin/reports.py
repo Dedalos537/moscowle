@@ -664,6 +664,7 @@ def api_generate_all_weekly():
 
 
 @admin_bp.route('/api/reports/generate-monthly', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_generate_monthly():
     if current_user.role not in ('admin', 'supervisor'):
@@ -683,6 +684,7 @@ def api_generate_monthly():
 
 
 @admin_bp.route('/api/reports/generate-quarterly', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_generate_quarterly():
     if current_user.role not in ('admin', 'supervisor'):

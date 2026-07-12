@@ -236,7 +236,9 @@ def api_therapist_efficiency():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
-        from app.models import Appointment, SessionMetrics
+        from sqlalchemy import func as sqlfunc
+
+        from app.models import Appointment, SessionAudit
 
         therapist_id = request.args.get('therapist_id', type=int)
         query = (
@@ -244,12 +246,12 @@ def api_therapist_efficiency():
                 User.id.label('therapist_id'),
                 User.username,
                 sqlfunc.count(Appointment.id).label('total'),
-                sqlfunc.avg(SessionMetrics.accurracy).label('avg_accuracy'),
+                sqlfunc.avg(SessionAudit.audit_score).label('avg_audit_score'),
                 sqlfunc.count(sqlfunc.nullif(Appointment.status, 'cancelled')).label('completed'),
             )
             .join(User, Appointment.therapist_id == User.id)
-            .outerjoin(SessionMetrics, SessionMetrics.session_id == Appointment.id)
-            .filter(User.role == 'terapista')
+            .outerjoin(SessionAudit, SessionAudit.appointment_id == Appointment.id)
+            .filter(User.role == 'terapista', SessionAudit.audit_score.isnot(None))
         )
         if therapist_id:
             query = query.filter(User.id == therapist_id)
@@ -258,15 +260,15 @@ def api_therapist_efficiency():
         breakdown = []
         for r in rows:
             completion = (r.completed / r.total * 100) if r.total else 0
-            accuracy = r.avg_accuracy or 0
-            efficiency = round((completion * 0.4 + accuracy * 0.6), 1)
+            audit_score = r.avg_audit_score or 0
+            efficiency = round((completion * 0.4 + audit_score * 0.6), 1)
             breakdown.append(
                 {
                     'therapist_id': r.therapist_id,
                     'name': r.username,
                     'total_sessions': r.total,
                     'completed': r.completed,
-                    'avg_accuracy': round(accuracy, 1),
+                    'avg_accuracy': round(audit_score, 1),
                     'efficiency': efficiency,
                 }
             )

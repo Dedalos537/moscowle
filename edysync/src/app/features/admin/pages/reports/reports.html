@@ -364,7 +364,7 @@
             </div>
             <div>
               <p class="text-label-caps text-success mb-0.5">Promedio Fidelidad</p>
-              <p class="text-2xl font-black text-on-surface">{{ auditStats?.avg_score || 0 }} <span class="text-sm font-normal text-on-surface-variant">/ 10</span></p>
+              <p class="text-2xl font-black text-on-surface">{{ auditStats?.avg_score || 0 }} <span class="text-sm font-normal text-on-surface-variant">%</span></p>
             </div>
           </div>
         </div>
@@ -378,7 +378,7 @@
             @for (t of auditStats?.by_therapist || []; track $index) {
               <div class="flex justify-between items-center text-sm p-2 hover:bg-surface-container rounded-lg transition-colors">
                 <span class="font-medium text-on-surface">{{ t.name }}</span>
-                <span class="bg-success-container text-success font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}/10</span>
+                <span class="bg-success-container text-success font-bold px-2 py-0.5 rounded-md text-xs">{{ t.avg_score }}%</span>
               </div>
             } @empty {
               <p class="text-xs text-center text-on-surface-variant py-4">No hay datos</p>
@@ -409,7 +409,7 @@
                         [class.text-success]="r.score >= 8"
                         [class.text-warning]="r.score >= 5 && r.score < 8"
                         [class.text-error]="r.score < 5"></fa-icon>
-                      {{ r.score }}/10
+                      {{ r.score }}%
                     </span>
                   </td>
                 </tr>
@@ -782,10 +782,10 @@
             @for (e of therapistEfficiency.breakdown; track e.therapist_id) {
               <div class="flex items-center justify-between p-2 hover:bg-surface-container-low rounded-lg transition-colors">
                 <div class="min-w-0 flex-1">
-                  <p class="text-sm font-semibold text-on-surface truncate">{{ e.therapist_name }}</p>
+                  <p class="text-sm font-semibold text-on-surface truncate">{{ e.name }}</p>
                   <div class="flex gap-3 text-xs text-on-surface-variant mt-0.5">
-                    <span>Auditoría: {{ e.audit_score || 0 }}%</span>
-                    <span>Feedback: {{ e.feedback_score || 0 }}%</span>
+                    <span>Sesiones: {{ e.total_sessions || 0 }} | Completadas: {{ e.completed || 0 }}</span>
+                    <span>Promedio Auditoría: {{ e.avg_accuracy || 0 }}%</span>
                   </div>
                 </div>
                 <div class="flex items-center gap-2 shrink-0 ml-3">
