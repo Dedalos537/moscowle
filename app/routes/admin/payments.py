@@ -4,10 +4,10 @@ import uuid
 from datetime import datetime
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
-from app.auth_compat import current_user, login_required
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
+from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import (
     Appointment,
@@ -15,7 +15,6 @@ from app.models import (
     Sede,
     SessionMetrics,
     User,
-    db,
 )
 from app.routes.admin import admin_bp, finance_service, payment_service
 from app.schemas.payment_schema import validate_payment_register
@@ -531,6 +530,7 @@ def analyze_receipt():
 @login_required
 def download_receipt(payment_id):
     from flask import flash, redirect, url_for
+
     from app.auth_compat import current_user
 
     if current_user.role not in ('admin', 'supervisor'):

@@ -472,6 +472,9 @@ def create_app(config_class=None):
     from app.routes.api import api_bp
 
     csrf.exempt(api_bp)
+    from app.routes.admin import admin_bp
+
+    csrf.exempt(admin_bp)
     from app.routes.llama_routes import llama_bp
 
     csrf.exempt(llama_bp)
@@ -509,6 +512,7 @@ def create_app(config_class=None):
 
     try:
         from app.celery_app import init_celery
+
         init_celery(app)
         app.logger.info('Celery initialized')
     except Exception as e:

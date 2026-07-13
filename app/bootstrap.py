@@ -265,6 +265,10 @@ def init_extensions(app: Flask) -> None:
 
     csrf.exempt(api_bp)
 
+    from app.routes.admin import admin_bp
+
+    csrf.exempt(admin_bp)
+
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS',

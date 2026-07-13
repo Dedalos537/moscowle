@@ -7,7 +7,7 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 
 from app.auth_compat import current_user, login_required
-from app.extensions import csrf, db
+from app.extensions import db
 from app.models import (
     Appointment,
     MonthlyReport,
@@ -551,7 +551,6 @@ def api_weekly_summary():
 
 
 @admin_bp.route('/api/reports/accumulate', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_accumulate_reports():
     """Acumular reportes diarios"""
@@ -633,7 +632,6 @@ def api_quarterly_reports():
 
 
 @admin_bp.route('/api/reports/generate-all-weekly', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_generate_all_weekly():
     if current_user.role not in ('admin', 'supervisor'):
@@ -664,7 +662,6 @@ def api_generate_all_weekly():
 
 
 @admin_bp.route('/api/reports/generate-monthly', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_generate_monthly():
     if current_user.role not in ('admin', 'supervisor'):
@@ -684,7 +681,6 @@ def api_generate_monthly():
 
 
 @admin_bp.route('/api/reports/generate-quarterly', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_generate_quarterly():
     if current_user.role not in ('admin', 'supervisor'):

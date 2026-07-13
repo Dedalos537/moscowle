@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from app.auth_compat import current_user, login_required
-from app.extensions import csrf, db
-from app.models import Appointment, User, db
+from app.extensions import db
+from app.models import Appointment, User
 from app.routes.admin import admin_bp
-from app.utils import normalize_datetime_for_storage
+from app.utils import get_user_day_utc_range, normalize_datetime_for_storage
 
 
 @admin_bp.route('/sessions')
@@ -37,19 +37,16 @@ def get_sessions_api():
 
         query = Appointment.query
 
-        if start_str and len(start_str) > 5:
+        if start_str and end_str:
             try:
                 simple_start = start_str.split('T')[0]
-                start_dt = datetime.strptime(simple_start, '%Y-%m-%d')
-                query = query.filter(Appointment.start_time >= start_dt)
-            except Exception:
-                pass
-
-        if end_str and len(end_str) > 5:
-            try:
                 simple_end = end_str.split('T')[0]
-                end_dt = datetime.strptime(simple_end, '%Y-%m-%d') + timedelta(days=1)
-                query = query.filter(Appointment.start_time <= end_dt)
+                start_dt, _ = get_user_day_utc_range(current_user, simple_start)
+                _, end_dt = get_user_day_utc_range(current_user, simple_end)
+                query = query.filter(
+                    Appointment.start_time >= start_dt,
+                    Appointment.start_time < end_dt,
+                )
             except Exception:
                 pass
 
@@ -113,7 +110,6 @@ def get_sessions_api():
 
 @admin_bp.route('/api/sessions/batch', methods=['POST'])
 @login_required
-@csrf.exempt
 def batch_create_sessions():
     if current_user.role != 'admin':
         return jsonify({'error': 'Unauthorized'}), 403
