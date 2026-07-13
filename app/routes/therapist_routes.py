@@ -16,7 +16,7 @@ from app.services.email_service import EmailService
 from app.services.game_service import GameService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
-from app.utils import get_user_today_utc_range
+from app.utils import get_user_timezone, get_user_today_utc_range, localize_datetime_for_display
 from app.utils import parse_datetime as _parse_datetime
 
 pd = None
@@ -1590,6 +1590,8 @@ def api_appointments_month(year, month):
         .all()
     )
 
+    tz_name = get_user_timezone(current_user)
+
     return jsonify(
         {
             'success': True,
@@ -1597,8 +1599,10 @@ def api_appointments_month(year, month):
                 {
                     'id': a.id,
                     'title': a.title or (a.patient.username if a.patient else 'Sesión'),
-                    'start': a.start_time.isoformat() if a.start_time else None,
-                    'end': a.end_time.isoformat() if a.end_time else None,
+                    'start': (
+                        localize_datetime_for_display(a.start_time, tz_name).isoformat() if a.start_time else None
+                    ),
+                    'end': (localize_datetime_for_display(a.end_time, tz_name).isoformat() if a.end_time else None),
                     'status': a.status,
                     'attendance': a.attendance,
                     'patient': {'id': a.patient.id, 'name': a.patient.username} if a.patient else None,
