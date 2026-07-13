@@ -78,3 +78,6 @@ python run.py
 ```bash
 python -m pytest tests/ --tb=short -q --cov=app
 ```
+
+## Deploy
+Ver [docs/DEPLOY.md](docs/DEPLOY.md) para el flujo completo de deploy (Backend Railway, Frontend Railway + cpanel).
