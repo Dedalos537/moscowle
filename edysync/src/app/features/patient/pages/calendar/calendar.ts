@@ -6,6 +6,7 @@ import { PatientService } from '../../../../core/services/patient.service';
 import { CalendarWidget, CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
+import { timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-patient-calendar',
@@ -49,9 +50,9 @@ export class PatientCalendar implements OnInit, OnDestroy {
           this.widgetEvents = res.data.map((s) => ({
             id: s.id,
             title: s.title,
-            date: new Date(s.start_time),
-            time: s.start_time ? new Date(s.start_time).toTimeString().substring(0, 5) : undefined,
-            endTime: s.end_time ? new Date(s.end_time).toTimeString().substring(0, 5) : undefined,
+            date: new Date(dateFromISO(s.start_time) + 'T12:00:00'),
+            time: timeFromISO(s.start_time),
+            endTime: timeFromISO(s.end_time),
             status: (s.status as 'scheduled' | 'completed' | 'cancelled') || 'scheduled',
           }));
         }

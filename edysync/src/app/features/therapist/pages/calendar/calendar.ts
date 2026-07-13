@@ -7,7 +7,7 @@ import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widg
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
-import { toLocalDateString } from '../../../../core/utils/date.util';
+import { toLocalDateString, timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-therapist-calendar',
@@ -54,9 +54,9 @@ export class TherapistCalendarPage implements OnInit, OnDestroy {
         this.widgetEvents = events.map((e: any) => ({
           id: e.id,
           title: e.title,
-          date: new Date(e.start),
-          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
-          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+          date: new Date(dateFromISO(e.start) + 'T12:00:00'),
+          time: timeFromISO(e.start),
+          endTime: timeFromISO(e.end),
           status: e.extendedProps?.status || 'scheduled',
           therapist: e.extendedProps?.therapist,
           patient: e.extendedProps?.patient,

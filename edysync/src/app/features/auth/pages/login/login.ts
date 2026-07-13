@@ -200,7 +200,7 @@ export class Login implements OnInit, OnDestroy {
                     : res.user?.role === 'terapista' ? '/therapist/dashboard'
                     : res.user?.role === 'jugador' ? '/patient/dashboard'
                     : '/';
-        this.router.navigate([route]).then(() => {
+        this.router.navigate([route]).finally(() => {
           this.isLoading = false;
           this.loading = false;
           this.cdr.markForCheck();

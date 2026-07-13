@@ -17,6 +17,7 @@ import { Select } from '../../../../shared/components/select/select';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { ProgressBar } from '../../../../shared/components/progress-bar/progress-bar';
 import { Sede } from '../../../../core/models/sede';
+import { timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-sessions',
@@ -176,9 +177,9 @@ export class Sessions implements OnInit, OnDestroy {
           this.widgetEvents = events.map((e: any) => ({
             id: e.id,
             title: e.title,
-            date: new Date(e.start),
-            time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
-            endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+            date: new Date(dateFromISO(e.start) + 'T12:00:00'),
+            time: timeFromISO(e.start),
+            endTime: timeFromISO(e.end),
             status: e.extendedProps?.status || 'scheduled',
             therapist: e.extendedProps?.therapist,
             patient: e.extendedProps?.patient,
@@ -317,6 +318,9 @@ export class Sessions implements OnInit, OnDestroy {
 
   closeCreateModal() {
     this.showCreateModal = false;
+    this.submitting = false;
+    this.createProgress = 0;
+    this.programUploadingCreate = false;
   }
 
   onTherapistSelectCreate() {
@@ -376,35 +380,33 @@ export class Sessions implements OnInit, OnDestroy {
             this.programUploadingCreate = true;
             let uploaded = 0;
             const total = sessionIds.length;
+            const finishCreate = (msg: string, type: 'success' | 'warning') => {
+              this.createProgress = 100;
+              this.programUploadingCreate = false;
+              this.createProgramFile = null;
+              this.submitting = false;
+              this.closeCreateModal();
+              this.refreshEvents();
+              this.toastService.show(msg, type);
+              this.cdr.markForCheck();
+            };
             sessionIds.forEach((id) => {
               this.subscriptions.add(
                 this.adminService.uploadSessionProgram(id, this.createProgramFile!).subscribe({
                   next: () => {
                     uploaded++;
                     this.createProgress = 40 + Math.round((uploaded / total) * 50);
+                    this.cdr.markForCheck();
                     if (uploaded === total) {
-                      this.createProgress = 100;
-                      this.programUploadingCreate = false;
-                      this.createProgramFile = null;
-                      this.submitting = false;
-                      this.closeCreateModal();
-                      this.refreshEvents();
-                      this.toastService.show(`${total} sesiones creadas con programación`, 'success');
-                      this.cdr.markForCheck();
+                      finishCreate(`${total} sesiones creadas con programación`, 'success');
                     }
                   },
                   error: () => {
                     uploaded++;
                     this.createProgress = 40 + Math.round((uploaded / total) * 50);
+                    this.cdr.markForCheck();
                     if (uploaded === total) {
-                      this.createProgress = 100;
-                      this.programUploadingCreate = false;
-                      this.createProgramFile = null;
-                      this.submitting = false;
-                      this.closeCreateModal();
-                      this.refreshEvents();
-                      this.toastService.show(`${total} sesiones creadas (con errores en algunas programaciones)`, 'warning');
-                      this.cdr.markForCheck();
+                      finishCreate(`${total} sesiones creadas (con errores en algunas programaciones)`, 'warning');
                     }
                   },
                 })
@@ -438,6 +440,7 @@ export class Sessions implements OnInit, OnDestroy {
 
   closeEditModal() {
     this.showEditModal = false;
+    this.submitting = false;
     this.auditState = null;
     this.programError = null;
     this.programSuccessMessage = null;

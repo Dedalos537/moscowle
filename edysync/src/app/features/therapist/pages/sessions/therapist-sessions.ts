@@ -17,7 +17,7 @@ import { Button } from '../../../../shared/components/button/button';
 import { CalendarWidget } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { CalendarWidgetEvent } from '../../../../shared/components/calendar-widget/calendar-widget';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
-import { toLocalDateString } from '../../../../core/utils/date.util';
+import { toLocalDateString, timeFromISO, dateFromISO } from '../../../../core/utils/date.util';
 
 @Component({
   selector: 'app-therapist-sessions',
@@ -190,9 +190,7 @@ export class TherapistSessions implements OnInit, OnDestroy {
   }
 
   formatTime(iso: string): string {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return timeFromISO(iso);
   }
 
   duration(start: string, end: string): string {
@@ -365,9 +363,9 @@ export class TherapistSessions implements OnInit, OnDestroy {
         this.calendarEvents = events.map((e: any) => ({
           id: e.id,
           title: e.title,
-          date: new Date(e.start),
-          time: e.start ? new Date(e.start).toTimeString().substring(0, 5) : undefined,
-          endTime: e.end ? new Date(e.end).toTimeString().substring(0, 5) : undefined,
+          date: new Date(dateFromISO(e.start) + 'T12:00:00'),
+          time: timeFromISO(e.start),
+          endTime: timeFromISO(e.end),
           status: e.extendedProps?.status || 'scheduled',
           therapist: e.extendedProps?.therapist,
           patient: e.extendedProps?.patient,
@@ -460,9 +458,9 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.editForm = {
       id: event.id,
       title: event.title,
-      date: toLocalDateString(new Date(event.start)),
-      start_time: event.start ? new Date(event.start).toTimeString().substring(0, 5) : '',
-      end_time: event.end ? new Date(event.end).toTimeString().substring(0, 5) : '',
+      date: dateFromISO(event.start),
+      start_time: event.start ? timeFromISO(event.start) : '',
+      end_time: event.end ? timeFromISO(event.end) : '',
       status: event.status || 'scheduled',
       patient: event.extendedProps?.patient || '',
     };
