@@ -96,6 +96,9 @@ export class Reports implements OnInit, OnDestroy {
   therapistEfficiency: any = null;
   efficiencyLoading = false;
 
+  // Accordion state
+  expandedTherapists = new Set<string>();
+
   loading = true;
   aiGenerating = false;
   reportSending = false;
@@ -559,6 +562,18 @@ export class Reports implements OnInit, OnDestroy {
     if (avg >= 90) return 'text-success bg-success-container';
     if (avg >= 75) return 'text-warning bg-warning-container';
     return 'text-error bg-error-container';
+  }
+
+  toggleTherapist(key: string) {
+    if (this.expandedTherapists.has(key)) {
+      this.expandedTherapists.delete(key);
+    } else {
+      this.expandedTherapists.add(key);
+    }
+  }
+
+  isTherapistExpanded(key: string): boolean {
+    return this.expandedTherapists.has(key);
   }
 
   get therapistWeeklyPatients(): any[] {
