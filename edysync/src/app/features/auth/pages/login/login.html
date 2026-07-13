@@ -4,6 +4,14 @@
 
   <div class="login-card w-full max-w-md bg-surface-container-lowest rounded-xl shadow-soft p-10 relative overflow-hidden transition-colors duration-300" role="region" aria-label="Formulario de inicio de sesión">
 
+      @if (isLoading) {
+        <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-surface-container-lowest/90 backdrop-blur-sm rounded-xl">
+          <div class="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+          <p class="text-sm font-bold text-on-surface">Iniciando sesion...</p>
+          <p class="text-xs text-on-surface-variant mt-1">Verificando credenciales</p>
+        </div>
+      }
+
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-container to-primary-fixed-dim"></div>
 
       <div class="text-center mb-8">

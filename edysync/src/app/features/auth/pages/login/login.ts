@@ -193,15 +193,18 @@ export class Login implements OnInit, OnDestroy {
 
     this.subs.add(this.authService.login(this.email, this.password).subscribe({
       next: (res) => {
-        this.isLoading = false;
-        this.loading = false;
-        this.cdr.markForCheck();
+        this.error = null;
+        this.alertMessage = '';
         const route = res.user?.role === 'admin' ? '/admin/dashboard'
                     : res.user?.role === 'supervisor' ? '/admin/dashboard'
                     : res.user?.role === 'terapista' ? '/therapist/dashboard'
                     : res.user?.role === 'jugador' ? '/patient/dashboard'
                     : '/';
-        this.router.navigate([route]);
+        this.router.navigate([route]).then(() => {
+          this.isLoading = false;
+          this.loading = false;
+          this.cdr.markForCheck();
+        });
       },
       error: (err) => {
         this.isLoading = false;
