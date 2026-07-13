@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta, timezone
 from functools import wraps
 
@@ -182,5 +183,19 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZO
         if dt_utc_naive.tzinfo is None:
             dt_utc_naive = dt_utc_naive.replace(tzinfo=UTC)
         return dt_utc_naive.astimezone(user_tz)
-    except Exception:
-        return dt_utc_naive
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            'localize_datetime_for_display failed for dt=%s tz=%s: %s',
+            dt_utc_naive,
+            user_timezone_str,
+            exc,
+        )
+        if dt_utc_naive.tzinfo is None:
+            dt_utc_naive = dt_utc_naive.replace(tzinfo=UTC)
+        try:
+            user_tz_final = (
+                ZoneInfo(str(user_timezone_str)) if isinstance(user_timezone_str, str) else user_timezone_str
+            )
+            return dt_utc_naive.astimezone(user_tz_final)
+        except Exception:
+            return dt_utc_naive
