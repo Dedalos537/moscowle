@@ -164,7 +164,7 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZO
 
     Args:
         dt_utc_naive: Naive datetime assumed to be in UTC
-        user_timezone_str: Target timezone string
+        user_timezone_str: Target timezone string (e.g. 'America/Lima') or ZoneInfo object
 
     Returns:
         datetime: Timezone-aware datetime in user's timezone
@@ -173,7 +173,12 @@ def localize_datetime_for_display(dt_utc_naive, user_timezone_str=DEFAULT_TIMEZO
         return None
 
     try:
-        user_tz = ZoneInfo(user_timezone_str)
+        if isinstance(user_timezone_str, str):
+            user_tz = ZoneInfo(user_timezone_str)
+        elif hasattr(user_timezone_str, 'key'):
+            user_tz = user_timezone_str
+        else:
+            user_tz = ZoneInfo(str(user_timezone_str))
         if dt_utc_naive.tzinfo is None:
             dt_utc_naive = dt_utc_naive.replace(tzinfo=UTC)
         return dt_utc_naive.astimezone(user_tz)
