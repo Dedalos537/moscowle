@@ -26,7 +26,7 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
-from app.utils import get_user_day_utc_range
+from app.utils import get_user_day_utc_range, get_user_timezone, localize_datetime_for_display
 from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 from app.utils.sanitizer import sanitize_text
 
@@ -93,9 +93,13 @@ def api_get_sessions():
         audits = SessionAudit.query.filter(SessionAudit.appointment_id.in_(appt_ids)).all()
         audit_map = {audit.appointment_id: audit for audit in audits}
 
+    tz_name = get_user_timezone(current_user)
+
     for a in appts:
-        start_iso = a.start_time.isoformat() if a.start_time else None
-        end_iso = a.end_time.isoformat() if a.end_time else None
+        local_start = localize_datetime_for_display(a.start_time, tz_name)
+        local_end = localize_datetime_for_display(a.end_time, tz_name)
+        start_iso = local_start.isoformat() if local_start else None
+        end_iso = local_end.isoformat() if local_end else None
         try:
             games_list = json.loads(a.games) if a.games else []
         except (json.JSONDecodeError, TypeError):
@@ -146,11 +150,14 @@ def api_upcoming_sessions():
     if current_user.role != 'terapista':
         return jsonify({'error': 'Acceso denegado'}), 403
     appts = appointment_service.get_upcoming_sessions(current_user.id)
+    tz_name = get_user_timezone(current_user)
     results = []
     for a in appts:
         patient = User.query.get(a.patient_id)
-        start_iso = a.start_time.isoformat()
-        end_iso = a.end_time.isoformat() if a.end_time else None
+        local_start = localize_datetime_for_display(a.start_time, tz_name)
+        local_end = localize_datetime_for_display(a.end_time, tz_name)
+        start_iso = local_start.isoformat() if local_start else a.start_time.isoformat()
+        end_iso = local_end.isoformat() if local_end else (a.end_time.isoformat() if a.end_time else None)
         results.append(
             {
                 'id': a.id,
@@ -231,13 +238,14 @@ def api_get_sessions_day():
         .all()
     )
 
+    tz_name = get_user_timezone(current_user)
+
     results = []
     for a in query:
-        start_iso = a.start_time.isoformat()
-
-        end_iso = None
-        if a.end_time:
-            end_iso = a.end_time.isoformat()
+        local_start = localize_datetime_for_display(a.start_time, tz_name)
+        local_end = localize_datetime_for_display(a.end_time, tz_name)
+        start_iso = local_start.isoformat() if local_start else None
+        end_iso = local_end.isoformat() if local_end else None
 
         results.append(
             {
@@ -373,28 +381,11 @@ def api_get_session(session_id):
                 'uploaded_by': img.uploaded_by.username if img.uploaded_by else None,
             }
         )
-    start_iso = appt.start_time.isoformat() if appt.start_time else None
-    end_iso = appt.end_time.isoformat() if appt.end_time else None
-    return jsonify(
-        {
-            'id': appt.id,
-            'title': appt.title or 'Sesión de Terapia',
-            'start_time': start_iso,
-            'end_time': end_iso,
-            'status': appt.status,
-            'attendance': appt.attendance,
-            'patient': {'id': appt.patient.id, 'name': appt.patient.username} if appt.patient else None,
-            'therapist_id': appt.therapist_id,
-            'location': appt.location,
-            'notes': appt.notes,
-            'games': appt.games_list,
-            'images': images,
-        }
-    )
-
-    start_iso = appt.start_time.isoformat() if appt.start_time else None
-    end_iso = appt.end_time.isoformat() if appt.end_time else None
-
+    tz_name = get_user_timezone(current_user)
+    local_start = localize_datetime_for_display(appt.start_time, tz_name)
+    local_end = localize_datetime_for_display(appt.end_time, tz_name)
+    start_iso = local_start.isoformat() if local_start else None
+    end_iso = local_end.isoformat() if local_end else None
     return jsonify(
         {
             'id': appt.id,

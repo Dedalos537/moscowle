@@ -6,7 +6,7 @@ from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import Appointment, User
 from app.routes.admin import admin_bp
-from app.utils import get_user_day_utc_range, normalize_datetime_for_storage
+from app.utils import get_user_day_utc_range, get_user_timezone, localize_datetime_for_display, normalize_datetime_for_storage
 
 
 @admin_bp.route('/sessions')
@@ -59,6 +59,7 @@ def get_sessions_api():
 
         appointments = query.all()
 
+        tz_name = current_user.timezone or 'America/Lima'
         events = []
         for app in appointments:
             try:
@@ -81,11 +82,14 @@ def get_sessions_api():
                 if not app.start_time:
                     continue
 
+                local_start = localize_datetime_for_display(app.start_time, tz_name)
+                local_end = localize_datetime_for_display(app.end_time, tz_name)
+
                 evt = {
                     'id': app.id,
                     'title': app.title if app.title else f'{p_name} ({t_name})',
-                    'start': app.start_time.isoformat(),
-                    'end': app.end_time.isoformat() if app.end_time else None,
+                    'start': local_start.isoformat() if local_start else app.start_time.isoformat(),
+                    'end': local_end.isoformat() if local_end else (app.end_time.isoformat() if app.end_time else None),
                     'backgroundColor': color,
                     'borderColor': color,
                     'extendedProps': {
