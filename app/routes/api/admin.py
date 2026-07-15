@@ -1,3 +1,4 @@
+from app.models.user import therapist_sede
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -21,7 +22,6 @@ from app.routes.api._shared import (
     os,
     request,
 )
-from app.models.user import therapist_sede
 
 
 def _serialize_user(u):
@@ -258,9 +258,26 @@ def api_admin_update_profile():
     data = request.get_json(silent=True) or {}
     name = (data.get('username') or '').strip()
     new_password = (data.get('new_password') or '').strip()
+    timezone = (data.get('timezone') or '').strip()
+
+    allowed_tz = {
+        'America/Lima',
+        'America/New_York',
+        'America/Mexico_City',
+        'America/Bogota',
+        'America/Argentina/Buenos_Aires',
+        'America/Santiago',
+        'Europe/Madrid',
+    }
+    if timezone and timezone not in allowed_tz:
+        return jsonify({'success': False, 'message': 'Zona horaria inválida'}), 400
+
     changed = False
     if name:
         current_user.username = name
+        changed = True
+    if timezone:
+        current_user.timezone = timezone
         changed = True
     if new_password:
         current_user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
@@ -273,7 +290,7 @@ def api_admin_update_profile():
             pass
     if changed:
         db.session.commit()
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'timezone': getattr(current_user, 'timezone', None) or 'America/Lima'})
 
 
 @api_bp.route('/admin/sedes', methods=['GET', 'POST'])
@@ -294,7 +311,13 @@ def admin_sedes():
                         created_at_iso = str(s.created_at)
 
                 result.append(
-                    {'id': s.id, 'name': s.name, 'address': s.address, 'active': s.is_active, 'created_at': created_at_iso}
+                    {
+                        'id': s.id,
+                        'name': s.name,
+                        'address': s.address,
+                        'active': s.is_active,
+                        'created_at': created_at_iso,
+                    }
                 )
             return jsonify(result)
 
@@ -402,60 +425,70 @@ def admin_sedes_analytics(sede_id):
         #   - el paciente pertenece a esta sede (por User.sede_id = sede_id)
         #   - O el terapeuta está asignado a esta sede
         #   - O el paciente tiene sede_id directo
-        appointments_at_sede = Appointment.query.filter(
-            db.or_(
-                Appointment.patient_id.in_(patient_ids),
-                Appointment.therapist_id.in_(therapist_ids),
-            )
-        ).all() if (patient_ids or therapist_ids) else []
+        appointments_at_sede = (
+            Appointment.query.filter(
+                db.or_(
+                    Appointment.patient_id.in_(patient_ids),
+                    Appointment.therapist_id.in_(therapist_ids),
+                )
+            ).all()
+            if (patient_ids or therapist_ids)
+            else []
+        )
 
         total_sessions = len([a for a in appointments_at_sede if a.status == 'completed'])
         pending_sessions = len([a for a in appointments_at_sede if a.status == 'scheduled'])
 
         today = datetime.utcnow()
         month_start = datetime(today.year, today.month, 1)
-        sessions_this_month = len([
-            a for a in appointments_at_sede
-            if a.status == 'completed' and a.start_time and a.start_time >= month_start
-        ])
+        sessions_this_month = len(
+            [
+                a
+                for a in appointments_at_sede
+                if a.status == 'completed' and a.start_time and a.start_time >= month_start
+            ]
+        )
 
         # ── Pagos ─────────────────────────────────────────────────────
         payments = Payment.query.filter(Payment.patient_id.in_(patient_ids)).all() if patient_ids else []
         total_revenue = sum(p.amount for p in payments if p.status == 'completed') if payments else 0
         payments_this_month = (
             sum(p.amount for p in payments if p.status == 'completed' and p.date and p.date >= month_start)
-            if payments else 0
+            if payments
+            else 0
         )
 
-        return jsonify({
-            'success': True,
-            'sede': {
-                'id': sede.id,
-                'name': sede.name,
-                'address': sede.address,
-            },
-            'analytics': {
-                'patients': {
-                    'total': total_patients,
-                    'active': active_patients,
+        return jsonify(
+            {
+                'success': True,
+                'sede': {
+                    'id': sede.id,
+                    'name': sede.name,
+                    'address': sede.address,
                 },
-                'payments': {
-                    'total_revenue': round(total_revenue, 2),
-                    'this_month': round(payments_this_month, 2),
-                    'transactions': len(payments),
+                'analytics': {
+                    'patients': {
+                        'total': total_patients,
+                        'active': active_patients,
+                    },
+                    'payments': {
+                        'total_revenue': round(total_revenue, 2),
+                        'this_month': round(payments_this_month, 2),
+                        'transactions': len(payments),
+                    },
+                    'sessions': {
+                        'total_completed': total_sessions,
+                        'pending': pending_sessions,
+                        'this_month': sessions_this_month,
+                        'total': len(appointments_at_sede),
+                    },
+                    'therapists': {
+                        'count': len(therapists),
+                        'names': [t.email for t in therapists],
+                    },
                 },
-                'sessions': {
-                    'total_completed': total_sessions,
-                    'pending': pending_sessions,
-                    'this_month': sessions_this_month,
-                    'total': len(appointments_at_sede),
-                },
-                'therapists': {
-                    'count': len(therapists),
-                    'names': [t.email for t in therapists],
-                },
-            },
-        })
+            }
+        )
     except Exception as e:
         current_app.logger.error(f'Error in admin_sedes_analytics: {str(e)}')
         return jsonify({'error': str(e), 'data': []}), 500
@@ -494,9 +527,7 @@ def admin_sedes_stats():
         result = []
         for s in sedes:
             direct = db.session.query(User.id).filter(User.sede_id == s.id)
-            indirect = db.session.query(therapist_sede.c.therapist_id).filter(
-                therapist_sede.c.sede_id == s.id
-            )
+            indirect = db.session.query(therapist_sede.c.therapist_id).filter(therapist_sede.c.sede_id == s.id)
             union = direct.union(indirect).subquery()
             count = db.session.query(union).count()
             result.append({'id': s.id, 'name': s.name, 'count': count})

@@ -102,7 +102,7 @@ export class PatientService {
     return this.http.post<ApiResponse>('/patient/api/messages/send', formData);
   }
 
-  updateProfile(data: { username?: string; phone?: string; new_password?: string }): Observable<ApiResponse> {
+  updateProfile(data: { username?: string; phone?: string; timezone?: string; new_password?: string }): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/patient/api/profile/update', data);
   }
 }

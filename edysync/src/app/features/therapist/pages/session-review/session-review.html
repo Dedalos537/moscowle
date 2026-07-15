@@ -67,7 +67,7 @@
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="text-on-surface-variant">Duracion</span>
-              <span class="font-bold text-on-surface">{{ session.duration_minutes || session.duration || '60' }} min</span>
+              <span class="font-bold text-on-surface">{{ computedDuration }} min</span>
             </div>
     @if (session.location) {
       <div class="flex items-center justify-between text-xs">
@@ -287,11 +287,19 @@
      style="background:var(--color-error);color:var(--color-on-error)">
   <span class="w-2.5 h-2.5 rounded-full bg-white" style="animation:pulse 2s infinite"></span>
   <span class="text-xs font-bold uppercase tracking-widest">En vivo</span>
-  <span class="text-sm font-mono font-bold tabular-nums">{{ recordingElapsed }}</span>
-  <span class="text-xs opacity-70">Seg.{{ chunkCount }}</span>
   <div class="w-px h-5 bg-white/20"></div>
+  <div class="flex flex-col items-center leading-tight">
+    <span class="text-sm font-mono font-bold tabular-nums">-{{ remainingTime }}</span>
+    <span class="text-[9px] opacity-70">restante</span>
+  </div>
+  <div class="w-px h-5 bg-white/20"></div>
+  <div class="flex flex-col items-center leading-tight">
+    <span class="text-xs font-bold">{{ extractNumber }}/{{ totalExtracts }}</span>
+    <span class="text-[9px] opacity-70">extractos</span>
+  </div>
   @if (chunkUploadStatus) {
-    <div class="text-xs" [style.color]="chunkUploadStatus.includes('Error') ? 'var(--color-warning)' : chunkUploadStatus.includes('transcrito') || chunkUploadStatus.includes('completa') ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'">
+    <div class="w-px h-5 bg-white/20"></div>
+    <div class="text-xs max-w-[160px] truncate" [style.color]="chunkUploadStatus.includes('Error') ? 'var(--color-warning)' : chunkUploadStatus.includes('transcrito') || chunkUploadStatus.includes('completa') ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'">
       {{ chunkUploadStatus }}
     </div>
   }

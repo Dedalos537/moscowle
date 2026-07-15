@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
@@ -16,17 +17,28 @@ import { Alert } from '../../../../shared/components/alert/alert';
   styleUrl: './profile.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
-  imports: [CommonModule, FontAwesomeModule, Button, Input, Card, Alert],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Input, Card, Alert],
 })
 export class Profile implements OnInit, OnDestroy {
   username = '';
   email = '';
+  timezone = 'America/Lima';
   newPassword = '';
   confirmPassword = '';
   saving = false;
   statusText = '';
   statusType: 'success' | 'error' = 'success';
   private subscriptions: Subscription = new Subscription();
+
+  readonly timezones = [
+    { value: 'America/Lima', label: 'Lima (GMT-5)' },
+    { value: 'America/New_York', label: 'Nueva York (GMT-4)' },
+    { value: 'America/Mexico_City', label: 'Ciudad de México (GMT-6)' },
+    { value: 'America/Bogota', label: 'Bogotá (GMT-5)' },
+    { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (GMT-3)' },
+    { value: 'America/Santiago', label: 'Santiago (GMT-4)' },
+    { value: 'Europe/Madrid', label: 'Madrid (GMT+2)' },
+  ];
 
   constructor(private admin: AdminService, private cdr: ChangeDetectorRef) {}
 
@@ -37,6 +49,7 @@ export class Profile implements OnInit, OnDestroy {
         const user = JSON.parse(stored);
         this.username = user.username || '';
         this.email = user.email || '';
+        this.timezone = user.timezone || 'America/Lima';
       } catch {}
     }
   }
@@ -55,6 +68,7 @@ export class Profile implements OnInit, OnDestroy {
     this.statusText = '';
     const data: any = {};
     if (this.username) data.username = this.username;
+    if (this.timezone) data.timezone = this.timezone;
     if (this.newPassword) data.new_password = this.newPassword;
     this.subscriptions.add(
       this.admin.updateProfile(data).subscribe({

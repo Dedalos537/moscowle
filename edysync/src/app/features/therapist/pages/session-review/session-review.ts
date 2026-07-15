@@ -75,6 +75,11 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
 
   showFullscreen = false;
 
+  remainingTime = '';
+  extractNumber = 0;
+  totalExtracts = 0;
+  private remainingTimer: any = null;
+
   private subs = new Subscription();
 
   constructor(
@@ -106,6 +111,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
     this.subs.unsubscribe();
     if (this.saveTimeout) clearTimeout(this.saveTimeout);
     if (this.videoStream) this.videoStream.getTracks().forEach(t => t.stop());
+    if (this.remainingTimer) clearInterval(this.remainingTimer);
   }
 
   private subscribeToRecordingService() {
@@ -156,6 +162,7 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
         this.loadProgram();
         this.initLiveScore();
         this.maybeAutoStartRecording();
+        this.startRemainingTimer();
       },
       error: (err) => {
         this.loading = false;
@@ -651,5 +658,41 @@ export class TherapistSessionReview implements OnInit, OnDestroy {
   get programPreview(): string {
     if (!this.programText) return '';
     return this.programText.substring(0, 200) + (this.programText.length > 200 ? '...' : '');
+  }
+
+  get computedDuration(): number {
+    if (!this.session?.start_time) return 0;
+    const start = new Date(this.session.start_time).getTime();
+    const end = this.session.end_time
+      ? new Date(this.session.end_time).getTime()
+      : Date.now();
+    return Math.max(0, Math.round((end - start) / 60000));
+  }
+
+  private startRemainingTimer() {
+    if (!this.session?.start_time) return;
+    const endTime = this.session.end_time
+      ? new Date(this.session.end_time).getTime()
+      : new Date(this.session.start_time).getTime() + 60 * 60 * 1000;
+    const startTime = new Date(this.session.start_time).getTime();
+    const sessionDurationMs = endTime - startTime;
+    this.totalExtracts = Math.max(1, Math.ceil(sessionDurationMs / (5 * 60 * 1000)));
+
+    const update = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+      const mins = String(Math.floor(remaining / 60)).padStart(2, '0');
+      const secs = String(remaining % 60).padStart(2, '0');
+      this.remainingTime = `${mins}:${secs}`;
+      const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
+      this.extractNumber = Math.min(this.totalExtracts, Math.floor(elapsed / 300) + 1);
+      if (remaining <= 0 && this.remainingTimer) {
+        clearInterval(this.remainingTimer);
+        this.remainingTimer = null;
+      }
+      this.cdr.markForCheck();
+    };
+    update();
+    this.remainingTimer = setInterval(update, 1000);
   }
 }

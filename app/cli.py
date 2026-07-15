@@ -42,3 +42,79 @@ def register_cli_commands(app: Flask) -> None:
                 )
         db.session.commit()
         click.echo(f'Migrated {count} messages into {len(pairs)} chat(s).')
+
+    @app.cli.command('diagnose-db')
+    def diagnose_db_command():
+        """Check database connectivity and basic health."""
+        import time
+
+        from app.extensions import db
+
+        click.echo('--- Database Diagnostics ---')
+
+        try:
+            start = time.time()
+            db.session.execute(db.text('SELECT 1'))
+            latency = (time.time() - start) * 1000
+            click.echo(f'Connection: OK ({latency:.1f}ms)')
+        except Exception as e:
+            click.echo(f'Connection: FAILED ({e})')
+            return
+
+        try:
+            result = db.session.execute(db.text('SELECT COUNT(*) FROM user'))
+            user_count = result.scalar()
+            click.echo(f'Users: {user_count}')
+        except Exception as e:
+            click.echo(f'User count: ERROR ({e})')
+
+        try:
+            result = db.session.execute(db.text('SELECT COUNT(*) FROM appointment'))
+            appt_count = result.scalar()
+            click.echo(f'Appointments: {appt_count}')
+        except Exception as e:
+            click.echo(f'Appointment count: ERROR ({e})')
+
+        try:
+            result = db.session.execute(db.text('SELECT COUNT(*) FROM incidente'))
+            inc_count = result.scalar()
+            click.echo(f'Incidents: {inc_count}')
+        except Exception as e:
+            click.echo(f'Incident count: ERROR ({e})')
+
+    @app.cli.command('diagnose-api')
+    def diagnose_api_command():
+        """Check API health endpoint."""
+        import time
+
+        import requests as req
+
+        click.echo('--- API Diagnostics ---')
+
+        try:
+            start = time.time()
+            resp = req.get('http://localhost:5000/api/health', timeout=5)
+            latency = (time.time() - start) * 1000
+            click.echo(f'Health endpoint: {resp.status_code} ({latency:.1f}ms)')
+            if resp.status_code == 200:
+                data = resp.json()
+                click.echo(f'  Status: {data.get("status", "unknown")}')
+                click.echo(f'  Database: {data.get("database", "unknown")}')
+        except Exception as e:
+            click.echo(f'Health endpoint: FAILED ({e})')
+
+    @app.cli.command('diagnose')
+    def diagnose_command():
+        """Run all diagnostics."""
+        click.echo('========================================')
+        click.echo(' Moscowle IA - System Diagnostics')
+        click.echo('========================================')
+        click.echo('')
+        ctx = click.get_current_context()
+        ctx.invoke(diagnose_db_command)
+        click.echo('')
+        ctx.invoke(diagnose_api_command)
+        click.echo('')
+        click.echo('========================================')
+        click.echo(' Diagnostics complete')
+        click.echo('========================================')

@@ -214,12 +214,26 @@
             </select>
           </div>
           <div class="form-group flex-1">
-            <label class="form-label">Prioridad</label>
-            <select [(ngModel)]="newIncident.prioridad" class="input-field">
-              @for (p of PRIORIDADES; track p.value) {
-                <option [ngValue]="p.value">{{ p.label }}</option>
-              }
+            <label class="form-label">Impacto</label>
+            <select [(ngModel)]="newIncident.impacto" class="input-field">
+              <option [ngValue]="1">1 - Bajo</option>
+              <option [ngValue]="2">2 - Medio</option>
+              <option [ngValue]="3">3 - Alto</option>
             </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label class="form-label">Urgencia</label>
+            <select [(ngModel)]="newIncident.urgencia" class="input-field">
+              <option [ngValue]="1">1 - Baja</option>
+              <option [ngValue]="2">2 - Media</option>
+              <option [ngValue]="3">3 - Alta</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label class="form-label">Prioridad (auto)</label>
+            <div class="input-field bg-surface-container-high">{{ newIncident.impacto * newIncident.urgencia }} — Impacto × Urgencia</div>
           </div>
         </div>
       </div>

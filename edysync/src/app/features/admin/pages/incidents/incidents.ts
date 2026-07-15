@@ -42,7 +42,8 @@ export class Incidents implements OnInit, OnDestroy {
     titulo: '',
     descripcion: '',
     categoria: 'SOFTWARE',
-    prioridad: 3,
+    impacto: 2,
+    urgencia: 2,
   };
   creating = false;
 
@@ -141,7 +142,7 @@ export class Incidents implements OnInit, OnDestroy {
   // --- Create ---
   openCreateModal() {
     this.showCreateModal = true;
-    this.newIncident = { titulo: '', descripcion: '', categoria: 'SOFTWARE', prioridad: 3 };
+    this.newIncident = { titulo: '', descripcion: '', categoria: 'SOFTWARE', impacto: 2, urgencia: 2 };
   }
 
   closeCreateModal() {

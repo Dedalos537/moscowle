@@ -10,7 +10,28 @@ def _utcnow():
 
 
 class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
-    """Modelo principal de incidencias del sistema."""
+    """Modelo principal de incidencias del sistema.
+
+    ITIL Priority Matrix (Impact x Urgency):
+    ==========================================
+    Impact\\Urgency  | 1 (Baja) | 2 (Media) | 3 (Alta)
+    -------------------------------------------------
+    1 (Bajo)         |    1     |     2     |    3
+    2 (Medio)        |    2     |     4     |    6
+    3 (Alto)         |    3     |     6     |    9
+
+    Priority Levels:
+      1-2 = P4 (Baja)  — Resolucion en 72h
+      3-4 = P3 (Media) — Resolucion en 24h
+      6   = P2 (Alta)  — Resolucion en 8h
+      9   = P1 (Critica) — Resolucion en 4h
+
+    State Machine (ITIL-aligned):
+      NUEVO -> EN_CURSO | PENDIENTE_PROVEEDOR | RESUELTO
+      EN_CURSO -> PENDIENTE_PROVEEDOR | RESUELTO
+      PENDIENTE_PROVEEDOR -> EN_CURSO | RESUELTO
+      RESUELTO -> CERRADO
+    """
 
     __tablename__ = 'incidente'
 
@@ -25,10 +46,17 @@ class Incidente(db.Model, AuditMixin, SoftDeleteMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     reports_to_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
 
-    # Clasificación automática por IA
+    # Clasificación ITIL (Impacto x Urgencia = Prioridad)
     categoria = db.Column(db.String(50), nullable=False, index=True)
     subcategoria = db.Column(db.String(100), nullable=True)
-    prioridad = db.Column(db.Integer, default=3, nullable=False, index=True)
+    impacto = db.Column(db.Integer, default=2, nullable=False)  # 1=Bajo, 2=Medio, 3=Alto
+    urgencia = db.Column(db.Integer, default=2, nullable=False)  # 1=Baja, 2=Media, 3=Alta
+    prioridad = db.Column(db.Integer, default=4, nullable=False, index=True)  # impacto * urgencia (1-9)
+
+    # Post-mortem
+    post_mortem = db.Column(db.Text, nullable=True)
+    causa_raiz = db.Column(db.Text, nullable=True)
+    lecciones_aprendidas = db.Column(db.Text, nullable=True)
 
     # Estado y flujo de vida
     estado = db.Column(db.String(50), default='NUEVO', nullable=False, index=True)

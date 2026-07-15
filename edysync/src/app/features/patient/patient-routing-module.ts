@@ -10,6 +10,7 @@ import { PatientCalendar } from './pages/calendar/calendar';
 import { ChatComponent } from '../../shared/components/chat/chat.component';
 import { PatientProfile } from './pages/profile/profile';
 import { PatientMyTherapist } from './pages/my-therapist/my-therapist';
+import { IncidentsList } from '../../shared/components/incidents-list/incidents-list';
 
 const routes: Routes = [
   {
@@ -26,6 +27,7 @@ const routes: Routes = [
       { path: 'messages', component: ChatComponent },
       { path: 'profile', component: PatientProfile },
       { path: 'my-therapist', component: PatientMyTherapist },
+      { path: 'incidents', component: IncidentsList, data: { viewMode: 'patient' } },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

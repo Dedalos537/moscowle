@@ -72,6 +72,11 @@
         <fa-icon [icon]="['fas', 'brain']" [class.!text-primary-container]="rla.isActive"></fa-icon>
         <span>Analíticas IA</span>
       </a>
+      <a routerLink="/therapist/incidents" routerLinkActive="active" #rli="routerLinkActive"
+         class="nav-link" [class.active]="rli.isActive">
+        <fa-icon [icon]="['fas', 'triangle-exclamation']" [class.!text-primary-container]="rli.isActive"></fa-icon>
+        <span>Incidencias</span>
+      </a>
       <a routerLink="/therapist/messages" routerLinkActive="active" #rlm="routerLinkActive"
          class="nav-link" [class.active]="rlm.isActive">
         <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlm.isActive"></fa-icon>

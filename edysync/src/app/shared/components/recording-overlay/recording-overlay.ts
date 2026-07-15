@@ -17,6 +17,8 @@ import { Button } from '../button/button';
 export class RecordingOverlay implements OnInit, OnDestroy {
   state: Observable<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>;
   elapsed: Observable<string>;
+  remainingTime: Observable<string>;
+  extractInfo: Observable<string>;
   chunkStatus: Observable<string>;
   sessionTitle: Observable<string>;
   patientName: Observable<string>;
@@ -33,6 +35,8 @@ export class RecordingOverlay implements OnInit, OnDestroy {
   ) {
     this.state = this.recordingService.recordingState$;
     this.elapsed = this.recordingService.elapsedTime$;
+    this.remainingTime = this.recordingService.remainingTime$;
+    this.extractInfo = this.recordingService.extractInfo$;
     this.chunkStatus = this.recordingService.chunkStatus$;
     this.sessionTitle = this.recordingService.sessionTitle$;
     this.patientName = this.recordingService.patientName$;

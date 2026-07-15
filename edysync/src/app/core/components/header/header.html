@@ -101,14 +101,15 @@
       </div>
 
       @if (showUserMenu) {
-        <div class="absolute right-0 mt-3 w-56 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 py-2 z-50 animate-fade-in">
+        <div class="absolute right-0 mt-3 w-52 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 py-2 z-50 animate-fade-in overflow-visible">
           <div class="px-4 py-3 border-b border-border/30 md:hidden bg-surface-container-low/80">
             <p class="text-sm font-bold text-on-surface truncate">{{ user?.username || 'Usuario' }}</p>
             <p class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</p>
+            <p class="text-xs text-on-surface-variant mt-1">{{ user?.timezone || 'America/Lima' }}</p>
           </div>
-          <button class="w-full flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="logout()">
-            <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-sm"></fa-icon>
-            <span>Cerrar Sesión</span>
+          <button class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="logout()">
+            <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-sm shrink-0"></fa-icon>
+            <span>Cerrar Sesion</span>
           </button>
         </div>
       }

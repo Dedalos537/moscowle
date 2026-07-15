@@ -12,6 +12,7 @@ import { TherapistPatients } from './pages/patients/patients';
 import { TherapistPatientDetail } from './pages/patient-detail/patient-detail';
 import { TherapistReports } from './pages/reports/reports';
 import { TherapistAnalytics } from './pages/analytics/analytics';
+import { IncidentsList } from '../../shared/components/incidents-list/incidents-list';
 
 const routes: Routes = [
   {
@@ -31,6 +32,7 @@ const routes: Routes = [
       { path: 'session-review/:id', component: TherapistSessionReview },
       { path: 'reports', component: TherapistReports },
       { path: 'analytics', component: TherapistAnalytics },
+      { path: 'incidents', component: IncidentsList, data: { viewMode: 'therapist' } },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

@@ -162,6 +162,7 @@ def api_login():
                         'email': user.email,
                         'username': user.username,
                         'role': user.role,
+                        'timezone': getattr(user, 'timezone', None) or 'America/Lima',
                     },
                 }
             )
@@ -203,6 +204,7 @@ def api_auth_me():
                 'email': current_user.email,
                 'username': current_user.username,
                 'role': current_user.role,
+                'timezone': getattr(current_user, 'timezone', None) or 'America/Lima',
             }
         )
     except Exception as e:

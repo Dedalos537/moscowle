@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 
+from app.auth_compat import current_user, login_required
 from app.extensions import bcrypt
 from app.models import db
 from app.services.email_service import EmailService
@@ -89,6 +89,7 @@ def update_profile():
         'America/Mexico_City',
         'America/Bogota',
         'America/Argentina/Buenos_Aires',
+        'America/Santiago',
         'Europe/Madrid',
     }
     if timezone and timezone not in allowed_tz:

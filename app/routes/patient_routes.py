@@ -5,11 +5,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
-from app.auth_compat import current_user, login_required
 from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename
 
-from app.extensions import csrf
+from app.auth_compat import current_user, login_required
+from app.extensions import bcrypt, csrf
 from app.models import Message, Payment, SessionMetrics, User, db
 from app.services.appointment_service import AppointmentService
 from app.services.dashboard_service import DashboardService
@@ -781,12 +781,33 @@ def api_patient_update_profile():
 
     data = request.get_json(silent=True) or {}
 
+    allowed_tz = {
+        'America/Lima',
+        'America/New_York',
+        'America/Mexico_City',
+        'America/Bogota',
+        'America/Argentina/Buenos_Aires',
+        'America/Santiago',
+        'Europe/Madrid',
+    }
+    timezone = (data.get('timezone') or '').strip()
+    if timezone and timezone not in allowed_tz:
+        return jsonify({'success': False, 'error': 'Zona horaria inválida'}), 400
+
     if 'username' in data and data['username']:
         current_user.username = data['username'].strip()
     if 'phone' in data:
         current_user.phone = data['phone']
+    if timezone:
+        current_user.timezone = timezone
     if 'new_password' in data and data['new_password']:
         current_user.password = bcrypt.generate_password_hash(data['new_password']).decode('utf-8')
 
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Perfil actualizado'})
+    return jsonify(
+        {
+            'success': True,
+            'message': 'Perfil actualizado',
+            'timezone': getattr(current_user, 'timezone', None) or 'America/Lima',
+        }
+    )

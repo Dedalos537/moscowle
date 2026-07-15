@@ -8,6 +8,8 @@ export interface Incident {
   descripcion: string;
   categoria: string;
   subcategoria: string | null;
+  impacto: number;
+  urgencia: number;
   prioridad: number;
   estado: string;
   responsable_id: number | null;
@@ -23,6 +25,9 @@ export interface Incident {
   horas_invertidas: number;
   esta_vencido: boolean;
   horas_restantes_sla: number | null;
+  post_mortem: string | null;
+  causa_raiz: string | null;
+  lecciones_aprendidas: string | null;
 }
 
 export interface IncidentDetail extends Incident {
@@ -106,12 +111,23 @@ export class IncidentService {
     descripcion: string;
     categoria: string;
     subcategoria?: string;
+    impacto?: number;
+    urgencia?: number;
     prioridad?: number;
     appointment_id?: number;
     evidencia_tipo?: string;
     evidencia_original?: string;
   }): Observable<IncidentDetail> {
     return this.http.post<IncidentDetail>(this.base, data);
+  }
+
+  getMyIncidents(page = 1, perPage = 20): Observable<IncidentListResponse> {
+    let params = new HttpParams().set('page', String(page)).set('per_page', String(perPage));
+    return this.http.get<IncidentListResponse>(`${this.base}/my`, { params });
+  }
+
+  getMetrics(): Observable<any> {
+    return this.http.get<any>(`${this.base}/metrics`);
   }
 
   updateStatus(id: number, estado: string, comentario?: string): Observable<IncidentDetail> {

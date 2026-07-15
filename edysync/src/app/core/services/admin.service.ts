@@ -307,7 +307,7 @@ export class AdminService {
   }
 
 
-  updateProfile(data: { username?: string; new_password?: string }): Observable<{ success: boolean; message?: string }> {
+  updateProfile(data: { username?: string; timezone?: string; new_password?: string }): Observable<{ success: boolean; message?: string; timezone?: string }> {
     return this.http.post<{ success: boolean; message?: string }>('/api/admin/profile', data);
   }
 

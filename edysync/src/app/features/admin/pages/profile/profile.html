@@ -13,6 +13,15 @@
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Email</label>
         <p class="px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm text-on-surface-variant">{{ email }}</p>
       </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-2">Zona Horaria</label>
+        <select [(ngModel)]="timezone"
+                class="w-full rounded-xl border border-border px-4 py-3 text-sm bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+          @for (tz of timezones; track tz.value) {
+            <option [value]="tz.value">{{ tz.label }}</option>
+          }
+        </select>
+      </div>
     </div>
   </app-card>
 

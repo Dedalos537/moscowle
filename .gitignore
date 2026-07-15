@@ -120,3 +120,7 @@ wsgi.py
 
 # Obsidian vault (separate repo)
 obsidian-vault/
+
+# Graphify
+graphify-out/
+.opencode/

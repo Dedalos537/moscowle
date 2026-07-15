@@ -1239,17 +1239,36 @@ def api_update_profile():
 
     data = request.get_json(silent=True) or {}
 
+    allowed_tz = {
+        'America/Lima',
+        'America/New_York',
+        'America/Mexico_City',
+        'America/Bogota',
+        'America/Argentina/Buenos_Aires',
+        'America/Santiago',
+        'Europe/Madrid',
+    }
+    timezone = (data.get('timezone') or '').strip()
+    if timezone and timezone not in allowed_tz:
+        return jsonify({'success': False, 'message': 'Zona horaria inválida'}), 400
+
     if 'username' in data and data['username']:
         current_user.username = data['username'].strip()
-    if 'timezone' in data:
-        current_user.timezone = data['timezone']
+    if timezone:
+        current_user.timezone = timezone
 
     if 'new_password' in data and data['new_password']:
         current_user.password = bcrypt.generate_password_hash(data['new_password']).decode('utf-8')
 
     db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Perfil actualizado correctamente'})
+    return jsonify(
+        {
+            'success': True,
+            'message': 'Perfil actualizado correctamente',
+            'timezone': getattr(current_user, 'timezone', None) or 'America/Lima',
+        }
+    )
 
 
 @therapist_bp.route('/api/weekly-reports/pending', methods=['GET'])

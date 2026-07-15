@@ -10,6 +10,8 @@ export class RecordingService {
   isRecording$ = new BehaviorSubject<boolean>(false);
   recordingState$ = new BehaviorSubject<'idle' | 'starting' | 'recording' | 'mic_error' | 'completed'>('idle');
   elapsedTime$ = new BehaviorSubject<string>('00:00');
+  remainingTime$ = new BehaviorSubject<string>('00:00');
+  extractInfo$ = new BehaviorSubject<string>('0/1');
   chunkStatus$ = new BehaviorSubject<string>('');
   canLogout$ = new BehaviorSubject<boolean>(true);
   sessionTitle$ = new BehaviorSubject<string>('Sesión');
@@ -221,12 +223,30 @@ export class RecordingService {
       this.http.post(`/api/sessions/${this.currentSessionId}/start-recording`, {}).subscribe();
     }
 
+    const session = this.activeSession$.value;
+    const sessionEndMs = session?.end
+      ? new Date(session.end).getTime()
+      : new Date(session.start).getTime() + 60 * 60 * 1000;
+    const sessionStartMs = session?.start
+      ? new Date(session.start).getTime()
+      : this.recordingStartTime;
+    const totalMs = sessionEndMs - sessionStartMs;
+    const totalExtracts = Math.max(1, Math.ceil(totalMs / (5 * 60 * 1000)));
+
     this.zone.runOutsideAngular(() => {
       this.elapsedTimer = setInterval(() => {
         const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
         const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
         const s = String(elapsed % 60).padStart(2, '0');
-        this.zone.run(() => this.elapsedTime$.next(`${m}:${s}`));
+        const remaining = Math.max(0, Math.floor((sessionEndMs - Date.now()) / 1000));
+        const rm = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const rs = String(remaining % 60).padStart(2, '0');
+        const extractNum = Math.min(totalExtracts, Math.floor(elapsed / 300) + 1);
+        this.zone.run(() => {
+          this.elapsedTime$.next(`${m}:${s}`);
+          this.remainingTime$.next(`${rm}:${rs}`);
+          this.extractInfo$.next(`${extractNum}/${totalExtracts}`);
+        });
       }, 1000);
 
       this.chunkTimer = setInterval(() => {

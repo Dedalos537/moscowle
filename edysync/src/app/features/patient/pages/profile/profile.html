@@ -24,6 +24,15 @@
         <input [(ngModel)]="phone"
                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
       </div>
+      <div>
+        <label class="block text-sm font-medium text-on-surface-variant mb-1">Zona Horaria</label>
+        <select [(ngModel)]="timezone"
+                class="w-full rounded-xl border border-border px-4 py-2.5 text-sm bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-colors">
+          @for (tz of timezones; track tz.value) {
+            <option [value]="tz.value">{{ tz.label }}</option>
+          }
+        </select>
+      </div>
     </div>
   </div>
 

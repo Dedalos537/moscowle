@@ -21,12 +21,23 @@ export class PatientProfile implements OnInit, OnDestroy {
   user: any = null;
   username = '';
   phone = '';
+  timezone = 'America/Lima';
   newPassword = '';
   confirmPassword = '';
   saving = false;
   message = '';
   messageType: 'success' | 'error' = 'success';
   error: string | null = null;
+
+  readonly timezones = [
+    { value: 'America/Lima', label: 'Lima (GMT-5)' },
+    { value: 'America/New_York', label: 'Nueva York (GMT-4)' },
+    { value: 'America/Mexico_City', label: 'Ciudad de México (GMT-6)' },
+    { value: 'America/Bogota', label: 'Bogotá (GMT-5)' },
+    { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (GMT-3)' },
+    { value: 'America/Santiago', label: 'Santiago (GMT-4)' },
+    { value: 'Europe/Madrid', label: 'Madrid (GMT+2)' },
+  ];
 
   private subs = new Subscription();
 
@@ -48,6 +59,7 @@ export class PatientProfile implements OnInit, OnDestroy {
       if (u) {
         this.username = u.username || '';
         this.phone = u.phone || '';
+        this.timezone = u.timezone || 'America/Lima';
       }
       this.cdr.markForCheck();
     }));
@@ -61,7 +73,7 @@ export class PatientProfile implements OnInit, OnDestroy {
     this.saving = true;
     this.message = '';
     this.cdr.markForCheck();
-    const payload: any = { username: this.username, phone: this.phone };
+    const payload: any = { username: this.username, phone: this.phone, timezone: this.timezone };
     if (this.newPassword && this.newPassword === this.confirmPassword) {
       payload.new_password = this.newPassword;
     }

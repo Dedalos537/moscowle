@@ -72,6 +72,11 @@
         <fa-icon [icon]="['fas', 'user-md']" [class.!text-primary-container]="rlt.isActive"></fa-icon>
         <span>Mi Terapeuta</span>
       </a>
+      <a routerLink="/patient/incidents" routerLinkActive="active" #rli="routerLinkActive"
+         class="nav-link" [class.active]="rli.isActive">
+        <fa-icon [icon]="['fas', 'triangle-exclamation']" [class.!text-primary-container]="rli.isActive"></fa-icon>
+        <span>Incidencias</span>
+      </a>
       <a routerLink="/patient/messages" routerLinkActive="active" #rlmg="routerLinkActive"
          class="nav-link" [class.active]="rlmg.isActive">
         <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlmg.isActive"></fa-icon>

@@ -163,7 +163,7 @@ def incidents_dashboard():
 @api_bp.route('/incidents', methods=['GET'])
 @login_required
 def list_incidents():
-    """Listar incidencias con filtros."""
+    """Listar incidencias con filtros y permisos por rol."""
     try:
         estado = request.args.get('estado')
         prioridad = request.args.get('prioridad', type=int)
@@ -175,6 +175,18 @@ def list_incidents():
         per_page = request.args.get('per_page', 20, type=int)
 
         query = Incidente.query.filter(Incidente.is_active)
+
+        # Role-based filtering
+        if current_user.role not in ('admin', 'supervisor'):
+            if current_user.role == 'terapista':
+                query = query.filter(
+                    db.or_(
+                        Incidente.user_id == current_user.id,
+                        Incidente.responsable_id == current_user.id,
+                    )
+                )
+            elif current_user.role == 'jugador':
+                query = query.filter(Incidente.user_id == current_user.id)
 
         if estado:
             query = query.filter(Incidente.estado == estado)
@@ -217,12 +229,21 @@ def list_incidents():
 @api_bp.route('/incidents/<int:incident_id>', methods=['GET'])
 @login_required
 def get_incident(incident_id):
-    """Detalle completo de un incidente."""
+    """Detalle completo de un incidente con verificación de permisos."""
     try:
         incidente = Incidente.query.filter_by(id_incidente=incident_id, is_active=True).first()
 
         if not incidente:
             return jsonify({'error': 'Incidente no encontrado'}), 404
+
+        # Role-based visibility
+        if current_user.role not in ('admin', 'supervisor'):
+            if current_user.role == 'terapista':
+                if incidente.user_id != current_user.id and incidente.responsable_id != current_user.id:
+                    return jsonify({'error': 'Acceso denegado'}), 403
+            elif current_user.role == 'jugador':
+                if incidente.user_id != current_user.id:
+                    return jsonify({'error': 'Acceso denegado'}), 403
 
         return jsonify(_serialize_incident(incidente, detail=True))
 
@@ -243,10 +264,15 @@ def create_incident():
         if errors:
             return jsonify({'error': 'Validación fallida', 'details': errors}), 400
 
+        # ITIL: Auto-compute priority from impact x urgency
+        impacto = validated.get('impacto', 2)
+        urgencia = validated.get('urgencia', 2)
+        prioridad = impacto * urgencia  # 1-9 scale
+
         fecha_creacion = _utcnow()
         fecha_limite = IncidentEscalationService.calculate_sla_deadline(
             categoria=validated['categoria'],
-            prioridad=validated.get('prioridad', 3),
+            prioridad=prioridad,
             fecha_creacion=fecha_creacion,
         )
 
@@ -255,7 +281,9 @@ def create_incident():
             descripcion=validated['descripcion'],
             categoria=validated['categoria'],
             subcategoria=validated.get('subcategoria'),
-            prioridad=validated.get('prioridad', 3),
+            impacto=impacto,
+            urgencia=urgencia,
+            prioridad=prioridad,
             estado='NUEVO',
             user_id=current_user.id,
             appointment_id=validated.get('appointment_id'),
@@ -329,6 +357,14 @@ def update_incident_status(incident_id):
 
         if nuevo_estado in ('RESUELTO', 'CERRADO'):
             incidente.fecha_resolucion = _utcnow()
+            # Auto-generate post-mortem summary
+            horas_total = (_utcnow() - incidente.fecha_creacion).total_seconds() / 3600
+            if not incidente.post_mortem:
+                incidente.post_mortem = (
+                    f'Resuelto por {current_user.username} en {round(horas_total, 1)}h. '
+                    f'Estado: {estado_anterior} -> {nuevo_estado}. '
+                    f'Nivel de escalamiento alcanzado: {incidente.escalamiento_nivel}.'
+                )
 
         horas = (_utcnow() - incidente.fecha_creacion).total_seconds() / 3600
         incidente.horas_invertidas = round(horas, 2)
@@ -443,4 +479,125 @@ def assign_incident(incident_id):
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/incidents/my', methods=['GET'])
+@login_required
+def my_incidents():
+    """Incidencias del usuario actual (con roles: terapista ve propias + asignadas, jugador ve propias)."""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+
+        query = Incidente.query.filter(Incidente.is_active)
+
+        if current_user.role == 'jugador':
+            query = query.filter(Incidente.user_id == current_user.id)
+        elif current_user.role == 'terapista':
+            query = query.filter(
+                db.or_(
+                    Incidente.user_id == current_user.id,
+                    Incidente.responsable_id == current_user.id,
+                )
+            )
+        else:
+            query = query.filter(
+                db.or_(
+                    Incidente.user_id == current_user.id,
+                    Incidente.responsable_id == current_user.id,
+                )
+            )
+
+        query = query.order_by(Incidente.created_at.desc())
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        return jsonify(
+            {
+                'incidentes': [_serialize_incident(i) for i in pagination.items],
+                'total': pagination.total,
+                'page': pagination.page,
+                'per_page': pagination.per_page,
+                'pages': pagination.pages,
+            }
+        )
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@api_bp.route('/incidents/metrics', methods=['GET'])
+@login_required
+def incident_metrics():
+    """Métricas de incidencias: tiempo promedio resolución, SLA compliance, por categoría."""
+    try:
+        if current_user.role not in ('admin', 'supervisor'):
+            return jsonify({'error': 'Acceso denegado'}), 403
+
+        now = _utcnow()
+        thirty_days_ago = now - timedelta(days=30)
+
+        # Average resolution time (hours)
+        resueltos = Incidente.query.filter(
+            Incidente.fecha_resolucion.isnot(None),
+            Incidente.fecha_resolucion >= thirty_days_ago,
+            Incidente.is_active,
+        ).all()
+
+        avg_resolution_hours = 0
+        if resueltos:
+            total_hours = sum(i.horas_invertidas or 0 for i in resueltos)
+            avg_resolution_hours = round(total_hours / len(resueltos), 1)
+
+        # SLA compliance
+        total_30d = Incidente.query.filter(
+            Incidente.created_at >= thirty_days_ago,
+            Incidente.is_active,
+        ).count()
+
+        resueltos_en_sla = Incidente.query.filter(
+            Incidente.estado.in_(['RESUELTO', 'CERRADO']),
+            Incidente.fecha_resolucion.isnot(None),
+            Incidente.fecha_limite_sla.isnot(None),
+            Incidente.fecha_resolucion <= Incidente.fecha_limite_sla,
+            Incidente.created_at >= thirty_days_ago,
+            Incidente.is_active,
+        ).count()
+
+        sla_compliance = round((resueltos_en_sla / total_30d * 100), 1) if total_30d > 0 else 100.0
+
+        # By category
+        por_categoria = dict(
+            db.session.query(Incidente.categoria, db.func.count(Incidente.id_incidente))
+            .filter(Incidente.created_at >= thirty_days_ago, Incidente.is_active)
+            .group_by(Incidente.categoria)
+            .all()
+        )
+
+        # By priority
+        por_prioridad = dict(
+            db.session.query(Incidente.prioridad, db.func.count(Incidente.id_incidente))
+            .filter(Incidente.created_at >= thirty_days_ago, Incidente.is_active)
+            .group_by(Incidente.prioridad)
+            .all()
+        )
+
+        # Open incidents
+        abiertos = Incidente.query.filter(
+            Incidente.estado.in_(['NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR']),
+            Incidente.is_active,
+        ).count()
+
+        return jsonify(
+            {
+                'avg_resolution_hours': avg_resolution_hours,
+                'sla_compliance_30d': sla_compliance,
+                'total_30d': total_30d,
+                'abiertos': abiertos,
+                'por_categoria': por_categoria,
+                'por_prioridad': por_prioridad,
+            }
+        )
+
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
