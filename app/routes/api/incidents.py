@@ -239,7 +239,7 @@ def get_incident(incident_id):
         # Role-based visibility
         if current_user.role not in ('admin', 'supervisor'):
             if current_user.role == 'terapista':
-                if incidente.user_id != current_user.id and incidente.responsable_id != current_user.id:
+                if current_user.id not in {incidente.user_id, incidente.responsable_id}:
                     return jsonify({'error': 'Acceso denegado'}), 403
             elif current_user.role == 'jugador':
                 if incidente.user_id != current_user.id:
@@ -265,9 +265,12 @@ def create_incident():
             return jsonify({'error': 'Validación fallida', 'details': errors}), 400
 
         # ITIL: Auto-compute priority from impact x urgency
-        impacto = validated.get('impacto', 2)
-        urgencia = validated.get('urgencia', 2)
-        prioridad = impacto * urgencia  # 1-9 scale
+        impacto = validated.get('impacto')
+        urgencia = validated.get('urgencia')
+        if impacto is not None and urgencia is not None:
+            prioridad = impacto * urgencia  # 1-9 scale
+        else:
+            prioridad = validated.get('prioridad', 3)
 
         fecha_creacion = _utcnow()
         fecha_limite = IncidentEscalationService.calculate_sla_deadline(
