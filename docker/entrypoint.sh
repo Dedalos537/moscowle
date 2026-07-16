@@ -25,6 +25,10 @@ for i in range(30):
 "
 fi
 
+# --- Run database migrations ---
+echo "Running database migrations..."
+flask db upgrade || echo "Warning: migration failed (non-fatal)"
+
 # --- Seed database if no admin user exists ---
 echo "Checking if seed is needed..."
 python -c "
