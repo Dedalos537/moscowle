@@ -559,9 +559,32 @@ def create_app(config_class=None):
         except Exception as e:
             app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
-        # Migraciones ya aplicadas vía flask db upgrade
-        # db.create_all() mantiene el schema actualizado
-        app.logger.info('Schema managed via db.create_all()')
+        try:
+            from sqlalchemy import text
+
+            result = db.session.execute(
+                text(
+                    'SELECT COUNT(*) FROM information_schema.columns '
+                    "WHERE table_name = 'incidente' AND column_name = 'impacto'"
+                )
+            )
+            if result.scalar() == 0:
+                app.logger.info('Adding ITIL columns to incidente table...')
+                for col_def in [
+                    'ALTER TABLE incidente ADD COLUMN impacto INTEGER NOT NULL DEFAULT 2',
+                    'ALTER TABLE incidente ADD COLUMN urgencia INTEGER NOT NULL DEFAULT 2',
+                    'ALTER TABLE incidente ADD COLUMN post_mortem TEXT NULL',
+                    'ALTER TABLE incidente ADD COLUMN causa_raiz TEXT NULL',
+                    'ALTER TABLE incidente ADD COLUMN lecciones_aprendidas TEXT NULL',
+                ]:
+                    db.session.execute(text(col_def))
+                db.session.commit()
+                app.logger.info('ITIL columns added successfully')
+            else:
+                app.logger.info('ITIL columns already exist')
+        except Exception as e:
+            app.logger.warning(f'ITIL column migration (non-fatal): {e}')
+            db.session.rollback()
 
         db.session.remove()
 

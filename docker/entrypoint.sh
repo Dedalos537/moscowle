@@ -27,7 +27,8 @@ fi
 
 # --- Run database migrations ---
 echo "Running database migrations..."
-flask db upgrade || echo "Warning: migration failed (non-fatal)"
+python apply_itil_columns.py || echo "Warning: ITIL columns migration (non-fatal)"
+flask db upgrade || echo "Warning: flask db upgrade failed (non-fatal)"
 
 # --- Seed database if no admin user exists ---
 echo "Checking if seed is needed..."
