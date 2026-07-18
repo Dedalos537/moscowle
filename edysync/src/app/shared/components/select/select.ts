@@ -1,4 +1,4 @@
-import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild, OnDestroy, OnInit } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -24,7 +24,7 @@ export interface SelectOption {
     multi: true
   }]
 })
-export class Select implements ControlValueAccessor {
+export class Select implements ControlValueAccessor, OnInit, OnDestroy {
   options = input<SelectOption[]>([]);
   placeholder = input<string>('Seleccionar...');
   label = input<string>('');
@@ -44,14 +44,30 @@ export class Select implements ControlValueAccessor {
   selectedValues: any[] = [];
   searchQuery = '';
   highlightedIndex = -1;
-  dropdownTop = 0;
-  dropdownLeft = 0;
-  dropdownWidth = 0;
 
   private onChange: any = () => {};
   private onTouched: any = () => {};
+  private scrollHandler?: () => void;
 
   constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {}
+
+  ngOnInit() {
+    this.scrollHandler = () => {
+      if (this.isOpen) {
+        this.close();
+        this.cdr.markForCheck();
+      }
+    };
+    window.addEventListener('scroll', this.scrollHandler, true);
+    window.addEventListener('resize', this.scrollHandler);
+  }
+
+  ngOnDestroy() {
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler, true);
+      window.removeEventListener('resize', this.scrollHandler);
+    }
+  }
 
   get filteredOptions(): SelectOption[] {
     if (!Array.isArray(this.options())) return [];
@@ -103,11 +119,8 @@ export class Select implements ControlValueAccessor {
     this.isOpen = !this.isOpen;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    if (this.isOpen) {
-      this.updateDropdownPosition();
-      if (this.searchable()) {
-        setTimeout(() => this.searchInput?.nativeElement?.focus());
-      }
+    if (this.isOpen && this.searchable()) {
+      setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
     this.cdr.markForCheck();
   }
@@ -117,7 +130,6 @@ export class Select implements ControlValueAccessor {
     this.isOpen = true;
     this.highlightedIndex = -1;
     this.searchQuery = '';
-    this.updateDropdownPosition();
     if (this.searchable()) {
       setTimeout(() => this.searchInput?.nativeElement?.focus());
     }
@@ -220,21 +232,5 @@ export class Select implements ControlValueAccessor {
       const el = this.dropdownPanel?.nativeElement?.children[this.highlightedIndex];
       el?.scrollIntoView?.({ block: 'nearest' });
     });
-  }
-
-  private updateDropdownPosition() {
-    const trigger = this.triggerRef?.nativeElement;
-    if (!trigger) return;
-    const rect = trigger.getBoundingClientRect();
-    const viewportH = window.innerHeight;
-    const spaceBelow = viewportH - rect.bottom;
-    const dropdownMaxH = 288;
-    this.dropdownWidth = rect.width;
-    this.dropdownLeft = rect.left;
-    if (spaceBelow < dropdownMaxH && rect.top > spaceBelow) {
-      this.dropdownTop = rect.top - dropdownMaxH - 4;
-    } else {
-      this.dropdownTop = rect.bottom + 4;
-    }
   }
 }

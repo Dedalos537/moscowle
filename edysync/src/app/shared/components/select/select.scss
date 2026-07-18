@@ -128,13 +128,16 @@
 }
 
 .select__dropdown {
-  position: fixed;
+  position: absolute;
   z-index: 9999;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
   background: var(--color-surface-container-lowest);
   border: 1px solid var(--color-outline-variant);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  z-index: 9999;
   animation: selectFadeIn 0.12s ease;
   overflow: hidden;
 }

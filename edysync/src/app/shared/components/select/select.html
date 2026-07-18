@@ -23,7 +23,7 @@
     </div>
   </div>
   @if (isOpen) {
-    <div class="select__dropdown" #dropdownPanel [style.top.px]="dropdownTop" [style.left.px]="dropdownLeft" [style.width.px]="dropdownWidth">
+    <div class="select__dropdown" #dropdownPanel>
       @if (searchable() && options().length > 5) {
         <div class="select__search">
           <fa-icon [icon]="['fas', 'search']" class="select__search-icon"></fa-icon>
