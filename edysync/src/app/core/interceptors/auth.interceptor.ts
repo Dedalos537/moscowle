@@ -31,11 +31,16 @@ export class AuthInterceptor implements HttpInterceptor {
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const csrfToken = getCookie('csrf_token') || localStorage.getItem('csrf_token');
+    const accessToken = localStorage.getItem('access_token');
 
     let headers: Record<string, string> = {};
 
     if (csrfToken && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(request.method)) {
       headers['X-CSRFToken'] = csrfToken;
+    }
+
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
     request = request.clone({ setHeaders: headers, withCredentials: true });
@@ -55,8 +60,11 @@ export class AuthInterceptor implements HttpInterceptor {
       isRefreshing = true;
 
       return this.http.post('/api/auth/refresh', {}, { withCredentials: true }).pipe(
-        switchMap(() => {
+        switchMap((res: any) => {
           isRefreshing = false;
+          if (res?.access_token) {
+            localStorage.setItem('access_token', res.access_token);
+          }
           pendingRequests.forEach(p => p.resolve(true));
           pendingRequests = [];
           return next.handle(request);

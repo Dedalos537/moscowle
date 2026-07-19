@@ -72,7 +72,7 @@ def register_request_handlers(app: Flask) -> None:
         # Try to authenticate via JWT before App-Key check so authenticated
         # users are recognized even in before_request.
         try:
-            verify_jwt_in_request(locations=['cookies'], optional=True)
+            verify_jwt_in_request(locations=['cookies', 'headers'], optional=True)
             uid = get_jwt_identity()
             if uid is not None:
                 from app.models import User

@@ -157,6 +157,7 @@ def api_login():
                 {
                     'success': True,
                     'csrf_token': csrf_token,
+                    'access_token': access_token,
                     'user': {
                         'id': user.id,
                         'email': user.email,
@@ -216,7 +217,7 @@ def api_auth_me():
 @csrf.exempt
 def api_auth_refresh():
     try:
-        verify_jwt_in_request(refresh=True, locations=['cookies'])
+        verify_jwt_in_request(refresh=True, locations=['cookies', 'headers'])
         identity = get_jwt_identity()
 
         # Rotar refresh token: revocar viejo, crear nuevo
@@ -230,7 +231,7 @@ def api_auth_refresh():
         new_refresh_token = create_refresh_token(identity=identity)
         access_token = create_access_token(identity=identity)
 
-        response = jsonify({'success': True, 'message': 'Token refrescado'})
+        response = jsonify({'success': True, 'message': 'Token refrescado', 'access_token': access_token})
         set_access_cookies(response, access_token)
         set_refresh_cookies(response, new_refresh_token)
         return response

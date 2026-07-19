@@ -46,6 +46,9 @@ export class AuthService {
           if (res.csrf_token) {
             localStorage.setItem('csrf_token', res.csrf_token);
           }
+          if (res.access_token) {
+            localStorage.setItem('access_token', res.access_token);
+          }
           this.currentUserSubject.next(res.user);
         }
       })
@@ -57,6 +60,7 @@ export class AuthService {
       tap(() => {
         localStorage.removeItem('user');
         localStorage.removeItem('csrf_token');
+        localStorage.removeItem('access_token');
         this.currentUserSubject.next(null);
       })
     );
@@ -65,6 +69,7 @@ export class AuthService {
   clearSession(): void {
     localStorage.removeItem('user');
     localStorage.removeItem('csrf_token');
+    localStorage.removeItem('access_token');
     this.currentUserSubject.next(null);
   }
 

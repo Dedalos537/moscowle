@@ -32,7 +32,7 @@ def login_required(f):
         if request.method == 'OPTIONS':
             return make_response('', 204)
         try:
-            verify_jwt_in_request(locations=['cookies'])
+            verify_jwt_in_request(locations=['cookies', 'headers'])
             user_id = get_jwt_identity()
             if user_id is None:
                 raise ValueError('No user identity in token')
