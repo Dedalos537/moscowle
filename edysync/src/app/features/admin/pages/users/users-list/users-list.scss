@@ -33,12 +33,3 @@
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-
-// ── Sticky toolbar for subtitle + filters ──
-.tab-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--color-surface);
-  padding: 1rem 0;
-}

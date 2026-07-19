@@ -1,87 +1,49 @@
 <div class="flex flex-col gap-6 animate-fade-in" [@fadeInUp]>
   @if (!loading) {
     <app-users-stats-cards [stats]="stats" />
-  } @if (!loading) {
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="card animate-fade-in" style="max-height: 280px; animation-delay: 0.05s">
-      <div class="p-5">
-        <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[18px] text-primary"></fa-icon>
-          Usuarios por Sede
-        </h4>
-        <div style="max-height: 200px">
-          <canvas baseChart [data]="chartSede" [options]="chartSedeOpt" type="bar"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="card animate-fade-in" style="max-height: 280px; animation-delay: 0.1s">
-      <div class="p-5">
-        <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'circle']" class="text-[18px] text-primary-container"></fa-icon>
-          Activo vs Inactivo
-        </h4>
-        <div style="max-height: 200px">
-          <canvas baseChart [data]="chartActive" [options]="chartActiveOpt" type="doughnut"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="card animate-fade-in" style="max-height: 280px; animation-delay: 0.15s">
-      <div class="p-5">
-        <h4 class="text-label text-on-surface-variant mb-3 flex items-center gap-2">
-          <fa-icon [icon]="['fas', 'id-badge']" class="text-[18px] text-info"></fa-icon>
-          Roles
-        </h4>
-        <div style="max-height: 200px">
-          <canvas baseChart [data]="chartRole" [options]="chartRoleOpt" type="doughnut"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
   }
 
-  <div class="card animate-fade-in" style="animation-delay: 0.2s">
+  <div class="card animate-fade-in" style="animation-delay: 0.15s">
     <div class="p-6 xl:p-8">
-      <div
-        class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 border-b border-border/20 pb-5">
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-border/20 pb-5 mb-5">
         <h3 class="text-h3 text-on-surface flex items-center gap-2">
           <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon>
           Directorio
+          <span class="text-sm font-normal text-on-surface-variant ml-2">({{ filteredUsers.length }} usuarios)</span>
         </h3>
 
         <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
           <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes"
             [clearable]="true" class="w-48"></app-select>
 
+          <app-select (valueChange)="onStatusChange($event)" [options]="statusOptions" placeholder="Todos los estados"
+            [clearable]="true" class="w-44"></app-select>
+
           <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions"
             placeholder="Todos los terapeutas" [clearable]="true" class="w-48"></app-select>
 
-          <app-input id="search-user" placeholder="Buscar usuario o email..." (valueChange)="onSearch($event)"
+          <app-input id="search-user" placeholder="Buscar nombre o email..." (valueChange)="onSearch($event)"
             class="w-full sm:w-56"></app-input>
-
-          <div class="flex gap-1.5 overflow-x-auto pb-0.5 flex-wrap">
-            <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">
-              Todos
-            </button>
-            <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">
-              Pacientes
-            </button>
-            <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">
-              Terapeutas
-            </button>
-            <button (click)="setFilter('deudores')" class="btn-filter" [class.active]="activeFilter === 'deudores'">
-              Deudores
-            </button>
-            <button (click)="setFilter('retirados')" class="btn-filter" [class.active]="activeFilter === 'retirados'">
-              Retirados
-            </button>
-            <button (click)="setFilter('supervisor')" class="btn-filter" [class.active]="activeFilter === 'supervisor'">
-              Supervisores
-            </button>
-            <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">
-              Admin
-            </button>
-          </div>
         </div>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="flex gap-1.5 overflow-x-auto pb-3 flex-wrap mb-5">
+        <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">
+          Todos
+        </button>
+        <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">
+          Pacientes
+        </button>
+        <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">
+          Terapeutas
+        </button>
+        <button (click)="setFilter('supervisor')" class="btn-filter" [class.active]="activeFilter === 'supervisor'">
+          Supervisores
+        </button>
+        <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">
+          Admin
+        </button>
       </div>
 
       @if (loading) {
@@ -89,8 +51,10 @@
         <app-spinner size="md" colorClass="text-primary"></app-spinner>
       </div>
       } @else {
+
+      <!-- Desktop table -->
       <div class="hidden md:block">
-        <app-table [columns]="columns" [data]="filteredUsers" [rowClass]="getRowClass" [trackBy]="trackUser"
+        <app-table [columns]="columns" [data]="paginatedUsers" [rowClass]="getRowClass" [trackBy]="trackUser"
           emptyMessage="No se encontraron usuarios" [emptyIcon]="['fas', 'user-slash']">
 
           <ng-template [tableCell]="'usuario'" let-row>
@@ -99,88 +63,44 @@
                 class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
                 {{ getInitials(row.username) }}
               </div>
-              <input [value]="row.username" (change)="updateName(row, $event)"
-                class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none w-full transition-colors py-0.5 text-sm" />
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold text-on-surface text-sm truncate" [title]="row.username">{{ row.username }}</p>
+                <p class="text-xs text-on-surface-variant truncate md:hidden" [title]="row.email">{{ row.email }}</p>
+              </div>
             </div>
           </ng-template>
 
           <ng-template [tableCell]="'email'" let-row>
-            <div class="flex justify-center w-full">
-              <span class="text-sm text-on-surface-variant max-w-[160px] truncate block text-center" [title]="row.email">
-                {{ row.email }}
-              </span>
-            </div>
+            <span class="text-sm text-on-surface-variant truncate block" [title]="row.email">
+              {{ row.email }}
+            </span>
           </ng-template>
 
           <ng-template [tableCell]="'rol'" let-row>
-            <div class="flex justify-center w-full">
-              <app-select [(ngModel)]="row.role" [options]="roleOptions" (valueChange)="updateRole(row, $event)"
-                class="w-36"></app-select>
-            </div>
+            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-md"
+              [ngClass]="getRoleBadgeClass(row.role)">
+              {{ getRoleBadge(row.role) }}
+            </span>
           </ng-template>
 
           <ng-template [tableCell]="'sede'" let-row>
-            @if (row.role === 'jugador') {
-            <div class="flex justify-center w-full">
-              <span
-                class="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-md bg-primary-container/15 text-primary-container">{{
-                getSedeName(row) }}</span>
-            </div>
-            } @else if (row.role === 'terapista') {
-            <div class="flex justify-center w-full">
-              <div class="flex flex-wrap justify-center gap-1 max-w-full">
-                @for (s of row.assigned_sedes; track s.id) {
-                <span
-                  class="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-md bg-secondary-container/15 text-secondary-container">{{
-                  s.name }}</span>
-                } @if (!row.assigned_sedes?.length) {
-                <span class="text-xs text-on-surface-variant/60">—</span>
-                }
-              </div>
-            </div>
+            @if (row.role === 'jugador' || row.role === 'terapista') {
+              <span class="text-sm text-on-surface-variant">{{ getSedeName(row) }}</span>
             } @else {
-            <div class="flex justify-center w-full">
-              <span class="text-xs text-on-surface-variant/50">—</span>
-            </div>
+              <span class="text-on-surface-variant/40">—</span>
             }
           </ng-template>
 
           <ng-template [tableCell]="'estado'" let-row>
-            <div class="flex justify-center w-full">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md"
-                [class.bg-primary-container/15]="row.account_status === 'active'"
-                [class.text-primary-container]="row.account_status === 'active'"
-                [class.bg-tertiary-container/15]="row.account_status === 'inactive'"
-                [class.text-tertiary-container]="row.account_status === 'inactive'"
-                [class.bg-surface-container-highest]="row.account_status === 'retired'"
-                [class.text-on-surface-variant]="row.account_status === 'retired'"
-                [class.bg-error-container/30]="row.account_status === 'debtor'"
-                [class.text-error]="row.account_status === 'debtor'">
-                <span class="w-1.5 h-1.5 rounded-full" [class.bg-primary]="row.account_status === 'active'"
-                  [class.bg-tertiary]="row.account_status === 'inactive'"
-                  [class.bg-on-surface-variant]="row.account_status === 'retired'"
-                  [class.bg-error]="row.account_status === 'debtor'"></span>
-                {{ getStatusLabel(row.account_status) }}
-              </span>
-            </div>
-          </ng-template>
-
-          <ng-template [tableCell]="'terapeuta'" let-row>
-            @if (row.role === 'jugador') {
-            <div class="flex items-center justify-center gap-2 w-full">
-              <app-select [multiple]="true" [(ngModel)]="row.therapist_ids" [options]="therapistOptionsAll"
-                class="w-44"></app-select>
-              <button (click)="assignTherapist(row)"
-                class="w-9 h-9 flex items-center justify-center bg-primary-container/15 text-primary-container rounded-lg font-bold hover:bg-primary hover:text-white hover:shadow-soft transition-all shrink-0 cursor-pointer"
-                title="Guardar">
-                <fa-icon [icon]="['fas', 'check']" class="text-lg"></fa-icon>
-              </button>
-            </div>
-            } @else {
-            <div class="flex justify-center w-full">
-              <span class="text-on-surface-variant/30 font-bold px-3">—</span>
-            </div>
-            }
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md"
+              [ngClass]="getStatusClass(row.account_status)">
+              <span class="w-1.5 h-1.5 rounded-full"
+                [class.bg-primary]="row.account_status === 'active'"
+                [class.bg-tertiary]="row.account_status === 'inactive'"
+                [class.bg-on-surface-variant]="row.account_status === 'retired'"
+                [class.bg-error]="row.account_status === 'debtor'"></span>
+              {{ getStatusLabel(row.account_status) }}
+            </span>
           </ng-template>
 
           <ng-template [tableCell]="'activo'" let-row>
@@ -196,18 +116,30 @@
           </ng-template>
 
           <ng-template [tableCell]="'acciones'" let-row>
-            <div class="flex justify-center w-full">
-              <button (click)="openActionDrawer(row)"
-                class="w-9 h-9 rounded-lg hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
-                <fa-icon [icon]="['fas', 'ellipsis-h']" class="text-lg"></fa-icon>
+            <div class="flex justify-end gap-1">
+              <button (click)="openEditDrawer(row)"
+                class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
+                title="Editar">
+                <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
+              </button>
+              <button (click)="openResetDrawer(row)"
+                class="w-8 h-8 rounded-lg hover:bg-tertiary-container/15 flex items-center justify-center text-on-surface-variant hover:text-tertiary-container transition-all cursor-pointer"
+                title="Reset password">
+                <fa-icon [icon]="['fas', 'key']" class="text-sm"></fa-icon>
+              </button>
+              <button (click)="deleteUser(row)"
+                class="w-8 h-8 rounded-lg hover:bg-error-container/30 flex items-center justify-center text-on-surface-variant hover:text-error transition-all cursor-pointer"
+                title="Eliminar">
+                <fa-icon [icon]="['fas', 'trash']" class="text-sm"></fa-icon>
               </button>
             </div>
           </ng-template>
         </app-table>
       </div>
 
+      <!-- Mobile cards -->
       <div class="md:hidden space-y-3 mt-4">
-        @for (u of filteredUsers; track u.id; let i = $index) {
+        @for (u of paginatedUsers; track u.id; let i = $index) {
         <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'"
           [class.bg-error-container/10]="u.account_status === 'debtor'"
           [class.bg-surface-container-highest/30]="u.account_status === 'retired'"
@@ -219,12 +151,9 @@
                   class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
                   {{ getInitials(u.username) }}
                 </div>
-                <div class="min-w-0">
-                  <input [value]="u.username" (change)="updateName(u, $event)"
-                    class="font-semibold text-on-surface bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none w-full transition-colors text-base" />
-                  <p class="text-xs text-on-surface-variant truncate mt-0.5">
-                    {{ u.email }}
-                  </p>
+                <div class="min-w-0 flex-1">
+                  <p class="font-semibold text-on-surface text-base truncate">{{ u.username }}</p>
+                  <p class="text-xs text-on-surface-variant truncate">{{ u.email }}</p>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
@@ -239,23 +168,17 @@
           <div class="p-4 space-y-3">
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-label-caps text-on-surface-variant">{{ getRoleBadge(u.role) }}</span>
+                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-md"
+                  [ngClass]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span>
                 <span class="text-on-surface-variant/30">|</span>
                 <span class="text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md"
-                  [class.bg-primary-container/15]="u.account_status === 'active'"
-                  [class.text-primary-container]="u.account_status === 'active'"
-                  [class.bg-tertiary-container/15]="u.account_status === 'inactive'"
-                  [class.text-tertiary-container]="u.account_status === 'inactive'"
-                  [class.bg-surface-container-highest]="u.account_status === 'retired'"
-                  [class.text-on-surface-variant]="u.account_status === 'retired'"
-                  [class.bg-error-container/30]="u.account_status === 'debtor'"
-                  [class.text-error]="u.account_status === 'debtor'">
+                  [ngClass]="getStatusClass(u.account_status)">
                   {{ getStatusLabel(u.account_status) }}
                 </span>
               </div>
-              <button (click)="openActionDrawer(u)" class="btn-ghost text-xs !px-3 !py-1.5 cursor-pointer">
-                Acciones
+              <button (click)="openEditDrawer(u)" class="btn-ghost text-xs !px-3 !py-1.5 cursor-pointer">
+                Editar
               </button>
             </div>
 
@@ -279,70 +202,61 @@
         </div>
         }
       </div>
+
+      <!-- Pagination footer -->
+      <div class="flex items-center justify-between mt-5 pt-4 border-t border-border/20">
+        <p class="text-sm text-on-surface-variant">
+          {{ filteredUsers.length }} usuario(s) con los filtros aplicados
+          @if (totalPages > 1) {
+            <span class="ml-2 text-on-surface-variant/60">· Página {{ currentPage }} de {{ totalPages }}</span>
+          }
+        </p>
+        @if (totalPages > 1) {
+        <div class="flex items-center gap-1">
+          <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
+            class="w-8 h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
+            <fa-icon [icon]="['fas', 'chevron-left']" class="text-xs"></fa-icon>
+          </button>
+          @for (p of pageNumbers; track p) {
+            <button (click)="goToPage(p)"
+              class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              [class.bg-primary]="p === currentPage"
+              [class.text-white]="p === currentPage"
+              [class.border]="p !== currentPage"
+              [class.border-border/30]="p !== currentPage"
+              [class.text-on-surface-variant]="p !== currentPage"
+              [class.hover:bg-surface-container-high]="p !== currentPage">
+              {{ p }}
+            </button>
+          }
+          <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
+            class="w-8 h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
+            <fa-icon [icon]="['fas', 'chevron-right']" class="text-xs"></fa-icon>
+          </button>
+        </div>
+        }
+      </div>
       }
     </div>
   </div>
 </div>
 
-@if (showActionDrawer && selectedUser) {
-<app-drawer [isOpen]="true" (close)="closeActionDrawer()" size="sm">
-  <div drawer-header #drawerHdr class="flex items-center justify-between w-full">
-    <div class="flex items-center gap-3">
-      <div
-        class="w-9 h-9 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center font-bold text-sm">
-        {{ getInitials(selectedUser.username) }}
-      </div>
-      <div>
-        <h4 class="font-semibold text-on-surface text-sm">
-          {{ selectedUser.username }}
-        </h4>
-        <p class="text-xs text-on-surface-variant">
-          {{ getRoleBadge(selectedUser.role) }}
-        </p>
-      </div>
-    </div>
-    <button (click)="closeActionDrawer()"
-      class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent">
-      <fa-icon [icon]="['fas', 'times']" class="text-lg"></fa-icon>
-    </button>
+<!-- Toast -->
+@if (showToast) {
+<div class="fixed bottom-6 right-6 z-[9999] animate-fade-in"
+  [class.bg-primary-container/95]="toastType === 'success'"
+  [class.text-primary-container]="toastType === 'success'"
+  [class.bg-error-container/95]="toastType === 'error'"
+  [class.text-error]="toastType === 'error'"
+  style="backdrop-filter: blur(12px); border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+  <div class="flex items-center gap-2 text-sm font-medium">
+    <fa-icon [icon]="toastType === 'success' ? ['fas', 'check-circle'] : ['fas', 'exclamation-circle']"></fa-icon>
+    {{ toastMessage }}
   </div>
-
-  <a [routerLink]="['/admin/users', selectedUser.id]"
-    class="flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
-    <fa-icon [icon]="['fas', 'user']" class="text-lg text-on-surface-variant"></fa-icon>
-    Ver Perfil
-  </a>
-  <button (click)="openEditDrawer(selectedUser)"
-    class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors rounded-lg cursor-pointer">
-    <fa-icon [icon]="['fas', 'edit']" class="text-lg text-on-surface-variant"></fa-icon>
-    Editar Usuario
-  </button>
-  <button (click)="openResetDrawer(selectedUser)"
-    class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-on-surface hover:bg-tertiary-container/15 hover:text-tertiary-container transition-colors rounded-lg cursor-pointer">
-    <fa-icon [icon]="['fas', 'key']" class="text-lg text-on-surface-variant"></fa-icon>
-    Reset Password
-  </button>
-  <hr class="my-2 mx-3.5 border-border/20" />
-  <button (click)="deleteUser(selectedUser)"
-    class="w-full text-left flex items-center gap-3 px-3.5 py-3 text-sm font-medium text-error hover:bg-error-container/30 transition-colors rounded-lg cursor-pointer">
-    <fa-icon [icon]="['fas', 'trash-alt']" class="text-lg text-error/70"></fa-icon>
-    Eliminar Usuario
-  </button>
-
-  <div drawer-footer>
-    <div class="p-3 bg-surface-container-high rounded-xl flex items-center gap-3">
-      <fa-icon [icon]="['fas', 'check-circle']" class="text-sm text-primary"></fa-icon>
-      <div>
-        <p class="text-xs font-semibold text-on-surface">
-          ID: #{{ selectedUser.id }}
-        </p>
-        <p class="text-[10px] text-on-surface-variant/60">Creado en sistema</p>
-      </div>
-    </div>
-  </div>
-</app-drawer>
+</div>
 }
 
+<!-- Edit Drawer -->
 <app-drawer [isOpen]="showEditDrawer" title="Editar Usuario" [icon]="['fas', 'user-cog']" (close)="closeEditDrawer()"
   size="lg">
   <div class="grid grid-cols-2 gap-4">
@@ -387,7 +301,7 @@
           <input type="time" [(ngModel)]="editData.end_time" class="input-field text-sm" />
         </div>
       </div>
-      <span class="text-[10px] text-on-surface-variant/60 block mb-1.5">Días Laborales</span>
+      <span class="text-[10px] text-on-surface-variant/60 block mb-1.5">Dias Laborales</span>
       <div class="flex flex-wrap gap-1.5">
         @for (day of
         [{v:0,l:'L'},{v:1,l:'M'},{v:2,l:'X'},{v:3,l:'J'},{v:4,l:'V'},{v:5,l:'S'}];
@@ -424,7 +338,7 @@
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
     <h4 class="text-sm font-bold text-primary flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
-      Configuración de Plan
+      Configuracion de Plan
     </h4>
     <div class="grid grid-cols-3 gap-3">
       <div>
@@ -496,6 +410,7 @@
   </div>
 </app-drawer>
 
+<!-- Reset Password Drawer -->
 <app-drawer [isOpen]="showResetDrawer" title="Reset Password" [icon]="['fas', 'key']" iconColor="text-tertiary"
   (close)="closeResetDrawer()" size="md">
   @if (resetData.firstTime) {
@@ -503,12 +418,12 @@
     <div class="bg-tertiary-container/15 text-tertiary-container p-4 rounded-xl mb-5 text-sm flex gap-3">
       <fa-icon [icon]="['fas', 'info-circle']" class="text-lg shrink-0"></fa-icon>
       <p>
-        Este usuario nunca ha iniciado sesión. Ingrese una
-        <strong>contraseña manual</strong> inicial (mín. 6 caracteres).
+        Este usuario nunca ha iniciado sesion. Ingrese una
+        <strong>contrasena manual</strong> inicial (min. 6 caracteres).
       </p>
     </div>
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva Contraseña</label>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nueva Contrasena</label>
       <div class="relative">
         <input [type]="resetData.showPassword ? 'text' : 'password'" [(ngModel)]="resetData.newPassword"
           class="input-field text-sm pr-12" placeholder="Ingrese la nueva clave..." />
@@ -527,8 +442,8 @@
     </div>
     <h4 class="text-lg font-bold text-on-surface mb-2">Generar nueva clave</h4>
     <p class="text-sm text-on-surface-variant max-w-xs">
-      El sistema generará una contraseña segura aleatoriamente y borrará la
-      actual. ¿Estás seguro?
+      El sistema generara una contrasena segura aleatoriamente y borrara la
+      actual. Estas seguro?
     </p>
   </div>
   } @if (resetData.status) {
@@ -550,6 +465,7 @@
   </div>
 </app-drawer>
 
+<!-- Create User Drawer -->
 <app-drawer [isOpen]="showCreateDrawer" title="Crear Nuevo Usuario" [icon]="['fas', 'user-plus']"
   (close)="closeCreateDrawer()" size="lg">
   <div>
@@ -581,7 +497,7 @@
   <div class="bg-surface-container-high rounded-xl p-4">
     <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
       <fa-icon [icon]="['fas', 'briefcase']" class="text-lg"></fa-icon>
-      Configuración de Contrato
+      Configuracion de Contrato
     </h4>
     <div class="grid grid-cols-2 gap-4">
       <div>
@@ -594,14 +510,14 @@
       </div>
     </div>
     <p class="text-xs text-on-surface-variant/60 mt-2">
-      El pago por hora se calculará: Base / Horas.
+      El pago por hora se calculara: Base / Horas.
     </p>
   </div>
   } @if (newUser.role === 'jugador') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
     <h4 class="text-sm font-bold text-primary flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
-      Configuración del Plan
+      Configuracion del Plan
     </h4>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
@@ -624,14 +540,14 @@
 
     <label class="flex items-center gap-2 cursor-pointer">
       <input type="checkbox" [(ngModel)]="newUser.generate_schedule" class="rounded text-primary focus:ring-primary" />
-      <span class="text-sm font-semibold text-on-surface">Generar Horario Automático</span>
+      <span class="text-sm font-semibold text-on-surface">Generar Horario Automatico</span>
     </label>
 
     @if (newUser.generate_schedule) {
     <div class="bg-surface-container-lowest p-4 rounded-xl border border-border/20 space-y-4">
       <h5 class="text-label-caps text-on-surface-variant flex items-center gap-1.5">
         <fa-icon [icon]="['fas', 'calendar-alt']" class="text-sm"></fa-icon>
-        Programación de Sesiones
+        Programacion de Sesiones
       </h5>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div>
@@ -649,10 +565,10 @@
         </div>
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Días de Sesión</label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dias de Sesion</label>
         <div class="flex gap-2 flex-wrap">
           @for (day of
-          [{v:0,l:'Lun'},{v:1,l:'Mar'},{v:2,l:'Mié'},{v:3,l:'Jue'},{v:4,l:'Vie'},{v:5,l:'Sáb'}];
+          [{v:0,l:'Lun'},{v:1,l:'Mar'},{v:2,l:'Mie'},{v:3,l:'Jue'},{v:4,l:'Vie'},{v:5,l:'Sab'}];
           track day.v) {
           <label
             class="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors"

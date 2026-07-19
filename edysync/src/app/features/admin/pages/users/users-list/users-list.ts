@@ -1,27 +1,23 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
 import { HeaderService } from '../../../../../core/services/header.service';
 import { Sede } from '../../../../../core/models/sede';
-import { Chart, registerables } from 'chart.js';
-import type { ChartConfiguration, ChartData } from 'chart.js';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../../core/animations';
 import { firstValueFrom } from 'rxjs';
 import { SelectOption } from '../../../../../shared/components/select/select';
 import { ConfirmService } from '../../../../../core/services/confirm.service';
 import { Spinner } from '../../../../../shared/components/spinner/spinner';
-import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
+import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Table, TableCell } from '../../../../../shared/components/table/table';
 import { UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
-
-Chart.register(...registerables);
 
 interface UserRow {
   id: number;
@@ -55,48 +51,50 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [FormsModule, RouterModule, FontAwesomeModule, BaseChartDirective, Spinner, Button, Select, Input, Drawer, Table, TableCell, UsersStatsCards],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Drawer, Table, TableCell, UsersStatsCards],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsersList implements OnInit, OnDestroy {
+  readonly Math = Math;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   users: UserRow[] = [];
   filteredUsers: UserRow[] = [];
+  paginatedUsers: UserRow[] = [];
   sedes: Sede[] = [];
   activeSedes: Pick<Sede, 'id' | 'name'>[] = [];
   therapists: { id: number; username: string; email: string }[] = [];
+
   activeFilter = 'all';
   searchQuery = '';
   selectedSedeId: number | null = null;
   selectedTherapistId: number | null = null;
+  selectedStatus: string | null = null;
   loading = true;
+
+  currentPage = 1;
+  pageSize = 25;
+  totalPages = 1;
 
   stats = { total: 0, active: 0, inactive: 0, patients: 0, therapists: 0, supervisors: 0, admins: 0, retired: 0, debtors: 0 };
 
-  selectedUser: UserRow | null = null;
-  showActionDrawer = false;
-  showResetDrawer = false;
   showEditDrawer = false;
-  resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
-  editData: any = {};
-
+  showResetDrawer = false;
   showCreateDrawer = false;
+
+  editData: any = {};
+  resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
   newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
   createStatus = '';
 
-  chartSede: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartSedeOpt: ChartConfiguration<'bar'>['options'] = {};
-  chartActive: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  chartActiveOpt: ChartConfiguration<'doughnut'>['options'] = {};
-  chartRole: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  chartRoleOpt: ChartConfiguration<'doughnut'>['options'] = {};
+  toastMessage = '';
+  toastType: 'success' | 'error' = 'success';
+  showToast = false;
 
   private sedeLookup: Record<string, string> = {};
-
   private subscriptions = new Subscription();
 
   roleOptions: SelectOption[] = [
@@ -139,6 +137,16 @@ export class UsersList implements OnInit, OnDestroy {
     return [{value: null, label: 'Todas las Sedes'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
   }
 
+  get statusOptions(): SelectOption[] {
+    return [
+      {value: null, label: 'Todos los estados'},
+      {value: 'active', label: 'Activo'},
+      {value: 'inactive', label: 'Inactivo'},
+      {value: 'debtor', label: 'Deudor'},
+      {value: 'retired', label: 'Retirado'},
+    ];
+  }
+
   get therapistOptions(): SelectOption[] {
     return [{value: null, label: 'Todos los terapeutas'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
   }
@@ -173,15 +181,42 @@ export class UsersList implements OnInit, OnDestroy {
       icon: ['fas', 'users'],
       actionTemplate: this.headerActions,
     });
-    const params = new URLSearchParams(window.location.search);
-    const search = params.get('search');
-    if (search) this.searchQuery = search;
+    this.restoreFiltersFromUrl();
     this.loadData();
   }
 
   ngOnDestroy() {
     this.headerService.reset();
     this.subscriptions.unsubscribe();
+  }
+
+  private restoreFiltersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const search = params.get('search');
+    const filter = params.get('filter');
+    const sede = params.get('sede');
+    const therapist = params.get('therapist');
+    const status = params.get('status');
+    const page = params.get('page');
+    if (search) this.searchQuery = search;
+    if (filter) this.activeFilter = filter;
+    if (sede) this.selectedSedeId = Number(sede);
+    if (therapist) this.selectedTherapistId = Number(therapist);
+    if (status) this.selectedStatus = status;
+    if (page) this.currentPage = Number(page);
+  }
+
+  private persistFiltersToUrl() {
+    const params = new URLSearchParams();
+    if (this.searchQuery) params.set('search', this.searchQuery);
+    if (this.activeFilter !== 'all') params.set('filter', this.activeFilter);
+    if (this.selectedSedeId) params.set('sede', String(this.selectedSedeId));
+    if (this.selectedTherapistId) params.set('therapist', String(this.selectedTherapistId));
+    if (this.selectedStatus) params.set('status', this.selectedStatus);
+    if (this.currentPage > 1) params.set('page', String(this.currentPage));
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState({}, '', newUrl);
   }
 
   private loadData() {
@@ -220,7 +255,6 @@ export class UsersList implements OnInit, OnDestroy {
             this.therapists = this.users.filter((u) => u.role === 'terapista').map((u) => ({ id: u.id, username: u.username, email: u.email }));
             this.buildSedeLookup();
             this.applyFilters();
-            this.refreshCharts();
             this.loading = false;
           }
           this.cdr.markForCheck();
@@ -260,90 +294,6 @@ export class UsersList implements OnInit, OnDestroy {
     }
   }
 
-  private refreshCharts() {
-    const total = this.filteredUsers.length;
-    const activeC = this.filteredUsers.filter((u) => u.is_active).length;
-    const inactiveC = total - activeC;
-    const patients = this.filteredUsers.filter((u) => u.role === 'jugador').length;
-    const therapistsC = this.filteredUsers.filter((u) => u.role === 'terapista').length;
-
-    const sedeCounts: Record<string, number> = {};
-    for (const u of this.filteredUsers) {
-      let names: string[] = [];
-      if (u.role === 'terapista' && u.assigned_sedes?.length) {
-        names = u.assigned_sedes.map((s) => s.name);
-      } else if (u.sede_name) {
-        names = [u.sede_name];
-      } else {
-        names = ['Sin Sede'];
-      }
-      for (const n of names) {
-        const key = (n || 'Sin Sede').trim();
-        sedeCounts[key] = (sedeCounts[key] || 0) + 1;
-      }
-    }
-    const sedeLabels = Object.keys(sedeCounts);
-    const sedeData = sedeLabels.map((l) => sedeCounts[l]);
-
-    this.chartSede = {
-      labels: sedeLabels,
-      datasets: [{ label: 'Usuarios', data: sedeData, backgroundColor: 'rgba(59,130,246,0.85)' }],
-    };
-    this.chartSedeOpt = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      onClick: (_e, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          const label = sedeLabels[idx];
-          for (const s of this.sedes) {
-            if (s.name === label) {
-              this.selectedSedeId = s.id;
-              this.onSedeChange(s.id);
-              return;
-            }
-          }
-          this.selectedSedeId = null;
-          this.onSedeChange(null);
-        }
-      },
-    };
-
-    this.chartActive = {
-      labels: ['Activos', 'Inactivos'],
-      datasets: [{ data: [activeC, inactiveC], backgroundColor: ['#10B981', '#EF4444'] }],
-    };
-    this.chartActiveOpt = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
-      onClick: (_e, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          this.activeFilter = idx === 0 ? 'all' : 'inactive';
-          this.applyFilters();
-        }
-      },
-    };
-
-    this.chartRole = {
-      labels: ['Pacientes', 'Terapeutas'],
-      datasets: [{ data: [patients, therapistsC], backgroundColor: ['#8B5CF6', '#FB923C'] }],
-    };
-    this.chartRoleOpt = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } },
-      onClick: (_e, elements) => {
-        if (elements.length > 0) {
-          const idx = elements[0].index;
-          this.setFilter(idx === 0 ? 'jugador' : 'terapista');
-        }
-      },
-    };
-  }
-
   private calcStats() {
     this.stats = {
       total: this.users.length,
@@ -364,9 +314,11 @@ export class UsersList implements OnInit, OnDestroy {
     else if (this.activeFilter === 'terapista') result = result.filter((u) => u.role === 'terapista');
     else if (this.activeFilter === 'supervisor') result = result.filter((u) => u.role === 'supervisor');
     else if (this.activeFilter === 'admin') result = result.filter((u) => u.role === 'admin');
-    else if (this.activeFilter === 'deudores') result = result.filter((u) => u.account_status === 'debtor');
-    else if (this.activeFilter === 'retirados') result = result.filter((u) => u.account_status === 'retired');
     else if (this.activeFilter === 'inactive') result = result.filter((u) => !u.is_active);
+
+    if (this.selectedStatus) {
+      result = result.filter((u) => u.account_status === this.selectedStatus);
+    }
 
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
@@ -388,90 +340,99 @@ export class UsersList implements OnInit, OnDestroy {
     }
 
     this.filteredUsers = result;
+    this.totalPages = Math.max(1, Math.ceil(result.length / this.pageSize));
+    if (this.currentPage > this.totalPages) this.currentPage = 1;
+    this.updatePagination();
     this.calcStats();
-    this.refreshCharts();
+    this.persistFiltersToUrl();
+  }
+
+  private updatePagination() {
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.paginatedUsers = this.filteredUsers.slice(start, start + this.pageSize);
   }
 
   setFilter(filter: string) {
     this.activeFilter = filter;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
   onSearch(query: string | number) {
     this.searchQuery = String(query);
+    this.currentPage = 1;
     this.applyFilters();
   }
 
   onSedeChange(sedeId: number | null) {
     this.selectedSedeId = sedeId;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
   onTherapistFilterChange(therapistId: number | null) {
     this.selectedTherapistId = therapistId;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
-  async updateName(user: UserRow, event: Event) {
-    const input = event.target as HTMLInputElement;
-    const confirmed = await firstValueFrom(this.confirmService.confirm({
-      title: 'Cambiar Nombre',
-      message: `¿Cambiar nombre de "${user.username}" a "${input.value}"?`,
-      confirmText: 'Cambiar',
-      cancelText: 'Cancelar',
-      variant: 'warning',
-    }));
-    if (!confirmed) {
-      input.value = user.username;
-      return;
-    }
-    user.username = input.value;
-    this.subscriptions.add(
-      this.adminService.updateUser({ id: user.id, username: user.username }).subscribe({
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+  onStatusChange(status: string | null) {
+    this.selectedStatus = status;
+    this.currentPage = 1;
+    this.applyFilters();
   }
 
-  updateRole(user: UserRow, newRole: string) {
-    user.role = newRole;
-    this.subscriptions.add(
-      this.adminService.updateUser({ id: user.id, role: newRole as any }).subscribe({
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+  goToPage(page: number) {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+    this.updatePagination();
+    this.persistFiltersToUrl();
+  }
+
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const total = this.totalPages;
+    const current = this.currentPage;
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
   }
 
   toggleActive(user: UserRow, event: Event) {
     const checked = (event.target as HTMLInputElement).checked;
+    const prev = user.is_active;
     user.is_active = checked;
     this.subscriptions.add(
       this.adminService.updateUser({ id: user.id, is_active: checked }).subscribe({
-        error: () => this.cdr.markForCheck(),
+        next: (res: any) => {
+          if (res.success) {
+            this.showSuccessToast(checked ? 'Usuario activado' : 'Usuario desactivado');
+          } else {
+            user.is_active = prev;
+            this.showErrorToast(res.message || 'Error al actualizar');
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          user.is_active = prev;
+          this.showErrorToast('Error de conexion');
+          this.cdr.markForCheck();
+        },
       }),
     );
   }
 
   assignTherapist(user: UserRow) {
-    const ids = user.therapist_ids;
     this.subscriptions.add(
-      this.adminService.assignTherapist(user.id, ids).subscribe({
-        next: () => {
+      this.adminService.assignTherapist(user.id, user.therapist_ids).subscribe({
+        next: (res: any) => {
+          if (res.success) this.showSuccessToast('Terapeuta asignado');
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),
       }),
     );
-  }
-
-  openActionDrawer(user: UserRow) {
-    this.selectedUser = user;
-    this.showActionDrawer = true;
-  }
-
-  closeActionDrawer() {
-    this.showActionDrawer = false;
-    this.selectedUser = null;
   }
 
   openEditDrawer(user: UserRow) {
@@ -499,7 +460,6 @@ export class UsersList implements OnInit, OnDestroy {
       end_time: user.work_end_time || '',
       days: user.work_days ? user.work_days.split(',').map(Number) : [],
     };
-    this.closeActionDrawer();
     this.showEditDrawer = true;
   }
 
@@ -538,13 +498,39 @@ export class UsersList implements OnInit, OnDestroy {
         next: (res: any) => {
           if (res.success) {
             this.closeEditDrawer();
-            this.loadData();
+            this.updateUserLocally(payload);
+            this.showSuccessToast('Usuario actualizado');
+          } else {
+            this.showErrorToast(res.message || 'Error al guardar');
           }
           this.cdr.markForCheck();
         },
-        error: () => this.cdr.markForCheck(),
+        error: () => {
+          this.showErrorToast('Error de conexion');
+          this.cdr.markForCheck();
+        },
       }),
     );
+  }
+
+  private updateUserLocally(payload: any) {
+    const idx = this.users.findIndex((u) => u.id === payload.id);
+    if (idx === -1) return;
+    const u = this.users[idx];
+    if (payload.username) u.username = payload.username;
+    if (payload.is_active !== undefined) u.is_active = payload.is_active;
+    if (payload.role) u.role = payload.role;
+    if (payload.sede_id) { u.sede_id = payload.sede_id; u.sede_name = this.sedeLookup[String(payload.sede_id)] || u.sede_name; }
+    if (payload.sede_ids) u.assigned_sedes = this.activeSedes.filter(s => payload.sede_ids.includes(s.id));
+    if (payload.salary_base) u.salary_base = payload.salary_base;
+    if (payload.contract_hours) u.contract_hours = payload.contract_hours;
+    if (payload.sessions_total) u.sessions_total = payload.sessions_total;
+    if (payload.plan_type) u.plan_type = payload.plan_type;
+    if (payload.payment_plan) u.payment_plan = payload.payment_plan;
+    if (payload.payment_amount) u.payment_amount = payload.payment_amount;
+    if (payload.sessions_attended !== undefined) u.sessions_attended = payload.sessions_attended;
+    if (payload.has_second_shift !== undefined) u.has_second_shift = payload.has_second_shift;
+    this.applyFilters();
   }
 
   openResetDrawer(user: UserRow) {
@@ -557,7 +543,6 @@ export class UsersList implements OnInit, OnDestroy {
       status: '',
       firstTime,
     };
-    this.closeActionDrawer();
     this.showResetDrawer = true;
   }
 
@@ -572,15 +557,11 @@ export class UsersList implements OnInit, OnDestroy {
 
   confirmResetPassword() {
     this.resetData.status = 'Procesando...';
-    const payload: any = { id: this.resetData.userId };
-    if (this.resetData.firstTime && this.resetData.newPassword) {
-      payload.new_password = this.resetData.newPassword;
-    }
     this.subscriptions.add(
       this.adminService.resetPassword(this.resetData.userId, this.resetData.newPassword || undefined).subscribe({
         next: (res: any) => {
           if (res.success) {
-            this.resetData.status = `Contraseña reseteada. Clave temporal: ${res.temp_password || 'N/A'}`;
+            this.resetData.status = `Contrasena reseteada. Clave temporal: ${res.temp_password || 'N/A'}`;
             setTimeout(() => this.closeResetDrawer(), 3000);
           } else {
             this.resetData.status = 'Error: ' + (res.message || 'Desconocido');
@@ -588,7 +569,7 @@ export class UsersList implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: () => {
-          this.resetData.status = 'Error de conexión';
+          this.resetData.status = 'Error de conexion';
           this.cdr.markForCheck();
         },
       }),
@@ -636,7 +617,7 @@ export class UsersList implements OnInit, OnDestroy {
       this.adminService.createUser(payload).subscribe({
         next: (res: any) => {
           if (res.success) {
-            this.createStatus = `Creado! Contraseña temporal: ${res.temp_password || 'N/A'}`;
+            this.createStatus = `Creado! Contrasena temporal: ${res.temp_password || 'N/A'}`;
             setTimeout(() => {
               this.closeCreateDrawer();
               this.loadData();
@@ -647,7 +628,7 @@ export class UsersList implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: (err: any) => {
-          this.createStatus = 'Error: ' + (err.error?.message || 'Error de conexión');
+          this.createStatus = 'Error: ' + (err.error?.message || 'Error de conexion');
           this.cdr.markForCheck();
         },
       }),
@@ -669,7 +650,7 @@ export class UsersList implements OnInit, OnDestroy {
           if (res.success) {
             this.users = this.users.filter((u) => u.id !== user.id);
             this.applyFilters();
-            this.closeActionDrawer();
+            this.showSuccessToast('Usuario eliminado');
           }
           this.cdr.markForCheck();
         },
@@ -689,6 +670,16 @@ export class UsersList implements OnInit, OnDestroy {
     return map[role] || role;
   }
 
+  getRoleBadgeClass(role: string): string {
+    const map: Record<string, string> = {
+      jugador: 'bg-secondary-container/15 text-secondary-container',
+      terapista: 'bg-info-container/15 text-info-container',
+      admin: 'bg-primary-container/15 text-primary-container',
+      supervisor: 'bg-tertiary-container/15 text-tertiary-container',
+    };
+    return map[role] || 'bg-surface-container-high text-on-surface-variant';
+  }
+
   getStatusLabel(account_status: string): string {
     const map: Record<string, string> = {
       active: 'Activo',
@@ -697,6 +688,16 @@ export class UsersList implements OnInit, OnDestroy {
       debtor: 'Deudor',
     };
     return map[account_status] || 'Activo';
+  }
+
+  getStatusClass(account_status: string): string {
+    const map: Record<string, string> = {
+      active: 'bg-primary-container/15 text-primary-container',
+      inactive: 'bg-tertiary-container/15 text-tertiary-container',
+      retired: 'bg-surface-container-highest text-on-surface-variant',
+      debtor: 'bg-error-container/30 text-error',
+    };
+    return map[account_status] || 'bg-primary-container/15 text-primary-container';
   }
 
   getInitials(name: string): string {
@@ -708,25 +709,39 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   columns = [
-    {key: 'usuario', label: 'Usuario', width: '15%'},
-    {key: 'email', label: 'Email', width: '15%'},
-    {key: 'rol', label: 'Rol', width: '12%'},
-    {key: 'sede', label: 'Sede', width: '11%'},
-    {key: 'estado', label: 'Estado', width: '11%'},
-    {key: 'terapeuta', label: 'Terapeuta', width: '16%'},
-    {key: 'activo', label: 'Activo', align: 'center' as const, width: '10%'},
-    {key: 'acciones', label: 'Acciones', align: 'right' as const, width: '10%'},
+    {key: 'usuario', label: 'Usuario', width: '24%'},
+    {key: 'email', label: 'Email', width: '20%'},
+    {key: 'rol', label: 'Rol', width: '14%'},
+    {key: 'sede', label: 'Sede', width: '14%'},
+    {key: 'estado', label: 'Estado', width: '12%'},
+    {key: 'activo', label: 'Activo', align: 'center' as const, width: '8%'},
+    {key: 'acciones', label: '', align: 'right' as const, width: '8%'},
   ];
 
   getRowClass = (u: UserRow, i: number): string => {
     const classes: string[] = [];
-    if (i % 2 === 1 && u.account_status === 'active' && u.is_active) classes.push('bg-surface-container-high/30');
-    if (u.account_status === 'debtor') classes.push('bg-error-container/20');
+    if (u.account_status === 'debtor') classes.push('bg-error-container/10');
     if (u.account_status === 'retired') classes.push('bg-surface-container-highest/40');
-    if (!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired') classes.push('bg-warning-container/30');
-    if (u.account_status === 'active' && u.is_active) classes.push('hover:bg-surface-container-highest/50');
+    if (!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired') classes.push('bg-warning-container/20');
+    if (u.account_status === 'active' && u.is_active) classes.push('hover:bg-surface-container-high/50');
     return classes.join(' ');
   };
 
   trackUser = (i: number, u: UserRow): number => u.id;
+
+  private showSuccessToast(msg: string) {
+    this.toastMessage = msg;
+    this.toastType = 'success';
+    this.showToast = true;
+    setTimeout(() => { this.showToast = false; this.cdr.markForCheck(); }, 3000);
+    this.cdr.markForCheck();
+  }
+
+  private showErrorToast(msg: string) {
+    this.toastMessage = msg;
+    this.toastType = 'error';
+    this.showToast = true;
+    setTimeout(() => { this.showToast = false; this.cdr.markForCheck(); }, 4000);
+    this.cdr.markForCheck();
+  }
 }
