@@ -28,7 +28,7 @@
       </div>
 
       <!-- Filter tabs -->
-      <div class="flex gap-1.5 overflow-x-auto pb-3 flex-wrap mb-5">
+      <div class="flex gap-1.5 overflow-x-auto pb-3 flex-wrap mb-5 items-center">
         <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">
           Todos
         </button>
@@ -44,6 +44,12 @@
         <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">
           Admin
         </button>
+        @if (hasActiveFilters) {
+          <button (click)="clearAllFilters()"
+            class="btn-filter text-error hover:bg-error/10 ml-auto flex items-center gap-1.5 cursor-pointer">
+            <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon> Limpiar filtros
+          </button>
+        }
       </div>
 
       @if (loading) {
@@ -116,22 +122,30 @@
           </ng-template>
 
           <ng-template [tableCell]="'acciones'" let-row>
-            <div class="flex justify-end gap-1">
-              <button (click)="openEditDrawer(row)"
-                class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
-                title="Editar">
-                <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
+            <div class="relative actions-menu flex justify-end">
+              <button (click)="$event.stopPropagation(); toggleMenu(row.id)"
+                class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
+                title="Mas opciones">
+                <fa-icon [icon]="['fas', 'ellipsis-vertical']" class="text-sm"></fa-icon>
               </button>
-              <button (click)="openResetDrawer(row)"
-                class="w-8 h-8 rounded-lg hover:bg-tertiary-container/15 flex items-center justify-center text-on-surface-variant hover:text-tertiary-container transition-all cursor-pointer"
-                title="Reset password">
-                <fa-icon [icon]="['fas', 'key']" class="text-sm"></fa-icon>
-              </button>
-              <button (click)="deleteUser(row)"
-                class="w-8 h-8 rounded-lg hover:bg-error-container/30 flex items-center justify-center text-on-surface-variant hover:text-error transition-all cursor-pointer"
-                title="Eliminar">
-                <fa-icon [icon]="['fas', 'trash']" class="text-sm"></fa-icon>
-              </button>
+              @if (openMenuUserId === row.id) {
+              <div class="absolute right-0 top-full mt-1 w-44 bg-surface-container-low rounded-xl border border-border/20 shadow-lg z-50 py-1 animate-fade-in"
+                (click)="$event.stopPropagation()">
+                <button (click)="openEditDrawer(row); openMenuUserId = null"
+                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
+                  <fa-icon [icon]="['fas', 'pen']" class="text-on-surface-variant w-4"></fa-icon> Editar
+                </button>
+                <button (click)="openResetDrawer(row); openMenuUserId = null"
+                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
+                  <fa-icon [icon]="['fas', 'key']" class="text-on-surface-variant w-4"></fa-icon> Reset Password
+                </button>
+                <div class="border-t border-border/15 my-1"></div>
+                <button (click)="deleteUser(row); openMenuUserId = null"
+                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-error hover:bg-error/5 transition-colors cursor-pointer">
+                  <fa-icon [icon]="['fas', 'trash']" class="w-4"></fa-icon> Eliminar
+                </button>
+              </div>
+              }
             </div>
           </ng-template>
         </app-table>

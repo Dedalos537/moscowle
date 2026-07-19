@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -76,7 +76,7 @@ export class UsersList implements OnInit, OnDestroy {
   loading = true;
 
   currentPage = 1;
-  pageSize = 25;
+  pageSize = 20;
   totalPages = 1;
 
   stats = { total: 0, active: 0, inactive: 0, patients: 0, therapists: 0, supervisors: 0, admins: 0, retired: 0, debtors: 0 };
@@ -94,6 +94,8 @@ export class UsersList implements OnInit, OnDestroy {
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   showToast = false;
+
+  openMenuUserId: number | null = null;
 
   private sedeLookup: Record<string, string> = {};
   private subscriptions = new Subscription();
@@ -392,6 +394,33 @@ export class UsersList implements OnInit, OnDestroy {
     this.selectedStatus = status;
     this.currentPage = 1;
     this.applyFilters();
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchQuery !== '' || this.activeFilter !== 'all' || this.selectedSedeId !== null || this.selectedTherapistId !== null || this.selectedStatus !== null;
+  }
+
+  clearAllFilters() {
+    this.searchQuery = '';
+    this.activeFilter = 'all';
+    this.selectedSedeId = null;
+    this.selectedTherapistId = null;
+    this.selectedStatus = null;
+    this.currentPage = 1;
+    this.persistFiltersToUrl();
+    this.applyFilters();
+  }
+
+  toggleMenu(userId: number) {
+    this.openMenuUserId = this.openMenuUserId === userId ? null : userId;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.actions-menu')) {
+      this.openMenuUserId = null;
+    }
   }
 
   goToPage(page: number) {
