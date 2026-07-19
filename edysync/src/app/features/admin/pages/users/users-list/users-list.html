@@ -632,6 +632,120 @@
 </app-drawer>
 
 <ng-template #headerActions>
-  <app-button variant="primary" label="Nuevo Usuario" [icon]="['fas', 'user-plus']"
-    (clicked)="openCreateDrawer()"></app-button>
+  <div class="flex gap-2">
+    <app-button variant="ghost" label="Grupos" [icon]="['fas', 'object-group']"
+      (clicked)="openGroupModal()"></app-button>
+    <app-button variant="primary" label="Nuevo Usuario" [icon]="['fas', 'user-plus']"
+      (clicked)="openCreateDrawer()"></app-button>
+  </div>
 </ng-template>
+
+<!-- Patient Groups Modal -->
+<app-modal [isOpen]="showGroupModal" [title]="editingGroupId ? 'Editar Grupo' : 'Nuevo Grupo de Pacientes'" (close)="closeGroupModal()" size="lg">
+  <div class="space-y-4">
+    <div>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre del Grupo</label>
+      <input type="text" [(ngModel)]="groupForm.name" placeholder="Ej: Grupo Manana A" class="input-field text-sm w-full">
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
+        <app-select [(ngModel)]="groupForm.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
+        <input type="time" [(ngModel)]="groupForm.start_time" class="input-field text-sm w-full">
+      </div>
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
+        <input type="time" [(ngModel)]="groupForm.end_time" class="input-field text-sm w-full">
+      </div>
+    </div>
+
+    <div>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dias de la Semana</label>
+      <div class="flex flex-wrap gap-1.5">
+        @for (day of [{v:0,l:'Lu'},{v:1,l:'Ma'},{v:2,l:'Mi'},{v:3,l:'Ju'},{v:4,l:'Vi'},{v:5,l:'Sa'},{v:6,l:'Do'}]; track day.v) {
+          <label class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors"
+            [class.bg-primary-container/15]="groupForm.work_days?.includes(day.v)"
+            [class.border-primary/30]="groupForm.work_days?.includes(day.v)">
+            <input type="checkbox" [value]="day.v" [checked]="groupForm.work_days?.includes(day.v)"
+              (change)="toggleGroupDay(day.v)"
+              class="sr-only" />
+            {{ day.l }}
+          </label>
+        }
+      </div>
+    </div>
+
+    <div>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Pacientes del Grupo</label>
+      <div class="max-h-48 overflow-y-auto border border-border/20 rounded-xl p-2 space-y-1">
+        @for (p of patientOptionsForGroup; track p.id) {
+          <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors"
+            [class.bg-primary-container/10]="groupForm.member_ids?.includes(p.id)">
+            <input type="checkbox" [checked]="groupForm.member_ids?.includes(p.id)"
+              (change)="toggleGroupMember(p.id)" class="rounded text-primary focus:ring-primary" />
+            <span class="text-sm text-on-surface">{{ p.username }}</span>
+          </label>
+        } @empty {
+          <p class="text-xs text-on-surface-variant/50 text-center py-4">No hay pacientes disponibles</p>
+        }
+      </div>
+    </div>
+
+    <div>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Notas</label>
+      <textarea [(ngModel)]="groupForm.notes" class="input-field text-sm w-full" rows="2" placeholder="Notas opcionales sobre el grupo"></textarea>
+    </div>
+  </div>
+
+  <div modal-footer>
+    <app-button variant="ghost" label="Cancelar" (clicked)="closeGroupModal()"></app-button>
+    <app-button variant="primary" [label]="editingGroupId ? 'Guardar Cambios' : 'Crear Grupo'" [icon]="['fas', 'save']" (clicked)="saveGroup()"></app-button>
+  </div>
+</app-modal>
+
+<!-- Groups List Section -->
+@if (patientGroups.length > 0) {
+<div class="card animate-fade-in" style="animation-delay: 0.25s">
+  <div class="p-6">
+    <h3 class="text-h3 text-on-surface flex items-center gap-2 mb-4">
+      <fa-icon [icon]="['fas', 'object-group']" class="text-secondary"></fa-icon>
+      Grupos de Pacientes
+      <span class="text-sm font-normal text-on-surface-variant ml-2">({{ patientGroups.length }})</span>
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      @for (g of patientGroups; track g.id) {
+        <div class="p-4 bg-surface-container-high rounded-xl border border-border/20 hover:border-primary/30 transition-colors">
+          <div class="flex items-start justify-between mb-2">
+            <h4 class="text-sm font-bold text-on-surface">{{ g.name }}</h4>
+            <div class="flex gap-1">
+              <button (click)="openGroupModal(g)" class="w-7 h-7 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer">
+                <fa-icon [icon]="['fas', 'pen']" class="text-xs"></fa-icon>
+              </button>
+              <button (click)="deleteGroup(g.id)" class="w-7 h-7 rounded-lg hover:bg-error/10 flex items-center justify-center text-on-surface-variant hover:text-error transition-all cursor-pointer">
+                <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+              </button>
+            </div>
+          </div>
+          <div class="space-y-1 text-xs text-on-surface-variant">
+            @if (g.sede_name) {
+              <p><fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ g.sede_name }}</p>
+            }
+            @if (g.start_time && g.end_time) {
+              <p><fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>{{ g.start_time }} - {{ g.end_time }}</p>
+            }
+            <p><fa-icon [icon]="['fas', 'users']" class="mr-1"></fa-icon>{{ g.member_count }} paciente(s)</p>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+}

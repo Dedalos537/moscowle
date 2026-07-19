@@ -8,7 +8,7 @@
     <label class="text-sm font-semibold text-on-surface">Filtrar por Terapeuta:</label>
     <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full md:w-64"></app-select>
     <label class="text-sm font-semibold text-on-surface">Alumno:</label>
-    <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" class="w-full md:w-64"></app-select>
+    <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full md:w-64"></app-select>
   </div>
 
   <div class="min-h-[500px]">
@@ -37,22 +37,39 @@
     </div>
 
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
-      <div class="relative">
-        <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" class="text-sm"></app-select>
-        @if (patientsLoading) {
-          <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
-        }
-      </div>
-      @if (!createForm.therapist_id) {
-        <p class="text-xs text-on-surface-variant/60 mt-1">Primero selecciona un terapeuta.</p>
-      }
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre de la Sesion</label>
+      <input type="text" [(ngModel)]="createForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
     </div>
 
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nombre de la Sesión</label>
-      <input type="text" [(ngModel)]="createForm.title" placeholder="Ej: Terapia de Lenguaje" class="input-field text-sm">
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Tipo de Sesion</label>
+      <app-select [(ngModel)]="createForm.session_type" [options]="sessionTypeOptions" class="text-sm"></app-select>
     </div>
+
+    @if (createForm.session_type === 'grupal') {
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Grupo de Pacientes <span class="text-error">*</span></label>
+        <app-select [(ngModel)]="selectedGroupId" (valueChange)="onGroupSelect($event)" [options]="groupSelectOptions" [clearable]="true" class="text-sm"></app-select>
+        @if (selectedGroupId) {
+          <p class="text-xs text-on-surface-variant/60 mt-1">
+            {{ getGroupById(selectedGroupId)?.member_count || 0 }} pacientes · {{ getGroupById(selectedGroupId)?.start_time }} - {{ getGroupById(selectedGroupId)?.end_time }}
+          </p>
+        }
+      </div>
+    } @else {
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
+        <div class="relative">
+          <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" class="text-sm"></app-select>
+          @if (patientsLoading) {
+            <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
+          }
+        </div>
+        @if (!createForm.therapist_id) {
+          <p class="text-xs text-on-surface-variant/60 mt-1">Primero selecciona un terapeuta.</p>
+        }
+      </div>
+    }
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede <span class="text-error">*</span></label>
@@ -61,18 +78,41 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-error">*</span></label>
-      <p class="text-xs text-on-surface-variant/60 mb-2">Click para seleccionar dias, Shift+Click para seleccionar un rango. Maximo 10 dias.</p>
+      <p class="text-xs text-on-surface-variant/60 mb-2">Click para seleccionar dias individuales. Usa el boton "Rango" para seleccionar un bloque de dias consecutivos. Maximo 10 dias.</p>
 
       <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
         <div class="flex items-center justify-between mb-3">
           <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
-          <span class="text-sm font-bold text-on-surface">{{ calendarLabel }}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-on-surface">{{ calendarLabel }}</span>
+            <button (click)="toggleRangeMode()"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer"
+              [class.bg-primary]="rangeMode"
+              [class.text-on-primary]="rangeMode"
+              [class.border-primary]="rangeMode"
+              [class.bg-surface-container-high]="!rangeMode"
+              [class.text-on-surface-variant]="!rangeMode"
+              [class.border-border/30]="!rangeMode">
+              <fa-icon [icon]="['fas', '-arrows-alt-h']" class="mr-1"></fa-icon>Rango
+            </button>
+            @if (rangeMode) {
+              <button (click)="clearRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer">
+                Cancelar
+              </button>
+            }
+          </div>
           <button (click)="nextMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-right']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
         </div>
+
+        @if (rangeMode) {
+          <div class="mb-2 px-2 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold text-center">
+            {{ rangeStartStr ? 'Selecciona la fecha final del rango' : 'Selecciona la fecha inicial del rango' }}
+          </div>
+        }
 
         <div class="grid grid-cols-7 mb-1">
           @for (wd of ['Lu','Ma','Mi','Ju','Vi','Sa','Do']; track wd) {
@@ -84,7 +124,7 @@
           <div class="grid grid-cols-7">
             @for (day of week; track day.date) {
               <button type="button"
-                (click)="toggleCalendarDate(day); toggleShiftRange(day, $event)"
+                (click)="toggleCalendarDate(day)"
                 [disabled]="day.disabled"
                 class="relative h-9 text-sm font-medium rounded-lg transition-all duration-150 mx-0.5 my-[1px]
                   {{ day.disabled ? 'text-on-surface-variant/20 cursor-not-allowed' : '' }}
@@ -398,10 +438,27 @@
             }
           </div>
         </div>
-      } @else {
+      }
+
+      @if (detailSession.hasProgram && detailSession.programText) {
+        <div class="border border-border/20 rounded-xl overflow-hidden">
+          <button (click)="detailShowProgram = !detailShowProgram"
+            class="w-full px-4 py-2.5 bg-surface-container-low border-b border-border/20 flex items-center justify-between cursor-pointer hover:bg-surface-container-high transition-colors">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'file-word']" class="text-primary"></fa-icon> Programacion Completa
+            </h4>
+            <fa-icon [icon]="detailShowProgram ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']" class="text-on-surface-variant text-xs"></fa-icon>
+          </button>
+          @if (detailShowProgram) {
+            <div class="p-4">
+              <div class="bg-surface-container-high rounded-xl p-4 text-sm text-on-surface whitespace-pre-wrap max-h-80 overflow-y-auto leading-relaxed">{{ detailSession.programText }}</div>
+            </div>
+          }
+        </div>
+      } @else if (!detailSession.auditExists) {
         <div class="text-center py-6 text-on-surface-variant/50">
           <fa-icon [icon]="['fas', 'clipboard-list']" class="text-3xl mb-2"></fa-icon>
-          <p class="text-sm">Sin auditoria disponible para esta sesion</p>
+          <p class="text-sm">Sin datos disponibles para esta sesion</p>
         </div>
       }
     </div>

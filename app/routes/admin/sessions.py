@@ -6,7 +6,11 @@ from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import Appointment, User
 from app.routes.admin import admin_bp
-from app.utils import get_user_day_utc_range, get_user_timezone, localize_datetime_for_display, normalize_datetime_for_storage
+from app.utils import (
+    get_user_day_utc_range,
+    localize_datetime_for_display,
+    normalize_datetime_for_storage,
+)
 
 
 @admin_bp.route('/sessions')
@@ -121,13 +125,15 @@ def batch_create_sessions():
     data = request.json
     therapist_id = data.get('therapist_id')
     patient_id = data.get('patient_id')
+    patient_ids = data.get('patient_ids') or ([patient_id] if patient_id else [])
     start_time_str = data.get('start_time')
     end_time_str = data.get('end_time')
     title_prefix = data.get('title_prefix', '')
     title = data.get('title', '')
     sede = data.get('sede', '')
+    session_type = data.get('session_type', 'individual')
 
-    if not all([therapist_id, patient_id, start_time_str, end_time_str]):
+    if not all([therapist_id, patient_ids, start_time_str, end_time_str]):
         return jsonify({'error': 'Faltan datos requeridos'}), 400
 
     try:
@@ -142,31 +148,32 @@ def batch_create_sessions():
         if specific_dates:
             if len(specific_dates) > 5:
                 return jsonify({'error': 'Máximo 5 fechas'}), 400
-            for date_str in specific_dates:
-                current_date = datetime.strptime(date_str, '%Y-%m-%d')
-                local_start = current_date.replace(hour=start_h, minute=start_m)
-                local_end = current_date.replace(hour=end_h, minute=end_m)
-                if local_end < local_start:
-                    local_end += timedelta(days=1)
-                session_start = normalize_datetime_for_storage(local_start)
-                session_end = normalize_datetime_for_storage(local_end)
-                session_title = (
-                    title if title else (f'{title_prefix} - {date_str}' if title_prefix else f'Sesión {date_str}')
-                )
-                appt = Appointment(
-                    therapist_id=therapist_id,
-                    patient_id=patient_id,
-                    title=session_title,
-                    start_time=session_start,
-                    end_time=session_end,
-                    status='scheduled',
-                    location=sede,
-                    created_at=datetime.utcnow(),
-                )
-                db.session.add(appt)
-                db.session.flush()
-                created_ids.append(appt.id)
-                created_count += 1
+            for pid in patient_ids:
+                for date_str in specific_dates:
+                    current_date = datetime.strptime(date_str, '%Y-%m-%d')
+                    local_start = current_date.replace(hour=start_h, minute=start_m)
+                    local_end = current_date.replace(hour=end_h, minute=end_m)
+                    if local_end < local_start:
+                        local_end += timedelta(days=1)
+                    session_start = normalize_datetime_for_storage(local_start)
+                    session_end = normalize_datetime_for_storage(local_end)
+                    session_title = (
+                        title if title else (f'{title_prefix} - {date_str}' if title_prefix else f'Sesión {date_str}')
+                    )
+                    appt = Appointment(
+                        therapist_id=therapist_id,
+                        patient_id=pid,
+                        title=session_title,
+                        start_time=session_start,
+                        end_time=session_end,
+                        status='scheduled',
+                        location=sede,
+                        created_at=datetime.utcnow(),
+                    )
+                    db.session.add(appt)
+                    db.session.flush()
+                    created_ids.append(appt.id)
+                    created_count += 1
             db.session.commit()
             return jsonify(
                 {
@@ -196,33 +203,36 @@ def batch_create_sessions():
         session_counter = 1
         current_date_iter = start_date
 
-        while current_date_iter < end_date_iter:
-            if current_date_iter.weekday() in days_of_week:
-                local_start = current_date_iter.replace(hour=start_h, minute=start_m)
-                local_end = current_date_iter.replace(hour=end_h, minute=end_m)
-                if local_end < local_start:
-                    local_end += timedelta(days=1)
-                session_start = normalize_datetime_for_storage(local_start)
-                session_end = normalize_datetime_for_storage(local_end)
-                if title_prefix and title_prefix.strip():
-                    title_text = f'{title_prefix} ({session_counter}/{total_sessions})'
-                else:
-                    title_text = f'Sesión {session_counter}/{total_sessions}'
-                appt = Appointment(
-                    therapist_id=therapist_id,
-                    patient_id=patient_id,
-                    title=title_text,
-                    start_time=session_start,
-                    end_time=session_end,
-                    status='scheduled',
-                    created_at=datetime.utcnow(),
-                )
-                db.session.add(appt)
-                db.session.flush()
-                created_ids.append(appt.id)
-                created_count += 1
-                session_counter += 1
-            current_date_iter += timedelta(days=1)
+        for pid in patient_ids:
+            session_counter = 1
+            current_date_iter = start_date
+            while current_date_iter < end_date_iter:
+                if current_date_iter.weekday() in days_of_week:
+                    local_start = current_date_iter.replace(hour=start_h, minute=start_m)
+                    local_end = current_date_iter.replace(hour=end_h, minute=end_m)
+                    if local_end < local_start:
+                        local_end += timedelta(days=1)
+                    session_start = normalize_datetime_for_storage(local_start)
+                    session_end = normalize_datetime_for_storage(local_end)
+                    if title_prefix and title_prefix.strip():
+                        title_text = f'{title_prefix} ({session_counter}/{total_sessions})'
+                    else:
+                        title_text = f'Sesión {session_counter}/{total_sessions}'
+                    appt = Appointment(
+                        therapist_id=therapist_id,
+                        patient_id=pid,
+                        title=title_text,
+                        start_time=session_start,
+                        end_time=session_end,
+                        status='scheduled',
+                        created_at=datetime.utcnow(),
+                    )
+                    db.session.add(appt)
+                    db.session.flush()
+                    created_ids.append(appt.id)
+                    created_count += 1
+                    session_counter += 1
+                current_date_iter += timedelta(days=1)
 
         db.session.commit()
         return jsonify(

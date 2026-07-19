@@ -41,6 +41,9 @@ export class Sessions implements OnInit, OnDestroy {
   loading = true;
   private subscriptions: Subscription = new Subscription();
 
+  patientGroups: any[] = [];
+  selectedGroupId: number | null = null;
+
   rawEvents: any[] = [];
   widgetEvents: CalendarWidgetEvent[] = [];
 
@@ -55,11 +58,14 @@ export class Sessions implements OnInit, OnDestroy {
 
   detailSession: any = null;
   detailLoading = false;
+  detailShowProgram = false;
 
   sedes: Sede[] = [];
   sedesLoading = false;
 
   shiftRangeStart: string | null = null;
+  rangeMode = false;
+  rangeStartStr: string | null = null;
 
   get therapistOptions(): SelectOption[] {
     return [{value: null, label: 'Todos'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
@@ -81,10 +87,23 @@ export class Sessions implements OnInit, OnDestroy {
     return [{value: null, label: 'Seleccionar sede'}, ...this.sedes.map(s => ({value: s.name, label: s.name}))];
   }
 
+  get groupSelectOptions(): SelectOption[] {
+    return [{value: null, label: 'Seleccionar grupo'}, ...this.patientGroups.map((g: any) => ({value: g.id, label: `${g.name} (${g.member_count} pac.)`}))];
+  }
+
+  getGroupById(id: number): any {
+    return this.patientGroups.find((g: any) => g.id === id) || null;
+  }
+
   statusOptions: SelectOption[] = [
     {value: 'scheduled', label: 'Programada'},
     {value: 'completed', label: 'Completada'},
     {value: 'cancelled', label: 'Cancelada'},
+  ];
+
+  sessionTypeOptions: SelectOption[] = [
+    {value: 'individual', label: 'Individual'},
+    {value: 'grupal', label: 'Grupal'},
   ];
 
   months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -94,6 +113,7 @@ export class Sessions implements OnInit, OnDestroy {
     patient_id: '',
     title: '',
     sede: '',
+    session_type: 'individual',
     dates: [] as string[],
     start_time: '',
     end_time: '',
@@ -146,6 +166,7 @@ export class Sessions implements OnInit, OnDestroy {
     this.loadAllPatients();
     this.loadSedes();
     this.loadSessions();
+    this.loadPatientGroups();
     this.buildCalendarGrid();
   }
 
@@ -191,6 +212,18 @@ export class Sessions implements OnInit, OnDestroy {
           this.sedesLoading = false;
           this.cdr.markForCheck();
         },
+      })
+    );
+  }
+
+  private loadPatientGroups() {
+    this.subscriptions.add(
+      this.adminService.getPatientGroups().subscribe({
+        next: (res: any) => {
+          this.patientGroups = res.groups || [];
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
       })
     );
   }
@@ -340,53 +373,40 @@ export class Sessions implements OnInit, OnDestroy {
     if (day.disabled) return;
     const dateStr = day.date.toISOString().split('T')[0];
 
-    if (this.shiftRangeStart && !day.selected) {
-      const start = new Date(this.shiftRangeStart);
-      const end = new Date(dateStr);
-      const minDate = start < end ? this.shiftRangeStart : dateStr;
-      const maxDate = start < end ? dateStr : this.shiftRangeStart;
-      const current = new Date(minDate);
-      while (current <= new Date(maxDate)) {
-        const ds = current.toISOString().split('T')[0];
-        if (!this.createForm.dates.includes(ds) && this.createForm.dates.length < 10) {
-          this.createForm.dates = [...this.createForm.dates, ds];
+    if (this.rangeMode) {
+      if (!this.rangeStartStr) {
+        this.rangeStartStr = dateStr;
+        this.toggleDate(dateStr);
+      } else {
+        const start = new Date(this.rangeStartStr);
+        const end = new Date(dateStr);
+        const minDate = start < end ? this.rangeStartStr : dateStr;
+        const maxDate = start < end ? dateStr : this.rangeStartStr;
+        const current = new Date(minDate);
+        while (current <= new Date(maxDate)) {
+          const ds = current.toISOString().split('T')[0];
+          if (!this.createForm.dates.includes(ds) && this.createForm.dates.length < 10) {
+            this.createForm.dates = [...this.createForm.dates, ds];
+          }
+          current.setDate(current.getDate() + 1);
         }
-        current.setDate(current.getDate() + 1);
+        this.rangeStartStr = null;
+        this.rangeMode = false;
+        this.buildCalendarGrid();
       }
-      this.shiftRangeStart = null;
-    } else if (this.shiftRangeStart && day.selected) {
-      this.shiftRangeStart = null;
     } else {
-      this.shiftRangeStart = dateStr;
       this.toggleDate(dateStr);
-      return;
     }
-    this.buildCalendarGrid();
   }
 
-  toggleShiftRange(day: { date: Date; day: number; selected: boolean; disabled: boolean }, event: MouseEvent) {
-    if (!event.shiftKey || day.disabled) return;
-    event.preventDefault();
-    const dateStr = day.date.toISOString().split('T')[0];
-    if (!this.shiftRangeStart) {
-      this.shiftRangeStart = dateStr;
-      this.toggleDate(dateStr);
-    } else {
-      const start = new Date(this.shiftRangeStart);
-      const end = new Date(dateStr);
-      const minDate = start < end ? this.shiftRangeStart : dateStr;
-      const maxDate = start < end ? dateStr : this.shiftRangeStart;
-      const current = new Date(minDate);
-      while (current <= new Date(maxDate)) {
-        const ds = current.toISOString().split('T')[0];
-        if (!this.createForm.dates.includes(ds) && this.createForm.dates.length < 10) {
-          this.createForm.dates = [...this.createForm.dates, ds];
-        }
-        current.setDate(current.getDate() + 1);
-      }
-      this.shiftRangeStart = null;
-      this.buildCalendarGrid();
-    }
+  toggleRangeMode() {
+    this.rangeMode = !this.rangeMode;
+    this.rangeStartStr = null;
+  }
+
+  clearRangeSelection() {
+    this.rangeMode = false;
+    this.rangeStartStr = null;
   }
 
   removeDate(dateStr: string) {
@@ -409,6 +429,7 @@ export class Sessions implements OnInit, OnDestroy {
     this.submitting = false;
     this.createProgress = 0;
     this.programUploadingCreate = false;
+    this.selectedGroupId = null;
   }
 
   onTherapistSelectCreate() {
@@ -434,13 +455,37 @@ export class Sessions implements OnInit, OnDestroy {
     );
   }
 
+  onGroupSelect(groupId: number | null) {
+    if (!groupId) {
+      this.selectedGroupId = null;
+      return;
+    }
+    this.selectedGroupId = groupId;
+    const group = this.patientGroups.find((g: any) => g.id === groupId);
+    if (!group) return;
+
+    if (group.start_time) this.createForm.start_time = group.start_time;
+    if (group.end_time) this.createForm.end_time = group.end_time;
+    if (group.sede_id) {
+      const sede = this.sedes.find(s => s.id === group.sede_id);
+      if (sede) this.createForm.sede = sede.name;
+    }
+    this.cdr.markForCheck();
+  }
+
   async submitCreate() {
     const f = this.createForm;
-    if (!f.therapist_id || !f.patient_id || !f.dates.length || !f.start_time || !f.end_time) return;
+    const isGroup = f.session_type === 'grupal' && this.selectedGroupId;
+    if (!f.therapist_id || (!isGroup && !f.patient_id) || !f.dates.length || !f.start_time || !f.end_time) return;
+
+    const group = isGroup ? this.patientGroups.find((g: any) => g.id === this.selectedGroupId) : null;
+    const patientCount = isGroup ? (group?.member_count || 0) : 1;
 
     const confirmed = await firstValueFrom(this.confirmService.confirm({
       title: 'Programar sesiones',
-      message: `Se crearán ${f.dates.length} sesión(es). ¿Estás seguro?`,
+      message: isGroup
+        ? `Se crearán ${f.dates.length} sesión(es) × ${patientCount} pacientes del grupo "${group?.name}". Total: ${f.dates.length * patientCount}. ¿Estás seguro?`
+        : `Se crearán ${f.dates.length} sesión(es). ¿Estás seguro?`,
       confirmText: 'Crear',
       cancelText: 'Cancelar',
       variant: 'primary',
@@ -449,15 +494,22 @@ export class Sessions implements OnInit, OnDestroy {
 
     this.submitting = true;
     this.createProgress = 10;
-    const payload = {
+
+    const payload: any = {
       therapist_id: parseInt(f.therapist_id),
-      patient_id: parseInt(f.patient_id),
       title_prefix: f.title,
       sede: f.sede,
+      session_type: f.session_type,
       dates: f.dates,
       start_time: f.start_time,
       end_time: f.end_time,
     };
+
+    if (isGroup && group) {
+      payload.patient_ids = group.member_ids || [];
+    } else {
+      payload.patient_id = parseInt(f.patient_id);
+    }
 
     this.subscriptions.add(
       this.adminService.batchCreateSessions(payload).subscribe({
@@ -606,6 +658,7 @@ export class Sessions implements OnInit, OnDestroy {
       patient_id: '',
       title: '',
       sede: '',
+      session_type: 'individual',
       dates: [],
       start_time: '',
       end_time: '',
@@ -613,6 +666,8 @@ export class Sessions implements OnInit, OnDestroy {
       dayNotes: {},
     };
     this.shiftRangeStart = null;
+    this.rangeMode = false;
+    this.rangeStartStr = null;
     this.createProgramFile = null;
     this.patients = [];
     this.calendarMonth = new Date();
@@ -741,40 +796,41 @@ export class Sessions implements OnInit, OnDestroy {
     this.showDetailModal = true;
     this.cdr.markForCheck();
 
+    let auditData: any = null;
+    let programData: any = null;
+    let loaded = 0;
+    const total = 2;
+
+    const buildSession = () => {
+      this.detailSession = {
+        id: event.id,
+        title: event.title,
+        status: event.status,
+        date: event.date.toISOString().split('T')[0],
+        time: event.time,
+        endTime: event.endTime,
+        therapist: event.therapist,
+        patient: event.patient,
+        audit: auditData?.audit || null,
+        auditExists: auditData?.exists || false,
+        programText: programData?.program_text || null,
+        hasProgram: programData?.has_program || false,
+      };
+      this.detailLoading = false;
+      this.cdr.markForCheck();
+    };
+
     this.subscriptions.add(
       this.adminService.getSessionAudit(event.id).subscribe({
-        next: (data: any) => {
-          this.detailSession = {
-            id: event.id,
-            title: event.title,
-            status: event.status,
-            date: event.date.toISOString().split('T')[0],
-            time: event.time,
-            endTime: event.endTime,
-            therapist: event.therapist,
-            patient: event.patient,
-            audit: data?.audit || null,
-            auditExists: data?.exists || false,
-          };
-          this.detailLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.detailSession = {
-            id: event.id,
-            title: event.title,
-            status: event.status,
-            date: event.date.toISOString().split('T')[0],
-            time: event.time,
-            endTime: event.endTime,
-            therapist: event.therapist,
-            patient: event.patient,
-            audit: null,
-            auditExists: false,
-          };
-          this.detailLoading = false;
-          this.cdr.markForCheck();
-        },
+        next: (data: any) => { auditData = data; loaded++; if (loaded >= total) buildSession(); },
+        error: () => { loaded++; if (loaded >= total) buildSession(); },
+      })
+    );
+
+    this.subscriptions.add(
+      this.adminService.getSessionProgram(event.id).subscribe({
+        next: (data: any) => { programData = data; loaded++; if (loaded >= total) buildSession(); },
+        error: () => { loaded++; if (loaded >= total) buildSession(); },
       })
     );
   }
@@ -782,6 +838,7 @@ export class Sessions implements OnInit, OnDestroy {
   closeDetailModal() {
     this.showDetailModal = false;
     this.detailSession = null;
+    this.detailShowProgram = false;
   }
 
   toDateStr(date: string): Date {

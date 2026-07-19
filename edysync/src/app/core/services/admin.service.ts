@@ -372,6 +372,27 @@ export class AdminService {
     return this.http.delete<any>(`/api/sessions/${sessionId}/program`);
   }
 
+  getSessionProgram(sessionId: number): Observable<any> {
+    return this.http.get<any>(`/api/sessions/${sessionId}/program`);
+  }
+
+  // --- PATIENT GROUPS ---
+  getPatientGroups(): Observable<any> {
+    return this.http.get<any>('/admin/api/patient-groups');
+  }
+
+  createPatientGroup(data: any): Observable<any> {
+    return this.http.post<any>('/admin/api/patient-groups', data);
+  }
+
+  updatePatientGroup(id: number, data: any): Observable<any> {
+    return this.http.put<any>(`/admin/api/patient-groups/${id}`, data);
+  }
+
+  deletePatientGroup(id: number): Observable<any> {
+    return this.http.delete<any>(`/admin/api/patient-groups/${id}`);
+  }
+
   getAuditStats(): Observable<any> {
     return this.http.get('/api/admin/audit-stats');
   }

@@ -35,7 +35,8 @@ export interface CalendarEvent {
 
 export interface BatchSessionPayload {
   therapist_id: number;
-  patient_id: number;
+  patient_id?: number;
+  patient_ids?: number[];
   start_date?: string;
   start_time: string;
   end_time: string;
@@ -44,4 +45,5 @@ export interface BatchSessionPayload {
   weeks?: number;
   dates?: string[];
   sede?: string;
+  session_type?: string;
 }

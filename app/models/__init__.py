@@ -7,6 +7,7 @@ from app.models.game import *
 from app.models.incidente import *
 from app.models.notification import *
 from app.models.password_reset import PasswordReset
+from app.models.patient_group import *
 from app.models.payment import *
 from app.models.refresh_token import RefreshToken
 from app.models.report import *

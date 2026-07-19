@@ -16,6 +16,7 @@ import { Button } from '../../../../../shared/components/button/button';
 import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
+import { Modal } from '../../../../../shared/components/modal/modal';
 import { Table, TableCell } from '../../../../../shared/components/table/table';
 import { UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
 
@@ -51,7 +52,7 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Drawer, Table, TableCell, UsersStatsCards],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Drawer, Modal, Table, TableCell, UsersStatsCards],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -84,12 +85,18 @@ export class UsersList implements OnInit, OnDestroy {
   showEditDrawer = false;
   showResetDrawer = false;
   showCreateDrawer = false;
+  showGroupDrawer = false;
+  showGroupModal = false;
 
   editData: any = {};
   currentEditUser: UserRow | null = null;
   resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
   newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
   createStatus = '';
+
+  patientGroups: any[] = [];
+  groupForm: any = {};
+  editingGroupId: number | null = null;
 
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
@@ -195,6 +202,7 @@ export class UsersList implements OnInit, OnDestroy {
     });
     this.restoreFiltersFromUrl();
     this.loadData();
+    this.loadGroups();
   }
 
   ngOnDestroy() {
@@ -797,5 +805,137 @@ export class UsersList implements OnInit, OnDestroy {
     this.showToast = true;
     setTimeout(() => { this.showToast = false; this.cdr.markForCheck(); }, 4000);
     this.cdr.markForCheck();
+  }
+
+  // --- PATIENT GROUPS ---
+  loadGroups() {
+    this.subscriptions.add(
+      this.adminService.getPatientGroups().subscribe({
+        next: (res: any) => {
+          this.patientGroups = res.groups || [];
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      })
+    );
+  }
+
+  openGroupModal(group?: any) {
+    if (group) {
+      this.editingGroupId = group.id;
+      this.groupForm = {
+        name: group.name,
+        sede_id: group.sede_id,
+        start_time: group.start_time || '',
+        end_time: group.end_time || '',
+        work_days: group.work_days ? group.work_days.split(',').map(Number) : [0,1,2,3,4],
+        notes: group.notes || '',
+        member_ids: group.member_ids || [],
+      };
+    } else {
+      this.editingGroupId = null;
+      this.groupForm = {
+        name: '',
+        sede_id: null,
+        start_time: '',
+        end_time: '',
+        work_days: [0,1,2,3,4],
+        notes: '',
+        member_ids: [],
+      };
+    }
+    this.showGroupModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeGroupModal() {
+    this.showGroupModal = false;
+    this.editingGroupId = null;
+    this.groupForm = {};
+  }
+
+  saveGroup() {
+    const f = this.groupForm;
+    if (!f.name) return;
+
+    const payload = {
+      name: f.name,
+      sede_id: f.sede_id,
+      start_time: f.start_time,
+      end_time: f.end_time,
+      work_days: f.work_days?.join(','),
+      notes: f.notes,
+      member_ids: f.member_ids,
+    };
+
+    const req = this.editingGroupId
+      ? this.adminService.updatePatientGroup(this.editingGroupId, payload)
+      : this.adminService.createPatientGroup(payload);
+
+    this.subscriptions.add(
+      req.subscribe({
+        next: () => {
+          this.closeGroupModal();
+          this.loadGroups();
+          this.showSuccessToast(this.editingGroupId ? 'Grupo actualizado' : 'Grupo creado');
+        },
+        error: () => {
+          this.showErrorToast('Error al guardar grupo');
+        },
+      })
+    );
+  }
+
+  deleteGroup(id: number) {
+    this.subscriptions.add(
+      this.confirmService.confirm({
+        title: 'Eliminar grupo',
+        message: '¿Eliminar este grupo de pacientes?',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        variant: 'danger',
+      }).subscribe((confirmed: boolean) => {
+        if (!confirmed) return;
+        this.subscriptions.add(
+          this.adminService.deletePatientGroup(id).subscribe({
+            next: () => {
+              this.loadGroups();
+              this.showSuccessToast('Grupo eliminado');
+            },
+            error: () => this.showErrorToast('Error al eliminar'),
+          })
+        );
+      })
+    );
+  }
+
+  toggleGroupMember(patientId: number) {
+    const ids = this.groupForm.member_ids || [];
+    const idx = ids.indexOf(patientId);
+    if (idx >= 0) {
+      this.groupForm.member_ids = ids.filter((id: number) => id !== patientId);
+    } else {
+      this.groupForm.member_ids = [...ids, patientId];
+    }
+    this.cdr.markForCheck();
+  }
+
+  toggleGroupDay(day: number) {
+    const days = this.groupForm.work_days || [];
+    const idx = days.indexOf(day);
+    if (idx >= 0) {
+      this.groupForm.work_days = days.filter((d: number) => d !== day);
+    } else {
+      this.groupForm.work_days = [...days, day];
+    }
+    this.cdr.markForCheck();
+  }
+
+  get groupDayLabels(): string[] {
+    return ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  }
+
+  get patientOptionsForGroup(): { id: number; username: string }[] {
+    return this.users.filter(u => u.role === 'jugador').map(u => ({ id: u.id, username: u.username }));
   }
 }

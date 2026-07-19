@@ -558,3 +558,84 @@ def get_capacity_metrics():
     except Exception as e:
         current_app.logger.error(f'Error fetching capacity metrics: {str(e)}')
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# --- PATIENT GROUPS ---
+
+
+@api_bp.route('/admin/patient-groups', methods=['GET'])
+@login_required
+def list_patient_groups():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.models.patient_group import PatientGroup
+
+    groups = PatientGroup.query.filter_by(is_active=True).order_by(PatientGroup.name).all()
+    return jsonify({'success': True, 'groups': [g.to_dict() for g in groups]})
+
+
+@api_bp.route('/admin/patient-groups', methods=['POST'])
+@login_required
+def create_patient_group():
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.models.patient_group import PatientGroup
+
+    data = request.get_json()
+    if not data.get('name'):
+        return jsonify({'success': False, 'message': 'Nombre es requerido'}), 400
+    group = PatientGroup(
+        name=data['name'],
+        sede_id=data.get('sede_id'),
+        start_time=data.get('start_time'),
+        end_time=data.get('end_time'),
+        work_days=data.get('work_days', '0,1,2,3,4'),
+        notes=data.get('notes'),
+    )
+    if data.get('member_ids'):
+        members = User.query.filter(User.id.in_(data['member_ids'])).all()
+        group.members = members
+    db.session.add(group)
+    db.session.commit()
+    return jsonify({'success': True, 'group': group.to_dict()})
+
+
+@api_bp.route('/admin/patient-groups/<int:group_id>', methods=['PUT'])
+@login_required
+def update_patient_group(group_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.models.patient_group import PatientGroup
+
+    group = PatientGroup.query.get_or_404(group_id)
+    data = request.get_json()
+    if 'name' in data:
+        group.name = data['name']
+    if 'sede_id' in data:
+        group.sede_id = data['sede_id']
+    if 'start_time' in data:
+        group.start_time = data['start_time']
+    if 'end_time' in data:
+        group.end_time = data['end_time']
+    if 'work_days' in data:
+        group.work_days = data['work_days']
+    if 'notes' in data:
+        group.notes = data['notes']
+    if 'member_ids' in data:
+        members = User.query.filter(User.id.in_(data['member_ids'])).all()
+        group.members = members
+    db.session.commit()
+    return jsonify({'success': True, 'group': group.to_dict()})
+
+
+@api_bp.route('/admin/patient-groups/<int:group_id>', methods=['DELETE'])
+@login_required
+def delete_patient_group(group_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+    from app.models.patient_group import PatientGroup
+
+    group = PatientGroup.query.get_or_404(group_id)
+    group.is_active = False
+    db.session.commit()
+    return jsonify({'success': True})
