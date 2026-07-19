@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -94,8 +94,6 @@ export class UsersList implements OnInit, OnDestroy {
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   showToast = false;
-
-  openMenuUserId: number | null = null;
 
   private sedeLookup: Record<string, string> = {};
   private subscriptions = new Subscription();
@@ -409,18 +407,6 @@ export class UsersList implements OnInit, OnDestroy {
     this.currentPage = 1;
     this.persistFiltersToUrl();
     this.applyFilters();
-  }
-
-  toggleMenu(userId: number) {
-    this.openMenuUserId = this.openMenuUserId === userId ? null : userId;
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event) {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.actions-menu')) {
-      this.openMenuUserId = null;
-    }
   }
 
   goToPage(page: number) {

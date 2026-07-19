@@ -59,7 +59,7 @@
       } @else {
 
       <!-- Desktop table -->
-      <div class="hidden md:block">
+      <div class="hidden md:block max-h-[520px] overflow-y-auto rounded-xl border border-border/15">
         <app-table [columns]="columns" [data]="paginatedUsers" [rowClass]="getRowClass" [trackBy]="trackUser"
           emptyMessage="No se encontraron usuarios" [emptyIcon]="['fas', 'user-slash']">
 
@@ -122,37 +122,19 @@
           </ng-template>
 
           <ng-template [tableCell]="'acciones'" let-row>
-            <div class="relative actions-menu flex justify-end">
-              <button (click)="$event.stopPropagation(); toggleMenu(row.id)"
-                class="w-8 h-8 rounded-lg hover:bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
-                title="Mas opciones">
-                <fa-icon [icon]="['fas', 'ellipsis-vertical']" class="text-sm"></fa-icon>
+            <div class="flex justify-end">
+              <button (click)="openEditDrawer(row)"
+                class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
+                title="Editar">
+                <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
               </button>
-              @if (openMenuUserId === row.id) {
-              <div class="absolute right-0 top-full mt-1 w-44 bg-surface-container-low rounded-xl border border-border/20 shadow-lg z-50 py-1 animate-fade-in"
-                (click)="$event.stopPropagation()">
-                <button (click)="openEditDrawer(row); openMenuUserId = null"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
-                  <fa-icon [icon]="['fas', 'pen']" class="text-on-surface-variant w-4"></fa-icon> Editar
-                </button>
-                <button (click)="openResetDrawer(row); openMenuUserId = null"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
-                  <fa-icon [icon]="['fas', 'key']" class="text-on-surface-variant w-4"></fa-icon> Reset Password
-                </button>
-                <div class="border-t border-border/15 my-1"></div>
-                <button (click)="deleteUser(row); openMenuUserId = null"
-                  class="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-error hover:bg-error/5 transition-colors cursor-pointer">
-                  <fa-icon [icon]="['fas', 'trash']" class="w-4"></fa-icon> Eliminar
-                </button>
-              </div>
-              }
             </div>
           </ng-template>
         </app-table>
       </div>
 
       <!-- Mobile cards -->
-      <div class="md:hidden space-y-3 mt-4">
+      <div class="md:hidden space-y-3 mt-4 max-h-[520px] overflow-y-auto rounded-xl border border-border/15 p-3">
         @for (u of paginatedUsers; track u.id; let i = $index) {
         <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'"
           [class.bg-error-container/10]="u.account_status === 'debtor'"
