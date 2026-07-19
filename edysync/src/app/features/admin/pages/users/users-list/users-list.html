@@ -279,6 +279,11 @@
     <span class="text-sm font-medium text-on-surface">Cuenta Activa</span>
   </label>
 
+  <div>
+    <label class="text-label-caps text-on-surface-variant mb-1.5 block">Estado de Cuenta</label>
+    <app-select [(ngModel)]="editData.account_status" [options]="accountStatusOptions" class="w-full"></app-select>
+  </div>
+
   @if (editData.role === 'terapista') {
   <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
     <h4 class="text-sm font-bold text-primary flex items-center gap-2">
@@ -329,13 +334,15 @@
       </div>
     </div>
   </div>
-  } @if (editData.role === 'jugador') {
+  }
+
+  @if (editData.role === 'jugador') {
   <div>
     <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
     <app-select [(ngModel)]="editData.sede_id" [options]="patientSedeOptions" class="w-full"></app-select>
   </div>
 
-  <div class="bg-surface-container-high rounded-xl p-4 space-y-4">
+  <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
     <h4 class="text-sm font-bold text-primary flex items-center gap-2">
       <fa-icon [icon]="['fas', 'receipt']" class="text-lg"></fa-icon>
       Configuracion de Plan
@@ -399,7 +406,33 @@
     </div>
     }
   </div>
+
+  <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
+    <h4 class="text-sm font-bold text-primary flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'user-nurse']" class="text-lg"></fa-icon> Terapeuta Asignado
+    </h4>
+    <app-select [multiple]="true" [(ngModel)]="editData.edit_therapist_ids" [options]="editTherapistOptions" class="w-full"></app-select>
+  </div>
   }
+
+  <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
+    <h4 class="text-sm font-bold text-tertiary flex items-center gap-2">
+      <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon> Cambiar Contrasena
+    </h4>
+    <div class="relative">
+      <input [type]="editData.show_password ? 'text' : 'password'" [(ngModel)]="editData.new_password" placeholder="Nueva contrasena (dejar vacio para no cambiar)" class="input-field text-sm pr-10" />
+      <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" (click)="editData.show_password = !editData.show_password">
+        <fa-icon [icon]="editData.show_password ? ['fas', 'eye-slash'] : ['fas', 'eye']"></fa-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="border-t border-error/20 pt-4 mt-2">
+    <button *ngIf="currentEditUser" type="button" (click)="deleteUser(currentEditUser)" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-error/30 text-error hover:bg-error/5 transition-colors text-sm font-semibold cursor-pointer">
+      <fa-icon [icon]="['fas', 'trash-can']"></fa-icon>
+      Eliminar Usuario
+    </button>
+  </div>
 
   <div drawer-footer>
     <div class="buttons_footer_drawer">

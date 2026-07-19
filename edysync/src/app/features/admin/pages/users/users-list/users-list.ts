@@ -86,6 +86,7 @@ export class UsersList implements OnInit, OnDestroy {
   showCreateDrawer = false;
 
   editData: any = {};
+  currentEditUser: UserRow | null = null;
   resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
   newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
   createStatus = '';
@@ -132,6 +133,17 @@ export class UsersList implements OnInit, OnDestroy {
     {value: 2, label: '2x Semana (8 ses)'},
     {value: 3, label: '3x Semana (12 ses)'},
   ];
+
+  accountStatusOptions: SelectOption[] = [
+    {value: 'active', label: 'Activo'},
+    {value: 'inactive', label: 'Inactivo'},
+    {value: 'debtor', label: 'Deudor'},
+    {value: 'retired', label: 'Retirado'},
+  ];
+
+  get editTherapistOptions(): SelectOption[] {
+    return this.therapists.map(t => ({value: t.id, label: t.username}));
+  }
 
   get sedeOptions(): SelectOption[] {
     return [{value: null, label: 'Todas las Sedes'}, ...this.activeSedes.map(s => ({value: s.id, label: s.name}))];
@@ -442,8 +454,10 @@ export class UsersList implements OnInit, OnDestroy {
       email: user.email,
       role: user.role,
       is_active: user.is_active,
+      account_status: user.account_status || 'active',
       sede_id: user.sede_id,
       sede_ids: user.assigned_sedes?.map((s) => s.id) || [],
+      edit_therapist_ids: user.therapist_ids || [],
       salary: user.salary_base || 0,
       hours: user.contract_hours || 0,
       modality: user.sessions_total ? user.sessions_total / 4 : 0,
@@ -459,19 +473,24 @@ export class UsersList implements OnInit, OnDestroy {
       start_time: user.work_start_time || '',
       end_time: user.work_end_time || '',
       days: user.work_days ? user.work_days.split(',').map(Number) : [],
+      new_password: '',
+      show_password: false,
     };
+    this.currentEditUser = user;
     this.showEditDrawer = true;
   }
 
   closeEditDrawer() {
     this.showEditDrawer = false;
     this.editData = {};
+    this.currentEditUser = null;
   }
 
   saveEditUser() {
     const payload: any = { id: this.editData.id };
     if (this.editData.username) payload.username = this.editData.username;
     if (this.editData.is_active !== undefined) payload.is_active = this.editData.is_active;
+    if (this.editData.account_status) payload.account_status = this.editData.account_status;
     if (this.editData.role) payload.role = this.editData.role;
     if (this.editData.sede_id) payload.sede_id = this.editData.sede_id;
     if (this.editData.sede_ids?.length) payload.sede_ids = this.editData.sede_ids;
@@ -497,9 +516,29 @@ export class UsersList implements OnInit, OnDestroy {
       this.adminService.updateUser(payload).subscribe({
         next: (res: any) => {
           if (res.success) {
-            this.closeEditDrawer();
             this.updateUserLocally(payload);
-            this.showSuccessToast('Usuario actualizado');
+            const promises: Promise<any>[] = [];
+
+            if (this.editData.role === 'jugador' && this.editData.edit_therapist_ids?.length) {
+              promises.push(firstValueFrom(this.adminService.assignTherapist(this.editData.id, this.editData.edit_therapist_ids)));
+            }
+
+            if (this.editData.new_password) {
+              promises.push(firstValueFrom(this.adminService.resetPassword(this.editData.id, this.editData.new_password)));
+            }
+
+            if (promises.length) {
+              Promise.all(promises).then(() => {
+                this.closeEditDrawer();
+                this.showSuccessToast('Usuario actualizado');
+              }).catch(() => {
+                this.closeEditDrawer();
+                this.showSuccessToast('Usuario actualizado (algunas opciones pendientes)');
+              });
+            } else {
+              this.closeEditDrawer();
+              this.showSuccessToast('Usuario actualizado');
+            }
           } else {
             this.showErrorToast(res.message || 'Error al guardar');
           }
