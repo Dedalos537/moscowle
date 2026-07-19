@@ -128,10 +128,15 @@
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.2s ease, transform 0.15s ease;
 
   &:hover {
     background: var(--color-surface-container-high);
+    transform: scale(1.04);
+  }
+
+  &:active {
+    transform: scale(0.96);
   }
 
   &.other-month {
@@ -206,7 +211,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-on-surface);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .event-dots {
@@ -236,6 +241,7 @@
 .agenda-panel {
   border-top: 1px solid var(--color-outline-variant);
   padding: 14px 20px 18px;
+  transition: opacity 0.2s ease;
 }
 
 .agenda-header {
@@ -253,6 +259,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-on-surface);
+  transition: opacity 0.15s ease;
 }
 
 .event-count-badge {
@@ -309,7 +316,8 @@
   width: 100%;
   text-align: left;
   cursor: default;
-  transition: background 0.12s, transform 0.12s;
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  animation: agendaFadeIn 0.25s ease both;
 
   &.clickable {
     cursor: pointer;
@@ -318,6 +326,17 @@
       background: var(--color-surface-container-highest);
       transform: translateX(2px);
     }
+  }
+}
+
+@keyframes agendaFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -375,6 +394,7 @@
   align-items: center;
   gap: 4px;
   padding: 24px 0 8px;
+  animation: agendaFadeIn 0.2s ease both;
 
   .material-symbols-outlined {
     font-size: 28px;

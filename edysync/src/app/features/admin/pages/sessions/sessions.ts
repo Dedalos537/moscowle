@@ -263,12 +263,10 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   onTherapistFilterChange() {
-    this.loading = true;
     this.loadSessions();
   }
 
   onPatientFilterChange() {
-    this.loading = true;
     this.loadSessions();
   }
 
