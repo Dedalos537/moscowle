@@ -35,7 +35,9 @@ export class Sessions implements OnInit, OnDestroy {
   therapists: { id: number; username: string }[] = [];
   selectedTherapistId: number | null = null;
   patients: { id: number; username: string }[] = [];
+  allPatients: { id: number; username: string }[] = [];
   patientsLoading = false;
+  selectedPatientId: number | null = null;
   loading = true;
   private subscriptions: Subscription = new Subscription();
 
@@ -44,12 +46,27 @@ export class Sessions implements OnInit, OnDestroy {
 
   showCreateModal = false;
   showEditModal = false;
+  showMoveModal = false;
+  showDetailModal = false;
+
+  moveSessionId = 0;
+  moveNewDate = '';
+  moveSessionTitle = '';
+
+  detailSession: any = null;
+  detailLoading = false;
 
   sedes: Sede[] = [];
   sedesLoading = false;
 
+  shiftRangeStart: string | null = null;
+
   get therapistOptions(): SelectOption[] {
     return [{value: null, label: 'Todos'}, ...this.therapists.map(t => ({value: t.id, label: t.username}))];
+  }
+
+  get patientFilterOptions(): SelectOption[] {
+    return [{value: null, label: 'Todos los alumnos'}, ...this.allPatients.map(p => ({value: p.id, label: p.username}))];
   }
 
   get therapistCreateOptions(): SelectOption[] {
@@ -81,6 +98,7 @@ export class Sessions implements OnInit, OnDestroy {
     start_time: '',
     end_time: '',
     notes: '',
+    dayNotes: {} as Record<string, string>,
   };
 
   editForm = {
@@ -125,6 +143,7 @@ export class Sessions implements OnInit, OnDestroy {
       actionTemplate: this.headerActions,
     });
     this.loadTherapists();
+    this.loadAllPatients();
     this.loadSedes();
     this.loadSessions();
     this.buildCalendarGrid();
@@ -140,6 +159,18 @@ export class Sessions implements OnInit, OnDestroy {
       this.adminService.getUsers('terapista').subscribe({
         next: (res) => {
           this.therapists = res.users.map((u) => ({ id: u.id, username: u.username }));
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  private loadAllPatients() {
+    this.subscriptions.add(
+      this.adminService.getUsers('jugador').subscribe({
+        next: (res) => {
+          this.allPatients = res.users.map((u) => ({ id: u.id, username: u.username }));
           this.cdr.markForCheck();
         },
         error: () => { this.cdr.markForCheck(); },
@@ -173,8 +204,12 @@ export class Sessions implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.adminService.getSessions(start, end, therapistId).subscribe({
         next: (events) => {
-          this.rawEvents = events;
-          this.widgetEvents = events.map((e: any) => ({
+          let filtered = events;
+          if (this.selectedPatientId) {
+            filtered = events.filter((e: any) => e.extendedProps?.patient_id === this.selectedPatientId);
+          }
+          this.rawEvents = filtered;
+          this.widgetEvents = filtered.map((e: any) => ({
             id: e.id,
             title: e.title,
             date: new Date(dateFromISO(e.start) + 'T12:00:00'),
@@ -195,6 +230,11 @@ export class Sessions implements OnInit, OnDestroy {
   }
 
   onTherapistFilterChange() {
+    this.loading = true;
+    this.loadSessions();
+  }
+
+  onPatientFilterChange() {
     this.loading = true;
     this.loadSessions();
   }
@@ -289,7 +329,8 @@ export class Sessions implements OnInit, OnDestroy {
     const idx = this.createForm.dates.indexOf(dateStr);
     if (idx >= 0) {
       this.createForm.dates = this.createForm.dates.filter(d => d !== dateStr);
-    } else if (this.createForm.dates.length < 5) {
+      delete this.createForm.dayNotes[dateStr];
+    } else if (this.createForm.dates.length < 10) {
       this.createForm.dates = [...this.createForm.dates, dateStr];
     }
     this.buildCalendarGrid();
@@ -298,7 +339,54 @@ export class Sessions implements OnInit, OnDestroy {
   toggleCalendarDate(day: { date: Date; day: number; selected: boolean; disabled: boolean }) {
     if (day.disabled) return;
     const dateStr = day.date.toISOString().split('T')[0];
-    this.toggleDate(dateStr);
+
+    if (this.shiftRangeStart && !day.selected) {
+      const start = new Date(this.shiftRangeStart);
+      const end = new Date(dateStr);
+      const minDate = start < end ? this.shiftRangeStart : dateStr;
+      const maxDate = start < end ? dateStr : this.shiftRangeStart;
+      const current = new Date(minDate);
+      while (current <= new Date(maxDate)) {
+        const ds = current.toISOString().split('T')[0];
+        if (!this.createForm.dates.includes(ds) && this.createForm.dates.length < 10) {
+          this.createForm.dates = [...this.createForm.dates, ds];
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      this.shiftRangeStart = null;
+    } else if (this.shiftRangeStart && day.selected) {
+      this.shiftRangeStart = null;
+    } else {
+      this.shiftRangeStart = dateStr;
+      this.toggleDate(dateStr);
+      return;
+    }
+    this.buildCalendarGrid();
+  }
+
+  toggleShiftRange(day: { date: Date; day: number; selected: boolean; disabled: boolean }, event: MouseEvent) {
+    if (!event.shiftKey || day.disabled) return;
+    event.preventDefault();
+    const dateStr = day.date.toISOString().split('T')[0];
+    if (!this.shiftRangeStart) {
+      this.shiftRangeStart = dateStr;
+      this.toggleDate(dateStr);
+    } else {
+      const start = new Date(this.shiftRangeStart);
+      const end = new Date(dateStr);
+      const minDate = start < end ? this.shiftRangeStart : dateStr;
+      const maxDate = start < end ? dateStr : this.shiftRangeStart;
+      const current = new Date(minDate);
+      while (current <= new Date(maxDate)) {
+        const ds = current.toISOString().split('T')[0];
+        if (!this.createForm.dates.includes(ds) && this.createForm.dates.length < 10) {
+          this.createForm.dates = [...this.createForm.dates, ds];
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      this.shiftRangeStart = null;
+      this.buildCalendarGrid();
+    }
   }
 
   removeDate(dateStr: string) {
@@ -522,7 +610,9 @@ export class Sessions implements OnInit, OnDestroy {
       start_time: '',
       end_time: '',
       notes: '',
+      dayNotes: {},
     };
+    this.shiftRangeStart = null;
     this.createProgramFile = null;
     this.patients = [];
     this.calendarMonth = new Date();
@@ -593,5 +683,108 @@ export class Sessions implements OnInit, OnDestroy {
         },
       })
     );
+  }
+
+  openMoveModal(event: {id: number; title: string; date: Date; time?: string; endTime?: string; status: string; therapist?: string; patient?: string}) {
+    this.moveSessionId = event.id;
+    this.moveSessionTitle = event.title;
+    this.moveNewDate = event.date.toISOString().split('T')[0];
+    this.showMoveModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeMoveModal() {
+    this.showMoveModal = false;
+    this.moveSessionId = 0;
+    this.moveNewDate = '';
+  }
+
+  async submitMove() {
+    if (!this.moveNewDate || !this.moveSessionId) return;
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Mover sesion',
+      message: `Mover "${this.moveSessionTitle}" al ${this.moveNewDate}?`,
+      confirmText: 'Mover',
+      cancelText: 'Cancelar',
+      variant: 'primary',
+    }));
+    if (!confirmed) return;
+
+    const raw = this.rawEvents.find((e: any) => e.id === this.moveSessionId);
+    if (!raw) return;
+
+    const startTime = timeFromISO(raw.start);
+    const endTime = timeFromISO(raw.end);
+
+    this.subscriptions.add(
+      this.adminService.updateSession(this.moveSessionId, {
+        start_time: `${this.moveNewDate}T${startTime}`,
+        end_time: `${this.moveNewDate}T${endTime}`,
+      }).subscribe({
+        next: () => {
+          this.closeMoveModal();
+          this.refreshEvents();
+          this.toastService.show('Sesion movida correctamente', 'success');
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.toastService.show('Error al mover sesion', 'error');
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  openDetailModal(event: {id: number; title: string; date: Date; time?: string; endTime?: string; status: string; therapist?: string; patient?: string}) {
+    this.detailLoading = true;
+    this.detailSession = null;
+    this.showDetailModal = true;
+    this.cdr.markForCheck();
+
+    this.subscriptions.add(
+      this.adminService.getSessionAudit(event.id).subscribe({
+        next: (data: any) => {
+          this.detailSession = {
+            id: event.id,
+            title: event.title,
+            status: event.status,
+            date: event.date.toISOString().split('T')[0],
+            time: event.time,
+            endTime: event.endTime,
+            therapist: event.therapist,
+            patient: event.patient,
+            audit: data?.audit || null,
+            auditExists: data?.exists || false,
+          };
+          this.detailLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.detailSession = {
+            id: event.id,
+            title: event.title,
+            status: event.status,
+            date: event.date.toISOString().split('T')[0],
+            time: event.time,
+            endTime: event.endTime,
+            therapist: event.therapist,
+            patient: event.patient,
+            audit: null,
+            auditExists: false,
+          };
+          this.detailLoading = false;
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  closeDetailModal() {
+    this.showDetailModal = false;
+    this.detailSession = null;
+  }
+
+  toDateStr(date: string): Date {
+    return new Date(date + 'T12:00:00');
   }
 }
