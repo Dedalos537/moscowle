@@ -43,8 +43,8 @@ export class App implements OnInit, OnDestroy {
           }
         },
         error: () => {
-          this.authService.clearSession();
-          this.router.navigate(['/auth/login']);
+          // On mobile, verifySession may fail due to cookie timing.
+          // Don't clear session — let the role guard + auth interceptor handle it.
         },
       });
     }
