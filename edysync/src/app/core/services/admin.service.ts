@@ -378,19 +378,19 @@ export class AdminService {
 
   // --- PATIENT GROUPS ---
   getPatientGroups(): Observable<any> {
-    return this.http.get<any>('/admin/api/patient-groups');
+    return this.http.get<any>('/api/admin/patient-groups');
   }
 
   createPatientGroup(data: any): Observable<any> {
-    return this.http.post<any>('/admin/api/patient-groups', data);
+    return this.http.post<any>('/api/admin/patient-groups', data);
   }
 
   updatePatientGroup(id: number, data: any): Observable<any> {
-    return this.http.put<any>(`/admin/api/patient-groups/${id}`, data);
+    return this.http.put<any>(`/api/admin/patient-groups/${id}`, data);
   }
 
   deletePatientGroup(id: number): Observable<any> {
-    return this.http.delete<any>(`/admin/api/patient-groups/${id}`);
+    return this.http.delete<any>(`/api/admin/patient-groups/${id}`);
   }
 
   getAuditStats(): Observable<any> {

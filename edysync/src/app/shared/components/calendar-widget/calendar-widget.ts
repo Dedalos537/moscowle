@@ -1,4 +1,4 @@
-import { Component, input, output, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, OnInit, OnChanges, SimpleChanges, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 export interface CalendarWidgetEvent {
@@ -39,6 +39,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   role = input<'admin' | 'therapist' | 'patient'>('admin');
   readonly = input(false);
 
+  dayClick = output<Date>();
   dayDblClick = output<Date>();
   rangeDblClick = output<{ start: Date; end: Date }>();
   eventClick = output<CalendarWidgetEvent>();
@@ -54,6 +55,8 @@ export class CalendarWidget implements OnInit, OnChanges {
   private clickCount = 0;
   private clickTimer: any = null;
   private lastClickedKey = '';
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.buildGrid();
@@ -216,7 +219,7 @@ export class CalendarWidget implements OnInit, OnChanges {
       this.lastClickedKey = '';
       this.clickTimer = null;
       this.handleSingleClick(cell, isModifier);
-    }, 300);
+    }, 250);
   }
 
   private handleSingleClick(cell: DayCell, isModifier: boolean) {
@@ -231,6 +234,7 @@ export class CalendarWidget implements OnInit, OnChanges {
         }
       }
       this.buildGrid();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -240,6 +244,8 @@ export class CalendarWidget implements OnInit, OnChanges {
       this.currentMonth = new Date(cell.date.getFullYear(), cell.date.getMonth(), 1);
     }
     this.buildGrid();
+    this.dayClick.emit(cell.date);
+    this.cdr.markForCheck();
   }
 
   private handleDblClick(cell: DayCell) {
