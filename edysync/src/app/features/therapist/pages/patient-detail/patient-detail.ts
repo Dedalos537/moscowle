@@ -50,7 +50,7 @@ export class TherapistPatientDetail implements OnInit, OnDestroy {
   }
 
   private loadPatientData() {
-    this.subs.add(this.http.get(`/therapist/patients/${this.patientId}`).subscribe({
+    this.subs.add(this.http.get(`/therapist/api/patients/${this.patientId}`).subscribe({
       next: (res: any) => {
         this.headerService.setConfig({
           title: res.patient?.username || 'Paciente',

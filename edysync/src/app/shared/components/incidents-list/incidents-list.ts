@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { IncidentService, Incident } from '../../../core/services/incident.service';
+import { HeaderService } from '../../../core/services/header.service';
 import { fadeInUp, cardEnter } from '../../../core/animations';
 import { Spinner } from '../spinner/spinner';
 import { Alert } from '../alert/alert';
@@ -143,14 +144,21 @@ export class IncidentsList implements OnInit, OnDestroy {
 
   constructor(
     private incidentService: IncidentService,
+    private headerService: HeaderService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
+    this.headerService.setConfig({
+      title: 'Incidencias',
+      subtitle: 'Reporta y gestiona incidencias',
+      icon: ['fas', 'triangle-exclamation'],
+    });
     this.loadIncidents();
   }
 
   ngOnDestroy() {
+    this.headerService.reset();
     this.subs.unsubscribe();
   }
 

@@ -41,6 +41,18 @@
               <span class="text-on-surface font-medium">{{ patient.guardian_name }}</span>
             </div>
           }
+          @if (patient.guardian_phone) {
+            <div class="flex justify-between">
+              <span class="text-on-surface-variant">Tel. Apoderado</span>
+              <span class="text-on-surface font-medium">{{ patient.guardian_phone }}</span>
+            </div>
+          }
+          @if (patient.preliminary_diagnosis) {
+            <div class="pt-3 border-t border-border">
+              <p class="text-on-surface-variant mb-1">Diagnóstico Preliminar</p>
+              <p class="text-on-surface">{{ patient.preliminary_diagnosis }}</p>
+            </div>
+          }
           @if (patient.therapy_goals) {
             <div class="pt-3 border-t border-border">
               <p class="text-on-surface-variant mb-1">Objetivos Terapéuticos</p>

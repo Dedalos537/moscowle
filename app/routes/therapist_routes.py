@@ -999,6 +999,57 @@ def patient_detail(patient_id):
     )
 
 
+@therapist_bp.route('/api/patients/<int:patient_id>')
+@login_required
+def api_patient_detail(patient_id):
+    if current_user.role not in ['terapista', 'admin', 'supervisor']:
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+
+    patient = User.query.get_or_404(patient_id)
+    if patient.role != 'jugador':
+        return jsonify({'success': False, 'message': 'Usuario no es un paciente'}), 403
+
+    recent_sessions = (
+        Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.start_time.desc()).limit(20).all()
+    )
+
+    sessions_data = []
+    for s in recent_sessions:
+        sessions_data.append(
+            {
+                'id': s.id,
+                'title': s.title,
+                'start_time': s.start_time.isoformat() if s.start_time else None,
+                'end_time': s.end_time.isoformat() if s.end_time else None,
+                'status': s.status,
+                'attendance': getattr(s, 'attendance', None),
+                'audit_score': getattr(s, 'audit_score', None),
+                'therapist_name': s.therapist.username if s.therapist else None,
+            }
+        )
+
+    return jsonify(
+        {
+            'success': True,
+            'patient': {
+                'id': patient.id,
+                'username': patient.username,
+                'email': patient.email,
+                'phone': patient.phone,
+                'document_number': patient.document_number,
+                'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
+                'guardian_name': getattr(patient, 'guardian_name', None),
+                'guardian_phone': getattr(patient, 'guardian_phone', None),
+                'therapy_goals': getattr(patient, 'therapy_goals', None),
+                'preliminary_diagnosis': getattr(patient, 'preliminary_diagnosis', None),
+                'medical_exam_url': getattr(patient, 'medical_exam_url', None),
+                'is_active': patient.is_active,
+            },
+            'recent_sessions': sessions_data,
+        }
+    )
+
+
 @therapist_bp.route('/patients/<int:patient_id>/update', methods=['POST'])
 @login_required
 def update_patient(patient_id):
