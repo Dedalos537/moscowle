@@ -4,6 +4,7 @@ import requests as http_requests
 
 from app.models.incidente import Incidente
 from app.services.email_service import EmailService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,31 @@ CATEGORY_COLORS = {
 
 class IncidentNotificationService:
     @classmethod
+    def _notify_user(cls, user_id, message, title=None, category='alert', priority='normal', link=None):
+        """Create an in-app notification for a user."""
+        try:
+            notif_service = NotificationService()
+            notif_service.notify_user(
+                user_id=user_id,
+                message=message,
+                title=title,
+                notif_type='alert',
+                link=link,
+                category=category,
+                priority=priority,
+                icon=['fas', 'triangle-exclamation'],
+            )
+        except Exception as e:
+            logger.exception('Failed to create in-app notification for user %s: %s', user_id, e)
+
+    @classmethod
     def notify_new_incident(cls, incidente: Incidente):
         """Notifica la creación de un incidente al responsable y admin."""
         logger.info('Notifying new incident #%s', incidente.id_incidente)
 
         cls._send_email_new(incidente)
         cls._send_slack_new(incidente)
+        cls._notify_inapp_new(incidente)
 
     @classmethod
     def notify_escalation(cls, incidente: Incidente, nivel_anterior: int):
@@ -43,6 +63,7 @@ class IncidentNotificationService:
 
         cls._send_email_escalation(incidente, nivel_anterior)
         cls._send_slack_escalation(incidente, nivel_anterior)
+        cls._notify_inapp_escalation(incidente, nivel_anterior)
 
     @classmethod
     def notify_sla_breach(cls, incidente: Incidente):
@@ -51,6 +72,7 @@ class IncidentNotificationService:
 
         cls._send_email_sla_breach(incidente)
         cls._send_slack_sla_breach(incidente)
+        cls._notify_inapp_sla_breach(incidente)
 
     @classmethod
     def notify_resolution(cls, incidente: Incidente):
@@ -59,6 +81,7 @@ class IncidentNotificationService:
 
         cls._send_email_resolution(incidente)
         cls._send_slack_resolution(incidente)
+        cls._notify_inapp_resolution(incidente)
 
     @classmethod
     def _get_admin_emails(cls):
@@ -339,3 +362,76 @@ class IncidentNotificationService:
             resp.raise_for_status()
         except Exception as e:
             logger.exception('Failed to send Slack alert: %s', e)
+
+    # --- In-app notifications ---
+
+    @classmethod
+    def _notify_inapp_new(cls, incidente: Incidente):
+        from app.models.user import User
+
+        sla_str = incidente.fecha_limite_sla.strftime('%d/%m %H:%M') if incidente.fecha_limite_sla else 'N/A'
+        msg = f'Nuevo incidente #{incidente.id_incidente}: {incidente.titulo} (P{incidente.prioridad}, SLA: {sla_str})'
+        link = f'/admin/incidents/{incidente.id_incidente}'
+
+        # Notify admins
+        admins = User.query.filter_by(role='admin', is_active=True).all()
+        for admin in admins:
+            cls._notify_user(admin.id, msg, title='Nuevo Incidente', category='alert', priority='high', link=link)
+
+        # Notify responsible
+        if incidente.responsable_id and incidente.responsable_id != incidente.user_id:
+            cls._notify_user(
+                incidente.responsable_id, msg, title='Incidente Asignado', category='alert', priority='high', link=link
+            )
+
+    @classmethod
+    def _notify_inapp_escalation(cls, incidente: Incidente, nivel_anterior: int):
+        from app.models.user import User
+
+        nivel_label = {1: 'Advertencia', 2: 'Error Crítico', 3: 'Incidente de Negocio'}.get(
+            incidente.escalamiento_nivel, f'Nivel {incidente.escalamiento_nivel}'
+        )
+        msg = f'Incidente #{incidente.id_incidente} escalado a {nivel_label}: {incidente.titulo}'
+        link = f'/admin/incidents/{incidente.id_incidente}'
+
+        admins = User.query.filter_by(role='admin', is_active=True).all()
+        for admin in admins:
+            cls._notify_user(admin.id, msg, title='Escalamiento', category='alert', priority='urgent', link=link)
+
+    @classmethod
+    def _notify_inapp_sla_breach(cls, incidente: Incidente):
+        from app.models.user import User
+
+        msg = f'SLA VENCIDO - Incidente #{incidente.id_incidente}: {incidente.titulo}'
+        link = f'/admin/incidents/{incidente.id_incidente}'
+
+        admins = User.query.filter_by(role='admin', is_active=True).all()
+        for admin in admins:
+            cls._notify_user(admin.id, msg, title='SLA Vencido', category='alert', priority='urgent', link=link)
+
+        if incidente.responsable_id:
+            cls._notify_user(
+                incidente.responsable_id, msg, title='SLA Vencido', category='alert', priority='urgent', link=link
+            )
+
+    @classmethod
+    def _notify_inapp_resolution(cls, incidente: Incidente):
+        msg = f'Incidente #{incidente.id_incidente} resuelto: {incidente.titulo}'
+        link = f'/admin/incidents/{incidente.id_incidente}'
+
+        # Notify creator
+        if incidente.user_id:
+            cls._notify_user(
+                incidente.user_id, msg, title='Incidente Resuelto', category='system', priority='normal', link=link
+            )
+
+        # Notify responsible
+        if incidente.responsable_id and incidente.responsable_id != incidente.user_id:
+            cls._notify_user(
+                incidente.responsable_id,
+                msg,
+                title='Incidente Resuelto',
+                category='system',
+                priority='normal',
+                link=link,
+            )
