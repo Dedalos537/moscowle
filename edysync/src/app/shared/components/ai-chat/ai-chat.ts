@@ -303,7 +303,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
     fetch(`${apiUrl}/mcp/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
+      },
       body: JSON.stringify({
         message: msg,
         mode,
