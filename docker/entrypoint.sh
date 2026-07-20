@@ -35,12 +35,10 @@ echo "Checking if seed is needed..."
 python -c "
 import os
 from app import create_app
-from app.extensions import db
-from flask_bcrypt import Bcrypt
+from app.extensions import db, bcrypt
 
 app = create_app()
-bcrypt = Bcrypt(app)
-with app.app.context():
+with app.app_context():
     from app.models import User
     admin_email = os.environ.get('ADMIN_EMAIL', 'diegocenteno537@gmail.com')
     admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
