@@ -586,7 +586,31 @@ def create_app(config_class=None):
             app.logger.warning(f'ITIL column migration (non-fatal): {e}')
             db.session.rollback()
 
-        db.session.remove()
+        try:
+            from sqlalchemy import text
+
+            result = db.session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'sex'"
+                )
+            )
+            if result.scalar() == 0:
+                app.logger.info('Adding patient detail columns to user table...')
+                for col_def in [
+                    'ALTER TABLE user ADD COLUMN sex VARCHAR(20) NULL',
+                    'ALTER TABLE user ADD COLUMN preliminary_diagnosis TEXT NULL',
+                    'ALTER TABLE user ADD COLUMN guardian_type VARCHAR(50) NULL',
+                ]:
+                    db.session.execute(text(col_def))
+                db.session.commit()
+                app.logger.info('Patient detail columns added successfully')
+            else:
+                app.logger.info('Patient detail columns already exist')
+        except Exception as e:
+            app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
+            db.session.rollback()
+
+    db.session.remove()
 
     _blueprints = [
         ('auth', 'app.routes.auth', 'auth_bp'),

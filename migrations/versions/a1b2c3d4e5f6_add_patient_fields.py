@@ -1,16 +1,15 @@
 """Add sex, preliminary_diagnosis, guardian_type to User
 
-Revision ID: a1b2c3d4e5f6
-Revises: bba7eaa6929c
+Revision ID: e5f6a7b8c9d0
+Revises: d4e5f6a7b8c9
 Create Date: 2026-07-20
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
-
-revision = 'a1b2c3d4e5f6'
-down_revision = 'bba7eaa6929c'
+revision = 'e5f6a7b8c9d0'
+down_revision = 'd4e5f6a7b8c9'
 branch_labels = None
 depends_on = None
 
