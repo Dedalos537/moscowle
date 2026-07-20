@@ -199,6 +199,81 @@ def api_admin_get_user(user_id):
     return jsonify({'success': True, 'user': _serialize_user(u)})
 
 
+@api_bp.route('/admin/patient/<int:patient_id>/detail')
+@login_required
+def api_admin_patient_detail(patient_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+
+    patient = User.query.get(patient_id)
+    if not patient or patient.role != 'jugador':
+        return jsonify({'success': False, 'message': 'Paciente no encontrado'}), 404
+
+    recent_sessions = (
+        Appointment.query.filter_by(patient_id=patient_id)
+        .order_by(Appointment.start_time.desc()).limit(20).all()
+    )
+
+    sessions_data = []
+    for s in recent_sessions:
+        sessions_data.append({
+            'id': s.id,
+            'title': s.title,
+            'start_time': s.start_time.isoformat() if s.start_time else None,
+            'end_time': s.end_time.isoformat() if s.end_time else None,
+            'status': s.status,
+            'attendance': getattr(s, 'attendance', None),
+            'audit_score': getattr(s, 'audit_score', None),
+            'therapist_name': s.therapist.username if s.therapist else None,
+        })
+
+    yape_name = None
+    try:
+        from app.models.payment import YapeTransaction
+        latest_yape = (
+            YapeTransaction.query
+            .filter(YapeTransaction.is_active == True)
+            .order_by(YapeTransaction.transaction_date.desc())
+            .first()
+        )
+        if latest_yape and latest_yape.sender_name:
+            yape_name = latest_yape.sender_name
+    except Exception:
+        pass
+
+    age = None
+    if patient.date_of_birth:
+        from datetime import date
+        today = date.today()
+        age = today.year - patient.date_of_birth.year - (
+            (today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day)
+        )
+
+    return jsonify({
+        'success': True,
+        'patient': {
+            'id': patient.id,
+            'username': patient.username,
+            'email': patient.email,
+            'phone': patient.phone,
+            'document_number': patient.document_number,
+            'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
+            'age': age,
+            'sex': patient.sex,
+            'guardian_name': patient.guardian_name,
+            'guardian_type': patient.guardian_type,
+            'guardian_dni': patient.guardian_dni,
+            'guardian_contact': patient.guardian_contact,
+            'therapy_goals': patient.therapy_goals,
+            'preliminary_diagnosis': patient.preliminary_diagnosis,
+            'notes': patient.notes,
+            'yape_name': yape_name,
+            'is_active': patient.is_active,
+        },
+        'recent_sessions': sessions_data,
+    })
+
+
 @api_bp.route('/admin/update-user', methods=['POST'])
 @login_required
 def api_admin_update_user():

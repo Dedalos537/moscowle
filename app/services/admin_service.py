@@ -296,6 +296,29 @@ class AdminService:
         if 'is_active' in data:
             user.is_active = bool(data['is_active'])
 
+        if 'sex' in data:
+            user.sex = data['sex']
+        if 'preliminary_diagnosis' in data:
+            user.preliminary_diagnosis = data['preliminary_diagnosis']
+        if 'guardian_type' in data:
+            user.guardian_type = data['guardian_type']
+        if 'guardian_name' in data:
+            user.guardian_name = data['guardian_name']
+        if 'guardian_dni' in data:
+            user.guardian_dni = data['guardian_dni']
+        if 'guardian_contact' in data:
+            user.guardian_contact = data['guardian_contact']
+        if 'date_of_birth' in data and data['date_of_birth']:
+            try:
+                from datetime import datetime
+                user.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+            except Exception:
+                pass
+        if 'notes' in data:
+            user.notes = data['notes']
+        if 'therapy_goals' in data:
+            user.therapy_goals = data['therapy_goals']
+
         if 'sede_id' in data and user.role == 'jugador':
             try:
                 sid = int(data['sede_id']) if data['sede_id'] else 0

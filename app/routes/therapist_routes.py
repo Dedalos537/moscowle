@@ -1028,6 +1028,30 @@ def api_patient_detail(patient_id):
             }
         )
 
+    # Get yape sender name from most recent YapeTransaction for this patient
+    yape_name = None
+    try:
+        from app.models.payment import YapeTransaction
+        latest_yape = (
+            YapeTransaction.query
+            .filter(YapeTransaction.is_active == True)
+            .order_by(YapeTransaction.transaction_date.desc())
+            .first()
+        )
+        if latest_yape and latest_yape.sender_name:
+            yape_name = latest_yape.sender_name
+    except Exception:
+        pass
+
+    # Compute age from date_of_birth
+    age = None
+    if patient.date_of_birth:
+        from datetime import date
+        today = date.today()
+        age = today.year - patient.date_of_birth.year - (
+            (today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day)
+        )
+
     return jsonify(
         {
             'success': True,
@@ -1038,11 +1062,16 @@ def api_patient_detail(patient_id):
                 'phone': patient.phone,
                 'document_number': patient.document_number,
                 'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
-                'guardian_name': getattr(patient, 'guardian_name', None),
-                'guardian_phone': getattr(patient, 'guardian_phone', None),
-                'therapy_goals': getattr(patient, 'therapy_goals', None),
-                'preliminary_diagnosis': getattr(patient, 'preliminary_diagnosis', None),
-                'medical_exam_url': getattr(patient, 'medical_exam_url', None),
+                'age': age,
+                'sex': patient.sex,
+                'guardian_name': patient.guardian_name,
+                'guardian_type': patient.guardian_type,
+                'guardian_dni': patient.guardian_dni,
+                'guardian_contact': patient.guardian_contact,
+                'therapy_goals': patient.therapy_goals,
+                'preliminary_diagnosis': patient.preliminary_diagnosis,
+                'notes': patient.notes,
+                'yape_name': yape_name,
                 'is_active': patient.is_active,
             },
             'recent_sessions': sessions_data,
@@ -1073,8 +1102,16 @@ def update_patient(patient_id):
             pass
     if 'guardian_name' in data:
         patient.guardian_name = sanitize_text(data['guardian_name'], 200)
+    if 'guardian_type' in data:
+        patient.guardian_type = sanitize_text(data['guardian_type'], 50)
+    if 'guardian_dni' in data:
+        patient.guardian_dni = sanitize_text(data['guardian_dni'], 15)
     if 'guardian_contact' in data:
         patient.guardian_contact = sanitize_text(data['guardian_contact'], 200)
+    if 'sex' in data:
+        patient.sex = sanitize_text(data['sex'], 20)
+    if 'preliminary_diagnosis' in data:
+        patient.preliminary_diagnosis = sanitize_text(data['preliminary_diagnosis'], 2000)
     if 'therapy_goals' in data:
         patient.therapy_goals = sanitize_text(data['therapy_goals'], 2000)
     if 'notes' in data:
