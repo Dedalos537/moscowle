@@ -475,9 +475,6 @@ def create_app(config_class=None):
     from app.routes.admin import admin_bp
 
     csrf.exempt(admin_bp)
-    from app.routes.llama_routes import llama_bp
-
-    csrf.exempt(llama_bp)
 
     from app.routes.mcp_routes import mcp_bp
 
@@ -495,7 +492,6 @@ def create_app(config_class=None):
             r'/api/*': {'origins': cors_origins},
             r'/admin/*': {'origins': cors_origins},
             r'/therapist/*': {'origins': cors_origins},
-            r'/llama/*': {'origins': cors_origins},
             r'/mcp/*': {'origins': cors_origins},
             r'/uploads/*': {'origins': cors_origins},
         },
@@ -627,7 +623,6 @@ def create_app(config_class=None):
         ('admin', 'app.routes.admin', 'admin_bp'),
         ('yape', 'app.routes.yape_routes', 'yape_bp'),
         ('chat', 'app.routes.chat_routes', 'chat_bp'),
-        ('llama', 'app.routes.llama_routes', 'llama_bp'),
         ('analytics', 'app.routes.analytics_routes', 'analytics_bp'),
         ('health', 'app.routes.health_routes', 'health_bp'),
         ('public', 'app.routes.public_routes', 'public_bp'),

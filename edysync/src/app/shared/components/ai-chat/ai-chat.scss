@@ -601,3 +601,58 @@
     max-height: 70vh;
   }
 }
+
+.tool-calls {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-call {
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-surface-container);
+  font-size: 0.72rem;
+}
+
+.tool-call--error {
+  border-color: var(--color-error);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tool-call-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tool-icon {
+  color: var(--color-primary);
+  font-size: 0.65rem;
+}
+
+.tool-name {
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-on-surface);
+}
+
+.tool-call-result pre {
+  margin: 0;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--color-on-surface-variant);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tool-pending {
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  opacity: 0.6;
+}

@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, ViewChild, HostBinding, HostListener, AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
+import {
+  Component, ElementRef, ViewChild, HostBinding, HostListener,
+  AfterViewChecked, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { Subscription, firstValueFrom } from 'rxjs';
-import { LlamaService, ChatMessage, ActionChip } from '../../../core/services/llama.service';
+import { Subscription } from 'rxjs';
 import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
 import { FloatingUiService } from '../../../core/services/floating-ui.service';
@@ -12,37 +14,62 @@ import DOMPurify from 'dompurify';
 
 const ALLOWED_REDIRECT_PREFIXES = ['/', '/admin/', '/therapist/', '/patient/', '/auth/'];
 
+interface ChatMsg {
+  id?: number;
+  role: 'user' | 'assistant';
+  content: string;
+  intent?: string;
+  error?: boolean;
+  filePreview?: string;
+  toolCalls?: ToolCallResult[];
+}
+
+interface ToolCallResult {
+  name: string;
+  args: Record<string, unknown>;
+  result: string;
+  success: boolean;
+}
+
+interface ActionChip {
+  id: string;
+  type: string;
+  label: string;
+  icon: string;
+  target?: string;
+}
+
 const FA_ICON_MAP: Record<string, string> = {
   'chart-line': 'chart-line',
-  'users': 'users',
-  'calendar': 'calendar',
+  users: 'users',
+  calendar: 'calendar',
   'chart-bar': 'chart-bar',
   'dollar-sign': 'dollar-sign',
-  'receipt': 'receipt',
-  'mobile': 'mobile-alt',
+  receipt: 'receipt',
+  mobile: 'mobile-alt',
   'question-circle': 'question-circle',
-  'history': 'history',
+  history: 'history',
   'user-plus': 'user-plus',
   'user-doctor': 'user-md',
-  'user': 'user',
-  'building': 'building',
+  user: 'user',
+  building: 'building',
   'calendar-plus': 'calendar-plus',
   'file-alt': 'file-alt',
-  'download': 'download',
+  download: 'download',
   'paper-plane': 'paper-plane',
-  'gamepad': 'gamepad',
+  gamepad: 'gamepad',
   'exclamation-triangle': 'exclamation-triangle',
-  'upload': 'upload',
-  'key': 'key',
-  'check': 'check',
-  'times': 'times',
-  'spinner': 'spinner',
-  'search': 'search',
-  'plus': 'plus',
-  'trash': 'trash',
-  'edit': 'edit',
-  'envelope': 'envelope',
-  'ban': 'ban',
+  upload: 'upload',
+  key: 'key',
+  check: 'check',
+  times: 'times',
+  spinner: 'spinner',
+  search: 'search',
+  plus: 'plus',
+  trash: 'trash',
+  edit: 'edit',
+  envelope: 'envelope',
+  ban: 'ban',
   'toggle-on': 'toggle-on',
 };
 
@@ -60,10 +87,11 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   private wizardService = inject(WizardService);
   private floatingUi = inject(FloatingUiService);
+  private abortCtrl: AbortController | null = null;
 
   isOpen = false;
   fullScreen = false;
-  messages: ChatMessage[] = [];
+  messages: ChatMsg[] = [];
   inputMessage = '';
   loading = false;
   hasUnread = false;
@@ -74,14 +102,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   suggestions: string[] = [];
   actionChips: ActionChip[] = [];
   currentPage = 'dashboard';
-  welcomeMessage = '¡Hola! Soy Llama';
+  welcomeMessage = '¡Hola! Soy tu asistente IA';
 
   private pendingFilePreview: string | null = null;
-
   private subs = new Subscription();
 
   constructor(
-    private llama: LlamaService,
     private admin: AdminService,
     private cdr: ChangeDetectorRef,
   ) {
@@ -99,7 +125,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   sanitize(html: string): string {
-    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p'], ALLOWED_ATTR: ['href'] });
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p'],
+      ALLOWED_ATTR: ['href'],
+    });
   }
 
   getIcon(iconName: string): IconProp {
@@ -113,9 +142,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.abortCtrl?.abort();
   }
 
-  @HostBinding('class.fullscreen') get fullScreenClass() { return this.fullScreen; }
+  @HostBinding('class.fullscreen') get fullScreenClass() {
+    return this.fullScreen;
+  }
   @HostBinding('class.floating-ui') readonly floatingUiClass = true;
   @HostBinding('class.floating-ui--hidden') get floatingHidden() {
     return this.floatingUi.hidden();
@@ -160,38 +192,30 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     if (url.includes('/finanzas')) return 'finanzas';
     if (url.includes('/payments')) return 'payments';
     if (url.includes('/users')) return 'users';
-    if (url.includes('/sedes')) return 'sedes';
     if (url.includes('/sessions')) return 'sessions';
-    if (url.includes('/expenses')) return 'expenses';
     if (url.includes('/reports')) return 'reports';
-    if (url.includes('/messages')) return 'messages';
     if (url.includes('/games')) return 'games';
-    if (url.includes('/logs')) return 'logs';
-    if (url.includes('/profile')) return 'profile';
-    if (url.includes('/yape-import')) return 'yape-import';
-    if (url.includes('/api-tokens')) return 'api-tokens';
-    if (url.includes('/ai')) return 'ai';
-    if (url.includes('/csp-reports')) return 'csp-reports';
     return 'dashboard';
+  }
+
+  private getApiUrl(): string {
+    const win = window as Record<string, unknown>;
+    const env = (win['__env'] ?? (win as { environment?: Record<string, unknown> }).environment) as
+      | Record<string, unknown>
+      | undefined;
+    return (env?.['apiBaseUrl'] as string) || '';
   }
 
   private loadInitialContext() {
     this.currentPage = this.detectCurrentPage();
-    const mode = this.currentMode;
-    this.subs.add(this.llama.sendAgentMessage('context_init', mode).subscribe({
-      next: (res) => {
-        this.suggestions = res.suggestions || [];
-        this.actionChips = res.action_chips || [];
-        if (res.response) {
-          this.welcomeMessage = res.response;
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.suggestions = ['Ver deudores', 'Registrar pago', 'Crear usuario', 'Ir a finanzas', 'Ver reporte'];
-        this.cdr.markForCheck();
-      },
-    }));
+    this.suggestions = [
+      '¿Cuántas sesiones hay hoy?',
+      'Ver incidencias abiertas',
+      'Crear sesión para un paciente',
+      'Ver reporte semanal',
+    ];
+    this.welcomeMessage = '¡Hola! Soy tu asistente IA';
+    this.cdr.markForCheck();
   }
 
   sendSuggestion(text: string) {
@@ -213,11 +237,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
     switch (chip.type) {
       case 'navigation':
-        if (chip.target && ALLOWED_REDIRECT_PREFIXES.some(p => chip.target.startsWith(p))) {
-          setTimeout(() => { window.location.href = chip.target; }, 300);
+        if (chip.target && ALLOWED_REDIRECT_PREFIXES.some((p) => chip.target!.startsWith(p))) {
+          setTimeout(() => {
+            window.location.href = chip.target!;
+          }, 300);
         }
         break;
-
       case 'wizard':
         this.isOpen = false;
         this.cdr.markForCheck();
@@ -230,31 +255,19 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           }, 1500);
         }, 400);
         break;
-
-      case 'scroll':
-        const el = document.querySelector(chip.target);
+      case 'scroll': {
+        const el = document.querySelector(chip.target!);
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         break;
-
+      }
       case 'action':
-        if (chip.target === 'generateReport') {
-          this.inputMessage = 'Generar reporte completo';
-          this.sendMessage();
-        } else if (chip.target === 'exportCSV') {
-          const btn = document.querySelector('button[exportCSV]') as HTMLButtonElement;
-          if (btn) btn.click();
-          this.pushAssistant('Exportación CSV iniciada.');
-        } else {
-          this.inputMessage = chip.label || chip.target;
-          this.sendMessage();
-        }
+        this.inputMessage = chip.label || chip.target || '';
+        if (this.inputMessage) this.sendMessage();
         break;
-
       case 'confirm':
         this.inputMessage = chip.label || 'Sí, confirmar';
         this.sendMessage();
         break;
-
       case 'cancel':
         this.messages.push({
           role: 'assistant',
@@ -262,11 +275,6 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         });
         this.cdr.markForCheck();
         break;
-
-      case 'toggleUser':
-        this.execToggleUser(chip);
-        break;
-
       default:
         this.inputMessage = chip.label || chip.target || '';
         if (this.inputMessage) this.sendMessage();
@@ -275,30 +283,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  private pushAssistant(content: string) {
-    this.messages.push({ role: 'assistant', content });
-    this.cdr.markForCheck();
-  }
-
-  private async execToggleUser(chip: ActionChip) {
-    const userId = parseInt(chip.target, 10);
-    if (!userId || isNaN(userId)) return;
-    this.processingAction = true;
-    this.showFeedback('info', 'Cambiando estado del usuario...');
-    try {
-      const res: any = await firstValueFrom(this.admin.toggleUserStatus(userId));
-      if (res?.success) {
-        this.showFeedback('success', res.message || 'Estado actualizado');
-        this.pushAssistant(`✅ Usuario actualizado: <b>${res.message || 'Estado cambiado correctamente'}</b>`);
-      } else {
-        this.showFeedback('error', res?.message || 'Error al cambiar estado');
-        this.pushAssistant(`❌ Error: ${res?.message || 'No se pudo cambiar el estado'}`);
-      }
-    } catch {
-      this.showFeedback('error', 'Error de conexión');
-      this.pushAssistant('❌ Error de conexión con el servidor');
-    }
-    this.processingAction = false;
+  private pushAssistant(content: string, toolCalls?: ToolCallResult[]) {
+    this.messages.push({ role: 'assistant', content, toolCalls });
     this.cdr.markForCheck();
   }
 
@@ -306,109 +292,143 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     const msg = this.inputMessage.trim();
     if (!msg || this.loading) return;
 
-    const userMsg: ChatMessage = { role: 'user', content: msg };
-    if (this.pendingFilePreview) {
-      userMsg.filePreview = this.pendingFilePreview;
-      this.pendingFilePreview = null;
-    }
-    this.messages.push(userMsg);
+    this.messages.push({ role: 'user', content: msg });
     this.inputMessage = '';
     this.loading = true;
     this.error = null;
     this.cdr.markForCheck();
 
+    this.abortCtrl?.abort();
+    this.abortCtrl = new AbortController();
+
+    const apiUrl = this.getApiUrl();
     const mode = this.currentMode;
-    const history = this.messages.slice(-10).map(m => ({ role: m.role, content: m.content }));
-    this.subs.add(this.llama.sendAgentMessage(msg, mode, history).subscribe({
-      next: (res) => {
+
+    fetch(`${apiUrl}/mcp/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        mode,
+        history: this.messages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+      }),
+      signal: this.abortCtrl.signal,
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const reader = resp.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let assistantText = '';
+        let toolCalls: ToolCallResult[] = [];
+
+        const processChunk = (): void => {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              this.loading = false;
+              if (assistantText) {
+                this.pushAssistant(assistantText, toolCalls.length > 0 ? toolCalls : undefined);
+              }
+              this.cdr.markForCheck();
+              return;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === 'chunk') {
+                  assistantText += event.content;
+                  this.updateLastAssistant(assistantText, toolCalls);
+                } else if (event.type === 'tool_start') {
+                  toolCalls.push({
+                    name: event.tool,
+                    args: event.args || {},
+                    result: '',
+                    success: false,
+                  });
+                  this.updateLastAssistant(assistantText, toolCalls);
+                } else if (event.type === 'tool_result') {
+                  if (toolCalls.length > 0) {
+                    const tc = toolCalls[toolCalls.length - 1];
+                    tc.result = event.result || '';
+                    tc.success = event.success ?? true;
+                  }
+                  this.updateLastAssistant(assistantText, toolCalls);
+                } else if (event.type === 'done') {
+                  this.loading = false;
+                  if (assistantText) {
+                    this.pushAssistant(assistantText, toolCalls.length > 0 ? toolCalls : undefined);
+                    assistantText = '';
+                    toolCalls = [];
+                  }
+                } else if (event.type === 'error') {
+                  this.loading = false;
+                  this.error = event.error;
+                  this.pushAssistant('Error: ' + (event.error || 'Error desconocido'));
+                }
+              } catch {
+                // skip malformed lines
+              }
+            }
+            this.cdr.markForCheck();
+            processChunk();
+          });
+        };
+
+        processChunk();
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
         this.loading = false;
-        this.messages.push({
-          role: 'assistant',
-          content: res.response,
-          intent: res.intent,
-          action_chips: res.action_chips,
-        });
-        this.suggestions = res.suggestions || this.suggestions;
-        this.actionChips = res.action_chips || this.actionChips;
+        this.error = 'Error de conexión';
+        this.pushAssistant('No se pudo conectar con el servidor');
         this.cdr.markForCheck();
-      },
-      error: () => {
-        this.loading = false;
-        this.error = 'Error de conexion con el servidor';
-        this.messages.push({
-          role: 'assistant',
-          content: 'No se pudo conectar con el servidor',
-          error: true,
-        });
-        this.cdr.markForCheck();
-      },
-    }));
+      });
+  }
+
+  private updateLastAssistant(content: string, toolCalls: ToolCallResult[]) {
+    const last = this.messages[this.messages.length - 1];
+    if (last && last.role === 'assistant') {
+      last.content = content;
+      last.toolCalls = toolCalls.length > 0 ? [...toolCalls] : undefined;
+    } else {
+      this.messages.push({
+        role: 'assistant',
+        content,
+        toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined,
+      });
+    }
+    this.cdr.markForCheck();
   }
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
-    const isImage = file.type.startsWith('image/');
 
-    if (!isImage) {
-      if (file.type.startsWith('text/') || file.type.includes('json') || file.type.includes('csv')) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          this.inputMessage = reader.result as string;
-          this.cdr.markForCheck();
-          this.sendMessage();
-        };
-        reader.readAsText(file);
-      } else {
-        this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
-        this.cdr.markForCheck();
-        this.sendMessage();
-      }
-      input.value = '';
-      return;
-    }
-
-    // Image file: read preview, upload for OCR, then send enriched message to agent
     const reader = new FileReader();
     reader.onload = () => {
-      this.pendingFilePreview = reader.result as string;
       this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
-      this.loading = true;
       this.cdr.markForCheck();
-
-      this.llama.uploadVoucher(file).subscribe({
-        next: (res) => {
-          this.loading = false;
-          const amount = res.extracted?.amount;
-          const payer = res.extracted?.payer || '';
-          const ocrText = res.ocr_text || '';
-          let enrichedMsg = `[Voucher: ${file.name}]\n\n--- Datos extraídos del voucher ---\n`;
-          if (amount) enrichedMsg += `- Monto: S/ ${amount.toFixed(2)}\n`;
-          if (payer) enrichedMsg += `- Pagador: ${payer}\n`;
-          enrichedMsg += `- Texto OCR: ${ocrText.slice(0, 500)}\n`;
-          enrichedMsg += `\nUsa estos datos para registrar el pago. Pregunta al usuario si falta información. Luego ejecuta register_payment con todos los datos confirmados.`;
-
-          this.inputMessage = enrichedMsg;
-          this.cdr.markForCheck();
-          this.sendMessage();
-        },
-        error: (err) => {
-          this.loading = false;
-          this.cdr.markForCheck();
-          this.sendMessage();
-        },
-      });
+      this.sendMessage();
     };
-    reader.readAsDataURL(file);
+    reader.readAsText(file);
     input.value = '';
   }
 
   private scrollToBottom() {
     try {
       if (this.scrollContainer) {
-        this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
+        const el = this.scrollContainer.nativeElement;
+        el.scrollTop = el.scrollHeight;
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 }

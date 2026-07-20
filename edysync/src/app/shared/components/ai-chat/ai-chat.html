@@ -1,4 +1,4 @@
-<div class="chat-toggle" (click)="togglePanel()" [title]="isOpen ? 'Cerrar' : 'Abrir Llama AI'">
+<div class="chat-toggle" (click)="togglePanel()" [title]="isOpen ? 'Cerrar' : 'Abrir asistente IA'">
   @if (hasUnread) {
     <span class="notif-dot"></span>
   }
@@ -36,7 +36,7 @@
           }
         </div>
         <div>
-          <h3>{{ fullScreen ? 'Antigravity — Llama' : 'Llama Copilot' }}<span class="mode-badge" [ngClass]="fullScreen ? 'mode-badge--grande' : 'mode-badge--chiquito'">{{ fullScreen ? 'Admin' : 'Consulta' }}</span></h3>
+          <h3>{{ fullScreen ? 'Asistente IA — Centro Juan Pablo II' : 'Asistente IA' }}<span class="mode-badge" [ngClass]="fullScreen ? 'mode-badge--grande' : 'mode-badge--chiquito'">{{ fullScreen ? 'Admin' : 'Consulta' }}</span></h3>
           <p>{{ fullScreen ? 'Asistente total del sistema' : 'Asistente IA' }}</p>
         </div>
       </div>
@@ -79,11 +79,8 @@
         </div>
       }
 
-      @for (msg of messages; track msg.id || $index) {
+      @for (msg of messages; track $index) {
         <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
-          @if (msg.intent) {
-            <span class="intent-badge">{{ msg.intent }}</span>
-          }
           @if (msg.error) {
             <div class="error-msg">
               <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error"></fa-icon>
@@ -95,14 +92,22 @@
             }
             <div [innerHTML]="sanitize(msg.content)"></div>
           }
-          @if (msg.action_chips && msg.action_chips.length > 0 && msg.role === 'assistant') {
-            <div class="action-chips-row">
-              @for (chip of msg.action_chips; track chip.id) {
-                <button class="action-chip" (click)="handleActionChip(chip)" [title]="chip.label"
-                  [disabled]="processingAction">
-                  <fa-icon [icon]="getIcon(chip.icon)" class="chip-icon"></fa-icon>
-                  <span>{{ chip.label }}</span>
-                </button>
+          @if (msg.toolCalls && msg.toolCalls.length > 0) {
+            <div class="tool-calls">
+              @for (tc of msg.toolCalls; track tc.name) {
+                <div class="tool-call" [class.tool-call--error]="!tc.success">
+                  <div class="tool-call-header">
+                    <fa-icon [icon]="['fas', 'wrench']" class="tool-icon"></fa-icon>
+                    <span class="tool-name">{{ tc.name }}</span>
+                  </div>
+                  <div class="tool-call-result">
+                    @if (tc.result) {
+                      <pre>{{ tc.result }}</pre>
+                    } @else {
+                      <span class="tool-pending">Ejecutando...</span>
+                    }
+                  </div>
+                </div>
               }
             </div>
           }

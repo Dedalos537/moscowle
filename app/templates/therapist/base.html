@@ -1408,7 +1408,7 @@ async function sendGlobalChatMessage(forcedMsg = null) {
     appendBotMessage("", true);
 
     try {
-        const response = await fetch('/llama/chat/send', {
+        const response = await fetch('/mcp/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1416,28 +1416,14 @@ async function sendGlobalChatMessage(forcedMsg = null) {
             },
             body: JSON.stringify({ 
                 message: msg,
-                page: window.location.pathname
+                mode: 'chiquito'
             })
         });
         const data = await response.json();
         removeLoader();
         
         if (data.success) {
-            // Mostrar respuesta inicial
-            appendBotMessage(data.response, false, data.intent === 'error' ? 'error' : 'success');
-            
-            // Mostrar tutorial steps si existen
-            if (data.tutorial_steps && data.tutorial_steps.length > 0) {
-                await showTutorialSteps(data.tutorial_steps);
-            }
-            
-            // Redirect si es necesario
-            if (data.redirect) {
-                setTimeout(() => {
-                    appendBotMessage(` Navegando a ${data.redirect}...`, false, 'info');
-                    setTimeout(() => { window.location.href = data.redirect; }, 800);
-                }, 1000);
-            }
+            appendBotMessage(data.response, false, 'success');
         } else {
             appendBotMessage(data.error || "Error procesando tu solicitud", false, 'error');
         }
@@ -1463,63 +1449,35 @@ async function showTutorialSteps(steps) {
 
 async function uploadVoucherChat() {
     const fileInput = document.getElementById('chatFileGlobal');
-    const container = document.getElementById('chatMessages');
     if (!fileInput.files[0]) return;
 
-    appendBotMessage("Analizando voucher...", true);
+    const file = fileInput.files[0];
+    appendBotMessage(`Analizando archivo: ${file.name}...`, true);
     
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    try {
-        const response = await fetch('/llama/chat/upload-voucher', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-            },
-            body: formData
-        });
-        const data = await response.json();
-        removeLoader();
-        
-        if (data.success) {
-            appendBotMessage(data.message, false, 'success');
-            
-            // Si detectó cantidad, mostrar formulario de confirmación
-            if (data.extracted && data.extracted.amount) {
-                const actions = document.getElementById('chatActionContainer');
-                actions.classList.remove('hidden');
-                
-                const names = data.extracted.possible_names || [];
-                let nameOptions = '<option value="">Selecciona paciente...</option>';
-                names.forEach(name => {
-                    nameOptions += `<option value="${name}">${name}</option>`;
-                });
-                
-                actions.innerHTML = `
-                    <div class="space-y-2 w-full">
-                        <div class="text-[11px] font-bold text-gray-500 px-1">Confirma los datos:</div>
-                        <select id="voucherPatient" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-[12px] font-bold">
-                            ${nameOptions}
-                        </select>
-                        <button onclick="confirmVoucherPayment(${data.extracted.amount}, '${data.filepath}')" class="w-full py-2 bg-green-500 text-white rounded-lg text-[11px] font-bold hover:bg-green-600 transition-all">
-                             Confirmar S/. ${data.extracted.amount.toFixed(2)}
-                        </button>
-                        <button onclick="clearChatActions()" class="w-full py-2 bg-gray-200 text-gray-700 rounded-lg text-[11px] font-bold hover:bg-gray-300">
-                            Cancelar
-                        </button>
-                    </div>
-                `;
-            }
-        } else {
-            appendBotMessage(data.message || "No pude leer el voucher", false, 'warning');
+    const reader = new FileReader();
+    reader.onload = async function() {
+        try {
+            const response = await fetch('/mcp/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                },
+                body: JSON.stringify({ 
+                    message: `[Archivo adjunto: ${file.name}]\n\nPor favor analiza este archivo y extrae la información relevante.`,
+                    mode: 'chiquito'
+                })
+            });
+            const data = await response.json();
+            removeLoader();
+            appendBotMessage(data.response || "No pude procesar el archivo", false, data.success ? 'success' : 'warning');
+        } catch (e) {
+            removeLoader();
+            appendBotMessage("Error al procesar el archivo", false, 'error');
         }
-        
-        fileInput.value = '';
-    } catch (e) {
-        removeLoader();
-        appendBotMessage("Error al subir el voucher", false, 'error');
-    }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
 }
 
 async function confirmVoucherPayment(amount, filepath) {
@@ -1534,16 +1492,15 @@ async function confirmVoucherPayment(amount, filepath) {
     appendBotMessage("Confirmando pago...", true);
     
     try {
-        const response = await fetch('/llama/chat/confirm-payment', {
+        const response = await fetch('/mcp/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
             },
             body: JSON.stringify({
-                patient_name: patientName,
-                amount: amount,
-                filepath: filepath
+                message: `Registra un pago de S/. ${amount.toFixed(2)} para el paciente "${patientName}".`,
+                mode: 'grande'
             })
         });
         
@@ -1551,12 +1508,11 @@ async function confirmVoucherPayment(amount, filepath) {
         removeLoader();
         
         if (data.success) {
-            appendBotMessage(data.message, false, 'success');
+            appendBotMessage(data.response || "Pago registrado", false, 'success');
             clearChatActions();
-            
-            // Redirect después de confirmar
-            if (data.redirectUrl) {
-                setTimeout(() => { window.location.href = data.redirectUrl; }, 1500);
+        } else {
+            appendBotMessage(data.error || "Error al registrar el pago", false, 'error');
+        }
             }
         } else {
             appendBotMessage(data.error || "Error confirmando pago", false, 'error');

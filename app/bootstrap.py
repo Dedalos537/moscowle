@@ -282,7 +282,6 @@ def init_extensions(app: Flask) -> None:
         resources={
             r'/api/*': {'origins': cors_origins},
             r'/admin/*': {'origins': cors_origins},
-            r'/llama/*': {'origins': cors_origins},
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
@@ -366,7 +365,6 @@ def register_blueprints(app: Flask) -> None:
         ('admin', 'app.routes.admin', 'admin_bp'),
         ('yape', 'app.routes.yape_routes', 'yape_bp'),
         ('chat', 'app.routes.chat_routes', 'chat_bp'),
-        ('llama', 'app.routes.llama_routes', 'llama_bp'),
         ('analytics', 'app.routes.analytics_routes', 'analytics_bp'),
         ('health', 'app.routes.health_routes', 'health_bp'),
         ('public', 'app.routes.public_routes', 'public_bp'),
