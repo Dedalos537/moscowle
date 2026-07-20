@@ -53,19 +53,24 @@ export class Select implements ControlValueAccessor, OnInit, OnDestroy {
 
   ngOnInit() {
     this.scrollHandler = () => {
-      if (this.isOpen) {
-        this.close();
-        this.cdr.markForCheck();
+      if (this.isOpen && this.elementRef) {
+        const dropdown = this.elementRef.nativeElement.querySelector('.select__dropdown');
+        if (dropdown) {
+          const rect = dropdown.getBoundingClientRect();
+          const inView = rect.top < window.innerHeight && rect.bottom > 0;
+          if (!inView) {
+            this.close();
+            this.cdr.markForCheck();
+          }
+        }
       }
     };
     window.addEventListener('scroll', this.scrollHandler, true);
-    window.addEventListener('resize', this.scrollHandler);
   }
 
   ngOnDestroy() {
     if (this.scrollHandler) {
       window.removeEventListener('scroll', this.scrollHandler, true);
-      window.removeEventListener('resize', this.scrollHandler);
     }
   }
 

@@ -81,7 +81,7 @@
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Paciente <span class="text-error">*</span></label>
         <div class="relative">
-          <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" class="text-sm"></app-select>
+          <app-select [(ngModel)]="createForm.patient_id" [options]="patientCreateOptions" [disabled]="!createForm.therapist_id" [searchable]="true" class="text-sm"></app-select>
           @if (patientsLoading) {
             <app-spinner size="sm" colorClass="text-on-surface-variant"></app-spinner>
           }
