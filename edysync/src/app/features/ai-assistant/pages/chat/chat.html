@@ -1,16 +1,36 @@
 <div class="flex flex-col h-[calc(100vh-12rem)] bg-surface-container-lowest rounded-lg shadow-soft border border-border/20 overflow-hidden">
+  <!-- Header -->
   <div class="p-4 border-b border-border bg-primary/5">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
-        <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center">
+          <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon>
+        </div>
+        <div>
+          <p class="font-bold text-on-surface">Asistente IA</p>
+          <p class="text-xs text-on-surface-variant">
+            {{ mode === 'grande' ? 'Modo completo' : 'Solo lectura' }}
+            <span class="ml-1 opacity-50">({{ toolsCount }} herramientas)</span>
+          </p>
+        </div>
       </div>
-      <div>
-        <p class="font-bold text-on-surface">Asistente IA EduSync</p>
-        <p class="text-xs text-on-surface-variant">Copiloto inteligente para gestión terapéutica</p>
+      <div class="flex items-center gap-2">
+        <button (click)="toggleMode()"
+                class="px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-surface-container-low transition-colors"
+                [class.bg-primary-container/20]="mode === 'grande'"
+                [class.text-primary]="mode === 'grande'">
+          <fa-icon [icon]="['fas', mode === 'grande' ? 'expand' : 'compress']" class="mr-1"></fa-icon>
+          {{ mode === 'grande' ? 'Completo' : 'Lectura' }}
+        </button>
+        <button (click)="clearChat()"
+                class="px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-surface-container-low transition-colors text-on-surface-variant">
+          <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+        </button>
       </div>
     </div>
   </div>
 
+  <!-- Messages -->
   <div #chatContainer class="flex-1 overflow-y-auto p-4 space-y-4">
     @if (error) {
       <div class="flex flex-col items-center justify-center py-16 text-center" role="alert">
@@ -24,24 +44,70 @@
       @if (messages.length === 0 && !loading) {
         <div class="text-center py-12">
           <fa-icon [icon]="['fas', 'comment-dots']" class="text-4xl text-on-surface-variant/20 mb-3"></fa-icon>
-          <p class="text-sm text-on-surface-variant">Pregúntame sobre:</p>
+          <p class="text-sm text-on-surface-variant">Pregúntame sobre el sistema:</p>
           <div class="flex flex-wrap justify-center gap-2 mt-4">
-            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Registrar pagos</span>
-            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Reportes de sesiones</span>
-            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Análisis de deudores</span>
-            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">Optimizar agenda</span>
+            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-container" (click)="input = '¿Cuántos pacientes hay activos?'; sendMessage()">Pacientes activos</span>
+            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-container" (click)="input = 'Muéstrame las sesiones de hoy'; sendMessage()">Sesiones de hoy</span>
+            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-container" (click)="input = '¿Hay incidencias abiertas?'; sendMessage()">Incidencias abiertas</span>
+            <span class="px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant cursor-pointer hover:bg-surface-container" (click)="input = 'Resumen financiero del mes'; sendMessage()">Resumen financiero</span>
           </div>
         </div>
       }
 
-      @for (msg of messages; track msg.timestamp) {
-        <div class="flex" [class]="{'justify-end': msg.role === 'user', 'justify-start': msg.role === 'assistant'}">
-          <div class="max-w-[75%] p-3 rounded-lg text-sm"
-               [class]="msg.role === 'user' ? 'bg-primary text-white rounded-br-sm' : 'bg-surface-container-low text-on-surface rounded-bl-sm'">
-            <p class="whitespace-pre-wrap">{{ msg.content }}</p>
-            <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
+      @for (msg of messages; track msg.timestamp; let i = $index) {
+        <!-- User message -->
+        @if (msg.role === 'user') {
+          <div class="flex justify-end">
+            <div class="max-w-[75%] p-3 rounded-lg text-sm bg-primary text-white rounded-br-sm">
+              <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+              <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
+            </div>
           </div>
-        </div>
+        }
+
+        <!-- Tool call -->
+        @if (msg.role === 'tool_call') {
+          <div class="flex justify-start">
+            <div class="max-w-[85%] rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 overflow-hidden">
+              <button class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors"
+                      (click)="toggleToolCall(msg)">
+                <fa-icon [icon]="['fas', 'cog']" class="text-amber-600 text-xs animate-spin" [class.animate-spin]="!msg.toolResult"></fa-icon>
+                <span class="text-xs font-medium text-amber-800 dark:text-amber-200 flex-1">
+                  {{ msg.toolName }}
+                </span>
+                @if (msg.toolResult) {
+                  <fa-icon [icon]="['fas', msg.expanded ? 'chevron-up' : 'chevron-down']" class="text-amber-400 text-[10px]"></fa-icon>
+                }
+              </button>
+              @if (msg.expanded) {
+                <div class="px-3 pb-2 space-y-1.5 border-t border-amber-200/50 dark:border-amber-800/50">
+                  @if (msg.toolArgs && getObjectKeys(msg.toolArgs).length > 0) {
+                    <div>
+                      <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Parámetros:</p>
+                      <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto">{{ msg.toolArgs | json }}</pre>
+                    </div>
+                  }
+                  @if (msg.toolResult) {
+                    <div>
+                      <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mb-0.5">Resultado:</p>
+                      <pre class="text-[11px] text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-900/30 rounded p-1.5 overflow-x-auto max-h-40 overflow-y-auto">{{ msg.toolResult | json }}</pre>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Assistant message -->
+        @if (msg.role === 'assistant') {
+          <div class="flex justify-start">
+            <div class="max-w-[75%] p-3 rounded-lg text-sm bg-surface-container-low text-on-surface rounded-bl-sm">
+              <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+              <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
+            </div>
+          </div>
+        }
       }
 
       @if (loading) {
@@ -58,9 +124,10 @@
     }
   </div>
 
+  <!-- Input -->
   <div class="p-4 border-t border-border">
     <div class="flex gap-3">
-      <input [(ngModel)]="input" placeholder="Escribe tu consulta aquí..."
+      <input [(ngModel)]="input" placeholder="{{ mode === 'grande' ? 'Escribe tu consulta... (puedo ejecutar acciones)' : 'Pregunta sobre el sistema...' }}"
              class="flex-1 rounded-xl border border-border px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none"
              (keyup.enter)="sendMessage()" [disabled]="loading">
       <button (click)="sendMessage()" [disabled]="!input.trim() || loading"

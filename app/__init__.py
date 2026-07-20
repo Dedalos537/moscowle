@@ -478,6 +478,10 @@ def create_app(config_class=None):
     from app.routes.llama_routes import llama_bp
 
     csrf.exempt(llama_bp)
+
+    from app.routes.mcp_routes import mcp_bp
+
+    csrf.exempt(mcp_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
@@ -492,6 +496,7 @@ def create_app(config_class=None):
             r'/admin/*': {'origins': cors_origins},
             r'/therapist/*': {'origins': cors_origins},
             r'/llama/*': {'origins': cors_origins},
+            r'/mcp/*': {'origins': cors_origins},
             r'/uploads/*': {'origins': cors_origins},
         },
         supports_credentials=True,
@@ -629,6 +634,7 @@ def create_app(config_class=None):
         ('spa', 'app.routes.public_routes', 'spa_bp'),
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
         ('metrics', 'app.routes.metrics_routes', 'metrics_bp'),
+        ('mcp', 'app.routes.mcp_routes', 'mcp_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
