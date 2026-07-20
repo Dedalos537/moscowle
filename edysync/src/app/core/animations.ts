@@ -102,7 +102,6 @@ export const gridStagger = trigger('gridStagger', [
 
 export const routeAnimations = trigger('routeAnimations', [
   transition('* <=> *', [
-    style({ position: 'relative' }),
     query(':enter, :leave', [
       style({ position: 'absolute', width: '100%', top: 0, left: 0 })
     ], { optional: true }),
@@ -112,7 +111,7 @@ export const routeAnimations = trigger('routeAnimations', [
     ], { optional: true }),
     query(':enter', [
       style({ opacity: 0 }),
-      animate(`300ms ${EASE}`, style({ opacity: 1 }))
+      animate(`300ms ${EASE}`, style({ opacity: 1, position: 'static' }))
     ], { optional: true }),
   ])
 ]);
