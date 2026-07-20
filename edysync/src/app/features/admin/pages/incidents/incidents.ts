@@ -6,7 +6,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../../../core/services/header.service';
 import { IncidentService, Incident, IncidentDashboard } from '../../../../core/services/incident.service';
 import { Subscription } from 'rxjs';
-import { fadeInUp, cardEnter, listStagger } from '../../../../core/animations';
+import { cardEnter, listStagger } from '../../../../core/animations';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Alert } from '../../../../shared/components/alert/alert';
@@ -18,7 +18,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
   imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Button, Spinner, Alert, Modal],
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss',
-  animations: [fadeInUp, cardEnter, listStagger],
+  animations: [cardEnter, listStagger],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Incidents implements OnInit, OnDestroy {

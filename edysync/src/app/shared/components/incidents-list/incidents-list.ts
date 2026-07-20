@@ -6,7 +6,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { IncidentService, Incident } from '../../../core/services/incident.service';
 import { HeaderService } from '../../../core/services/header.service';
-import { fadeInUp, cardEnter } from '../../../core/animations';
+import { cardEnter } from '../../../core/animations';
 import { Spinner } from '../spinner/spinner';
 import { Alert } from '../alert/alert';
 
@@ -15,7 +15,7 @@ import { Alert } from '../alert/alert';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Alert],
   template: `
-    <div class="space-y-4 animate-fade-in-up" [@fadeInUp]>
+    <div class="space-y-4">
       @if (loading) {
         <app-spinner></app-spinner>
       } @else if (error) {
@@ -118,7 +118,7 @@ import { Alert } from '../alert/alert';
       }
     </div>
   `,
-  animations: [fadeInUp, cardEnter],
+  animations: [cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IncidentsList implements OnInit, OnDestroy {
