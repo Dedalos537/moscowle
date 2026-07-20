@@ -199,11 +199,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   private getApiUrl(): string {
-    const win = window as Record<string, unknown>;
-    const env = (win['__env'] ?? (win as { environment?: Record<string, unknown> }).environment) as
-      | Record<string, unknown>
-      | undefined;
-    return (env?.['apiBaseUrl'] as string) || '';
+    try {
+      const env = (window as unknown as { __env?: Record<string, unknown> }).__env;
+      return (env?.['apiBaseUrl'] as string) || '';
+    } catch {
+      return '';
+    }
   }
 
   private loadInitialContext() {
