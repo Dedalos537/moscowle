@@ -18,15 +18,16 @@ import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Input } from '../../../../shared/components/input/input';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
+import { Incidents } from '../incidents/incidents';
 
 Chart.register(...registerables);
 
-type TabId = 'railway' | 'logs' | 'csp' | 'tokens';
+type TabId = 'railway' | 'logs' | 'csp' | 'tokens' | 'incidents';
 
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Input, Alert, Modal],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Input, Alert, Modal, Incidents],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],

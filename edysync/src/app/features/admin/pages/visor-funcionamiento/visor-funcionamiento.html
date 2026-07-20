@@ -21,6 +21,11 @@
       <span>API Tokens</span>
       <div class="chrome-tab-indicator"></div>
     </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'incidents'" (click)="switchTab('incidents')">
+      <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+      <span>Incidencias</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
   </div>
 
   @if (activeTab === 'railway') {
@@ -404,6 +409,12 @@
           </div>
         }
       </div>
+    </div>
+  }
+
+  @if (activeTab === 'incidents') {
+    <div class="tab-section">
+      <app-incidents></app-incidents>
     </div>
   }
 
