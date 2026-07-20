@@ -4,23 +4,23 @@
   }
 
   <div class="card animate-fade-in" style="animation-delay: 0.15s">
-    <div class="p-6 xl:p-8">
-      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-border/20 pb-5 mb-5">
-        <h3 class="text-h3 text-on-surface flex items-center gap-2">
+    <div class="p-4 sm:p-6 xl:p-8">
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 sm:gap-4 border-b border-border/20 pb-4 sm:pb-5 mb-4 sm:mb-5">
+        <h3 class="text-base sm:text-h3 text-on-surface flex items-center gap-2">
           <fa-icon [icon]="['fas', 'users']" class="text-primary"></fa-icon>
           Directorio
-          <span class="text-sm font-normal text-on-surface-variant ml-2">({{ filteredUsers.length }} usuarios)</span>
+          <span class="text-xs sm:text-sm font-normal text-on-surface-variant ml-1 sm:ml-2">({{ filteredUsers.length }} usuarios)</span>
         </h3>
 
-        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto items-stretch sm:items-center flex-wrap">
           <app-select (valueChange)="onSedeChange($event)" [options]="sedeOptions" placeholder="Todas las Sedes"
-            [clearable]="true" class="w-48"></app-select>
+            [clearable]="true" class="w-full sm:w-48"></app-select>
 
           <app-select (valueChange)="onStatusChange($event)" [options]="statusOptions" placeholder="Todos los estados"
-            [clearable]="true" class="w-44"></app-select>
+            [clearable]="true" class="w-full sm:w-44"></app-select>
 
           <app-select (valueChange)="onTherapistFilterChange($event)" [options]="therapistOptions"
-            placeholder="Todos los terapeutas" [clearable]="true" class="w-48"></app-select>
+            placeholder="Todos los terapeutas" [clearable]="true" class="w-full sm:w-48"></app-select>
 
           <app-input id="search-user" placeholder="Buscar nombre o email..." (valueChange)="onSearch($event)"
             class="w-full sm:w-56"></app-input>
@@ -28,26 +28,26 @@
       </div>
 
       <!-- Filter tabs -->
-      <div class="flex gap-1.5 overflow-x-auto pb-3 flex-wrap mb-5 items-center">
-        <button (click)="setFilter('all')" class="btn-filter" [class.active]="activeFilter === 'all'">
+      <div class="flex gap-1 sm:gap-1.5 overflow-x-auto pb-2 sm:pb-3 flex-wrap mb-4 sm:mb-5 items-center">
+        <button (click)="setFilter('all')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'all'">
           Todos
         </button>
-        <button (click)="setFilter('jugador')" class="btn-filter" [class.active]="activeFilter === 'jugador'">
+        <button (click)="setFilter('jugador')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'jugador'">
           Pacientes
         </button>
-        <button (click)="setFilter('terapista')" class="btn-filter" [class.active]="activeFilter === 'terapista'">
+        <button (click)="setFilter('terapista')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'terapista'">
           Terapeutas
         </button>
-        <button (click)="setFilter('supervisor')" class="btn-filter" [class.active]="activeFilter === 'supervisor'">
+        <button (click)="setFilter('supervisor')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'supervisor'">
           Supervisores
         </button>
-        <button (click)="setFilter('admin')" class="btn-filter" [class.active]="activeFilter === 'admin'">
+        <button (click)="setFilter('admin')" class="btn-filter text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5" [class.active]="activeFilter === 'admin'">
           Admin
         </button>
         @if (hasActiveFilters) {
           <button (click)="clearAllFilters()"
-            class="btn-filter text-error hover:bg-error/10 ml-auto flex items-center gap-1.5 cursor-pointer">
-            <fa-icon [icon]="['fas', 'xmark']" class="text-xs"></fa-icon> Limpiar filtros
+            class="btn-filter text-error hover:bg-error/10 ml-auto flex items-center gap-1.5 cursor-pointer text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5">
+            <fa-icon [icon]="['fas', 'xmark']" class="text-[8px] sm:text-xs"></fa-icon> Limpiar filtros
           </button>
         }
       </div>
@@ -134,22 +134,22 @@
       </div>
 
       <!-- Mobile cards -->
-      <div class="md:hidden space-y-3 mt-4 max-h-[520px] overflow-y-auto rounded-xl border border-border/15 p-3">
+      <div class="md:hidden space-y-2 sm:space-y-3 mt-3 sm:mt-4 max-h-[520px] overflow-y-auto rounded-xl border border-border/15 p-2 sm:p-3">
         @for (u of paginatedUsers; track u.id; let i = $index) {
         <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'"
           [class.bg-error-container/10]="u.account_status === 'debtor'"
           [class.bg-surface-container-highest/30]="u.account_status === 'retired'"
           [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
-          <div class="p-4 border-b border-border/15 bg-surface-container-high/30">
-            <div class="flex justify-between items-start gap-3">
-              <div class="flex items-center gap-3 flex-1 min-w-0">
+          <div class="p-3 sm:p-4 border-b border-border/15 bg-surface-container-high/30">
+            <div class="flex justify-between items-start gap-2 sm:gap-3">
+              <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 <div
-                  class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
+                  class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs sm:text-sm shrink-0">
                   {{ getInitials(u.username) }}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="font-semibold text-on-surface text-base truncate">{{ u.username }}</p>
-                  <p class="text-xs text-on-surface-variant truncate">{{ u.email }}</p>
+                  <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ u.username }}</p>
+                  <p class="text-[10px] sm:text-xs text-on-surface-variant truncate">{{ u.email }}</p>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
@@ -161,19 +161,19 @@
               </label>
             </div>
           </div>
-          <div class="p-4 space-y-3">
+          <div class="p-3 sm:p-4 space-y-2 sm:space-y-3">
             <div class="flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-md"
+              <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md"
                   [ngClass]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span>
                 <span class="text-on-surface-variant/30">|</span>
-                <span class="text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-md"
+                <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
+                <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md"
                   [ngClass]="getStatusClass(u.account_status)">
                   {{ getStatusLabel(u.account_status) }}
                 </span>
               </div>
-              <button (click)="openEditDrawer(u)" class="btn-ghost text-xs !px-3 !py-1.5 cursor-pointer">
+              <button (click)="openEditDrawer(u)" class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer">
                 Editar
               </button>
             </div>
@@ -200,22 +200,22 @@
       </div>
 
       <!-- Pagination footer -->
-      <div class="flex items-center justify-between mt-5 pt-4 border-t border-border/20">
-        <p class="text-sm text-on-surface-variant">
+      <div class="flex items-center justify-between mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-border/20">
+        <p class="text-[10px] sm:text-sm text-on-surface-variant">
           {{ filteredUsers.length }} usuario(s) con los filtros aplicados
           @if (totalPages > 1) {
-            <span class="ml-2 text-on-surface-variant/60">· Página {{ currentPage }} de {{ totalPages }}</span>
+            <span class="ml-1 sm:ml-2 text-on-surface-variant/60">· Página {{ currentPage }} de {{ totalPages }}</span>
           }
         </p>
         @if (totalPages > 1) {
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-0.5 sm:gap-1">
           <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
-            class="w-8 h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'chevron-left']" class="text-xs"></fa-icon>
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
+            <fa-icon [icon]="['fas', 'chevron-left']" class="text-[10px] sm:text-xs"></fa-icon>
           </button>
           @for (p of pageNumbers; track p) {
             <button (click)="goToPage(p)"
-              class="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+              class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-medium transition-colors cursor-pointer"
               [class.bg-primary]="p === currentPage"
               [class.text-white]="p === currentPage"
               [class.border]="p !== currentPage"
@@ -226,8 +226,8 @@
             </button>
           }
           <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
-            class="w-8 h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'chevron-right']" class="text-xs"></fa-icon>
+            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
+            <fa-icon [icon]="['fas', 'chevron-right']" class="text-[10px] sm:text-xs"></fa-icon>
           </button>
         </div>
         }
@@ -632,11 +632,11 @@
 </app-drawer>
 
 <ng-template #headerActions>
-  <div class="flex gap-2">
+  <div class="flex gap-1.5 sm:gap-2">
     <app-button variant="ghost" label="Grupos" [icon]="['fas', 'object-group']"
-      (clicked)="openGroupModal()"></app-button>
+      (clicked)="openGroupModal()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
     <app-button variant="primary" label="Nuevo Usuario" [icon]="['fas', 'user-plus']"
-      (clicked)="openCreateDrawer()"></app-button>
+      (clicked)="openCreateDrawer()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
   </div>
 </ng-template>
 

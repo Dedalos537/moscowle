@@ -1,24 +1,24 @@
-<header class="sticky top-0 z-40 h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 shrink-0 transition-colors duration-300">
-  <div class="flex items-center gap-3">
-    <button (click)="toggleSidebar()" class="md:hidden w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-1" aria-label="Toggle sidebar">
-      <fa-icon [icon]="['fas', 'bars']"></fa-icon>
+<header class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-colors duration-300">
+  <div class="flex items-center gap-2 sm:gap-3">
+    <button (click)="toggleSidebar()" class="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-0.5 sm:mr-1" aria-label="Toggle sidebar">
+      <fa-icon [icon]="['fas', 'bars']" class="text-sm sm:text-base"></fa-icon>
     </button>
     @if (headerService.icon$ | async; as icon) {
       @if (icon && icon.length && icon.length === 2) {
-        <fa-icon [icon]="icon" class="text-primary-container text-xl"></fa-icon>
+        <fa-icon [icon]="icon" class="text-primary-container text-lg sm:text-xl"></fa-icon>
       }
     }
-    <div class="flex flex-col">
-      <h1 class="text-xl font-bold text-on-surface">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
-      <p class="text-body-sm text-on-surface-variant">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
+    <div class="flex flex-col min-w-0">
+      <h1 class="text-base sm:text-xl font-bold text-on-surface truncate">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
+      <p class="text-xs sm:text-body-sm text-on-surface-variant hidden sm:block truncate">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
     </div>
   </div>
 
-  <div class="flex items-center gap-3">
+  <div class="flex items-center gap-1.5 sm:gap-3">
     <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
 
     @if (isRecording) {
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-error-container border border-error-container">
+      <div class="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-error-container border border-error-container">
         <span class="w-2 h-2 rounded-full bg-error recording-dot"></span>
         <span class="text-label-caps text-error hidden sm:inline">Grabando</span>
       </div>
@@ -27,10 +27,10 @@
     <app-preferences-menu></app-preferences-menu>
 
     <div class="relative">
-      <button (click)="toggleNotifications()" class="relative w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
-        <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0"></fa-icon>
+      <button (click)="toggleNotifications()" class="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
+        <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm sm:text-base"></fa-icon>
         @if (unreadCount > 0) {
-          <span class="absolute -top-1 -right-1 w-5 h-5 bg-error rounded-full text-on-error text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+          <span class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-error rounded-full text-on-error text-[10px] sm:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
         }
       </button>
 
@@ -89,15 +89,15 @@
     </div>
 
     <div class="relative">
-      <div (click)="toggleUserMenu()" class="flex items-center gap-3 pl-4 border-l border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
-        <div class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-lg uppercase">
+      <div (click)="toggleUserMenu()" class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm sm:text-lg uppercase">
           {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
         </div>
         <div class="hidden md:flex flex-col">
           <span class="font-bold text-on-surface text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
           <span class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</span>
         </div>
-        <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-sm transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
+        <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs sm:text-sm transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
       </div>
 
       @if (showUserMenu) {

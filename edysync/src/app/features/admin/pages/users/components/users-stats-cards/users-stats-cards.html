@@ -1,9 +1,9 @@
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
   @for (card of cards; track card.key; let i = $index) {
     <div class="stat-card animate-fade-in"
          [class]="'stat-card--' + card.variant">
-      <p class="text-label-caps text-on-surface-variant">{{ card.label }}</p>
-      <p class="text-h3 mt-1" style="color: var(--card-color, var(--color-on-surface))">{{ stats()[card.key] }}</p>
+      <p class="text-[10px] sm:text-label-caps text-on-surface-variant">{{ card.label }}</p>
+      <p class="text-xl sm:text-h3 mt-0.5 sm:mt-1" style="color: var(--card-color, var(--color-on-surface))">{{ stats()[card.key] }}</p>
     </div>
   }
 </div>

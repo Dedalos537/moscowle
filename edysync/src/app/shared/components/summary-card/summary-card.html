@@ -1,5 +1,5 @@
 <div
-  class="flex flex-row justify-between bg-surface-container-lowest rounded-xl h-full border border-border/30 shadow-soft p-5 hover:shadow-soft transition-shadow"
+  class="flex flex-row justify-between bg-surface-container-lowest rounded-xl h-full border border-border/30 shadow-soft p-3 sm:p-5 hover:shadow-soft transition-shadow"
   [class.border-l-4]="border()" [style.--i]="staggerIndex()" [class.border-l-error]="border() && variant() === 'error'"
   [class.border-l-success]="border() && variant() === 'success'"
   [class.border-l-warning]="border() && variant() === 'warning'"
@@ -7,8 +7,8 @@
   [class.border-l-primary]="border() && variant() === 'primary'"
   [class.border-l-secondary]="border() && variant() === 'secondary'"
   [class.border-l-accent]="border() && variant() === 'accent'">
-  <div class="flex flex-col items-start gap-4" style="align-self: center">
-    <span class="text-label-caps" [class.text-error]="variant() === 'error'"
+  <div class="flex flex-col items-start gap-2 sm:gap-4" style="align-self: center">
+    <span class="text-[10px] sm:text-label-caps" [class.text-error]="variant() === 'error'"
       [class.text-success]="variant() === 'success'" [class.text-warning]="variant() === 'warning'"
       [class.text-info]="variant() === 'info'" [class.text-primary]="variant() === 'primary'"
       [class.text-secondary]="variant() === 'secondary'" [class.text-accent]="variant() === 'accent'">
@@ -16,7 +16,7 @@
     </span>
     <div>
       @if (!loading()) {
-      <p class="text-3xl font-black tracking-tight" [class.text-on-surface]="!valueColor()"
+      <p class="text-xl sm:text-3xl font-black tracking-tight" [class.text-on-surface]="!valueColor()"
         [class.text-success]="valueColor() === 'success'" [class.text-error]="valueColor() === 'error'"
         [class.text-warning]="valueColor() === 'warning'" [class.text-info]="valueColor() === 'info'">
         {{ prefix() }}{{ value() }}
@@ -44,11 +44,11 @@
       }
     </div>
   </div>
-  <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="align-self: center" [class.bg-error/15]="variant() === 'error'"
+  <span class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0" style="align-self: center" [class.bg-error/15]="variant() === 'error'"
     [class.bg-success/15]="variant() === 'success'" [class.bg-warning/15]="variant() === 'warning'"
     [class.bg-info/15]="variant() === 'info'" [class.bg-primary/15]="variant() === 'primary'"
     [class.bg-secondary/15]="variant() === 'secondary'" [class.bg-accent/15]="variant() === 'accent'">
-    <fa-icon [icon]="icon()" class="text-xl" [class.text-error]="variant() === 'error'"
+    <fa-icon [icon]="icon()" class="text-base sm:text-xl" [class.text-error]="variant() === 'error'"
       [class.text-success]="variant() === 'success'" [class.text-warning]="variant() === 'warning'"
       [class.text-info]="variant() === 'info'" [class.text-primary]="variant() === 'primary'"
       [class.text-secondary]="variant() === 'secondary'" [class.text-accent]="variant() === 'accent'">

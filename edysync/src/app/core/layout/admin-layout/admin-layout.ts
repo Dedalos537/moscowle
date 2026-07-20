@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
+import { WakeLockService } from '../../services/wake-lock.service';
 import { Sidebar } from '../../components/sidebar/sidebar';
 import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
@@ -35,10 +36,12 @@ export class AdminLayout implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     public confirmService: ConfirmService,
+    private wakeLockService: WakeLockService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
+    this.wakeLockService.request();
     this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {
         this.routeLoading = true;
@@ -56,6 +59,7 @@ export class AdminLayout implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.wakeLockService.release();
   }
 
   prepareRoute() {

@@ -48,6 +48,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   selectedDate: Date = new Date();
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
+  rangeMode = false;
   weeks: DayCell[][] = [];
   weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -172,6 +173,35 @@ export class CalendarWidget implements OnInit, OnChanges {
     this.selectedDate = new Date();
     this.clearRange();
     this.buildGrid();
+  }
+
+  toggleRangeMode() {
+    this.rangeMode = !this.rangeMode;
+    if (this.rangeMode) {
+      this.clearRange();
+    }
+    this.cdr.markForCheck();
+  }
+
+  cancelRange() {
+    this.rangeMode = false;
+    this.clearRange();
+    this.buildGrid();
+    this.cdr.markForCheck();
+  }
+
+  clearRangeSelection() {
+    this.rangeMode = false;
+    this.clearRange();
+    this.buildGrid();
+    this.cdr.markForCheck();
+  }
+
+  getRangeDayCount(): number {
+    if (!this.rangeStart || !this.rangeEnd) return 0;
+    const s = new Date(this.rangeStart).setHours(0, 0, 0, 0);
+    const e = new Date(this.rangeEnd).setHours(0, 0, 0, 0);
+    return Math.round(Math.abs(e - s) / 86400000) + 1;
   }
 
   get todayButtonVisible(): boolean {

@@ -7,6 +7,7 @@ import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { ThemeService } from '../../services/theme.service';
+import { WakeLockService } from '../../services/wake-lock.service';
 import { HelpButton } from '../../../shared/contextual-help/components/help-button/help-button';
 import { HelpPanel } from '../../../shared/contextual-help/components/help-panel/help-panel';
 import { Header } from '../../components/header/header';
@@ -39,10 +40,12 @@ export class PatientLayout implements OnInit, OnDestroy {
     public confirmService: ConfirmService,
     public sidebarService: SidebarService,
     private themeService: ThemeService,
+    private wakeLockService: WakeLockService,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
+    this.wakeLockService.request();
     this.subs.add(this.themeService.theme$.subscribe(t => {
       this.theme = t;
       this.cdr.markForCheck();
@@ -68,6 +71,7 @@ export class PatientLayout implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.wakeLockService.release();
   }
 
   prepareRoute() {

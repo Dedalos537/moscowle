@@ -1,14 +1,18 @@
 <ng-template #headerActions>
-  <app-button variant="primary" label="Nueva Programación" [icon]="['fas', 'plus']" (clicked)="openCreateModal()"></app-button>
+  <app-button variant="primary" label="Nueva Programación" [icon]="['fas', 'plus']" (clicked)="openCreateModal()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
 </ng-template>
 
 <div class="space-y-6" [@fadeInUp]>
 
-  <div class="card p-4 flex flex-wrap gap-4 items-center">
-    <label class="text-sm font-semibold text-on-surface">Filtrar por Terapeuta:</label>
-    <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full md:w-64"></app-select>
-    <label class="text-sm font-semibold text-on-surface">Alumno:</label>
-    <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full md:w-64"></app-select>
+  <div class="card p-3 sm:p-4 flex flex-col sm:flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
+    <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
+      <label class="text-xs sm:text-sm font-semibold text-on-surface self-center sm:self-auto">Filtrar por Terapeuta:</label>
+      <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full sm:w-64"></app-select>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
+      <label class="text-xs sm:text-sm font-semibold text-on-surface self-center sm:self-auto">Alumno:</label>
+      <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full sm:w-64"></app-select>
+    </div>
   </div>
 
   <div class="min-h-[500px]">

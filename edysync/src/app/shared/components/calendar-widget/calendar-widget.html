@@ -9,17 +9,34 @@
       @if (todayButtonVisible) {
         <button class="today-btn" (click)="today()">Hoy</button>
       }
+      <button class="range-toggle-btn" [class.active]="rangeMode" (click)="toggleRangeMode()" title="Seleccionar rango de fechas">
+        <fa-icon [icon]="['fas', 'arrows-alt-h']"></fa-icon>
+        <span class="range-toggle-label">Rango</span>
+      </button>
     </div>
     <button class="nav-btn" (click)="nextMonth()" title="Mes siguiente">
       <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
     </button>
   </div>
 
+  @if (rangeMode && !isRangeSelected) {
+    <div class="range-mode-hint">
+      <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
+      <span>{{ rangeStart ? 'Ahora selecciona la fecha final' : 'Selecciona la fecha de inicio del rango' }}</span>
+      <button class="range-cancel-btn" (click)="cancelRange()">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+  }
+
   @if (isRangeSelected) {
     <div class="range-hint">
       <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
       <span>{{ rangeStart!.getDate() }} {{ months[rangeStart!.getMonth()] }} — {{ rangeEnd!.getDate() }} {{ months[rangeEnd!.getMonth()] }}</span>
-      <span class="range-hint-action">Doble click para crear sesiones &middot; Click en un día fuera del rango o triple click para limpiar</span>
+      <span class="range-hint-count">{{ getRangeDayCount() }} día{{ getRangeDayCount() !== 1 ? 's' : '' }}</span>
+      <button class="range-clear-btn" (click)="clearRangeSelection()" title="Limpiar selección">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
     </div>
   }
 

@@ -11,25 +11,41 @@
 .range-hint {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 16px 8px;
-  padding: 8px 14px;
-  border-radius: 10px;
+  gap: 6px;
+  margin: 0 8px 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
   background: var(--color-primary-container);
   color: var(--color-on-primary-container);
-  font-size: 0.78rem;
+  font-size: 0.65rem;
   font-weight: 600;
 
+  @media (min-width: 640px) {
+    gap: 8px;
+    margin: 0 16px 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+  }
+
   .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 14px;
     opacity: 0.7;
+
+    @media (min-width: 640px) {
+      font-size: 18px;
+    }
   }
 
   .range-hint-action {
     opacity: 0.6;
     font-weight: 500;
     margin-left: auto;
-    font-size: 0.68rem;
+    font-size: 0.55rem;
+
+    @media (min-width: 640px) {
+      font-size: 0.68rem;
+    }
   }
 }
 
@@ -38,13 +54,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 12px;
+  padding: 10px 12px 8px;
+
+  @media (min-width: 640px) {
+    padding: 16px 20px 12px;
+  }
 }
 
 .nav-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--color-on-surface-variant);
@@ -53,6 +73,12 @@
   align-items: center;
   justify-content: center;
   transition: background 0.15s, color 0.15s;
+
+  @media (min-width: 640px) {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
 
   &:hover {
     background: var(--color-surface-container-high);
@@ -63,21 +89,29 @@
 .month-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+
+  @media (min-width: 640px) {
+    gap: 10px;
+  }
 
   h3 {
     margin: 0;
-    font-size: 1.05rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--color-on-surface);
     letter-spacing: -0.01em;
+
+    @media (min-width: 640px) {
+      font-size: 1.05rem;
+    }
   }
 }
 
 .today-btn {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 6px;
   border: 1px solid var(--color-outline-variant);
   background: transparent;
@@ -86,6 +120,11 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   transition: background 0.15s, color 0.15s;
+
+  @media (min-width: 640px) {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
 
   &:hover {
     background: var(--color-primary);
@@ -96,24 +135,37 @@
 
 /* ─── Grid ─── */
 .calendar-grid {
-  padding: 0 12px 8px;
+  padding: 0 6px 6px;
+
+  @media (min-width: 640px) {
+    padding: 0 12px 8px;
+  }
 }
 
 .weekday-row,
 .week-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 1px;
+
+  @media (min-width: 640px) {
+    gap: 2px;
+  }
 }
 
 .weekday-cell {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: var(--color-on-surface-variant);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 6px 0 8px;
+  padding: 4px 0 6px;
+
+  @media (min-width: 640px) {
+    font-size: 0.7rem;
+    padding: 6px 0 8px;
+  }
 }
 
 .day-cell {
@@ -122,13 +174,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 6px 2px 4px;
-  min-height: 60px;
+  padding: 4px 1px 3px;
+  min-height: 44px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.15s ease;
+
+  @media (min-width: 640px) {
+    padding: 6px 2px 4px;
+    min-height: 60px;
+    border-radius: 10px;
+  }
 
   &:hover {
     background: var(--color-surface-container-high);
@@ -172,27 +230,35 @@
   &.in-range {
     background: var(--color-primary-container);
     border-radius: 0;
+
+    .day-number {
+      color: var(--color-on-primary);
+      background: var(--color-primary);
+      font-weight: 700;
+    }
   }
 
   &.range-start {
-    background: var(--color-primary-container);
+    background: linear-gradient(135deg, var(--color-primary-container) 50%, var(--color-primary-container) 50%);
     border-radius: 10px 0 0 10px;
 
     .day-number {
       background: var(--color-primary);
       color: var(--color-on-primary);
       font-weight: 700;
+      box-shadow: 0 2px 8px rgba(var(--color-primary-rgb, 0, 100, 0) / 0.3);
     }
   }
 
   &.range-end {
-    background: var(--color-primary-container);
+    background: linear-gradient(225deg, var(--color-primary-container) 50%, var(--color-primary-container) 50%);
     border-radius: 0 10px 10px 0;
 
     .day-number {
       background: var(--color-primary);
       color: var(--color-on-primary);
       font-weight: 700;
+      box-shadow: 0 2px 8px rgba(var(--color-primary-rgb, 0, 100, 0) / 0.3);
     }
   }
 
@@ -205,71 +271,114 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--color-on-surface);
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+  @media (min-width: 640px) {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
 }
 
 .event-dots {
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-top: 4px;
+  gap: 2px;
+  margin-top: 2px;
   flex-wrap: wrap;
   justify-content: center;
+
+  @media (min-width: 640px) {
+    gap: 3px;
+    margin-top: 4px;
+  }
 }
 
 .event-dot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   display: block;
+
+  @media (min-width: 640px) {
+    width: 5px;
+    height: 5px;
+  }
 }
 
 .more-badge {
-  font-size: 0.55rem;
+  font-size: 0.45rem;
   font-weight: 700;
   color: var(--color-on-surface-variant);
-  padding: 0 2px;
+  padding: 0 1px;
+
+  @media (min-width: 640px) {
+    font-size: 0.55rem;
+    padding: 0 2px;
+  }
 }
 
 /* ─── Agenda Panel ─── */
 .agenda-panel {
   border-top: 1px solid var(--color-outline-variant);
-  padding: 14px 20px 18px;
+  padding: 10px 12px 14px;
   transition: opacity 0.2s ease;
+
+  @media (min-width: 640px) {
+    padding: 14px 20px 18px;
+  }
 }
 
 .agenda-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 8px;
+
+  @media (min-width: 640px) {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
 
   .material-symbols-outlined {
-    font-size: 18px;
+    font-size: 14px;
+
+    @media (min-width: 640px) {
+      font-size: 18px;
+    }
   }
 }
 
 .agenda-date {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-on-surface);
   transition: opacity 0.15s ease;
+
+  @media (min-width: 640px) {
+    font-size: 0.85rem;
+  }
 }
 
 .event-count-badge {
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 1px 6px;
   border-radius: 20px;
   background: var(--color-primary-container);
   color: var(--color-primary);
   margin-left: auto;
+
+  @media (min-width: 640px) {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+  }
 }
 
 .range-actions {
@@ -277,9 +386,9 @@
 }
 
 .range-action-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--color-on-surface-variant);
@@ -289,28 +398,42 @@
   justify-content: center;
   transition: background 0.12s;
 
+  @media (min-width: 640px) {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
   &:hover {
     background: var(--color-surface-container-high);
     color: var(--color-on-surface);
   }
 
   .material-symbols-outlined {
-    font-size: 16px;
+    font-size: 14px;
+
+    @media (min-width: 640px) {
+      font-size: 16px;
+    }
   }
 }
 
 .agenda-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+
+  @media (min-width: 640px) {
+    gap: 6px;
+  }
 }
 
 .agenda-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
   border: none;
   background: var(--color-surface-container-high);
   width: 100%;
@@ -318,6 +441,12 @@
   cursor: default;
   transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
   animation: agendaFadeIn 0.25s ease both;
+
+  @media (min-width: 640px) {
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
 
   &.clickable {
     cursor: pointer;
@@ -341,10 +470,16 @@
 }
 
 .agenda-item-indicator {
-  width: 4px;
-  height: 36px;
-  border-radius: 4px;
+  width: 3px;
+  height: 28px;
+  border-radius: 3px;
   flex-shrink: 0;
+
+  @media (min-width: 640px) {
+    width: 4px;
+    height: 36px;
+    border-radius: 4px;
+  }
 }
 
 .agenda-item-body {
@@ -353,22 +488,32 @@
 }
 
 .agenda-item-title {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--color-on-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  @media (min-width: 640px) {
+    font-size: 0.8rem;
+  }
 }
 
 .agenda-item-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 6px;
-  font-size: 0.7rem;
+  gap: 3px 4px;
+  font-size: 0.6rem;
   color: var(--color-on-surface-variant);
-  margin-top: 2px;
+  margin-top: 1px;
+
+  @media (min-width: 640px) {
+    gap: 4px 6px;
+    font-size: 0.7rem;
+    margin-top: 2px;
+  }
 }
 
 .meta-sep {
@@ -380,12 +525,17 @@
 }
 
 .status-pill {
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 20px;
   white-space: nowrap;
   flex-shrink: 0;
+
+  @media (min-width: 640px) {
+    font-size: 0.6rem;
+    padding: 3px 8px;
+  }
 }
 
 .agenda-empty {
@@ -393,24 +543,40 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 24px 0 8px;
+  padding: 16px 0 6px;
   animation: agendaFadeIn 0.2s ease both;
 
+  @media (min-width: 640px) {
+    padding: 24px 0 8px;
+  }
+
   .material-symbols-outlined {
-    font-size: 28px;
+    font-size: 22px;
+
+    @media (min-width: 640px) {
+      font-size: 28px;
+    }
   }
 }
 
 .agenda-empty-text {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 500;
   color: var(--color-on-surface-variant);
+
+  @media (min-width: 640px) {
+    font-size: 0.8rem;
+  }
 }
 
 .agenda-empty-hint {
   margin: 2px 0 0;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 500;
   color: var(--color-on-surface-variant);
+
+  @media (min-width: 640px) {
+    font-size: 0.7rem;
+  }
 }
