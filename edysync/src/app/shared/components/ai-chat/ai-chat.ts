@@ -10,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
 import { FloatingUiService } from '../../../core/services/floating-ui.service';
+import { environment } from '../../../../environments/environment';
 import DOMPurify from 'dompurify';
 
 const ALLOWED_REDIRECT_PREFIXES = ['/', '/admin/', '/therapist/', '/patient/', '/auth/'];
@@ -199,12 +200,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   private getApiUrl(): string {
-    try {
-      const env = (window as unknown as { __env?: Record<string, unknown> }).__env;
-      return (env?.['apiBaseUrl'] as string) || '';
-    } catch {
-      return '';
-    }
+    return environment.apiBaseUrl;
   }
 
   private loadInitialContext() {
