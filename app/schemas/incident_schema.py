@@ -27,15 +27,25 @@ class IncidentCreateSchema(Schema):
 
 class IncidentStatusSchema(Schema):
     estado = fields.Str(required=True, validate=validate.OneOf(ESTADOS_VALIDOS))
+    comentario = fields.Str(load_default='')
+
+    class Meta:
+        unknown = INCLUDE
 
 
 class IncidentAssignSchema(Schema):
     responsable_id = fields.Int(required=True)
 
+    class Meta:
+        unknown = INCLUDE
+
 
 class IncidentCommentSchema(Schema):
     contenido = fields.Str(required=True, validate=validate.Length(min=1, max=5000))
     es_interno = fields.Bool(load_default=False)
+
+    class Meta:
+        unknown = INCLUDE
 
 
 def validate_incident_create(data):
