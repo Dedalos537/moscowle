@@ -409,6 +409,11 @@
     </h4>
     <app-select [multiple]="true" [(ngModel)]="editData.edit_therapist_ids" [options]="editTherapistOptions" class="w-full"></app-select>
   </div>
+
+  <button type="button" (click)="openPatientDetail()" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold cursor-pointer">
+    <fa-icon [icon]="['fas', 'id-card']"></fa-icon>
+    Más Detalles del Paciente
+  </button>
   }
 
   <div class="bg-surface-container-high rounded-xl p-4 space-y-3">
@@ -749,3 +754,65 @@
   </div>
 </div>
 }
+
+<!-- Patient Detail Modal -->
+<app-modal [isOpen]="showPatientDetailModal" title="Detalle del Paciente" (close)="closePatientDetailModal()" size="lg">
+  @if (patientDetailData) {
+    <div class="space-y-4">
+      <!-- Info Personal -->
+      <div>
+        <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Información Personal</h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-on-surface-variant">Nombre:</span> <span class="font-medium">{{ patientDetailData.username }}</span></div>
+          <div><span class="text-on-surface-variant">Email:</span> <span class="font-medium">{{ patientDetailData.email }}</span></div>
+          <div><span class="text-on-surface-variant">Teléfono:</span> <span class="font-medium">{{ patientDetailData.phone || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">DNI:</span> <span class="font-medium">{{ patientDetailData.document_number || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">F. Nacimiento:</span> <span class="font-medium">{{ patientDetailData.date_of_birth || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">Edad:</span> <span class="font-medium">{{ patientDetailData.age != null ? patientDetailData.age + ' años' : '—' }}</span></div>
+          <div><span class="text-on-surface-variant">Sexo:</span> <span class="font-medium">{{ patientDetailData.sex || '—' }}</span></div>
+        </div>
+      </div>
+
+      <!-- Diagnóstico -->
+      @if (patientDetailData.preliminary_diagnosis) {
+        <div class="pt-3 border-t border-border">
+          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Diagnóstico Preliminar</h4>
+          <p class="text-sm text-on-surface">{{ patientDetailData.preliminary_diagnosis }}</p>
+        </div>
+      }
+
+      <!-- Objetivos -->
+      @if (patientDetailData.therapy_goals) {
+        <div class="pt-3 border-t border-border">
+          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Objetivos Terapéuticos</h4>
+          <p class="text-sm text-on-surface">{{ patientDetailData.therapy_goals }}</p>
+        </div>
+      }
+
+      <!-- Apoderado -->
+      <div class="pt-3 border-t border-border">
+        <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Apoderado</h4>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-on-surface-variant">Nombre:</span> <span class="font-medium">{{ patientDetailData.guardian_name || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">Tipo:</span> <span class="font-medium capitalize">{{ patientDetailData.guardian_type || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">DNI:</span> <span class="font-medium">{{ patientDetailData.guardian_dni || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">Teléfono:</span> <span class="font-medium">{{ patientDetailData.guardian_contact || '—' }}</span></div>
+          <div><span class="text-on-surface-variant">Nombre Yape:</span> <span class="font-medium">{{ patientDetailData.yape_name || '—' }}</span></div>
+        </div>
+      </div>
+
+      <!-- Notas -->
+      @if (patientDetailData.notes) {
+        <div class="pt-3 border-t border-border">
+          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Notas</h4>
+          <p class="text-sm text-on-surface whitespace-pre-wrap">{{ patientDetailData.notes }}</p>
+        </div>
+      }
+    </div>
+  } @else if (patientDetailLoading) {
+    <div class="py-8 text-center"><app-spinner></app-spinner></div>
+  }
+  <div modal-footer>
+    <app-button variant="ghost" label="Cerrar" (clicked)="closePatientDetailModal()"></app-button>
+  </div>
+</app-modal>

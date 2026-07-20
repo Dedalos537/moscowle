@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -9,11 +9,12 @@ import { HttpClient } from '@angular/common/http';
 import { fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter } from '../../../../core/animations';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
+import { Modal } from '../../../../shared/components/modal/modal';
 
 @Component({
   selector: 'app-therapist-patient-detail',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Spinner, Button],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, Spinner, Button, Modal],
   templateUrl: './patient-detail.html',
   styleUrl: './patient-detail.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -29,6 +30,9 @@ export class TherapistPatientDetail implements OnInit, OnDestroy {
   weeklyReport: any = null;
   weeklyReportLoading = false;
   weeklyReportGenerating = false;
+
+  showSessionModal = false;
+  selectedSession: any = null;
 
   private subs = new Subscription();
 
@@ -68,6 +72,17 @@ export class TherapistPatientDetail implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     }));
+  }
+
+  viewSession(session: any) {
+    this.selectedSession = session;
+    this.showSessionModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeSessionModal() {
+    this.showSessionModal = false;
+    this.selectedSession = null;
   }
 
   generateWeeklyReport() {

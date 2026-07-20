@@ -1,151 +1,282 @@
 @if (loading) {
-<div class="flex justify-center items-center h-96">
-  <app-spinner size="lg" colorClass="text-primary"></app-spinner>
-</div>
+  <div class="flex justify-center items-center h-96">
+    <app-spinner size="lg" colorClass="text-primary"></app-spinner>
+  </div>
 }
 
 @if (!loading && patient) {
-<div class="space-y-6" [@fadeInUp]>
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-1">
-      <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
-        <div class="text-center mb-6">
-          <div class="w-20 h-20 rounded-full bg-primary-container/15 flex items-center justify-center mx-auto mb-3">
-            <fa-icon [icon]="['fas', 'user']" class="text-2xl text-primary"></fa-icon>
+  <div class="space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Patient Info Card -->
+      <div class="lg:col-span-1">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
+          <div class="text-center mb-6">
+            <div class="w-20 h-20 rounded-full bg-primary-container/15 flex items-center justify-center mx-auto mb-3">
+              <fa-icon [icon]="['fas', 'user']" class="text-2xl text-primary"></fa-icon>
+            </div>
+            <h2 class="text-lg font-bold text-on-surface">{{ patient.username }}</h2>
+            <p class="text-sm text-on-surface-variant">{{ patient.email }}</p>
           </div>
-          <h2 class="text-lg font-bold text-on-surface">{{ patient.username }}</h2>
-          <p class="text-sm text-on-surface-variant">{{ patient.email }}</p>
-        </div>
-        <div class="space-y-3 text-sm">
-          @if (patient.phone) {
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Teléfono</span>
-              <span class="text-on-surface font-medium">{{ patient.phone }}</span>
+
+          <!-- Información Personal -->
+          <div class="mb-4">
+            <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <fa-icon [icon]="['fas', 'id-card']" class="text-[10px]"></fa-icon> Información Personal
+            </h4>
+            <div class="space-y-2 text-sm">
+              @if (patient.phone) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Teléfono</span>
+                  <span class="text-on-surface font-medium">{{ patient.phone }}</span>
+                </div>
+              }
+              @if (patient.document_number) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">DNI</span>
+                  <span class="text-on-surface font-medium">{{ patient.document_number }}</span>
+                </div>
+              }
+              @if (patient.date_of_birth) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">F. Nacimiento</span>
+                  <span class="text-on-surface font-medium">{{ patient.date_of_birth }}</span>
+                </div>
+              }
+              @if (patient.age != null) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Edad</span>
+                  <span class="text-on-surface font-medium">{{ patient.age }} años</span>
+                </div>
+              }
+              @if (patient.sex) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Sexo</span>
+                  <span class="text-on-surface font-medium">{{ patient.sex }}</span>
+                </div>
+              }
             </div>
-          }
-          @if (patient.document_number) {
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Documento</span>
-              <span class="text-on-surface font-medium">{{ patient.document_number }}</span>
-            </div>
-          }
-          @if (patient.date_of_birth) {
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Fecha de Nac.</span>
-              <span class="text-on-surface font-medium">{{ patient.date_of_birth }}</span>
-            </div>
-          }
-          @if (patient.guardian_name) {
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Apoderado</span>
-              <span class="text-on-surface font-medium">{{ patient.guardian_name }}</span>
-            </div>
-          }
-          @if (patient.guardian_phone) {
-            <div class="flex justify-between">
-              <span class="text-on-surface-variant">Tel. Apoderado</span>
-              <span class="text-on-surface font-medium">{{ patient.guardian_phone }}</span>
-            </div>
-          }
+          </div>
+
+          <!-- Diagnóstico -->
           @if (patient.preliminary_diagnosis) {
-            <div class="pt-3 border-t border-border">
-              <p class="text-on-surface-variant mb-1">Diagnóstico Preliminar</p>
-              <p class="text-on-surface">{{ patient.preliminary_diagnosis }}</p>
+            <div class="mb-4 pt-4 border-t border-border">
+              <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'stethoscope']" class="text-[10px]"></fa-icon> Diagnóstico
+              </h4>
+              <p class="text-sm text-on-surface">{{ patient.preliminary_diagnosis }}</p>
             </div>
           }
+
+          <!-- Objetivos Terapéuticos -->
           @if (patient.therapy_goals) {
-            <div class="pt-3 border-t border-border">
-              <p class="text-on-surface-variant mb-1">Objetivos Terapéuticos</p>
-              <p class="text-on-surface">{{ patient.therapy_goals }}</p>
+            <div class="mb-4 pt-4 border-t border-border">
+              <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'bullseye']" class="text-[10px]"></fa-icon> Objetivos
+              </h4>
+              <p class="text-sm text-on-surface">{{ patient.therapy_goals }}</p>
+            </div>
+          }
+
+          <!-- Apoderado -->
+          <div class="mb-4 pt-4 border-t border-border">
+            <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <fa-icon [icon]="['fas', 'users']" class="text-[10px]"></fa-icon> Apoderado
+            </h4>
+            <div class="space-y-2 text-sm">
+              @if (patient.guardian_name) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Nombre</span>
+                  <span class="text-on-surface font-medium">{{ patient.guardian_name }}</span>
+                </div>
+              }
+              @if (patient.guardian_type) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Tipo</span>
+                  <span class="text-on-surface font-medium capitalize">{{ patient.guardian_type }}</span>
+                </div>
+              }
+              @if (patient.guardian_dni) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">DNI</span>
+                  <span class="text-on-surface font-medium">{{ patient.guardian_dni }}</span>
+                </div>
+              }
+              @if (patient.guardian_contact) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Teléfono</span>
+                  <span class="text-on-surface font-medium">{{ patient.guardian_contact }}</span>
+                </div>
+              }
+              @if (patient.yape_name) {
+                <div class="flex justify-between">
+                  <span class="text-on-surface-variant">Nombre Yape</span>
+                  <span class="text-on-surface font-medium">{{ patient.yape_name }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Notas -->
+          @if (patient.notes) {
+            <div class="pt-4 border-t border-border">
+              <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <fa-icon [icon]="['fas', 'sticky-note']" class="text-[10px]"></fa-icon> Notas
+              </h4>
+              <p class="text-sm text-on-surface whitespace-pre-wrap">{{ patient.notes }}</p>
             </div>
           }
         </div>
       </div>
-    </div>
 
-    <div class="lg:col-span-2">
-      <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-bold text-on-surface">Sesiones Recientes</h3>
-          <app-button
-            [label]="weeklyReportGenerating ? 'Generando...' : 'Generar Reporte Semanal'"
-            [icon]="weeklyReportGenerating ? ['fas', 'spinner'] : ['fas', 'file-alt']"
-            [disabled]="weeklyReportGenerating"
-            (clicked)="generateWeeklyReport()"
-            variant="secondary">
-          </app-button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-border">
-                <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Fecha</th>
-                <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Título</th>
-                <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
-                <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Asistencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (session of sessions; track $index) {
-                <tr class="border-b border-border/50 hover:bg-surface-container-low transition-colors">
-                  <td class="py-3 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
-                  <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>
-                  <td class="py-3">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                          [class.bg-success-container]="session.status === 'completed'"
-                          [class.text-success]="session.status === 'completed'"
-                          [class.bg-info-container]="session.status === 'scheduled'"
-                          [class.text-info]="session.status === 'scheduled'"
-                          [class.bg-surface-container-high]="session.status === 'cancelled'"
-                          [class.text-on-surface-variant]="session.status === 'cancelled'">
-                      {{ session.status }}
-                    </span>
-                  </td>
-                  <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance || '—' }}</td>
-                </tr>
-              }
-              @if (sessions.length === 0) {
-                <tr>
-                  <td colspan="4" class="py-8 text-center text-on-surface-variant text-sm">No hay sesiones registradas</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        @if (weeklyReport) {
-          <div class="mt-4 p-4 bg-info-container rounded-xl border border-info-container">
-            <h4 class="text-sm font-bold text-info mb-3 flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'file-alt']" class="text-info"></fa-icon>
-              Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
-            </h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-                <p class="text-xs text-info font-bold uppercase tracking-wider">Sesiones</p>
-                <p class="text-xl font-black text-info">{{ weeklyReport.sessions_count }}</p>
-              </div>
-              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-                <p class="text-xs text-info font-bold uppercase tracking-wider">Score Promedio</p>
-                <p class="text-xl font-black text-info">{{ weeklyReport.avg_score || '—' }}</p>
-              </div>
-              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-                <p class="text-xs text-info font-bold uppercase tracking-wider">Objetivos Logrados</p>
-                <p class="text-xl font-black text-info">{{ weeklyReport.objectives_achieved }}/{{ weeklyReport.objectives_total }}</p>
-              </div>
-              <div class="bg-white rounded-lg p-3 text-center border border-info-container">
-                <p class="text-xs text-info font-bold uppercase tracking-wider">Progreso</p>
-                <p class="text-xl font-black text-info">{{ weeklyReport.objectives_total > 0 ? (weeklyReport.objectives_achieved / weeklyReport.objectives_total * 100).toFixed(0) : 0 }}%</p>
-              </div>
-            </div>
-            @if (weeklyReport.report_text) {
-              <div class="p-3 bg-white rounded-lg border border-info-container text-sm text-info whitespace-pre-wrap max-h-40 overflow-y-auto">
-                {{ weeklyReport.report_text }}
-              </div>
-            }
+      <!-- Sessions + Report -->
+      <div class="lg:col-span-2">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-soft border border-border/20 p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-on-surface">Sesiones Recientes</h3>
+            <app-button
+              [label]="weeklyReportGenerating ? 'Generando...' : 'Generar Reporte Semanal'"
+              [icon]="weeklyReportGenerating ? ['fas', 'spinner'] : ['fas', 'file-alt']"
+              [disabled]="weeklyReportGenerating"
+              (clicked)="generateWeeklyReport()"
+              variant="secondary">
+            </app-button>
           </div>
-        }
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-border">
+                  <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Fecha</th>
+                  <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Título</th>
+                  <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Estado</th>
+                  <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Asistencia</th>
+                  <th class="text-left py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (session of sessions; track $index) {
+                  <tr class="border-b border-border/50 hover:bg-surface-container-low transition-colors cursor-pointer" (click)="viewSession(session)">
+                    <td class="py-3 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
+                    <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>
+                    <td class="py-3">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                            [class.bg-success-container]="session.status === 'completed'"
+                            [class.text-success]="session.status === 'completed'"
+                            [class.bg-info-container]="session.status === 'scheduled'"
+                            [class.text-info]="session.status === 'scheduled'"
+                            [class.bg-surface-container-high]="session.status === 'cancelled'"
+                            [class.text-on-surface-variant]="session.status === 'cancelled'">
+                        {{ session.status }}
+                      </span>
+                    </td>
+                    <td class="py-3 text-sm text-on-surface-variant">{{ session.attendance || '—' }}</td>
+                    <td class="py-3">
+                      <fa-icon [icon]="['fas', 'chevron-right']" class="text-xs text-on-surface-variant"></fa-icon>
+                    </td>
+                  </tr>
+                }
+                @if (sessions.length === 0) {
+                  <tr>
+                    <td colspan="5" class="py-8 text-center text-on-surface-variant text-sm">No hay sesiones registradas</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (weeklyReport) {
+            <div class="mt-4 p-4 bg-info-container rounded-xl border border-info-container">
+              <h4 class="text-sm font-bold text-info mb-3 flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'file-alt']" class="text-info"></fa-icon>
+                Reporte Semanal {{ weeklyReport.week_start | date:'dd/MM/yyyy' }} - {{ weeklyReport.week_end | date:'dd/MM/yyyy' }}
+              </h4>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                  <p class="text-xs text-info font-bold uppercase tracking-wider">Sesiones</p>
+                  <p class="text-xl font-black text-info">{{ weeklyReport.sessions_count }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                  <p class="text-xs text-info font-bold uppercase tracking-wider">Score Promedio</p>
+                  <p class="text-xl font-black text-info">{{ weeklyReport.avg_score || '—' }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                  <p class="text-xs text-info font-bold uppercase tracking-wider">Objetivos Logrados</p>
+                  <p class="text-xl font-black text-info">{{ weeklyReport.objectives_achieved }}/{{ weeklyReport.objectives_total }}</p>
+                </div>
+                <div class="bg-white rounded-lg p-3 text-center border border-info-container">
+                  <p class="text-xs text-info font-bold uppercase tracking-wider">Progreso</p>
+                  <p class="text-xl font-black text-info">{{ weeklyReport.objectives_total > 0 ? (weeklyReport.objectives_achieved / weeklyReport.objectives_total * 100).toFixed(0) : 0 }}%</p>
+                </div>
+              </div>
+              @if (weeklyReport.report_text) {
+                <div class="p-3 bg-white rounded-lg border border-info-container text-sm text-info whitespace-pre-wrap max-h-40 overflow-y-auto">
+                  {{ weeklyReport.report_text }}
+                </div>
+              }
+            </div>
+          }
+        </div>
       </div>
     </div>
   </div>
-</div>
 }
+
+<!-- Session Detail Modal -->
+<app-modal [isOpen]="showSessionModal" title="Detalle de Sesión" (close)="closeSessionModal()">
+  @if (selectedSession) {
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Título</p>
+          <p class="text-sm font-medium text-on-surface">{{ selectedSession.title }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Estado</p>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                [class.bg-success-container]="selectedSession.status === 'completed'"
+                [class.text-success]="selectedSession.status === 'completed'"
+                [class.bg-info-container]="selectedSession.status === 'scheduled'"
+                [class.text-info]="selectedSession.status === 'scheduled'"
+                [class.bg-surface-container-high]="selectedSession.status === 'cancelled'"
+                [class.text-on-surface-variant]="selectedSession.status === 'cancelled'">
+            {{ selectedSession.status }}
+          </span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Inicio</p>
+          <p class="text-sm text-on-surface">{{ selectedSession.start_time | date:'dd/MM/yyyy HH:mm' }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Fin</p>
+          <p class="text-sm text-on-surface">{{ selectedSession.end_time ? (selectedSession.end_time | date:'HH:mm') : '—' }}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Terapeuta</p>
+          <p class="text-sm text-on-surface">{{ selectedSession.therapist_name || '—' }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Asistencia</p>
+          <p class="text-sm text-on-surface capitalize">{{ selectedSession.attendance || '—' }}</p>
+        </div>
+      </div>
+      @if (selectedSession.audit_score != null) {
+        <div>
+          <p class="text-xs text-on-surface-variant uppercase tracking-wide mb-1">Score de Auditoría</p>
+          <p class="text-sm font-bold text-on-surface">{{ selectedSession.audit_score }}%</p>
+        </div>
+      }
+    </div>
+  }
+  <div modal-footer>
+    <app-button variant="ghost" label="Cerrar" (clicked)="closeSessionModal()"></app-button>
+    @if (selectedSession) {
+      <a [routerLink]="['/therapist/sessions', selectedSession.id, 'review']"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
+        <fa-icon [icon]="['fas', 'external-link-alt']" class="text-xs"></fa-icon> Ir a Revisión
+      </a>
+    }
+  </div>
+</app-modal>

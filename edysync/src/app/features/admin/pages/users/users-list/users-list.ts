@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../../core/services/admin.service';
@@ -87,6 +88,10 @@ export class UsersList implements OnInit, OnDestroy {
   showCreateDrawer = false;
   showGroupDrawer = false;
   showGroupModal = false;
+
+  showPatientDetailModal = false;
+  patientDetailData: any = null;
+  patientDetailLoading = false;
 
   editData: any = {};
   currentEditUser: UserRow | null = null;
@@ -185,6 +190,8 @@ export class UsersList implements OnInit, OnDestroy {
   get scheduleTherapistOptions(): SelectOption[] {
     return [{value: null, label: '— Seleccionar —'}, ...this.therapists.map(t => ({value: t.id, label: t.username + ' (' + t.email + ')'}))];
   }
+
+  private http = inject(HttpClient);
 
   constructor(
     private adminService: AdminService,
@@ -852,6 +859,32 @@ export class UsersList implements OnInit, OnDestroy {
     this.showGroupModal = false;
     this.editingGroupId = null;
     this.groupForm = {};
+  }
+
+  openPatientDetail() {
+    if (!this.currentEditUser || this.currentEditUser.role !== 'jugador') return;
+    this.showPatientDetailModal = true;
+    this.patientDetailLoading = true;
+    this.patientDetailData = null;
+    this.cdr.markForCheck();
+    this.subscriptions.add(
+      this.http.get(`/api/admin/patient/${this.currentEditUser.id}/detail`).subscribe({
+        next: (res: any) => {
+          this.patientDetailData = res.patient;
+          this.patientDetailLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.patientDetailLoading = false;
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  closePatientDetailModal() {
+    this.showPatientDetailModal = false;
+    this.patientDetailData = null;
   }
 
   saveGroup() {
