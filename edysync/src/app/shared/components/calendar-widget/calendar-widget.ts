@@ -193,6 +193,11 @@ export class CalendarWidget implements OnInit, OnChanges {
     this.cdr.markForCheck();
   }
 
+  setRangeTab(tab: 'start' | 'end') {
+    this.rangeTab = tab;
+    this.cdr.markForCheck();
+  }
+
   clearRangeSelection() {
     this.rangeMode = false;
     this.rangeTab = 'start';

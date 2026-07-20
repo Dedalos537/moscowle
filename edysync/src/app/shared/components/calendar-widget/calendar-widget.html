@@ -21,7 +21,7 @@
 
   @if (rangeMode && !isRangeSelected) {
     <div class="range-tabs mobile-only">
-      <button class="range-tab" [class.active]="rangeTab === 'start'" (click)="rangeTab = 'start'; cdr.markForCheck()">
+      <button class="range-tab" [class.active]="rangeTab === 'start'" (click)="setRangeTab('start')">
         <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px]"></fa-icon>
         Inicio
         @if (rangeStart) {
@@ -31,7 +31,7 @@
       <div class="range-tab-divider">
         <fa-icon [icon]="['fas', 'chevron-right']" class="text-[9px] text-on-surface-variant/40"></fa-icon>
       </div>
-      <button class="range-tab" [class.active]="rangeTab === 'end'" [disabled]="!rangeStart" (click)="rangeTab = 'end'; cdr.markForCheck()">
+      <button class="range-tab" [class.active]="rangeTab === 'end'" [disabled]="!rangeStart" (click)="setRangeTab('end')">
         <fa-icon [icon]="['fas', 'arrow-right-to-line']" class="text-[10px]"></fa-icon>
         Fin
         @if (rangeEnd) {
