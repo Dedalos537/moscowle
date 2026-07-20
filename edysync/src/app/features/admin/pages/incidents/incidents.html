@@ -193,8 +193,7 @@
   }
 
   <!-- Create Modal -->
-  @if (showCreateModal) {
-    <app-modal title="Nueva Incidencia" (close)="closeCreateModal()">
+  <app-modal [isOpen]="showCreateModal" title="Nueva Incidencia" (close)="closeCreateModal()">
       <div class="modal-form">
         <div class="form-group">
           <label class="form-label">Título *</label>
@@ -237,26 +236,26 @@
           </div>
         </div>
       </div>
-      <div slot="footer" class="modal-actions">
+      <div modal-footer class="modal-actions">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeCreateModal()"></app-button>
         <app-button variant="primary" label="Crear" [loading]="creating" (clicked)="createIncident()"></app-button>
       </div>
     </app-modal>
-  }
 
   <!-- Status Change Modal -->
-  @if (showStatusModal && selectedIncident) {
-    <app-modal title="Cambiar Estado" (close)="closeStatusModal()">
+  <app-modal [isOpen]="showStatusModal && !!selectedIncident" title="Cambiar Estado" (close)="closeStatusModal()">
       <div class="modal-form">
         <p class="text-sm text-on-surface-variant mb-3">
-          Cambiar estado de <strong>#{{ selectedIncident.id }}</strong>
+          Cambiar estado de <strong>#{{ selectedIncident?.id }}</strong>
         </p>
         <div class="form-group">
           <label class="form-label">Nuevo Estado</label>
           <select [(ngModel)]="newStatus" class="input-field">
             <option value="">Seleccionar...</option>
-            @for (s of getValidTransitions(selectedIncident.estado); track s) {
-              <option [value]="s">{{ s }}</option>
+            @if (selectedIncident) {
+              @for (s of getValidTransitions(selectedIncident.estado); track s) {
+                <option [value]="s">{{ s }}</option>
+              }
             }
           </select>
         </div>
@@ -265,11 +264,10 @@
           <textarea [(ngModel)]="statusComment" class="input-field" rows="3" placeholder="Comentario opcional"></textarea>
         </div>
       </div>
-      <div slot="footer" class="modal-actions">
+      <div modal-footer class="modal-actions">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeStatusModal()"></app-button>
         <app-button variant="primary" label="Actualizar" [loading]="updating" [disabled]="!newStatus" (clicked)="updateStatus()"></app-button>
       </div>
     </app-modal>
-  }
 
 </div>

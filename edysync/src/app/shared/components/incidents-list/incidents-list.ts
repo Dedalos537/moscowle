@@ -18,12 +18,12 @@ import { Alert } from '../alert/alert';
     <div class="space-y-4">
       @if (loading) {
         <app-spinner></app-spinner>
-      } @else if (error) {
+      } @else if (error && !showCreateModal) {
         <app-alert type="error" [message]="error"></app-alert>
-      } @else {
+      } @else if (!showCreateModal) {
         <div class="flex items-center justify-between">
           <p class="text-sm text-on-surface-variant">{{ totalItems }} incidencia(s)</p>
-          <button (click)="showCreateModal = true"
+          <button (click)="showCreateModal = true; error = null"
                   class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-colors flex items-center gap-2">
             <fa-icon [icon]="['fas', 'plus']"></fa-icon> Reportar
           </button>
@@ -63,9 +63,14 @@ import { Alert } from '../alert/alert';
       }
 
       @if (showCreateModal) {
-        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="showCreateModal = false">
+        <div class="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="showCreateModal = false">
           <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-lg w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
             <h3 class="text-lg font-bold text-on-surface mb-4">Reportar Incidencia</h3>
+            @if (error) {
+              <div class="mb-4 p-3 rounded-lg bg-error-container text-on-error-container text-sm font-medium flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ error }}
+              </div>
+            }
             <div class="space-y-4">
               <div>
                 <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Titulo</label>
@@ -182,8 +187,19 @@ export class IncidentsList implements OnInit, OnDestroy {
   }
 
   createIncident() {
-    if (!this.newIncident.titulo) return;
+    if (!this.newIncident.titulo || this.newIncident.titulo.length < 5) {
+      this.error = 'El título debe tener al menos 5 caracteres';
+      this.cdr.markForCheck();
+      return;
+    }
+    if (!this.newIncident.descripcion || this.newIncident.descripcion.length < 10) {
+      this.error = 'La descripción debe tener al menos 10 caracteres';
+      this.cdr.markForCheck();
+      return;
+    }
+    this.error = null;
     this.creating = true;
+    this.cdr.markForCheck();
     this.subs.add(
       this.incidentService.createIncident({
         titulo: this.newIncident.titulo,
@@ -195,13 +211,18 @@ export class IncidentsList implements OnInit, OnDestroy {
         next: () => {
           this.creating = false;
           this.showCreateModal = false;
+          this.error = null;
           this.newIncident = { titulo: '', descripcion: '', categoria: 'SOFTWARE', impacto: 2, urgencia: 2 };
           this.loadIncidents();
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.creating = false;
-          this.error = 'Error al crear incidencia';
+          if (err.status === 401) {
+            this.error = 'Sesión expirada. Recarga la página e inicia sesión de nuevo.';
+          } else {
+            this.error = err.error?.error || err.error?.message || 'Error al crear incidencia';
+          }
           this.cdr.markForCheck();
         },
       })

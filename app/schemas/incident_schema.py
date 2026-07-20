@@ -1,4 +1,4 @@
-from marshmallow import Schema, ValidationError, fields, validate
+from marshmallow import INCLUDE, Schema, ValidationError, fields, validate
 
 CATEGORIAS_VALIDAS = {'HARDWARE', 'SOFTWARE', 'RED', 'ACCESOS', 'OPERACIONES'}
 ESTADOS_VALIDOS = {'NUEVO', 'EN_CURSO', 'PENDIENTE_PROVEEDOR', 'RESUELTO', 'CERRADO'}
@@ -12,12 +12,17 @@ class IncidentCreateSchema(Schema):
     categoria = fields.Str(required=True, validate=validate.OneOf(CATEGORIAS_VALIDAS))
     subcategoria = fields.Str(load_default=None, validate=validate.Length(max=100))
     prioridad = fields.Int(load_default=3, validate=validate.OneOf(PRIORIDADES_VALIDAS))
+    impacto = fields.Int(load_default=None)
+    urgencia = fields.Int(load_default=None)
     appointment_id = fields.Int(load_default=None)
     evidencia_tipo = fields.Str(
         load_default='MANUAL',
         validate=validate.OneOf(EVIDENCIAS_VALIDAS),
     )
     evidencia_original = fields.Str(load_default='')
+
+    class Meta:
+        unknown = INCLUDE
 
 
 class IncidentStatusSchema(Schema):

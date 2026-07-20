@@ -190,18 +190,19 @@
   }
 
   <!-- Status Modal -->
-  @if (showStatusModal && incident) {
-    <app-modal title="Cambiar Estado" (close)="closeStatusModal()">
+  <app-modal [isOpen]="showStatusModal && !!incident" title="Cambiar Estado" (close)="closeStatusModal()">
       <div class="modal-form">
         <p class="text-sm text-on-surface-variant mb-3">
-          Cambiar estado de <strong>#{{ incident.id }}</strong> desde <strong>{{ incident.estado }}</strong>
+          Cambiar estado de <strong>#{{ incident?.id }}</strong> desde <strong>{{ incident?.estado }}</strong>
         </p>
         <div class="form-group">
           <label class="form-label">Nuevo Estado</label>
           <select [(ngModel)]="newStatus" class="input-field">
             <option value="">Seleccionar...</option>
-            @for (s of getValidTransitions(incident.estado); track s) {
-              <option [value]="s">{{ s }}</option>
+            @if (incident) {
+              @for (s of getValidTransitions(incident.estado); track s) {
+                <option [value]="s">{{ s }}</option>
+              }
             }
           </select>
         </div>
@@ -210,11 +211,10 @@
           <textarea [(ngModel)]="statusComment" class="input-field" rows="3" placeholder="Comentario opcional"></textarea>
         </div>
       </div>
-      <div slot="footer" class="modal-actions">
+      <div modal-footer class="modal-actions">
         <app-button variant="ghost" label="Cancelar" (clicked)="closeStatusModal()"></app-button>
         <app-button variant="primary" label="Actualizar" [loading]="updating" [disabled]="!newStatus" (clicked)="updateStatus()"></app-button>
       </div>
     </app-modal>
-  }
 
 </div>
