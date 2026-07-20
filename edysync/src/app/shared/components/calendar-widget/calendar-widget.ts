@@ -43,6 +43,9 @@ export class CalendarWidget implements OnInit, OnChanges {
   dayDblClick = output<Date>();
   rangeDblClick = output<{ start: Date; end: Date }>();
   eventClick = output<CalendarWidgetEvent>();
+  multiSelect = input(false);
+  selectedIds = input<Set<number>>(new Set());
+  selectionChange = output<number[]>();
 
   currentMonth: Date = new Date();
   selectedDate: Date = new Date();
@@ -183,6 +186,38 @@ export class CalendarWidget implements OnInit, OnChanges {
       this.rangeTab = 'start';
     }
     this.cdr.markForCheck();
+  }
+
+  toggleSessionSelect(event: CalendarWidgetEvent, e: Event) {
+    e.stopPropagation();
+    const current = new Set(this.selectedIds());
+    if (current.has(event.id)) {
+      current.delete(event.id);
+    } else {
+      current.add(event.id);
+    }
+    this.selectionChange.emit(Array.from(current));
+  }
+
+  toggleAllDaySessions() {
+    const allIds = this.selectedDayEvents.map(ev => ev.id);
+    const current = new Set(this.selectedIds());
+    const allSelected = allIds.every(id => current.has(id));
+    if (allSelected) {
+      allIds.forEach(id => current.delete(id));
+    } else {
+      allIds.forEach(id => current.add(id));
+    }
+    this.selectionChange.emit(Array.from(current));
+  }
+
+  isSessionSelected(id: number): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  areAllDaySessionsSelected(): boolean {
+    const events = this.selectedDayEvents;
+    return events.length > 0 && events.every(ev => this.selectedIds().has(ev.id));
   }
 
   cancelRange() {

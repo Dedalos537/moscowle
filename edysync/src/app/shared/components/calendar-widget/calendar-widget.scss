@@ -591,6 +591,16 @@
       transform: translateX(2px);
     }
   }
+
+  &.selected {
+    background: var(--color-primary-container);
+    border: 1.5px solid var(--color-primary);
+    outline: none;
+  }
+
+  input[type="checkbox"] {
+    flex-shrink: 0;
+  }
 }
 
 @keyframes agendaFadeIn {

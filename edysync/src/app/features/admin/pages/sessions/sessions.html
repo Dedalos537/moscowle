@@ -1,5 +1,17 @@
 <ng-template #headerActions>
-  <app-button variant="primary" label="Nueva Programación" [icon]="['fas', 'plus']" (clicked)="openCreateModal()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
+  <div class="flex items-center gap-2">
+    <button (click)="toggleMultiSelect()"
+      class="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg border transition-colors cursor-pointer"
+      [class.border-primary]="multiSelectMode"
+      [class.bg-primary-container]="multiSelectMode"
+      [class.text-on-primary-container]="multiSelectMode"
+      [class.border-border/30]="!multiSelectMode"
+      [class.hover:bg-surface-container-high]="!multiSelectMode">
+      <fa-icon [icon]="multiSelectMode ? ['fas', 'times'] : ['fas', 'check-double']" class="text-xs"></fa-icon>
+      {{ multiSelectMode ? 'Cancelar' : 'Selección múltiple' }}
+    </button>
+    <app-button variant="primary" label="Nueva Programación" [icon]="['fas', 'plus']" (clicked)="openCreateModal()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
+  </div>
 </ng-template>
 
 <div class="space-y-6" [@fadeInUp]>
@@ -26,9 +38,12 @@
       <app-calendar-widget
         [events]="widgetEvents"
         [role]="'admin'"
+        [multiSelect]="multiSelectMode"
+        [selectedIds]="selectedSessionIds"
         (dayDblClick)="onDayDblClick($event)"
         (rangeDblClick)="onRangeDblClick($event)"
         (eventClick)="onEventClick($event)"
+        (selectionChange)="onSelectionChange($event)"
       ></app-calendar-widget>
     }
   </div>
@@ -345,8 +360,20 @@
     </div>
   </div>
 
-  <div modal-footer class="flex items-center justify-between">
-    <app-button variant="danger" [label]="deleting ? 'Eliminando...' : 'Eliminar Sesión'" [icon]="deleting ? ['fas', 'spinner'] : ['fas', 'trash-alt']" [disabled]="deleting" (clicked)="deleteSession()"></app-button>
+  <div class="border-t border-outline pt-3 mt-5">
+    <button (click)="deleteSession()" [disabled]="deleting"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-error rounded-lg border border-error/30 hover:bg-error-container/30 transition-colors cursor-pointer w-full justify-center">
+      @if (deleting) {
+        <fa-icon [icon]="['fas', 'spinner']" [animation]="'spin'" class="text-base"></fa-icon>
+        <span>Eliminando...</span>
+      } @else {
+        <fa-icon [icon]="['fas', 'trash-alt']" class="text-base"></fa-icon>
+        <span>Eliminar Sesión</span>
+      }
+    </button>
+  </div>
+
+  <div modal-footer class="flex items-center justify-end">
     <app-button variant="primary" [label]="submitting ? 'Guardando...' : 'Guardar Cambios'" [icon]="submitting ? ['fas', 'spinner'] : undefined" [disabled]="submitting" (clicked)="submitEdit()"></app-button>
   </div>
 </app-modal>
@@ -471,5 +498,75 @@
   }
   <div modal-footer>
     <app-button variant="ghost" label="Cerrar" (clicked)="closeDetailModal()"></app-button>
+  </div>
+</app-modal>
+
+@if (multiSelectMode && selectedSessionIds.size > 0) {
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-slide-up">
+    <div class="flex items-center gap-3 px-5 py-3 bg-primary text-on-primary rounded-2xl shadow-lg">
+      <span class="text-sm font-bold">{{ selectedSessionIds.size }} sesión{{ selectedSessionIds.size > 1 ? 'es' : '' }}</span>
+      <div class="w-px h-5 bg-on-primary/30"></div>
+      <button (click)="openBulkProgramModal()"
+        class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-on-primary text-primary rounded-xl hover:bg-on-primary/90 transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'file-upload']" class="text-xs"></fa-icon>
+        Asignar Programación
+      </button>
+    </div>
+  </div>
+}
+
+<app-modal [isOpen]="showBulkProgramModal" title="Asignar Programación a Múltiples Sesiones" (close)="closeBulkProgramModal()">
+  <div class="space-y-4">
+    <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl border border-border/20">
+      <fa-icon [icon]="['fas', 'check-double']" class="text-primary text-lg"></fa-icon>
+      <div>
+        <p class="text-sm font-bold text-on-surface">{{ selectedSessionIds.size }} sesión{{ selectedSessionIds.size > 1 ? 'es' : '' }} seleccionada{{ selectedSessionIds.size > 1 ? 's' : '' }}</p>
+        <p class="text-xs text-on-surface-variant mt-0.5">Se asignará el mismo documento de programación a todas las sesiones</p>
+      </div>
+    </div>
+
+    <div>
+      <p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Documento de Programación (.docx)</p>
+      @if (!bulkProgramFile) {
+        <label for="bulkProgramFileInput" class="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-border/40 rounded-xl cursor-pointer hover:border-primary hover:bg-surface-container-low transition-all">
+          <fa-icon [icon]="['fas', 'cloud-upload-alt']" class="text-3xl text-on-surface-variant/50"></fa-icon>
+          <div class="text-center">
+            <p class="text-sm font-medium text-on-surface">Subir documento Word</p>
+            <p class="text-xs text-on-surface-variant/70 mt-0.5">Solo archivos .docx</p>
+          </div>
+        </label>
+        <input type="file" id="bulkProgramFileInput" class="hidden" accept=".docx" (change)="onBulkFileSelected($event)">
+      } @else {
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-success-container border border-success-container">
+          <fa-icon [icon]="['fas', 'file-word']" class="text-primary text-lg shrink-0"></fa-icon>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-on-success-container truncate">{{ bulkProgramFile.name }}</p>
+            <p class="text-xs text-success mt-0.5">{{ (bulkProgramFile.size / 1024).toFixed(0) }} KB</p>
+          </div>
+          <button (click)="bulkProgramFile = null" class="p-1.5 rounded-lg hover:bg-on-success-container/10 transition-colors cursor-pointer">
+            <fa-icon [icon]="['fas', 'times']" class="text-on-success-container text-sm"></fa-icon>
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (bulkProgramError) {
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-error-container text-error text-sm">
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-lg"></fa-icon> {{ bulkProgramError }}
+      </div>
+    }
+    @if (bulkProgramSuccess) {
+      <div class="flex items-center gap-2 p-2.5 rounded-lg bg-success-container text-on-success-container text-sm">
+        <fa-icon [icon]="['fas', 'check-circle']" class="text-lg"></fa-icon> {{ bulkProgramSuccess }}
+      </div>
+    }
+  </div>
+  <div modal-footer class="flex items-center justify-end gap-2">
+    <app-button variant="ghost" label="Cancelar" (clicked)="closeBulkProgramModal()"></app-button>
+    <app-button variant="primary"
+      [label]="bulkProgramUploading ? 'Subiendo...' : 'Asignar a ' + selectedSessionIds.size + ' sesión(es)'"
+      [icon]="bulkProgramUploading ? ['fas', 'spinner'] : ['fas', 'file-upload']"
+      [disabled]="!bulkProgramFile || bulkProgramUploading"
+      (clicked)="submitBulkProgram()"></app-button>
   </div>
 </app-modal>

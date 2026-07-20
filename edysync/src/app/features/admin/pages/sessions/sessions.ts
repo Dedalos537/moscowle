@@ -147,6 +147,14 @@ export class Sessions implements OnInit, OnDestroy {
   programUploadingCreate = false;
   createProgress = 0;
 
+  multiSelectMode = false;
+  selectedSessionIds = new Set<number>();
+  showBulkProgramModal = false;
+  bulkProgramFile: File | null = null;
+  bulkProgramUploading = false;
+  bulkProgramError: string | null = null;
+  bulkProgramSuccess: string | null = null;
+
   constructor(
     private adminService: AdminService,
     private headerService: HeaderService,
@@ -841,5 +849,86 @@ export class Sessions implements OnInit, OnDestroy {
 
   toDateStr(date: string): Date {
     return new Date(date + 'T12:00:00');
+  }
+
+  toggleMultiSelect() {
+    this.multiSelectMode = !this.multiSelectMode;
+    if (!this.multiSelectMode) {
+      this.selectedSessionIds = new Set();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onSelectionChange(ids: number[]) {
+    this.selectedSessionIds = new Set(ids);
+    this.cdr.markForCheck();
+  }
+
+  openBulkProgramModal() {
+    if (this.selectedSessionIds.size === 0) return;
+    this.showBulkProgramModal = true;
+    this.bulkProgramFile = null;
+    this.bulkProgramError = null;
+    this.bulkProgramSuccess = null;
+    this.cdr.markForCheck();
+  }
+
+  closeBulkProgramModal() {
+    this.showBulkProgramModal = false;
+    this.bulkProgramFile = null;
+    this.bulkProgramError = null;
+    this.bulkProgramSuccess = null;
+  }
+
+  onBulkFileSelected(event: any) {
+    const file: File = event.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.docx')) {
+        this.bulkProgramError = 'Solo se permiten archivos .docx';
+        return;
+      }
+      this.bulkProgramFile = file;
+      this.bulkProgramError = null;
+    }
+  }
+
+  submitBulkProgram() {
+    if (!this.bulkProgramFile || this.selectedSessionIds.size === 0) return;
+    this.bulkProgramUploading = true;
+    this.bulkProgramError = null;
+    this.bulkProgramSuccess = null;
+
+    const ids = Array.from(this.selectedSessionIds);
+    let completed = 0;
+    let errors = 0;
+
+    ids.forEach(sessionId => {
+      this.adminService.uploadSessionProgram(sessionId, this.bulkProgramFile!).subscribe({
+        next: () => {
+          completed++;
+          if (completed + errors === ids.length) {
+            this.bulkProgramUploading = false;
+            if (errors > 0) {
+              this.bulkProgramError = `${completed} exitosas, ${errors} fallidas`;
+            } else {
+              this.bulkProgramSuccess = `Programación asignada a ${completed} sesión(es) exitosamente`;
+              setTimeout(() => {
+                this.closeBulkProgramModal();
+                this.loadSessions();
+              }, 1500);
+            }
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
+          errors++;
+          if (completed + errors === ids.length) {
+            this.bulkProgramUploading = false;
+            this.bulkProgramError = `${completed} exitosas, ${errors} fallidas`;
+            this.cdr.markForCheck();
+          }
+        }
+      });
+    });
   }
 }
