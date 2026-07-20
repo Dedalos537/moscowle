@@ -14,7 +14,7 @@ import re
 FTP_HOST = 'ftp.centrojuanpabloii.com'
 FTP_USER = 'centroju'
 FTP_PASS = '+LC6OXpm0dq6@4'
-REMOTE_DIR = '/public_html/moscowle'
+REMOTE_DIR = '/public_html/moscowle.centrojuanpabloii.com'
 LOCAL_DIR = 'edysync/dist/edysync/browser'
 
 

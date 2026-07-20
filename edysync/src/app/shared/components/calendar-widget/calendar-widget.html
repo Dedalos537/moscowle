@@ -32,7 +32,7 @@
         <fa-icon [icon]="['fas', 'chevron-right']" class="text-[9px] text-on-surface-variant/40"></fa-icon>
       </div>
       <button class="range-tab" [class.active]="rangeTab === 'end'" [disabled]="!rangeStart" (click)="setRangeTab('end')">
-        <fa-icon [icon]="['fas', 'arrow-right-to-line']" class="text-[10px]"></fa-icon>
+        <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px]"></fa-icon>
         Fin
         @if (rangeEnd) {
           <span class="range-tab-value">{{ rangeEnd.getDate() }}/{{ rangeEnd.getMonth() + 1 }}</span>
