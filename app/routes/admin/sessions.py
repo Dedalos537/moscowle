@@ -144,10 +144,12 @@ def batch_create_sessions():
         created_ids = []
 
         specific_dates = data.get('dates')
+        unlock_past = data.get('unlock_past_dates', False)
 
         if specific_dates:
             if len(specific_dates) > 5:
                 return jsonify({'error': 'Máximo 5 fechas'}), 400
+            now = datetime.utcnow()
             for pid in patient_ids:
                 for date_str in specific_dates:
                     current_date = datetime.strptime(date_str, '%Y-%m-%d')
@@ -160,13 +162,14 @@ def batch_create_sessions():
                     session_title = (
                         title if title else (f'{title_prefix} - {date_str}' if title_prefix else f'Sesión {date_str}')
                     )
+                    is_past = session_end.replace(tzinfo=None) < now
                     appt = Appointment(
                         therapist_id=therapist_id,
                         patient_id=pid,
                         title=session_title,
                         start_time=session_start,
                         end_time=session_end,
-                        status='scheduled',
+                        status='completed' if is_past and unlock_past else 'scheduled',
                         location=sede,
                         created_at=datetime.utcnow(),
                     )
@@ -202,6 +205,7 @@ def batch_create_sessions():
 
         session_counter = 1
         current_date_iter = start_date
+        now = datetime.utcnow()
 
         for pid in patient_ids:
             session_counter = 1
@@ -218,13 +222,14 @@ def batch_create_sessions():
                         title_text = f'{title_prefix} ({session_counter}/{total_sessions})'
                     else:
                         title_text = f'Sesión {session_counter}/{total_sessions}'
+                    is_past = session_end.replace(tzinfo=None) < now
                     appt = Appointment(
                         therapist_id=therapist_id,
                         patient_id=pid,
                         title=title_text,
                         start_time=session_start,
                         end_time=session_end,
-                        status='scheduled',
+                        status='completed' if is_past and unlock_past else 'scheduled',
                         created_at=datetime.utcnow(),
                     )
                     db.session.add(appt)

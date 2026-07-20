@@ -515,6 +515,7 @@ export class Sessions implements OnInit, OnDestroy {
       dates: f.dates,
       start_time: f.start_time,
       end_time: f.end_time,
+      unlock_past_dates: this.unlockPastDates,
     };
 
     if (isGroup && group) {

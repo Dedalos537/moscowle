@@ -224,11 +224,13 @@ export class RecordingService {
     }
 
     const session = this.activeSession$.value;
-    const sessionEndMs = session?.end
-      ? new Date(session.end).getTime()
-      : new Date(session.start).getTime() + 60 * 60 * 1000;
-    const sessionStartMs = session?.start
-      ? new Date(session.start).getTime()
+    const startRaw = session?.start || session?.start_time;
+    const endRaw = session?.end || session?.end_time;
+    const sessionEndMs = endRaw
+      ? new Date(endRaw).getTime()
+      : new Date(startRaw).getTime() + 60 * 60 * 1000;
+    const sessionStartMs = startRaw
+      ? new Date(startRaw).getTime()
       : this.recordingStartTime;
     const totalMs = sessionEndMs - sessionStartMs;
     const totalExtracts = Math.max(1, Math.ceil(totalMs / (5 * 60 * 1000)));
@@ -375,9 +377,11 @@ export class RecordingService {
     if (!this.currentSessionId) return;
     const session = this.activeSession$.value;
     if (!session) return;
-    const endTime = session.end
-      ? new Date(session.end).getTime()
-      : new Date(session.start).getTime() + 60 * 60 * 1000;
+    const startRaw = session?.start || session?.start_time;
+    const endRaw = session?.end || session?.end_time;
+    const endTime = endRaw
+      ? new Date(endRaw).getTime()
+      : new Date(startRaw).getTime() + 60 * 60 * 1000;
     const timeLeft = endTime - Date.now();
     if (timeLeft > 0) {
       this.endTimer = setTimeout(() => {
