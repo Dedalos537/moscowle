@@ -107,12 +107,12 @@ export const routeAnimations = trigger('routeAnimations', [
       style({ position: 'absolute', width: '100%', top: 0, left: 0 })
     ], { optional: true }),
     query(':leave', [
-      style({ opacity: 1, filter: 'blur(0px)', transform: 'translateX(0)' }),
-      animate(`180ms ${EASE}`, style({ opacity: 0, filter: 'blur(4px)', transform: 'translateX(-24px)' }))
+      style({ opacity: 1 }),
+      animate(`180ms ${EASE}`, style({ opacity: 0 }))
     ], { optional: true }),
     query(':enter', [
-      style({ opacity: 0, filter: 'blur(6px)', transform: 'translateX(24px)' }),
-      animate(`420ms ${EASE}`, style({ opacity: 1, filter: 'blur(0px)', transform: 'translateX(0)' }))
+      style({ opacity: 0 }),
+      animate(`300ms ${EASE}`, style({ opacity: 1 }))
     ], { optional: true }),
   ])
 ]);

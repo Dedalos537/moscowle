@@ -23,7 +23,7 @@
               [style.color]="isRecording ? 'var(--color-on-error)' : 'var(--color-on-surface)'"
               [style.borderColor]="isRecording ? 'var(--color-error)' : 'var(--color-border)'"
               (click)="toggleRecording()">
-        @if (isRecording) {
+    @if (isRecording && session?.status !== 'completed') {
           <fa-icon [icon]="['fas', 'stop']" class="text-xs"></fa-icon>
           Detener
         } @else {
@@ -282,21 +282,11 @@
 </div>
 }
 
-@if (isRecording) {
+@if (isRecording && session?.status !== 'completed') {
 <div class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-2xl transition-all"
      style="background:var(--color-error);color:var(--color-on-error)">
   <span class="w-2.5 h-2.5 rounded-full bg-white" style="animation:pulse 2s infinite"></span>
   <span class="text-xs font-bold uppercase tracking-widest">En vivo</span>
-  <div class="w-px h-5 bg-white/20"></div>
-  <div class="flex flex-col items-center leading-tight">
-    <span class="text-sm font-mono font-bold tabular-nums">-{{ remainingTime }}</span>
-    <span class="text-[9px] opacity-70">restante</span>
-  </div>
-  <div class="w-px h-5 bg-white/20"></div>
-  <div class="flex flex-col items-center leading-tight">
-    <span class="text-xs font-bold">{{ extractNumber }}/{{ totalExtracts }}</span>
-    <span class="text-[9px] opacity-70">extractos</span>
-  </div>
   @if (chunkUploadStatus) {
     <div class="w-px h-5 bg-white/20"></div>
     <div class="text-xs max-w-[160px] truncate" [style.color]="chunkUploadStatus.includes('Error') ? 'var(--color-warning)' : chunkUploadStatus.includes('transcrito') || chunkUploadStatus.includes('completa') ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'">
