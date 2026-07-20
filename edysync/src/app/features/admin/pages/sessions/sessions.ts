@@ -136,6 +136,7 @@ export class Sessions implements OnInit, OnDestroy {
 
   calendarMonth: Date = new Date();
   calendarDays: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
+  unlockPastDates = false;
 
   auditState: any = null;
   programUploading = false;
@@ -338,7 +339,7 @@ export class Sessions implements OnInit, OnDestroy {
       const week: { date: Date; day: number; selected: boolean; disabled: boolean }[] = [];
       for (let d = 0; d < 7; d++) {
         const dateStr = cursor.toISOString().split('T')[0];
-        const isPast = cursor.getTime() < today.getTime() && cursor.getMonth() === month;
+        const isPast = cursor.getTime() < today.getTime() && cursor.getMonth() === month && !this.unlockPastDates;
         week.push({
           date: new Date(cursor),
           day: cursor.getDate(),
@@ -408,6 +409,11 @@ export class Sessions implements OnInit, OnDestroy {
   toggleRangeMode() {
     this.rangeMode = !this.rangeMode;
     this.rangeStartStr = null;
+  }
+
+  toggleUnlockPast() {
+    this.unlockPastDates = !this.unlockPastDates;
+    this.buildCalendarGrid();
   }
 
   clearRangeSelection() {

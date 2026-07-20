@@ -101,6 +101,11 @@
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Fechas <span class="text-error">*</span></label>
       <p class="text-xs text-on-surface-variant/60 mb-2">Click para seleccionar dias individuales. Usa el boton "Rango" para seleccionar un bloque de dias consecutivos. Maximo 10 dias.</p>
 
+      <label class="flex items-center gap-2 mb-2 cursor-pointer">
+        <input type="checkbox" class="w-4 h-4 accent-primary" [checked]="unlockPastDates" (change)="toggleUnlockPast()">
+        <span class="text-xs text-on-surface-variant font-medium">Permitir crear sesiones en fechas pasadas</span>
+      </label>
+
       <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
         <div class="flex items-center justify-between mb-3">
           <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
