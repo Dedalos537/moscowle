@@ -40,11 +40,12 @@ from flask_bcrypt import Bcrypt
 
 app = create_app()
 bcrypt = Bcrypt(app)
-with app.app_context():
+with app.app.context():
     from app.models import User
-    if not User.query.filter_by(role='admin').first():
-        admin_email = os.environ.get('ADMIN_EMAIL', 'diegocenteno537@gmail.com')
-        admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    admin_email = os.environ.get('ADMIN_EMAIL', 'diegocenteno537@gmail.com')
+    admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    admin = User.query.filter_by(role='admin').first()
+    if not admin:
         admin = User(
             email=admin_email,
             password=bcrypt.generate_password_hash(admin_pass).decode('utf-8'),
@@ -54,9 +55,19 @@ with app.app_context():
         )
         db.session.add(admin)
         db.session.commit()
-        print(f'Admin created: {admin_email} / {admin_pass}')
+        print(f'Admin created: {admin_email}')
     else:
-        print('Admin already exists, skipping seed')
+        try:
+            if not bcrypt.check_password_hash(admin.password, admin_pass):
+                admin.password = bcrypt.generate_password_hash(admin_pass).decode('utf-8')
+                db.session.commit()
+                print(f'Admin password reset: {admin_email}')
+            else:
+                print('Admin already exists and password is valid')
+        except Exception:
+            admin.password = bcrypt.generate_password_hash(admin_pass).decode('utf-8')
+            db.session.commit()
+            print(f'Admin password reset (hash incompatible): {admin_email}')
 " || echo "Warning: seed failed (non-fatal)"
 
 # --- Start nginx in background (production mode) ---
