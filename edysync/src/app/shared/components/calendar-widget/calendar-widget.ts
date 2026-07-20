@@ -49,6 +49,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
   rangeMode = false;
+  rangeTab: 'start' | 'end' = 'start';
   weeks: DayCell[][] = [];
   weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -179,12 +180,14 @@ export class CalendarWidget implements OnInit, OnChanges {
     this.rangeMode = !this.rangeMode;
     if (this.rangeMode) {
       this.clearRange();
+      this.rangeTab = 'start';
     }
     this.cdr.markForCheck();
   }
 
   cancelRange() {
     this.rangeMode = false;
+    this.rangeTab = 'start';
     this.clearRange();
     this.buildGrid();
     this.cdr.markForCheck();
@@ -192,6 +195,7 @@ export class CalendarWidget implements OnInit, OnChanges {
 
   clearRangeSelection() {
     this.rangeMode = false;
+    this.rangeTab = 'start';
     this.clearRange();
     this.buildGrid();
     this.cdr.markForCheck();
@@ -268,6 +272,23 @@ export class CalendarWidget implements OnInit, OnChanges {
       return;
     }
 
+    if (this.rangeMode && !this.isRangeSelected) {
+      if (this.rangeTab === 'start') {
+        this.rangeStart = new Date(cell.date);
+        this.rangeEnd = null;
+        this.rangeTab = 'end';
+      } else if (this.rangeTab === 'end') {
+        this.rangeEnd = new Date(cell.date);
+        if (this.rangeStart && this.rangeEnd) {
+          this.selectedDate = new Date(this.rangeStart);
+          this.rangeTab = 'start';
+        }
+      }
+      this.buildGrid();
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.clearRange();
     this.selectedDate = new Date(cell.date);
     if (!cell.isCurrentMonth) {
@@ -298,6 +319,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   private clearRange() {
     this.rangeStart = null;
     this.rangeEnd = null;
+    this.rangeTab = 'start';
   }
 
 

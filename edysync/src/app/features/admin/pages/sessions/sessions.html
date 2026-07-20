@@ -4,14 +4,16 @@
 
 <div class="space-y-6" [@fadeInUp]>
 
-  <div class="card p-3 sm:p-4 flex flex-col sm:flex-wrap gap-3 sm:gap-4 items-stretch sm:items-center">
-    <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
-      <label class="text-xs sm:text-sm font-semibold text-on-surface self-center sm:self-auto">Filtrar por Terapeuta:</label>
-      <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full sm:w-64"></app-select>
-    </div>
-    <div class="flex flex-col sm:flex-row gap-3 flex-wrap">
-      <label class="text-xs sm:text-sm font-semibold text-on-surface self-center sm:self-auto">Alumno:</label>
-      <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full sm:w-64"></app-select>
+  <div class="card p-3 sm:p-4">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+        <label class="text-xs sm:text-sm font-semibold text-on-surface whitespace-nowrap">Filtrar por Terapeuta:</label>
+        <app-select [(ngModel)]="selectedTherapistId" (valueChange)="onTherapistFilterChange()" [options]="therapistOptions" class="w-full sm:w-56"></app-select>
+      </div>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+        <label class="text-xs sm:text-sm font-semibold text-on-surface whitespace-nowrap">Alumno:</label>
+        <app-select [(ngModel)]="selectedPatientId" (valueChange)="onPatientFilterChange()" [options]="patientFilterOptions" [searchable]="true" class="w-full sm:w-56"></app-select>
+      </div>
     </div>
   </div>
 

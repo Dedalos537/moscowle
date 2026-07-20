@@ -9,7 +9,7 @@
       @if (todayButtonVisible) {
         <button class="today-btn" (click)="today()">Hoy</button>
       }
-      <button class="range-toggle-btn" [class.active]="rangeMode" (click)="toggleRangeMode()" title="Seleccionar rango de fechas">
+      <button class="range-toggle-btn mobile-only" [class.active]="rangeMode" (click)="toggleRangeMode()" title="Seleccionar rango de fechas">
         <fa-icon [icon]="['fas', 'arrows-alt-h']"></fa-icon>
         <span class="range-toggle-label">Rango</span>
       </button>
@@ -20,10 +20,25 @@
   </div>
 
   @if (rangeMode && !isRangeSelected) {
-    <div class="range-mode-hint">
-      <fa-icon [icon]="['fas', 'info-circle']"></fa-icon>
-      <span>{{ rangeStart ? 'Ahora selecciona la fecha final' : 'Selecciona la fecha de inicio del rango' }}</span>
-      <button class="range-cancel-btn" (click)="cancelRange()">
+    <div class="range-tabs mobile-only">
+      <button class="range-tab" [class.active]="rangeTab === 'start'" (click)="rangeTab = 'start'; cdr.markForCheck()">
+        <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px]"></fa-icon>
+        Inicio
+        @if (rangeStart) {
+          <span class="range-tab-value">{{ rangeStart.getDate() }}/{{ rangeStart.getMonth() + 1 }}</span>
+        }
+      </button>
+      <div class="range-tab-divider">
+        <fa-icon [icon]="['fas', 'chevron-right']" class="text-[9px] text-on-surface-variant/40"></fa-icon>
+      </div>
+      <button class="range-tab" [class.active]="rangeTab === 'end'" [disabled]="!rangeStart" (click)="rangeTab = 'end'; cdr.markForCheck()">
+        <fa-icon [icon]="['fas', 'arrow-right-to-line']" class="text-[10px]"></fa-icon>
+        Fin
+        @if (rangeEnd) {
+          <span class="range-tab-value">{{ rangeEnd.getDate() }}/{{ rangeEnd.getMonth() + 1 }}</span>
+        }
+      </button>
+      <button class="range-cancel-btn" (click)="cancelRange()" title="Cancelar">
         <fa-icon [icon]="['fas', 'times']"></fa-icon>
       </button>
     </div>

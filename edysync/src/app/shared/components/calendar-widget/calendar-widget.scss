@@ -7,7 +7,96 @@
   overflow: hidden;
 }
 
-/* ─── Range Hint Banner ─── */
+/* ─── Range Tabs (Mobile) ─── */
+.mobile-only {
+  display: none;
+
+  @media (max-width: 767px) {
+    display: flex;
+  }
+}
+
+.range-tabs {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: var(--color-surface-container-high);
+
+  @media (max-width: 767px) {
+    display: flex;
+  }
+}
+
+.range-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-outline-variant);
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-container-lowest);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-color: var(--color-primary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.range-tab-value {
+  font-size: 0.6rem;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.range-tab-divider {
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.range-cancel-btn {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+
+  .material-symbols-outlined, fa-icon {
+    font-size: 13px;
+  }
+
+  &:hover {
+    background: var(--color-error-container);
+    color: var(--color-error);
+  }
+}
+
+/* ─── Range Hint Banner (selected range) ─── */
 .range-hint {
   display: flex;
   align-items: center;
@@ -131,6 +220,52 @@
     color: var(--color-on-primary);
     border-color: var(--color-primary);
   }
+}
+
+.range-toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--color-outline-variant);
+  background: transparent;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, color 0.15s;
+
+  @media (max-width: 767px) {
+    display: flex;
+  }
+
+  @media (min-width: 640px) {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-color: var(--color-primary);
+  }
+
+  &:hover {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    border-color: var(--color-primary);
+  }
+
+  .fa-icon {
+    font-size: 0.7em;
+  }
+}
+
+.range-toggle-label {
+  font-size: inherit;
 }
 
 /* ─── Grid ─── */
