@@ -610,7 +610,7 @@ def create_app(config_class=None):
             app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
             db.session.rollback()
 
-    db.session.remove()
+        db.session.remove()
 
     _blueprints = [
         ('auth', 'app.routes.auth', 'auth_bp'),
