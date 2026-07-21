@@ -489,9 +489,9 @@ export class Sessions implements OnInit, OnDestroy {
     const f = this.createForm;
     const isGroup = f.session_type === 'grupal' && this.selectedGroupId;
     if (!f.therapist_id || (!isGroup && !f.patient_id) || !f.dates.length || !f.start_time || !f.end_time) return;
-    if (isGroup && (!group || !group.member_ids?.length)) return;
 
     const group = isGroup ? this.patientGroups.find((g: any) => g.id === this.selectedGroupId) : null;
+    if (isGroup && (!group || !group.member_ids?.length)) return;
     const patientCount = isGroup ? (group?.member_count || 0) : 1;
 
     const confirmed = await firstValueFrom(this.confirmService.confirm({
