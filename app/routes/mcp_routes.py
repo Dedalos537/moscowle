@@ -107,6 +107,7 @@ def mcp_chat_stream():
     """Send a message and stream the response via SSE."""
     user = _get_current_user()
     cors = _cors_headers()
+    _app = current_app._get_current_object()
 
     if not user:
         resp = jsonify({'error': 'No autenticado'})
@@ -128,9 +129,9 @@ def mcp_chat_stream():
         return resp
 
     def generate():
-        with current_app.app_context():
+        with _app.app_context():
             try:
-                api_key = current_app.config.get('GROQ_API_KEY')
+                api_key = _app.config.get('GROQ_API_KEY')
                 client = Groq(api_key=api_key)
                 tools = get_tools_for_mode(mode, user.role)
                 system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
