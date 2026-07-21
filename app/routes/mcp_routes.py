@@ -14,12 +14,6 @@ mcp_bp = Blueprint('mcp', __name__, url_prefix='/mcp')
 
 mcp_service = MCPService()
 
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRFToken',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-}
-
 
 def _get_current_user():
     """Get current user from JWT or session."""
@@ -31,23 +25,6 @@ def _get_current_user():
         if current_user and current_user.is_authenticated:
             return current_user
         return None
-
-
-@mcp_bp.before_request
-def handle_options():
-    """Handle CORS preflight requests."""
-    if request.method == 'OPTIONS':
-        resp = current_app.make_default_options_response()
-        resp.headers.update(CORS_HEADERS)
-        return resp
-
-
-@mcp_bp.after_request
-def add_cors_headers(response):
-    """Add CORS headers to all MCP responses."""
-    for k, v in CORS_HEADERS.items():
-        response.headers[k] = v
-    return response
 
 
 @mcp_bp.route('/chat', methods=['POST'])
@@ -174,7 +151,6 @@ def mcp_chat_stream():
         headers={
             'Cache-Control': 'no-cache',
             'X-Accel-Buffering': 'no',
-            **CORS_HEADERS,
         },
     )
 

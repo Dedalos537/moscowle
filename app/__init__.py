@@ -500,6 +500,28 @@ def create_app(config_class=None):
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
+
+    # Dedicated CORS handler for /mcp/* routes (Flask-CORS doesn't work with SSE streaming)
+    MCP_CORS = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRFToken',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    }
+
+    @app.before_request
+    def mcp_cors_preflight():
+        if request.path.startswith('/mcp/') and request.method == 'OPTIONS':
+            resp = app.make_default_options_response()
+            resp.headers.update(MCP_CORS)
+            return resp
+
+    @app.after_request
+    def mcp_cors_headers(response):
+        if request.path.startswith('/mcp/'):
+            for k, v in MCP_CORS.items():
+                response.headers[k] = v
+        return response
+
     try:
         from flask_wtf.csrf import generate_csrf
 
