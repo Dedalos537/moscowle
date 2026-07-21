@@ -28,6 +28,7 @@ export class RecordingService {
   private focusHandler?: () => void;
   private recorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
+  private recordingNotification: Notification | null = null;
   private chunkTimer: any;
   private elapsedTimer: any;
   private endTimer: any;
@@ -219,6 +220,14 @@ export class RecordingService {
     this.chunkCount = 0;
     this.startNewChunk();
 
+    this.requestNotificationPermission();
+    const patient = this.patientName$.value || 'Paciente';
+    const title = this.sessionTitle$.value || 'Sesión';
+    this.showRecordingNotification(
+      '🔴 Grabación activa',
+      `${title} — ${patient}\nLa grabación continúa aunque la pantalla esté apagada.`
+    );
+
     if (this.currentSessionId) {
       this.http.post(`/api/sessions/${this.currentSessionId}/start-recording`, {}).subscribe();
     }
@@ -349,6 +358,12 @@ export class RecordingService {
         this.pendingUploads--;
         if (data.success) {
           this.chunkStatus$.next(`Bloque ${this.chunkCount} transcrito`);
+          const patient = this.patientName$.value || 'Paciente';
+          const title = this.sessionTitle$.value || 'Sesión';
+          const elapsed = this.elapsedTime$.value || '00:00';
+          this.updateRecordingNotification(
+            `${title} — ${patient}\nExtracto ${this.chunkCount} subido · Tiempo: ${elapsed}\nLa grabación continúa.`
+          );
           this.http.post(`/api/sessions/${this.currentSessionId}/analyze-attendance`, {}).subscribe();
           this.http.get(`/api/sessions/${this.currentSessionId}/compare-live`).subscribe({
             next: (cmp: any) => {
@@ -495,6 +510,7 @@ export class RecordingService {
 
   private closeSessionGate() {
     this.stopRecording();
+    this.closeRecordingNotification();
     this.activeSession$.next(null);
     this.recordingState$.next('idle');
     this.currentSessionId = null;
@@ -516,5 +532,49 @@ export class RecordingService {
     const mins = this.delayMinutes$.value;
     if (mins <= 0) return 'menos de 1 min';
     return `${mins} min`;
+  }
+
+  private requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  private showRecordingNotification(title: string, body: string) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      this.recordingNotification?.close();
+      this.recordingNotification = new Notification(title, {
+        body,
+        icon: '/assets/img/logo.svg',
+        tag: 'recording-session',
+        requireInteraction: true,
+        silent: false,
+      } as any);
+      this.recordingNotification.onclick = () => {
+        window.focus();
+        this.recordingNotification?.close();
+      };
+    } catch {
+      // Mobile browsers may not support all options
+    }
+  }
+
+  private updateRecordingNotification(body: string) {
+    if (this.recordingNotification) {
+      try {
+        this.recordingNotification.close();
+      } catch { /* ignore */ }
+    }
+    this.showRecordingNotification('🔴 Grabación activa', body);
+  }
+
+  private closeRecordingNotification() {
+    if (this.recordingNotification) {
+      try {
+        this.recordingNotification.close();
+      } catch { /* ignore */ }
+      this.recordingNotification = null;
+    }
   }
 }
