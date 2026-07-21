@@ -132,7 +132,7 @@ def mcp_chat_stream():
     def generate():
         with _app.app_context():
             try:
-                from app.services.mcp_service import _parse_text_tool_call, _build_tool_prompt, MODELS
+                from app.services.mcp_service import _parse_text_tool_call, _build_tool_prompt
 
                 api_key = _app.config.get('GROQ_API_KEY')
                 client = Groq(api_key=api_key)
@@ -152,7 +152,7 @@ def mcp_chat_stream():
                 for iteration in range(5):
                     try:
                         response = client.chat.completions.create(
-                            model=MODELS[0],
+                            model='llama-3.1-8b-instant',
                             messages=messages,
                             max_tokens=4096,
                             temperature=0.3,

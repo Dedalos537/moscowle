@@ -107,7 +107,7 @@ class MCPService:
 
     def _call_llm(self, client, messages, model=None):
         if model is None:
-            model = MODELS[0]
+            model = 'llama-3.1-8b-instant'
         return client.chat.completions.create(
             model=model,
             messages=messages,
