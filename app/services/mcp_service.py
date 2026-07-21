@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime
 
 from flask import current_app
@@ -23,34 +24,71 @@ SYSTEM_PROMPTS = {
         '- Actualizar datos de pacientes (update_patient)\n'
         '- Enviar mensajes/notificaciones (broadcast_message)\n\n'
         'REGLAS:\n'
-        '- Responde en español, se conciso.\n'
+        '- Responde en espanol, se conciso.\n'
         '- SIEMPRE usa herramientas para obtener datos reales. Nunca inventes.\n'
         '- Si el usuario pide algo que requiere datos, usa la herramienta apropiada primero.\n'
         '- Para registrar un pago, primero busca el paciente con search_patients si no tienes el ID.\n'
         '- Confirma al usuario cuando ejecutes una accion (crear, registrar, actualizar).\n'
-        '- Si falta informacion para una accion, pide solo lo estrictamente necesario.\n'
     ),
     'supervisor': (
         'Eres el asistente IA del Centro Juan Pablo II.\n'
         'Puedes consultar pacientes, sesiones, pagos, incidencias y reportes.\n'
         'Puedes crear sesiones, incidencias y actualizar datos de pacientes.\n'
-        'Responde en español, se conciso. Usa herramientas para datos reales.\n'
+        'Responde en espanol, se conciso. Usa herramientas para datos reales.\n'
     ),
     'terapista': (
         'Eres el asistente IA del Centro Juan Pablo II.\n'
         'Puedes ver tus sesiones, pacientes asignados, reportes semanales/mensuales.\n'
         'Puedes crear sesiones y actualizar su estado.\n'
-        'Responde en español, se amigable.\n'
+        'Responde en espanol, se amigable.\n'
     ),
     'jugador': (
         'Eres el asistente IA del Centro Juan Pablo II.\n'
         'Puedes ver tus sesiones y perfil.\n'
-        'Responde en español, se amigable.\n'
+        'Responde en espanol, se amigable.\n'
     ),
 }
 
 MAX_ITERATIONS = 5
 MODELS = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile']
+
+TOOL_CALL_PATTERN = re.compile(
+    r'<function=(\w+)\s*(\{.*?\})?\s*</function>',
+    re.DOTALL,
+)
+
+
+def _parse_text_tool_call(text):
+    """Extract tool name and args from text like <function=search_patients{"query":"Carlos"}</function>."""
+    match = TOOL_CALL_PATTERN.search(text)
+    if not match:
+        return None, None
+    tool_name = match.group(1)
+    args_str = match.group(2)
+    if args_str:
+        try:
+            tool_args = json.loads(args_str)
+        except json.JSONDecodeError:
+            tool_args = {}
+    else:
+        tool_args = {}
+    return tool_name, tool_args
+
+
+def _build_tool_prompt(tools):
+    """Build a text listing of available tools for the system prompt."""
+    lines = ['HERRAMIENTAS DISPONIBLES (usa el formato <function=nombre{json_args} </function>):']
+    for t in tools:
+        fn = t['function']
+        params = fn.get('parameters', {}).get('properties', {})
+        required = fn.get('parameters', {}).get('required', [])
+        param_parts = []
+        for pname, pinfo in params.items():
+            req = '*' if pname in required else ''
+            param_parts.append(f'{pname}{req}:{pinfo.get("type","string")}')
+        params_str = ', '.join(param_parts) if param_parts else 'ninguno'
+        lines.append(f'- {fn["name"]}: {fn["description"]} | Params: {params_str}')
+    return '\n'.join(lines)
 
 
 class MCPService:
@@ -67,25 +105,29 @@ class MCPService:
             self._client = Groq(api_key=api_key)
         return self._client
 
-    def _call_llm(self, client, messages, tools, model=None):
-        """Call Groq API with error handling."""
+    def _call_llm(self, client, messages, model=None):
         if model is None:
             model = MODELS[0]
-        kwargs = {
-            'model': model,
-            'messages': messages,
-            'max_tokens': 4096,
-            'temperature': 0.3,
-        }
-        if tools:
-            kwargs['tools'] = tools
-            kwargs['tool_choice'] = 'auto'
-        return client.chat.completions.create(**kwargs)
+        return client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=4096,
+            temperature=0.3,
+        )
+
+    def _extract_response_text(self, choice):
+        """Extract text from the response, handling both tool_calls and plain text."""
+        if choice.message.content:
+            return choice.message.content
+        return ''
 
     def process_message(self, message, user_role, user_id, mode='grande', history=None):
         system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
         tools = get_tools_for_mode(mode, user_role)
-        messages = [{'role': 'system', 'content': system_prompt}]
+        tool_prompt = _build_tool_prompt(tools)
+
+        full_system = system_prompt + '\n\n' + tool_prompt
+        messages = [{'role': 'system', 'content': full_system}]
 
         if history:
             for h in history[-20:]:
@@ -98,26 +140,21 @@ class MCPService:
 
         for iteration in range(MAX_ITERATIONS):
             try:
-                response = self._call_llm(client, messages, tools)
+                response = self._call_llm(client, messages)
                 choice = response.choices[0]
+                content = self._extract_response_text(choice)
 
-                if choice.finish_reason == 'stop' or not choice.message.tool_calls:
+                if not content:
                     return {
-                        'response': choice.message.content or '',
+                        'response': 'No pude generar una respuesta.',
                         'tool_calls': tool_calls_log,
                         'done': True,
                     }
 
-                messages.append(choice.message)
+                tool_name, tool_args = _parse_text_tool_call(content)
 
-                for tc in choice.message.tool_calls:
-                    tool_name = tc.function.name
-                    try:
-                        tool_args = json.loads(tc.function.arguments)
-                    except json.JSONDecodeError:
-                        tool_args = {}
-
-                    logger.info(f'MCP tool call: {tool_name}({tool_args})')
+                if tool_name:
+                    logger.info(f'MCP parsed tool call: {tool_name}({tool_args})')
                     result = execute_tool(tool_name, tool_args)
                     tool_calls_log.append({
                         'name': tool_name,
@@ -126,20 +163,58 @@ class MCPService:
                         'timestamp': datetime.utcnow().isoformat(),
                     })
 
+                    result_str = json.dumps(result, ensure_ascii=False, default=str)
+                    messages.append({'role': 'assistant', 'content': content})
                     messages.append({
-                        'role': 'tool',
-                        'tool_call_id': tc.id,
-                        'content': json.dumps(result, ensure_ascii=False, default=str),
+                        'role': 'user',
+                        'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
                     })
+                    continue
+
+                return {
+                    'response': content,
+                    'tool_calls': tool_calls_log,
+                    'done': True,
+                }
 
             except Exception as e:
-                logger.error(f'MCP iteration {iteration} error: {e}', exc_info=True)
+                error_str = str(e)
+                logger.error(f'MCP iteration {iteration} error: {error_str}', exc_info=True)
+
+                if 'failed_generation' in error_str:
+                    try:
+                        err_json = json.loads(error_str.split("'failed_generation':")[1].split("}")[0] + "}")
+                        failed_gen = err_json.get('failed_generation', '')
+                    except Exception:
+                        match = re.search(r"'failed_generation':\s*'([^']*)'", error_str)
+                        failed_gen = match.group(1) if match else ''
+
+                    if failed_gen:
+                        tool_name, tool_args = _parse_text_tool_call(failed_gen)
+                        if tool_name:
+                            logger.info(f'MCP fallback parsed tool call: {tool_name}({tool_args})')
+                            result = execute_tool(tool_name, tool_args)
+                            tool_calls_log.append({
+                                'name': tool_name,
+                                'args': tool_args,
+                                'result': result,
+                                'timestamp': datetime.utcnow().isoformat(),
+                            })
+
+                            result_str = json.dumps(result, ensure_ascii=False, default=str)
+                            messages.append({'role': 'assistant', 'content': failed_gen})
+                            messages.append({
+                                'role': 'user',
+                                'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                            })
+                            continue
+
                 if iteration >= 2:
                     return {
-                        'response': f'Error procesando tu solicitud: {str(e)}',
+                        'response': f'Error procesando tu solicitud: {error_str[:200]}',
                         'tool_calls': tool_calls_log,
                         'done': True,
-                        'error': str(e),
+                        'error': error_str,
                     }
 
         return {

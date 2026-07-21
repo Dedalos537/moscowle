@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
@@ -131,11 +132,14 @@ def mcp_chat_stream():
     def generate():
         with _app.app_context():
             try:
+                from app.services.mcp_service import _parse_text_tool_call, _build_tool_prompt, MODELS
+
                 api_key = _app.config.get('GROQ_API_KEY')
                 client = Groq(api_key=api_key)
                 tools = get_tools_for_mode(mode, user.role)
+                tool_prompt = _build_tool_prompt(tools)
                 system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
-                messages = [{'role': 'system', 'content': system_prompt}]
+                messages = [{'role': 'system', 'content': system_prompt + '\n\n' + tool_prompt}]
 
                 if history:
                     for h in history[-20:]:
@@ -143,71 +147,78 @@ def mcp_chat_stream():
 
                 messages.append({'role': 'user', 'content': message})
 
-                full_response = ''
                 tool_calls_log = []
 
-                for _iteration in range(5):
-                    kwargs = {
-                        'model': 'llama-3.1-8b-instant',
-                        'messages': messages,
-                        'max_tokens': 4096,
-                        'temperature': 0.3,
-                    }
-                    if tools:
-                        kwargs['tools'] = tools
-                        kwargs['tool_choice'] = 'auto'
+                for iteration in range(5):
+                    try:
+                        response = client.chat.completions.create(
+                            model=MODELS[0],
+                            messages=messages,
+                            max_tokens=4096,
+                            temperature=0.3,
+                        )
+                        choice = response.choices[0]
+                        content = choice.message.content or ''
 
-                    response = client.chat.completions.create(**kwargs)
-                    choice = response.choices[0]
+                        if not content:
+                            yield f'data: {json.dumps({"type": "text", "content": "No pude generar una respuesta."})}\n\n'
+                            break
 
-                    if choice.message.tool_calls:
-                        messages.append(choice.message)
+                        tool_name, tool_args = _parse_text_tool_call(content)
 
-                        for tc in choice.message.tool_calls:
-                            tool_name = tc.function.name
-                            try:
-                                tool_args = json.loads(tc.function.arguments)
-                            except json.JSONDecodeError:
-                                tool_args = {}
-
-                            tc_data = {
-                                'type': 'tool_call',
-                                'name': tool_name,
-                                'args': tool_args,
-                            }
+                        if tool_name:
+                            tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
                             yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                             result = execute_tool(tool_name, tool_args)
-                            tool_calls_log.append(
-                                {
-                                    'name': tool_name,
-                                    'args': tool_args,
-                                    'result': result,
-                                }
-                            )
+                            tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
 
-                            tr_data = {
-                                'type': 'tool_result',
-                                'name': tool_name,
-                                'result': result,
-                            }
-                            yield (f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n')
+                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': result}
+                            yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
 
-                            messages.append(
-                                {
-                                    'role': 'tool',
-                                    'tool_call_id': tc.id,
-                                    'content': json.dumps(result, ensure_ascii=False, default=str),
-                                }
-                            )
-                    else:
-                        content = choice.message.content or ''
-                        full_response += content
+                            result_str = json.dumps(result, ensure_ascii=False, default=str)
+                            messages.append({'role': 'assistant', 'content': content})
+                            messages.append({
+                                'role': 'user',
+                                'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                            })
+                            continue
+
                         yield f'data: {json.dumps({"type": "text", "content": content}, ensure_ascii=False)}\n\n'
                         break
 
-                done_event = {'type': 'done', 'tool_calls': tool_calls_log}
-                yield f'data: {json.dumps(done_event, ensure_ascii=False, default=str)}\n\n'
+                    except Exception as e:
+                        error_str = str(e)
+                        logger.error(f'MCP stream iteration {iteration} error: {error_str}')
+
+                        if 'failed_generation' in error_str:
+                            match = re.search(r"'failed_generation':\s*'([^']*)'", error_str)
+                            failed_gen = match.group(1) if match else ''
+                            if failed_gen:
+                                tn, ta = _parse_text_tool_call(failed_gen)
+                                if tn:
+                                    tc_data = {'type': 'tool_call', 'name': tn, 'args': ta}
+                                    yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
+
+                                    result = execute_tool(tn, ta)
+                                    tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
+
+                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': result}
+                                    yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
+
+                                    result_str = json.dumps(result, ensure_ascii=False, default=str)
+                                    messages.append({'role': 'assistant', 'content': failed_gen})
+                                    messages.append({
+                                        'role': 'user',
+                                        'content': f'[Tool result for {tn}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                    })
+                                    continue
+
+                        if iteration >= 2:
+                            yield f'data: {json.dumps({"type": "text", "content": f"Error: {error_str[:200]}"})}\n\n'
+                            break
+
+                yield f'data: {json.dumps({"type": "done", "tool_calls": tool_calls_log}, ensure_ascii=False, default=str)}\n\n'
 
             except Exception as e:
                 logger.error(f'MCP stream error: {e}', exc_info=True)
