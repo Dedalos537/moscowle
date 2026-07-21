@@ -489,6 +489,7 @@ export class Sessions implements OnInit, OnDestroy {
     const f = this.createForm;
     const isGroup = f.session_type === 'grupal' && this.selectedGroupId;
     if (!f.therapist_id || (!isGroup && !f.patient_id) || !f.dates.length || !f.start_time || !f.end_time) return;
+    if (isGroup && (!group || !group.member_ids?.length)) return;
 
     const group = isGroup ? this.patientGroups.find((g: any) => g.id === this.selectedGroupId) : null;
     const patientCount = isGroup ? (group?.member_count || 0) : 1;
@@ -520,7 +521,7 @@ export class Sessions implements OnInit, OnDestroy {
 
     if (isGroup && group) {
       payload.patient_ids = group.member_ids || [];
-    } else {
+    } else if (f.patient_id) {
       payload.patient_id = parseInt(f.patient_id);
     }
 
@@ -575,11 +576,12 @@ export class Sessions implements OnInit, OnDestroy {
             this.cdr.markForCheck();
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.submitting = false;
           this.programUploadingCreate = false;
           this.createProgress = 0;
-          this.toastService.show('Error al crear sesiones', 'error');
+          const msg = err?.error?.error || err?.error?.message || 'Error al crear sesiones';
+          this.toastService.show(msg, 'error');
           this.cdr.markForCheck();
         },
       })
