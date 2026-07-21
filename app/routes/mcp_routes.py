@@ -3,16 +3,46 @@ import logging
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from groq import Groq
 
 from app.auth_compat import current_user
 from app.models import User
-from app.services.mcp_service import MCPService
+from app.services.mcp_service import SYSTEM_PROMPTS, MCPService
+from app.services.tools_registry import execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
 
 mcp_bp = Blueprint('mcp', __name__, url_prefix='/mcp')
 
 mcp_service = MCPService()
+
+ALLOWED_ORIGINS = [
+    'https://moscowle.centrojuanpabloii.com',
+    'https://centrojuanpabloii.com',
+    'http://localhost:4200',
+]
+
+
+def _cors_headers():
+    origin = request.headers.get('Origin', '')
+    if origin in ALLOWED_ORIGINS:
+        return {
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRFToken',
+            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        }
+    return {}
+
+
+@mcp_bp.before_request
+def mcp_options_preflight():
+    if request.method == 'OPTIONS':
+        resp = current_app.make_default_options_response()
+        for k, v in _cors_headers().items():
+            resp.headers[k] = v
+        resp.headers['Access-Control-Max-Age'] = '3600'
+        return resp
 
 
 def _get_current_user():
@@ -31,8 +61,13 @@ def _get_current_user():
 def mcp_chat():
     """Send a message and get a response with tool calls."""
     user = _get_current_user()
+    cors = _cors_headers()
     if not user:
-        return jsonify({'error': 'No autenticado'}), 401
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()
@@ -40,7 +75,11 @@ def mcp_chat():
     history = data.get('history', [])
 
     if not message:
-        return jsonify({'error': 'Mensaje requerido'}), 400
+        resp = jsonify({'error': 'Mensaje requerido'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     try:
         result = mcp_service.process_message(
@@ -50,18 +89,31 @@ def mcp_chat():
             mode=mode,
             history=history,
         )
-        return jsonify(result)
+        resp = jsonify(result)
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
     except Exception as e:
         logger.error(f'MCP chat error: {e}', exc_info=True)
-        return jsonify({'error': f'Error del servidor: {str(e)}'}), 500
+        resp = jsonify({'error': f'Error del servidor: {str(e)}'})
+        resp.status_code = 500
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
 
 @mcp_bp.route('/chat/stream', methods=['POST'])
 def mcp_chat_stream():
     """Send a message and stream the response via SSE."""
     user = _get_current_user()
+    cors = _cors_headers()
+
     if not user:
-        return jsonify({'error': 'No autenticado'}), 401
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     data = request.get_json(silent=True) or {}
     message = (data.get('message') or '').strip()
@@ -69,16 +121,15 @@ def mcp_chat_stream():
     history = data.get('history', [])
 
     if not message:
-        return jsonify({'error': 'Mensaje requerido'}), 400
+        resp = jsonify({'error': 'Mensaje requerido'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     def generate():
         with current_app.app_context():
             try:
-                from groq import Groq
-
-                from app.services.mcp_service import SYSTEM_PROMPTS
-                from app.services.tools_registry import execute_tool, get_tools_for_mode
-
                 api_key = current_app.config.get('GROQ_API_KEY')
                 client = Groq(api_key=api_key)
                 tools = get_tools_for_mode(mode, user.role)
@@ -94,7 +145,7 @@ def mcp_chat_stream():
                 full_response = ''
                 tool_calls_log = []
 
-                for iteration in range(5):
+                for _iteration in range(5):
                     kwargs = {
                         'model': 'llama-3.3-70b-versatile',
                         'messages': messages,
@@ -118,12 +169,28 @@ def mcp_chat_stream():
                             except json.JSONDecodeError:
                                 tool_args = {}
 
-                            yield f'data: {json.dumps({"type": "tool_call", "name": tool_name, "args": tool_args}, ensure_ascii=False)}\n\n'
+                            tc_data = {
+                                'type': 'tool_call',
+                                'name': tool_name,
+                                'args': tool_args,
+                            }
+                            yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                             result = execute_tool(tool_name, tool_args)
-                            tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
+                            tool_calls_log.append(
+                                {
+                                    'name': tool_name,
+                                    'args': tool_args,
+                                    'result': result,
+                                }
+                            )
 
-                            yield f'data: {json.dumps({"type": "tool_result", "name": tool_name, "result": result}, ensure_ascii=False, default=str)}\n\n'
+                            tr_data = {
+                                'type': 'tool_result',
+                                'name': tool_name,
+                                'result': result,
+                            }
+                            yield (f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n')
 
                             messages.append(
                                 {
@@ -145,13 +212,16 @@ def mcp_chat_stream():
                 logger.error(f'MCP stream error: {e}', exc_info=True)
                 yield f'data: {json.dumps({"type": "error", "error": str(e)})}\n\n'
 
+    headers = {
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+    }
+    headers.update(cors)
+
     return Response(
         generate(),
         mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',
-        },
+        headers=headers,
     )
 
 
@@ -159,15 +229,27 @@ def mcp_chat_stream():
 def mcp_tools():
     """List available tools for the current user's role."""
     user = _get_current_user()
+    cors = _cors_headers()
     if not user:
-        return jsonify({'error': 'No autenticado'}), 401
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
 
     mode = request.args.get('mode', 'grande')
     tools = mcp_service.get_available_tools(user.role, mode)
-    return jsonify({'tools': tools, 'count': len(tools), 'role': user.role, 'mode': mode})
+    resp = jsonify({'tools': tools, 'count': len(tools), 'role': user.role, 'mode': mode})
+    for k, v in cors.items():
+        resp.headers[k] = v
+    return resp
 
 
 @mcp_bp.route('/chat/clear', methods=['POST'])
 def mcp_clear():
     """Clear chat history (frontend-side, just acknowledge)."""
-    return jsonify({'success': True, 'message': 'Historial limpiado'})
+    cors = _cors_headers()
+    resp = jsonify({'success': True, 'message': 'Historial limpiado'})
+    for k, v in cors.items():
+        resp.headers[k] = v
+    return resp
