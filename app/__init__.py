@@ -502,24 +502,32 @@ def create_app(config_class=None):
     )
 
     # Dedicated CORS handler for /mcp/* routes (Flask-CORS doesn't work with SSE streaming)
-    MCP_CORS = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRFToken',
-        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    }
+    # Must echo request Origin for credentials to work; never use '*'
+
+    def _mcp_allowed_origin():
+        origin = request.headers.get('Origin', '')
+        if origin in cors_origins:
+            return origin
+        return cors_origins[0] if cors_origins else ''
 
     @app.before_request
     def mcp_cors_preflight():
         if request.path.startswith('/mcp/') and request.method == 'OPTIONS':
             resp = app.make_default_options_response()
-            resp.headers.update(MCP_CORS)
+            resp.headers['Access-Control-Allow-Origin'] = _mcp_allowed_origin()
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
+            resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            resp.headers['Access-Control-Max-Age'] = '3600'
             return resp
 
     @app.after_request
     def mcp_cors_headers(response):
         if request.path.startswith('/mcp/'):
-            for k, v in MCP_CORS.items():
-                response.headers[k] = v
+            response.headers['Access-Control-Allow-Origin'] = _mcp_allowed_origin()
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
+            response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
         return response
 
     try:
