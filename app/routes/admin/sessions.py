@@ -147,8 +147,8 @@ def batch_create_sessions():
         unlock_past = data.get('unlock_past_dates', False)
 
         if specific_dates:
-            if len(specific_dates) > 5:
-                return jsonify({'error': 'Máximo 5 fechas'}), 400
+            if len(specific_dates) > 31:
+                return jsonify({'error': 'Máximo 31 fechas'}), 400
             now = datetime.utcnow()
             for pid in patient_ids:
                 for date_str in specific_dates:

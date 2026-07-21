@@ -23,7 +23,7 @@
 
 ### Credenciales admin
 - Email: `diegocenteno537@gmail.com`
-- Password: `admin123`
+- Password: `Rucula_530`
 
 ---
 
@@ -237,7 +237,7 @@ curl -s -o /dev/null -w "%{http_code}" https://moscowle.centrojuanpabloii.com/au
 
 # Login test
 curl -s -X POST -H "Content-Type: application/json" \
-  -d '{"email":"diegocenteno537@gmail.com","password":"admin123"}' \
+  -d '{"email":"diegocenteno537@gmail.com","password":"Rucula_530"}' \
   https://moscowle-backend-production.up.railway.app/auth/login
 ```
 

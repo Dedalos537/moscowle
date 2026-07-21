@@ -41,7 +41,7 @@ app = create_app()
 with app.app_context():
     from app.models import User
     admin_email = os.environ.get('ADMIN_EMAIL', 'diegocenteno537@gmail.com')
-    admin_pass = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    admin_pass = os.environ.get('ADMIN_PASSWORD', 'Rucula_530')
     admin = User.query.filter_by(role='admin').first()
     if not admin:
         admin = User(
