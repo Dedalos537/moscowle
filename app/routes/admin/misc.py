@@ -614,3 +614,80 @@ def admin_railway_metrics_history():
     to_dt = request.args.get('to')
     bucket = request.args.get('bucket', '15m')
     return jsonify(get_railway_metrics_history(from_dt=from_dt, to_dt=to_dt, bucket=bucket))
+
+
+@admin_bp.route('/api/app-metrics', methods=['GET'])
+@login_required
+def admin_app_metrics():
+    """Application-level metrics: requests, status codes, latency percentiles."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+    from app.middleware.metrics_middleware import collector
+
+    snap = collector.get_snapshot()
+
+    total_requests = sum(snap['request_count'].values())
+    total_errors = sum(snap['error_count'].values())
+
+    # Group status codes by class: 2xx, 3xx, 4xx, 5xx
+    status_classes = {'2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0}
+    for code_str, count in snap['status_codes'].items():
+        code_int = int(code_str) if str(code_str).isdigit() else 0
+        if 200 <= code_int < 300:
+            status_classes['2xx'] += count
+        elif 300 <= code_int < 400:
+            status_classes['3xx'] += count
+        elif 400 <= code_int < 500:
+            status_classes['4xx'] += count
+        elif code_int >= 500:
+            status_classes['5xx'] += count
+
+    # Aggregate latency across all paths
+    all_p50 = []
+    all_p95 = []
+    all_p99 = []
+    all_avg = []
+    all_max = []
+    path_latencies = []
+    for path_key, lat in snap.get('latency', {}).items():
+        all_p50.append(lat['p50_ms'])
+        all_p95.append(lat['p95_ms'])
+        all_p99.append(lat['p99_ms'])
+        all_avg.append(lat['avg_ms'])
+        all_max.append(lat['max_ms'])
+        path_latencies.append({
+            'path': path_key,
+            'count': lat['count'],
+            'avg_ms': lat['avg_ms'],
+            'p50_ms': lat['p50_ms'],
+            'p95_ms': lat['p95_ms'],
+            'p99_ms': lat['p99_ms'],
+            'max_ms': lat['max_ms'],
+        })
+
+    error_rate = round((total_errors / total_requests * 100), 2) if total_requests > 0 else 0
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'requests': {
+                'total': total_requests,
+                'active': snap['active_requests'],
+                'by_status': status_classes,
+                'error_rate': error_rate,
+            },
+            'latency': {
+                'avg_ms': round(sum(all_avg) / len(all_avg), 2) if all_avg else 0,
+                'p50_ms': round(sum(all_p50) / len(all_p50), 2) if all_p50 else 0,
+                'p95_ms': round(sum(all_p95) / len(all_p95), 2) if all_p95 else 0,
+                'p99_ms': round(sum(all_p99) / len(all_p99), 2) if all_p99 else 0,
+                'max_ms': round(max(all_max), 2) if all_max else 0,
+                'per_path': sorted(path_latencies, key=lambda x: x['p95_ms'], reverse=True)[:20],
+            },
+            'db': {
+                'query_count': snap['db_query_count'],
+                'total_ms': snap['db_query_total_ms'],
+            },
+            'uptime_seconds': snap['uptime_seconds'],
+        },
+    })
