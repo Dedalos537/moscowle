@@ -6,7 +6,7 @@ logger = logging.getLogger('app.llm')
 # ─── Provider configuration ────────────────────────────────────────────────
 
 GLM_BASE_URL = 'https://integrate.api.nvidia.com/v1'
-GLM_MODEL = 'zhipuai/glm-5.2'
+GLM_MODEL = 'z-ai/glm-5.2'
 
 GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
 GEMINI_MODEL = 'gemini-1.5-flash'

@@ -33,7 +33,7 @@ def health_check():
 
     glm_key = os.environ.get('GLM_API_KEY') or current_app.config.get('GLM_API_KEY')
     glm_ok = bool(glm_key)
-    checks['glm'] = {'status': 'ok' if glm_ok else 'missing_key', 'model': 'zhipuai/glm-5.2'}
+    checks['glm'] = {'status': 'ok' if glm_ok else 'missing_key', 'model': 'z-ai/glm-5.2'}
     if not glm_ok and overall == 'healthy':
         overall = 'degraded'
 

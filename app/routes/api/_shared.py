@@ -119,7 +119,7 @@ Responde con este JSON exacto (sin markdown):
                 'glm',
                 lambda: (
                     _glm_client.chat.completions.create(
-                        model='zhipuai/glm-5.2',
+                        model='z-ai/glm-5.2',
                         messages=[{'role': 'user', 'content': prompt}],
                         temperature=0.0,
                         max_tokens=300,
