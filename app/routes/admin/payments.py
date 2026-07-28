@@ -173,7 +173,12 @@ def api_create_expense():
 def api_financial_summary():
     if current_user.role not in ('admin', 'supervisor'):
         return jsonify({'error': 'Unauthorized'}), 403
-    financials = payment_service.get_financial_summary()
+
+    from flask import request as req
+    month = req.args.get('month', type=int)
+    year = req.args.get('year', type=int)
+
+    financials = payment_service.get_financial_summary(month=month, year=year)
     return jsonify({'success': True, 'data': financials})
 
 

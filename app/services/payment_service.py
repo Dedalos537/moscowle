@@ -271,15 +271,17 @@ class PaymentService:
             'guardian_dni': user.guardian_dni,
         }
 
-    def get_financial_summary(self):
-        """Métricas financieras para dashboard"""
+    def get_financial_summary(self, month=None, year=None):
+        """Métricas financieras para dashboard. Opcional: month (1-12), year."""
         today = datetime.utcnow().date()
+        target_month = month or today.month
+        target_year = year or today.year
 
-        start_date = datetime(today.year, today.month, 1)
+        start_date = datetime(target_year, target_month, 1)
         import calendar
 
-        last_day = calendar.monthrange(today.year, today.month)[1]
-        end_date = datetime(today.year, today.month, last_day, 23, 59, 59)
+        last_day = calendar.monthrange(target_year, target_month)[1]
+        end_date = datetime(target_year, target_month, last_day, 23, 59, 59)
 
         income_query = (
             db.session.query(func.sum(Payment.amount))

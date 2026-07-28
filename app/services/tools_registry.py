@@ -57,6 +57,8 @@ CORE_TOOL_NAMES = [
     'register_payment',
     'get_debtors',
     'send_payment_reminder',
+    'compare_periods',
+    'get_user_growth',
     'create_incident',
     'list_incidents',
     'get_incident_detail',
@@ -304,13 +306,28 @@ def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
 
 @tool(
     name='get_financial_summary',
-    description='Resumen financiero del mes: ingresos, egresos, ganancia, cobranza.',
-    parameters={'type': 'object', 'properties': {}},
+    description='Resumen financiero del mes: ingresos, egresos, ganancia, cobranza. Puede consultar cualquier mes.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'month': {'type': 'integer', 'description': 'Mes (1-12). Default: mes actual'},
+            'year': {'type': 'integer', 'description': 'Ano (ej: 2026). Default: ano actual'},
+        },
+    },
     category='read',
+    roles=ROLES_SUPERVISOR,
 )
-def handle_financial_summary(**kwargs):
+def handle_financial_summary(month=None, year=None, **kwargs):
     try:
-        resp = _api_get('/admin/api/financial-summary', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        url = '/admin/api/financial-summary'
+        params = []
+        if month:
+            params.append(f'month={month}')
+        if year:
+            params.append(f'year={year}')
+        if params:
+            url += '?' + '&'.join(params)
+        resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -1176,6 +1193,118 @@ def handle_get_therapist_financials(**kwargs):
         return {'success': True, 'data': data}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='compare_periods',
+    description='Compara ingresos, egresos y ganancia entre dos meses. Muestra diferencia absoluta y porcentual.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'month1': {'type': 'integer', 'description': 'Mes inicial (1-12)'},
+            'year1': {'type': 'integer', 'description': 'Ano inicial'},
+            'month2': {'type': 'integer', 'description': 'Mes final (1-12)'},
+            'year2': {'type': 'integer', 'description': 'Ano final'},
+        },
+        'required': ['month1', 'year1', 'month2', 'year2'],
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_compare_periods(month1, year1, month2, year2, **kwargs):
+    from datetime import datetime as dt
+    import calendar
+
+    def _get_month_data(m, y):
+        start = dt(y, m, 1)
+        last_day = calendar.monthrange(y, m)[1]
+        end = dt(y, m, last_day, 23, 59, 59)
+        from app.models import Payment, Expense, User
+        from sqlalchemy import func
+
+        income = db.session.query(func.sum(Payment.amount)).filter(Payment.date >= start, Payment.date <= end).scalar() or 0.0
+        expenses = db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start, Expense.date <= end).scalar() or 0.0
+        payments_count = Payment.query.filter(Payment.date >= start, Payment.date <= end).count()
+        return {
+            'income': float(income),
+            'expenses': float(expenses),
+            'net': float(income) - float(expenses),
+            'payments_count': payments_count,
+        }
+
+    d1 = _get_month_data(month1, year1)
+    d2 = _get_month_data(month2, year2)
+
+    def _pct(old, new):
+        if old == 0:
+            return None if new == 0 else 100.0
+        return round(((new - old) / old) * 100, 1)
+
+    return {
+        'success': True,
+        'period1': {'month': month1, 'year': year1, **d1},
+        'period2': {'month': month2, 'year': year2, **d2},
+        'diff': {
+            'income': round(d2['income'] - d1['income'], 2),
+            'expenses': round(d2['expenses'] - d1['expenses'], 2),
+            'net': round(d2['net'] - d1['net'], 2),
+            'income_pct': _pct(d1['income'], d2['income']),
+            'expenses_pct': _pct(d1['expenses'], d2['expenses']),
+            'payments_count': d2['payments_count'] - d1['payments_count'],
+        },
+    }
+
+
+@tool(
+    name='get_user_growth',
+    description='Metricas de crecimiento de usuarios: registros por mes, activos, inactivos, distribucion por rol.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'months': {'type': 'integer', 'description': 'Meses a analizar (default: 6)'},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_user_growth(months=6, **kwargs):
+    from datetime import datetime as dt, timedelta
+    from sqlalchemy import func, extract
+    from app.models import User
+
+    today = dt.utcnow().date()
+    results = []
+
+    for i in range(months - 1, -1, -1):
+        target_date = today.replace(day=1) - timedelta(days=i * 28)
+        m, y = target_date.month, target_date.year
+
+        total = User.query.filter(extract('month', User.created_at) == m, extract('year', User.created_at) == y).count()
+        by_role = {}
+        for role in ['jugador', 'terapista', 'admin', 'supervisor']:
+            cnt = User.query.filter(User.role == role, extract('month', User.created_at) == m, extract('year', User.created_at) == y).count()
+            if cnt > 0:
+                by_role[role] = cnt
+        results.append({'month': m, 'year': y, 'month_name': dt(y, m, 1).strftime('%B'), 'new_users': total, 'by_role': by_role})
+
+    active = User.query.filter_by(is_active=True).count()
+    inactive = User.query.filter_by(is_active=False).count()
+    total_users = User.query.count()
+    by_role_total = {}
+    for role in ['jugador', 'terapista', 'admin', 'supervisor']:
+        cnt = User.query.filter_by(role=role).count()
+        by_role_total[role] = cnt
+
+    return {
+        'success': True,
+        'summary': {
+            'total_users': total_users,
+            'active': active,
+            'inactive': inactive,
+            'by_role': by_role_total,
+        },
+        'monthly': results,
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
