@@ -182,6 +182,7 @@ export class AiAssistantChat implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         break;
 
+      case 'chunk':
       case 'text':
         if (event.content) {
           const lastAssistant = this.messages[this.messages.length - 1];

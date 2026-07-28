@@ -21,6 +21,7 @@ requests
 Flask-WTF
 email-validator
 groq>=0.4.0
+openai>=1.30.0
 google-generativeai
 google-api-python-client
 google-auth

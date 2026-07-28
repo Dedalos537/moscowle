@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 import warnings
 from datetime import datetime, timedelta
@@ -686,52 +685,9 @@ def _build_result(intent, response, params, confidence, action, **extra):
 
 
 def _llm_fallback_chain(system_prompt: str, msg: str) -> str:
-    messages = [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': msg}]
+    from app.services.llm_client import llm_fallback_chain
 
-    try:
-        from groq import Groq
-
-        groq_key = os.getenv('GROQ_API_KEY')
-        if groq_key:
-            client = Groq(api_key=groq_key)
-            resp = client.chat.completions.create(
-                model='llama-3.1-8b-instant', messages=messages, temperature=0.3, max_tokens=2000
-            )
-            if resp.choices[0].message.content:
-                return resp.choices[0].message.content
-    except Exception as e:
-        logger.warning(f'Groq falló: {e}')
-
-    try:
-        import google.generativeai as genai
-
-        gemini_key = os.getenv('GEMINI_API_KEY')
-        if gemini_key:
-            genai.configure(api_key=gemini_key)
-            gemini_resp = genai.GenerativeModel('gemini-1.5-flash').generate_content(
-                f'{system_prompt}\n\nUsuario: {msg}'
-            )
-            if gemini_resp.text:
-                return gemini_resp.text
-    except Exception as e:
-        logger.warning(f'Gemini falló: {e}')
-
-    try:
-        import requests
-
-        ollama_resp = requests.post(
-            f'{os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")}/api/chat',
-            json={'model': os.getenv('OLLAMA_MODEL', 'llama3.1:8b'), 'messages': messages, 'stream': False},
-            timeout=30,
-        )
-        if ollama_resp.ok:
-            content = ollama_resp.json().get('message', {}).get('content', '')
-            if content:
-                return content
-    except Exception as e:
-        logger.error(f'Ollama falló: {e}')
-
-    return 'Lo siento, no pude conectar con ningún proveedor de IA. Verifica las API keys o la conexión a Internet.'
+    return llm_fallback_chain(system_prompt, msg)
 
 
 def process_chat_enhanced_v5(uid: int, msg: str, cid=None, pg='dashboard'):

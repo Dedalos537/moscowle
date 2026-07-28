@@ -31,6 +31,12 @@ def health_check():
     if not db_ok:
         overall = 'degraded'
 
+    glm_key = os.environ.get('GLM_API_KEY') or current_app.config.get('GLM_API_KEY')
+    glm_ok = bool(glm_key)
+    checks['glm'] = {'status': 'ok' if glm_ok else 'missing_key', 'model': 'zhipuai/glm-5.2'}
+    if not glm_ok and overall == 'healthy':
+        overall = 'degraded'
+
     groq_key = os.environ.get('GROQ_API_KEY') or current_app.config.get('GROQ_API_KEY')
     groq_ok = bool(groq_key)
     checks['groq'] = {'status': 'ok' if groq_ok else 'missing_key'}

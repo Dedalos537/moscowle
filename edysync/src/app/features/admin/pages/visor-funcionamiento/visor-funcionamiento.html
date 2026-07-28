@@ -54,36 +54,44 @@
       </div>
 
       <div class="tab-body">
+        <!-- Snapshot cards -->
         @if (railwaySnapshot?.data) {
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
             <div class="railway-card">
-              <fa-icon [icon]="['fas', 'microchip']" class="text-2xl text-primary"></fa-icon>
+              <fa-icon [icon]="['fas', 'microchip']" class="text-xl" style="color: #3b82f6;"></fa-icon>
               <div>
-                <span class="text-label-caps text-on-surface-variant">CPU actual</span>
+                <span class="text-label-caps text-on-surface-variant">CPU</span>
                 <p class="text-lg font-bold text-on-surface">{{ railwaySnapshot.data.cpu.percentage }}%</p>
               </div>
             </div>
             <div class="railway-card">
-              <fa-icon [icon]="['fas', 'memory']" class="text-2xl text-info"></fa-icon>
+              <fa-icon [icon]="['fas', 'memory']" class="text-xl" style="color: #10b981;"></fa-icon>
               <div>
-                <span class="text-label-caps text-on-surface-variant">Memoria actual</span>
+                <span class="text-label-caps text-on-surface-variant">Memoria</span>
                 <p class="text-lg font-bold text-on-surface">{{ railwaySnapshot.data.memory.percentage }}%</p>
               </div>
             </div>
             <div class="railway-card">
-              <fa-icon [icon]="['fas', 'server']" class="text-2xl" style="color: var(--color-outline);"></fa-icon>
+              <fa-icon [icon]="['fas', 'hdd']" class="text-xl" style="color: #8b5cf6;"></fa-icon>
+              <div>
+                <span class="text-label-caps text-on-surface-variant">Disco</span>
+                <p class="text-lg font-bold text-on-surface">{{ railwaySnapshot.data.disk?.usage_gb || 0 }} GB</p>
+              </div>
+            </div>
+            <div class="railway-card">
+              <fa-icon [icon]="['fas', 'server']" class="text-xl" style="color: #64748b;"></fa-icon>
               <div>
                 <span class="text-label-caps text-on-surface-variant">Servicio</span>
-                <p class="text-sm font-bold text-success flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-success"></span> Activo
+                <p class="text-sm font-bold flex items-center gap-2" style="color: #10b981;">
+                  <span class="w-2 h-2 rounded-full" style="background: #10b981;"></span> Activo
                 </p>
               </div>
             </div>
             <div class="railway-card">
-              <fa-icon [icon]="['fas', 'clock']" class="text-2xl text-on-surface-variant"></fa-icon>
+              <fa-icon [icon]="['fas', 'clock']" class="text-xl text-on-surface-variant"></fa-icon>
               <div>
                 <span class="text-label-caps text-on-surface-variant">Rango</span>
-                <p class="text-sm font-mono text-on-surface">{{ railwayDateFrom | slice:0:10 }} — {{ railwayDateTo | slice:0:10 }}</p>
+                <p class="text-xs font-mono text-on-surface">{{ railwayDateFrom | slice:0:10 }} — {{ railwayDateTo | slice:0:10 }}</p>
               </div>
             </div>
           </div>
@@ -100,32 +108,44 @@
             <app-button variant="primary" label="Reintentar" (clicked)="loadRailwayHistory()" class="mt-3"></app-button>
           </div>
         } @else {
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Infrastructure metrics -->
+          <h3 class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #64748b;">Infraestructura</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'microchip']" class="text-sm text-primary"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">CPU</h3>
+            <div class="chart-card prom-card">
+              <div class="chart-card__header">
+                <span class="chart-card__dot" style="background: #3b82f6;"></span>
+                <h3 class="chart-card__title">CPU</h3>
               </div>
               <div class="chart-container" style="position: relative; height: 200px;">
                 <canvas baseChart #cpuChart type="line" [data]="cpuChartData" [options]="cpuChartOptions"></canvas>
               </div>
             </div>
 
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'memory']" class="text-sm text-info"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Memory</h3>
+            <div class="chart-card prom-card">
+              <div class="chart-card__header">
+                <span class="chart-card__dot" style="background: #10b981;"></span>
+                <h3 class="chart-card__title">Memory</h3>
               </div>
               <div class="chart-container" style="position: relative; height: 200px;">
                 <canvas baseChart #memChart type="line" [data]="memChartData" [options]="memChartOptions"></canvas>
               </div>
             </div>
 
-            <div class="chart-card">
-              <div class="flex items-center gap-2 mb-3">
-                <fa-icon [icon]="['fas', 'network-wired']" class="text-sm" style="color: rgb(139, 92, 246);"></fa-icon>
-                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Public Network Traffic (GB)</h3>
+            <div class="chart-card prom-card">
+              <div class="chart-card__header">
+                <span class="chart-card__dot" style="background: #8b5cf6;"></span>
+                <h3 class="chart-card__title">Disk Usage</h3>
+              </div>
+              <div class="chart-container" style="position: relative; height: 200px;">
+                <canvas baseChart #diskChart type="line" [data]="diskChartData" [options]="diskChartOptions"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card prom-card">
+              <div class="chart-card__header">
+                <span class="chart-card__dot" style="background: #22d3ee;"></span>
+                <h3 class="chart-card__title">Public Network Traffic (GB)</h3>
               </div>
               <div class="chart-container" style="position: relative; height: 200px;">
                 <canvas baseChart #netChart type="line" [data]="netChartData" [options]="netChartOptions"></canvas>
@@ -133,6 +153,103 @@
             </div>
 
           </div>
+
+          <!-- Application-level metrics (from internal collector) -->
+          @if (appMetrics?.data) {
+            <h3 class="text-xs font-bold uppercase tracking-widest mb-3" style="color: #64748b;">Aplicación</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div class="railway-card">
+                <fa-icon [icon]="['fas', 'exchange-alt']" class="text-xl" style="color: #eab308;"></fa-icon>
+                <div>
+                  <span class="text-label-caps text-on-surface-variant">Requests</span>
+                  <p class="text-lg font-bold text-on-surface">{{ appMetrics.data.requests.total }}</p>
+                </div>
+              </div>
+              <div class="railway-card">
+                <fa-icon [icon]="['fas', 'bolt']" class="text-xl" style="color: #22d3ee;"></fa-icon>
+                <div>
+                  <span class="text-label-caps text-on-surface-variant">Activos</span>
+                  <p class="text-lg font-bold text-on-surface">{{ appMetrics.data.requests.active }}</p>
+                </div>
+              </div>
+              <div class="railway-card">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-xl" style="color: #ef4444;"></fa-icon>
+                <div>
+                  <span class="text-label-caps text-on-surface-variant">Error Rate</span>
+                  <p class="text-lg font-bold" [style.color]="appMetrics.data.requests.error_rate > 5 ? '#ef4444' : '#10b981'">{{ appMetrics.data.requests.error_rate }}%</p>
+                </div>
+              </div>
+              <div class="railway-card">
+                <fa-icon [icon]="['fas', 'stopwatch']" class="text-xl" style="color: #f59e0b;"></fa-icon>
+                <div>
+                  <span class="text-label-caps text-on-surface-variant">Latencia p95</span>
+                  <p class="text-lg font-bold text-on-surface">{{ appMetrics.data.latency.p95_ms }}ms</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <!-- Requests by status bar chart -->
+              <div class="chart-card prom-card">
+                <div class="chart-card__header">
+                  <span class="chart-card__dot" style="background: #eab308;"></span>
+                  <h3 class="chart-card__title">Requests by Status</h3>
+                </div>
+                <div class="chart-container" style="position: relative; height: 200px;">
+                  <canvas baseChart #reqChart type="bar" [data]="reqChartData" [options]="reqChartOptions"></canvas>
+                </div>
+              </div>
+
+              <!-- Latency percentiles -->
+              <div class="chart-card prom-card">
+                <div class="chart-card__header">
+                  <span class="chart-card__dot" style="background: #f59e0b;"></span>
+                  <h3 class="chart-card__title">Response Time (ms)</h3>
+                </div>
+                <div class="chart-container" style="position: relative; height: 200px;">
+                  <canvas baseChart #latChart type="bar" [data]="latChartData" [options]="latChartOptions"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Latency per path table -->
+            @if (appMetrics.data.latency.per_path?.length) {
+              <div class="chart-card prom-card">
+                <div class="chart-card__header">
+                  <span class="chart-card__dot" style="background: #ec4899;"></span>
+                  <h3 class="chart-card__title">Latencia por Endpoint</h3>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-xs">
+                    <thead>
+                      <tr style="border-bottom: 1px solid rgba(148,163,184,0.15);">
+                        <th class="px-3 py-2 text-left font-bold" style="color: #64748b;">Path</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">Requests</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">Avg</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">P50</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">P95</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">P99</th>
+                        <th class="px-3 py-2 text-right font-bold" style="color: #64748b;">Max</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (p of appMetrics.data.latency.per_path; track p.path) {
+                        <tr style="border-bottom: 1px solid rgba(148,163,184,0.08);" class="hover:bg-white/[0.02]">
+                          <td class="px-3 py-2 font-mono" style="color: #94a3b8;">{{ p.path }}</td>
+                          <td class="px-3 py-2 text-right" style="color: #cbd5e1;">{{ p.count }}</td>
+                          <td class="px-3 py-2 text-right" style="color: #22d3ee;">{{ p.avg_ms }}ms</td>
+                          <td class="px-3 py-2 text-right" style="color: #3b82f6;">{{ p.p50_ms }}ms</td>
+                          <td class="px-3 py-2 text-right" style="color: #eab308;">{{ p.p95_ms }}ms</td>
+                          <td class="px-3 py-2 text-right" style="color: #f97316;">{{ p.p99_ms }}ms</td>
+                          <td class="px-3 py-2 text-right" style="color: #ef4444;">{{ p.max_ms }}ms</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          }
         }
       </div>
     </div>

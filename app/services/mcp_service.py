@@ -3,9 +3,7 @@ import logging
 import re
 from datetime import datetime
 
-from flask import current_app
-from groq import Groq
-
+from app.services.llm_client import llm_chat
 from app.services.tools_registry import TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -50,7 +48,6 @@ SYSTEM_PROMPTS = {
 }
 
 MAX_ITERATIONS = 5
-MODELS = ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile']
 
 TOOL_CALL_PATTERN = re.compile(
     r'<function=(\w+)\s*(\{.*?\})?\s*</function>',
@@ -85,41 +82,14 @@ def _build_tool_prompt(tools):
         param_parts = []
         for pname, pinfo in params.items():
             req = '*' if pname in required else ''
-            param_parts.append(f'{pname}{req}:{pinfo.get("type","string")}')
+            param_parts.append(f'{pname}{req}:{pinfo.get("type", "string")}')
         params_str = ', '.join(param_parts) if param_parts else 'ninguno'
         lines.append(f'- {fn["name"]}: {fn["description"]} | Params: {params_str}')
     return '\n'.join(lines)
 
 
 class MCPService:
-    """Servicio MCP que conecta Groq API con tools_registry."""
-
-    def __init__(self):
-        self._client = None
-
-    def _get_client(self):
-        if self._client is None:
-            api_key = current_app.config.get('GROQ_API_KEY')
-            if not api_key:
-                raise ValueError('GROQ_API_KEY no configurada')
-            self._client = Groq(api_key=api_key)
-        return self._client
-
-    def _call_llm(self, client, messages, model=None):
-        if model is None:
-            model = 'llama-3.1-8b-instant'
-        return client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=4096,
-            temperature=0.3,
-        )
-
-    def _extract_response_text(self, choice):
-        """Extract text from the response, handling both tool_calls and plain text."""
-        if choice.message.content:
-            return choice.message.content
-        return ''
+    """Servicio MCP con GLM-5.2 como LLM principal y fallback multi-provider."""
 
     def process_message(self, message, user_role, user_id, mode='grande', history=None):
         system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
@@ -136,54 +106,66 @@ class MCPService:
         messages.append({'role': 'user', 'content': message})
 
         tool_calls_log = []
-        client = self._get_client()
 
         for iteration in range(MAX_ITERATIONS):
             try:
-                response = self._call_llm(client, messages)
-                choice = response.choices[0]
-                content = self._extract_response_text(choice)
+                content, provider = llm_chat(
+                    messages,
+                    temperature=0.3,
+                    max_tokens=4096,
+                )
 
-                if not content:
+                if not content.strip():
                     return {
                         'response': 'No pude generar una respuesta.',
                         'tool_calls': tool_calls_log,
                         'done': True,
+                        'provider': provider,
                     }
+
+                logger.info(f'MCP LLM response via {provider} (iteration {iteration})')
 
                 tool_name, tool_args = _parse_text_tool_call(content)
 
                 if tool_name:
                     logger.info(f'MCP parsed tool call: {tool_name}({tool_args})')
                     result = execute_tool(tool_name, tool_args)
-                    tool_calls_log.append({
-                        'name': tool_name,
-                        'args': tool_args,
-                        'result': result,
-                        'timestamp': datetime.utcnow().isoformat(),
-                    })
+                    tool_calls_log.append(
+                        {
+                            'name': tool_name,
+                            'args': tool_args,
+                            'result': result,
+                            'timestamp': datetime.utcnow().isoformat(),
+                        }
+                    )
 
                     result_str = json.dumps(result, ensure_ascii=False, default=str)
                     messages.append({'role': 'assistant', 'content': content})
-                    messages.append({
-                        'role': 'user',
-                        'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
-                    })
+                    messages.append(
+                        {
+                            'role': 'user',
+                            'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                        }
+                    )
                     continue
 
                 return {
                     'response': content,
                     'tool_calls': tool_calls_log,
                     'done': True,
+                    'provider': provider,
                 }
 
             except Exception as e:
                 error_str = str(e)
                 logger.error(f'MCP iteration {iteration} error: {error_str}', exc_info=True)
 
+                # Try to recover tool calls from failed_generation error (Groq-specific)
                 if 'failed_generation' in error_str:
                     try:
-                        err_json = json.loads(error_str.split("'failed_generation':")[1].split("}")[0] + "}")
+                        err_json = json.loads(
+                            error_str.split("'failed_generation':")[1].split('}', maxsplit=1)[0] + '}'
+                        )
                         failed_gen = err_json.get('failed_generation', '')
                     except Exception:
                         match = re.search(r"'failed_generation':\s*'([^']*)'", error_str)
@@ -194,19 +176,23 @@ class MCPService:
                         if tool_name:
                             logger.info(f'MCP fallback parsed tool call: {tool_name}({tool_args})')
                             result = execute_tool(tool_name, tool_args)
-                            tool_calls_log.append({
-                                'name': tool_name,
-                                'args': tool_args,
-                                'result': result,
-                                'timestamp': datetime.utcnow().isoformat(),
-                            })
+                            tool_calls_log.append(
+                                {
+                                    'name': tool_name,
+                                    'args': tool_args,
+                                    'result': result,
+                                    'timestamp': datetime.utcnow().isoformat(),
+                                }
+                            )
 
                             result_str = json.dumps(result, ensure_ascii=False, default=str)
                             messages.append({'role': 'assistant', 'content': failed_gen})
-                            messages.append({
-                                'role': 'user',
-                                'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
-                            })
+                            messages.append(
+                                {
+                                    'role': 'user',
+                                    'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                }
+                            )
                             continue
 
                 if iteration >= 2:

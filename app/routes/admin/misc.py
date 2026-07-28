@@ -667,27 +667,29 @@ def admin_app_metrics():
 
     error_rate = round((total_errors / total_requests * 100), 2) if total_requests > 0 else 0
 
-    return jsonify({
-        'success': True,
-        'data': {
-            'requests': {
-                'total': total_requests,
-                'active': snap['active_requests'],
-                'by_status': status_classes,
-                'error_rate': error_rate,
+    return jsonify(
+        {
+            'success': True,
+            'data': {
+                'requests': {
+                    'total': total_requests,
+                    'active': snap['active_requests'],
+                    'by_status': status_classes,
+                    'error_rate': error_rate,
+                },
+                'latency': {
+                    'avg_ms': round(sum(all_avg) / len(all_avg), 2) if all_avg else 0,
+                    'p50_ms': round(sum(all_p50) / len(all_p50), 2) if all_p50 else 0,
+                    'p95_ms': round(sum(all_p95) / len(all_p95), 2) if all_p95 else 0,
+                    'p99_ms': round(sum(all_p99) / len(all_p99), 2) if all_p99 else 0,
+                    'max_ms': round(max(all_max), 2) if all_max else 0,
+                    'per_path': sorted(path_latencies, key=lambda x: x['p95_ms'], reverse=True)[:20],
+                },
+                'db': {
+                    'query_count': snap['db_query_count'],
+                    'total_ms': snap['db_query_total_ms'],
+                },
+                'uptime_seconds': snap['uptime_seconds'],
             },
-            'latency': {
-                'avg_ms': round(sum(all_avg) / len(all_avg), 2) if all_avg else 0,
-                'p50_ms': round(sum(all_p50) / len(all_p50), 2) if all_p50 else 0,
-                'p95_ms': round(sum(all_p95) / len(all_p95), 2) if all_p95 else 0,
-                'p99_ms': round(sum(all_p99) / len(all_p99), 2) if all_p99 else 0,
-                'max_ms': round(max(all_max), 2) if all_max else 0,
-                'per_path': sorted(path_latencies, key=lambda x: x['p95_ms'], reverse=True)[:20],
-            },
-            'db': {
-                'query_count': snap['db_query_count'],
-                'total_ms': snap['db_query_total_ms'],
-            },
-            'uptime_seconds': snap['uptime_seconds'],
-        },
-    })
+        }
+    )

@@ -114,6 +114,42 @@
   margin-top: 0.75rem;
 }
 
+// ── Prometheus dark theme chart card ──
+.prom-card {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+}
+
+.chart-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chart-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chart-card__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin: 0;
+}
+
 // ── Logs design (copied from standalone logs.scss) ──
 .logs__toolbar {
   display: flex;

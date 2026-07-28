@@ -24,6 +24,18 @@ Chart.register(...registerables);
 
 type TabId = 'railway' | 'logs' | 'csp' | 'tokens' | 'incidents';
 
+// Prometheus-inspired color palette
+const COLORS = {
+  blue:   { line: 'rgb(59, 130, 246)',  fill: 'rgba(59,130,246,0.15)' },
+  green:  { line: 'rgb(16, 185, 129)',  fill: 'rgba(16,185,129,0.15)' },
+  purple: { line: 'rgb(139, 92, 246)',  fill: 'rgba(139,92,246,0.15)' },
+  orange: { line: 'rgb(251, 146, 60)',  fill: 'rgba(251,146,60,0.15)' },
+  red:    { line: 'rgb(239, 68, 68)',   fill: 'rgba(239,68,68,0.15)' },
+  cyan:   { line: 'rgb(34, 211, 238)',  fill: 'rgba(34,211,238,0.15)' },
+  yellow: { line: 'rgb(234, 179, 8)',   fill: 'rgba(234,179,8,0.15)' },
+  pink:   { line: 'rgb(236, 72, 153)',  fill: 'rgba(236,72,153,0.15)' },
+};
+
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
@@ -46,7 +58,11 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   @ViewChild('cpuChart') cpuChartRef?: BaseChartDirective;
   @ViewChild('memChart') memChartRef?: BaseChartDirective;
+  @ViewChild('diskChart') diskChartRef?: BaseChartDirective;
   @ViewChild('netChart') netChartRef?: BaseChartDirective;
+  @ViewChild('reqChart') reqChartRef?: BaseChartDirective;
+  @ViewChild('errChart') errChartRef?: BaseChartDirective;
+  @ViewChild('latChart') latChartRef?: BaseChartDirective;
 
   // --- Railway history ---
   railwayLoading = true;
@@ -54,13 +70,22 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   railwayDateFrom = '';
   railwayDateTo = '';
   railwaySnapshot: any = null;
+  appMetrics: any = null;
 
   cpuChartData: ChartData<'line'> = { labels: [], datasets: [] };
   cpuChartOptions: ChartConfiguration<'line'>['options'] = {};
   memChartData: ChartData<'line'> = { labels: [], datasets: [] };
   memChartOptions: ChartConfiguration<'line'>['options'] = {};
+  diskChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  diskChartOptions: ChartConfiguration<'line'>['options'] = {};
   netChartData: ChartData<'line'> = { labels: [], datasets: [] };
   netChartOptions: ChartConfiguration<'line'>['options'] = {};
+  reqChartData: ChartData<'bar'> = { labels: [], datasets: [] };
+  reqChartOptions: ChartConfiguration<'bar'>['options'] = {};
+  errChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  errChartOptions: ChartConfiguration<'line'>['options'] = {};
+  latChartData: ChartData<'bar'> = { labels: [], datasets: [] };
+  latChartOptions: ChartConfiguration<'bar'>['options'] = {};
 
   // --- Logs ---
   logs: LogEntry[] = [];
@@ -98,11 +123,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       icon: ['fas', 'desktop'],
     });
     const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    this.railwayDateFrom = yesterday.toISOString().slice(0, 16);
-    this.railwayDateTo = now.toISOString().slice(0, 16);
+    // Default range: last 7 days in Lima time
+    const limaOffset = -5 * 60;
+    const nowLima = new Date(now.getTime() + (limaOffset - now.getTimezoneOffset()) * 60000);
+    const weekAgoLima = new Date(nowLima.getTime() - 7 * 24 * 60 * 60 * 1000);
+    this.railwayDateFrom = this.toLocalISO(weekAgoLima);
+    this.railwayDateTo = this.toLocalISO(nowLima);
     this.loadRailwayHistory();
     this.loadRailwaySnapshot();
+    this.loadAppMetrics();
     this.loadLogs();
     this.loadCspReports();
     this.loadTokens();
@@ -117,7 +146,10 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   switchTab(tab: TabId) {
     this.activeTab = tab;
     if (tab === 'railway') {
-      setTimeout(() => { [this.cpuChartRef, this.memChartRef, this.netChartRef].forEach(c => c?.update()); }, 100);
+      setTimeout(() => {
+        [this.cpuChartRef, this.memChartRef, this.diskChartRef, this.netChartRef,
+         this.reqChartRef, this.errChartRef, this.latChartRef].forEach(c => c?.update());
+      }, 100);
     }
   }
 
@@ -129,6 +161,84 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         error: () => {},
       })
     );
+  }
+
+  loadAppMetrics() {
+    this.subs.add(
+      this.admin.getAppMetrics().subscribe({
+        next: (res) => {
+          this.appMetrics = res;
+          if (res?.data) {
+            this.buildAppCharts(res.data);
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      })
+    );
+  }
+
+  private buildAppCharts(data: any) {
+    const tooltipBase = {
+      backgroundColor: 'rgba(15,23,42,0.95)',
+      titleColor: '#e2e8f0',
+      bodyColor: '#cbd5e1',
+      borderColor: 'rgba(100,116,139,0.3)',
+      borderWidth: 1,
+      padding: 10,
+      cornerRadius: 6,
+    };
+
+    // Requests by status
+    const bs = data.requests.by_status;
+    this.reqChartData = {
+      labels: ['2xx', '3xx', '4xx', '5xx'],
+      datasets: [{
+        data: [bs['2xx'] || 0, bs['3xx'] || 0, bs['4xx'] || 0, bs['5xx'] || 0],
+        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    };
+    this.reqChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipBase,
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11, weight: 'bold' } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.08)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+      },
+    };
+
+    // Response time percentiles
+    const lat = data.latency;
+    this.latChartData = {
+      labels: ['avg', 'p50', 'p95', 'p99', 'max'],
+      datasets: [{
+        data: [lat.avg_ms, lat.p50_ms, lat.p95_ms, lat.p99_ms, lat.max_ms],
+        backgroundColor: ['#22d3ee', '#3b82f6', '#eab308', '#f97316', '#ef4444'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    };
+    this.latChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase,
+          callbacks: { label: (ctx: any) => `${ctx.parsed?.y ?? 0} ms` },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 11, weight: 'bold' } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.08)' }, ticks: { color: '#64748b', font: { size: 10 }, callback: (v: any) => `${v}ms` } },
+      },
+    };
   }
 
   loadRailwayHistory() {
@@ -158,16 +268,41 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  private timestamps(values: any[]): string[] {
-    return values.map((v: any) => {
+  // --- Prometheus-style chart helpers ---
+
+  private toLocalISO(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  /** Aggregate raw {ts,value} points by Lima-day → {day, avg}[] */
+  private aggregateByDay(values: { ts: string; value: number }[]): { day: string; avg: number }[] {
+    const buckets = new Map<string, { sum: number; count: number }>();
+    for (const v of values) {
+      // Parse ts → Lima date key (YYYY-MM-DD)
       const d = new Date(v.ts);
-      return d.toLocaleString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit', month: 'short', day: 'numeric' });
+      const limaStr = d.toLocaleDateString('sv-SE', { timeZone: 'America/Lima' }); // 'YYYY-MM-DD'
+      const b = buckets.get(limaStr) || { sum: 0, count: 0 };
+      b.sum += v.value;
+      b.count += 1;
+      buckets.set(limaStr, b);
+    }
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, { sum, count }]) => ({ day, avg: +(sum / count).toFixed(4) }));
+  }
+
+  /** Format day keys to short labels like "22 jul" */
+  private dayLabels(days: string[]): string[] {
+    return days.map(d => {
+      const [y, m, dd] = d.split('-').map(Number);
+      const dt = new Date(y, m - 1, dd);
+      return dt.toLocaleString('es-PE', { month: 'short', day: 'numeric', timeZone: 'America/Lima' });
     });
   }
 
-  private lineOptions(data: number[], unit: string, suggestedMaxOverride?: number): ChartConfiguration<'line'>['options'] {
-    const filtered = data.filter(v => v > 0);
-    const maxVal = filtered.length ? Math.max(...filtered) : 1;
+  private promLineOptions(unit: string, data?: number[]): ChartConfiguration<'line'>['options'] {
+    const maxVal = data?.length ? Math.max(...data.filter(v => v > 0), 1) : 1;
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -175,16 +310,30 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: { label: (ctx) => `${ctx.parsed.y} ${unit}` },
+          backgroundColor: 'rgba(15,23,42,0.95)',
+          titleColor: '#e2e8f0',
+          bodyColor: '#cbd5e1',
+          borderColor: 'rgba(100,116,139,0.3)',
+          borderWidth: 1,
+          padding: 10,
+          cornerRadius: 6,
+          titleFont: { weight: 'bold', size: 11 },
+          bodyFont: { size: 11 },
+          callbacks: { label: (ctx) => `${(ctx.parsed.y ?? 0).toFixed(3)} ${unit}` },
         },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+        x: {
+          grid: { color: 'rgba(148,163,184,0.08)' },
+          border: { display: false },
+          ticks: { color: '#64748b', maxRotation: 45, font: { size: 9 } },
+        },
         y: {
           beginAtZero: true,
-          suggestedMax: suggestedMaxOverride ?? Math.ceil(maxVal * 1.3),
-          grid: { color: 'rgba(0,0,0,0.06)' },
-          ticks: { font: { size: 10 }, callback: (v) => `${v}${unit ? ' ' + unit : ''}` },
+          suggestedMax: Math.ceil(maxVal * 1.3),
+          grid: { color: 'rgba(148,163,184,0.08)' },
+          border: { display: false },
+          ticks: { color: '#64748b', font: { size: 10 }, callback: (v) => `${v} ${unit}` },
         },
       },
     };
@@ -192,43 +341,86 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   private buildAllCharts(data: any) {
     const s = data.series;
-    if (!s?.CPU_USAGE) { this.railwayError = 'No hay datos'; return; }
+    if (!s?.CPU_USAGE?.length) { this.railwayError = 'No hay datos de Railway para el rango seleccionado'; return; }
 
-    const ts = this.timestamps(s.CPU_USAGE);
+    // Aggregate all metrics by day
+    const cpuAgg = this.aggregateByDay(s.CPU_USAGE);
+    const memAgg = s.MEMORY_USAGE_GB?.length ? this.aggregateByDay(s.MEMORY_USAGE_GB) : [];
+    const diskAgg = s.DISK_USAGE_GB?.length ? this.aggregateByDay(s.DISK_USAGE_GB) : [];
+    const rxAgg = s.NETWORK_RX_GB?.length ? this.aggregateByDay(s.NETWORK_RX_GB) : [];
+    const txAgg = s.NETWORK_TX_GB?.length ? this.aggregateByDay(s.NETWORK_TX_GB) : [];
+
+    // Use the longest series for labels
+    const allDays = [cpuAgg, memAgg, diskAgg, rxAgg, txAgg]
+      .reduce<string[]>((acc, a) => acc.length >= a.length ? acc : a.map(d => d.day), []);
+    const ts = this.dayLabels(allDays);
+
+    if (!ts.length) { this.railwayError = 'No hay datos de Railway para el rango seleccionado'; return; }
+
+    // Helper: align aggregated values to the full day list
+    const align = (agg: { day: string; avg: number }[]): number[] =>
+      allDays.map(d => agg.find(a => a.day === d)?.avg ?? 0);
 
     // CPU
-    const cpuVals = s.CPU_USAGE.map((v: any) => +(v.value).toFixed(3));
-    this.cpuChartData = { labels: ts, datasets: [{ label: 'vCPU', data: cpuVals, borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-    this.cpuChartOptions = this.lineOptions(cpuVals, 'vCPU');
-    this.cpuChartRef?.update();
+    const cpuVals = align(cpuAgg);
+    this.cpuChartData = {
+      labels: ts,
+      datasets: [{
+        label: 'CPU', data: cpuVals,
+        borderColor: COLORS.blue.line, backgroundColor: COLORS.blue.fill,
+        borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5,
+      }],
+    };
+    this.cpuChartOptions = this.promLineOptions('vCPU', cpuVals);
 
     // Memory
-    if (s.MEMORY_USAGE_GB?.length) {
-      const memVals = s.MEMORY_USAGE_GB.map((v: any) => +(v.value).toFixed(3));
-      this.memChartData = { labels: ts, datasets: [{ label: 'GB', data: memVals, borderColor: 'rgb(16, 185, 129)', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] };
-      this.memChartOptions = this.lineOptions(memVals, 'GB');
-      this.memChartRef?.update();
+    if (memAgg.length) {
+      const memVals = align(memAgg);
+      this.memChartData = {
+        labels: ts,
+        datasets: [{
+          label: 'Memory', data: memVals,
+          borderColor: COLORS.green.line, backgroundColor: COLORS.green.fill,
+          borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5,
+        }],
+      };
+      this.memChartOptions = this.promLineOptions('GB', memVals);
     }
 
-    // Network
-    if (s.NETWORK_RX_GB?.length) {
-      const rx = s.NETWORK_RX_GB.map((v: any) => +(v.value).toFixed(3));
-      const tx = s.NETWORK_TX_GB?.length ? s.NETWORK_TX_GB.map((v: any) => +(v.value).toFixed(3)) : [];
+    // Disk
+    if (diskAgg.length) {
+      const diskVals = align(diskAgg);
+      this.diskChartData = {
+        labels: ts,
+        datasets: [{
+          label: 'Disk', data: diskVals,
+          borderColor: COLORS.purple.line, backgroundColor: COLORS.purple.fill,
+          borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5,
+        }],
+      };
+      this.diskChartOptions = this.promLineOptions('GB', diskVals);
+    }
+
+    // Network (dual axis: RX + TX)
+    if (rxAgg.length) {
+      const rx = align(rxAgg);
+      const tx = txAgg.length ? align(txAgg) : [];
       const allNet = [...rx, ...tx].filter((v: number) => v > 0);
       this.netChartData = {
         labels: ts,
-          datasets: [
-            { label: 'RX (GB)', data: rx, borderColor: 'rgb(139, 92, 246)', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 },
-            ...(tx.length ? [{ label: 'TX (GB)', data: tx, borderColor: 'rgb(251, 146, 60)', backgroundColor: 'rgba(251,146,60,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2 }] : []),
+        datasets: [
+          { label: 'Ingress (RX)', data: rx, borderColor: COLORS.cyan.line, backgroundColor: COLORS.cyan.fill, borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 },
+          ...(tx.length ? [{ label: 'Egress (TX)', data: tx, borderColor: COLORS.orange.line, backgroundColor: COLORS.orange.fill, borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 5 }] : []),
         ],
       };
+      const baseOpts = this.promLineOptions('GB', allNet);
       this.netChartOptions = {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 10, weight: 700 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} GB` } } },
-        scales: { x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } }, y: { beginAtZero: true, suggestedMax: Math.ceil(Math.max(...allNet, 1) * 1.3), grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 10 }, callback: (v) => `${v} GB` } } },
-      };
-      this.netChartRef?.update();
+        ...baseOpts,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 10 }, color: '#94a3b8' } },
+          tooltip: (baseOpts as any)?.plugins?.tooltip,
+        },
+      } as any;
     }
   }
 

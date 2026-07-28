@@ -344,9 +344,9 @@ export class AiChat implements AfterViewChecked, OnDestroy {
                 if (event.type === 'chunk') {
                   assistantText += event.content;
                   this.updateLastAssistant(assistantText, toolCalls);
-                } else if (event.type === 'tool_start') {
+                } else if (event.type === 'tool_call') {
                   toolCalls.push({
-                    name: event.tool,
+                    name: event.name,
                     args: event.args || {},
                     result: '',
                     success: false,
@@ -361,11 +361,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
                   this.updateLastAssistant(assistantText, toolCalls);
                 } else if (event.type === 'done') {
                   this.loading = false;
-                  if (assistantText) {
-                    this.pushAssistant(assistantText, toolCalls.length > 0 ? toolCalls : undefined);
-                    assistantText = '';
-                    toolCalls = [];
-                  }
+                  assistantText = '';
+                  toolCalls = [];
                 } else if (event.type === 'error') {
                   this.loading = false;
                   this.error = event.error;

@@ -460,8 +460,8 @@ export class AdminService {
     return this.http.get<any>('/admin/api/therapist-efficiency', { params });
   }
 
-  getRailwayMetrics(): Observable<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; environment_id: string; service_id: string }; error?: string }> {
-    return this.http.get<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; environment_id: string; service_id: string }; error?: string }>('/admin/api/railway-metrics');
+  getRailwayMetrics(): Observable<{ success: boolean; data?: { cpu: { usage: number; limit: number; percentage: number }; memory: { usage_gb: number; limit_gb: number; percentage: number }; disk: { usage_gb: number }; environment_id: string; service_id: string }; error?: string }> {
+    return this.http.get<{ success: boolean; data?: any }>('/admin/api/railway-metrics');
   }
 
   getRailwayMetricsHistory(from?: string, to?: string, bucket?: string): Observable<{
@@ -471,12 +471,7 @@ export class AdminService {
       service_id: string;
       start: string;
       end: string;
-      series: {
-        CPU_USAGE: { ts: string; value: number }[];
-        CPU_LIMIT: { ts: string; value: number }[];
-        MEMORY_USAGE_GB: { ts: string; value: number }[];
-        MEMORY_LIMIT_GB: { ts: string; value: number }[];
-      };
+      series: Record<string, { ts: string; value: number }[]>;
     };
     error?: string;
   }> {
@@ -485,6 +480,19 @@ export class AdminService {
     if (to) params = params.set('to', to);
     if (bucket) params = params.set('bucket', bucket);
     return this.http.get<any>('/admin/api/railway-metrics/history', { params });
+  }
+
+  getAppMetrics(): Observable<{
+    success: boolean;
+    data?: {
+      requests: { total: number; active: number; by_status: Record<string, number>; error_rate: number };
+      latency: { avg_ms: number; p50_ms: number; p95_ms: number; p99_ms: number; max_ms: number; per_path: any[] };
+      db: { query_count: number; total_ms: number };
+      uptime_seconds: number;
+    };
+    error?: string;
+  }> {
+    return this.http.get<any>('/admin/api/app-metrics');
   }
 
 }

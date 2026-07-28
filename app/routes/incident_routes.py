@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
-from flask_login import current_user, login_required
 
+from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models.incidente import (
     Incidente,

@@ -4,11 +4,11 @@ import re
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from groq import Groq
 
 from app.auth_compat import current_user
 from app.models import User
-from app.services.mcp_service import SYSTEM_PROMPTS, MCPService
+from app.services.llm_client import llm_chat_stream
+from app.services.mcp_service import SYSTEM_PROMPTS, MCPService, _build_tool_prompt, _parse_text_tool_call
 from app.services.tools_registry import execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -105,7 +105,7 @@ def mcp_chat():
 
 @mcp_bp.route('/chat/stream', methods=['POST'])
 def mcp_chat_stream():
-    """Send a message and stream the response via SSE."""
+    """Send a message and stream the response via SSE (GLM-5.2 primary → fallback)."""
     user = _get_current_user()
     cors = _cors_headers()
     _app = current_app._get_current_object()
@@ -132,10 +132,6 @@ def mcp_chat_stream():
     def generate():
         with _app.app_context():
             try:
-                from app.services.mcp_service import _parse_text_tool_call, _build_tool_prompt
-
-                api_key = _app.config.get('GROQ_API_KEY')
-                client = Groq(api_key=api_key)
                 tools = get_tools_for_mode(mode, user.role)
                 tool_prompt = _build_tool_prompt(tools)
                 system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
@@ -151,20 +147,17 @@ def mcp_chat_stream():
 
                 for iteration in range(5):
                     try:
-                        response = client.chat.completions.create(
-                            model='llama-3.1-8b-instant',
-                            messages=messages,
-                            max_tokens=4096,
-                            temperature=0.3,
-                        )
-                        choice = response.choices[0]
-                        content = choice.message.content or ''
+                        # Stream chunks from GLM-5.2 (or fallback)
+                        full_content = ''
+                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=4096):
+                            full_content += chunk
+                            yield f'data: {json.dumps({"type": "chunk", "content": chunk}, ensure_ascii=False)}\n\n'
 
-                        if not content:
+                        if not full_content.strip():
                             yield f'data: {json.dumps({"type": "text", "content": "No pude generar una respuesta."})}\n\n'
                             break
 
-                        tool_name, tool_args = _parse_text_tool_call(content)
+                        tool_name, tool_args = _parse_text_tool_call(full_content)
 
                         if tool_name:
                             tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
@@ -177,14 +170,16 @@ def mcp_chat_stream():
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
 
                             result_str = json.dumps(result, ensure_ascii=False, default=str)
-                            messages.append({'role': 'assistant', 'content': content})
-                            messages.append({
-                                'role': 'user',
-                                'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
-                            })
+                            messages.append({'role': 'assistant', 'content': full_content})
+                            messages.append(
+                                {
+                                    'role': 'user',
+                                    'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                }
+                            )
                             continue
 
-                        yield f'data: {json.dumps({"type": "text", "content": content}, ensure_ascii=False)}\n\n'
+                        # No more tool calls — final response already streamed
                         break
 
                     except Exception as e:
@@ -208,10 +203,12 @@ def mcp_chat_stream():
 
                                     result_str = json.dumps(result, ensure_ascii=False, default=str)
                                     messages.append({'role': 'assistant', 'content': failed_gen})
-                                    messages.append({
-                                        'role': 'user',
-                                        'content': f'[Tool result for {tn}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
-                                    })
+                                    messages.append(
+                                        {
+                                            'role': 'user',
+                                            'content': f'[Tool result for {tn}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                        }
+                                    )
                                     continue
 
                         if iteration >= 2:

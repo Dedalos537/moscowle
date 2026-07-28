@@ -1,6 +1,6 @@
 from flask import jsonify, request
-from flask_login import login_required
 
+from app.auth_compat import login_required
 from app.routes.admin import admin_bp
 from app.services.contract_service import ContractService
 from app.utils.decorators import admin_required
