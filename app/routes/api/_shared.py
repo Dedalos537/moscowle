@@ -1,16 +1,34 @@
 import json
 import os
 import time
+import uuid
 import warnings
+from datetime import datetime, timedelta
 
+import requests
+from flask import current_app, jsonify, request, url_for
+from sqlalchemy import func, or_
+from werkzeug.utils import secure_filename
+
+from app.auth_compat import current_user, login_required
+from app.extensions import bcrypt, csrf, db, limiter, login_manager
+from app.models.appointment import Appointment, SessionImage, SessionMetrics
+from app.models.chat import ContactMessage, Message
+from app.models.game import Game
+from app.models.payment import Payment
+from app.models.user import Sede, User
+from app.schemas import AssignTherapistSchema, UpdateUserSchema
 from app.services.admin_service import AdminService
 from app.services.appointment_service import AppointmentService
+from app.services.availability_service import AvailabilityService
 from app.services.dashboard_service import DashboardService
+from app.services.email_service import EmailService
 from app.services.game_service import GameService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.utils import parse_datetime
+from app.utils.api_helpers import api_response
 from app.utils.sanitizer import sanitize_for_prompt
 
 warnings.filterwarnings('ignore', message='.*google.generativeai.*ended.*')
