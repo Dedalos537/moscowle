@@ -306,6 +306,18 @@ export class AdminService {
     return this.http.post<{ success: boolean }>(`/admin/api/tokens/deactivate/${tokenId}`, {});
   }
 
+  getLLMConfig(): Observable<any> {
+    return this.http.get('/api/health/llm/config');
+  }
+
+  testLLMProviders(): Observable<any> {
+    return this.http.get('/api/health/llm');
+  }
+
+  updateLLMConfig(data: Record<string, string>): Observable<any> {
+    return this.http.post('/api/health/llm/config', data);
+  }
+
 
   updateProfile(data: { username?: string; timezone?: string; new_password?: string }): Observable<{ success: boolean; message?: string; timezone?: string }> {
     return this.http.post<{ success: boolean; message?: string }>('/api/admin/profile', data);

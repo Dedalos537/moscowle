@@ -501,6 +501,71 @@ def health_llm():
     return jsonify({'providers': results})
 
 
+@health_bp.route('/health/llm/config', methods=['GET'])
+@csrf.exempt
+def health_llm_config():
+    """Get current LLM configuration (API keys masked)."""
+    import os
+
+    def mask_key(k):
+        if not k:
+            return ''
+        if len(k) <= 8:
+            return '****'
+        return k[:4] + '****' + k[-4:]
+
+    return jsonify({
+        'glm': {
+            'key': mask_key(os.environ.get('GLM_API_KEY', '')),
+            'model': 'z-ai/glm-5.2',
+            'base_url': 'https://integrate.api.nvidia.com/v1',
+        },
+        'groq': {
+            'key': mask_key(os.environ.get('GROQ_API_KEY', '')),
+            'models': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+        },
+        'gemini': {
+            'key': mask_key(os.environ.get('GEMINI_API_KEY', '')),
+            'model': 'gemini-2.0-flash',
+        },
+    })
+
+
+@health_bp.route('/health/llm/config', methods=['POST'])
+@csrf.exempt
+def health_llm_config_update():
+    """Update LLM API keys at runtime. Admin only."""
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+    from app.models import User
+
+    try:
+        verify_jwt_in_request(locations=['cookies', 'headers'])
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid))
+        if not user or user.role not in ('admin', 'supervisor'):
+            return jsonify({'error': 'No autorizado'}), 403
+    except Exception:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    data = request.get_json(silent=True) or {}
+    updated = []
+    errors = []
+
+    for key_name in ['GLM_API_KEY', 'GROQ_API_KEY', 'GEMINI_API_KEY']:
+        if key_name in data:
+            new_val = data[key_name]
+            if new_val and new_val != '****':
+                os.environ[key_name] = new_val
+                current_app.config[key_name] = new_val
+                updated.append(key_name)
+
+    if updated:
+        from app.services.llm_client import reset_clients
+        reset_clients()
+
+    return jsonify({'updated': updated, 'errors': errors})
+
+
 @health_bp.route('/health/debug/routes', methods=['GET'])
 def debug_routes():
     rules = []

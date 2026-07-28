@@ -26,6 +26,11 @@
       <span>Incidencias</span>
       <div class="chrome-tab-indicator"></div>
     </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'llm'" (click)="switchTab('llm'); loadLLMConfig()">
+      <fa-icon [icon]="['fas', 'robot']"></fa-icon>
+      <span>LLM / IA</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
   </div>
 
   @if (activeTab === 'railway') {
@@ -565,3 +570,143 @@
     }
   </div>
 </app-modal>
+
+<!-- LLM Tab -->
+@if (activeTab === 'llm') {
+  <div class="tab-section" @fadeInUp>
+    <div class="tab-toolbar">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> Configuracion LLM / IA
+          </h2>
+          <p class="text-sm text-on-surface-variant">Proveedores de inteligencia artificial para el chat y asistente</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <app-button variant="primary" label="Provar Providers" [icon]="['fas', 'play']" [loading]="llmTesting" (clicked)="testLLMProviders()"></app-button>
+          @if (!llmEditing) {
+            <app-button variant="secondary" label="Configurar API Keys" [icon]="['fas', 'key']" (clicked)="startEditLLM()"></app-button>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (llmError) {
+      <app-alert type="error" [message]="llmError" class="mb-4"></app-alert>
+    }
+    @if (llmSuccess) {
+      <app-alert type="success" [message]="llmSuccess" class="mb-4"></app-alert>
+    }
+
+    <!-- Provider Status Cards -->
+    @if (llmProviders) {
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        @for (key of ['glm', 'groq', 'gemini', 'chain']; track key) {
+          <div class="bg-surface-container rounded-xl border border-border/20 p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders[key]?.status) + '20'">
+                <fa-icon [icon]="providerStatusIcon(llmProviders[key]?.status)" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-on-surface uppercase">{{ key }}</h3>
+                <p class="text-xs text-on-surface-variant">
+                  @if (llmProviders[key]?.status === 'ok') {
+                    @if (llmProviders[key]?.latency_ms) {
+                      {{ llmProviders[key].latency_ms }}ms
+                    }
+                    @if (llmProviders[key]?.provider) {
+                      via {{ llmProviders[key].provider }}
+                    }
+                  } @else if (llmProviders[key]?.status === 'client_null') {
+                    Sin configurar
+                  } @else {
+                    Error
+                  }
+                </p>
+              </div>
+            </div>
+            @if (llmProviders[key]?.response) {
+              <div class="text-xs text-on-surface-variant bg-surface-container-high rounded-lg p-2 font-mono truncate">
+                "{{ llmProviders[key].response }}"
+              </div>
+            }
+            @if (llmProviders[key]?.error) {
+              <div class="text-xs text-error bg-error/10 rounded-lg p-2 font-mono truncate">
+                {{ llmProviders[key].error | slice:0:100 }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (llmLoading && !llmProviders) {
+      <div class="flex justify-center py-12"><app-spinner></app-spinner></div>
+    }
+
+    <!-- API Key Editor -->
+    @if (llmEditing) {
+      <div class="bg-surface-container rounded-xl border border-primary/30 p-6 mb-6" @fadeInUp>
+        <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon>
+          Actualizar API Keys
+        </h3>
+        <p class="text-sm text-on-surface-variant mb-4">Deja en blanco si no quieres cambiar esa key. Las keys se guardan en variables de entorno del servidor.</p>
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-bold text-on-surface-variant block mb-1">GLM API Key (NVIDIA NIM — Primary)</label>
+            <input type="password" [(ngModel)]="llmEditKeys['GLM_API_KEY']" placeholder="nvapi-..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-on-surface-variant block mb-1">GROQ API Key (Fallback 1)</label>
+            <input type="password" [(ngModel)]="llmEditKeys['GROQ_API_KEY']" placeholder="gsk_..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-on-surface-variant block mb-1">GEMINI API Key (Fallback 2)</label>
+            <input type="password" [(ngModel)]="llmEditKeys['GEMINI_API_KEY']" placeholder="AI..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+          </div>
+        </div>
+        <div class="flex gap-2 mt-4">
+          <app-button variant="ghost" label="Cancelar" (clicked)="cancelEditLLM()"></app-button>
+          <app-button variant="primary" label="Guardar y Provar" [icon]="['fas', 'save']" (clicked)="saveLLMKeys()"></app-button>
+        </div>
+      </div>
+    }
+
+    <!-- Current Config -->
+    @if (llmConfig && !llmEditing) {
+      <div class="bg-surface-container rounded-xl border border-border/20 p-6" @fadeInUp>
+        <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
+          <fa-icon [icon]="['fas', 'cog']" class="text-on-surface-variant"></fa-icon>
+          Configuracion Actual
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          @for (prov of ['glm', 'groq', 'gemini']; track prov) {
+            <div class="bg-surface-container-high rounded-xl p-4">
+              <h4 class="font-bold text-sm uppercase text-on-surface mb-2">{{ prov }}</h4>
+              <div class="space-y-1 text-xs text-on-surface-variant">
+                @if (llmConfig[prov]?.key) {
+                  <p><span class="font-semibold">Key:</span> <code class="bg-surface-container rounded px-1">{{ llmConfig[prov].key }}</code></p>
+                } @else {
+                  <p class="text-error font-semibold">No configurada</p>
+                }
+                @if (llmConfig[prov]?.model) {
+                  <p><span class="font-semibold">Modelo:</span> {{ llmConfig[prov].model }}</p>
+                }
+                @if (llmConfig[prov]?.base_url) {
+                  <p><span class="font-semibold">URL:</span> <code class="bg-surface-container rounded px-1 text-[10px]">{{ llmConfig[prov].base_url }}</code></p>
+                }
+                @if (llmConfig[prov]?.models) {
+                  <p><span class="font-semibold">Modelos:</span> {{ llmConfig[prov].models.join(', ') }}</p>
+                }
+              </div>
+            </div>
+          }
+        </div>
+        <div class="mt-4 p-3 bg-surface-container-high rounded-xl text-xs text-on-surface-variant">
+          <strong>Cadena de fallback:</strong> GLM-5.2 (Primary) → Groq (Fallback 1) → Gemini (Fallback 2) → Ollama (Local)
+        </div>
+      </div>
+    }
+  </div>
+}

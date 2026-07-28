@@ -22,7 +22,7 @@ import { Incidents } from '../incidents/incidents';
 
 Chart.register(...registerables);
 
-type TabId = 'railway' | 'logs' | 'csp' | 'tokens' | 'incidents';
+type TabId = 'railway' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm';
 
 // Prometheus-inspired color palette
 const COLORS = {
@@ -115,6 +115,16 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   rotate = false;
   newToken: string | null = null;
   creating = false;
+
+  // --- LLM ---
+  llmConfig: any = null;
+  llmProviders: any = null;
+  llmLoading = false;
+  llmTesting = false;
+  llmError: string | null = null;
+  llmSuccess: string | null = null;
+  llmEditing = false;
+  llmEditKeys: Record<string, string> = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -539,5 +549,85 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   copyToken(token: string) {
     navigator.clipboard.writeText(token);
+  }
+
+  // --- LLM ---
+  loadLLMConfig() {
+    this.llmLoading = true;
+    this.llmError = null;
+    const base = (window as any).__apiBaseUrl || '';
+    this.subs.add(
+      this.admin.getLLMConfig().subscribe({
+        next: (res) => { this.llmConfig = res; this.llmLoading = false; this.cdr.markForCheck(); },
+        error: (err) => { this.llmLoading = false; this.llmError = err.error?.error || 'Error al cargar config LLM'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  testLLMProviders() {
+    this.llmTesting = true;
+    this.llmError = null;
+    this.llmSuccess = null;
+    this.subs.add(
+      this.admin.testLLMProviders().subscribe({
+        next: (res) => {
+          this.llmProviders = res.providers;
+          this.llmTesting = false;
+          const chain = res.providers?.chain;
+          if (chain?.status === 'ok') {
+            this.llmSuccess = `Cadena activa: ${chain.provider} (${chain.latency_ms}ms)`;
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.llmTesting = false; this.llmError = err.error?.error || 'Error al provar LLM'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  startEditLLM() {
+    this.llmEditing = true;
+    this.llmEditKeys = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
+    this.llmError = null;
+    this.llmSuccess = null;
+  }
+
+  cancelEditLLM() {
+    this.llmEditing = false;
+  }
+
+  saveLLMKeys() {
+    const payload: Record<string, string> = {};
+    for (const [k, v] of Object.entries(this.llmEditKeys)) {
+      if (v && v.trim()) {
+        payload[k] = v.trim();
+      }
+    }
+    if (!Object.keys(payload).length) {
+      this.llmError = 'Ingresa al menos una API key';
+      return;
+    }
+    this.subs.add(
+      this.admin.updateLLMConfig(payload).subscribe({
+        next: (res) => {
+          this.llmEditing = false;
+          this.llmSuccess = `Actualizadas: ${res.updated?.join(', ') || 'ninguna'}`;
+          this.loadLLMConfig();
+          this.testLLMProviders();
+        },
+        error: (err) => { this.llmError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  providerStatusIcon(status: string): string[] {
+    if (status === 'ok') return ['fas', 'check-circle'];
+    if (status === 'client_null') return ['fas', 'minus-circle'];
+    return ['fas', 'times-circle'];
+  }
+
+  providerStatusColor(status: string): string {
+    if (status === 'ok') return '#22c55e';
+    if (status === 'client_null') return '#eab308';
+    return '#ef4444';
   }
 }
