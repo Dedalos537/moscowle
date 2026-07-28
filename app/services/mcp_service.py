@@ -216,11 +216,18 @@ class MCPService:
                     )
 
                     result_str = _trim_tool_result(result)
-                    messages.append({'role': 'assistant', 'content': content})
+                    # Strip any fabricated text before the tool call — only keep the tool invocation
+                    tool_call_match = re.search(r'<function=.*?</function>', content, re.DOTALL)
+                    clean_assistant = tool_call_match.group(0) if tool_call_match else content
+                    messages.append({'role': 'assistant', 'content': clean_assistant})
                     messages.append(
                         {
                             'role': 'user',
-                            'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
+                            'content': (
+                                f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                f'{result_str}\n\n'
+                                f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                            ),
                         }
                     )
                     continue
@@ -261,11 +268,17 @@ class MCPService:
                             )
 
                             result_str = _trim_tool_result(result)
-                            messages.append({'role': 'assistant', 'content': failed_gen})
+                            tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                            clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
+                            messages.append({'role': 'assistant', 'content': clean_assistant})
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
+                                    'content': (
+                                        f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                        f'{result_str}\n\n'
+                                        f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                    ),
                                 }
                             )
                             continue

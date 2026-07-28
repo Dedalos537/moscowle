@@ -178,11 +178,17 @@ def mcp_chat_stream():
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                             result_str = _trim_tool_result(result)
-                            messages.append({'role': 'assistant', 'content': full_content})
+                            tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
+                            clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
+                            messages.append({'role': 'assistant', 'content': clean_assistant})
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
+                                    'content': (
+                                        f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                        f'{result_str}\n\n'
+                                        f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                    ),
                                 }
                             )
 
@@ -215,11 +221,17 @@ def mcp_chat_stream():
                                     yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                                     result_str = _trim_tool_result(result)
-                                    messages.append({'role': 'assistant', 'content': failed_gen})
+                                    tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                                    clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
+                                    messages.append({'role': 'assistant', 'content': clean_assistant})
                                     messages.append(
                                         {
                                             'role': 'user',
-                                            'content': f'[Tool {tn} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
+                                            'content': (
+                                                f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
+                                                f'{result_str}\n\n'
+                                                f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                            ),
                                         }
                                     )
                                     yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
