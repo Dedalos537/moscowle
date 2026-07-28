@@ -166,7 +166,7 @@ def mcp_chat_stream():
                             result = execute_tool(tool_name, tool_args)
                             tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
 
-                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': result}
+                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': json.dumps(result, ensure_ascii=False, default=str)}
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
 
                             result_str = json.dumps(result, ensure_ascii=False, default=str)
@@ -198,7 +198,7 @@ def mcp_chat_stream():
                                     result = execute_tool(tn, ta)
                                     tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
 
-                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': result}
+                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': json.dumps(result, ensure_ascii=False, default=str)}
                                     yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
 
                                     result_str = json.dumps(result, ensure_ascii=False, default=str)

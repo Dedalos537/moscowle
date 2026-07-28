@@ -496,10 +496,23 @@ def create_app(config_class=None):
             r'/uploads/*': {'origins': cors_origins},
         },
         supports_credentials=True,
-        allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
+        allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
+
+    @app.before_request
+    def _global_options_handler():
+        if request.method == 'OPTIONS':
+            origin = request.headers.get('Origin', '')
+            resp = app.make_default_options_response()
+            if origin in cors_origins:
+                resp.headers['Access-Control-Allow-Origin'] = origin
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            resp.headers['Access-Control-Max-Age'] = '3600'
+            return resp
 
     # Dedicated CORS handler for /mcp/* routes (Flask-CORS doesn't work with SSE streaming)
     # Must echo request Origin for credentials to work; never use '*'
