@@ -680,7 +680,8 @@ def create_app(config_class=None):
             app.register_blueprint(bp)
             app.logger.debug('Blueprint registered: %s', name)
         except Exception as e:
-            app.logger.warning('Blueprint %s failed to load: %s', name, e)
+            import traceback
+            app.logger.error('Blueprint %s FAILED to load: %s\n%s', name, e, traceback.format_exc())
 
     @app.cli.command('migrate-messages')
     def migrate_messages_command():
