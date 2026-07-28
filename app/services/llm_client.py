@@ -9,7 +9,7 @@ GLM_BASE_URL = 'https://integrate.api.nvidia.com/v1'
 GLM_MODEL = 'z-ai/glm-5.2'
 
 GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
-GEMINI_MODEL = 'gemini-1.5-flash'
+GEMINI_MODEL = 'gemini-2.0-flash'
 OLLAMA_MODEL_DEFAULT = 'llama3.1:8b'
 
 
@@ -205,8 +205,9 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
 def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
     """
     Stream chat completion. Yields text chunks.
-    Tries GLM-5.2 first, then Groq, then Ollama.
+    Tries GLM-5.2 first, then Groq, then Gemini, then Ollama.
     """
+    logger.info(f'llm_chat_stream called: {len(messages)} messages')
     # GLM-5.2 streaming
     glm = get_glm_client()
     if glm:
@@ -231,6 +232,7 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
     if groq:
         for gm in GROQ_MODELS:
             try:
+                logger.info(f'Trying Groq stream with {gm}')
                 stream = groq.chat.completions.create(
                     model=gm,
                     messages=messages,
@@ -241,9 +243,12 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
                 for chunk in stream:
                     if chunk.choices and chunk.choices[0].delta.content:
                         yield chunk.choices[0].delta.content
+                logger.info(f'Groq stream {gm} succeeded')
                 return
             except Exception as e:
                 logger.warning(f'Groq stream {gm} failed: {e}')
+    else:
+        logger.warning('Groq client unavailable')
 
     # Gemini streaming
     gemini = get_gemini_model()
