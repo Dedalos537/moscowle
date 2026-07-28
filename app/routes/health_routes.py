@@ -427,6 +427,80 @@ def debug_sync_schema():
     return jsonify({'created': created, 'errors': errors, 'tables': sorted(tables)})
 
 
+@health_bp.route('/health/llm', methods=['GET'])
+def health_llm():
+    """Test each LLM provider and return detailed results."""
+    import time
+    results = {}
+    test_messages = [{'role': 'user', 'content': 'Responde solo: hola'}]
+
+    # GLM-5.2
+    try:
+        from app.services.llm_client import get_glm_client, GLM_MODEL
+        import os
+        key = os.environ.get('GLM_API_KEY', '')
+        results['glm'] = {'key_set': bool(key), 'key_len': len(key), 'model': GLM_MODEL}
+        client = get_glm_client()
+        if client:
+            t0 = time.time()
+            r = client.chat.completions.create(model=GLM_MODEL, messages=test_messages, max_tokens=20, temperature=0.1)
+            results['glm']['status'] = 'ok'
+            results['glm']['response'] = r.choices[0].message.content
+            results['glm']['latency_ms'] = int((time.time() - t0) * 1000)
+        else:
+            results['glm']['status'] = 'client_null'
+            results['glm']['error'] = 'get_glm_client() returned None'
+    except Exception as e:
+        results['glm'] = {'status': 'error', 'error': str(e)[:300]}
+
+    # Groq
+    try:
+        from app.services.llm_client import get_groq_client, GROQ_MODELS
+        import os
+        key = os.environ.get('GROQ_API_KEY', '')
+        results['groq'] = {'key_set': bool(key), 'key_len': len(key)}
+        client = get_groq_client()
+        if client:
+            t0 = time.time()
+            r = client.chat.completions.create(model=GROQ_MODELS[0], messages=test_messages, max_tokens=20, temperature=0.1)
+            results['groq']['status'] = 'ok'
+            results['groq']['response'] = r.choices[0].message.content
+            results['groq']['latency_ms'] = int((time.time() - t0) * 1000)
+        else:
+            results['groq']['status'] = 'client_null'
+    except Exception as e:
+        results['groq'] = {'status': 'error', 'error': str(e)[:300]}
+
+    # Gemini
+    try:
+        from app.services.llm_client import get_gemini_model
+        import os
+        key = os.environ.get('GEMINI_API_KEY', '')
+        results['gemini'] = {'key_set': bool(key), 'key_len': len(key)}
+        model = get_gemini_model()
+        if model:
+            t0 = time.time()
+            r = model.generate_content('Responde solo: hola')
+            results['gemini']['status'] = 'ok'
+            results['gemini']['response'] = r.text[:100]
+            results['gemini']['latency_ms'] = int((time.time() - t0) * 1000)
+        else:
+            results['gemini']['status'] = 'client_null'
+    except Exception as e:
+        results['gemini'] = {'status': 'error', 'error': str(e)[:300]}
+
+    # Full chain test (what MCP actually uses)
+    try:
+        from app.services.llm_client import llm_chat
+        t0 = time.time()
+        content, provider = llm_chat(test_messages, temperature=0.1, max_tokens=20)
+        results['chain'] = {'status': 'ok', 'provider': provider, 'response': content, 'latency_ms': int((time.time() - t0) * 1000)}
+    except Exception as e:
+        results['chain'] = {'status': 'error', 'error': str(e)[:500]}
+
+    return jsonify({'providers': results})
+
+
 @health_bp.route('/health/debug/routes', methods=['GET'])
 def debug_routes():
     rules = []

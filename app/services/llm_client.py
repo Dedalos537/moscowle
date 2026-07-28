@@ -27,15 +27,23 @@ def get_glm_client():
 
         api_key = os.environ.get('GLM_API_KEY')
         if not api_key:
+            try:
+                from flask import current_app
+                api_key = current_app.config.get('GLM_API_KEY')
+            except Exception:
+                pass
+        if not api_key:
+            logger.warning('GLM_API_KEY not set in environment or config')
             return None
+        logger.info(f'Creating GLM client: base_url={GLM_BASE_URL}, key_len={len(api_key)}')
         client = OpenAI(base_url=GLM_BASE_URL, api_key=api_key)
         _clients['glm'] = client
         return client
     except ImportError:
-        logger.warning('openai library not installed — GLM-5.2 unavailable')
+        logger.error('openai library not installed — pip install openai')
         return None
     except Exception as e:
-        logger.error(f'Failed to create GLM client: {e}')
+        logger.error(f'Failed to create GLM client: {e}', exc_info=True)
         return None
 
 
@@ -46,6 +54,12 @@ def get_groq_client():
         from groq import Groq
 
         api_key = os.environ.get('GROQ_API_KEY')
+        if not api_key:
+            try:
+                from flask import current_app
+                api_key = current_app.config.get('GROQ_API_KEY')
+            except Exception:
+                pass
         if not api_key:
             return None
         client = Groq(api_key=api_key)
@@ -65,6 +79,12 @@ def get_gemini_model():
         import google.generativeai as genai
 
         api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            try:
+                from flask import current_app
+                api_key = current_app.config.get('GEMINI_API_KEY')
+            except Exception:
+                pass
         if not api_key:
             return None
         genai.configure(api_key=api_key)
@@ -109,6 +129,7 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
     Returns (content: str, provider: str) or raises RuntimeError.
     """
     errors = []
+    logger.info(f'llm_chat called: {len(messages)} messages, providers will be tried in order')
 
     # 1) GLM-5.2 (primary)
     glm = get_glm_client()
@@ -123,10 +144,17 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
             )
             content = response.choices[0].message.content or ''
             if content.strip():
+                logger.info(f'GLM-5.2 success: {len(content)} chars')
                 return content, 'glm'
+            else:
+                logger.warning('GLM-5.2 returned empty content')
+                errors.append('GLM: empty response')
         except Exception as e:
             errors.append(f'GLM: {e}')
             logger.warning(f'GLM-5.2 failed: {e}')
+    else:
+        logger.warning('GLM client unavailable (no key or import error)')
+        errors.append('GLM: client unavailable')
 
     # 2) Groq (secondary)
     groq = get_groq_client()
@@ -246,7 +274,8 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
         except Exception as e:
             logger.error(f'Ollama stream failed: {e}')
 
-    yield 'Error: ningun proveedor LLM disponible.'
+    logger.error('All LLM providers failed in llm_chat_stream')
+    yield 'Error: todos los proveedores de IA fallaron. Verifica las API keys en Configuracion del Sistema.'
 
 
 # ─── Legacy helpers (used by enhanced_llm_service_v5, _shared, etc.) ───────
