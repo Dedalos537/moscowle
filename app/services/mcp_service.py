@@ -139,7 +139,13 @@ def _parse_text_tool_call(text):
 
 def _build_tool_prompt(tools):
     """Build a text listing of available tools for the system prompt."""
-    lines = ['HERRAMIENTAS DISPONIBLES (usa el formato <function=nombre{json_args} </function>):']
+    lines = [
+        'HERRAMIENTAS DISPONIBLES:',
+        'IMPORTANTE: SIEMPRE incluye los parametros JSON entre llaves. Si no tienes un valor, usa null.',
+        'Formato correcto: <function=nombre{"param1": "valor1", "param2": 123}</function>',
+        'Formato INCORRECTO: <function=nombre</function>  ← SIN LLAVES NO FUNCIONA',
+        '',
+    ]
     for t in tools:
         fn = t['function']
         params = fn.get('parameters', {}).get('properties', {})

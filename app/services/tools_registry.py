@@ -108,27 +108,48 @@ def execute_tool(name, args, user_id=None, role=None):
     t = TOOL_REGISTRY.get(name)
     if not t:
         return {'error': f'Unknown tool: {name}'}
+    if not args:
+        params = t['parameters'].get('properties', {})
+        required = t['parameters'].get('required', [])
+        if required:
+            missing = [r for r in required if r not in params]
+            return {
+                'error': f'Faltan parametros requeridos para {name}: {", ".join(required)}. '
+                f'Usa el formato: <function={name}{{"param1": "valor1"}}' + '</function>'
+            }
     try:
         return t['handler'](**args, _user_id=user_id, _role=role)
+    except TypeError as e:
+        return {
+            'error': f'Parametros incorrectos para {name}: {str(e)}. '
+            f'Usa el formato: <function={name}{{...}}' + '</function>'
+        }
     except Exception as e:
         logger.error(f'Tool {name} error: {e}', exc_info=True)
         return {'error': str(e)}
 
 
+def _make_auth_cookie(user_id, role=None):
+    """Generate a JWT access token cookie for internal API calls."""
+    from flask_jwt_extended import create_access_token
+
+    identity = str(user_id) if user_id else '1'
+    token = create_access_token(identity=identity)
+    return token
+
+
 def _api_get(endpoint, user_id=None, role=None):
     with current_app.test_client() as c:
-        with c.session_transaction() as sess:
-            sess['user_id'] = user_id
-            sess['role'] = role or 'admin'
-        return c.get(endpoint)
+        token = _make_auth_cookie(user_id, role)
+        c.set_cookie('localhost', 'access_token', token)
+        return c.get(endpoint, headers={'Authorization': f'Bearer {token}'})
 
 
 def _api_post(endpoint, json=None, user_id=None, role=None):
     with current_app.test_client() as c:
-        with c.session_transaction() as sess:
-            sess['user_id'] = user_id
-            sess['role'] = role or 'admin'
-        return c.post(endpoint, json=json or {})
+        token = _make_auth_cookie(user_id, role)
+        c.set_cookie('localhost', 'access_token', token)
+        return c.post(endpoint, json=json or {}, headers={'Authorization': f'Bearer {token}'})
 
 
 @tool(
@@ -871,9 +892,9 @@ def handle_batch_create_sessions(sessions=None, **kwargs):
 )
 def handle_list_incidents(status=None, limit=20, **kwargs):
     try:
-        params = f'?limit={limit}'
+        params = f'?per_page={limit}'
         if status:
-            params += f'&status={status}'
+            params += f'&estado={status}'
         resp = _api_get(f'/api/incidents{params}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
         return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'incidents': data}
