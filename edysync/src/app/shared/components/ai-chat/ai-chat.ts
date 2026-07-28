@@ -99,6 +99,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   error: string | null = null;
   processingAction = false;
   actionFeedback: { type: 'success' | 'error' | 'info'; message: string } | null = null;
+  thinkingText = '';
 
   suggestions: string[] = [];
   actionChips: ActionChip[] = [];
@@ -285,6 +286,16 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  private updateThinking(text: string) {
+    this.thinkingText = text;
+    this.cdr.markForCheck();
+  }
+
+  private clearThinking() {
+    this.thinkingText = '';
+    this.cdr.markForCheck();
+  }
+
   sendMessage() {
     const msg = this.inputMessage.trim();
     if (!msg || this.loading) return;
@@ -341,8 +352,11 @@ export class AiChat implements AfterViewChecked, OnDestroy {
               if (!line.startsWith('data: ')) continue;
               try {
                 const event = JSON.parse(line.slice(6));
-                if (event.type === 'chunk') {
+                if (event.type === 'thinking') {
+                  this.updateThinking(event.content || 'Procesando...');
+                } else if (event.type === 'chunk') {
                   assistantText += event.content;
+                  this.clearThinking();
                   this.updateLastAssistant(assistantText, toolCalls);
                 } else if (event.type === 'tool_call') {
                   toolCalls.push({
@@ -356,15 +370,17 @@ export class AiChat implements AfterViewChecked, OnDestroy {
                   if (toolCalls.length > 0) {
                     const tc = toolCalls[toolCalls.length - 1];
                     tc.result = event.result || '';
-                    tc.success = event.success ?? true;
+                    tc.success = true;
                   }
                   this.updateLastAssistant(assistantText, toolCalls);
                 } else if (event.type === 'done') {
                   this.loading = false;
+                  this.clearThinking();
                   assistantText = '';
                   toolCalls = [];
                 } else if (event.type === 'error') {
                   this.loading = false;
+                  this.clearThinking();
                   this.error = event.error;
                   this.pushAssistant('Error: ' + (event.error || 'Error desconocido'));
                 }

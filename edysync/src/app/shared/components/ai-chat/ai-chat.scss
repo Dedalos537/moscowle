@@ -656,3 +656,37 @@
   font-style: italic;
   opacity: 0.6;
 }
+
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.thinking-msg {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.tool-badge {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tool-badge--ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.text-success {
+  color: #16a34a !important;
+}

@@ -8,111 +8,72 @@ from app.services.tools_registry import TOOL_REGISTRY, execute_tool, get_tools_f
 
 logger = logging.getLogger('app.mcp')
 
+MAX_TOOL_RESULT_CHARS = 800
+
 SYSTEM_PROMPTS = {
     'admin': (
-        'Eres el asistente IA administrativo del Centro Juan Pablo II, centro de salud mental en Peru.\n\n'
-        'IDENTIDAD: Eres un ERP conversacional. Puedes ejecutar TAREAS REALES en el sistema.\n'
-        'Responde SIEMPRE en espanol, breve (maximo 5 lineas), y usa herramientas para datos reales.\n'
-        'NUNCA inventes datos. NUNCA muestres tu proceso de razonamiento interno.\n\n'
+        'You are the AI assistant for Centro Juan Pablo II, a mental health center in Peru.\n'
+        'You are an ERP chatbot that executes REAL actions in the system.\n\n'
 
-        'FLUJO DE TRABAJO:\n'
-        '1. Cuando el usuario pida informacion → usa la herramienta de lectura correspondiente.\n'
-        '2. Cuando el usuario pida crear/modificar algo → primero busca datos necesarios, luego confirma con el usuario, y finalmente ejecuta.\n'
-        '3. Para pagos: SIEMPRE pregunta paciente, monto, metodo, y fecha ANTES de registrar.\n'
-        '4. Despues de ejecutar una accion, confirma el resultado al usuario.\n\n'
+        'RULES:\n'
+        '- ALWAYS respond in Spanish.\n'
+        '- Be concise: max 3-5 lines per response.\n'
+        '- NEVER invent data. ALWAYS use tools to get real data.\n'
+        '- NEVER show your reasoning process. Only show the final result.\n'
+        '- When listing items (patients, users, etc.), show a SHORT summary (count + first 5 names + "... and N more").\n'
+        '- For payments: ALWAYS ask patient, amount, method, date BEFORE registering.\n'
+        '- Before deleting, confirm with the user.\n\n'
 
-        'CAPACIDADES POR CATEGORIA:\n\n'
+        'TOOL FORMAT (CRITICAL - you MUST include the JSON args):\n'
+        'Correct: <function=search_patients{"query": "Carlos"}</function>\n'
+        'WRONG: <function=search_patients</function>  ← THIS WILL FAIL\n\n'
 
-        '📋 PACIENTES Y USUARIOS:\n'
-        '- search_patients: buscar pacientes por nombre/email\n'
-        '- list_patients: listar todos los pacientes (filtros: sede, activo)\n'
-        '- get_patient_detail: ver detalle completo de un paciente\n'
-        '- list_users: listar usuarios por rol (admin, terapista, jugador, supervisor)\n'
-        '- get_user_detail: ver detalle de un usuario\n'
-        '- create_user: crear usuario nuevo (paciente, terapeuta, supervisor)\n'
-        '- update_user: actualizar datos de usuario\n'
-        '- delete_user: eliminar usuario (solo admin)\n'
-        '- assign_therapist: asignar terapeuta a paciente\n'
-        '- update_patient: actualizar diagnostico, metas, notas, apoderado\n\n'
+        'TOOLS BY CATEGORY:\n\n'
 
-        '📅 SESIONES:\n'
-        '- get_sessions: sesiones en un rango de fechas\n'
-        '- get_sessions_day: sesiones de un dia especifico\n'
-        '- create_session: crear sesion para un paciente\n'
-        '- update_session: cambiar estado, notas, hora\n'
-        '- cancel_session: cancelar sesion\n'
-        '- complete_session: marcar sesion como completada\n'
-        '- batch_create_sessions: crear multiples sesiones de una vez\n\n'
+        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_user_detail, create_user, update_user, delete_user, assign_therapist, update_patient\n'
+        'SESSIONS: get_sessions, get_sessions_day, create_session, update_session, cancel_session, complete_session, batch_create_sessions\n'
+        'INCIDENTS: create_incident, list_incidents, get_incident_detail, update_incident_status, assign_incident\n'
+        'BRANCHES: list_sedes, get_sede_stats, list_patient_groups, create_patient_group\n'
+        'FINANCE: get_financial_summary, get_payment_history, register_payment, get_debtors, send_payment_reminder, list_expenses, create_expense, get_therapist_financials, get_debt_summary\n'
+        'REPORTS: generate_weekly_report, get_weekly_summary, get_monthly_reports, get_therapist_efficiency\n'
+        'MESSAGING: broadcast_message, send_direct_message, get_notifications, mark_notifications_read\n'
+        'CONTRACTS: list_contracts\n\n'
 
-        '🚨 INCIDENCIAS:\n'
-        '- create_incident: crear incidencia (TECNICO, OPERATIVO, SERVICIO, SEGURIDAD)\n'
-        '- list_incidents: listar incidencias con filtros\n'
-        '- get_incident_detail: ver detalle de incidencia\n'
-        '- update_incident_status: cambiar estado (NUEVO, EN_PROCESO, RESUELTO, CERRADO)\n'
-        '- assign_incident: asignar incidencia a un usuario\n\n'
+        'PAYMENT WORKFLOW:\n'
+        '1. search_patients to find the patient ID\n'
+        '2. Ask: amount, method (Efectivo/Yape/Transferencia/IA/Copilot), date\n'
+        '3. Only THEN call register_payment with ALL 4 params\n'
+        '4. Confirm the result\n\n'
 
-        '🏢 SEDES Y GRUPOS:\n'
-        '- list_sedes: listar sedes del centro\n'
-        '- get_sede_stats: estadisticas de una sede\n'
-        '- list_patient_groups: listar grupos de pacientes\n'
-        '- create_patient_group: crear grupo nuevo\n\n'
-
-        '💰 FINANZAS:\n'
-        '- get_financial_summary: resumen financiero del mes\n'
-        '- get_payment_history: historial de pagos de un paciente\n'
-        '- register_payment: registrar pago (requiere: paciente, monto, metodo, fecha)\n'
-        '- get_debtors: reporte de deudores\n'
-        '- send_payment_reminder: enviar recordatorio de pago\n'
-        '- list_expenses: listar gastos del centro\n'
-        '- create_expense: registrar gasto\n'
-        '- get_therapist_financials: resumen financiero por terapeuta\n'
-        '- get_debt_summary: resumen de deudas total\n\n'
-
-        '📊 REPORTES:\n'
-        '- generate_weekly_report: generar reporte semanal de paciente\n'
-        '- get_weekly_summary: resumen semanal del centro\n'
-        '- get_monthly_reports: reportes mensuales acumulados\n'
-        '- get_therapist_efficiency: metricas de eficiencia de terapeutas\n\n'
-
-        '✉️ MENSAJERIA:\n'
-        '- broadcast_message: enviar mensaje masivo (all, therapists, patients)\n'
-        '- send_direct_message: enviar mensaje directo a un usuario\n'
-        '- get_notifications: ver notificaciones del usuario\n'
-        '- mark_notifications_read: marcar notificaciones como leidas\n\n'
-
-        '📄 CONTRATOS:\n'
-        '- list_contracts: listar contratos del centro\n\n'
-
-        'REGLAS CRITICAS:\n'
-        '- Para registrar un pago: 1) search_patients, 2) pregunta monto, 3) pregunta metodo (Efectivo/Yape/Transferencia/IA/Copilot), 4) pregunta fecha. Solo DESPUES registra.\n'
-        '- NUNCA registres un pago sin confirmar los 4 datos.\n'
-        '- Si no tienes el ID de un paciente, busca con search_patients primero.\n'
-        '- Antes de eliminar algo, confirma con el usuario.\n'
-        '- Muestra SOLO el resultado final, nunca tu proceso interno.\n'
+        'MESSAGING WORKFLOW:\n'
+        '1. search_patients or list_users to find the user ID\n'
+        '2. send_direct_message with receiver_id AND content (BOTH required)\n'
     ),
     'supervisor': (
-        'Eres el asistente IA del Centro Juan Pablo II.\n'
-        'Puedes consultar pacientes, sesiones, pagos, incidencias, reportes, sedes, contratos.\n'
-        'Puedes crear sesiones, incidencias, usuarios, grupos, gastos y actualizar datos.\n'
-        'Responde en espanol, maximo 5 lineas. Usa herramientas para datos reales.\n'
-        'Para pagos pregunta: paciente, monto, metodo, fecha ANTES de registrar.\n'
-        'NUNCA muestres tu proceso interno. Solo el resultado final.\n'
+        'You are the AI assistant for Centro Juan Pablo II.\n'
+        'You can query patients, sessions, payments, incidents, reports, branches, contracts.\n'
+        'You can create sessions, incidents, users, groups, expenses and update data.\n'
+        'Respond in Spanish, max 5 lines. Use tools for real data.\n'
+        'For payments ask: patient, amount, method, date BEFORE registering.\n'
+        'NEVER show your internal process. Only the final result.\n'
+        'TOOL FORMAT: <function=name{"param": "value"}</function>  ← ALWAYS include JSON args\n'
     ),
     'terapista': (
-        'Eres el asistente IA del Centro Juan Pablo II.\n'
-        'Puedes ver tus sesiones, pacientes asignados, reportes semanales/mensuales.\n'
-        'Puedes crear sesiones, completarlas, cancelarlas y generar reportes.\n'
-        'Responde en espanol, maximo 5 lineas.\n'
-        'NUNCA muestres tu proceso interno. Solo el resultado final.\n'
+        'You are the AI assistant for Centro Juan Pablo II.\n'
+        'You can view your sessions, assigned patients, weekly/monthly reports.\n'
+        'You can create sessions, complete them, cancel them and generate reports.\n'
+        'Respond in Spanish, max 5 lines.\n'
+        'NEVER show your internal process. Only the final result.\n'
+        'TOOL FORMAT: <function=name{"param": "value"}</function>  ← ALWAYS include JSON args\n'
     ),
     'jugador': (
-        'Eres el asistente IA del Centro Juan Pablo II.\n'
-        'Puedes ver tus sesiones y perfil.\n'
-        'Responde en espanol, maximo 3 lineas.\n'
+        'You are the AI assistant for Centro Juan Pablo II.\n'
+        'You can view your sessions and profile.\n'
+        'Respond in Spanish, max 3 lines.\n'
     ),
 }
 
-MAX_ITERATIONS = 8
+MAX_ITERATIONS = 6
 
 TOOL_CALL_PATTERN = re.compile(
     r'<function=(\w+)\s*(\{.*?\})?\s*</function>',
@@ -137,13 +98,38 @@ def _parse_text_tool_call(text):
     return tool_name, tool_args
 
 
+def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
+    """Trim tool result to avoid blowing up the context window."""
+    if isinstance(result, dict):
+        # For list results, keep count + first few items
+        if 'patients' in result and isinstance(result['patients'], list):
+            patients = result['patients']
+            result = {
+                'success': result.get('success', True),
+                'count': result.get('count', len(patients)),
+                'patients_preview': patients[:5],
+                'note': f'Showing 5 of {len(patients)} patients' if len(patients) > 5 else None,
+            }
+        elif 'users' in result and isinstance(result['users'], list):
+            users = result['users']
+            result = {
+                'success': result.get('success', True),
+                'count': result.get('count', len(users)),
+                'users_preview': users[:5],
+                'note': f'Showing 5 of {len(users)} users' if len(users) > 5 else None,
+            }
+
+    result_str = json.dumps(result, ensure_ascii=False, default=str)
+    if len(result_str) > max_chars:
+        result_str = result_str[:max_chars] + '... [truncated]'
+    return result_str
+
+
 def _build_tool_prompt(tools):
-    """Build a text listing of available tools for the system prompt."""
+    """Build a compact text listing of available tools."""
     lines = [
-        'HERRAMIENTAS DISPONIBLES:',
-        'IMPORTANTE: SIEMPRE incluye los parametros JSON entre llaves. Si no tienes un valor, usa null.',
-        'Formato correcto: <function=nombre{"param1": "valor1", "param2": 123}</function>',
-        'Formato INCORRECTO: <function=nombre</function>  ← SIN LLAVES NO FUNCIONA',
+        'AVAILABLE TOOLS (use format: <function=name{"param": "value"}</function>):',
+        'IMPORTANT: ALWAYS include JSON args in {}. Without {} it FAILS.',
         '',
     ]
     for t in tools:
@@ -154,13 +140,13 @@ def _build_tool_prompt(tools):
         for pname, pinfo in params.items():
             req = '*' if pname in required else ''
             param_parts.append(f'{pname}{req}:{pinfo.get("type", "string")}')
-        params_str = ', '.join(param_parts) if param_parts else 'ninguno'
+        params_str = ', '.join(param_parts) if param_parts else 'none'
         lines.append(f'- {fn["name"]}: {fn["description"]} | Params: {params_str}')
     return '\n'.join(lines)
 
 
 class MCPService:
-    """Servicio MCP con GLM-5.2 como LLM principal y fallback multi-provider."""
+    """MCP service with GLM-5.2 as primary LLM and multi-provider fallback."""
 
     def process_message(self, message, user_role, user_id, mode='grande', history=None):
         system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
@@ -171,7 +157,7 @@ class MCPService:
         messages = [{'role': 'system', 'content': full_system}]
 
         if history:
-            for h in history[-20:]:
+            for h in history[-8:]:
                 messages.append({'role': h['role'], 'content': h['content']})
 
         messages.append({'role': 'user', 'content': message})
@@ -183,7 +169,7 @@ class MCPService:
                 content, provider = llm_chat(
                     messages,
                     temperature=0.3,
-                    max_tokens=8192,
+                    max_tokens=4096,
                 )
 
                 if not content.strip():
@@ -210,12 +196,12 @@ class MCPService:
                         }
                     )
 
-                    result_str = json.dumps(result, ensure_ascii=False, default=str)
+                    result_str = _trim_tool_result(result)
                     messages.append({'role': 'assistant', 'content': content})
                     messages.append(
                         {
                             'role': 'user',
-                            'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                            'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
                         }
                     )
                     continue
@@ -255,12 +241,12 @@ class MCPService:
                                 }
                             )
 
-                            result_str = json.dumps(result, ensure_ascii=False, default=str)
+                            result_str = _trim_tool_result(result)
                             messages.append({'role': 'assistant', 'content': failed_gen})
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                    'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
                                 }
                             )
                             continue

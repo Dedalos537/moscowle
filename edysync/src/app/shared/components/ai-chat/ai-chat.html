@@ -97,16 +97,17 @@
               @for (tc of msg.toolCalls; track tc.name) {
                 <div class="tool-call" [class.tool-call--error]="!tc.success">
                   <div class="tool-call-header">
-                    <fa-icon [icon]="['fas', 'wrench']" class="tool-icon"></fa-icon>
+                    <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
                     <span class="tool-name">{{ tc.name }}</span>
-                  </div>
-                  <div class="tool-call-result">
-                    @if (tc.result) {
-                      <pre>{{ tc.result }}</pre>
-                    } @else {
-                      <span class="tool-pending">Ejecutando...</span>
+                    @if (tc.success) {
+                      <span class="tool-badge tool-badge--ok">OK</span>
                     }
                   </div>
+                  @if (tc.result) {
+                    <div class="tool-call-result">
+                      <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -115,11 +116,20 @@
       }
 
       @if (loading) {
-        <div class="message assistant" style="opacity:1">
-          <div class="typing-indicator">
-            <span></span><span></span><span></span>
+        @if (thinkingText) {
+          <div class="message assistant thinking-msg">
+            <div class="thinking-indicator">
+              <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
+              <span>{{ thinkingText }}</span>
+            </div>
           </div>
-        </div>
+        } @else {
+          <div class="message assistant" style="opacity:1">
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        }
       }
     </div>
 

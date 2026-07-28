@@ -8,7 +8,7 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from app.auth_compat import current_user
 from app.models import User
 from app.services.llm_client import llm_chat_stream
-from app.services.mcp_service import SYSTEM_PROMPTS, MCPService, _build_tool_prompt, _parse_text_tool_call
+from app.services.mcp_service import SYSTEM_PROMPTS, MCPService, _build_tool_prompt, _parse_text_tool_call, _trim_tool_result
 from app.services.tools_registry import execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -105,7 +105,7 @@ def mcp_chat():
 
 @mcp_bp.route('/chat/stream', methods=['POST'])
 def mcp_chat_stream():
-    """Send a message and stream the response via SSE (GLM-5.2 primary → fallback)."""
+    """Send a message and stream the response via SSE with progress indicators."""
     user = _get_current_user()
     cors = _cors_headers()
     _app = current_app._get_current_object()
@@ -132,26 +132,27 @@ def mcp_chat_stream():
     def generate():
         with _app.app_context():
             try:
+                # Send thinking indicator
+                yield f'data: {json.dumps({"type": "thinking", "content": "Procesando..."})}\n\n'
+
                 tools = get_tools_for_mode(mode, user.role)
                 tool_prompt = _build_tool_prompt(tools)
                 system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
                 messages = [{'role': 'system', 'content': system_prompt + '\n\n' + tool_prompt}]
 
                 if history:
-                    for h in history[-20:]:
+                    for h in history[-8:]:
                         messages.append({'role': h['role'], 'content': h['content']})
 
                 messages.append({'role': 'user', 'content': message})
 
                 tool_calls_log = []
 
-                for iteration in range(8):
+                for iteration in range(6):
                     try:
-                        # Stream chunks from GLM-5.2 (or fallback)
                         full_content = ''
-                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=8192):
+                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=4096):
                             full_content += chunk
-                            # Strip tool call XML from visible text
                             clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
                             if clean.strip():
                                 yield f'data: {json.dumps({"type": "chunk", "content": clean}, ensure_ascii=False)}\n\n'
@@ -163,23 +164,29 @@ def mcp_chat_stream():
                         tool_name, tool_args = _parse_text_tool_call(full_content)
 
                         if tool_name:
+                            # Send tool_call event
                             tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
                             yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
                             result = execute_tool(tool_name, tool_args, user_id=user.id, role=user.role)
                             tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
 
-                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': json.dumps(result, ensure_ascii=False, default=str)}
-                            yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
+                            # Send trimmed tool_result
+                            trimmed = _trim_tool_result(result)
+                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': trimmed}
+                            yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
-                            result_str = json.dumps(result, ensure_ascii=False, default=str)
+                            result_str = _trim_tool_result(result)
                             messages.append({'role': 'assistant', 'content': full_content})
                             messages.append(
                                 {
                                     'role': 'user',
-                                    'content': f'[Tool result for {tool_name}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                    'content': f'[Tool {tool_name} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
                                 }
                             )
+
+                            # Send thinking indicator for next iteration
+                            yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
                             continue
 
                         # No more tool calls — final response already streamed
@@ -201,24 +208,26 @@ def mcp_chat_stream():
                                     result = execute_tool(tn, ta, user_id=user.id, role=user.role)
                                     tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
 
-                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': json.dumps(result, ensure_ascii=False, default=str)}
-                                    yield f'data: {json.dumps(tr_data, ensure_ascii=False, default=str)}\n\n'
+                                    trimmed = _trim_tool_result(result)
+                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': trimmed}
+                                    yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
-                                    result_str = json.dumps(result, ensure_ascii=False, default=str)
+                                    result_str = _trim_tool_result(result)
                                     messages.append({'role': 'assistant', 'content': failed_gen})
                                     messages.append(
                                         {
                                             'role': 'user',
-                                            'content': f'[Tool result for {tn}]: {result_str}\n\nAhora responde al usuario con esta informacion.',
+                                            'content': f'[Tool {tn} result]: {result_str}\n\nRespond to the user with this info. Be concise.',
                                         }
                                     )
+                                    yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
                                     continue
 
-                        if iteration >= 5:
+                        if iteration >= 2:
                             yield f'data: {json.dumps({"type": "text", "content": f"Error: {error_str[:200]}"})}\n\n'
                             break
 
-                yield f'data: {json.dumps({"type": "done", "tool_calls": tool_calls_log}, ensure_ascii=False, default=str)}\n\n'
+                yield f'data: {json.dumps({"type": "done", "tool_calls": tool_calls_log}, ensure_ascii=False)}\n\n'
 
             except Exception as e:
                 logger.error(f'MCP stream error: {e}', exc_info=True)
