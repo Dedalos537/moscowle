@@ -619,12 +619,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  providerStatusIcon(status: string): string[] {
-    if (status === 'ok') return ['fas', 'check-circle'];
-    if (status === 'client_null') return ['fas', 'minus-circle'];
-    return ['fas', 'times-circle'];
-  }
-
   providerStatusColor(status: string): string {
     if (status === 'ok') return '#22c55e';
     if (status === 'client_null') return '#eab308';

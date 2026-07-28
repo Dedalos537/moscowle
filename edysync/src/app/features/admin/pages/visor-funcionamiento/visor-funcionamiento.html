@@ -605,7 +605,13 @@
           <div class="bg-surface-container rounded-xl border border-border/20 p-4">
             <div class="flex items-center gap-3 mb-3">
               <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders[key]?.status) + '20'">
-                <fa-icon [icon]="providerStatusIcon(llmProviders[key]?.status) as any" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                @if (llmProviders[key]?.status === 'ok') {
+                  <fa-icon [icon]="['fas', 'check-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                } @else if (llmProviders[key]?.status === 'client_null') {
+                  <fa-icon [icon]="['fas', 'minus-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                } @else {
+                  <fa-icon [icon]="['fas', 'times-circle']" [style.color]="providerStatusColor(llmProviders[key]?.status)"></fa-icon>
+                }
               </div>
               <div>
                 <h3 class="font-bold text-sm text-on-surface uppercase">{{ key }}</h3>
