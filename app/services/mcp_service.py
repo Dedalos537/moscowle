@@ -8,7 +8,7 @@ from app.services.tools_registry import TOOL_REGISTRY, execute_tool, get_tools_f
 
 logger = logging.getLogger('app.mcp')
 
-MAX_TOOL_RESULT_CHARS = 800
+MAX_TOOL_RESULT_CHARS = 1500
 
 SYSTEM_PROMPTS = {
     'admin': (
@@ -18,7 +18,9 @@ SYSTEM_PROMPTS = {
         'RULES:\n'
         '- ALWAYS respond in Spanish.\n'
         '- Be concise: max 3-5 lines per response.\n'
-        '- NEVER invent data. ALWAYS use tools to get real data.\n'
+        '- NEVER invent data. ONLY use the EXACT values returned by tools.\n'
+        '- NEVER modify, estimate, or "fill in" values from tool results. Report EXACTLY what the tool returned.\n'
+        '- If a tool result is truncated, say "el resultado fue truncado" and show what you received.\n'
         '- NEVER show your reasoning process. Only show the final result.\n'
         '- When listing items (patients, users, etc.), show a SHORT summary (count + first 5 names + "... and N more").\n'
         '- For payments: ALWAYS ask patient, amount, method, date BEFORE registering.\n'
@@ -117,6 +119,23 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
                 'count': result.get('count', len(users)),
                 'users_preview': users[:5],
                 'note': f'Showing 5 of {len(users)} users' if len(users) > 5 else None,
+            }
+        elif 'payments' in result and isinstance(result['payments'], list):
+            payments = result['payments']
+            result = {
+                'success': result.get('success', True),
+                'patient': result.get('patient'),
+                'total_payments': len(payments),
+                'payments': payments[:10],
+                'note': f'Showing {min(10, len(payments))} of {len(payments)} payments' if len(payments) > 10 else None,
+            }
+        elif 'sessions' in result and isinstance(result['sessions'], list):
+            sessions = result['sessions']
+            result = {
+                'success': result.get('success', True),
+                'count': result.get('count', len(sessions)),
+                'sessions': sessions[:5],
+                'note': f'Showing {min(5, len(sessions))} of {len(sessions)} sessions' if len(sessions) > 5 else None,
             }
 
     result_str = json.dumps(result, ensure_ascii=False, default=str)
