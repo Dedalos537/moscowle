@@ -145,11 +145,11 @@ def mcp_chat_stream():
 
                 tool_calls_log = []
 
-                for iteration in range(5):
+                for iteration in range(8):
                     try:
                         # Stream chunks from GLM-5.2 (or fallback)
                         full_content = ''
-                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=4096):
+                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=8192):
                             full_content += chunk
                             # Strip tool call XML from visible text
                             clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
@@ -214,7 +214,7 @@ def mcp_chat_stream():
                                     )
                                     continue
 
-                        if iteration >= 2:
+                        if iteration >= 5:
                             yield f'data: {json.dumps({"type": "text", "content": f"Error: {error_str[:200]}"})}\n\n'
                             break
 
