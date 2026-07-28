@@ -108,13 +108,12 @@ def execute_tool(name, args, user_id=None, role=None):
     t = TOOL_REGISTRY.get(name)
     if not t:
         return {'error': f'Unknown tool: {name}'}
-    if not args:
-        params = t['parameters'].get('properties', {})
-        required = t['parameters'].get('required', [])
-        if required:
-            missing = [r for r in required if r not in params]
+    required = t['parameters'].get('required', [])
+    if required:
+        missing = [r for r in required if r not in args or args.get(r) is None or args.get(r) == '']
+        if missing:
             return {
-                'error': f'Faltan parametros requeridos para {name}: {", ".join(required)}. '
+                'error': f'Faltan parametros requeridos para {name}: {", ".join(missing)}. '
                 f'Usa el formato: <function={name}{{"param1": "valor1"}}' + '</function>'
             }
     try:
@@ -1217,7 +1216,7 @@ def handle_generate_weekly_report(patient_id, **kwargs):
 )
 def handle_get_weekly_summary(**kwargs):
     try:
-        resp = _api_get('/api/reports/weekly-summary', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_get('/api/weekly-summary', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
         return {'success': True, 'summary': data}
     except Exception as e:
