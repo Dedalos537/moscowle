@@ -173,7 +173,8 @@ def mcp_chat_stream():
 
                             # Send trimmed tool_result
                             trimmed = _trim_tool_result(result)
-                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': trimmed}
+                            success = not (isinstance(result, dict) and 'error' in result)
+                            tr_data = {'type': 'tool_result', 'name': tool_name, 'result': trimmed, 'success': success}
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                             result_str = _trim_tool_result(result)
@@ -209,7 +210,8 @@ def mcp_chat_stream():
                                     tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
 
                                     trimmed = _trim_tool_result(result)
-                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': trimmed}
+                                    success = not (isinstance(result, dict) and 'error' in result)
+                                    tr_data = {'type': 'tool_result', 'name': tn, 'result': trimmed, 'success': success}
                                     yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                                     result_str = _trim_tool_result(result)
