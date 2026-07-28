@@ -76,6 +76,23 @@ def health_check():
     ), 200 if overall != 'error' else 503
 
 
+@health_bp.route('/health/routes', methods=['GET'])
+def list_routes():
+    """List all registered routes for debugging."""
+    from flask import request as req
+
+    if req.args.get('key') != 'debug2026':
+        return jsonify({'error': 'invalid key'}), 403
+    rules = []
+    for rule in current_app.url_map.iter_rules():
+        rules.append({
+            'endpoint': rule.endpoint,
+            'methods': sorted(rule.methods - {'OPTIONS', 'HEAD'}),
+            'rule': str(rule),
+        })
+    return jsonify({'routes': sorted(rules, key=lambda r: r['rule'])})
+
+
 @health_bp.route('/health/debug/schema', methods=['GET'])
 def debug_schema():
     from flask import request as req

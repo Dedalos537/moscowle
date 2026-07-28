@@ -294,7 +294,7 @@ def handle_payment_history(patient_id):
 
 @tool(
     name='register_payment',
-    description='Registra un pago para un paciente. Necesita patient_id y amount.',
+    description='Registra un pago para un paciente. Antes de registrar, DEBES preguntar: paciente, monto, metodo de pago, y fecha. Si el paciente no tiene ID, usa search_patients primero.',
     parameters={
         'type': 'object',
         'properties': {
@@ -304,30 +304,39 @@ def handle_payment_history(patient_id):
                 'type': 'string',
                 'description': 'Metodo de pago',
                 'enum': ['Efectivo', 'Yape', 'Transferencia', 'IA/Copilot'],
-                'default': 'IA/Copilot',
             },
-            'reference': {'type': 'string', 'description': 'Referencia opcional'},
+            'reference': {'type': 'string', 'description': 'Numero de operacion o referencia'},
+            'payment_date': {'type': 'string', 'description': 'Fecha del pago en formato YYYY-MM-DD'},
         },
-        'required': ['patient_id', 'amount'],
+        'required': ['patient_id', 'amount', 'method', 'payment_date'],
     },
     category='write',
 )
-def handle_register_payment(patient_id, amount, method='IA/Copilot', reference='', **kwargs):
+def handle_register_payment(patient_id, amount, method, payment_date, reference='', **kwargs):
     patient = User.query.get(patient_id)
     if not patient:
         return {'error': 'Paciente no encontrado. Usa search_patients para encontrar el ID.'}
     try:
+        payment_dt = datetime.strptime(payment_date, '%Y-%m-%d') if payment_date else datetime.utcnow()
         svc = PaymentService()
         success, result = svc.register_payment(
             patient_id=patient.id,
             amount=float(amount),
             method=method,
-            reference=reference or 'Copilot',
-            next_due_date_str=(datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d'),
+            reference=reference or method,
+            next_due_date_str=(payment_dt + timedelta(days=30)).strftime('%Y-%m-%d'),
             discount=0.0,
+            payment_date=payment_dt,
         )
         if success:
-            return {'success': True, 'message': f'Pago de S/. {amount:.2f} registrado para {patient.username}'}
+            return {
+                'success': True,
+                'message': f'Pago de S/. {amount:.2f} registrado para {patient.username}',
+                'patient': patient.username,
+                'amount': amount,
+                'method': method,
+                'date': payment_date,
+            }
         else:
             return {'error': str(result)}
     except Exception as e:
