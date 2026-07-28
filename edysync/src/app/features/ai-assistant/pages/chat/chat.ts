@@ -13,6 +13,7 @@ interface ChatMessage {
   toolName?: string;
   toolArgs?: Record<string, any>;
   toolResult?: any;
+  toolResultSuccess?: boolean;
   expanded?: boolean;
 }
 
@@ -161,6 +162,21 @@ export class AiAssistantChat implements OnInit, OnDestroy {
 
   private handleStreamEvent(event: any) {
     switch (event.type) {
+      case 'thinking':
+        const lastThinking = this.messages[this.messages.length - 1];
+        if (lastThinking?.role === 'assistant') {
+          lastThinking.content = event.content;
+        } else {
+          this.messages.push({
+            role: 'assistant',
+            content: event.content,
+            timestamp: new Date(),
+          });
+        }
+        this.cdr.markForCheck();
+        this.scrollToBottom();
+        break;
+
       case 'tool_call':
         this.messages.push({
           role: 'tool_call',
@@ -178,6 +194,7 @@ export class AiAssistantChat implements OnInit, OnDestroy {
         const lastToolCall = [...this.messages].reverse().find(m => m.role === 'tool_call' && m.toolName === event.name && !m.toolResult);
         if (lastToolCall) {
           lastToolCall.toolResult = event.result;
+          lastToolCall.toolResultSuccess = event.success;
         }
         this.cdr.markForCheck();
         break;

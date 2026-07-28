@@ -76,6 +76,10 @@
                   {{ msg.toolName }}
                 </span>
                 @if (msg.toolResult) {
+                  <fa-icon [icon]="['fas', msg.toolResultSuccess ? 'check-circle' : 'exclamation-circle']"
+                           [class.text-green-600]="msg.toolResultSuccess"
+                           [class.text-red-500]="!msg.toolResultSuccess"
+                           class="text-[10px]"></fa-icon>
                   <fa-icon [icon]="['fas', msg.expanded ? 'chevron-up' : 'chevron-down']" class="text-amber-400 text-[10px]"></fa-icon>
                 }
               </button>
