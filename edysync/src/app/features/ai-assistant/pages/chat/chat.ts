@@ -239,6 +239,34 @@ export class AiAssistantChat implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  sanitize(html: string): string {
+    const rendered = this.markdownToHtml(html);
+    return rendered;
+  }
+
+  private markdownToHtml(text: string): string {
+    if (!text) return '';
+    let html = text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+    const lines = html.split('\n');
+    const processed: string[] = [];
+    let inList = false;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^[-•]\s/.test(trimmed)) {
+        if (!inList) { processed.push('<ul>'); inList = true; }
+        processed.push(`<li>${trimmed.replace(/^[-•]\s+/, '')}</li>`);
+      } else {
+        if (inList) { processed.push('</ul>'); inList = false; }
+        processed.push(trimmed ? `<p>${trimmed}</p>` : '');
+      }
+    }
+    if (inList) processed.push('</ul>');
+    return processed.join('');
+  }
+
   getObjectKeys(obj: any): string[] {
     return obj ? Object.keys(obj) : [];
   }

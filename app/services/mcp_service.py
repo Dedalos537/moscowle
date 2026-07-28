@@ -49,6 +49,7 @@ SYSTEM_PROMPTS = {
 
         'FINANCIAL QUERIES:\n'
         '- get_financial_summary with month=5, year=2026 for May 2026\n'
+        '- ALWAYS include year parameter (current year is 2026)\n'
         '- compare_periods to compare any two months side by side\n'
         '- get_user_growth for registration trends\n\n'
 

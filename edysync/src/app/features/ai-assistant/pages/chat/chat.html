@@ -107,7 +107,7 @@
         @if (msg.role === 'assistant') {
           <div class="flex justify-start">
             <div class="max-w-[75%] p-3 rounded-lg text-sm bg-surface-container-low text-on-surface rounded-bl-sm">
-              <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+              <div [innerHTML]="sanitize(msg.content)"></div>
               <p class="text-[10px] mt-1 opacity-60">{{ msg.timestamp | date:'HH:mm' }}</p>
             </div>
           </div>

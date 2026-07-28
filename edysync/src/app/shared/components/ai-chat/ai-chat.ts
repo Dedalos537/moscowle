@@ -127,10 +127,34 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   }
 
   sanitize(html: string): string {
-    return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p'],
+    const rendered = this.markdownToHtml(html);
+    return DOMPurify.sanitize(rendered, {
+      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li', 'br', 'p', 'h3', 'h4'],
       ALLOWED_ATTR: ['href'],
     });
+  }
+
+  private markdownToHtml(text: string): string {
+    if (!text) return '';
+    let html = text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code>$1</code>');
+    const lines = html.split('\n');
+    const processed: string[] = [];
+    let inList = false;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (/^[-•]\s/.test(trimmed)) {
+        if (!inList) { processed.push('<ul>'); inList = true; }
+        processed.push(`<li>${trimmed.replace(/^[-•]\s+/, '')}</li>`);
+      } else {
+        if (inList) { processed.push('</ul>'); inList = false; }
+        processed.push(trimmed ? `<p>${trimmed}</p>` : '');
+      }
+    }
+    if (inList) processed.push('</ul>');
+    return processed.join('');
   }
 
   getIcon(iconName: string): IconProp {
