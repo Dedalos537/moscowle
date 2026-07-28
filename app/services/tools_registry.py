@@ -72,30 +72,30 @@ def get_tools_for_mode(mode, user_role=None):
     return tools
 
 
-def execute_tool(name, args):
+def execute_tool(name, args, user_id=None, role=None):
     t = TOOL_REGISTRY.get(name)
     if not t:
         return {'error': f'Unknown tool: {name}'}
     try:
-        return t['handler'](**args)
+        return t['handler'](**args, _user_id=user_id, _role=role)
     except Exception as e:
         logger.error(f'Tool {name} error: {e}', exc_info=True)
         return {'error': str(e)}
 
 
-def _api_get(endpoint):
+def _api_get(endpoint, user_id=None, role=None):
     with current_app.test_client() as c:
         with c.session_transaction() as sess:
-            sess['user_id'] = session.get('user_id')
-            sess['role'] = session.get('role', 'admin')
+            sess['user_id'] = user_id
+            sess['role'] = role or 'admin'
         return c.get(endpoint)
 
 
-def _api_post(endpoint, json=None):
+def _api_post(endpoint, json=None, user_id=None, role=None):
     with current_app.test_client() as c:
         with c.session_transaction() as sess:
-            sess['user_id'] = session.get('user_id')
-            sess['role'] = session.get('role', 'admin')
+            sess['user_id'] = user_id
+            sess['role'] = role or 'admin'
         return c.post(endpoint, json=json or {})
 
 
@@ -111,9 +111,9 @@ def _api_post(endpoint, json=None):
     },
     category='read',
 )
-def handle_search_patients(query, limit=10):
-    if len(query) < 2:
-        return {'error': 'Minimo 2 caracteres'}
+def handle_search_patients(query=None, limit=10, **kwargs):
+    if not query or len(query) < 2:
+        return {'error': 'Parametro "query" requerido (minimo 2 caracteres). Ejemplo: search_patients({"query": "nombre"})'}
     patients = (
         User.query.filter(
             db.or_(
@@ -149,7 +149,7 @@ def handle_search_patients(query, limit=10):
     },
     category='read',
 )
-def handle_list_users(role=None):
+def handle_list_users(role=None, **kwargs):
     q = User.query
     if role:
         q = q.filter_by(role=role)
@@ -177,7 +177,7 @@ def handle_list_users(role=None):
     category='read',
     roles=ROLES_SUPERVISOR,
 )
-def handle_get_patient_detail(patient_id):
+def handle_get_patient_detail(patient_id, **kwargs):
     patient = User.query.get(patient_id)
     if not patient or patient.role != 'jugador':
         return {'error': 'Paciente no encontrado'}
@@ -233,7 +233,7 @@ def handle_get_patient_detail(patient_id):
     },
     category='read',
 )
-def handle_get_sessions(start=None, end=None, therapist_id=None):
+def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
     try:
         params = {}
         if start:
@@ -243,7 +243,7 @@ def handle_get_sessions(start=None, end=None, therapist_id=None):
         if therapist_id:
             params['therapist_id'] = therapist_id
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
-        resp = _api_get(f'/admin/api/sessions?{qs}')
+        resp = _api_get(f'/admin/api/sessions?{qs}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
         return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'sessions': data}
     except Exception as e:
@@ -256,9 +256,9 @@ def handle_get_sessions(start=None, end=None, therapist_id=None):
     parameters={'type': 'object', 'properties': {}},
     category='read',
 )
-def handle_financial_summary():
+def handle_financial_summary(**kwargs):
     try:
-        resp = _api_get('/admin/api/financial-summary')
+        resp = _api_get('/admin/api/financial-summary', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -277,7 +277,7 @@ def handle_financial_summary():
     },
     category='read',
 )
-def handle_payment_history(patient_id):
+def handle_payment_history(patient_id, **kwargs):
     patient = User.query.get(patient_id)
     if not patient:
         return {'error': 'Paciente no encontrado'}
@@ -360,7 +360,7 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_create_session(patient_id, day, time, therapist_id=None, duration_minutes=60, notes=None):
+def handle_create_session(patient_id, day, time, therapist_id=None, duration_minutes=60, notes=None, **kwargs):
     patient = User.query.get(patient_id)
     if not patient:
         return {'error': 'Paciente no encontrado'}
@@ -499,7 +499,7 @@ def handle_update_patient(patient_id, **kwargs):
 )
 def handle_broadcast(subject, body, target='all', **kwargs):
     try:
-        resp = _api_post('/api/admin/messages/broadcast', json={'subject': subject, 'body': body, 'target': target})
+        resp = _api_post('/api/admin/messages/broadcast', json={'subject': subject, 'body': body, 'target': target}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:

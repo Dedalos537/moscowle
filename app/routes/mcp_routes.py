@@ -151,7 +151,10 @@ def mcp_chat_stream():
                         full_content = ''
                         for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=4096):
                             full_content += chunk
-                            yield f'data: {json.dumps({"type": "chunk", "content": chunk}, ensure_ascii=False)}\n\n'
+                            # Strip tool call XML from visible text
+                            clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
+                            if clean.strip():
+                                yield f'data: {json.dumps({"type": "chunk", "content": clean}, ensure_ascii=False)}\n\n'
 
                         if not full_content.strip():
                             yield f'data: {json.dumps({"type": "text", "content": "No pude generar una respuesta."})}\n\n'
@@ -163,7 +166,7 @@ def mcp_chat_stream():
                             tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
                             yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
-                            result = execute_tool(tool_name, tool_args)
+                            result = execute_tool(tool_name, tool_args, user_id=user.id, role=user.role)
                             tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
 
                             tr_data = {'type': 'tool_result', 'name': tool_name, 'result': json.dumps(result, ensure_ascii=False, default=str)}
@@ -195,7 +198,7 @@ def mcp_chat_stream():
                                     tc_data = {'type': 'tool_call', 'name': tn, 'args': ta}
                                     yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
-                                    result = execute_tool(tn, ta)
+                                    result = execute_tool(tn, ta, user_id=user.id, role=user.role)
                                     tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
 
                                     tr_data = {'type': 'tool_result', 'name': tn, 'result': json.dumps(result, ensure_ascii=False, default=str)}
