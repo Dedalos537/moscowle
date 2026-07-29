@@ -333,6 +333,7 @@ def mcp_upload():
     upload_dir = os.path.join(current_app.instance_path, 'uploads', 'mcp')
     os.makedirs(upload_dir, exist_ok=True)
     file.save(os.path.join(upload_dir, unique_name))
+    logger.info(f'Upload guardado: {unique_name} por usuario {user.id}')
 
     url = f'/uploads/mcp/{unique_name}'
 
@@ -340,8 +341,12 @@ def mcp_upload():
     if ext in ('jpg', 'jpeg', 'png', 'webp'):
         try:
             ocr_data = _ocr_voucher(os.path.join(upload_dir, unique_name), ext)
+            if ocr_data:
+                logger.info(f'OCR exitoso: {ocr_data}')
+            else:
+                logger.warning('OCR retornó None')
         except Exception as e:
-            logger.warning(f'OCR failed: {e}')
+            logger.warning(f'OCR exception: {e}')
 
     resp_data = {'success': True, 'url': url, 'filename': unique_name}
     if ocr_data:
