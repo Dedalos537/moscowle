@@ -354,41 +354,73 @@ def mcp_upload():
 
 
 def _ocr_voucher(file_path, ext):
-    """Use Gemini vision to extract payment data from voucher image."""
+    """Use available LLM vision to extract payment data from voucher image."""
     try:
         import base64
         with open(file_path, 'rb') as f:
             img_b64 = base64.b64encode(f.read()).decode()
 
         mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
+        prompt = (
+            'Extrae los datos de este comprobante de pago:\n'
+            '- monto (numero)\n'
+            '- metodo de pago (Efectivo, Yape, Plin, Transferencia, IA/Copilot)\n'
+            '- fecha (YYYY-MM-DD)\n'
+            '- nombre del paciente si aparece\n'
+            '- numero de operacion/referencia si aparece\n'
+            'Responde SOLO con JSON: {"amount": number, "method": "string", "date": "string", "patient_hint": "string", "reference": "string"}'
+        )
 
-        gemini = None
+        # Try Gemini first
         try:
             from app.services.llm_client import get_gemini_model
             gemini = get_gemini_model()
-        except Exception:
-            pass
+            if gemini:
+                import google.generativeai as genai
+                response = gemini.generate_content([
+                    prompt,
+                    {'inline_data': {'mime_type': mime, 'data': img_b64}}
+                ])
+                text = response.text.strip()
+                import json
+                match = re.search(r'\{[^}]+\}', text)
+                if match:
+                    logger.info('OCR via Gemini exitoso')
+                    return json.loads(match.group())
+        except Exception as e:
+            logger.warning(f'OCR Gemini failed: {e}')
 
-        if gemini:
-            import google.generativeai as genai
-            prompt = (
-                'Extrae los datos de este comprobante de pago:\n'
-                '- monto (numero)\n'
-                '- metodo de pago (Efectivo, Yape, Plin, Transferencia, IA/Copilot)\n'
-                '- fecha (YYYY-MM-DD)\n'
-                '- nombre del paciente si aparece\n'
-                '- numero de operacion/referencia si aparece\n'
-                'Responde SOLO con JSON: {"amount": number, "method": "string", "date": "string", "patient_hint": "string", "reference": "string"}'
-            )
-            response = gemini.generate_content([
-                prompt,
-                {'inline_data': {'mime_type': mime, 'data': img_b64}}
-            ])
-            text = response.text.strip()
-            import json
-            match = re.search(r'\{[^}]+\}', text)
-            if match:
-                return json.loads(match.group())
+        # Try Groq with llama vision
+        try:
+            import os, json
+            api_key = os.environ.get('GROQ_API_KEY', '')
+            if api_key:
+                import requests as req
+                resp = req.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+                    json={
+                        'model': 'llama-3.2-11b-vision-preview',
+                        'messages': [
+                            {'role': 'user', 'content': [
+                                {'type': 'text', 'text': prompt},
+                                {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{img_b64}'}},
+                            ]},
+                        ],
+                        'max_tokens': 300,
+                    },
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    text = resp.json()['choices'][0]['message']['content']
+                    match = re.search(r'\{[^}]+\}', text)
+                    if match:
+                        logger.info('OCR via Groq exitoso')
+                        return json.loads(match.group())
+        except Exception as e:
+            logger.warning(f'OCR Groq failed: {e}')
+
+        logger.warning('OCR: ningún proveedor disponible')
         return None
     except Exception as e:
         logger.warning(f'OCR error: {e}')

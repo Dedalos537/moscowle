@@ -467,10 +467,12 @@ export class AiChat implements AfterViewChecked, OnDestroy {
       .then(data => {
         this.uploading = false;
         if (data.success) {
-          const ocrHint = data.ocr
-            ? ` [OCR: monto=${data.ocr.amount || '?'}, metodo=${data.ocr.method || '?'}]`
-            : '';
-          this.inputMessage = `[Imagen subida: ${data.url}]${ocrHint}`;
+          if (data.ocr) {
+            const o = data.ocr;
+            this.inputMessage = `Voucher de pago subido. Imagen: ${data.url}. Datos detectados: monto=S/${o.amount || '?'}, metodo=${o.method || '?'}, fecha=${o.date || '?'}, paciente=${o.patient_hint || '?'}. ¿Registrar este pago?`;
+          } else {
+            this.inputMessage = `Imagen subida: ${data.url}. Por favor indique los datos del pago: paciente, monto, método y fecha.`;
+          }
           this.sendMessage();
         } else {
           this.inputMessage = `Error al subir: ${data.error}`;
