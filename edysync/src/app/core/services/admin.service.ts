@@ -118,7 +118,7 @@ export class AdminService {
     return this.http.get<{ success: boolean; contract: any }>(`/admin/api/contracts/${contractId}`);
   }
 
-  createContract(data: { patient_id: number; total_amount: number; installment_count: number; name?: string; start_date?: string }): Observable<{ success: boolean; contract: any; installments_generated: number; error?: string }> {
+  createContract(data: { patient_id: number | null; total_amount: number; installment_count: number; name?: string; start_date?: string; billing_type?: string; currency?: string; implementation_cost?: number; billing_rule?: string; bonus_months?: number; notes?: string }): Observable<{ success: boolean; contract: any; installments_generated: number; error?: string }> {
     return this.http.post<{ success: boolean; contract: any; installments_generated: number }>('/admin/api/contracts', data);
   }
 
@@ -128,6 +128,41 @@ export class AdminService {
 
   getDueInstallments(): Observable<{ success: boolean; installments: any[] }> {
     return this.http.get<{ success: boolean; installments: any[] }>('/admin/api/installments/due');
+  }
+
+  getUpcomingInstallments(days: number = 7): Observable<{ success: boolean; installments: any[] }> {
+    return this.http.get<{ success: boolean; installments: any[] }>('/admin/api/installments/upcoming', {
+      params: new HttpParams().set('days', days),
+    });
+  }
+
+  getContractsFiltered(filters: { search?: string; status?: string; month?: number; year?: number; sede_id?: number }): Observable<{ success: boolean; contracts: any[] }> {
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.status) params = params.set('status', filters.status);
+    if (filters.month) params = params.set('month', filters.month);
+    if (filters.year) params = params.set('year', filters.year);
+    if (filters.sede_id) params = params.set('sede_id', filters.sede_id);
+    return this.http.get<{ success: boolean; contracts: any[] }>('/admin/api/contracts', { params });
+  }
+
+  cancelContract(contractId: number, data: { reason: string; cancellation_date?: string; comment?: string; disposition?: string }): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`/admin/api/contracts/${contractId}/cancel`, data);
+  }
+
+  reactivateContract(contractId: number, data: { next_payment_date: string; reactivation_date?: string }): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`/admin/api/contracts/${contractId}/reactivate`, data);
+  }
+
+  getMonthlyBreakdown(month?: number, year?: number): Observable<{ success: boolean; data: any }> {
+    let params = new HttpParams();
+    if (month) params = params.set('month', month);
+    if (year) params = params.set('year', year);
+    return this.http.get<{ success: boolean; data: any }>('/admin/api/contracts/monthly-breakdown', { params });
+  }
+
+  updateContract(contractId: number, data: { name?: string; notes?: string; billing_type?: string; currency?: string; billing_rule?: string }): Observable<ApiResponse> {
+    return this.http.put<ApiResponse>(`/admin/api/contracts/${contractId}`, data);
   }
 
   updatePaymentSettings(patientId: number, data: { payment_amount?: number; payment_due_date?: string; payment_plan?: string }): Observable<ApiResponse> {

@@ -1,14 +1,11 @@
 import logging
-import os
-import secrets
 from datetime import datetime, timedelta
 
-from flask import current_app, session
+from flask import current_app
 
 from app.auth_compat import current_user
-from app.extensions import bcrypt, db
-from app.models import AIChatMessage, Appointment, ContactMessage, Notification, Payment, Sede, User
-from app.services.financial_service import FinancialService
+from app.extensions import db
+from app.models import Appointment, Payment, User
 from app.services.payment_service import PaymentService
 
 ROLES_ADMIN = {'admin'}
@@ -32,6 +29,7 @@ def tool(name, description, parameters, category='read', roles=None):
             'handler': func,
         }
         return func
+
     return decorator
 
 
@@ -85,6 +83,14 @@ CORE_TOOL_NAMES = [
     'get_therapist_financials',
     'list_contracts',
     'get_debt_summary',
+    'create_contract',
+    'get_contract_detail',
+    'get_contracts_filtered',
+    'pay_installment',
+    'cancel_contract',
+    'reactivate_contract',
+    'get_monthly_collection',
+    'get_upcoming_installments',
 ]
 
 
@@ -98,14 +104,16 @@ def get_tools_for_mode(mode, user_role=None):
             continue
         if user_role and user_role not in t['roles']:
             continue
-        tools.append({
-            'type': 'function',
-            'function': {
-                'name': t['name'],
-                'description': t['description'],
-                'parameters': t['parameters'],
-            },
-        })
+        tools.append(
+            {
+                'type': 'function',
+                'function': {
+                    'name': t['name'],
+                    'description': t['description'],
+                    'parameters': t['parameters'],
+                },
+            }
+        )
     return tools
 
 
@@ -177,7 +185,9 @@ def _api_put(endpoint, json=None, user_id=None, role=None):
 )
 def handle_search_patients(query=None, limit=10, **kwargs):
     if not query or len(query) < 2:
-        return {'error': 'Parametro "query" requerido (minimo 2 caracteres). Ejemplo: search_patients({"query": "nombre"})'}
+        return {
+            'error': 'Parametro "query" requerido (minimo 2 caracteres). Ejemplo: search_patients({"query": "nombre"})'
+        }
     patients = (
         User.query.filter(
             db.or_(
@@ -191,10 +201,7 @@ def handle_search_patients(query=None, limit=10, **kwargs):
     return {
         'success': True,
         'count': len(patients),
-        'patients': [
-            {'id': p.id, 'username': p.username, 'email': p.email, 'role': p.role}
-            for p in patients
-        ],
+        'patients': [{'id': p.id, 'username': p.username, 'email': p.email, 'role': p.role} for p in patients],
     }
 
 
@@ -275,12 +282,10 @@ def handle_get_patient_detail(patient_id, **kwargs):
             'sessions_remaining': patient.sessions_remaining,
         },
         'recent_sessions': [
-            {'id': s.id, 'start_time': str(s.start_time), 'status': s.status, 'title': s.title}
-            for s in sessions
+            {'id': s.id, 'start_time': str(s.start_time), 'status': s.status, 'title': s.title} for s in sessions
         ],
         'recent_payments': [
-            {'id': p.id, 'amount': float(p.amount), 'date': str(p.date), 'method': p.method}
-            for p in payments
+            {'id': p.id, 'amount': float(p.amount), 'date': str(p.date), 'method': p.method} for p in payments
         ],
     }
 
@@ -428,7 +433,10 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
     parameters={
         'type': 'object',
         'properties': {
-            'payment_id': {'type': 'integer', 'description': 'ID del pago a eliminar (usa get_payment_history para encontrarlo)'},
+            'payment_id': {
+                'type': 'integer',
+                'description': 'ID del pago a eliminar (usa get_payment_history para encontrarlo)',
+            },
         },
         'required': ['payment_id'],
     },
@@ -437,7 +445,9 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
 )
 def handle_cancel_payment(payment_id, **kwargs):
     try:
-        resp = _api_post(f'/admin/api/payments/delete/{payment_id}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            f'/admin/api/payments/delete/{payment_id}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role')
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': data.get('message', 'Pago eliminado')}
@@ -472,8 +482,12 @@ def handle_edit_payment(payment_id, **kwargs):
             if field in kwargs and kwargs[field] is not None:
                 updates[field] = kwargs[field]
         if not updates:
-            return {'error': 'No hay campos para actualizar. Proporcione amount, method, payment_date, status, description o receipt_url.'}
-        resp = _api_put(f'/admin/api/payments/{payment_id}', json=updates, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+            return {
+                'error': 'No hay campos para actualizar. Proporcione amount, method, payment_date, status, description o receipt_url.'
+            }
+        resp = _api_put(
+            f'/admin/api/payments/{payment_id}', json=updates, user_id=kwargs.get('_user_id'), role=kwargs.get('_role')
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': data.get('message', 'Pago actualizado'), 'payment': data.get('payment')}
@@ -502,10 +516,20 @@ def handle_edit_payment(payment_id, **kwargs):
 )
 def handle_toggle_user_status(user_id, status, **kwargs):
     try:
-        resp = _api_post(f'/admin/api/users/{user_id}/toggle-status', json={'status': status}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            f'/admin/api/users/{user_id}/toggle-status',
+            json={'status': status},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
-            return {'success': True, 'message': data.get('message', 'Estado actualizado'), 'old_status': data.get('old_status'), 'new_status': data.get('new_status')}
+            return {
+                'success': True,
+                'message': data.get('message', 'Estado actualizado'),
+                'old_status': data.get('old_status'),
+                'new_status': data.get('new_status'),
+            }
         return {'error': data.get('error', 'Error al cambiar estado')}
     except Exception as e:
         return {'error': str(e)}
@@ -589,7 +613,11 @@ def handle_update_session(session_id, status=None, notes=None, **kwargs):
         'properties': {
             'titulo': {'type': 'string', 'description': 'Titulo de la incidencia'},
             'descripcion': {'type': 'string', 'description': 'Descripcion detallada'},
-            'categoria': {'type': 'string', 'description': 'Categoria', 'enum': ['TECNICO', 'OPERATIVO', 'SERVICIO', 'SEGURIDAD']},
+            'categoria': {
+                'type': 'string',
+                'description': 'Categoria',
+                'enum': ['TECNICO', 'OPERATIVO', 'SERVICIO', 'SEGURIDAD'],
+            },
             'impacto': {'type': 'integer', 'description': 'Impacto 1=bajo, 2=medio, 3=alto', 'default': 2},
             'urgencia': {'type': 'integer', 'description': 'Urgencia 1=baja, 2=media, 3=alta', 'default': 2},
         },
@@ -600,6 +628,7 @@ def handle_update_session(session_id, status=None, notes=None, **kwargs):
 )
 def handle_create_incident(titulo, descripcion, categoria, impacto=2, urgencia=2, **kwargs):
     from app.models.incidente import Incidente
+
     inc = Incidente(
         titulo=titulo,
         descripcion=descripcion,
@@ -667,7 +696,12 @@ def handle_update_patient(patient_id, **kwargs):
 )
 def handle_broadcast(subject, body, target='all', **kwargs):
     try:
-        resp = _api_post('/api/admin/messages/broadcast', json={'subject': subject, 'body': body, 'target': target}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/messages/broadcast',
+            json={'subject': subject, 'body': body, 'target': target},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         return {'success': True, 'data': data}
     except Exception as e:
@@ -704,9 +738,13 @@ def handle_list_patients(sede_id=None, is_active=None, limit=50, **kwargs):
         'count': len(patients),
         'patients': [
             {
-                'id': p.id, 'username': p.username, 'email': p.email,
-                'sede_id': p.sede_id, 'is_active': p.is_active,
-                'phone': p.phone, 'sessions_remaining': p.sessions_remaining,
+                'id': p.id,
+                'username': p.username,
+                'email': p.email,
+                'sede_id': p.sede_id,
+                'is_active': p.is_active,
+                'phone': p.phone,
+                'sessions_remaining': p.sessions_remaining,
             }
             for p in patients
         ],
@@ -733,9 +771,14 @@ def handle_get_user_detail(user_id, **kwargs):
     return {
         'success': True,
         'user': {
-            'id': user.id, 'username': user.username, 'email': user.email,
-            'role': user.role, 'phone': user.phone, 'sex': user.sex,
-            'sede_id': user.sede_id, 'is_active': user.is_active,
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'phone': user.phone,
+            'sex': user.sex,
+            'sede_id': user.sede_id,
+            'is_active': user.is_active,
             'preliminary_diagnosis': user.preliminary_diagnosis,
             'therapy_goals': user.therapy_goals,
             'guardian_name': user.guardian_name,
@@ -756,7 +799,11 @@ def handle_get_user_detail(user_id, **kwargs):
             'username': {'type': 'string', 'description': 'Nombre completo'},
             'email': {'type': 'string', 'description': 'Email unico'},
             'password': {'type': 'string', 'description': 'Contrasena temporal'},
-            'role': {'type': 'string', 'enum': ['jugador', 'terapista', 'supervisor', 'admin'], 'description': 'Rol del usuario'},
+            'role': {
+                'type': 'string',
+                'enum': ['jugador', 'terapista', 'supervisor', 'admin'],
+                'description': 'Rol del usuario',
+            },
             'sede_id': {'type': 'integer', 'description': 'ID de sede'},
             'phone': {'type': 'string', 'description': 'Telefono'},
         },
@@ -769,10 +816,19 @@ def handle_create_user(username, email, password, role, sede_id=None, phone=None
     if User.query.filter_by(email=email).first():
         return {'error': f'Ya existe un usuario con email {email}'}
     try:
-        resp = _api_post('/api/admin/create-user', json={
-            'username': username, 'email': email, 'password': password,
-            'role': role, 'sede_id': sede_id, 'phone': phone,
-        }, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/create-user',
+            json={
+                'username': username,
+                'email': email,
+                'password': password,
+                'role': role,
+                'sede_id': sede_id,
+                'phone': phone,
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Usuario {username} creado como {role}', 'data': data}
@@ -805,12 +861,19 @@ def handle_update_user(user_id, username=None, email=None, sede_id=None, phone=N
         return {'error': 'Usuario no encontrado'}
     try:
         payload = {'user_id': user_id}
-        if username: payload['username'] = username
-        if email: payload['email'] = email
-        if sede_id: payload['sede_id'] = sede_id
-        if phone: payload['phone'] = phone
-        if is_active is not None: payload['is_active'] = is_active
-        resp = _api_post('/api/admin/update-user', json=payload, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        if username:
+            payload['username'] = username
+        if email:
+            payload['email'] = email
+        if sede_id:
+            payload['sede_id'] = sede_id
+        if phone:
+            payload['phone'] = phone
+        if is_active is not None:
+            payload['is_active'] = is_active
+        resp = _api_post(
+            '/api/admin/update-user', json=payload, user_id=kwargs.get('_user_id'), role=kwargs.get('_role')
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Usuario {user.username} actualizado', 'data': data}
@@ -837,7 +900,12 @@ def handle_delete_user(user_id, **kwargs):
     if not user:
         return {'error': 'Usuario no encontrado'}
     try:
-        resp = _api_post('/api/admin/delete-user', json={'user_id': user_id}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/delete-user',
+            json={'user_id': user_id},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Usuario {user.username} eliminado'}
@@ -862,9 +930,15 @@ def handle_delete_user(user_id, **kwargs):
 )
 def handle_assign_therapist(patient_id, therapist_id, **kwargs):
     try:
-        resp = _api_post('/api/admin/assign-therapist', json={
-            'patient_id': patient_id, 'therapist_id': therapist_id,
-        }, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/assign-therapist',
+            json={
+                'patient_id': patient_id,
+                'therapist_id': therapist_id,
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': 'Terapeuta asignado correctamente', 'data': data}
@@ -938,7 +1012,9 @@ def handle_cancel_session(session_id, **kwargs):
 )
 def handle_complete_session(session_id, **kwargs):
     try:
-        resp = _api_post(f'/api/sessions/{session_id}/complete', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            f'/api/sessions/{session_id}/complete', user_id=kwargs.get('_user_id'), role=kwargs.get('_role')
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Sesion {session_id} completada'}
@@ -978,7 +1054,12 @@ def handle_batch_create_sessions(sessions=None, **kwargs):
     if not sessions:
         return {'error': 'Se requiere una lista de sesiones'}
     try:
-        resp = _api_post('/admin/api/sessions/batch', json={'sessions': sessions}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/admin/api/sessions/batch',
+            json={'sessions': sessions},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'{len(sessions)} sesiones creadas', 'data': data}
@@ -1046,7 +1127,11 @@ def handle_get_incident_detail(incident_id, **kwargs):
         'type': 'object',
         'properties': {
             'incident_id': {'type': 'integer', 'description': 'ID de la incidencia'},
-            'status': {'type': 'string', 'enum': ['NUEVO', 'EN_PROCESO', 'RESUELTO', 'CERRADO'], 'description': 'Nuevo estado'},
+            'status': {
+                'type': 'string',
+                'enum': ['NUEVO', 'EN_PROCESO', 'RESUELTO', 'CERRADO'],
+                'description': 'Nuevo estado',
+            },
         },
         'required': ['incident_id', 'status'],
     },
@@ -1055,7 +1140,12 @@ def handle_get_incident_detail(incident_id, **kwargs):
 )
 def handle_update_incident_status(incident_id, status, **kwargs):
     try:
-        resp = _api_post(f'/api/incidents/{incident_id}/status', json={'status': status}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            f'/api/incidents/{incident_id}/status',
+            json={'status': status},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Incidencia #{incident_id} actualizada a {status}'}
@@ -1080,7 +1170,12 @@ def handle_update_incident_status(incident_id, status, **kwargs):
 )
 def handle_assign_incident(incident_id, assignee_id, **kwargs):
     try:
-        resp = _api_post(f'/api/incidents/{incident_id}/assign', json={'assignee_id': assignee_id}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            f'/api/incidents/{incident_id}/assign',
+            json={'assignee_id': assignee_id},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Incidencia #{incident_id} asignada'}
@@ -1164,7 +1259,12 @@ def handle_list_patient_groups(**kwargs):
 )
 def handle_create_patient_group(name, description='', **kwargs):
     try:
-        resp = _api_post('/api/admin/patient-groups', json={'name': name, 'description': description}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/patient-groups',
+            json={'name': name, 'description': description},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Grupo "{name}" creado', 'data': data}
@@ -1217,7 +1317,12 @@ def handle_get_debtors(month=None, **kwargs):
 )
 def handle_send_payment_reminder(patient_id, **kwargs):
     try:
-        resp = _api_post('/api/admin/send-payment-reminder', json={'patient_id': patient_id}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/admin/send-payment-reminder',
+            json={'patient_id': patient_id},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': 'Recordatorio enviado', 'data': data}
@@ -1258,7 +1363,10 @@ def handle_list_expenses(month=None, **kwargs):
         'properties': {
             'description': {'type': 'string', 'description': 'Descripcion del gasto'},
             'amount': {'type': 'number', 'description': 'Monto en soles'},
-            'category': {'type': 'string', 'description': 'Categoria: alquiler, servicios, suministros, personal, otro'},
+            'category': {
+                'type': 'string',
+                'description': 'Categoria: alquiler, servicios, suministros, personal, otro',
+            },
         },
         'required': ['description', 'amount'],
     },
@@ -1267,9 +1375,16 @@ def handle_list_expenses(month=None, **kwargs):
 )
 def handle_create_expense(description, amount, category='otro', **kwargs):
     try:
-        resp = _api_post('/admin/api/expenses/create', json={
-            'description': description, 'amount': float(amount), 'category': category,
-        }, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/admin/api/expenses/create',
+            json={
+                'description': description,
+                'amount': float(amount),
+                'category': category,
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Gasto de S/. {amount:.2f} registrado', 'data': data}
@@ -1311,18 +1426,25 @@ def handle_get_therapist_financials(**kwargs):
     roles=ROLES_SUPERVISOR,
 )
 def handle_compare_periods(month1, year1, month2, year2, **kwargs):
-    from datetime import datetime as dt
     import calendar
+    from datetime import datetime as dt
 
     def _get_month_data(m, y):
         start = dt(y, m, 1)
         last_day = calendar.monthrange(y, m)[1]
         end = dt(y, m, last_day, 23, 59, 59)
-        from app.models import Payment, Expense, User
         from sqlalchemy import func
 
-        income = db.session.query(func.sum(Payment.amount)).filter(Payment.date >= start, Payment.date <= end).scalar() or 0.0
-        expenses = db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start, Expense.date <= end).scalar() or 0.0
+        from app.models import Expense, Payment
+
+        income = (
+            db.session.query(func.sum(Payment.amount)).filter(Payment.date >= start, Payment.date <= end).scalar()
+            or 0.0
+        )
+        expenses = (
+            db.session.query(func.sum(Expense.amount)).filter(Expense.date >= start, Expense.date <= end).scalar()
+            or 0.0
+        )
         payments_count = Payment.query.filter(Payment.date >= start, Payment.date <= end).count()
         return {
             'income': float(income),
@@ -1367,8 +1489,11 @@ def handle_compare_periods(month1, year1, month2, year2, **kwargs):
     roles=ROLES_SUPERVISOR,
 )
 def handle_get_user_growth(months=6, **kwargs):
-    from datetime import datetime as dt, timedelta
-    from sqlalchemy import func, extract
+    from datetime import datetime as dt
+    from datetime import timedelta
+
+    from sqlalchemy import extract
+
     from app.models import User
 
     today = dt.utcnow().date()
@@ -1381,10 +1506,14 @@ def handle_get_user_growth(months=6, **kwargs):
         total = User.query.filter(extract('month', User.created_at) == m, extract('year', User.created_at) == y).count()
         by_role = {}
         for role in ['jugador', 'terapista', 'admin', 'supervisor']:
-            cnt = User.query.filter(User.role == role, extract('month', User.created_at) == m, extract('year', User.created_at) == y).count()
+            cnt = User.query.filter(
+                User.role == role, extract('month', User.created_at) == m, extract('year', User.created_at) == y
+            ).count()
             if cnt > 0:
                 by_role[role] = cnt
-        results.append({'month': m, 'year': y, 'month_name': dt(y, m, 1).strftime('%B'), 'new_users': total, 'by_role': by_role})
+        results.append(
+            {'month': m, 'year': y, 'month_name': dt(y, m, 1).strftime('%B'), 'new_users': total, 'by_role': by_role}
+        )
 
     active = User.query.filter_by(is_active=True).count()
     inactive = User.query.filter_by(is_active=False).count()
@@ -1426,7 +1555,12 @@ def handle_get_user_growth(months=6, **kwargs):
 )
 def handle_generate_weekly_report(patient_id, **kwargs):
     try:
-        resp = _api_post('/api/reports/generate-weekly', json={'patient_id': patient_id}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/reports/generate-weekly',
+            json={'patient_id': patient_id},
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': 'Reporte semanal generado', 'data': data}
@@ -1503,9 +1637,15 @@ def handle_get_therapist_efficiency(**kwargs):
 )
 def handle_send_direct_message(receiver_id, content, **kwargs):
     try:
-        resp = _api_post('/api/messages/send', json={
-            'receiver_id': receiver_id, 'content': content,
-        }, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        resp = _api_post(
+            '/api/messages/send',
+            json={
+                'receiver_id': receiver_id,
+                'content': content,
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': 'Mensaje enviado', 'data': data}
@@ -1587,3 +1727,295 @@ def handle_get_debt_summary(**kwargs):
         return {'success': True, 'summary': data}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='create_contract',
+    description=(
+        'Crea un contrato para un paciente con generación automática de cuotas. '
+        'Antes de crear, usa search_patients para obtener el ID.'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'total_amount': {'type': 'number', 'description': 'Monto total del contrato'},
+            'billing_type': {
+                'type': 'string',
+                'description': 'Tipo de facturación',
+                'enum': ['Mensual', 'Anual'],
+                'default': 'Mensual',
+            },
+            'currency': {
+                'type': 'string',
+                'description': 'Moneda',
+                'enum': ['PEN', 'USD'],
+                'default': 'PEN',
+            },
+            'installment_count': {'type': 'integer', 'description': 'Número de cuotas', 'default': 4},
+            'start_date': {'type': 'string', 'description': 'Fecha de inicio YYYY-MM-DD'},
+            'implementation_cost': {'type': 'number', 'description': 'Costo de implementación (cuota 0)', 'default': 0},
+            'billing_rule': {
+                'type': 'string',
+                'description': 'Regla de facturación',
+                'enum': ['standard', 'sign-date'],
+                'default': 'standard',
+            },
+            'bonus_months': {'type': 'integer', 'description': 'Meses de bonificación (solo anual)', 'default': 0},
+            'name': {'type': 'string', 'description': 'Nombre del contrato'},
+            'notes': {'type': 'string', 'description': 'Notas adicionales'},
+        },
+        'required': ['patient_id', 'total_amount', 'start_date'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_create_contract(patient_id, total_amount, start_date, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    success, result = svc.create_contract(
+        patient_id=patient_id,
+        total_amount=float(total_amount),
+        start_date=start_date,
+        billing_type=kwargs.get('billing_type', 'Mensual'),
+        currency=kwargs.get('currency', 'PEN'),
+        installment_count=kwargs.get('installment_count', 4),
+        implementation_cost=float(kwargs.get('implementation_cost', 0)),
+        billing_rule=kwargs.get('billing_rule', 'standard'),
+        bonus_months=kwargs.get('bonus_months', 0),
+        name=kwargs.get('name'),
+        notes=kwargs.get('notes'),
+    )
+    if success:
+        return {
+            'success': True,
+            'contract_id': result.id,
+            'name': result.name,
+            'installments_generated': result.installment_count,
+            'message': f'Contrato "{result.name}" creado con {result.installment_count} cuotas',
+        }
+    return {'error': str(result)}
+
+
+@tool(
+    name='get_contract_detail',
+    description='Detalle completo de un contrato incluyendo todas las cuotas con estado.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'contract_id': {'type': 'integer', 'description': 'ID del contrato'},
+        },
+        'required': ['contract_id'],
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_contract_detail(contract_id, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    detail = svc.get_contract_detail(contract_id)
+    if not detail:
+        return {'error': 'Contrato no encontrado'}
+    return {'success': True, 'contract': detail}
+
+
+@tool(
+    name='get_contracts_filtered',
+    description='Lista contratos con filtros avanzados: búsqueda por nombre, estado, mes/año, sede.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'search': {'type': 'string', 'description': 'Buscar por nombre del paciente'},
+            'status': {
+                'type': 'string',
+                'description': 'Filtrar por estado',
+                'enum': ['active', 'cancelled', 'deudor', 'todos'],
+            },
+            'month': {'type': 'integer', 'description': 'Mes (1-12) para filtrar cuotas'},
+            'year': {'type': 'integer', 'description': 'Año para filtrar cuotas'},
+            'sede_id': {'type': 'integer', 'description': 'ID de sede'},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_contracts_filtered(**kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    contracts = svc.get_contracts_filtered(
+        search=kwargs.get('search'),
+        status=kwargs.get('status'),
+        month=kwargs.get('month'),
+        year=kwargs.get('year'),
+        sede_id=kwargs.get('sede_id'),
+    )
+    return {'success': True, 'count': len(contracts), 'contracts': contracts}
+
+
+@tool(
+    name='pay_installment',
+    description=(
+        'Registra el pago de una cuota específica de un contrato. '
+        'Usa get_contract_detail para encontrar el installment_id.'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'installment_id': {'type': 'integer', 'description': 'ID de la cuota'},
+            'amount': {'type': 'number', 'description': 'Monto a pagar'},
+            'method': {
+                'type': 'string',
+                'description': 'Método de pago',
+                'enum': ['Efectivo', 'Yape', 'Transferencia', 'Plin', 'Tarjeta'],
+            },
+            'payment_date': {'type': 'string', 'description': 'Fecha del pago YYYY-MM-DD'},
+            'reference': {'type': 'string', 'description': 'Número de operación'},
+            'payment_notes': {'type': 'string', 'description': 'Notas del pago'},
+            'is_free_month': {'type': 'boolean', 'description': 'Marcar como mes gratis', 'default': False},
+        },
+        'required': ['installment_id', 'amount', 'method', 'payment_date'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_pay_installment(installment_id, amount, method, payment_date, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    success, result = svc.pay_installment(
+        installment_id=installment_id,
+        amount=float(amount),
+        method=method,
+        payment_date=payment_date,
+        reference=kwargs.get('reference'),
+        payment_notes=kwargs.get('payment_notes'),
+        is_free_month=kwargs.get('is_free_month', False),
+    )
+    if success:
+        return {
+            'success': True,
+            'message': f'Cuota #{installment_id} pagada - S/. {amount:.2f} vía {method}',
+            'payment_id': result.id if result else None,
+        }
+    return {'error': str(result)}
+
+
+@tool(
+    name='cancel_contract',
+    description='Cancela un contrato. Requiere confirmación. Puede generar reembolso, crédito o nada.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'contract_id': {'type': 'integer', 'description': 'ID del contrato'},
+            'cancellation_date': {'type': 'string', 'description': 'Fecha de cancelación YYYY-MM-DD'},
+            'reason': {'type': 'string', 'description': 'Razón de cancelación'},
+            'comment': {'type': 'string', 'description': 'Comentario adicional'},
+            'disposition': {
+                'type': 'string',
+                'description': 'Disposition del dinero pagado',
+                'enum': ['none', 'refund', 'credit'],
+                'default': 'none',
+            },
+        },
+        'required': ['contract_id', 'reason'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_cancel_contract(contract_id, reason, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    success, result = svc.cancel_contract(
+        contract_id=contract_id,
+        cancellation_date=kwargs.get('cancellation_date'),
+        reason=reason,
+        comment=kwargs.get('comment'),
+        disposition=kwargs.get('disposition', 'none'),
+    )
+    if success:
+        return {
+            'success': True,
+            'message': f'Contrato #{contract_id} cancelado',
+            'disposition': kwargs.get('disposition', 'none'),
+        }
+    return {'error': str(result)}
+
+
+@tool(
+    name='reactivate_contract',
+    description='Reactiva un contrato cancelado. Genera nuevas cuotas con fechas desde next_payment_date.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'contract_id': {'type': 'integer', 'description': 'ID del contrato'},
+            'reactivation_date': {'type': 'string', 'description': 'Fecha de reactivación YYYY-MM-DD'},
+            'next_payment_date': {'type': 'string', 'description': 'Fecha de próxima cuota YYYY-MM-DD'},
+        },
+        'required': ['contract_id', 'next_payment_date'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_reactivate_contract(contract_id, next_payment_date, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    success, result = svc.reactivate_contract(
+        contract_id=contract_id,
+        reactivation_date=kwargs.get('reactivation_date'),
+        next_payment_date=next_payment_date,
+    )
+    if success:
+        return {
+            'success': True,
+            'message': f'Contrato #{contract_id} reactivado',
+        }
+    return {'error': str(result)}
+
+
+@tool(
+    name='get_monthly_collection',
+    description='Resumen de cobranza del mes: cuotas pagadas, pendientes, vencidas, monto total.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'month': {'type': 'integer', 'description': 'Mes (1-12). Default: mes actual'},
+            'year': {'type': 'integer', 'description': 'Año. Default: año actual'},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_monthly_collection(**kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    breakdown = svc.get_monthly_breakdown(
+        month=kwargs.get('month'),
+        year=kwargs.get('year'),
+    )
+    return {'success': True, 'data': breakdown}
+
+
+@tool(
+    name='get_upcoming_installments',
+    description='Cuotas próximas a vencer en los próximos N días. Útil para recordatorios.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'days_ahead': {'type': 'integer', 'description': 'Días hacia adelante (default 7)', 'default': 7},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_upcoming_installments(**kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    upcoming = svc.get_upcoming_installments(days_ahead=kwargs.get('days_ahead', 7))
+    return {'success': True, 'count': len(upcoming), 'installments': upcoming}

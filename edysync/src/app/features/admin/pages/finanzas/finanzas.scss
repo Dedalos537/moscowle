@@ -142,3 +142,73 @@
   background: var(--color-surface);
   padding-bottom: 4px;
 }
+
+// ── Contratos ──
+.contract-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  }
+}
+
+.contract-detail-panel {
+  background: color-mix(in srgb, var(--color-surface-container-high) 30%, var(--color-surface));
+  border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+  padding: 1.25rem;
+  animation: accordionFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.installment-row {
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary) 3%, transparent);
+  }
+}
+
+.contract-summary-card {
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .summary-value {
+    font-family: var(--font-accent);
+    font-weight: 800;
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+
+  .summary-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .contract-summary-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.contract-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

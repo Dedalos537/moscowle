@@ -24,7 +24,7 @@ import { Select } from '../../../../shared/components/select/select';
 import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
-import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm } from './finanzas.models';
+import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
@@ -75,7 +75,7 @@ export class Finanzas implements OnInit, OnDestroy {
   therapistsList: Therapist[] = [];
   paymentsLoading = true;
   historyLoading = true;
-  pagosTab: 'pacientes' | 'historial' = 'pacientes';
+  pagosTab: 'pacientes' | 'historial' | 'contratos' = 'pacientes';
 
   searchQuery = '';
   selectedSedeId: number | null = null;
@@ -149,6 +149,46 @@ export class Finanzas implements OnInit, OnDestroy {
   analyzeResult: any = null;
   analyzingReceipt = false;
 
+  contractsLoading = false;
+  contracts: Contract[] = [];
+  expandedContractId: number | null = null;
+  contractDetail: ContractDetail | null = null;
+  contractFilter: ContractFilter = { search: '', status: 'active', month: null, year: null, sede_id: null };
+  contractSummaryActive = 0;
+  contractSummaryPending = 0;
+  contractSummaryOverdue = 0;
+  contractSummaryCollected = 0;
+
+  showCreateContractModal = false;
+  createContractForm: CreateContractForm = {
+    patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
+    installment_count: 4, start_date: '', implementation_cost: 0, billing_rule: 'standard',
+    bonus_months: 0, name: '', notes: '',
+  };
+  createContractStatus = '';
+
+  showPayInstallmentModal = false;
+  payInstallmentForm: PayInstallmentForm = {
+    installment_id: null, contract_id: null, contract_name: '', patient_name: '',
+    installment_number: 0, due_date: '', amount: 0, method: 'transfer',
+    payment_date: '', reference: '', payment_notes: '', is_free_month: false,
+  };
+  payInstallmentStatus = '';
+
+  showCancelContractModal = false;
+  cancelContractForm: CancelContractForm = {
+    contract_id: null, contract_name: '', patient_name: '',
+    cancellation_date: '', reason: '', comment: '', disposition: 'none',
+  };
+  cancelContractStatus = '';
+
+  showReactivateContractModal = false;
+  reactivateContractId: number | null = null;
+  reactivateNextPaymentDate = '';
+  reactivateStatus = '';
+
+  patientsList: User[] = [];
+
   showSettingsModal = false;
   settingsForm: SettingsForm = {
     patient_id: null, patient_name: '', payment_plan: 'Mensual',
@@ -213,6 +253,8 @@ export class Finanzas implements OnInit, OnDestroy {
     category: 'operational', therapist_id: null, therapist_name: '',
     amount: 0, method: 'transfer', date: '', description: '', receipt: null,
   };
+
+  contractAlerts: { id: number; patient_name: string; contract_name: string; installment_number: number; amount: number; due_date: string; type: 'overdue' | 'upcoming' | 'due_today' }[] = [];
 
   private subscriptions = new Subscription();
 
@@ -333,7 +375,7 @@ export class Finanzas implements OnInit, OnDestroy {
     if (params['action'] === 'register') setTimeout(() => this.openRegisterModal(), 800);
   }
 
-  private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadFinancialSummary(); this.loadPaymentHistory(); }
+  private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadFinancialSummary(); this.loadPaymentHistory(); this.loadContractAlerts(); }
 
   private loadSedes() {
     this.subscriptions.add(this.adminService.getSedes().subscribe({ next: (list) => { this.sedes = list; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
@@ -401,8 +443,331 @@ export class Finanzas implements OnInit, OnDestroy {
         this.updateRevenueHistoryChart();
         this.cdr.markForCheck();
       },
-      error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
-    }));
+        error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
+      }));
+  }
+
+  loadContractAlerts() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    this.subscriptions.add(
+      forkJoin({
+        due: this.adminService.getDueInstallments(),
+        upcoming: this.adminService.getUpcomingInstallments(7),
+      }).subscribe({
+        next: ({ due, upcoming }) => {
+          const alerts: any[] = [];
+          const seen = new Set<string>();
+
+          (due.installments || []).forEach((inst: any) => {
+            const key = `${inst.contract_id}-${inst.id}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            alerts.push({
+              id: inst.id,
+              patient_name: inst.patient_name || '',
+              contract_name: inst.contract_name || '',
+              installment_number: inst.number || 0,
+              amount: inst.amount || 0,
+              due_date: inst.due_date || '',
+              type: 'overdue',
+            });
+          });
+
+          (upcoming.installments || []).forEach((inst: any) => {
+            const key = `${inst.contract_id}-${inst.id}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            const dueDate = new Date(inst.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            const isToday = dueDate.getTime() === today.getTime();
+            alerts.push({
+              id: inst.id,
+              patient_name: inst.patient_name || '',
+              contract_name: inst.contract_name || '',
+              installment_number: inst.number || 0,
+              amount: inst.amount || 0,
+              due_date: inst.due_date || '',
+              type: isToday ? 'due_today' : 'upcoming',
+            });
+          });
+
+          this.contractAlerts = alerts.slice(0, 5);
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      })
+    );
+  }
+
+  // ── Contratos ──────────────────────────────────────────────────────
+  loadContracts() {
+    this.contractsLoading = true;
+    this.contracts = [];
+    this.cdr.markForCheck();
+    const params: any = {};
+    if (this.contractFilter.search) params.search = this.contractFilter.search;
+    if (this.contractFilter.status) params.status = this.contractFilter.status;
+    if (this.contractFilter.month) params.month = this.contractFilter.month;
+    if (this.contractFilter.year) params.year = this.contractFilter.year;
+    if (this.contractFilter.sede_id) params.sede_id = this.contractFilter.sede_id;
+
+    this.subscriptions.add(
+      this.adminService.getContractsFiltered(params).subscribe({
+        next: (res) => {
+          this.contracts = (res.contracts || []) as any;
+          this.contractsLoading = false;
+          this.updateContractSummary();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.contractsLoading = false;
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  get contractFilterMonthValue(): string {
+    if (this.contractFilter.month && this.contractFilter.year) {
+      return `${this.contractFilter.year}-${String(this.contractFilter.month).padStart(2, '0')}`;
+    }
+    return '';
+  }
+
+  onContractMonthChange(event: Event) {
+    const val = (event.target as HTMLInputElement).value;
+    if (val) {
+      const [y, m] = val.split('-').map(Number);
+      this.contractFilter.year = y;
+      this.contractFilter.month = m;
+    } else {
+      this.contractFilter.year = null;
+      this.contractFilter.month = null;
+    }
+    this.loadContracts();
+  }
+
+  clearContractFilters() {
+    this.contractFilter = { search: '', status: '', month: null, year: null, sede_id: null };
+    this.loadContracts();
+  }
+
+  updateContractSummary() {
+    this.contractSummaryActive = this.contracts.filter(c => c.status === 'active').length;
+    this.contractSummaryPending = this.contracts.filter(c => c.status === 'pending').length;
+    this.contractSummaryOverdue = this.contracts.filter(c => c.status === 'overdue' || c.overdue_count > 0).length;
+    this.contractSummaryCollected = this.contracts.reduce((sum, c) => sum + (c.paid_count * c.installment_amount), 0);
+  }
+
+  toggleContractDetail(contract: Contract) {
+    if (this.expandedContractId === contract.id) {
+      this.expandedContractId = null;
+      this.contractDetail = null;
+      return;
+    }
+    this.expandedContractId = contract.id;
+    this.subscriptions.add(
+      this.adminService.getContractDetail(contract.id).subscribe({
+        next: (res) => {
+          this.contractDetail = res.contract as any;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.expandedContractId = null; this.cdr.markForCheck(); }
+      })
+    );
+  }
+
+  openCreateContractModal() {
+    this.createContractForm = {
+      patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
+      installment_count: 4, start_date: '', implementation_cost: 0, billing_rule: 'standard',
+      bonus_months: 0, name: '', notes: '',
+    };
+    this.createContractStatus = '';
+    this.showCreateContractModal = true;
+    this.loadPatientsList();
+  }
+
+  loadPatientsList() {
+    this.subscriptions.add(
+      this.adminService.getUsers('jugador').subscribe({
+        next: (res) => { this.patientsList = res.users || []; this.cdr.markForCheck(); },
+        error: () => this.cdr.markForCheck()
+      })
+    );
+  }
+
+  submitCreateContract() {
+    if (!this.createContractForm.patient_id || this.createContractForm.total_amount <= 0) {
+      this.createContractStatus = 'Selecciona un paciente y monto válido.';
+      return;
+    }
+    this.createContractStatus = '';
+    this.subscriptions.add(
+      this.adminService.createContract(this.createContractForm).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.showCreateContractModal = false;
+            this.loadContracts();
+          } else {
+            this.createContractStatus = res.error || 'Error al crear contrato';
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.createContractStatus = err.error?.error || 'Error de conexión';
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  openPayInstallmentModal(installment: any, contract: Contract) {
+    this.payInstallmentForm = {
+      installment_id: installment.id,
+      contract_id: contract.id,
+      contract_name: contract.name,
+      patient_name: contract.patient_name,
+      installment_number: installment.number,
+      due_date: installment.due_date,
+      amount: installment.is_free_month ? 0 : (installment.real_amount || installment.amount),
+      method: 'transfer',
+      payment_date: '',
+      reference: '',
+      payment_notes: '',
+      is_free_month: installment.is_free_month,
+    };
+    this.payInstallmentStatus = '';
+    this.showPayInstallmentModal = true;
+  }
+
+  submitPayInstallment() {
+    if (!this.payInstallmentForm.installment_id) return;
+    this.payInstallmentStatus = '';
+    const data = {
+      amount: this.payInstallmentForm.amount,
+      method: this.payInstallmentForm.method,
+      reference: this.payInstallmentForm.reference,
+      payment_notes: this.payInstallmentForm.payment_notes,
+    };
+    this.subscriptions.add(
+      this.adminService.payInstallment(this.payInstallmentForm.installment_id!, data).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.showPayInstallmentModal = false;
+            this.loadContracts();
+            if (this.expandedContractId) this.toggleContractDetail({ id: this.expandedContractId } as any);
+          } else {
+            this.payInstallmentStatus = res.error || 'Error al pagar cuota';
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.payInstallmentStatus = err.error?.error || 'Error de conexión';
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  openCancelContractModal(contract: Contract) {
+    this.cancelContractForm = {
+      contract_id: contract.id,
+      contract_name: contract.name,
+      patient_name: contract.patient_name,
+      cancellation_date: new Date().toISOString().split('T')[0],
+      reason: '',
+      comment: '',
+      disposition: 'none',
+    };
+    this.cancelContractStatus = '';
+    this.showCancelContractModal = true;
+  }
+
+  submitCancelContract() {
+    if (!this.cancelContractForm.contract_id || !this.cancelContractForm.reason) {
+      this.cancelContractStatus = 'Ingresa un motivo de cancelación.';
+      return;
+    }
+    this.cancelContractStatus = '';
+    const data = {
+      reason: this.cancelContractForm.reason,
+      cancellation_date: this.cancelContractForm.cancellation_date,
+      comment: this.cancelContractForm.comment,
+      disposition: this.cancelContractForm.disposition,
+    };
+    this.subscriptions.add(
+      this.adminService.cancelContract(this.cancelContractForm.contract_id!, data).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.showCancelContractModal = false;
+            this.loadContracts();
+          } else {
+            this.cancelContractStatus = res.error || 'Error al cancelar contrato';
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.cancelContractStatus = err.error?.error || 'Error de conexión';
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  openReactivateContractModal(contractId: number) {
+    this.reactivateContractId = contractId;
+    this.reactivateNextPaymentDate = '';
+    this.reactivateStatus = '';
+    this.showReactivateContractModal = true;
+  }
+
+  submitReactivateContract() {
+    if (!this.reactivateContractId || !this.reactivateNextPaymentDate) {
+      this.reactivateStatus = 'Selecciona fecha de próximo pago.';
+      return;
+    }
+    this.reactivateStatus = '';
+    this.subscriptions.add(
+      this.adminService.reactivateContract(this.reactivateContractId, { next_payment_date: this.reactivateNextPaymentDate }).subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.showReactivateContractModal = false;
+            this.loadContracts();
+          } else {
+            this.reactivateStatus = res.error || 'Error al reactivar';
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.reactivateStatus = err.error?.error || 'Error de conexión';
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  getContractStatusColor(status: string): string {
+    const colors: Record<string, string> = { active: '#75a83a', pending: '#f59e0b', overdue: '#dc2626', cancelled: '#9ca3af', completed: '#2563eb' };
+    return colors[status] || '#9ca3af';
+  }
+
+  getContractStatusText(status: string): string {
+    const labels: Record<string, string> = { active: 'Activo', pending: 'Pendiente', overdue: 'Vencido', cancelled: 'Cancelado', completed: 'Completado' };
+    return labels[status] || status;
+  }
+
+  getInstallmentStatusColor(status: string): string {
+    const colors: Record<string, string> = { paid: '#75a83a', pending: '#f59e0b', overdue: '#dc2626', free: '#6b7280' };
+    return colors[status] || '#9ca3af';
+  }
+
+  getInstallmentStatusText(status: string): string {
+    const labels: Record<string, string> = { paid: 'Pagado', pending: 'Pendiente', overdue: 'Vencido', free: 'Gratis' };
+    return labels[status] || status;
   }
 
   get activeFilterCount(): number {

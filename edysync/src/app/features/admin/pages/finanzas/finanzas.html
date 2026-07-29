@@ -154,6 +154,59 @@
   </div>
   }
 
+  @if (contractAlerts.length > 0) {
+  <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-lg"></fa-icon>
+        Alertas de Contratos
+      </h3>
+      <button (click)="switchTab('pagos'); pagosTab = 'contratos'; loadContracts()"
+        class="text-xs font-bold text-primary hover:underline">
+        Ver todos
+      </button>
+    </div>
+    <div class="space-y-3">
+      @for (alert of contractAlerts; track alert.id) {
+      <div class="flex items-center gap-3 p-3 rounded-lg border"
+        [class.bg-error/5]="alert.type === 'overdue'"
+        [class.border-error/20]="alert.type === 'overdue'"
+        [class.bg-warning/5]="alert.type === 'upcoming'"
+        [class.border-warning/20]="alert.type === 'upcoming'"
+        [class.bg-primary/5]="alert.type === 'due_today'"
+        [class.border-primary/20]="alert.type === 'due_today'">
+        <div class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+          [class.bg-error/15]="alert.type === 'overdue'"
+          [class.bg-warning/15]="alert.type === 'upcoming'"
+          [class.bg-primary/15]="alert.type === 'due_today'">
+          <fa-icon [icon]="alert.type === 'overdue' ? ['fas', 'exclamation-triangle'] : alert.type === 'upcoming' ? ['fas', 'clock'] : ['fas', 'check-circle']"
+            class="text-[14px]"
+            [class.text-error]="alert.type === 'overdue'"
+            [class.text-warning]="alert.type === 'upcoming'"
+            [class.text-primary]="alert.type === 'due_today'"></fa-icon>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-on-surface truncate">{{ alert.patient_name }} — {{ alert.contract_name }}</p>
+          <p class="text-xs text-on-surface-variant">
+            Cuota #{{ alert.installment_number }} • S/ {{ alert.amount.toFixed(2) }} •
+            <span [class.text-error]="alert.type === 'overdue'"
+              [class.text-warning]="alert.type === 'upcoming'"
+              [class.text-primary]="alert.type === 'due_today'">
+              {{ alert.type === 'overdue' ? 'Vencida' : alert.type === 'upcoming' ? 'Próxima' : 'Vence hoy' }}
+            </span>
+            • {{ alert.due_date | date:'dd/MM/yyyy' }}
+          </p>
+        </div>
+        <button (click)="switchTab('pagos'); pagosTab = 'contratos'; loadContracts()"
+          class="btn-ghost !px-3 !py-1 text-xs shrink-0">
+          Ver
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
   <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
@@ -351,6 +404,15 @@
       Historial @if (paymentHistory.length > 0) {
       <span class="text-[10px] bg-primary-container/15 text-primary-container font-black px-1.5 py-0.5 rounded-full">{{
         paymentHistory.length }}</span>
+      }
+    </button>
+    <button class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
+      [class.bg-surface-container-lowest]="pagosTab === 'contratos'" [class.text-on-surface]="pagosTab === 'contratos'"
+      [class.text-on-surface-variant]="pagosTab !== 'contratos'" [class.shadow-soft]="pagosTab === 'contratos'"
+      (click)="pagosTab = 'contratos'; loadContracts()">
+      <fa-icon [icon]="['fas', 'file-contract']" class="text-[18px]"></fa-icon>
+      Contratos @if (contractSummaryOverdue > 0) {
+      <span class="text-[10px] bg-error/15 text-error font-black px-1.5 py-0.5 rounded-full">{{ contractSummaryOverdue }}</span>
       }
     </button>
   </div>
@@ -767,6 +829,221 @@
     </div>
   </div>
   } }
+
+  @if (pagosTab === 'contratos') {
+  @if (contractsLoading) {
+  <div class="flex justify-center py-24">
+    <app-spinner size="md" colorClass="text-primary"></app-spinner>
+  </div>
+  } @else {
+  <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+      <h3 class="text-sm font-bold text-on-surface flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'file-contract']" class="text-primary text-lg"></fa-icon>
+        Contratos
+      </h3>
+      <div class="flex gap-2 items-center">
+        <app-button variant="primary" label="Nuevo Contrato" [icon]="['fas', 'plus']"
+          (clicked)="openCreateContractModal()"></app-button>
+      </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-3 mb-5">
+      <div class="relative flex-1">
+        <fa-icon [icon]="['fas', 'search']"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]"></fa-icon>
+        <input (input)="contractFilter.search = $any($event.target).value" [value]="contractFilter.search" type="text"
+          placeholder="Buscar por nombre o paciente..." class="input-field !pl-10" />
+      </div>
+      <app-select (valueChange)="contractFilter.status = $event; loadContracts()"
+        [options]="[{ value: '', label: 'Todos' }, { value: 'active', label: 'Activos' }, { value: 'pending', label: 'Pendientes' }, { value: 'overdue', label: 'Vencidos' }, { value: 'completed', label: 'Completados' }, { value: 'cancelled', label: 'Cancelados' }]"
+        class="min-w-[140px]"></app-select>
+      <app-select (valueChange)="contractFilter.sede_id = $event; loadContracts()"
+        [options]="sedeFilterOptions" class="min-w-[160px]"></app-select>
+      <input type="month" (change)="onContractMonthChange($event)" [value]="contractFilterMonthValue"
+        class="input-field min-w-[160px]" />
+      <app-button variant="ghost" label="Limpiar" [icon]="['fas', 'times']"
+        (clicked)="clearContractFilters()"></app-button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+        <p class="text-xs font-bold text-primary mb-1">Activos</p>
+        <p class="text-2xl font-black text-primary font-accent">{{ contractSummaryActive }}</p>
+      </div>
+      <div class="bg-warning/10 border border-warning/20 rounded-xl p-4 text-center">
+        <p class="text-xs font-bold text-warning mb-1">Pendientes</p>
+        <p class="text-2xl font-black text-warning font-accent">{{ contractSummaryPending }}</p>
+      </div>
+      <div class="bg-error/10 border border-error/20 rounded-xl p-4 text-center">
+        <p class="text-xs font-bold text-error mb-1">Vencidos</p>
+        <p class="text-2xl font-black text-error font-accent">{{ contractSummaryOverdue }}</p>
+      </div>
+      <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
+        <p class="text-xs font-bold text-blue-600 mb-1">Recaudado</p>
+        <p class="text-2xl font-black text-blue-600 font-accent">S/ {{ contractSummaryCollected.toFixed(2) }}</p>
+      </div>
+    </div>
+
+    @if (contracts.length === 0) {
+    <div class="text-center py-16">
+      <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+      <p class="text-sm font-medium text-on-surface-variant">No hay contratos</p>
+      <p class="text-xs text-on-surface-variant mt-1">Crea un nuevo contrato para comenzar.</p>
+    </div>
+    } @else {
+    <div class="overflow-x-auto rounded-xl border border-border/30">
+      <table class="w-full min-w-[900px]">
+        <thead>
+          <tr class="bg-surface-container-high/50">
+            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
+              Contrato
+            </th>
+            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
+              Paciente
+            </th>
+            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
+              Total
+            </th>
+            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
+              Cuotas
+            </th>
+            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
+              Estado
+            </th>
+            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
+              Tipo
+            </th>
+            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border/20">
+          @for (contract of contracts; track contract.id) {
+          <tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer"
+            (click)="toggleContractDetail(contract)">
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'file-alt']" class="text-primary text-lg"></fa-icon>
+                <div>
+                  <p class="text-sm font-bold text-on-surface">{{ contract.name }}</p>
+                  <p class="text-[10px] text-on-surface-variant">ID: {{ contract.id }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-sm font-medium text-on-surface">{{ contract.patient_name }}</td>
+            <td class="px-4 py-3.5 text-right">
+              <span class="text-sm font-bold text-on-surface">S/ {{ contract.total_amount.toFixed(2) }}</span>
+            </td>
+            <td class="px-4 py-3.5 text-center">
+              <span class="text-sm font-semibold text-on-surface">{{ contract.paid_count }} / {{ contract.installment_count }}</span>
+              @if (contract.overdue_count > 0) {
+              <span class="text-[10px] text-error block">{{ contract.overdue_count }} vencidas</span>
+              }
+            </td>
+            <td class="px-4 py-3.5 text-center">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold"
+                [style.background]="getContractStatusColor(contract.status) + '15'"
+                [style.color]="getContractStatusColor(contract.status)">
+                {{ getContractStatusText(contract.status) }}
+              </span>
+            </td>
+            <td class="px-4 py-3.5 text-center">
+              <span class="text-xs text-on-surface-variant">{{ contract.billing_type }}</span>
+            </td>
+            <td class="px-4 py-3.5 text-right">
+              <div class="flex items-center justify-end gap-1">
+                @if (contract.status === 'active') {
+                <button (click)="openCancelContractModal(contract); $event.stopPropagation()"
+                  class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container" title="Cancelar">
+                  <fa-icon [icon]="['fas', 'times-circle']" class="text-[14px]"></fa-icon>
+                </button>
+                } @if (contract.status === 'cancelled') {
+                <button (click)="openReactivateContractModal(contract.id); $event.stopPropagation()"
+                  class="btn-ghost !px-2 !py-1 text-xs text-primary hover:bg-primary-container" title="Reactivar">
+                  <fa-icon [icon]="['fas', 'redo']" class="text-[14px]"></fa-icon>
+                </button>
+                }
+                <fa-icon [icon]="expandedContractId === contract.id ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"
+                  class="text-on-surface-variant text-sm"></fa-icon>
+              </div>
+            </td>
+          </tr>
+          @if (expandedContractId === contract.id && contractDetail) {
+          <tr>
+            <td colspan="7" class="px-0 py-0">
+              <div class="bg-surface-container-high/30 border-t border-border/30 p-5">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                  <div>
+                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Monto por cuota</p>
+                    <p class="text-sm font-bold text-on-surface">S/ {{ contract.installment_amount.toFixed(2) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Moneda</p>
+                    <p class="text-sm font-bold text-on-surface">{{ contract.currency }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Regla de facturación</p>
+                    <p class="text-sm font-bold text-on-surface">{{ contract.billing_rule }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Pendiente</p>
+                    <p class="text-sm font-bold text-error">S/ {{ contract.pending_amount.toFixed(2) }}</p>
+                  </div>
+                </div>
+                @if (contractDetail.installments && contractDetail.installments.length > 0) {
+                <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Cuotas</h4>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-border/30">
+                        <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">#</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">Vencimiento</th>
+                        <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Monto</th>
+                        <th class="px-3 py-2 text-center text-[10px] font-bold text-on-surface-variant">Estado</th>
+                        <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/20">
+                      @for (inst of contractDetail.installments; track inst.id) {
+                      <tr class="hover:bg-surface-container-low/30">
+                        <td class="px-3 py-2.5 font-semibold text-on-surface">{{ inst.number }}</td>
+                        <td class="px-3 py-2.5 text-on-surface-variant">{{ inst.due_date | date:'dd/MM/yyyy' }}</td>
+                        <td class="px-3 py-2.5 text-right font-bold text-on-surface">S/ {{ inst.amount.toFixed(2) }}</td>
+                        <td class="px-3 py-2.5 text-center">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
+                            [style.background]="getInstallmentStatusColor(inst.status) + '15'"
+                            [style.color]="getInstallmentStatusColor(inst.status)">
+                            {{ getInstallmentStatusText(inst.status) }}
+                          </span>
+                        </td>
+                        <td class="px-3 py-2.5 text-right">
+                          @if (inst.status === 'pending' || inst.status === 'overdue') {
+                          <button (click)="openPayInstallmentModal(inst, contract)"
+                            class="btn-primary !px-3 !py-1 text-xs">
+                            Pagar
+                          </button>
+                          }
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                }
+              </div>
+            </td>
+          </tr>
+          }
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </div>
+  }
+  }
 </div>
 }
 
@@ -1192,6 +1469,160 @@
 
     <app-button variant="primary" label="Registrar" [disabled]="submitting"
       (clicked)="submitExpenseForm()"></app-button>
+  </div>
+</app-modal>
+
+<!-- Modal: Crear Contrato -->
+<app-modal [isOpen]="showCreateContractModal" title="Nuevo Contrato" (close)="showCreateContractModal = false">
+  <div class="space-y-4">
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente *</label>
+      <select [(ngModel)]="createContractForm.patient_id" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+        <option [ngValue]="null">Seleccionar paciente</option>
+        @for (p of patientsList; track p.id) {
+        <option [ngValue]="p.id">{{ p.username }}</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Nombre del Contrato</label>
+      <input [(ngModel)]="createContractForm.name" type="text" class="input-field" placeholder="Ej: Terapia Grupo A" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto Total (S/) *</label>
+        <input [(ngModel)]="createContractForm.total_amount" type="number" class="input-field" min="0" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Cuotas</label>
+        <input [(ngModel)]="createContractForm.installment_count" type="number" class="input-field" min="1" max="48" />
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Costo de Implementación</label>
+        <input [(ngModel)]="createContractForm.implementation_cost" type="number" class="input-field" min="0" />
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Meses de Bono</label>
+        <input [(ngModel)]="createContractForm.bonus_months" type="number" class="input-field" min="0" />
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Tipo de Facturación</label>
+        <select [(ngModel)]="createContractForm.billing_type" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+          <option value="Mensual">Mensual</option>
+          <option value="Bimestral">Bimestral</option>
+          <option value="Trimestral">Trimestral</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Regla de Facturación</label>
+        <select [(ngModel)]="createContractForm.billing_rule" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+          <option value="standard">Estándar (día 1)</option>
+          <option value="sign_date">Fecha de firma</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Fecha de Inicio</label>
+      <input [(ngModel)]="createContractForm.start_date" type="date" class="input-field" />
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+      <textarea [(ngModel)]="createContractForm.notes" rows="2" class="input-field"
+        placeholder="Detalles del contrato..."></textarea>
+    </div>
+    @if (createContractStatus) {
+    <p class="text-xs text-error font-medium">{{ createContractStatus }}</p>
+    }
+    <app-button variant="primary" label="Crear Contrato" (clicked)="submitCreateContract()"></app-button>
+  </div>
+</app-modal>
+
+<!-- Modal: Pagar Cuota -->
+<app-modal [isOpen]="showPayInstallmentModal" title="Pagar Cuota" (close)="showPayInstallmentModal = false">
+  <div class="space-y-4">
+    <div class="bg-primary/10 border border-primary/20 rounded-lg p-3">
+      <p class="text-xs font-bold text-primary">{{ payInstallmentForm.contract_name }}</p>
+      <p class="text-sm text-on-surface">Paciente: {{ payInstallmentForm.patient_name }}</p>
+      <p class="text-xs text-on-surface-variant">Cuota #{{ payInstallmentForm.installment_number }} • Vence: {{ payInstallmentForm.due_date | date:'dd/MM/yyyy' }}</p>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto (S/)</label>
+      <input type="number" [(ngModel)]="payInstallmentForm.amount" class="input-field" min="0"
+        [disabled]="payInstallmentForm.is_free_month" />
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
+      <select [(ngModel)]="payInstallmentForm.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+        <option value="transfer">Transferencia</option>
+        <option value="yape">Yape</option>
+        <option value="plin">Plin</option>
+        <option value="cash">Efectivo</option>
+        <option value="card">Tarjeta</option>
+      </select>
+    </div>
+    <app-input id="pay-date" label="Fecha de Pago" type="date" [(value)]="payInstallmentForm.payment_date"></app-input>
+    <app-input id="pay-ref" label="Referencia" [(value)]="payInstallmentForm.reference"
+      placeholder="N° de operación o referencia"></app-input>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+      <textarea [(ngModel)]="payInstallmentForm.payment_notes" rows="2" class="input-field"
+        placeholder="Detalles del pago..."></textarea>
+    </div>
+    @if (payInstallmentStatus) {
+    <p class="text-xs text-error font-medium">{{ payInstallmentStatus }}</p>
+    }
+    <app-button variant="primary" label="Registrar Pago" (clicked)="submitPayInstallment()"></app-button>
+  </div>
+</app-modal>
+
+<!-- Modal: Cancelar Contrato -->
+<app-modal [isOpen]="showCancelContractModal" title="Cancelar Contrato" (close)="showCancelContractModal = false">
+  <div class="space-y-4">
+    <div class="bg-error/10 border border-error/20 rounded-lg p-3">
+      <p class="text-xs font-bold text-error">{{ cancelContractForm.contract_name }}</p>
+      <p class="text-sm text-on-surface">Paciente: {{ cancelContractForm.patient_name }}</p>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Motivo *</label>
+      <textarea [(ngModel)]="cancelContractForm.reason" rows="2" class="input-field"
+        placeholder="Razón de la cancelación..."></textarea>
+    </div>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Disposition del Crédito</label>
+      <select [(ngModel)]="cancelContractForm.disposition" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+        <option value="none">Ninguna</option>
+        <option value="refund">Reembolso</option>
+        <option value="credit">Crédito para futuro</option>
+      </select>
+    </div>
+    <app-input id="cancel-date" label="Fecha de Cancelación" type="date" [(value)]="cancelContractForm.cancellation_date"></app-input>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Comentario</label>
+      <textarea [(ngModel)]="cancelContractForm.comment" rows="2" class="input-field"
+        placeholder="Detalles adicionales..."></textarea>
+    </div>
+    @if (cancelContractStatus) {
+    <p class="text-xs text-error font-medium">{{ cancelContractStatus }}</p>
+    }
+    <app-button variant="danger" label="Cancelar Contrato" (clicked)="submitCancelContract()"></app-button>
+  </div>
+</app-modal>
+
+<!-- Modal: Reactivar Contrato -->
+<app-modal [isOpen]="showReactivateContractModal" title="Reactivar Contrato" (close)="showReactivateContractModal = false">
+  <div class="space-y-4">
+    <div class="bg-primary/10 border border-primary/20 rounded-lg p-3">
+      <p class="text-xs font-bold text-primary">El contrato será reactivado con una nueva cuota programada.</p>
+    </div>
+    <app-input id="reactivate-date" label="Fecha de Próximo Pago" type="date" [(value)]="reactivateNextPaymentDate"></app-input>
+    @if (reactivateStatus) {
+    <p class="text-xs text-error font-medium">{{ reactivateStatus }}</p>
+    }
+    <app-button variant="primary" label="Reactivar" (clicked)="submitReactivateContract()"></app-button>
   </div>
 </app-modal>
 }
