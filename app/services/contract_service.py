@@ -1,8 +1,6 @@
 from calendar import monthrange
 from datetime import date, datetime
 
-from sqlalchemy import func
-
 from app.models import Contract, Installment, Payment, User, db
 
 
@@ -127,6 +125,7 @@ class ContractService:
             )
         elif billing_type == 'Semanal':
             from datetime import timedelta
+
             for i in range(duration):
                 due = start_date + timedelta(weeks=i)
                 is_free = i >= (duration - bonus) if bonus else False
@@ -143,6 +142,7 @@ class ContractService:
                 )
         elif billing_type == 'Quincenal':
             from datetime import timedelta
+
             for i in range(duration):
                 due = start_date + timedelta(days=14 * i)
                 is_free = i >= (duration - bonus) if bonus else False
@@ -220,9 +220,6 @@ class ContractService:
 
         return dates
 
-    def get_contract_raw(self, contract_id):
-        return Contract.query.get(contract_id)
-
     def get_patient_contracts(self, patient_id):
         try:
             contracts = Contract.query.filter_by(patient_id=patient_id).order_by(Contract.created_at.desc()).all()
@@ -230,15 +227,19 @@ class ContractService:
         except Exception:
             return []
 
-    def get_all_contracts(self, status=None, limit=200):
+    def update_contract(self, contract_id, **kwargs):
+        contract = Contract.query.get(contract_id)
+        if not contract:
+            return False, 'Contrato no encontrado'
         try:
-            q = Contract.query
-            if status:
-                q = q.filter_by(status=status)
-            contracts = q.order_by(Contract.created_at.desc()).limit(limit).all()
-            return [self._contract_summary(c) for c in contracts]
-        except Exception:
-            return []
+            for key in ('name', 'notes', 'billing_type', 'currency', 'billing_rule'):
+                if key in kwargs:
+                    setattr(contract, key, kwargs[key])
+            db.session.commit()
+            return True, contract
+        except Exception as e:
+            db.session.rollback()
+            return False, str(e)
 
     def get_contracts_filtered(self, search=None, status=None, month=None, year=None, sede_id=None, limit=200):
         try:
@@ -269,9 +270,12 @@ class ContractService:
                 filtered = []
                 for c in contracts:
                     for inst in c.installments:
-                        if (inst.due_date and inst.due_date.month == month
-                                and inst.due_date.year == year
-                                and inst.status != 'cancelled'):
+                        if (
+                            inst.due_date
+                            and inst.due_date.month == month
+                            and inst.due_date.year == year
+                            and inst.status != 'cancelled'
+                        ):
                             filtered.append(c)
                             break
                 return [self._contract_summary(c) for c in filtered]
@@ -369,11 +373,17 @@ class ContractService:
                 'billing_type': getattr(contract, 'billing_type', None) or 'Mensual',
                 'currency': getattr(contract, 'currency', None) or 'PEN',
                 'bonus_months': getattr(contract, 'bonus_months', None) or 0,
-                'sign_date': getattr(contract, 'sign_date', None).strftime('%Y-%m-%d') if getattr(contract, 'sign_date', None) else None,
-                'service_start_date': getattr(contract, 'service_start_date', None).strftime('%Y-%m-%d') if getattr(contract, 'service_start_date', None) else None,
+                'sign_date': getattr(contract, 'sign_date', None).strftime('%Y-%m-%d')
+                if getattr(contract, 'sign_date', None)
+                else None,
+                'service_start_date': getattr(contract, 'service_start_date', None).strftime('%Y-%m-%d')
+                if getattr(contract, 'service_start_date', None)
+                else None,
                 'billing_rule': getattr(contract, 'billing_rule', None) or 'standard',
                 'implementation_cost': getattr(contract, 'implementation_cost', None) or 0,
-                'cancelled_at': getattr(contract, 'cancelled_at', None).isoformat() if getattr(contract, 'cancelled_at', None) else None,
+                'cancelled_at': getattr(contract, 'cancelled_at', None).isoformat()
+                if getattr(contract, 'cancelled_at', None)
+                else None,
                 'cancellation_reason': getattr(contract, 'cancellation_reason', None),
                 'cancellation_comment': getattr(contract, 'cancellation_comment', None),
                 'refund_status': getattr(contract, 'refund_status', None),
@@ -613,34 +623,6 @@ class ContractService:
             return result
         except Exception:
             return []
-
-    def get_debt_summary(self):
-        today = datetime.utcnow().date()
-
-        patients_with_debt = (
-            db.session.query(
-                Installment.contract_id,
-                Contract.patient_id,
-                func.sum(Installment.amount - func.coalesce(Installment.paid_amount, 0)).label('total_debt'),
-            )
-            .join(Contract, Installment.contract_id == Contract.id)
-            .filter(
-                Contract.status == 'active',
-                Installment.status.in_(['pending', 'partial']),
-                Installment.due_date < today,
-            )
-            .group_by(Installment.contract_id, Contract.patient_id)
-            .all()
-        )
-
-        return [
-            {
-                'patient_id': row.patient_id,
-                'contract_id': row.contract_id,
-                'total_debt': float(row.total_debt),
-            }
-            for row in patients_with_debt
-        ]
 
     def get_monthly_breakdown(self, month=None, year=None):
         today = datetime.utcnow().date()

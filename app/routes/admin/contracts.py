@@ -80,15 +80,17 @@ def create_contract():
         )
 
         if success:
-            return jsonify({
-                'success': True,
-                'contract': {
-                    'id': result.id,
-                    'name': result.name,
-                    'installment_count': result.installment_count,
-                },
-                'installments_generated': result.installment_count,
-            })
+            return jsonify(
+                {
+                    'success': True,
+                    'contract': {
+                        'id': result.id,
+                        'name': result.name,
+                        'installment_count': result.installment_count,
+                    },
+                    'installments_generated': result.installment_count,
+                }
+            )
         return jsonify({'success': False, 'error': str(result)}), 400
     except Exception as e:
         logger.exception('Error creating contract')
@@ -101,24 +103,10 @@ def create_contract():
 def update_contract(contract_id):
     try:
         data = request.get_json(silent=True) or {}
-        contract = contract_service.get_contract_raw(contract_id)
-        if not contract:
-            return jsonify({'success': False, 'error': 'Contrato no encontrado'}), 404
-
-        if 'name' in data:
-            contract.name = data['name']
-        if 'notes' in data:
-            contract.notes = data['notes']
-        if 'billing_type' in data:
-            contract.billing_type = data['billing_type']
-        if 'currency' in data:
-            contract.currency = data['currency']
-        if 'billing_rule' in data:
-            contract.billing_rule = data['billing_rule']
-
-        from app.extensions import db
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Contrato actualizado'})
+        success, result = contract_service.update_contract(contract_id, **data)
+        if success:
+            return jsonify({'success': True, 'message': 'Contrato actualizado'})
+        return jsonify({'success': False, 'error': str(result)}), 400 if 'no encontrado' in str(result).lower() else 500
     except Exception as e:
         logger.exception('Error updating contract')
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -229,18 +217,6 @@ def upcoming_installments():
         return jsonify({'success': False, 'error': str(e), 'installments': []}), 500
 
 
-@admin_bp.route('/api/debt-summary', methods=['GET'])
-@login_required
-@admin_required
-def debt_summary():
-    try:
-        summary = contract_service.get_debt_summary()
-        return jsonify({'success': True, 'data': summary})
-    except Exception as e:
-        logger.exception('Error getting debt summary')
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 @admin_bp.route('/api/contracts/monthly-breakdown', methods=['GET'])
 @login_required
 @admin_required
@@ -261,47 +237,48 @@ def monthly_breakdown():
 def migrate_existing_patients():
     """Migrate patients with payment plans to Contract records."""
     try:
+        from datetime import date, timedelta
+
         from app.extensions import db
         from app.models.user import User
-        from datetime import datetime, date, timedelta
 
         conn = db.session.connection()
 
         # First, ensure contract columns exist (in case migration hasn't run)
         contract_cols_to_add = [
-            ("billing_type", "VARCHAR(20) DEFAULT 'Mensual'"),
-            ("currency", "VARCHAR(5) DEFAULT 'PEN'"),
-            ("bonus_months", "INTEGER DEFAULT 0"),
-            ("sign_date", "DATE"),
-            ("service_start_date", "DATE"),
-            ("billing_rule", "VARCHAR(20) DEFAULT 'standard'"),
-            ("implementation_cost", "FLOAT DEFAULT 0"),
-            ("cancelled_at", "DATETIME"),
-            ("cancellation_reason", "VARCHAR(200)"),
-            ("cancellation_comment", "TEXT"),
-            ("refund_status", "VARCHAR(20)"),
-            ("total_refunded", "FLOAT DEFAULT 0"),
+            ('billing_type', "VARCHAR(20) DEFAULT 'Mensual'"),
+            ('currency', "VARCHAR(5) DEFAULT 'PEN'"),
+            ('bonus_months', 'INTEGER DEFAULT 0'),
+            ('sign_date', 'DATE'),
+            ('service_start_date', 'DATE'),
+            ('billing_rule', "VARCHAR(20) DEFAULT 'standard'"),
+            ('implementation_cost', 'FLOAT DEFAULT 0'),
+            ('cancelled_at', 'DATETIME'),
+            ('cancellation_reason', 'VARCHAR(200)'),
+            ('cancellation_comment', 'TEXT'),
+            ('refund_status', 'VARCHAR(20)'),
+            ('total_refunded', 'FLOAT DEFAULT 0'),
         ]
         for col_name, col_def in contract_cols_to_add:
             try:
-                conn.execute(db.text(f"ALTER TABLE contract ADD COLUMN {col_name} {col_def}"))
+                conn.execute(db.text(f'ALTER TABLE contract ADD COLUMN {col_name} {col_def}'))
             except Exception:
                 pass  # Column already exists
 
         installment_cols_to_add = [
-            ("real_amount", "FLOAT"),
-            ("payment_method", "VARCHAR(50)"),
-            ("payment_currency", "VARCHAR(5)"),
-            ("payment_notes", "TEXT"),
-            ("is_free_month", "BOOLEAN DEFAULT 0"),
-            ("refunded_amount", "FLOAT DEFAULT 0"),
-            ("refunded_at", "DATETIME"),
-            ("description", "VARCHAR(200)"),
-            ("is_implementation", "BOOLEAN DEFAULT 0"),
+            ('real_amount', 'FLOAT'),
+            ('payment_method', 'VARCHAR(50)'),
+            ('payment_currency', 'VARCHAR(5)'),
+            ('payment_notes', 'TEXT'),
+            ('is_free_month', 'BOOLEAN DEFAULT 0'),
+            ('refunded_amount', 'FLOAT DEFAULT 0'),
+            ('refunded_at', 'DATETIME'),
+            ('description', 'VARCHAR(200)'),
+            ('is_implementation', 'BOOLEAN DEFAULT 0'),
         ]
         for col_name, col_def in installment_cols_to_add:
             try:
-                conn.execute(db.text(f"ALTER TABLE installment ADD COLUMN {col_name} {col_def}"))
+                conn.execute(db.text(f'ALTER TABLE installment ADD COLUMN {col_name} {col_def}'))
             except Exception:
                 pass  # Column already exists
 
@@ -322,7 +299,7 @@ def migrate_existing_patients():
             try:
                 existing = conn.execute(
                     db.text("SELECT id FROM contract WHERE patient_id = :pid AND status = 'active'"),
-                    {'pid': patient.id}
+                    {'pid': patient.id},
                 ).fetchone()
                 if existing:
                     skipped += 1
@@ -365,7 +342,7 @@ def migrate_existing_patients():
                         'iamount': round(patient.payment_amount, 2),
                         'start': start_date,
                         'btype': billing_type,
-                    }
+                    },
                 )
                 contract_id = result.lastrowid
 
@@ -378,9 +355,13 @@ def migrate_existing_patients():
                                     description, is_free_month, is_implementation, created_at, updated_at)
                                 VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
                             """),
-                            {'cid': contract_id, 'num': i + 1, 'due': due,
-                             'amt': round(patient.payment_amount, 2),
-                             'desc': f'Cuota Semanal {i + 1}'}
+                            {
+                                'cid': contract_id,
+                                'num': i + 1,
+                                'due': due,
+                                'amt': round(patient.payment_amount, 2),
+                                'desc': f'Cuota Semanal {i + 1}',
+                            },
                         )
                 elif billing_type == 'Quincenal':
                     for i in range(installment_count):
@@ -391,9 +372,13 @@ def migrate_existing_patients():
                                     description, is_free_month, is_implementation, created_at, updated_at)
                                 VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
                             """),
-                            {'cid': contract_id, 'num': i + 1, 'due': due,
-                             'amt': round(patient.payment_amount, 2),
-                             'desc': f'Cuota Quincenal {i + 1}'}
+                            {
+                                'cid': contract_id,
+                                'num': i + 1,
+                                'due': due,
+                                'amt': round(patient.payment_amount, 2),
+                                'desc': f'Cuota Quincenal {i + 1}',
+                            },
                         )
                 else:
                     for i in range(installment_count):
@@ -409,9 +394,13 @@ def migrate_existing_patients():
                                     description, is_free_month, is_implementation, created_at, updated_at)
                                 VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
                             """),
-                            {'cid': contract_id, 'num': i + 1, 'due': due,
-                             'amt': round(patient.payment_amount, 2),
-                             'desc': f'Cuota Mensual {i + 1}'}
+                            {
+                                'cid': contract_id,
+                                'num': i + 1,
+                                'due': due,
+                                'amt': round(patient.payment_amount, 2),
+                                'desc': f'Cuota Mensual {i + 1}',
+                            },
                         )
 
                 created += 1
@@ -422,13 +411,15 @@ def migrate_existing_patients():
 
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'created': created,
-            'skipped': skipped,
-            'errors': errors,
-            'total_patients': len(patients),
-        })
+        return jsonify(
+            {
+                'success': True,
+                'created': created,
+                'skipped': skipped,
+                'errors': errors,
+                'total_patients': len(patients),
+            }
+        )
     except Exception as e:
         logger.exception('Error migrating existing patients')
         return jsonify({'success': False, 'error': str(e)}), 500

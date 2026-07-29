@@ -82,10 +82,11 @@ CORE_TOOL_NAMES = [
     'get_therapist_efficiency',
     'get_therapist_financials',
     'list_contracts',
-    'get_debt_summary',
     'create_contract',
     'get_contract_detail',
     'get_contracts_filtered',
+    'get_due_installments',
+    'update_contract',
     'pay_installment',
     'cancel_contract',
     'reactivate_contract',
@@ -2019,3 +2020,58 @@ def handle_get_upcoming_installments(**kwargs):
     svc = ContractService()
     upcoming = svc.get_upcoming_installments(days_ahead=kwargs.get('days_ahead', 7))
     return {'success': True, 'count': len(upcoming), 'installments': upcoming}
+
+
+@tool(
+    name='get_due_installments',
+    description='Cuotas vencidas (atrasadas). Retorna lista de cuotas pendientes con días de atraso.',
+    parameters={
+        'type': 'object',
+        'properties': {},
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_due_installments(**kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    due = svc.get_due_installments()
+    return {'success': True, 'count': len(due), 'installments': due}
+
+
+@tool(
+    name='update_contract',
+    description='Actualiza campos de un contrato existente (nombre, notas, tipo de facturación, moneda, regla).',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'contract_id': {'type': 'integer', 'description': 'ID del contrato'},
+            'name': {'type': 'string', 'description': 'Nombre del contrato'},
+            'notes': {'type': 'string', 'description': 'Notas'},
+            'billing_type': {
+                'type': 'string',
+                'description': 'Tipo de facturación',
+                'enum': ['Mensual', 'Quincenal', 'Semanal', 'Anual'],
+            },
+            'currency': {'type': 'string', 'description': 'Moneda', 'default': 'PEN'},
+            'billing_rule': {
+                'type': 'string',
+                'description': 'Regla de facturación',
+                'enum': ['standard', 'sign-date'],
+            },
+        },
+        'required': ['contract_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+def handle_update_contract(contract_id, **kwargs):
+    from app.services.contract_service import ContractService
+
+    svc = ContractService()
+    fields = {k: v for k, v in kwargs.items() if k != 'contract_id' and v is not None}
+    success, result = svc.update_contract(contract_id, **fields)
+    if success:
+        return {'success': True, 'message': f'Contrato #{contract_id} actualizado'}
+    return {'error': str(result)}

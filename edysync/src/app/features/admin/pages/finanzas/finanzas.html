@@ -422,6 +422,46 @@
     <app-spinner size="md" colorClass="text-primary"></app-spinner>
   </div>
   } @else {
+
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <button (click)="setPatientStatusFilter('all')"
+      class="rounded-xl p-3 text-center border transition-all cursor-pointer"
+      [class.border-primary]="patientStatusFilter === 'all'"
+      [class.bg-primary/10]="patientStatusFilter === 'all'"
+      [class.border-border/30]="patientStatusFilter !== 'all'"
+      [class.hover:border-primary/40]="patientStatusFilter !== 'all'">
+      <p class="text-[10px] font-bold uppercase" [class.text-primary]="patientStatusFilter === 'all'" [class.text-on-surface-variant]="patientStatusFilter !== 'all'">Todos</p>
+      <p class="text-xl font-black font-accent" [class.text-primary]="patientStatusFilter === 'all'" [class.text-on-surface]="patientStatusFilter !== 'all'">{{ patientStats.total }}</p>
+    </button>
+    <button (click)="setPatientStatusFilter('al_dia')"
+      class="rounded-xl p-3 text-center border transition-all cursor-pointer"
+      [class.border-success]="patientStatusFilter === 'al_dia'"
+      [class.bg-success/10]="patientStatusFilter === 'al_dia'"
+      [class.border-border/30]="patientStatusFilter !== 'al_dia'"
+      [class.hover:border-success/40]="patientStatusFilter !== 'al_dia'">
+      <p class="text-[10px] font-bold uppercase" [class.text-success]="patientStatusFilter === 'al_dia'" [class.text-on-surface-variant]="patientStatusFilter !== 'al_dia'">Al Dia</p>
+      <p class="text-xl font-black font-accent" [class.text-success]="patientStatusFilter === 'al_dia'" [class.text-on-surface]="patientStatusFilter !== 'al_dia'">{{ patientStats.alDia }}</p>
+    </button>
+    <button (click)="setPatientStatusFilter('deudor')"
+      class="rounded-xl p-3 text-center border transition-all cursor-pointer"
+      [class.border-error]="patientStatusFilter === 'deudor'"
+      [class.bg-error/10]="patientStatusFilter === 'deudor'"
+      [class.border-border/30]="patientStatusFilter !== 'deudor'"
+      [class.hover:border-error/40]="patientStatusFilter !== 'deudor'">
+      <p class="text-[10px] font-bold uppercase" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface-variant]="patientStatusFilter !== 'deudor'">Deudores</p>
+      <p class="text-xl font-black font-accent" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface]="patientStatusFilter !== 'deudor'">{{ patientStats.deudores }}</p>
+    </button>
+    <button (click)="setPatientStatusFilter('sin_plan')"
+      class="rounded-xl p-3 text-center border transition-all cursor-pointer"
+      [class.border-warning]="patientStatusFilter === 'sin_plan'"
+      [class.bg-warning/10]="patientStatusFilter === 'sin_plan'"
+      [class.border-border/30]="patientStatusFilter !== 'sin_plan'"
+      [class.hover:border-warning/40]="patientStatusFilter !== 'sin_plan'">
+      <p class="text-[10px] font-bold uppercase" [class.text-warning]="patientStatusFilter === 'sin_plan'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_plan'">Sin Plan</p>
+      <p class="text-xl font-black font-accent" [class.text-warning]="patientStatusFilter === 'sin_plan'" [class.text-on-surface]="patientStatusFilter !== 'sin_plan'">{{ patientStats.sinPlan }}</p>
+    </button>
+  </div>
+
   <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 md:p-6">
     <div class="flex flex-col gap-4 mb-6">
       <div class="flex flex-col md:flex-row gap-3">
@@ -460,150 +500,131 @@
       </div>
     </div>
 
-    <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
-      <table class="w-full min-w-[1000px]">
-        <thead>
-          <tr class="bg-surface-container-high/50">
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Paciente
-            </th>
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Sede
-            </th>
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Terapeuta
-            </th>
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Plan / Frecuencia
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Progreso
-            </th>
-            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
-              Deuda Est.
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Próx. Venc.
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Estado
-            </th>
-            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border/20">
-          @for (p of filteredPatients; track p.id) {
-          <tr class="hover:bg-surface-container-low/50 transition-colors">
-            <td class="px-4 py-3.5">
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
-                  {{ getInitials(p.username) }}
-                </div>
-                <div class="min-w-0">
-                  <p class="text-sm font-bold text-on-surface truncate">
-                    {{ p.username }}
-                  </p>
-                  <p class="text-xs text-on-surface-variant truncate">
-                    {{ p.email || '—' }}
-                  </p>
-                </div>
-              </div>
-            </td>
-            <td class="px-4 py-3.5 text-sm text-on-surface-variant">
-              {{ p.sede_name || '—' }}
-            </td>
-            <td class="px-4 py-3.5 text-sm text-on-surface-variant">
-              {{ p.therapist_name || '—' }}
-            </td>
-            <td class="px-4 py-3.5">
-              <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
-              @if (p.plan_frequency) {
-              <span class="text-xs text-on-surface-variant block">{{ p.plan_frequency }}</span>
-              }
-            </td>
-            <td class="px-4 py-3.5">
-              <div class="flex items-center gap-2 justify-center">
-                <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                  <div class="h-full rounded-full transition-all duration-700"
-                    [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
-                    [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
-                    [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
-                    [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"></div>
-                </div>
-                <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
-                  {{ p.sessions_total > 0 ? ((p.sessions_attended /
-                  p.sessions_total) * 100).toFixed(0) : '0' }}%
-                </span>
-              </div>
-            </td>
-            <td class="px-4 py-3.5 text-right">
-              @if (p.payment_amount <= 0) { <span class="text-sm text-on-surface-variant">—</span>
-                } @else {
-                <span class="text-sm font-bold" [class.text-success]="p.payment_amount < 100"
-                  [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
-                  [class.text-error]="p.payment_amount >= 300">
-                  S/ {{ p.payment_amount.toFixed(2) }}
-                </span>
-                }
-            </td>
-            <td class="px-4 py-3.5 text-center">
-              @if (p.next_due_date) {
-              <div class="flex flex-col items-center">
-                <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
-                @if (isOverdue(p)) {
-                <span
-                  class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
-                }
-              </div>
-              } @else {
-              <span class="text-sm text-on-surface-variant">—</span>
-              }
-            </td>
-            <td class="px-4 py-3.5 text-center">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
-                <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
-                {{ getStatusInfo(p).label }}
-              </span>
-            </td>
-            <td class="px-4 py-3.5 text-right">
-              <div class="flex items-center justify-end gap-1">
-                <button class="btn-ghost !px-2.5 !py-1.5 text-xs" title="Registrar Pago" (click)="openRegisterModal(p)">
-                  <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[16px]"></fa-icon>
-                </button>
-                <button class="btn-ghost !px-2.5 !py-1.5 text-xs" title="Configurar Plan"
-                  (click)="openSettingsModal(p)">
-                  <fa-icon [icon]="['fas', 'cog']" class="text-[16px]"></fa-icon>
-                </button>
-                <button class="btn-ghost !px-2.5 !py-1.5 text-xs" title="Ver Historial" (click)="viewPatientHistory(p)">
-                  <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
-                </button>
-              </div>
-            </td>
-          </tr>
-          } @empty {
-          <tr>
-            <td colspan="9" class="px-4 py-16 text-center">
-              <fa-icon [icon]="['fas', 'money-bill-wave']"
-                class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
-              <p class="text-sm font-medium text-on-surface-variant">
-                No se encontraron pacientes
-              </p>
-              <p class="text-xs text-on-surface-variant mt-1">
-                Intenta ajustar los filtros de búsqueda.
-              </p>
-            </td>
-          </tr>
+    <div class="hidden md:block">
+      <app-table [columns]="patientColumns" [data]="paginatedPatients" [rowClass]="getPatientRowClass"
+        [trackBy]="trackPatient" emptyMessage="No se encontraron pacientes" [emptyIcon]="['fas', 'user-slash']">
+
+        <ng-template [tableCell]="'paciente'" let-row>
+          <div class="flex items-center gap-3">
+            <div
+              class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
+              {{ getInitials(row.username) }}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-on-surface truncate">{{ row.username }}</p>
+              <p class="text-xs text-on-surface-variant truncate">{{ row.email || '—' }}</p>
+            </div>
+          </div>
+        </ng-template>
+
+        <ng-template [tableCell]="'sede'" let-row>
+          <span class="text-sm text-on-surface-variant">{{ row.sede_name || '—' }}</span>
+        </ng-template>
+
+        <ng-template [tableCell]="'terapeuta'" let-row>
+          <span class="text-sm text-on-surface-variant">{{ row.therapist_name || '—' }}</span>
+        </ng-template>
+
+        <ng-template [tableCell]="'plan'" let-row>
+          <span class="text-sm font-semibold text-on-surface">{{ row.plan_name || '—' }}</span>
+          @if (row.plan_frequency) {
+          <span class="text-xs text-on-surface-variant block">{{ row.plan_frequency }}</span>
           }
-        </tbody>
-      </table>
+        </ng-template>
+
+        <ng-template [tableCell]="'progreso'" let-row>
+          <div class="flex items-center gap-2 justify-center">
+            <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-700"
+                [class.bg-success]="(row.sessions_attended / (row.sessions_total || 1)) * 100 >= 75"
+                [class.bg-warning]="(row.sessions_attended / (row.sessions_total || 1)) * 100 >= 40 && (row.sessions_attended / (row.sessions_total || 1)) * 100 < 75"
+                [class.bg-error-container0]="(row.sessions_attended / (row.sessions_total || 1)) * 100 < 40"
+                [style.width.%]="row.sessions_total > 0 ? ((row.sessions_attended / row.sessions_total) * 100) : 0"></div>
+            </div>
+            <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
+              {{ row.sessions_total > 0 ? ((row.sessions_attended / row.sessions_total) * 100).toFixed(0) : '0' }}%
+            </span>
+          </div>
+        </ng-template>
+
+        <ng-template [tableCell]="'deuda'" let-row>
+          @if (row.payment_amount <= 0) {
+          <span class="text-sm text-on-surface-variant">—</span>
+          } @else {
+          <span class="text-sm font-bold"
+            [class.text-success]="row.payment_amount < 100"
+            [class.text-warning]="row.payment_amount >= 100 && row.payment_amount < 300"
+            [class.text-error]="row.payment_amount >= 300">
+            S/ {{ row.payment_amount.toFixed(2) }}
+          </span>
+          }
+        </ng-template>
+
+        <ng-template [tableCell]="'vencimiento'" let-row>
+          @if (row.next_due_date) {
+          <div class="flex flex-col items-center">
+            <span class="text-sm font-medium text-on-surface">{{ row.next_due_date | date:'dd/MM/yyyy' }}</span>
+            @if (isOverdue(row)) {
+            <span
+              class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+            }
+          </div>
+          } @else {
+          <span class="text-sm text-on-surface-variant">—</span>
+          }
+        </ng-template>
+
+        <ng-template [tableCell]="'estado'" let-row>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+            [class]="getStatusInfo(row).bg + ' ' + getStatusInfo(row).text">
+            <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(row).dot"></span>
+            {{ getStatusInfo(row).label }}
+          </span>
+        </ng-template>
+
+      </app-table>
     </div>
 
-    <div class="md:hidden space-y-3">
-      @for (p of filteredPatients; track p.id) {
+    @if (filteredPatients.length > patientPageSize) {
+    <div class="flex items-center justify-between mt-4 pt-4 border-t border-border/20">
+      <p class="text-xs text-on-surface-variant">
+        Mostrando {{ (patientPage - 1) * patientPageSize + 1 }}-{{ Math.min(patientPage * patientPageSize, filteredPatients.length) }}
+        de {{ filteredPatients.length }} pacientes
+      </p>
+      <div class="flex items-center gap-1">
+        <button (click)="goToPatientPage(patientPage - 1)" [disabled]="patientPage <= 1"
+          class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors"
+          [class.text-on-surface-variant]="patientPage <= 1"
+          [class.pointer-events-none]="patientPage <= 1"
+          [class.text-primary]="patientPage > 1"
+          [class.hover:bg-primary/10]="patientPage > 1">
+          <fa-icon [icon]="['fas', 'chevron-left']" class="text-[12px]"></fa-icon>
+        </button>
+        @for (pg of patientPageNumbers; track pg) {
+        <button (click)="goToPatientPage(pg)"
+          class="w-8 h-8 rounded-lg text-xs font-bold transition-colors"
+          [class.bg-primary]="pg === patientPage"
+          [class.text-white]="pg === patientPage"
+          [class.text-on-surface-variant]="pg !== patientPage"
+          [class.hover:bg-surface-container-high]="pg !== patientPage">
+          {{ pg }}
+        </button>
+        }
+        <button (click)="goToPatientPage(patientPage + 1)" [disabled]="patientPage >= patientTotalPages"
+          class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors"
+          [class.text-on-surface-variant]="patientPage >= patientTotalPages"
+          [class.pointer-events-none]="patientPage >= patientTotalPages"
+          [class.text-primary]="patientPage < patientTotalPages"
+          [class.hover:bg-primary/10]="patientPage < patientTotalPages">
+          <fa-icon [icon]="['fas', 'chevron-right']" class="text-[12px]"></fa-icon>
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+
+    <div class="md:hidden space-y-3 mt-4">
+      @for (p of paginatedPatients; track p.id) {
       <div class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200"
         [class.border-l-4]="isOverdue(p)" [class.border-l-red-500]="isOverdue(p)">
         <div class="flex items-center justify-between mb-3">
@@ -704,7 +725,29 @@
       </div>
       }
     </div>
-  </div>
+
+    @if (filteredPatients.length > patientPageSize) {
+    <div class="md:hidden flex items-center justify-between mt-4 pt-4 border-t border-border/20">
+      <p class="text-xs text-on-surface-variant">
+        {{ patientPage }}/{{ patientTotalPages }}
+      </p>
+      <div class="flex items-center gap-1">
+        <button (click)="goToPatientPage(patientPage - 1)" [disabled]="patientPage <= 1"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+          [class.text-on-surface-variant]="patientPage <= 1"
+          [class.pointer-events-none]="patientPage <= 1">
+          Anterior
+        </button>
+        <button (click)="goToPatientPage(patientPage + 1)" [disabled]="patientPage >= patientTotalPages"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+          [class.text-on-surface-variant]="patientPage >= patientTotalPages"
+          [class.pointer-events-none]="patientPage >= patientTotalPages">
+          Siguiente
+        </button>
+      </div>
+    </div>
+    }
+
   } } @if (pagosTab === 'historial') { @if (historyLoading) {
   <div class="flex justify-center py-24">
     <app-spinner size="md" colorClass="text-primary"></app-spinner>

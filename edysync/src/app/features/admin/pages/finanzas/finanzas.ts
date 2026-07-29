@@ -25,6 +25,7 @@ import { Select } from '../../../../shared/components/select/select';
 import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
+import { Table, TableCell, TableColumn } from '../../../../shared/components/table/table';
 import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
@@ -40,7 +41,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -126,6 +127,32 @@ export class Finanzas implements OnInit, OnDestroy {
     { value: 'Quincenal', label: 'Quincenal' },
   ];
 
+  patientColumns: TableColumn[] = [
+    { key: 'paciente', label: 'Paciente', width: '22%' },
+    { key: 'sede', label: 'Sede', width: '12%' },
+    { key: 'terapeuta', label: 'Terapeuta', width: '14%' },
+    { key: 'plan', label: 'Plan / Frecuencia', width: '14%' },
+    { key: 'progreso', label: 'Progreso', align: 'center', width: '10%' },
+    { key: 'deuda', label: 'Deuda Est.', align: 'right', width: '10%' },
+    { key: 'vencimiento', label: 'Próx. Venc.', align: 'center', width: '10%' },
+    { key: 'estado', label: 'Estado', align: 'center', width: '8%' },
+  ];
+
+  patientPage = 1;
+  patientPageSize = 20;
+  patientTotalPages = 1;
+
+  patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'sin_plan' = 'all';
+
+  get patientStats() {
+    const total = this.patients.length;
+    const alDia = this.patients.filter(p => getPatientStatus(p) === 'al_dia').length;
+    const deudores = this.patients.filter(p => getPatientStatus(p) === 'deudor').length;
+    const sinPlan = this.patients.filter(p => getPatientStatus(p) === 'sin_plan').length;
+    const totalDeuda = this.patients.reduce((s, p) => s + (p.payment_amount || 0), 0);
+    return { total, alDia, deudores, sinPlan, totalDeuda };
+  }
+
   expenseCategoryOptions: SelectOption[] = [
     { value: 'therapist_payment', label: 'Pago a Terapeuta' },
     { value: 'operational', label: 'Gasto Operativo' },
@@ -159,7 +186,7 @@ export class Finanzas implements OnInit, OnDestroy {
   contractSummaryPending = 0;
   contractSummaryOverdue = 0;
   contractSummaryCollected = 0;
-  migrationDone = false;
+  migrationDone = localStorage.getItem('contracts_migration_done') === 'true';
   migrating = false;
 
   showCreateContractModal = false;
@@ -585,6 +612,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   openCreateContractModal() {
+    console.log('[FINANZAS] openCreateContractModal called');
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
       installment_count: 4, start_date: '', implementation_cost: 0, billing_rule: 'standard',
@@ -592,6 +620,7 @@ export class Finanzas implements OnInit, OnDestroy {
     };
     this.createContractStatus = '';
     this.showCreateContractModal = true;
+    console.log('[FINANZAS] showCreateContractModal set to', this.showCreateContractModal);
     this.cdr.markForCheck();
     this.loadPatientsList();
   }
@@ -614,6 +643,7 @@ export class Finanzas implements OnInit, OnDestroy {
         this.migrating = false;
         if (res.success) {
           this.migrationDone = true;
+          localStorage.setItem('contracts_migration_done', 'true');
           this.toastService.show(`Migración completada: ${res.created} contratos creados, ${res.skipped} ya existían`, 'success');
           this.loadContracts();
         } else {
@@ -621,9 +651,10 @@ export class Finanzas implements OnInit, OnDestroy {
         }
         this.cdr.markForCheck();
       },
-      error: () => {
+      error: (err) => {
         this.migrating = false;
-        this.toastService.show('Error de conexión al migrar', 'error');
+        console.error('[FINANZAS] Error en migrateExistingPatients:', err);
+        this.toastService.show('Error de conexión al migrar: ' + (err.message || ''), 'error');
         this.cdr.markForCheck();
       }
     });
@@ -811,8 +842,21 @@ export class Finanzas implements OnInit, OnDestroy {
 
   clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; }
 
+  trackPatient = (i: number, p: PatientRow): number => p.id;
+
+  getPatientRowClass = (p: PatientRow, _i: number): string => {
+    const classes: string[] = [];
+    if (getPatientStatus(p) === 'deudor') classes.push('bg-error-container/10');
+    if (getPatientStatus(p) === 'sin_plan') classes.push('bg-surface-container-high/40');
+    if (isOverdue(p)) classes.push('border-l-2 border-l-error');
+    return classes.join(' ');
+  };
+
   get filteredPatients(): PatientRow[] {
     let result = [...this.patients];
+    if (this.patientStatusFilter !== 'all') {
+      result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
+    }
     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
     if (this.selectedTherapistId) { const tn = this.therapistsList.find((t) => t.id === this.selectedTherapistId)?.username || ''; result = result.filter((p) => p.therapist_name === tn); }
@@ -825,7 +869,36 @@ export class Finanzas implements OnInit, OnDestroy {
         case 'mayor_deuda': result.sort((a, b) => b.payment_amount - a.payment_amount); break;
       }
     }
+    this.patientTotalPages = Math.max(1, Math.ceil(result.length / this.patientPageSize));
+    if (this.patientPage > this.patientTotalPages) this.patientPage = 1;
     return result;
+  }
+
+  get paginatedPatients(): PatientRow[] {
+    const start = (this.patientPage - 1) * this.patientPageSize;
+    return this.filteredPatients.slice(start, start + this.patientPageSize);
+  }
+
+  get patientPageNumbers(): number[] {
+    const pages: number[] = [];
+    const total = this.patientTotalPages;
+    const current = this.patientPage;
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, current + 2);
+    for (let i = start; i <= end; i++) pages.push(i);
+    return pages;
+  }
+
+  goToPatientPage(page: number) {
+    if (page < 1 || page > this.patientTotalPages) return;
+    this.patientPage = page;
+    this.cdr.markForCheck();
+  }
+
+  setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'sin_plan') {
+    this.patientStatusFilter = filter;
+    this.patientPage = 1;
+    this.cdr.markForCheck();
   }
 
   get filteredHistory(): PaymentHistoryRow[] {
