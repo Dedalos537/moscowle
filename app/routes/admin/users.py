@@ -100,6 +100,36 @@ def toggle_user_status(user_id):
     return redirect(url_for('admin.user_details', user_id=user.id))
 
 
+@admin_bp.route('/api/users/<int:user_id>/toggle-status', methods=['POST'])
+@login_required
+def api_toggle_user_status(user_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json(silent=True) or {}
+    status = data.get('status', 'active')
+
+    if status not in ['active', 'inactive', 'retired', 'debtor']:
+        return jsonify({'error': 'Estado invalido. Use: active, inactive, retired, debtor'}), 400
+
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        return jsonify({'error': 'No puedes cambiar tu propio estado'}), 400
+
+    old_status = user.account_status or ('active' if user.is_active else 'inactive')
+    user.account_status = status
+    user.is_active = status == 'active'
+    db.session.commit()
+
+    messages = {
+        'active': 'Usuario activado',
+        'inactive': 'Usuario desactivado',
+        'retired': 'Usuario marcado como retirado',
+        'debtor': 'Usuario marcado como deudor',
+    }
+    return jsonify({'success': True, 'message': messages.get(status, 'Estado actualizado'), 'old_status': old_status, 'new_status': status})
+
+
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 def delete_user(user_id):

@@ -55,10 +55,12 @@ CORE_TOOL_NAMES = [
     'get_financial_summary',
     'get_payment_history',
     'register_payment',
+    'cancel_payment',
     'get_debtors',
     'send_payment_reminder',
     'compare_periods',
     'get_user_growth',
+    'toggle_user_status',
     'create_incident',
     'list_incidents',
     'get_incident_detail',
@@ -408,6 +410,59 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
             }
         else:
             return {'error': str(result)}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='cancel_payment',
+    description='Elimina un pago registrado. Requiere el ID del pago (usa get_payment_history para encontrarlo). Confirma con el usuario antes de eliminar.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'payment_id': {'type': 'integer', 'description': 'ID del pago a eliminar (usa get_payment_history para encontrarlo)'},
+        },
+        'required': ['payment_id'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_cancel_payment(payment_id, **kwargs):
+    try:
+        resp = _api_post(f'/admin/api/payments/delete/{payment_id}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        data = resp.get_json() if resp else {}
+        if resp and resp.status_code < 400:
+            return {'success': True, 'message': data.get('message', 'Pago eliminado')}
+        return {'error': data.get('error', 'Error al eliminar pago')}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='toggle_user_status',
+    description='Cambia el estado de un usuario: activar, desactivar, marcar como retirado o deudor.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'user_id': {'type': 'integer', 'description': 'ID del usuario'},
+            'status': {
+                'type': 'string',
+                'description': 'Nuevo estado',
+                'enum': ['active', 'inactive', 'retired', 'debtor'],
+            },
+        },
+        'required': ['user_id', 'status'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_toggle_user_status(user_id, status, **kwargs):
+    try:
+        resp = _api_post(f'/admin/api/users/{user_id}/toggle-status', json={'status': status}, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        data = resp.get_json() if resp else {}
+        if resp and resp.status_code < 400:
+            return {'success': True, 'message': data.get('message', 'Estado actualizado'), 'old_status': data.get('old_status'), 'new_status': data.get('new_status')}
+        return {'error': data.get('error', 'Error al cambiar estado')}
     except Exception as e:
         return {'error': str(e)}
 

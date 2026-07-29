@@ -456,6 +456,28 @@ def delete_payment(payment_id):
     return redirect(request.referrer or url_for('admin.payments'))
 
 
+@admin_bp.route('/api/payments/delete/<int:payment_id>', methods=['POST'])
+@login_required
+def api_delete_payment(payment_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    try:
+        payment = Payment.query.get_or_404(payment_id)
+        patient = User.query.get(payment.patient_id)
+        patient_name = patient.username if patient else 'Unknown'
+        amount = float(payment.amount)
+        if payment.receipt_image_path:
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], payment.receipt_image_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        db.session.delete(payment)
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Pago de S/{amount:.2f} de {patient_name} eliminado'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al eliminar: {str(e)}'}), 500
+
+
 @admin_bp.route('/analyze-receipt', methods=['POST'])
 @login_required
 def analyze_receipt():

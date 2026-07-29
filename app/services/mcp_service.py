@@ -32,11 +32,11 @@ SYSTEM_PROMPTS = {
 
         'TOOLS BY CATEGORY:\n\n'
 
-        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_user_detail, create_user, update_user, delete_user, assign_therapist, update_patient\n'
+        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_user_detail, create_user, update_user, delete_user, assign_therapist, update_patient, toggle_user_status\n'
         'SESSIONS: get_sessions, get_sessions_day, create_session, update_session, cancel_session, complete_session, batch_create_sessions\n'
         'INCIDENTS: create_incident, list_incidents, get_incident_detail, update_incident_status, assign_incident\n'
         'BRANCHES: list_sedes, get_sede_stats, list_patient_groups, create_patient_group\n'
-        'FINANCE: get_financial_summary (use month/year params for past months), get_payment_history, register_payment, get_debtors, send_payment_reminder, list_expenses, create_expense, get_therapist_financials, get_debt_summary, compare_periods (compare 2 months)\n'
+        'FINANCE: get_financial_summary (use month/year params for past months), get_payment_history, register_payment, cancel_payment (delete a payment by ID), get_debtors, send_payment_reminder, list_expenses, create_expense, get_therapist_financials, get_debt_summary, compare_periods (compare 2 months)\n'
         'REPORTS: generate_weekly_report, get_weekly_summary, get_monthly_reports, get_therapist_efficiency, get_user_growth (user registration metrics by month)\n'
         'MESSAGING: broadcast_message, send_direct_message, get_notifications, mark_notifications_read\n'
         'CONTRACTS: list_contracts\n\n'
