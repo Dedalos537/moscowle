@@ -485,88 +485,238 @@
     </div>
 
     <div class="hidden md:block">
-      <app-table [columns]="patientColumns" [data]="paginatedPatients" [rowClass]="getPatientRowClass"
-        [trackBy]="trackPatient" emptyMessage="No se encontraron pacientes" [emptyIcon]="['fas', 'user-slash']">
+      <div class="overflow-x-auto rounded-xl border border-border/30">
+        <table class="w-full min-w-[1000px]">
+          <thead>
+            <tr class="bg-surface-container-high/50">
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Paciente</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Terapeuta</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Plan / Frecuencia</th>
+              <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Progreso</th>
+              <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Deuda Est.</th>
+              <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Prox. Venc.</th>
+              <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border/20">
+            @for (p of paginatedPatients; track p.id) {
+            <tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer"
+              [class.bg-primary/5]="expandedPatientId === p.id"
+              [class.border-l-2]="expandedPatientId === p.id"
+              [class.border-l-primary]="expandedPatientId === p.id"
+              [class.opacity-50]="expandedPatientId && expandedPatientId !== p.id"
+              (click)="togglePatientExpand(p)">
+              <td class="px-4 py-3.5">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
+                    {{ getInitials(p.username) }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+                    <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.sede_name || '—' }}</td>
+              <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ p.therapist_name || '—' }}</td>
+              <td class="px-4 py-3.5">
+                <span class="text-sm font-semibold text-on-surface">{{ p.plan_name || '—' }}</span>
+                @if (p.plan_frequency) {
+                <span class="text-xs text-on-surface-variant block">{{ p.plan_frequency }}</span>
+                }
+              </td>
+              <td class="px-4 py-3.5">
+                <div class="flex items-center gap-2 justify-center">
+                  <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-700"
+                      [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
+                      [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
+                      [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
+                      [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"></div>
+                  </div>
+                  <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
+                    {{ p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100).toFixed(0) : '0' }}%
+                  </span>
+                </div>
+              </td>
+              <td class="px-4 py-3.5 text-right">
+                @if (p.payment_amount <= 0) {
+                <span class="text-sm text-on-surface-variant">—</span>
+                } @else {
+                <span class="text-sm font-bold"
+                  [class.text-success]="p.payment_amount < 100"
+                  [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                  [class.text-error]="p.payment_amount >= 300">
+                  S/ {{ p.payment_amount.toFixed(2) }}
+                </span>
+                }
+              </td>
+              <td class="px-4 py-3.5 text-center">
+                @if (p.next_due_date) {
+                <div class="flex flex-col items-center">
+                  <span class="text-sm font-medium text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+                  @if (isOverdue(p)) {
+                  <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+                  }
+                </div>
+                } @else {
+                <span class="text-sm text-on-surface-variant">—</span>
+                }
+              </td>
+              <td class="px-4 py-3.5 text-center">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                  [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                  <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                  {{ getStatusInfo(p).label }}
+                </span>
+              </td>
+            </tr>
 
-        <ng-template [tableCell]="'paciente'" let-row>
-          <div class="flex items-center gap-3">
-            <div
-              class="w-9 h-9 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs shrink-0">
-              {{ getInitials(row.username) }}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-on-surface truncate">{{ row.username }}</p>
-              <p class="text-xs text-on-surface-variant truncate">{{ row.email || '—' }}</p>
-            </div>
-          </div>
-        </ng-template>
-
-        <ng-template [tableCell]="'sede'" let-row>
-          <span class="text-sm text-on-surface-variant">{{ row.sede_name || '—' }}</span>
-        </ng-template>
-
-        <ng-template [tableCell]="'terapeuta'" let-row>
-          <span class="text-sm text-on-surface-variant">{{ row.therapist_name || '—' }}</span>
-        </ng-template>
-
-        <ng-template [tableCell]="'plan'" let-row>
-          <span class="text-sm font-semibold text-on-surface">{{ row.plan_name || '—' }}</span>
-          @if (row.plan_frequency) {
-          <span class="text-xs text-on-surface-variant block">{{ row.plan_frequency }}</span>
-          }
-        </ng-template>
-
-        <ng-template [tableCell]="'progreso'" let-row>
-          <div class="flex items-center gap-2 justify-center">
-            <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-700"
-                [class.bg-success]="(row.sessions_attended / (row.sessions_total || 1)) * 100 >= 75"
-                [class.bg-warning]="(row.sessions_attended / (row.sessions_total || 1)) * 100 >= 40 && (row.sessions_attended / (row.sessions_total || 1)) * 100 < 75"
-                [class.bg-error-container0]="(row.sessions_attended / (row.sessions_total || 1)) * 100 < 40"
-                [style.width.%]="row.sessions_total > 0 ? ((row.sessions_attended / row.sessions_total) * 100) : 0"></div>
-            </div>
-            <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
-              {{ row.sessions_total > 0 ? ((row.sessions_attended / row.sessions_total) * 100).toFixed(0) : '0' }}%
-            </span>
-          </div>
-        </ng-template>
-
-        <ng-template [tableCell]="'deuda'" let-row>
-          @if (row.payment_amount <= 0) {
-          <span class="text-sm text-on-surface-variant">—</span>
-          } @else {
-          <span class="text-sm font-bold"
-            [class.text-success]="row.payment_amount < 100"
-            [class.text-warning]="row.payment_amount >= 100 && row.payment_amount < 300"
-            [class.text-error]="row.payment_amount >= 300">
-            S/ {{ row.payment_amount.toFixed(2) }}
-          </span>
-          }
-        </ng-template>
-
-        <ng-template [tableCell]="'vencimiento'" let-row>
-          @if (row.next_due_date) {
-          <div class="flex flex-col items-center">
-            <span class="text-sm font-medium text-on-surface">{{ row.next_due_date | date:'dd/MM/yyyy' }}</span>
-            @if (isOverdue(row)) {
-            <span
-              class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full mt-0.5">VENCIDO</span>
+            @if (expandedPatientId === p.id) {
+            <tr>
+              <td colspan="8" class="p-0">
+                <div class="bg-surface-container-low/50 border-t border-border/20 px-6 py-5 animate-fade-in">
+                  @if (contractLoading) {
+                  <div class="flex items-center justify-center py-8 gap-3">
+                    <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+                    <span class="text-sm text-on-surface-variant">Cargando contrato...</span>
+                  </div>
+                  } @else if (selectedPatientContract) {
+                  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div class="lg:col-span-1 space-y-3">
+                      <div class="flex items-center gap-2 mb-2">
+                        <fa-icon [icon]="['fas', 'file-contract']" class="text-primary"></fa-icon>
+                        <span class="text-sm font-bold text-primary">{{ selectedPatientContract.name }}</span>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-surface-container-high/50 rounded-lg p-2.5">
+                          <span class="text-on-surface-variant block mb-0.5">Tipo</span>
+                          <span class="font-bold text-on-surface">{{ selectedPatientContract.billing_type }}</span>
+                        </div>
+                        <div class="bg-surface-container-high/50 rounded-lg p-2.5">
+                          <span class="text-on-surface-variant block mb-0.5">Total</span>
+                          <span class="font-bold text-on-surface">S/ {{ selectedPatientContract.total_amount.toFixed(2) }}</span>
+                        </div>
+                        <div class="bg-surface-container-high/50 rounded-lg p-2.5">
+                          <span class="text-on-surface-variant block mb-0.5">DNI Paciente</span>
+                          <span class="font-bold text-on-surface">{{ selectedPatientContract.patient_dni || '—' }}</span>
+                        </div>
+                        <div class="bg-surface-container-high/50 rounded-lg p-2.5">
+                          <span class="text-on-surface-variant block mb-0.5">DNI Apoderado</span>
+                          <span class="font-bold text-on-surface">{{ selectedPatientContract.guardian_dni || '—' }}</span>
+                        </div>
+                      </div>
+                      @if (selectedPatientContract.guardian_name) {
+                      <div class="bg-surface-container-high/50 rounded-lg p-2.5 text-xs">
+                        <span class="text-on-surface-variant block mb-0.5">Apoderado / Tutor</span>
+                        <span class="font-bold text-on-surface">{{ selectedPatientContract.guardian_name }}</span>
+                      </div>
+                      }
+                      <div class="bg-surface-container-high/50 rounded-lg p-2.5 text-xs">
+                        <span class="text-on-surface-variant block mb-0.5">Progreso</span>
+                        <div class="flex items-center gap-2 mt-1">
+                          <div class="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
+                            <div class="h-full bg-primary rounded-full transition-all"
+                              [style.width.%]="selectedPatientContract.installment_count > 0 ? ((selectedPatientContract.paid_count / selectedPatientContract.installment_count) * 100) : 0"></div>
+                          </div>
+                          <span class="font-bold text-on-surface">{{ selectedPatientContract.paid_count }}/{{ selectedPatientContract.installment_count }}</span>
+                        </div>
+                      </div>
+                      <div class="flex gap-2 pt-1">
+                        <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                          (clicked)="openEditContractModal()"></app-button>
+                        @if (selectedPatientContract.status === 'active') {
+                        <app-button variant="danger" label="Cancelar" [icon]="['fas', 'ban']" size="sm"
+                          (clicked)="showCancelContractModal = true"></app-button>
+                        } @else {
+                        <app-button variant="primary" label="Reactivar" [icon]="['fas', 'redo']" size="sm"
+                          (clicked)="showReactivateContractModal = true"></app-button>
+                        }
+                      </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                      <h4 class="text-xs font-bold text-on-surface-variant uppercase mb-3">Cuotas del Contrato</h4>
+                      <div class="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                        @for (inst of selectedPatientContract.installments; track inst.id; let i = $index) {
+                        <div class="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                          [class.bg-success/5]="inst.status === 'paid'"
+                          [class.border-success/30]="inst.status === 'paid'"
+                          [class.bg-error/5]="inst.status === 'pending' && inst.due_date < today"
+                          [class.border-error/30]="inst.status === 'pending' && inst.due_date < today"
+                          [class.bg-surface-container-high/30]="inst.status === 'pending' && inst.due_date >= today"
+                          [class.border-border/20]="inst.status === 'pending' && inst.due_date >= today">
+                          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                            [class.bg-success/15]="inst.status === 'paid'"
+                            [class.text-success]="inst.status === 'paid'"
+                            [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
+                            [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                            [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
+                            [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                            {{ i + 1 }}
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-on-surface truncate">{{ inst.description || 'Cuota #' + inst.number }}</p>
+                            <p class="text-[10px] text-on-surface-variant">Vence: {{ inst.due_date | date:'dd/MM/yyyy' }}</p>
+                          </div>
+                          <div class="text-right shrink-0">
+                            <p class="text-xs font-bold text-on-surface">S/ {{ inst.amount.toFixed(2) }}</p>
+                            @if (inst.paid_amount > 0 && inst.paid_amount < inst.amount) {
+                            <p class="text-[10px] text-warning font-bold">Pagado: S/ {{ inst.paid_amount.toFixed(2) }}</p>
+                            }
+                          </div>
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+                            [class.bg-success/15]="inst.status === 'paid'"
+                            [class.text-success]="inst.status === 'paid'"
+                            [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
+                            [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                            [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
+                            [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                            @switch (inst.status) {
+                              @case ('paid') { Pagada }
+                              @case ('partial') { Parcial }
+                              @case ('cancelled') { Anulada }
+                              @default {
+                                @if (inst.due_date < today) { Vencida } @else { Pendiente }
+                              }
+                            }
+                          </span>
+                          @if (inst.status !== 'paid' && inst.status !== 'cancelled') {
+                          <button class="btn-ghost !px-2 !py-1 text-[10px] font-bold text-primary shrink-0"
+                            (click)="openPayInstallmentModal(inst, selectedPatientContract!); $event.stopPropagation()">
+                            <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px] mr-1"></fa-icon>Pagar
+                          </button>
+                          }
+                        </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                  } @else {
+                  <div class="text-center py-8">
+                    <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant/40 mb-3 block"></fa-icon>
+                    <p class="text-sm font-medium text-on-surface-variant mb-1">Sin contrato activo</p>
+                    <p class="text-xs text-on-surface-variant mb-4">Crea un contrato para gestionar el plan de pago de este paciente.</p>
+                    <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']"
+                      (clicked)="openCreateContractForPatient(p)"></app-button>
+                  </div>
+                  }
+                </div>
+              </td>
+            </tr>
             }
-          </div>
-          } @else {
-          <span class="text-sm text-on-surface-variant">—</span>
-          }
-        </ng-template>
-
-        <ng-template [tableCell]="'estado'" let-row>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
-            [class]="getStatusInfo(row).bg + ' ' + getStatusInfo(row).text">
-            <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(row).dot"></span>
-            {{ getStatusInfo(row).label }}
-          </span>
-        </ng-template>
-
-      </app-table>
+            } @empty {
+            <tr>
+              <td colspan="8" class="px-4 py-16 text-center">
+                <fa-icon [icon]="['fas', 'user-slash']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+                <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+                <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de busqueda.</p>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
 
     @if (filteredPatients.length > patientPageSize) {
@@ -609,8 +759,12 @@
 
     <div class="md:hidden space-y-3 mt-4">
       @for (p of paginatedPatients; track p.id) {
-      <div class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200"
-        [class.border-l-4]="isOverdue(p)" [class.border-l-red-500]="isOverdue(p)">
+      <div class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200 cursor-pointer"
+        [class.border-l-4]="isOverdue(p)" [class.border-l-red-500]="isOverdue(p)"
+        [class.border-l-primary]="expandedPatientId === p.id"
+        [class.bg-primary/5]="expandedPatientId === p.id"
+        [class.opacity-50]="expandedPatientId && expandedPatientId !== p.id"
+        (click)="togglePatientExpand(p)">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-3 min-w-0">
             <div
@@ -618,39 +772,33 @@
               {{ getInitials(p.username) }}
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-bold text-on-surface truncate">
-                {{ p.username }}
-              </p>
-              <p class="text-xs text-on-surface-variant truncate">
-                {{ p.email || '—' }}
-              </p>
+              <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
+              <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
             </div>
           </div>
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
-            [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
-            <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
-            {{ getStatusInfo(p).label }}
-          </span>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+              [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+              <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+              {{ getStatusInfo(p).label }}
+            </span>
+            <fa-icon [icon]="expandedPatientId === p.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
+              class="text-on-surface-variant text-[12px]"></fa-icon>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mb-3">
           <div>
             <span class="text-label-caps text-on-surface-variant">Sede</span>
-            <p class="text-sm font-medium text-on-surface">
-              {{ p.sede_name || '—' }}
-            </p>
+            <p class="text-sm font-medium text-on-surface">{{ p.sede_name || '—' }}</p>
           </div>
           <div>
             <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
-            <p class="text-sm font-medium text-on-surface">
-              {{ p.therapist_name || '—' }}
-            </p>
+            <p class="text-sm font-medium text-on-surface">{{ p.therapist_name || '—' }}</p>
           </div>
           <div>
             <span class="text-label-caps text-on-surface-variant">Plan</span>
-            <p class="text-sm font-medium text-on-surface">
-              {{ p.plan_name || '—' }}
-            </p>
+            <p class="text-sm font-medium text-on-surface">{{ p.plan_name || '—' }}</p>
           </div>
           <div>
             <span class="text-label-caps text-on-surface-variant">Deuda</span>
@@ -679,7 +827,7 @@
         @if (p.next_due_date) {
         <div class="flex items-center gap-2 mb-3 text-xs">
           <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
-          <span class="text-on-surface-variant">Próx. venc.:</span>
+          <span class="text-on-surface-variant">Prox. venc.:</span>
           <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
           @if (isOverdue(p)) {
           <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full">VENCIDO</span>
@@ -687,25 +835,107 @@
         </div>
         }
 
+        @if (expandedPatientId === p.id) {
+        <div class="border-t border-border/20 pt-3 mt-3" (click)="$event.stopPropagation()">
+          @if (contractLoading) {
+          <div class="flex items-center justify-center py-6 gap-2">
+            <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+            <span class="text-xs text-on-surface-variant">Cargando contrato...</span>
+          </div>
+          } @else if (selectedPatientContract) {
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'file-contract']" class="text-primary"></fa-icon>
+              <span class="text-xs font-bold text-primary">{{ selectedPatientContract.name }}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-surface-container-high/50 rounded-lg p-2">
+                <span class="text-on-surface-variant block">Tipo</span>
+                <span class="font-bold">{{ selectedPatientContract.billing_type }}</span>
+              </div>
+              <div class="bg-surface-container-high/50 rounded-lg p-2">
+                <span class="text-on-surface-variant block">Total</span>
+                <span class="font-bold">S/ {{ selectedPatientContract.total_amount.toFixed(2) }}</span>
+              </div>
+              <div class="bg-surface-container-high/50 rounded-lg p-2">
+                <span class="text-on-surface-variant block">DNI Paciente</span>
+                <span class="font-bold">{{ selectedPatientContract.patient_dni || '—' }}</span>
+              </div>
+              <div class="bg-surface-container-high/50 rounded-lg p-2">
+                <span class="text-on-surface-variant block">DNI Apoderado</span>
+                <span class="font-bold">{{ selectedPatientContract.guardian_dni || '—' }}</span>
+              </div>
+            </div>
+            @if (selectedPatientContract.guardian_name) {
+            <div class="bg-surface-container-high/50 rounded-lg p-2 text-xs">
+              <span class="text-on-surface-variant block">Apoderado</span>
+              <span class="font-bold">{{ selectedPatientContract.guardian_name }}</span>
+            </div>
+            }
+            <div class="space-y-2 max-h-[250px] overflow-y-auto">
+              @for (inst of selectedPatientContract.installments; track inst.id; let i = $index) {
+              <div class="flex items-center gap-2 p-2 rounded-lg text-xs"
+                [class.bg-success/5]="inst.status === 'paid'"
+                [class.border border-success/30]="inst.status === 'paid'"
+                [class.bg-error/5]="inst.status === 'pending' && inst.due_date < today"
+                [class.border border-error/30]="inst.status === 'pending' && inst.due_date < today"
+                [class.bg-surface-container-high/30]="inst.status === 'pending' && inst.due_date >= today">
+                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                  [class.bg-success/15]="inst.status === 'paid'"
+                  [class.text-success]="inst.status === 'paid'"
+                  [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
+                  [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                  [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
+                  [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                  {{ i + 1 }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <span class="font-semibold">{{ inst.description || 'Cuota #' + inst.number }}</span>
+                  <span class="text-on-surface-variant ml-1">{{ inst.due_date | date:'dd/MM' }}</span>
+                </div>
+                <span class="font-bold shrink-0">S/ {{ inst.amount.toFixed(0) }}</span>
+                <span class="font-bold shrink-0"
+                  [class.text-success]="inst.status === 'paid'"
+                  [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                  [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                  {{ inst.status === 'paid' ? 'Pagada' : (inst.due_date < today ? 'Vencida' : 'Pendiente') }}
+                </span>
+              </div>
+              }
+            </div>
+            <div class="flex gap-2 pt-1">
+              <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                (clicked)="openEditContractModal()"></app-button>
+              <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
+                (clicked)="openRegisterModal(p)"></app-button>
+            </div>
+          </div>
+          } @else {
+          <div class="text-center py-4">
+            <fa-icon [icon]="['fas', 'file-contract']" class="text-3xl text-on-surface-variant/40 mb-2 block"></fa-icon>
+            <p class="text-xs text-on-surface-variant mb-2">Sin contrato activo</p>
+            <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
+              (clicked)="openCreateContractForPatient(p)"></app-button>
+          </div>
+          }
+        </div>
+        } @else {
         <div class="flex gap-2 pt-2 border-t border-border/20">
           <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']"
             (clicked)="openRegisterModal(p)"></app-button>
           <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']"
             (clicked)="openSettingsModal(p)"></app-button>
-          <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p)" title="Ver Historial">
+          <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p); $event.stopPropagation()" title="Ver Historial">
             <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
           </button>
         </div>
+        }
       </div>
       } @empty {
       <div class="text-center py-12">
         <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
-        <p class="text-sm font-medium text-on-surface-variant">
-          No se encontraron pacientes
-        </p>
-        <p class="text-xs text-on-surface-variant mt-1">
-          Intenta ajustar los filtros de búsqueda.
-        </p>
+        <p class="text-sm font-medium text-on-surface-variant">No se encontraron pacientes</p>
+        <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de busqueda.</p>
       </div>
       }
     </div>
