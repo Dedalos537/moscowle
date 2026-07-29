@@ -624,8 +624,10 @@
                         </div>
                       </div>
                       <div class="flex gap-2 pt-1">
-                        <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                        <app-button variant="primary" label="Editar Contrato" [icon]="['fas', 'file-contract']" size="sm"
                           (clicked)="openEditContractModal()"></app-button>
+                        <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']" size="sm"
+                          (clicked)="startEditPatientDetails()"></app-button>
                         @if (selectedPatientContract.status === 'active') {
                         <app-button variant="danger" label="Cancelar" [icon]="['fas', 'ban']" size="sm"
                           (clicked)="showCancelContractModal = true"></app-button>
@@ -692,6 +694,89 @@
                       </div>
                     </div>
                   </div>
+
+                  @if (editingPatientDetails) {
+                  <div class="mt-4 border-t border-border/20 pt-4 animate-fade-in">
+                    <div class="flex items-center justify-between mb-3">
+                      <h4 class="text-xs font-bold text-on-surface-variant uppercase flex items-center gap-2">
+                        <fa-icon [icon]="['fas', 'user-edit']" class="text-primary"></fa-icon>
+                        Editar Datos del Paciente
+                      </h4>
+                      <button (click)="cancelEditPatientDetails()" class="text-on-surface-variant hover:text-on-surface text-xs">
+                        <fa-icon [icon]="['fas', 'times']"></fa-icon> Cancelar
+                      </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI</label>
+                        <input type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Telefono</label>
+                        <input type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
+                        <input type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
+                        <select [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
+                          <option value="">No especificado</option>
+                          <option value="M">Masculino</option>
+                          <option value="F">Femenino</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
+                        <input type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
+                        <select [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
+                          <option value="">No especificado</option>
+                          <option value="padre">Padre</option>
+                          <option value="madre">Madre</option>
+                          <option value="tutor">Tutor</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
+                        <input type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
+                        <input type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Telefono o email">
+                      </div>
+                      <div>
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Diagnostico</label>
+                        <input type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnostico preliminar">
+                      </div>
+                      <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
+                        <textarea [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
+                      </div>
+                      <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+                        <textarea [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
+                      </div>
+                    </div>
+                    @if (patientDetailStatus) {
+                    <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error]="patientDetailStatus !== 'Guardado correctamente'">
+                      {{ patientDetailStatus }}
+                    </p>
+                    }
+                    <div class="flex gap-2 mt-3">
+                      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
+                        (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
+                      <app-button variant="ghost" label="Cancelar" size="sm"
+                        (clicked)="cancelEditPatientDetails()"></app-button>
+                    </div>
+                  </div>
+                  }
+
                   } @else {
                   <div class="text-center py-8">
                     <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant/40 mb-3 block"></fa-icon>

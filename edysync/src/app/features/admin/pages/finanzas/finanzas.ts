@@ -149,6 +149,11 @@ export class Finanzas implements OnInit, OnDestroy {
   contractLoading = false;
   today = new Date().toISOString().split('T')[0];
 
+  editingPatientDetails = false;
+  patientDetailForm: Record<string, any> = {};
+  patientDetailSaving = false;
+  patientDetailStatus = '';
+
   get patientStats() {
     const total = this.patients.length;
     const alDia = this.patients.filter(p => getPatientStatus(p) === 'al_dia').length;
@@ -970,6 +975,81 @@ export class Finanzas implements OnInit, OnDestroy {
           }
         },
         error: () => { this.contractLoading = false; this.cdr.markForCheck(); }
+      })
+    );
+  }
+
+  startEditPatientDetails() {
+    const patient = this.patients.find(p => p.id === this.expandedPatientId);
+    if (!patient) return;
+    this.patientDetailForm = {
+      document_number: (patient as any).document_number || '',
+      phone: patient.phone || '',
+      date_of_birth: (patient as any).date_of_birth || '',
+      sex: (patient as any).sex || '',
+      guardian_name: (patient as any).guardian_name || '',
+      guardian_type: (patient as any).guardian_type || '',
+      guardian_dni: (patient as any).guardian_dni || '',
+      guardian_contact: (patient as any).guardian_contact || '',
+      preliminary_diagnosis: (patient as any).preliminary_diagnosis || '',
+      therapy_goals: (patient as any).therapy_goals || '',
+      notes: (patient as any).notes || '',
+    };
+    this.editingPatientDetails = true;
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+  }
+
+  cancelEditPatientDetails() {
+    this.editingPatientDetails = false;
+    this.patientDetailForm = {};
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+  }
+
+  savePatientDetails() {
+    if (!this.expandedPatientId) return;
+    this.patientDetailSaving = true;
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+
+    this.subscriptions.add(
+      this.adminService.updatePatientDetails(this.expandedPatientId, this.patientDetailForm).subscribe({
+        next: (res) => {
+          this.patientDetailSaving = false;
+          if (res.success) {
+            this.patientDetailStatus = 'Guardado correctamente';
+            this.editingPatientDetails = false;
+            this.loadPatientContract(this.expandedPatientId!);
+            this.refreshPatients();
+          } else {
+            this.patientDetailStatus = res.error || 'Error al guardar';
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.patientDetailSaving = false;
+          this.patientDetailStatus = 'Error de conexion';
+          this.cdr.markForCheck();
+        }
+      })
+    );
+  }
+
+  private refreshPatients() {
+    this.subscriptions.add(
+      this.adminService.getPatients().subscribe({
+        next: (res) => {
+          if (res.success && res.patients) {
+            this.patients = res.patients.map((p: any) => ({
+              ...p,
+              plan_name: p.plan_name || p.payment_plan || '—',
+              plan_frequency: p.plan_frequency || p.payment_plan || '',
+            })) as PatientRow[];
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {}
       })
     );
   }

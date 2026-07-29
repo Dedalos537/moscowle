@@ -46,6 +46,14 @@ export class AdminService {
     return this.http.post<ApiResponse>('/api/admin/update-user', data);
   }
 
+  updatePatientDetails(userId: number, data: Record<string, any>): Observable<ApiResponse> {
+    return this.http.patch<ApiResponse>(`/api/admin/users/${userId}/patient-details`, data);
+  }
+
+  getPatientDetails(userId: number): Observable<{ success: boolean; patient: any }> {
+    return this.http.get<{ success: boolean; patient: any }>(`/api/admin/users/${userId}/patient-details`);
+  }
+
   deleteUser(id: number): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/api/admin/delete-user', { id });
   }
@@ -171,6 +179,10 @@ export class AdminService {
 
   getPaymentInfo(patientId: number): Observable<any> {
     return this.http.get<any>(`/admin/api/payment-info/${patientId}`);
+  }
+
+  getPatients(): Observable<{ success: boolean; patients: any[] }> {
+    return this.http.get<{ success: boolean; patients: any[] }>('/admin/api/patients');
   }
 
   getPatientsByTherapist(therapistId: number): Observable<{ id: number; username: string; email: string }[]> {
