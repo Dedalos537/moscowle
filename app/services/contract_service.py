@@ -182,6 +182,9 @@ class ContractService:
 
         return dates
 
+    def get_contract_raw(self, contract_id):
+        return Contract.query.get(contract_id)
+
     def get_patient_contracts(self, patient_id):
         contracts = Contract.query.filter_by(patient_id=patient_id).order_by(Contract.created_at.desc()).all()
         return [self._contract_summary(c) for c in contracts]
@@ -255,17 +258,17 @@ class ContractService:
             'paid_count': paid,
             'overdue_count': overdue,
             'status': c.status,
-            'billing_type': c.billing_type or 'Mensual',
-            'currency': c.currency or 'PEN',
+            'billing_type': getattr(c, 'billing_type', None) or 'Mensual',
+            'currency': getattr(c, 'currency', None) or 'PEN',
             'start_date': c.start_date.strftime('%Y-%m-%d') if c.start_date else None,
             'end_date': c.end_date.strftime('%Y-%m-%d') if c.end_date else None,
             'notes': c.notes,
             'pending_amount': round(pending_amount, 2),
-            'implementation_cost': c.implementation_cost or 0,
-            'billing_rule': c.billing_rule or 'standard',
-            'cancelled_at': c.cancelled_at.isoformat() if c.cancelled_at else None,
-            'refund_status': c.refund_status,
-            'total_refunded': c.total_refunded or 0,
+            'implementation_cost': getattr(c, 'implementation_cost', None) or 0,
+            'billing_rule': getattr(c, 'billing_rule', None) or 'standard',
+            'cancelled_at': getattr(c, 'cancelled_at', None).isoformat() if getattr(c, 'cancelled_at', None) else None,
+            'refund_status': getattr(c, 'refund_status', None),
+            'total_refunded': getattr(c, 'total_refunded', None) or 0,
         }
 
     def get_contract_detail(self, contract_id):
@@ -286,13 +289,13 @@ class ContractService:
                     'status': inst.status,
                     'reminder_sent': inst.reminder_sent,
                     'payment_id': inst.payment_id,
-                    'payment_method': inst.payment_method,
-                    'payment_notes': inst.payment_notes,
-                    'is_free_month': inst.is_free_month,
-                    'is_implementation': inst.is_implementation,
-                    'description': inst.description,
-                    'real_amount': inst.real_amount,
-                    'refunded_amount': inst.refunded_amount or 0,
+                    'payment_method': getattr(inst, 'payment_method', None),
+                    'payment_notes': getattr(inst, 'payment_notes', None),
+                    'is_free_month': getattr(inst, 'is_free_month', False),
+                    'is_implementation': getattr(inst, 'is_implementation', False),
+                    'description': getattr(inst, 'description', None),
+                    'real_amount': getattr(inst, 'real_amount', None),
+                    'refunded_amount': getattr(inst, 'refunded_amount', None) or 0,
                 }
             )
 
@@ -311,20 +314,18 @@ class ContractService:
             'end_date': contract.end_date.strftime('%Y-%m-%d') if contract.end_date else None,
             'status': contract.status,
             'notes': contract.notes,
-            'billing_type': contract.billing_type or 'Mensual',
-            'currency': contract.currency or 'PEN',
-            'bonus_months': contract.bonus_months or 0,
-            'sign_date': contract.sign_date.strftime('%Y-%m-%d') if contract.sign_date else None,
-            'service_start_date': contract.service_start_date.strftime('%Y-%m-%d')
-            if contract.service_start_date
-            else None,
-            'billing_rule': contract.billing_rule or 'standard',
-            'implementation_cost': contract.implementation_cost or 0,
-            'cancelled_at': contract.cancelled_at.isoformat() if contract.cancelled_at else None,
-            'cancellation_reason': contract.cancellation_reason,
-            'cancellation_comment': contract.cancellation_comment,
-            'refund_status': contract.refund_status,
-            'total_refunded': contract.total_refunded or 0,
+            'billing_type': getattr(contract, 'billing_type', None) or 'Mensual',
+            'currency': getattr(contract, 'currency', None) or 'PEN',
+            'bonus_months': getattr(contract, 'bonus_months', None) or 0,
+            'sign_date': getattr(contract, 'sign_date', None).strftime('%Y-%m-%d') if getattr(contract, 'sign_date', None) else None,
+            'service_start_date': getattr(contract, 'service_start_date', None).strftime('%Y-%m-%d') if getattr(contract, 'service_start_date', None) else None,
+            'billing_rule': getattr(contract, 'billing_rule', None) or 'standard',
+            'implementation_cost': getattr(contract, 'implementation_cost', None) or 0,
+            'cancelled_at': getattr(contract, 'cancelled_at', None).isoformat() if getattr(contract, 'cancelled_at', None) else None,
+            'cancellation_reason': getattr(contract, 'cancellation_reason', None),
+            'cancellation_comment': getattr(contract, 'cancellation_comment', None),
+            'refund_status': getattr(contract, 'refund_status', None),
+            'total_refunded': getattr(contract, 'total_refunded', None) or 0,
             'installments': installments,
         }
 
