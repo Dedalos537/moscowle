@@ -92,6 +92,8 @@ CORE_TOOL_NAMES = [
     'reactivate_contract',
     'get_monthly_collection',
     'get_upcoming_installments',
+    'get_patient_stats',
+    'update_patient_details',
 ]
 
 
@@ -2075,3 +2077,131 @@ def handle_update_contract(contract_id, **kwargs):
     if success:
         return {'success': True, 'message': f'Contrato #{contract_id} actualizado'}
     return {'error': str(result)}
+
+
+register_tool(
+    name='get_patient_stats',
+    description='Obtener estadisticas demograficas de pacientes: distribucion por edades, sexo, sede, fecha de ingreso, guardianes, diagnosticos, contratos activos.',
+    parameters={
+        'type': 'object',
+        'properties': {},
+    },
+    category='read',
+    roles=ROLES_ADMIN,
+)
+
+
+def handle_get_patient_stats():
+
+    from app.routes.admin.users import patient_stats
+
+    with current_app.test_request_context('/api/patient-stats'):
+        result = patient_stats()
+        return result.get_json()
+
+
+register_tool(
+    name='update_patient_details',
+    description='Actualizar datos personales de un paciente (DNI, telefono, fecha de nacimiento, sexo, apoderado, diagnostico, etc). Sincroniza con contratos automaticamente.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {
+                'type': 'integer',
+                'description': 'ID del paciente',
+            },
+            'document_number': {
+                'type': 'string',
+                'description': 'DNI del paciente',
+            },
+            'phone': {
+                'type': 'string',
+                'description': 'Telefono del paciente',
+            },
+            'date_of_birth': {
+                'type': 'string',
+                'description': 'Fecha de nacimiento (YYYY-MM-DD)',
+            },
+            'sex': {
+                'type': 'string',
+                'description': 'Sexo del paciente',
+                'enum': ['M', 'F', 'Otro'],
+            },
+            'guardian_name': {
+                'type': 'string',
+                'description': 'Nombre del apoderado/tutor',
+            },
+            'guardian_type': {
+                'type': 'string',
+                'description': 'Tipo de apoderado',
+                'enum': ['padre', 'madre', 'tutor', 'otro'],
+            },
+            'guardian_dni': {
+                'type': 'string',
+                'description': 'DNI del apoderado',
+            },
+            'guardian_contact': {
+                'type': 'string',
+                'description': 'Contacto del apoderado (telefono/email)',
+            },
+            'preliminary_diagnosis': {
+                'type': 'string',
+                'description': 'Diagnostico preliminar',
+            },
+            'therapy_goals': {
+                'type': 'string',
+                'description': 'Objetivos de terapia',
+            },
+            'notes': {
+                'type': 'string',
+                'description': 'Notas adicionales',
+            },
+        },
+        'required': ['patient_id'],
+    },
+    category='write',
+    roles=ROLES_ADMIN,
+)
+
+
+def handle_update_patient_details(patient_id, **kwargs):
+    from datetime import datetime
+
+    from app.extensions import db as _db
+    from app.models import User
+
+    user = User.query.get(patient_id)
+    if not user:
+        return {'error': 'Paciente no encontrado'}
+
+    allowed_fields = [
+        'document_number',
+        'phone',
+        'date_of_birth',
+        'sex',
+        'guardian_name',
+        'guardian_type',
+        'guardian_dni',
+        'guardian_contact',
+        'preliminary_diagnosis',
+        'therapy_goals',
+        'notes',
+    ]
+
+    updated = []
+    for field in allowed_fields:
+        if field in kwargs and kwargs[field] is not None:
+            value = kwargs[field]
+            if field == 'date_of_birth' and isinstance(value, str):
+                try:
+                    value = datetime.strptime(value, '%Y-%m-%d').date()
+                except ValueError:
+                    return {'error': f'Formato de fecha invalido para {field}'}
+            setattr(user, field, value if value != '' else None)
+            updated.append(field)
+
+    if not updated:
+        return {'error': 'No hay campos para actualizar'}
+
+    _db.session.commit()
+    return {'success': True, 'message': f'Paciente #{patient_id} actualizado', 'updated_fields': updated}

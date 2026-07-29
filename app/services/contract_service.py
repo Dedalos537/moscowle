@@ -18,6 +18,9 @@ class ContractService:
         bonus_months=0,
         billing_rule='standard',
         implementation_cost=0.0,
+        guardian_name=None,
+        guardian_dni=None,
+        patient_dni=None,
     ):
         patient = User.query.get(patient_id)
         if not patient:
@@ -52,6 +55,14 @@ class ContractService:
             implementation_cost=implementation_cost,
         )
         db.session.add(contract)
+
+        if guardian_name:
+            patient.guardian_name = guardian_name
+        if guardian_dni:
+            patient.guardian_dni = guardian_dni
+        if patient_dni:
+            patient.document_number = patient_dni
+
         db.session.flush()
 
         installments = self._generate_installments(
@@ -235,6 +246,13 @@ class ContractService:
             for key in ('name', 'notes', 'billing_type', 'currency', 'billing_rule'):
                 if key in kwargs:
                     setattr(contract, key, kwargs[key])
+
+            patient = User.query.get(contract.patient_id) if contract.patient_id else None
+            if patient:
+                for key in ('guardian_name', 'guardian_dni', 'guardian_contact', 'document_number'):
+                    if key in kwargs and kwargs[key] is not None:
+                        setattr(patient, key, kwargs[key])
+
             db.session.commit()
             return True, contract
         except Exception as e:

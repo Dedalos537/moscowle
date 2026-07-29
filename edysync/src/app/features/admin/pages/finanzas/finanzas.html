@@ -782,8 +782,12 @@
                     <fa-icon [icon]="['fas', 'file-contract']" class="text-4xl text-on-surface-variant/40 mb-3 block"></fa-icon>
                     <p class="text-sm font-medium text-on-surface-variant mb-1">Sin contrato activo</p>
                     <p class="text-xs text-on-surface-variant mb-4">Crea un contrato para gestionar el plan de pago de este paciente.</p>
-                    <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']"
-                      (clicked)="openCreateContractForPatient(p)"></app-button>
+                    <div class="flex gap-2 justify-center">
+                      <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']"
+                        (clicked)="openCreateContractForPatient(p)"></app-button>
+                      <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']"
+                        (clicked)="startEditPatientDetails()"></app-button>
+                    </div>
                   </div>
                   }
                 </div>
@@ -999,8 +1003,12 @@
           <div class="text-center py-4">
             <fa-icon [icon]="['fas', 'file-contract']" class="text-3xl text-on-surface-variant/40 mb-2 block"></fa-icon>
             <p class="text-xs text-on-surface-variant mb-2">Sin contrato activo</p>
-            <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
-              (clicked)="openCreateContractForPatient(p)"></app-button>
+            <div class="flex gap-2 justify-center">
+              <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
+                (clicked)="openCreateContractForPatient(p)"></app-button>
+              <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']" size="sm"
+                (clicked)="startEditPatientDetails()"></app-button>
+            </div>
           </div>
           }
         </div>
