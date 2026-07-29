@@ -212,3 +212,15 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
+
+.contract-row {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  &.opacity-40 {
+    filter: grayscale(0.4);
+  }
+}

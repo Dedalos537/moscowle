@@ -848,6 +848,7 @@
       </div>
     </div>
 
+    <!-- Filtros avanzados -->
     <div class="flex flex-col md:flex-row gap-3 mb-5">
       <div class="relative flex-1">
         <fa-icon [icon]="['fas', 'search']"
@@ -866,22 +867,23 @@
         (clicked)="clearContractFilters()"></app-button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-      <div class="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
-        <p class="text-xs font-bold text-primary mb-1">Activos</p>
-        <p class="text-2xl font-black text-primary font-accent">{{ contractSummaryActive }}</p>
+    <!-- Resumen -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center">
+        <p class="text-[10px] font-bold text-primary uppercase">Activos</p>
+        <p class="text-xl font-black text-primary font-accent">{{ contractSummaryActive }}</p>
       </div>
-      <div class="bg-warning/10 border border-warning/20 rounded-xl p-4 text-center">
-        <p class="text-xs font-bold text-warning mb-1">Pendientes</p>
-        <p class="text-2xl font-black text-warning font-accent">{{ contractSummaryPending }}</p>
+      <div class="bg-warning/10 border border-warning/20 rounded-xl p-3 text-center">
+        <p class="text-[10px] font-bold text-warning uppercase">Pendientes</p>
+        <p class="text-xl font-black text-warning font-accent">{{ contractSummaryPending }}</p>
       </div>
-      <div class="bg-error/10 border border-error/20 rounded-xl p-4 text-center">
-        <p class="text-xs font-bold text-error mb-1">Vencidos</p>
-        <p class="text-2xl font-black text-error font-accent">{{ contractSummaryOverdue }}</p>
+      <div class="bg-error/10 border border-error/20 rounded-xl p-3 text-center">
+        <p class="text-[10px] font-bold text-error uppercase">Vencidos</p>
+        <p class="text-xl font-black text-error font-accent">{{ contractSummaryOverdue }}</p>
       </div>
-      <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
-        <p class="text-xs font-bold text-blue-600 mb-1">Recaudado</p>
-        <p class="text-2xl font-black text-blue-600 font-accent">S/ {{ contractSummaryCollected.toFixed(2) }}</p>
+      <div class="bg-info-container border border-info-container rounded-xl p-3 text-center">
+        <p class="text-[10px] font-bold text-info uppercase">Recaudado</p>
+        <p class="text-xl font-black text-info font-accent">S/ {{ contractSummaryCollected.toFixed(0) }}</p>
       </div>
     </div>
 
@@ -892,153 +894,197 @@
       <p class="text-xs text-on-surface-variant mt-1">Crea un nuevo contrato para comenzar.</p>
     </div>
     } @else {
-    <div class="overflow-x-auto rounded-xl border border-border/30">
-      <table class="w-full min-w-[900px]">
-        <thead>
-          <tr class="bg-surface-container-high/50">
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Contrato
-            </th>
-            <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">
-              Paciente
-            </th>
-            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
-              Total
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Cuotas
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Estado
-            </th>
-            <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">
-              Tipo
-            </th>
-            <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border/20">
-          @for (contract of contracts; track contract.id) {
-          <tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer"
-            (click)="toggleContractDetail(contract)">
-            <td class="px-4 py-3.5">
-              <div class="flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'file-alt']" class="text-primary text-lg"></fa-icon>
-                <div>
-                  <p class="text-sm font-bold text-on-surface">{{ contract.name }}</p>
-                  <p class="text-[10px] text-on-surface-variant">ID: {{ contract.id }}</p>
+    <!-- Lista de contratos tipo billingFlow -->
+    <div class="space-y-3">
+      @for (contract of contracts; track contract.id) {
+      <div class="contract-row rounded-xl border transition-all duration-200"
+        [class.border-primary/30]="expandedContractId === contract.id"
+        [class.bg-primary/5]="expandedContractId === contract.id"
+        [class.border-border/30]="expandedContractId !== contract.id"
+        [class.opacity-40]="expandedContractId && expandedContractId !== contract.id"
+        [class.pointer-events-none]="expandedContractId && expandedContractId !== contract.id">
+
+        <!-- Contrato colapsado -->
+        <div class="p-4 cursor-pointer hover:bg-surface-container-low/50 rounded-xl transition-colors"
+          (click)="toggleContractDetail(contract)">
+          <div class="flex items-start justify-between gap-3">
+            <!-- Lado izquierdo: Info del paciente/tutor -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  [class.bg-primary/15]="contract.status === 'active'"
+                  [class.text-primary]="contract.status === 'active'"
+                  [class.bg-error/15]="contract.status === 'cancelled'"
+                  [class.text-error]="contract.status === 'cancelled'"
+                  [class.bg-warning/15]="contract.status === 'pending'"
+                  [class.text-warning]="contract.status === 'pending'">
+                  @switch (contract.billing_type) {
+                    @case ('Semanal') { <fa-icon [icon]="['fas', 'calendar-week']" class="text-[14px]"></fa-icon> }
+                    @case ('Quincenal') { <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px]"></fa-icon> }
+                    @case ('Anual') { <fa-icon [icon]="['fas', 'calendar']" class="text-[14px]"></fa-icon> }
+                    @default { <fa-icon [icon]="['fas', 'calendar-day']" class="text-[14px]"></fa-icon> }
+                  }
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-bold text-on-surface truncate"
+                    [class.line-through]="contract.status === 'cancelled'">
+                    {{ contract.patient_name }}
+                  </p>
+                  <p class="text-[11px] text-on-surface-variant truncate">
+                    {{ contract.name }}
+                  </p>
                 </div>
               </div>
-            </td>
-            <td class="px-4 py-3.5 text-sm font-medium text-on-surface">{{ contract.patient_name }}</td>
-            <td class="px-4 py-3.5 text-right">
-              <span class="text-sm font-bold text-on-surface">S/ {{ contract.total_amount.toFixed(2) }}</span>
-            </td>
-            <td class="px-4 py-3.5 text-center">
-              <span class="text-sm font-semibold text-on-surface">{{ contract.paid_count }} / {{ contract.installment_count }}</span>
-              @if (contract.overdue_count > 0) {
-              <span class="text-[10px] text-error block">{{ contract.overdue_count }} vencidas</span>
+
+              <div class="flex flex-wrap items-center gap-2 mt-2">
+                @if (contract.guardian_name) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-high text-on-surface-variant">
+                  <fa-icon [icon]="['fas', 'user-friends']" class="text-[10px]"></fa-icon>
+                  {{ contract.guardian_name }}
+                </span>
+                }
+                @if (contract.patient_dni) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-high text-on-surface-variant">
+                  <fa-icon [icon]="['fas', 'id-card']" class="text-[10px]"></fa-icon>
+                  DNI: {{ contract.patient_dni }}
+                </span>
+                }
+                @if (contract.guardian_dni) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-container-high text-on-surface-variant">
+                  Apod. DNI: {{ contract.guardian_dni }}
+                </span>
+                }
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  [class.bg-purple-100]="contract.billing_rule === 'sign-date'"
+                  [class.text-purple-700]="contract.billing_rule === 'sign-date'"
+                  [class.bg-blue-100]="contract.billing_rule !== 'sign-date'"
+                  [class.text-blue-700]="contract.billing_rule !== 'sign-date'">
+                  {{ contract.billing_rule === 'sign-date' ? 'Cobro x Firma' : 'Cobro Estándar' }}
+                </span>
+                @if (contract.status === 'cancelled') {
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
+                  Cancelado
+                </span>
+                }
+              </div>
+            </div>
+
+            <!-- Lado derecho: Monto y progreso -->
+            <div class="text-right shrink-0">
+              <div class="flex items-center gap-2 justify-end mb-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  [class.bg-success/15]="contract.paid_count === contract.installment_count"
+                  [class.text-success]="contract.paid_count === contract.installment_count"
+                  [class.bg-warning/15]="contract.paid_count < contract.installment_count && contract.overdue_count === 0"
+                  [class.text-warning]="contract.paid_count < contract.installment_count && contract.overdue_count === 0"
+                  [class.bg-error/15]="contract.overdue_count > 0"
+                  [class.text-error]="contract.overdue_count > 0">
+                  {{ contract.paid_count }}/{{ contract.installment_count }} pagadas
+                </span>
+                <span class="text-xs font-black"
+                  [class.text-primary]="contract.status === 'active'"
+                  [class.text-error]="contract.status === 'cancelled'">
+                  {{ contract.billing_type }}
+                </span>
+              </div>
+              <p class="text-lg font-black text-on-surface font-accent">
+                S/ {{ contract.total_amount.toFixed(0) }}
+              </p>
+              <p class="text-[10px] text-on-surface-variant">Total Contrato</p>
+              @if (contract.pending_amount > 0) {
+              <p class="text-[10px] text-error font-bold mt-0.5">
+                Pendiente: S/ {{ contract.pending_amount.toFixed(0) }}
+              </p>
               }
-            </td>
-            <td class="px-4 py-3.5 text-center">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold"
-                [style.background]="getContractStatusColor(contract.status) + '15'"
-                [style.color]="getContractStatusColor(contract.status)">
-                {{ getContractStatusText(contract.status) }}
-              </span>
-            </td>
-            <td class="px-4 py-3.5 text-center">
-              <span class="text-xs text-on-surface-variant">{{ contract.billing_type }}</span>
-            </td>
-            <td class="px-4 py-3.5 text-right">
-              <div class="flex items-center justify-end gap-1">
-                @if (contract.status === 'active') {
-                <button (click)="openCancelContractModal(contract); $event.stopPropagation()"
-                  class="btn-ghost !px-2 !py-1 text-xs text-error hover:bg-error-container" title="Cancelar">
-                  <fa-icon [icon]="['fas', 'times-circle']" class="text-[14px]"></fa-icon>
-                </button>
-                } @if (contract.status === 'cancelled') {
-                <button (click)="openReactivateContractModal(contract.id); $event.stopPropagation()"
-                  class="btn-ghost !px-2 !py-1 text-xs text-primary hover:bg-primary-container" title="Reactivar">
-                  <fa-icon [icon]="['fas', 'redo']" class="text-[14px]"></fa-icon>
-                </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contrato expandido: Desglose de cuotas -->
+        @if (expandedContractId === contract.id && contractDetail) {
+        <div class="border-t border-border/30 bg-surface-container-high/20 p-4 rounded-b-xl">
+          <!-- Detalles del contrato -->
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 p-3 bg-surface-container-lowest rounded-lg">
+            <div>
+              <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Monto/Cuota</p>
+              <p class="text-sm font-bold text-on-surface">S/ {{ contract.installment_amount.toFixed(2) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Frecuencia</p>
+              <p class="text-sm font-bold text-on-surface">{{ contract.billing_type }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Moneda</p>
+              <p class="text-sm font-bold text-on-surface">{{ contract.currency }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Inicio</p>
+              <p class="text-sm font-bold text-on-surface">{{ contract.start_date | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Pendiente</p>
+              <p class="text-sm font-bold text-error">S/ {{ contract.pending_amount.toFixed(2) }}</p>
+            </div>
+          </div>
+
+          <!-- Tabla de cuotas -->
+          @if (contractDetail.installments && contractDetail.installments.length > 0) {
+          <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'list']" class="text-[14px]"></fa-icon>
+            Desglose de Cuotas
+          </h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-border/30">
+                  <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">#</th>
+                  <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">Descripción</th>
+                  <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">Vencimiento</th>
+                  <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Monto</th>
+                  <th class="px-3 py-2 text-center text-[10px] font-bold text-on-surface-variant">Estado</th>
+                  <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border/20">
+                @for (inst of contractDetail.installments; track inst.id) {
+                <tr class="hover:bg-surface-container-low/30 transition-colors"
+                  [class.bg-success/5]="inst.status === 'paid'"
+                  [class.bg-error/5]="inst.status === 'overdue'">
+                  <td class="px-3 py-2.5 font-semibold text-on-surface">{{ inst.number }}</td>
+                  <td class="px-3 py-2.5 text-on-surface-variant text-xs">{{ inst.description || ('Cuota #' + inst.number) }}</td>
+                  <td class="px-3 py-2.5 text-on-surface-variant">{{ inst.due_date | date:'dd/MM/yyyy' }}</td>
+                  <td class="px-3 py-2.5 text-right font-bold text-on-surface">
+                    @if (inst.is_free_month) {
+                    <span class="text-success">Gratis</span>
+                    } @else {
+                    S/ {{ inst.amount.toFixed(2) }}
+                    }
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
+                      [style.background]="getInstallmentStatusColor(inst.status) + '15'"
+                      [style.color]="getInstallmentStatusColor(inst.status)">
+                      {{ getInstallmentStatusText(inst.status) }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2.5 text-right">
+                    @if ((inst.status === 'pending' || inst.status === 'overdue') && !inst.is_free_month) {
+                    <button (click)="openPayInstallmentModal(inst, contract)"
+                      class="btn-primary !px-3 !py-1 text-xs">
+                      Pagar
+                    </button>
+                    }
+                  </td>
+                </tr>
                 }
-                <fa-icon [icon]="expandedContractId === contract.id ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"
-                  class="text-on-surface-variant text-sm"></fa-icon>
-              </div>
-            </td>
-          </tr>
-          @if (expandedContractId === contract.id && contractDetail) {
-          <tr>
-            <td colspan="7" class="px-0 py-0">
-              <div class="bg-surface-container-high/30 border-t border-border/30 p-5">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-                  <div>
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Monto por cuota</p>
-                    <p class="text-sm font-bold text-on-surface">S/ {{ contract.installment_amount.toFixed(2) }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Moneda</p>
-                    <p class="text-sm font-bold text-on-surface">{{ contract.currency }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Regla de facturación</p>
-                    <p class="text-sm font-bold text-on-surface">{{ contract.billing_rule }}</p>
-                  </div>
-                  <div>
-                    <p class="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Pendiente</p>
-                    <p class="text-sm font-bold text-error">S/ {{ contract.pending_amount.toFixed(2) }}</p>
-                  </div>
-                </div>
-                @if (contractDetail.installments && contractDetail.installments.length > 0) {
-                <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Cuotas</h4>
-                <div class="overflow-x-auto">
-                  <table class="w-full text-sm">
-                    <thead>
-                      <tr class="border-b border-border/30">
-                        <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">#</th>
-                        <th class="px-3 py-2 text-left text-[10px] font-bold text-on-surface-variant">Vencimiento</th>
-                        <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Monto</th>
-                        <th class="px-3 py-2 text-center text-[10px] font-bold text-on-surface-variant">Estado</th>
-                        <th class="px-3 py-2 text-right text-[10px] font-bold text-on-surface-variant">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border/20">
-                      @for (inst of contractDetail.installments; track inst.id) {
-                      <tr class="hover:bg-surface-container-low/30">
-                        <td class="px-3 py-2.5 font-semibold text-on-surface">{{ inst.number }}</td>
-                        <td class="px-3 py-2.5 text-on-surface-variant">{{ inst.due_date | date:'dd/MM/yyyy' }}</td>
-                        <td class="px-3 py-2.5 text-right font-bold text-on-surface">S/ {{ inst.amount.toFixed(2) }}</td>
-                        <td class="px-3 py-2.5 text-center">
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
-                            [style.background]="getInstallmentStatusColor(inst.status) + '15'"
-                            [style.color]="getInstallmentStatusColor(inst.status)">
-                            {{ getInstallmentStatusText(inst.status) }}
-                          </span>
-                        </td>
-                        <td class="px-3 py-2.5 text-right">
-                          @if (inst.status === 'pending' || inst.status === 'overdue') {
-                          <button (click)="openPayInstallmentModal(inst, contract)"
-                            class="btn-primary !px-3 !py-1 text-xs">
-                            Pagar
-                          </button>
-                          }
-                        </td>
-                      </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-                }
-              </div>
-            </td>
-          </tr>
+              </tbody>
+            </table>
+          </div>
           }
-          }
-        </tbody>
-      </table>
+        </div>
+        }
+      </div>
+      }
     </div>
     }
   </div>
@@ -1473,7 +1519,7 @@
 </app-modal>
 
 <!-- Modal: Crear Contrato -->
-<app-modal [isOpen]="showCreateContractModal" title="Nuevo Contrato" (close)="showCreateContractModal = false">
+<app-modal [isOpen]="showCreateContractModal" title="Nuevo Contrato de Servicio" (close)="showCreateContractModal = false">
   <div class="space-y-4">
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente *</label>
@@ -1500,7 +1546,7 @@
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Costo de Implementación</label>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Costo Implementación (S/)</label>
         <input [(ngModel)]="createContractForm.implementation_cost" type="number" class="input-field" min="0" />
       </div>
       <div>
@@ -1510,17 +1556,18 @@
     </div>
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Tipo de Facturación</label>
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Frecuencia de Pago *</label>
         <select [(ngModel)]="createContractForm.billing_type" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
           <option value="Mensual">Mensual</option>
-          <option value="Bimestral">Bimestral</option>
-          <option value="Trimestral">Trimestral</option>
+          <option value="Quincenal">Quincenal (cada 14 días)</option>
+          <option value="Semanal">Semanal (cada semana)</option>
+          <option value="Anual">Anual (pago único)</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Regla de Facturación</label>
         <select [(ngModel)]="createContractForm.billing_rule" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
-          <option value="standard">Estándar (día 1)</option>
+          <option value="standard">Estándar (día fijo)</option>
           <option value="sign_date">Fecha de firma</option>
         </select>
       </div>
@@ -1537,7 +1584,10 @@
     @if (createContractStatus) {
     <p class="text-xs text-error font-medium">{{ createContractStatus }}</p>
     }
-    <app-button variant="primary" label="Crear Contrato" (clicked)="submitCreateContract()"></app-button>
+    <div class="flex gap-2 justify-end">
+      <app-button variant="ghost" label="Cancelar" (clicked)="showCreateContractModal = false"></app-button>
+      <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'save']" (clicked)="submitCreateContract()"></app-button>
+    </div>
   </div>
 </app-modal>
 

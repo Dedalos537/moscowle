@@ -74,9 +74,10 @@ class ContractService:
                 number=inst_data['number'],
                 due_date=inst_data['due_date'],
                 amount=inst_data['amount'],
-                status='pending',
+                status=inst_data.get('status', 'pending'),
                 description=inst_data.get('description'),
                 is_implementation=inst_data.get('is_implementation', False),
+                is_free_month=inst_data.get('is_free_month', False),
             )
             db.session.add(installment)
 
@@ -106,6 +107,7 @@ class ContractService:
                     'status': 'pending',
                     'description': 'Costo de Implementación',
                     'is_implementation': True,
+                    'is_free_month': False,
                 }
             )
 
@@ -120,23 +122,59 @@ class ContractService:
                     'status': 'pending',
                     'description': 'Pago Anual Anticipado',
                     'is_implementation': False,
+                    'is_free_month': False,
                 }
             )
+        elif billing_type == 'Semanal':
+            from datetime import timedelta
+            for i in range(duration):
+                due = start_date + timedelta(weeks=i)
+                is_free = i >= (duration - bonus) if bonus else False
+                installments.append(
+                    {
+                        'number': i + 1,
+                        'due_date': due,
+                        'amount': 0.0 if is_free else price,
+                        'status': 'free' if is_free else 'pending',
+                        'description': f'Cuota Semanal {i + 1}' + (' (Bonificación)' if is_free else ''),
+                        'is_implementation': False,
+                        'is_free_month': is_free,
+                    }
+                )
+        elif billing_type == 'Quincenal':
+            from datetime import timedelta
+            for i in range(duration):
+                due = start_date + timedelta(days=14 * i)
+                is_free = i >= (duration - bonus) if bonus else False
+                installments.append(
+                    {
+                        'number': i + 1,
+                        'due_date': due,
+                        'amount': 0.0 if is_free else price,
+                        'status': 'free' if is_free else 'pending',
+                        'description': f'Cuota Quincenal {i + 1}' + (' (Bonificación)' if is_free else ''),
+                        'is_implementation': False,
+                        'is_free_month': is_free,
+                    }
+                )
         else:
+            # Mensual (default)
             if billing_rule == 'sign-date':
                 due_dates = self._get_sign_date_due_dates(sign_date, duration)
             else:
                 due_dates = self._get_standard_due_dates(start_date, duration)
 
             for i in range(duration):
+                is_free = i >= (duration - bonus) if bonus else False
                 installments.append(
                     {
                         'number': i + 1,
                         'due_date': due_dates[i],
-                        'amount': price,
-                        'status': 'pending',
-                        'description': f'Cuota Mensual {i + 1}',
+                        'amount': 0.0 if is_free else price,
+                        'status': 'free' if is_free else 'pending',
+                        'description': f'Cuota Mensual {i + 1}' + (' (Bonificación)' if is_free else ''),
                         'is_implementation': False,
+                        'is_free_month': is_free,
                     }
                 )
 
@@ -251,6 +289,10 @@ class ContractService:
             'patient_id': c.patient_id,
             'patient_name': patient.username if patient else '',
             'patient_email': patient.email if patient else '',
+            'patient_dni': getattr(patient, 'document_number', None) if patient else None,
+            'guardian_name': getattr(patient, 'guardian_name', None) if patient else None,
+            'guardian_dni': getattr(patient, 'guardian_dni', None) if patient else None,
+            'guardian_contact': getattr(patient, 'guardian_contact', None) if patient else None,
             'name': c.name,
             'total_amount': c.total_amount,
             'installment_count': total,
@@ -327,6 +369,11 @@ class ContractService:
             'refund_status': getattr(contract, 'refund_status', None),
             'total_refunded': getattr(contract, 'total_refunded', None) or 0,
             'installments': installments,
+            'patient_dni': getattr(patient, 'document_number', None) if patient else None,
+            'guardian_name': getattr(patient, 'guardian_name', None) if patient else None,
+            'guardian_dni': getattr(patient, 'guardian_dni', None) if patient else None,
+            'guardian_contact': getattr(patient, 'guardian_contact', None) if patient else None,
+            'payment_plan': getattr(patient, 'payment_plan', None) if patient else None,
         }
 
     def pay_installment(

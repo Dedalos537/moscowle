@@ -86,6 +86,10 @@ export interface Contract {
   patient_id: number;
   patient_name: string;
   patient_email?: string;
+  patient_dni?: string;
+  guardian_name?: string;
+  guardian_dni?: string;
+  guardian_contact?: string;
   name: string;
   total_amount: number;
   installment_count: number;
@@ -112,6 +116,7 @@ export interface ContractDetail extends Contract {
   service_start_date?: string;
   cancellation_reason?: string;
   cancellation_comment?: string;
+  payment_plan?: string;
   installments: Installment[];
 }
 
