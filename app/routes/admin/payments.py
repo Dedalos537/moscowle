@@ -478,6 +478,49 @@ def api_delete_payment(payment_id):
         return jsonify({'error': f'Error al eliminar: {str(e)}'}), 500
 
 
+@admin_bp.route('/api/payments/<int:payment_id>', methods=['PUT'])
+@login_required
+def api_edit_payment(payment_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    try:
+        payment = Payment.query.get_or_404(payment_id)
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        allowed = {'amount', 'method', 'payment_date', 'status', 'description', 'receipt_url'}
+        updated = []
+        for field in allowed:
+            if field in data:
+                val = data[field]
+                if field == 'amount':
+                    val = float(val)
+                elif field == 'payment_date':
+                    val = datetime.strptime(val, '%Y-%m-%d').date()
+                setattr(payment, field, val)
+                updated.append(field)
+        if not updated:
+            return jsonify({'error': 'No valid fields to update'}), 400
+        db.session.commit()
+        patient = User.query.get(payment.patient_id)
+        return jsonify({
+            'success': True,
+            'message': f'Pago #{payment_id} actualizado: {", ".join(updated)}',
+            'payment': {
+                'id': payment.id,
+                'patient_id': payment.patient_id,
+                'patient_name': patient.username if patient else '',
+                'amount': float(payment.amount),
+                'method': payment.method,
+                'payment_date': str(payment.payment_date),
+                'status': getattr(payment, 'status', 'completado'),
+            },
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Error al actualizar: {str(e)}'}), 500
+
+
 @admin_bp.route('/analyze-receipt', methods=['POST'])
 @login_required
 def analyze_receipt():

@@ -98,6 +98,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   hasUnread = false;
   error: string | null = null;
   processingAction = false;
+  uploading = false;
   actionFeedback: { type: 'success' | 'error' | 'info'; message: string } | null = null;
   thinkingText = '';
 
@@ -448,13 +449,40 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     if (!input.files || input.files.length === 0) return;
     const file = input.files[0];
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.inputMessage = `[Archivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)]`;
-      this.cdr.markForCheck();
-      this.sendMessage();
-    };
-    reader.readAsText(file);
+    this.uploading = true;
+    this.cdr.markForCheck();
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const apiUrl = this.getApiUrl();
+    fetch(`${apiUrl}/mcp/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
+      },
+      body: formData,
+    })
+      .then(resp => resp.json())
+      .then(data => {
+        this.uploading = false;
+        if (data.success) {
+          const ocrHint = data.ocr
+            ? ` [OCR: monto=${data.ocr.amount || '?'}, metodo=${data.ocr.method || '?'}]`
+            : '';
+          this.inputMessage = `[Imagen subida: ${data.url}]${ocrHint}`;
+          this.sendMessage();
+        } else {
+          this.inputMessage = `Error al subir: ${data.error}`;
+        }
+        this.cdr.markForCheck();
+      })
+      .catch(err => {
+        this.uploading = false;
+        this.inputMessage = `Error de red al subir archivo`;
+        this.cdr.markForCheck();
+      });
+
     input.value = '';
   }
 

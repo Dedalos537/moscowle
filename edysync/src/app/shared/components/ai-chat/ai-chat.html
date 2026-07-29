@@ -156,7 +156,7 @@
         rows="1"
         #inputEl
       ></textarea>
-      <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading || processingAction">
+      <button class="chat-send" (click)="sendMessage()" [disabled]="!inputMessage.trim() || loading || processingAction || uploading">
         @if (loading || processingAction) {
           <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
         } @else {

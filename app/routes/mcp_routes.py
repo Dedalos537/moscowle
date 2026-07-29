@@ -1,6 +1,9 @@
 import json
 import logging
+import os
 import re
+import uuid
+from datetime import datetime
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
@@ -288,3 +291,105 @@ def mcp_clear():
     for k, v in cors.items():
         resp.headers[k] = v
     return resp
+
+
+@mcp_bp.route('/upload', methods=['POST'])
+def mcp_upload():
+    """Upload an image from chat. Returns URL and optional OCR data."""
+    user = _get_current_user()
+    cors = _cors_headers()
+    if not user:
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    if 'file' not in request.files:
+        resp = jsonify({'error': 'No file provided'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    file = request.files['file']
+    if not file.filename:
+        resp = jsonify({'error': 'No filename'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'jpg'
+    allowed = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'}
+    if ext not in allowed:
+        resp = jsonify({'error': f'Tipo no permitido: {ext}. Use: {", ".join(allowed)}'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    unique_name = f'{uuid.uuid4().hex[:12]}.{ext}'
+    upload_dir = os.path.join(current_app.instance_path, 'uploads', 'mcp')
+    os.makedirs(upload_dir, exist_ok=True)
+    file.save(os.path.join(upload_dir, unique_name))
+
+    url = f'/uploads/mcp/{unique_name}'
+
+    ocr_data = None
+    if ext in ('jpg', 'jpeg', 'png', 'webp'):
+        try:
+            ocr_data = _ocr_voucher(os.path.join(upload_dir, unique_name), ext)
+        except Exception as e:
+            logger.warning(f'OCR failed: {e}')
+
+    resp_data = {'success': True, 'url': url, 'filename': unique_name}
+    if ocr_data:
+        resp_data['ocr'] = ocr_data
+
+    resp = jsonify(resp_data)
+    for k, v in cors.items():
+        resp.headers[k] = v
+    return resp
+
+
+def _ocr_voucher(file_path, ext):
+    """Use Gemini vision to extract payment data from voucher image."""
+    try:
+        import base64
+        with open(file_path, 'rb') as f:
+            img_b64 = base64.b64encode(f.read()).decode()
+
+        mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
+
+        gemini = None
+        try:
+            from app.services.llm_client import get_gemini_model
+            gemini = get_gemini_model()
+        except Exception:
+            pass
+
+        if gemini:
+            import google.generativeai as genai
+            prompt = (
+                'Extrae los datos de este comprobante de pago:\n'
+                '- monto (numero)\n'
+                '- metodo de pago (Efectivo, Yape, Plin, Transferencia, IA/Copilot)\n'
+                '- fecha (YYYY-MM-DD)\n'
+                '- nombre del paciente si aparece\n'
+                '- numero de operacion/referencia si aparece\n'
+                'Responde SOLO con JSON: {"amount": number, "method": "string", "date": "string", "patient_hint": "string", "reference": "string"}'
+            )
+            response = gemini.generate_content([
+                prompt,
+                {'inline_data': {'mime_type': mime, 'data': img_b64}}
+            ])
+            text = response.text.strip()
+            import json
+            match = re.search(r'\{[^}]+\}', text)
+            if match:
+                return json.loads(match.group())
+        return None
+    except Exception as e:
+        logger.warning(f'OCR error: {e}')
+        return None

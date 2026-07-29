@@ -56,6 +56,7 @@ CORE_TOOL_NAMES = [
     'get_payment_history',
     'register_payment',
     'cancel_payment',
+    'edit_payment',
     'get_debtors',
     'send_payment_reminder',
     'compare_periods',
@@ -153,6 +154,13 @@ def _api_post(endpoint, json=None, user_id=None, role=None):
         token = _make_auth_cookie(user_id, role)
         c.set_cookie('localhost', 'access_token', token)
         return c.post(endpoint, json=json or {}, headers={'Authorization': f'Bearer {token}'})
+
+
+def _api_put(endpoint, json=None, user_id=None, role=None):
+    with current_app.test_client() as c:
+        token = _make_auth_cookie(user_id, role)
+        c.set_cookie('localhost', 'access_token', token)
+        return c.put(endpoint, json=json or {}, headers={'Authorization': f'Bearer {token}'})
 
 
 @tool(
@@ -434,6 +442,42 @@ def handle_cancel_payment(payment_id, **kwargs):
         if resp and resp.status_code < 400:
             return {'success': True, 'message': data.get('message', 'Pago eliminado')}
         return {'error': data.get('error', 'Error al eliminar pago')}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@tool(
+    name='edit_payment',
+    description='Modifica un pago existente. Puede cambiar monto, metodo, fecha o estado. Usa get_payment_history para encontrar el ID.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'payment_id': {'type': 'integer', 'description': 'ID del pago a modificar'},
+            'amount': {'type': 'number', 'description': 'Nuevo monto (opcional)'},
+            'method': {'type': 'string', 'description': 'Nuevo metodo: Efectivo, Yape, Plin, Transferencia (opcional)'},
+            'payment_date': {'type': 'string', 'description': 'Nueva fecha YYYY-MM-DD (opcional)'},
+            'status': {'type': 'string', 'description': 'Nuevo estado: pendiente, completado, cancelado (opcional)'},
+            'description': {'type': 'string', 'description': 'Nueva descripcion (opcional)'},
+            'receipt_url': {'type': 'string', 'description': 'URL del comprobante de pago (opcional)'},
+        },
+        'required': ['payment_id'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_edit_payment(payment_id, **kwargs):
+    try:
+        updates = {}
+        for field in ('amount', 'method', 'payment_date', 'status', 'description', 'receipt_url'):
+            if field in kwargs and kwargs[field] is not None:
+                updates[field] = kwargs[field]
+        if not updates:
+            return {'error': 'No hay campos para actualizar. Proporcione amount, method, payment_date, status, description o receipt_url.'}
+        resp = _api_put(f'/admin/api/payments/{payment_id}', json=updates, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
+        data = resp.get_json() if resp else {}
+        if resp and resp.status_code < 400:
+            return {'success': True, 'message': data.get('message', 'Pago actualizado'), 'payment': data.get('payment')}
+        return {'error': data.get('error', 'Error al actualizar pago')}
     except Exception as e:
         return {'error': str(e)}
 
