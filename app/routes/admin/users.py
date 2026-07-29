@@ -364,7 +364,7 @@ def patient_stats():
                 'age_ranges': age_ranges,
                 'sex_distribution': sex_counts,
                 'by_sede': sede_counts,
-                'by_join_month': dict(sorted(join_month_counts.items(), reverse=True)[:12])),
+                'by_join_month': dict(sorted(join_month_counts.items(), reverse=True)[:12]),
                 'has_guardian': has_guardian,
                 'has_dni': has_dni,
                 'has_diagnosis': has_diagnosis,
