@@ -224,52 +224,61 @@ class ContractService:
         return Contract.query.get(contract_id)
 
     def get_patient_contracts(self, patient_id):
-        contracts = Contract.query.filter_by(patient_id=patient_id).order_by(Contract.created_at.desc()).all()
-        return [self._contract_summary(c) for c in contracts]
+        try:
+            contracts = Contract.query.filter_by(patient_id=patient_id).order_by(Contract.created_at.desc()).all()
+            return [self._contract_summary(c) for c in contracts]
+        except Exception:
+            return []
 
     def get_all_contracts(self, status=None, limit=200):
-        q = Contract.query
-        if status:
-            q = q.filter_by(status=status)
-        contracts = q.order_by(Contract.created_at.desc()).limit(limit).all()
-        return [self._contract_summary(c) for c in contracts]
+        try:
+            q = Contract.query
+            if status:
+                q = q.filter_by(status=status)
+            contracts = q.order_by(Contract.created_at.desc()).limit(limit).all()
+            return [self._contract_summary(c) for c in contracts]
+        except Exception:
+            return []
 
     def get_contracts_filtered(self, search=None, status=None, month=None, year=None, sede_id=None, limit=200):
-        q = Contract.query
+        try:
+            q = Contract.query
 
-        if status and status != 'todos':
-            if status == 'deudor':
-                today = datetime.utcnow().date()
-                q = q.join(Installment).filter(
-                    Installment.status.in_(['pending', 'partial']),
-                    Installment.due_date < today,
+            if status and status != 'todos':
+                if status == 'deudor':
+                    today = datetime.utcnow().date()
+                    q = q.join(Installment).filter(
+                        Installment.status.in_(['pending', 'partial']),
+                        Installment.due_date < today,
+                    )
+                else:
+                    q = q.filter_by(status=status)
+
+            if sede_id:
+                q = q.join(User, Contract.patient_id == User.id).filter(User.sede_id == sede_id)
+
+            if search:
+                term = f'%{search}%'
+                q = q.join(User, Contract.patient_id == User.id).filter(
+                    db.or_(User.username.ilike(term), User.email.ilike(term))
                 )
-            else:
-                q = q.filter_by(status=status)
 
-        if sede_id:
-            q = q.join(User, Contract.patient_id == User.id).filter(User.sede_id == sede_id)
+            contracts = q.order_by(Contract.created_at.desc()).limit(limit).all()
 
-        if search:
-            term = f'%{search}%'
-            q = q.join(User, Contract.patient_id == User.id).filter(
-                db.or_(User.username.ilike(term), User.email.ilike(term))
-            )
+            if month and year:
+                filtered = []
+                for c in contracts:
+                    for inst in c.installments:
+                        if (inst.due_date and inst.due_date.month == month
+                                and inst.due_date.year == year
+                                and inst.status != 'cancelled'):
+                            filtered.append(c)
+                            break
+                return [self._contract_summary(c) for c in filtered]
 
-        contracts = q.order_by(Contract.created_at.desc()).limit(limit).all()
-
-        if month and year:
-            filtered = []
-            for c in contracts:
-                for inst in c.installments:
-                    if (inst.due_date and inst.due_date.month == month
-                            and inst.due_date.year == year
-                            and inst.status != 'cancelled'):
-                        filtered.append(c)
-                        break
-            return [self._contract_summary(c) for c in filtered]
-
-        return [self._contract_summary(c) for c in contracts]
+            return [self._contract_summary(c) for c in contracts]
+        except Exception:
+            return []
 
     def _contract_summary(self, c):
         total = len(c.installments)
@@ -314,67 +323,70 @@ class ContractService:
         }
 
     def get_contract_detail(self, contract_id):
-        contract = Contract.query.get(contract_id)
-        if not contract:
+        try:
+            contract = Contract.query.get(contract_id)
+            if not contract:
+                return None
+
+            installments = []
+            for inst in contract.installments:
+                installments.append(
+                    {
+                        'id': inst.id,
+                        'number': inst.number,
+                        'due_date': inst.due_date.strftime('%Y-%m-%d'),
+                        'amount': inst.amount,
+                        'paid_amount': inst.paid_amount or 0,
+                        'paid_date': inst.paid_date.strftime('%Y-%m-%d %H:%M') if inst.paid_date else None,
+                        'status': inst.status,
+                        'reminder_sent': inst.reminder_sent,
+                        'payment_id': inst.payment_id,
+                        'payment_method': getattr(inst, 'payment_method', None),
+                        'payment_notes': getattr(inst, 'payment_notes', None),
+                        'is_free_month': getattr(inst, 'is_free_month', False),
+                        'is_implementation': getattr(inst, 'is_implementation', False),
+                        'description': getattr(inst, 'description', None),
+                        'real_amount': getattr(inst, 'real_amount', None),
+                        'refunded_amount': getattr(inst, 'refunded_amount', None) or 0,
+                    }
+                )
+
+            patient = User.query.get(contract.patient_id) if contract.patient_id else None
+
+            return {
+                'id': contract.id,
+                'patient_id': contract.patient_id,
+                'patient_name': patient.username if patient else '',
+                'patient_email': patient.email if patient else '',
+                'name': contract.name,
+                'total_amount': contract.total_amount,
+                'installment_count': contract.installment_count,
+                'installment_amount': contract.installment_amount,
+                'start_date': contract.start_date.strftime('%Y-%m-%d') if contract.start_date else None,
+                'end_date': contract.end_date.strftime('%Y-%m-%d') if contract.end_date else None,
+                'status': contract.status,
+                'notes': contract.notes,
+                'billing_type': getattr(contract, 'billing_type', None) or 'Mensual',
+                'currency': getattr(contract, 'currency', None) or 'PEN',
+                'bonus_months': getattr(contract, 'bonus_months', None) or 0,
+                'sign_date': getattr(contract, 'sign_date', None).strftime('%Y-%m-%d') if getattr(contract, 'sign_date', None) else None,
+                'service_start_date': getattr(contract, 'service_start_date', None).strftime('%Y-%m-%d') if getattr(contract, 'service_start_date', None) else None,
+                'billing_rule': getattr(contract, 'billing_rule', None) or 'standard',
+                'implementation_cost': getattr(contract, 'implementation_cost', None) or 0,
+                'cancelled_at': getattr(contract, 'cancelled_at', None).isoformat() if getattr(contract, 'cancelled_at', None) else None,
+                'cancellation_reason': getattr(contract, 'cancellation_reason', None),
+                'cancellation_comment': getattr(contract, 'cancellation_comment', None),
+                'refund_status': getattr(contract, 'refund_status', None),
+                'total_refunded': getattr(contract, 'total_refunded', None) or 0,
+                'installments': installments,
+                'patient_dni': getattr(patient, 'document_number', None) if patient else None,
+                'guardian_name': getattr(patient, 'guardian_name', None) if patient else None,
+                'guardian_dni': getattr(patient, 'guardian_dni', None) if patient else None,
+                'guardian_contact': getattr(patient, 'guardian_contact', None) if patient else None,
+                'payment_plan': getattr(patient, 'payment_plan', None) if patient else None,
+            }
+        except Exception:
             return None
-
-        installments = []
-        for inst in contract.installments:
-            installments.append(
-                {
-                    'id': inst.id,
-                    'number': inst.number,
-                    'due_date': inst.due_date.strftime('%Y-%m-%d'),
-                    'amount': inst.amount,
-                    'paid_amount': inst.paid_amount or 0,
-                    'paid_date': inst.paid_date.strftime('%Y-%m-%d %H:%M') if inst.paid_date else None,
-                    'status': inst.status,
-                    'reminder_sent': inst.reminder_sent,
-                    'payment_id': inst.payment_id,
-                    'payment_method': getattr(inst, 'payment_method', None),
-                    'payment_notes': getattr(inst, 'payment_notes', None),
-                    'is_free_month': getattr(inst, 'is_free_month', False),
-                    'is_implementation': getattr(inst, 'is_implementation', False),
-                    'description': getattr(inst, 'description', None),
-                    'real_amount': getattr(inst, 'real_amount', None),
-                    'refunded_amount': getattr(inst, 'refunded_amount', None) or 0,
-                }
-            )
-
-        patient = User.query.get(contract.patient_id) if contract.patient_id else None
-
-        return {
-            'id': contract.id,
-            'patient_id': contract.patient_id,
-            'patient_name': patient.username if patient else '',
-            'patient_email': patient.email if patient else '',
-            'name': contract.name,
-            'total_amount': contract.total_amount,
-            'installment_count': contract.installment_count,
-            'installment_amount': contract.installment_amount,
-            'start_date': contract.start_date.strftime('%Y-%m-%d') if contract.start_date else None,
-            'end_date': contract.end_date.strftime('%Y-%m-%d') if contract.end_date else None,
-            'status': contract.status,
-            'notes': contract.notes,
-            'billing_type': getattr(contract, 'billing_type', None) or 'Mensual',
-            'currency': getattr(contract, 'currency', None) or 'PEN',
-            'bonus_months': getattr(contract, 'bonus_months', None) or 0,
-            'sign_date': getattr(contract, 'sign_date', None).strftime('%Y-%m-%d') if getattr(contract, 'sign_date', None) else None,
-            'service_start_date': getattr(contract, 'service_start_date', None).strftime('%Y-%m-%d') if getattr(contract, 'service_start_date', None) else None,
-            'billing_rule': getattr(contract, 'billing_rule', None) or 'standard',
-            'implementation_cost': getattr(contract, 'implementation_cost', None) or 0,
-            'cancelled_at': getattr(contract, 'cancelled_at', None).isoformat() if getattr(contract, 'cancelled_at', None) else None,
-            'cancellation_reason': getattr(contract, 'cancellation_reason', None),
-            'cancellation_comment': getattr(contract, 'cancellation_comment', None),
-            'refund_status': getattr(contract, 'refund_status', None),
-            'total_refunded': getattr(contract, 'total_refunded', None) or 0,
-            'installments': installments,
-            'patient_dni': getattr(patient, 'document_number', None) if patient else None,
-            'guardian_name': getattr(patient, 'guardian_name', None) if patient else None,
-            'guardian_dni': getattr(patient, 'guardian_dni', None) if patient else None,
-            'guardian_contact': getattr(patient, 'guardian_contact', None) if patient else None,
-            'payment_plan': getattr(patient, 'payment_plan', None) if patient else None,
-        }
 
     def pay_installment(
         self,
@@ -528,73 +540,79 @@ class ContractService:
             return False, str(e)
 
     def get_due_installments(self, reference_date=None):
-        if not reference_date:
-            reference_date = datetime.utcnow().date()
+        try:
+            if not reference_date:
+                reference_date = datetime.utcnow().date()
 
-        overdue = (
-            Installment.query.filter(
-                Installment.status.in_(['pending', 'partial']),
-                Installment.due_date < reference_date,
+            overdue = (
+                Installment.query.filter(
+                    Installment.status.in_(['pending', 'partial']),
+                    Installment.due_date < reference_date,
+                )
+                .order_by(Installment.due_date.asc())
+                .all()
             )
-            .order_by(Installment.due_date.asc())
-            .all()
-        )
 
-        result = []
-        for inst in overdue:
-            contract = Contract.query.get(inst.contract_id)
-            patient = User.query.get(contract.patient_id) if contract else None
-            days_overdue = (reference_date - inst.due_date).days if inst.due_date else 0
-            result.append(
-                {
-                    'installment_id': inst.id,
-                    'contract_id': inst.contract_id,
-                    'contract_name': contract.name if contract else '',
-                    'patient_id': patient.id if patient else None,
-                    'patient_name': patient.username if patient else '',
-                    'patient_phone': patient.phone if patient else '',
-                    'due_date': inst.due_date.strftime('%Y-%m-%d') if inst.due_date else None,
-                    'amount': inst.amount,
-                    'paid_amount': inst.paid_amount or 0,
-                    'remaining': inst.amount - (inst.paid_amount or 0),
-                    'days_overdue': days_overdue,
-                    'number': inst.number,
-                    'reminder_sent': inst.reminder_sent,
-                }
-            )
-        return result
+            result = []
+            for inst in overdue:
+                contract = Contract.query.get(inst.contract_id)
+                patient = User.query.get(contract.patient_id) if contract else None
+                days_overdue = (reference_date - inst.due_date).days if inst.due_date else 0
+                result.append(
+                    {
+                        'installment_id': inst.id,
+                        'contract_id': inst.contract_id,
+                        'contract_name': contract.name if contract else '',
+                        'patient_id': patient.id if patient else None,
+                        'patient_name': patient.username if patient else '',
+                        'patient_phone': patient.phone if patient else '',
+                        'due_date': inst.due_date.strftime('%Y-%m-%d') if inst.due_date else None,
+                        'amount': inst.amount,
+                        'paid_amount': inst.paid_amount or 0,
+                        'remaining': inst.amount - (inst.paid_amount or 0),
+                        'days_overdue': days_overdue,
+                        'number': inst.number,
+                        'reminder_sent': inst.reminder_sent,
+                    }
+                )
+            return result
+        except Exception:
+            return []
 
     def get_upcoming_installments(self, days_ahead=7):
-        today = datetime.utcnow().date()
-        limit_date = date.fromordinal(today.toordinal() + days_ahead)
+        try:
+            today = datetime.utcnow().date()
+            limit_date = date.fromordinal(today.toordinal() + days_ahead)
 
-        upcoming = (
-            Installment.query.filter(
-                Installment.status.in_(['pending', 'partial']),
-                Installment.due_date >= today,
-                Installment.due_date <= limit_date,
+            upcoming = (
+                Installment.query.filter(
+                    Installment.status.in_(['pending', 'partial']),
+                    Installment.due_date >= today,
+                    Installment.due_date <= limit_date,
+                )
+                .order_by(Installment.due_date.asc())
+                .all()
             )
-            .order_by(Installment.due_date.asc())
-            .all()
-        )
 
-        result = []
-        for inst in upcoming:
-            contract = Contract.query.get(inst.contract_id)
-            patient = User.query.get(contract.patient_id) if contract else None
-            result.append(
-                {
-                    'installment_id': inst.id,
-                    'contract_id': inst.contract_id,
-                    'patient_id': patient.id if patient else None,
-                    'patient_name': patient.username if patient else '',
-                    'due_date': inst.due_date.strftime('%Y-%m-%d'),
-                    'amount': inst.amount,
-                    'remaining': inst.amount - (inst.paid_amount or 0),
-                    'number': inst.number,
-                }
-            )
-        return result
+            result = []
+            for inst in upcoming:
+                contract = Contract.query.get(inst.contract_id)
+                patient = User.query.get(contract.patient_id) if contract else None
+                result.append(
+                    {
+                        'installment_id': inst.id,
+                        'contract_id': inst.contract_id,
+                        'patient_id': patient.id if patient else None,
+                        'patient_name': patient.username if patient else '',
+                        'due_date': inst.due_date.strftime('%Y-%m-%d'),
+                        'amount': inst.amount,
+                        'remaining': inst.amount - (inst.paid_amount or 0),
+                        'number': inst.number,
+                    }
+                )
+            return result
+        except Exception:
+            return []
 
     def get_debt_summary(self):
         today = datetime.utcnow().date()
