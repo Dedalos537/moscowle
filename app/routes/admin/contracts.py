@@ -253,3 +253,130 @@ def monthly_breakdown():
     except Exception as e:
         logger.exception('Error getting monthly breakdown')
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/contracts/migrate-existing', methods=['POST'])
+@login_required
+@admin_required
+def migrate_existing_patients():
+    """Migrate patients with payment plans to Contract records."""
+    try:
+        from app.models.user import User
+        from app.models.contract import Contract, Installment
+        from app.models.payment import Payment
+        from app.extensions import db
+        from datetime import datetime, date
+        from dateutil.relativedelta import relativedelta
+
+        patients = User.query.filter(
+            User.role == 'jugador',
+            User.is_active == True,
+            User.payment_amount > 0,
+        ).all()
+
+        created = 0
+        skipped = 0
+        errors = []
+
+        for patient in patients:
+            existing = Contract.query.filter_by(patient_id=patient.id, status='active').first()
+            if existing:
+                skipped += 1
+                continue
+
+            try:
+                billing_type = 'Mensual'
+                if patient.payment_plan:
+                    plan_map = {
+                        'weekly': 'Semanal',
+                        'biweekly': 'Quincenal',
+                        'monthly': 'Mensual',
+                        'annual': 'Anual',
+                    }
+                    billing_type = plan_map.get(patient.payment_plan, 'Mensual')
+
+                installment_count = 12
+                if billing_type == 'Semanal':
+                    installment_count = 48
+                elif billing_type == 'Quincenal':
+                    installment_count = 24
+                elif billing_type == 'Anual':
+                    installment_count = 1
+
+                total_amount = patient.payment_amount * installment_count
+                start_date = patient.payment_due_date or date.today()
+
+                contract = Contract(
+                    patient_id=patient.id,
+                    name=f'Plan {billing_type} - {patient.username}',
+                    total_amount=round(total_amount, 2),
+                    installment_count=installment_count,
+                    installment_amount=round(patient.payment_amount, 2),
+                    start_date=start_date,
+                    status='active',
+                    billing_type=billing_type,
+                    currency='PEN',
+                    billing_rule='standard',
+                )
+                db.session.add(contract)
+                db.session.flush()
+
+                existing_payments = Payment.query.filter_by(patient_id=patient.id).order_by(Payment.date.asc()).all()
+
+                if billing_type == 'Semanal':
+                    from datetime import timedelta
+                    for i in range(installment_count):
+                        due = start_date + timedelta(weeks=i)
+                        inst = Installment(
+                            contract_id=contract.id,
+                            number=i + 1,
+                            due_date=due,
+                            amount=round(patient.payment_amount, 2),
+                            status='pending',
+                            description=f'Cuota Semanal {i + 1}',
+                        )
+                        db.session.add(inst)
+                elif billing_type == 'Quincenal':
+                    from datetime import timedelta
+                    for i in range(installment_count):
+                        due = start_date + timedelta(days=14 * i)
+                        inst = Installment(
+                            contract_id=contract.id,
+                            number=i + 1,
+                            due_date=due,
+                            amount=round(patient.payment_amount, 2),
+                            status='pending',
+                            description=f'Cuota Quincenal {i + 1}',
+                        )
+                        db.session.add(inst)
+                else:
+                    for i in range(installment_count):
+                        due = start_date + relativedelta(months=i)
+                        inst = Installment(
+                            contract_id=contract.id,
+                            number=i + 1,
+                            due_date=due,
+                            amount=round(patient.payment_amount, 2),
+                            status='pending',
+                            description=f'Cuota Mensual {i + 1}',
+                        )
+                        db.session.add(inst)
+
+                created += 1
+            except Exception as e:
+                errors.append(f'Patient {patient.id}: {str(e)}')
+                db.session.rollback()
+                continue
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'created': created,
+            'skipped': skipped,
+            'errors': errors,
+            'total_patients': len(patients),
+        })
+    except Exception as e:
+        logger.exception('Error migrating existing patients')
+        return jsonify({'success': False, 'error': str(e)}), 500

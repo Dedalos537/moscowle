@@ -843,6 +843,10 @@
         Contratos
       </h3>
       <div class="flex gap-2 items-center">
+        @if (!migrationDone) {
+        <app-button variant="secondary" label="Migrar Pacientes" [icon]="['fas', 'sync']"
+          (clicked)="migrateExistingPatients()"></app-button>
+        }
         <app-button variant="primary" label="Nuevo Contrato" [icon]="['fas', 'plus']"
           (clicked)="openCreateContractModal()"></app-button>
       </div>

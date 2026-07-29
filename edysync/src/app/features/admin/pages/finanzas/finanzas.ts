@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
@@ -158,6 +159,8 @@ export class Finanzas implements OnInit, OnDestroy {
   contractSummaryPending = 0;
   contractSummaryOverdue = 0;
   contractSummaryCollected = 0;
+  migrationDone = false;
+  migrating = false;
 
   showCreateContractModal = false;
   createContractForm: CreateContractForm = {
@@ -267,6 +270,7 @@ export class Finanzas implements OnInit, OnDestroy {
     private toastService: ToastService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
+    private http: HttpClient,
   ) {}
 
   ngOnInit() {
@@ -588,6 +592,7 @@ export class Finanzas implements OnInit, OnDestroy {
     };
     this.createContractStatus = '';
     this.showCreateContractModal = true;
+    this.cdr.markForCheck();
     this.loadPatientsList();
   }
 
@@ -598,6 +603,30 @@ export class Finanzas implements OnInit, OnDestroy {
         error: () => this.cdr.markForCheck()
       })
     );
+  }
+
+  migrateExistingPatients() {
+    if (this.migrating) return;
+    this.migrating = true;
+    this.cdr.markForCheck();
+    this.http.post('/admin/api/contracts/migrate-existing', {}).subscribe({
+      next: (res: any) => {
+        this.migrating = false;
+        if (res.success) {
+          this.migrationDone = true;
+          this.toastService.show(`Migración completada: ${res.created} contratos creados, ${res.skipped} ya existían`, 'success');
+          this.loadContracts();
+        } else {
+          this.toastService.show('Error en la migración: ' + (res.error || 'Error desconocido'), 'error');
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.migrating = false;
+        this.toastService.show('Error de conexión al migrar', 'error');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   submitCreateContract() {
