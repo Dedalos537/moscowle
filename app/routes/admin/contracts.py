@@ -261,13 +261,53 @@ def monthly_breakdown():
 def migrate_existing_patients():
     """Migrate patients with payment plans to Contract records."""
     try:
-        from app.models.user import User
-        from app.models.contract import Contract, Installment
-        from app.models.payment import Payment
         from app.extensions import db
-        from datetime import datetime, date
-        from dateutil.relativedelta import relativedelta
+        from app.models.user import User
+        from datetime import datetime, date, timedelta
 
+        conn = db.session.connection()
+
+        # First, ensure contract columns exist (in case migration hasn't run)
+        contract_cols_to_add = [
+            ("billing_type", "VARCHAR(20) DEFAULT 'Mensual'"),
+            ("currency", "VARCHAR(5) DEFAULT 'PEN'"),
+            ("bonus_months", "INTEGER DEFAULT 0"),
+            ("sign_date", "DATE"),
+            ("service_start_date", "DATE"),
+            ("billing_rule", "VARCHAR(20) DEFAULT 'standard'"),
+            ("implementation_cost", "FLOAT DEFAULT 0"),
+            ("cancelled_at", "DATETIME"),
+            ("cancellation_reason", "VARCHAR(200)"),
+            ("cancellation_comment", "TEXT"),
+            ("refund_status", "VARCHAR(20)"),
+            ("total_refunded", "FLOAT DEFAULT 0"),
+        ]
+        for col_name, col_def in contract_cols_to_add:
+            try:
+                conn.execute(db.text(f"ALTER TABLE contract ADD COLUMN {col_name} {col_def}"))
+            except Exception:
+                pass  # Column already exists
+
+        installment_cols_to_add = [
+            ("real_amount", "FLOAT"),
+            ("payment_method", "VARCHAR(50)"),
+            ("payment_currency", "VARCHAR(5)"),
+            ("payment_notes", "TEXT"),
+            ("is_free_month", "BOOLEAN DEFAULT 0"),
+            ("refunded_amount", "FLOAT DEFAULT 0"),
+            ("refunded_at", "DATETIME"),
+            ("description", "VARCHAR(200)"),
+            ("is_implementation", "BOOLEAN DEFAULT 0"),
+        ]
+        for col_name, col_def in installment_cols_to_add:
+            try:
+                conn.execute(db.text(f"ALTER TABLE installment ADD COLUMN {col_name} {col_def}"))
+            except Exception:
+                pass  # Column already exists
+
+        db.session.commit()
+
+        # Now migrate patients to contracts using raw SQL
         patients = User.query.filter(
             User.role == 'jugador',
             User.is_active == True,
@@ -279,12 +319,15 @@ def migrate_existing_patients():
         errors = []
 
         for patient in patients:
-            existing = Contract.query.filter_by(patient_id=patient.id, status='active').first()
-            if existing:
-                skipped += 1
-                continue
-
             try:
+                existing = conn.execute(
+                    db.text("SELECT id FROM contract WHERE patient_id = :pid AND status = 'active'"),
+                    {'pid': patient.id}
+                ).fetchone()
+                if existing:
+                    skipped += 1
+                    continue
+
                 billing_type = 'Mensual'
                 if patient.payment_plan:
                     plan_map = {
@@ -306,61 +349,70 @@ def migrate_existing_patients():
                 total_amount = patient.payment_amount * installment_count
                 start_date = patient.payment_due_date or date.today()
 
-                contract = Contract(
-                    patient_id=patient.id,
-                    name=f'Plan {billing_type} - {patient.username}',
-                    total_amount=round(total_amount, 2),
-                    installment_count=installment_count,
-                    installment_amount=round(patient.payment_amount, 2),
-                    start_date=start_date,
-                    status='active',
-                    billing_type=billing_type,
-                    currency='PEN',
-                    billing_rule='standard',
+                result = conn.execute(
+                    db.text("""
+                        INSERT INTO contract (patient_id, name, total_amount, installment_count,
+                            installment_amount, start_date, status, billing_type, currency, billing_rule,
+                            created_at, updated_at)
+                        VALUES (:pid, :name, :total, :icount, :iamount, :start, 'active',
+                            :btype, 'PEN', 'standard', NOW(), NOW())
+                    """),
+                    {
+                        'pid': patient.id,
+                        'name': f'Plan {billing_type} - {patient.username}',
+                        'total': round(total_amount, 2),
+                        'icount': installment_count,
+                        'iamount': round(patient.payment_amount, 2),
+                        'start': start_date,
+                        'btype': billing_type,
+                    }
                 )
-                db.session.add(contract)
-                db.session.flush()
-
-                existing_payments = Payment.query.filter_by(patient_id=patient.id).order_by(Payment.date.asc()).all()
+                contract_id = result.lastrowid
 
                 if billing_type == 'Semanal':
-                    from datetime import timedelta
                     for i in range(installment_count):
                         due = start_date + timedelta(weeks=i)
-                        inst = Installment(
-                            contract_id=contract.id,
-                            number=i + 1,
-                            due_date=due,
-                            amount=round(patient.payment_amount, 2),
-                            status='pending',
-                            description=f'Cuota Semanal {i + 1}',
+                        conn.execute(
+                            db.text("""
+                                INSERT INTO installment (contract_id, number, due_date, amount, status,
+                                    description, is_free_month, is_implementation, created_at, updated_at)
+                                VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
+                            """),
+                            {'cid': contract_id, 'num': i + 1, 'due': due,
+                             'amt': round(patient.payment_amount, 2),
+                             'desc': f'Cuota Semanal {i + 1}'}
                         )
-                        db.session.add(inst)
                 elif billing_type == 'Quincenal':
-                    from datetime import timedelta
                     for i in range(installment_count):
                         due = start_date + timedelta(days=14 * i)
-                        inst = Installment(
-                            contract_id=contract.id,
-                            number=i + 1,
-                            due_date=due,
-                            amount=round(patient.payment_amount, 2),
-                            status='pending',
-                            description=f'Cuota Quincenal {i + 1}',
+                        conn.execute(
+                            db.text("""
+                                INSERT INTO installment (contract_id, number, due_date, amount, status,
+                                    description, is_free_month, is_implementation, created_at, updated_at)
+                                VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
+                            """),
+                            {'cid': contract_id, 'num': i + 1, 'due': due,
+                             'amt': round(patient.payment_amount, 2),
+                             'desc': f'Cuota Quincenal {i + 1}'}
                         )
-                        db.session.add(inst)
                 else:
                     for i in range(installment_count):
-                        due = start_date + relativedelta(months=i)
-                        inst = Installment(
-                            contract_id=contract.id,
-                            number=i + 1,
-                            due_date=due,
-                            amount=round(patient.payment_amount, 2),
-                            status='pending',
-                            description=f'Cuota Mensual {i + 1}',
+                        m = start_date.month + i
+                        y = start_date.year + (m - 1) // 12
+                        m = (m - 1) % 12 + 1
+                        last_day = 30 if m in (4, 6, 9, 11) else (29 if m == 2 and y % 4 == 0 else 28) if m == 2 else 31
+                        day = min(start_date.day, last_day)
+                        due = date(y, m, day)
+                        conn.execute(
+                            db.text("""
+                                INSERT INTO installment (contract_id, number, due_date, amount, status,
+                                    description, is_free_month, is_implementation, created_at, updated_at)
+                                VALUES (:cid, :num, :due, :amt, 'pending', :desc, 0, 0, NOW(), NOW())
+                            """),
+                            {'cid': contract_id, 'num': i + 1, 'due': due,
+                             'amt': round(patient.payment_amount, 2),
+                             'desc': f'Cuota Mensual {i + 1}'}
                         )
-                        db.session.add(inst)
 
                 created += 1
             except Exception as e:
