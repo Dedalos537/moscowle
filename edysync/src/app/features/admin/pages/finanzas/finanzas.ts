@@ -77,7 +77,7 @@ export class Finanzas implements OnInit, OnDestroy {
   therapistsList: Therapist[] = [];
   paymentsLoading = true;
   historyLoading = true;
-  pagosTab: 'pacientes' | 'historial' | 'contratos' = 'pacientes';
+  pagosTab: 'pacientes' | 'historial' = 'pacientes';
 
   searchQuery = '';
   selectedSedeId: number | null = null;
@@ -143,6 +143,11 @@ export class Finanzas implements OnInit, OnDestroy {
   patientTotalPages = 1;
 
   patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'sin_plan' = 'all';
+
+  expandedPatientId: number | null = null;
+  selectedPatientContract: ContractDetail | null = null;
+  contractLoading = false;
+  today = new Date().toISOString().split('T')[0];
 
   get patientStats() {
     const total = this.patients.length;
@@ -615,8 +620,8 @@ export class Finanzas implements OnInit, OnDestroy {
     console.log('[FINANZAS] openCreateContractModal called');
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-      installment_count: 4, start_date: '', implementation_cost: 0, billing_rule: 'standard',
-      bonus_months: 0, name: '', notes: '',
+      installment_count: 4, start_date: new Date().toISOString().substring(1, 10),
+      implementation_cost: 0, billing_rule: 'standard', bonus_months: 0, name: '', notes: '',
     };
     this.createContractStatus = '';
     this.showCreateContractModal = true;
@@ -662,27 +667,56 @@ export class Finanzas implements OnInit, OnDestroy {
 
   submitCreateContract() {
     if (!this.createContractForm.patient_id || this.createContractForm.total_amount <= 0) {
-      this.createContractStatus = 'Selecciona un paciente y monto válido.';
+      this.createContractStatus = 'Selecciona un paciente y monto valido.';
       return;
     }
     this.createContractStatus = '';
-    this.subscriptions.add(
-      this.adminService.createContract(this.createContractForm).subscribe({
-        next: (res) => {
-          if (res.success) {
-            this.showCreateContractModal = false;
-            this.loadContracts();
-          } else {
-            this.createContractStatus = res.error || 'Error al crear contrato';
+    const isEdit = this.selectedPatientContract && this.selectedPatientContract.patient_id === this.createContractForm.patient_id;
+    if (isEdit) {
+      this.subscriptions.add(
+        this.adminService.updateContract(this.selectedPatientContract!.id, {
+          name: this.createContractForm.name,
+          notes: this.createContractForm.notes,
+          billing_type: this.createContractForm.billing_type,
+          currency: this.createContractForm.currency,
+          billing_rule: this.createContractForm.billing_rule,
+        }).subscribe({
+          next: (res) => {
+            if (res.success) {
+              this.showCreateContractModal = false;
+              this.loadPatientContract(this.createContractForm.patient_id!);
+              this.toastService.show('Contrato actualizado', 'success');
+            } else {
+              this.createContractStatus = res.error || 'Error al actualizar';
+            }
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.createContractStatus = err.error?.error || 'Error de conexion';
+            this.cdr.markForCheck();
           }
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.createContractStatus = err.error?.error || 'Error de conexión';
-          this.cdr.markForCheck();
-        }
-      })
-    );
+        })
+      );
+    } else {
+      this.subscriptions.add(
+        this.adminService.createContract(this.createContractForm).subscribe({
+          next: (res) => {
+            if (res.success) {
+              this.showCreateContractModal = false;
+              this.loadPatientContract(this.createContractForm.patient_id!);
+              this.toastService.show('Contrato creado', 'success');
+            } else {
+              this.createContractStatus = res.error || 'Error al crear contrato';
+            }
+            this.cdr.markForCheck();
+          },
+          error: (err) => {
+            this.createContractStatus = err.error?.error || 'Error de conexion';
+            this.cdr.markForCheck();
+          }
+        })
+      );
+    }
   }
 
   openPayInstallmentModal(installment: any, contract: Contract) {
@@ -898,6 +932,77 @@ export class Finanzas implements OnInit, OnDestroy {
   setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'sin_plan') {
     this.patientStatusFilter = filter;
     this.patientPage = 1;
+    this.cdr.markForCheck();
+  }
+
+  togglePatientExpand(patient: PatientRow) {
+    if (this.expandedPatientId === patient.id) {
+      this.expandedPatientId = null;
+      this.selectedPatientContract = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    this.expandedPatientId = patient.id;
+    this.selectedPatientContract = null;
+    this.contractLoading = true;
+    this.cdr.markForCheck();
+    this.loadPatientContract(patient.id);
+  }
+
+  private loadPatientContract(patientId: number) {
+    this.subscriptions.add(
+      this.adminService.getContractsFiltered({ patient_id: patientId }).subscribe({
+        next: (res) => {
+          const contracts = (res.contracts || []) as any;
+          const active = contracts.find((c: any) => c.status === 'active');
+          if (active) {
+            this.adminService.getContractDetail(active.id).subscribe({
+              next: (detailRes) => {
+                this.selectedPatientContract = detailRes.contract as any;
+                this.contractLoading = false;
+                this.cdr.markForCheck();
+              },
+              error: () => { this.contractLoading = false; this.cdr.markForCheck(); }
+            });
+          } else {
+            this.contractLoading = false;
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => { this.contractLoading = false; this.cdr.markForCheck(); }
+      })
+    );
+  }
+
+  openCreateContractForPatient(patient: PatientRow) {
+    this.createContractForm = {
+      patient_id: patient.id, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
+      installment_count: 4, start_date: new Date().toISOString().substring(0, 10),
+      implementation_cost: 0, billing_rule: 'standard', bonus_months: 0,
+      name: `Plan ${patient.username}`, notes: '',
+    };
+    this.createContractStatus = '';
+    this.showCreateContractModal = true;
+    this.cdr.markForCheck();
+  }
+
+  openEditContractModal() {
+    if (!this.selectedPatientContract) return;
+    this.createContractForm = {
+      patient_id: this.selectedPatientContract.patient_id,
+      total_amount: this.selectedPatientContract.total_amount,
+      billing_type: this.selectedPatientContract.billing_type,
+      currency: this.selectedPatientContract.currency,
+      installment_count: this.selectedPatientContract.installment_count,
+      start_date: this.selectedPatientContract.start_date || '',
+      implementation_cost: this.selectedPatientContract.implementation_cost,
+      billing_rule: this.selectedPatientContract.billing_rule,
+      bonus_months: 0,
+      name: this.selectedPatientContract.name,
+      notes: this.selectedPatientContract.notes || '',
+    };
+    this.createContractStatus = '';
+    this.showCreateContractModal = true;
     this.cdr.markForCheck();
   }
 

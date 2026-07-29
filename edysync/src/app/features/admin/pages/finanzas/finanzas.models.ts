@@ -159,6 +159,9 @@ export interface CreateContractForm {
   bonus_months: number;
   name: string;
   notes: string;
+  guardian_name?: string;
+  guardian_dni?: string;
+  patient_dni?: string;
 }
 
 export interface PayInstallmentForm {

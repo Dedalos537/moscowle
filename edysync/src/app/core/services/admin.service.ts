@@ -136,7 +136,7 @@ export class AdminService {
     });
   }
 
-  getContractsFiltered(filters: { search?: string; status?: string; month?: number; year?: number; sede_id?: number }): Observable<{ success: boolean; contracts: any[] }> {
+  getContractsFiltered(filters: { search?: string; status?: string; month?: number; year?: number; sede_id?: number; patient_id?: number }): Observable<{ success: boolean; contracts: any[] }> {
     let params = new HttpParams();
     if (filters.search) params = params.set('search', filters.search);
     if (filters.status) params = params.set('status', filters.status);
