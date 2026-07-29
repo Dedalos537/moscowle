@@ -469,9 +469,16 @@ export class AiChat implements AfterViewChecked, OnDestroy {
         if (data.success) {
           if (data.ocr) {
             const o = data.ocr;
-            this.inputMessage = `Voucher de pago subido. Imagen: ${data.url}. Datos detectados: monto=S/${o.amount || '?'}, metodo=${o.method || '?'}, fecha=${o.date || '?'}, paciente=${o.patient_hint || '?'}. ¿Registrar este pago?`;
+            const parts = [];
+            if (o.patient_hint) parts.push(`Paciente: ${o.patient_hint}`);
+            if (o.amount) parts.push(`Monto: S/${o.amount}`);
+            if (o.method) parts.push(`Método: ${o.method}`);
+            if (o.date) parts.push(`Fecha: ${o.date}`);
+            if (o.reference) parts.push(`Ref: ${o.reference}`);
+            const ocrText = parts.length > 0 ? parts.join(' - ') : 'No se pudieron leer datos';
+            this.inputMessage = `Voucher detectado: ${ocrText}. Imagen: ${data.url}. ¿Registrar este pago? Si los datos son incorrectos, indíqueme los correctos.`;
           } else {
-            this.inputMessage = `Imagen subida: ${data.url}. Por favor indique los datos del pago: paciente, monto, método y fecha.`;
+            this.inputMessage = `Imagen subida: ${data.url}. No pude leer el comprobante. Por favor indique: paciente, monto, método y fecha.`;
           }
           this.sendMessage();
         } else {

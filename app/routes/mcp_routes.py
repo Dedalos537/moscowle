@@ -367,13 +367,17 @@ def _ocr_voucher(file_path, ext):
 
         mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
         prompt = (
-            'Extrae los datos de este comprobante de pago:\n'
-            '- monto (numero)\n'
-            '- metodo de pago (Efectivo, Yape, Plin, Transferencia, IA/Copilot)\n'
-            '- fecha (YYYY-MM-DD)\n'
-            '- nombre del paciente si aparece\n'
-            '- numero de operacion/referencia si aparece\n'
-            'Responde SOLO con JSON: {"amount": number, "method": "string", "date": "string", "patient_hint": "string", "reference": "string"}'
+            'LEE ESTA IMAGEN CUIDADOSAMENTE. Es un comprobante de pago.\n'
+            'NO INVENTES DATOS. Si no puedes leer algo, pon null.\n\n'
+            'Busca:\n'
+            '- Monto total (el número grande, puede tener S/ o S/.)\n'
+            '- Nombre de quien recibe o envía (el nombre completo que aparece)\n'
+            '- Fecha (formato: DD mes AAAA o YYYY-MM-DD)\n'
+            '- Método de pago (Plin, Yape, Efectivo, Transferencia)\n'
+            '- Número de operación o referencia\n\n'
+            'Responde SOLO con JSON válido:\n'
+            '{"amount": number|null, "method": "Plin"|"Yape"|"Efectivo"|"Transferencia"|null, "date": "YYYY-MM-DD"|null, "patient_hint": "nombre completo"|null, "reference": "string"|null}\n\n'
+            'EJEMPLO de respuesta correcta: {"amount": 200, "method": "Plin", "date": "2026-07-22", "patient_hint": "Diego Alejandro Centeno Barrutia", "reference": "2026077240"}'
         )
 
         # Try Gemini first
