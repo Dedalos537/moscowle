@@ -1,3 +1,5 @@
+import json
+
 from app.models import Notification, UserNotificationPreference, db
 
 
@@ -14,6 +16,9 @@ class NotificationRepository:
         icon=None,
         metadata_json=None,
     ):
+        # Convert icon list to JSON string if needed
+        if isinstance(icon, list):
+            icon = json.dumps(icon)
         notif = Notification(
             user_id=user_id,
             title=title,

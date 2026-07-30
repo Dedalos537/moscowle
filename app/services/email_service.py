@@ -185,45 +185,45 @@ class EmailService:
     @staticmethod
     def send_password_reset_code(recipient_email: str, username: str, code: str):
         if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
-            current_app.logger.warning("Email not configured. Skipping password reset code email.")
+            current_app.logger.warning('Email not configured. Skipping password reset code email.')
             return False
         try:
-            subject = "Código de recuperación - Moscowle"
+            subject = 'Código de recuperación - Moscowle'
             body = (
-                f"Hola {username or recipient_email},\n\n"
-                f"Has solicitado restablecer tu contraseña.\n\n"
-                f"Tu código de verificación es: {code}\n\n"
-                f"Este código expira en 30 minutos.\n\n"
-                "Si no solicitaste este cambio, ignora este mensaje.\n\n"
-                "Saludos,\nEquipo Moscowle"
+                f'Hola {username or recipient_email},\n\n'
+                f'Has solicitado restablecer tu contraseña.\n\n'
+                f'Tu código de verificación es: {code}\n\n'
+                f'Este código expira en 30 minutos.\n\n'
+                'Si no solicitaste este cambio, ignora este mensaje.\n\n'
+                'Saludos,\nEquipo Moscowle'
             )
             msg = MailMessage(subject=subject, recipients=[recipient_email], body=body)
             mail.send(msg)
-            current_app.logger.info(f"Password reset code sent to {recipient_email}")
+            current_app.logger.info(f'Password reset code sent to {recipient_email}')
             return True
         except Exception as e:
-            current_app.logger.error(f"Failed to send password reset code to {recipient_email}: {str(e)}")
+            current_app.logger.error(f'Failed to send password reset code to {recipient_email}: {str(e)}')
             return False
 
     @staticmethod
     def send_password_reset_notification_admin(admin_email: str, user_email: str, username: str):
         if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
-            current_app.logger.warning("Email not configured. Skipping admin reset notification.")
+            current_app.logger.warning('Email not configured. Skipping admin reset notification.')
             return False
         try:
-            subject = "Solicitud de cambio de contraseña - Moscowle"
+            subject = 'Solicitud de cambio de contraseña - Moscowle'
             body = (
-                f"Hola Administrador,\n\n"
-                f"El usuario {username or user_email} ({user_email}) ha solicitado un cambio de contraseña.\n\n"
-                f"Ingresa al panel de administración para revisar la solicitud.\n\n"
-                "Saludos,\nEquipo Moscowle"
+                f'Hola Administrador,\n\n'
+                f'El usuario {username or user_email} ({user_email}) ha solicitado un cambio de contraseña.\n\n'
+                f'Ingresa al panel de administración para revisar la solicitud.\n\n'
+                'Saludos,\nEquipo Moscowle'
             )
             msg = MailMessage(subject=subject, recipients=[admin_email], body=body)
             mail.send(msg)
-            current_app.logger.info(f"Password reset notification sent to admin {admin_email}")
+            current_app.logger.info(f'Password reset notification sent to admin {admin_email}')
             return True
         except Exception as e:
-            current_app.logger.error(f"Failed to send admin reset notification: {str(e)}")
+            current_app.logger.error(f'Failed to send admin reset notification: {str(e)}')
             return False
 
     @staticmethod
@@ -307,4 +307,22 @@ class EmailService:
 
         except Exception as e:
             current_app.logger.error(f'Failed to send enhanced admin report: {str(e)}')
+            return False
+
+    @staticmethod
+    def send_notification_email(subject, recipients, body):
+        """Send a generic notification email."""
+        if not current_app.config.get('MAIL_USERNAME'):
+            current_app.logger.info(f'[MOCK EMAIL] {subject} to {recipients}')
+            return False
+        try:
+            msg = MailMessage(
+                subject=subject,
+                recipients=recipients if isinstance(recipients, list) else [recipients],
+                body=body,
+            )
+            mail.send(msg)
+            return True
+        except Exception as e:
+            current_app.logger.error(f'Failed to send notification email: {e}')
             return False
