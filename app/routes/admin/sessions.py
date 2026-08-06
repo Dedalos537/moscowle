@@ -136,6 +136,19 @@ def batch_create_sessions():
     if not all([therapist_id, patient_ids, start_time_str, end_time_str]):
         return jsonify({'error': 'Faltan datos requeridos'}), 400
 
+    for field_name, field_value in [('start_time', start_time_str), ('end_time', end_time_str)]:
+        parts = field_value.split(':')
+        if len(parts) != 2:
+            return jsonify({'error': f'{field_name} debe tener formato HH:MM'}), 400
+        try:
+            h, m = int(parts[0]), int(parts[1])
+        except ValueError:
+            return jsonify({'error': f'{field_name} debe contener solo números'}), 400
+        if h < 0 or h > 23:
+            return jsonify({'error': f'{field_name} horas deben estar entre 0 y 23'}), 400
+        if m < 0 or m > 59:
+            return jsonify({'error': f'{field_name} minutos deben estar entre 0 y 59'}), 400
+
     try:
         start_h, start_m = map(int, start_time_str.split(':'))
         end_h, end_m = map(int, end_time_str.split(':'))
@@ -266,22 +279,40 @@ def update_session(session_id):
         if 'title' in data:
             appt.title = data['title']
 
-        if 'start_time' in data and isinstance(data['start_time'], str) and 'T' in data['start_time']:
-            appt.start_time = datetime.fromisoformat(data['start_time'])
-        elif 'start_date' in data and 'start_time' in data:
-            start_dt = datetime.strptime(f'{data["start_date"]} {data["start_time"]}', '%Y-%m-%d %H:%M')
-            appt.start_time = start_dt
+        if 'start_time' in data:
+            st = data['start_time']
+            if isinstance(st, str) and 'T' in st:
+                try:
+                    appt.start_time = datetime.fromisoformat(st)
+                except (ValueError, TypeError):
+                    return jsonify(
+                        {'error': 'Formato de start_time inválido. Use ISO 8601 (ej: 2026-08-05T10:00)'}
+                    ), 400
+            elif isinstance(st, str) and data.get('start_date'):
+                try:
+                    start_dt = datetime.strptime(f'{data["start_date"]} {st}', '%Y-%m-%d %H:%M')
+                    appt.start_time = start_dt
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Formato de start_time inválido. Use HH:MM (ej: 10:00)'}), 400
 
-        if 'end_time' in data and isinstance(data['end_time'], str) and 'T' in data['end_time']:
-            end_dt = datetime.fromisoformat(data['end_time'])
-            if appt.start_time and end_dt < appt.start_time:
-                end_dt += timedelta(days=1)
-            appt.end_time = end_dt
-        elif 'end_time' in data and data.get('start_date'):
-            end_dt = datetime.strptime(f'{data["start_date"]} {data["end_time"]}', '%Y-%m-%d %H:%M')
-            if end_dt < appt.start_time:
-                end_dt += timedelta(days=1)
-            appt.end_time = end_dt
+        if 'end_time' in data:
+            et = data['end_time']
+            if isinstance(et, str) and 'T' in et:
+                try:
+                    end_dt = datetime.fromisoformat(et)
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Formato de end_time inválido. Use ISO 8601 (ej: 2026-08-05T11:00)'}), 400
+                if appt.start_time and end_dt < appt.start_time:
+                    end_dt += timedelta(days=1)
+                appt.end_time = end_dt
+            elif isinstance(et, str) and data.get('start_date'):
+                try:
+                    end_dt = datetime.strptime(f'{data["start_date"]} {et}', '%Y-%m-%d %H:%M')
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Formato de end_time inválido. Use HH:MM (ej: 11:00)'}), 400
+                if end_dt < appt.start_time:
+                    end_dt += timedelta(days=1)
+                appt.end_time = end_dt
 
         if 'notes' in data:
             appt.notes = data['notes']

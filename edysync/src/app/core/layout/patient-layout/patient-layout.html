@@ -48,37 +48,37 @@
         <span>Mi Panel</span>
       </a>
       <a routerLink="/patient/sessions" routerLinkActive="active" #rls="routerLinkActive"
-         class="nav-link" [class.active]="rls.isActive">
+         class="nav-link" [class.active]="rls.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'calendar-alt']" [class.!text-primary-container]="rls.isActive"></fa-icon>
         <span>Mis Sesiones</span>
       </a>
       <a routerLink="/patient/calendar" routerLinkActive="active" #rlc="routerLinkActive"
-         class="nav-link" [class.active]="rlc.isActive">
+         class="nav-link" [class.active]="rlc.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'calendar-day']" [class.!text-primary-container]="rlc.isActive"></fa-icon>
         <span>Calendario</span>
       </a>
       <a routerLink="/patient/progress" routerLinkActive="active" #rlp="routerLinkActive"
-         class="nav-link" [class.active]="rlp.isActive">
+         class="nav-link" [class.active]="rlp.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'chart-line']" [class.!text-primary-container]="rlp.isActive"></fa-icon>
         <span>Mi Progreso</span>
       </a>
       <a routerLink="/patient/payments" routerLinkActive="active" #rlpm="routerLinkActive"
-         class="nav-link" [class.active]="rlpm.isActive">
+         class="nav-link" [class.active]="rlpm.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'file-invoice-dollar']" [class.!text-primary-container]="rlpm.isActive"></fa-icon>
         <span>Pagos</span>
       </a>
       <a routerLink="/patient/my-therapist" routerLinkActive="active" #rlt="routerLinkActive"
-         class="nav-link" [class.active]="rlt.isActive">
+         class="nav-link" [class.active]="rlt.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'user-md']" [class.!text-primary-container]="rlt.isActive"></fa-icon>
         <span>Mi Terapeuta</span>
       </a>
       <a routerLink="/patient/incidents" routerLinkActive="active" #rli="routerLinkActive"
-         class="nav-link" [class.active]="rli.isActive">
+         class="nav-link" [class.active]="rli.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'triangle-exclamation']" [class.!text-primary-container]="rli.isActive"></fa-icon>
         <span>Incidencias</span>
       </a>
       <a routerLink="/patient/messages" routerLinkActive="active" #rlmg="routerLinkActive"
-         class="nav-link" [class.active]="rlmg.isActive">
+         class="nav-link" [class.active]="rlmg.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlmg.isActive"></fa-icon>
         <span>Mensajes</span>
       </a>

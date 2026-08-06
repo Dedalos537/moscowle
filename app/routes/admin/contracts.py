@@ -283,6 +283,7 @@ def migrate_existing_patients():
                 pass  # Column already exists
 
         db.session.commit()
+        conn = db.session.connection()
 
         # Now migrate patients to contracts using raw SQL
         patients = User.query.filter(
@@ -324,7 +325,26 @@ def migrate_existing_patients():
                     installment_count = 1
 
                 total_amount = patient.payment_amount * installment_count
-                start_date = patient.payment_due_date or date.today()
+
+                # Use earliest payment date as start_date (so past payments match installments)
+                earliest_pay = conn.execute(
+                    db.text('SELECT MIN(date) as min_date FROM payment WHERE patient_id = :pid'),
+                    {'pid': patient.id},
+                ).fetchone()
+                if earliest_pay and earliest_pay.min_date:
+                    raw_date = earliest_pay.min_date
+                    if hasattr(raw_date, 'date'):
+                        raw_date = raw_date.date()
+                    start_date = date(raw_date.year, raw_date.month, 1)
+                else:
+                    start_date = patient.payment_due_date or date.today()
+
+                # Ensure installment_count covers from start_date to today + 1 month
+                today = date.today()
+                months_needed = (today.year - start_date.year) * 12 + (today.month - start_date.month) + 1
+                if installment_count < months_needed:
+                    installment_count = months_needed
+                    total_amount = patient.payment_amount * installment_count
 
                 result = conn.execute(
                     db.text("""
@@ -402,6 +422,69 @@ def migrate_existing_patients():
                                 'desc': f'Cuota Mensual {i + 1}',
                             },
                         )
+
+                # Link existing Payment records to installments
+                try:
+                    payments = conn.execute(
+                        db.text(
+                            'SELECT id, amount, method, date, notes FROM payment '
+                            'WHERE patient_id = :pid AND installment_id IS NULL ORDER BY date ASC'
+                        ),
+                        {'pid': patient.id},
+                    ).fetchall()
+
+                    if payments:
+                        # Get installments for this contract ordered by due_date
+                        installments = conn.execute(
+                            db.text(
+                                'SELECT id, due_date, amount, status FROM installment '
+                                "WHERE contract_id = :cid AND status = 'pending' ORDER BY due_date ASC"
+                            ),
+                            {'cid': contract_id},
+                        ).fetchall()
+
+                        # Build month->installment map
+                        inst_map = {}
+                        for inst in installments:
+                            if inst.due_date:
+                                key = (inst.due_date.year, inst.due_date.month)
+                                if key not in inst_map:
+                                    inst_map[key] = inst
+
+                        linked = 0
+                        for pay in payments:
+                            pay_date = pay.date
+                            if hasattr(pay_date, 'date'):
+                                pay_date = pay_date.date()
+                            key = (pay_date.year, pay_date.month)
+                            inst = inst_map.get(key)
+                            if inst:
+                                conn.execute(
+                                    db.text(
+                                        "UPDATE installment SET status='paid', paid_amount=:amt, "
+                                        'paid_date=:pdate, payment_id=:payid, '
+                                        'payment_method=:pmeth, updated_at=NOW() '
+                                        'WHERE id=:iid'
+                                    ),
+                                    {
+                                        'amt': float(pay.amount),
+                                        'pdate': pay.date,
+                                        'payid': pay.id,
+                                        'pmeth': pay.method or 'Efectivo',
+                                        'iid': inst.id,
+                                    },
+                                )
+                                # Also back-link the Payment to the installment
+                                conn.execute(
+                                    db.text('UPDATE payment SET installment_id=:iid WHERE id=:payid'),
+                                    {'iid': inst.id, 'payid': pay.id},
+                                )
+                                # Remove from map so it's not matched again
+                                del inst_map[key]
+                                linked += 1
+
+                except Exception:
+                    pass  # Best effort — don't break migration if linking fails
 
                 created += 1
             except Exception as e:

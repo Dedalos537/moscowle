@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -41,6 +41,7 @@ export class Login implements OnInit, OnDestroy {
 
   private guideTimer: any;
   private resizeHandler: (() => void) | null = null;
+  private _lastFormValid = false;
 
   private subs = new Subscription();
 
@@ -49,6 +50,7 @@ export class Login implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
   ) {}
 
   ngOnInit() {
@@ -73,7 +75,9 @@ export class Login implements OnInit, OnDestroy {
   private scheduleGuide() {
     clearTimeout(this.guideTimer);
     this.guideTimer = setTimeout(() => {
-      this.startGuide();
+      this.ngZone.run(() => {
+        this.startGuide();
+      });
     }, 10000);
   }
 
@@ -89,7 +93,7 @@ export class Login implements OnInit, OnDestroy {
     this.guideVisible = true;
     this.cdr.markForCheck();
 
-    setTimeout(() => this.positionGuide('email'), 350);
+    setTimeout(() => this.ngZone.run(() => this.positionGuide('email')), 350);
     this.resizeHandler = () => {
       if (this.guideStep === 1) this.positionGuide('email');
       else if (this.guideStep === 2) this.positionGuide('password');
@@ -136,7 +140,7 @@ export class Login implements OnInit, OnDestroy {
       this.guideStep = 2;
       this.guideText = 'Ahora ingresa la contraseña que te enviamos';
       this.cdr.markForCheck();
-      setTimeout(() => this.positionGuide('password'), 350);
+      setTimeout(() => this.ngZone.run(() => this.positionGuide('password')), 350);
     }
   }
 
@@ -145,7 +149,7 @@ export class Login implements OnInit, OnDestroy {
       this.guideStep = 3;
       this.guideText = 'Perfecto! Presiona INICIAR SESIÓN para acceder';
       this.cdr.markForCheck();
-      setTimeout(() => this.positionGuide('login-btn'), 350);
+      setTimeout(() => this.ngZone.run(() => this.positionGuide('login-btn')), 350);
     }
   }
 
@@ -167,7 +171,12 @@ export class Login implements OnInit, OnDestroy {
   }
 
   get isFormValid(): boolean {
-    return this.email.trim().length > 5 && this.password.length > 0;
+    const valid = this.email.trim().length > 5 && this.password.length > 0;
+    if (valid !== this._lastFormValid) {
+      this._lastFormValid = valid;
+      this.cdr.markForCheck();
+    }
+    return valid;
   }
 
   togglePassword() {

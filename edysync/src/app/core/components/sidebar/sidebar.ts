@@ -53,6 +53,7 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/reports', label: 'Admin Reportes', icon: ['fas', 'chart-bar'], supervisor: true },
     { path: '/admin/messages', label: 'Admin Mensajes', icon: ['fas', 'envelope'], supervisor: true },
     { path: '/admin/visor-funcionamiento', label: 'Centro de Operaciones', icon: ['fas', 'desktop'], supervisor: true },
+    { path: '/admin/password-resets', label: 'Reseteo Contraseñas', icon: ['fas', 'key'], supervisor: true },
   ];
 
   get navItems(): NavItem[] {

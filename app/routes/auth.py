@@ -254,29 +254,72 @@ def api_reset_password_request():
         now = datetime.utcnow()
         recent = PasswordReset.query.filter(
             PasswordReset.email == email,
-            PasswordReset.status == 'pending',
+            PasswordReset.status == 'awaiting_approval',
             PasswordReset.expires_at > now,
         ).first()
         if recent:
-            return jsonify({'success': True, 'message': 'Si el email existe, recibirás instrucciones.'})
+            return jsonify({'success': True, 'message': 'Si el email existe, un administrador revisará tu solicitud.'})
 
         PasswordReset.query.filter(
             PasswordReset.email == email,
-            PasswordReset.status == 'pending',
+            PasswordReset.status.in_(['awaiting_approval', 'pending']),
             PasswordReset.expires_at <= now,
         ).update({'status': 'expired'})
         db.session.commit()
 
         user = User.query.filter_by(email=email).first()
-        record = PasswordReset.create_for_email(email, user_id=user.id if user else None)
+        record = PasswordReset.create_for_email(
+            email,
+            user_id=user.id if user else None,
+            requester_ip=request.headers.get('X-Forwarded-For', request.remote_addr),
+            user_agent=request.headers.get('User-Agent', ''),
+        )
 
         if user:
-            EmailService.send_password_reset_code(email, user.username or email, record.code)
-            admins = User.query.filter_by(role='admin', is_active=True).all()
-            for admin in admins:
-                EmailService.send_password_reset_notification_admin(admin.email, email, user.username or email)
+            try:
+                from app.services.notification_service import NotificationService
 
-        return jsonify({'success': True, 'message': 'Si el email existe, recibirás instrucciones.'})
+                notif = NotificationService()
+                admins = User.query.filter(User.role.in_(['admin', 'supervisor']), User.is_active.is_(True)).all()
+                link = '/admin/password-resets'
+                for admin in admins:
+                    notif.create_notification(
+                        user_id=admin.id,
+                        title='Solicitud de reseteo de contraseña',
+                        message=(
+                            f'El usuario {user.username or user.email} ({user.role}) solicitó reseteo de contraseña. '
+                            f'Contraseña temporal propuesta: {record.temp_password_plain}. '
+                            f'Aprueba o rechaza en la sección de solicitudes.'
+                        ),
+                        notif_type='warning',
+                        link=link,
+                        category='security',
+                        priority='high',
+                        icon='key',
+                        metadata_json={
+                            'reset_request_id': record.id,
+                            'target_user_id': user.id,
+                            'target_email': user.email,
+                            'target_username': user.username,
+                            'temp_password': record.temp_password_plain,
+                            'requester_ip': record.requester_ip,
+                        },
+                    )
+            except Exception as ne:
+                current_app.logger.error(f'Notif create failed in reset-password: {ne}')
+
+            try:
+                EmailService.send_password_reset_notification_admin(
+                    User.query.filter(User.role.in_(['admin', 'supervisor']), User.is_active.is_(True)).first().email
+                    if User.query.filter(User.role.in_(['admin', 'supervisor']), User.is_active.is_(True)).first()
+                    else email,
+                    email,
+                    user.username or email,
+                )
+            except Exception:
+                pass
+
+        return jsonify({'success': True, 'message': 'Si el email existe, un administrador revisará tu solicitud.'})
     except Exception as e:
         current_app.logger.error(f'/api/auth/reset-password error: {e}')
         return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500

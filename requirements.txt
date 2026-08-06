@@ -43,7 +43,7 @@ markdown>=3.5.0
 celery>=5.3.0
 redis>=5.0.0
 sentry-sdk[flask]>=2.0.0
-flasgger>=0.9.7.1
+flasgger>=0.9.5
 scikit-learn
 pytest>=8.0.0
 pytest-cov>=5.0.0

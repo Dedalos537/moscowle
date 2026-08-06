@@ -32,9 +32,17 @@ export class ChatComponent implements OnInit, OnDestroy {
     admin: 'Admin',
     supervisor: 'Supervisor',
     terapista: 'Terapista',
+    terapeuta: 'Terapista',
     paciente: 'Paciente',
+    jugador: 'Paciente',
   };
   roleOrder = ['admin', 'supervisor', 'terapista', 'paciente'];
+
+  displayRole(role: string): string {
+    if (role === 'jugador' || role === 'paciente') return 'paciente';
+    if (role === 'terapeuta') return 'terapista';
+    return role;
+  }
 
   selectedChatId: number | null = null;
   selectedContact: ContactUser | null = null;
@@ -184,13 +192,13 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   get canFilterByRole(): boolean {
-    return this.userRole === 'admin' || this.userRole === 'supervisor';
+    return this.userRole === 'admin' || this.userRole === 'supervisor' || this.userRole === 'terapista';
   }
 
   get groupedContacts(): { role: string; users: ContactUser[] }[] {
     const groups: { role: string; users: ContactUser[] }[] = [];
     for (const role of this.roleOrder) {
-      const users = this.filteredContacts.filter((c) => c.role === role);
+      const users = this.filteredContacts.filter((c) => this.displayRole(c.role) === role);
       if (users.length > 0) {
         groups.push({ role, users });
       }

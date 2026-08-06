@@ -140,6 +140,17 @@ def api_create_expense():
     data = request.form.to_dict() if request.form else request.get_json(silent=True) or {}
     if not data.get('therapist_id'):
         data['therapist_id'] = None
+
+    missing = []
+    if not data.get('category'):
+        missing.append('category')
+    if not data.get('amount'):
+        missing.append('amount')
+    if not data.get('date'):
+        missing.append('date')
+    if missing:
+        return jsonify({'success': False, 'error': f'Campos requeridos faltantes: {", ".join(missing)}'}), 400
+
     if 'receipt' in request.files:
         file = request.files['receipt']
         if file and file.filename != '':
@@ -175,6 +186,7 @@ def api_financial_summary():
         return jsonify({'error': 'Unauthorized'}), 403
 
     from flask import request as req
+
     month = req.args.get('month', type=int)
     year = req.args.get('year', type=int)
 
@@ -503,19 +515,21 @@ def api_edit_payment(payment_id):
             return jsonify({'error': 'No valid fields to update'}), 400
         db.session.commit()
         patient = User.query.get(payment.patient_id)
-        return jsonify({
-            'success': True,
-            'message': f'Pago #{payment_id} actualizado: {", ".join(updated)}',
-            'payment': {
-                'id': payment.id,
-                'patient_id': payment.patient_id,
-                'patient_name': patient.username if patient else '',
-                'amount': float(payment.amount),
-                'method': payment.method,
-                'payment_date': str(payment.payment_date),
-                'status': getattr(payment, 'status', 'completado'),
-            },
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': f'Pago #{payment_id} actualizado: {", ".join(updated)}',
+                'payment': {
+                    'id': payment.id,
+                    'patient_id': payment.patient_id,
+                    'patient_name': patient.username if patient else '',
+                    'amount': float(payment.amount),
+                    'method': payment.method,
+                    'payment_date': str(payment.payment_date),
+                    'status': getattr(payment, 'status', 'completado'),
+                },
+            }
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Error al actualizar: {str(e)}'}), 500

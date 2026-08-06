@@ -210,29 +210,30 @@ def api_admin_patient_detail(patient_id):
         return jsonify({'success': False, 'message': 'Paciente no encontrado'}), 404
 
     recent_sessions = (
-        Appointment.query.filter_by(patient_id=patient_id)
-        .order_by(Appointment.start_time.desc()).limit(20).all()
+        Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.start_time.desc()).limit(20).all()
     )
 
     sessions_data = []
     for s in recent_sessions:
-        sessions_data.append({
-            'id': s.id,
-            'title': s.title,
-            'start_time': s.start_time.isoformat() if s.start_time else None,
-            'end_time': s.end_time.isoformat() if s.end_time else None,
-            'status': s.status,
-            'attendance': getattr(s, 'attendance', None),
-            'audit_score': getattr(s, 'audit_score', None),
-            'therapist_name': s.therapist.username if s.therapist else None,
-        })
+        sessions_data.append(
+            {
+                'id': s.id,
+                'title': s.title,
+                'start_time': s.start_time.isoformat() if s.start_time else None,
+                'end_time': s.end_time.isoformat() if s.end_time else None,
+                'status': s.status,
+                'attendance': getattr(s, 'attendance', None),
+                'audit_score': getattr(s, 'audit_score', None),
+                'therapist_name': s.therapist.username if s.therapist else None,
+            }
+        )
 
     yape_name = None
     try:
         from app.models.payment import YapeTransaction
+
         latest_yape = (
-            YapeTransaction.query
-            .filter(YapeTransaction.is_active == True)
+            YapeTransaction.query.filter(YapeTransaction.is_active == True)
             .order_by(YapeTransaction.transaction_date.desc())
             .first()
         )
@@ -244,34 +245,39 @@ def api_admin_patient_detail(patient_id):
     age = None
     if patient.date_of_birth:
         from datetime import date
+
         today = date.today()
-        age = today.year - patient.date_of_birth.year - (
-            (today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day)
+        age = (
+            today.year
+            - patient.date_of_birth.year
+            - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
         )
 
-    return jsonify({
-        'success': True,
-        'patient': {
-            'id': patient.id,
-            'username': patient.username,
-            'email': patient.email,
-            'phone': patient.phone,
-            'document_number': patient.document_number,
-            'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
-            'age': age,
-            'sex': patient.sex,
-            'guardian_name': patient.guardian_name,
-            'guardian_type': patient.guardian_type,
-            'guardian_dni': patient.guardian_dni,
-            'guardian_contact': patient.guardian_contact,
-            'therapy_goals': patient.therapy_goals,
-            'preliminary_diagnosis': patient.preliminary_diagnosis,
-            'notes': patient.notes,
-            'yape_name': yape_name,
-            'is_active': patient.is_active,
-        },
-        'recent_sessions': sessions_data,
-    })
+    return jsonify(
+        {
+            'success': True,
+            'patient': {
+                'id': patient.id,
+                'username': patient.username,
+                'email': patient.email,
+                'phone': patient.phone,
+                'document_number': patient.document_number,
+                'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
+                'age': age,
+                'sex': patient.sex,
+                'guardian_name': patient.guardian_name,
+                'guardian_type': patient.guardian_type,
+                'guardian_dni': patient.guardian_dni,
+                'guardian_contact': patient.guardian_contact,
+                'therapy_goals': patient.therapy_goals,
+                'preliminary_diagnosis': patient.preliminary_diagnosis,
+                'notes': patient.notes,
+                'yape_name': yape_name,
+                'is_active': patient.is_active,
+            },
+            'recent_sessions': sessions_data,
+        }
+    )
 
 
 @api_bp.route('/admin/update-user', methods=['POST'])
@@ -424,7 +430,9 @@ def admin_sedes_active():
     try:
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
-        sedes = Sede.query.filter_by(is_active=True).order_by(Sede.name.asc()).all()
+        sedes = (
+            Sede.query.filter(db.or_(Sede.is_active == True, Sede.is_active == None)).order_by(Sede.name.asc()).all()
+        )
         result = [{'id': s.id, 'name': s.name, 'address': s.address} for s in sedes]
         return jsonify(result)
     except Exception as e:

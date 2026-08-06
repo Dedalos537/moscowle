@@ -26,7 +26,7 @@ import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
 import { Table, TableCell, TableColumn } from '../../../../shared/components/table/table';
-import { PatientRow, PaymentHistoryRow, Therapist, RegisterForm, SettingsForm, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
+import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
@@ -52,6 +52,10 @@ export class Finanzas implements OnInit, OnDestroy {
   readonly getCategoryLabel = getCategoryLabel;
   readonly getMethodBadgeClass = getMethodBadgeClass;
   readonly getMethodLabel = getMethodLabel;
+  getExpenseMethodLabel(method: string): string {
+    const m: Record<string, string> = { transfer: 'Transferencia', yape_plin: 'Yape/Plin', cash: 'Efectivo', yape: 'Yape', plin: 'Plin', card: 'Tarjeta' };
+    return m[method] || method || '—';
+  }
   readonly getWhatsAppLink = getWhatsAppLink;
   readonly getInitials = getInitials;
   readonly getPatientStatus = getPatientStatus;
@@ -102,7 +106,7 @@ export class Finanzas implements OnInit, OnDestroy {
     { value: '', label: 'Todos los Estados' },
     { value: 'al_dia', label: 'Al Día' },
     { value: 'deudor', label: 'Deudores' },
-    { value: 'sin_plan', label: 'Sin Plan' },
+    { value: 'sin_contrato', label: 'Sin Contrato' },
     { value: 'inactivo', label: 'Inactivos' },
   ];
 
@@ -122,16 +126,11 @@ export class Finanzas implements OnInit, OnDestroy {
     { value: 'card', label: 'Tarjeta' },
   ];
 
-  planFrequencyOptions: SelectOption[] = [
-    { value: 'Mensual', label: 'Mensual' },
-    { value: 'Quincenal', label: 'Quincenal' },
-  ];
-
   patientColumns: TableColumn[] = [
     { key: 'paciente', label: 'Paciente', width: '22%' },
     { key: 'sede', label: 'Sede', width: '12%' },
     { key: 'terapeuta', label: 'Terapeuta', width: '14%' },
-    { key: 'plan', label: 'Plan / Frecuencia', width: '14%' },
+    { key: 'plan', label: 'Plan / Cuotas', width: '14%' },
     { key: 'progreso', label: 'Progreso', align: 'center', width: '10%' },
     { key: 'deuda', label: 'Deuda Est.', align: 'right', width: '10%' },
     { key: 'vencimiento', label: 'Próx. Venc.', align: 'center', width: '10%' },
@@ -142,14 +141,16 @@ export class Finanzas implements OnInit, OnDestroy {
   patientPageSize = 20;
   patientTotalPages = 1;
 
-  patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'sin_plan' = 'all';
+  patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'sin_contrato' = 'all';
 
   expandedPatientId: number | null = null;
+  selectedPatientContracts: ContractDetail[] = [];
   selectedPatientContract: ContractDetail | null = null;
   contractLoading = false;
   today = new Date().toISOString().split('T')[0];
 
-  editingPatientDetails = false;
+  showEditPatientModal = false;
+  isEditingContract = false;
   patientDetailForm: Record<string, any> = {};
   patientDetailSaving = false;
   patientDetailStatus = '';
@@ -158,9 +159,9 @@ export class Finanzas implements OnInit, OnDestroy {
     const total = this.patients.length;
     const alDia = this.patients.filter(p => getPatientStatus(p) === 'al_dia').length;
     const deudores = this.patients.filter(p => getPatientStatus(p) === 'deudor').length;
-    const sinPlan = this.patients.filter(p => getPatientStatus(p) === 'sin_plan').length;
+    const sinContrato = this.patients.filter(p => !this.patientContractMap[p.id]).length;
     const totalDeuda = this.patients.reduce((s, p) => s + (p.payment_amount || 0), 0);
-    return { total, alDia, deudores, sinPlan, totalDeuda };
+    return { total, alDia, deudores, sinContrato, totalDeuda };
   }
 
   expenseCategoryOptions: SelectOption[] = [
@@ -177,18 +178,10 @@ export class Finanzas implements OnInit, OnDestroy {
     { value: 'other', label: 'Otro' },
   ];
 
-  showRegisterModal = false;
-  registerForm: RegisterForm = {
-    patient_id: null, amount: 0, method: 'transfer', reference: '',
-    next_due_date: '', payment_date: '', discount: 0,
-    document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
-  };
-  registerStatus = '';
-  analyzeResult: any = null;
-  analyzingReceipt = false;
-
   contractsLoading = false;
   contracts: Contract[] = [];
+  patientContractMap: Record<number, Contract> = {};
+  contractProgressMap: Record<number, { paid: number; total: number; amount: number; collected: number }> = {};
   expandedContractId: number | null = null;
   contractDetail: ContractDetail | null = null;
   contractFilter: ContractFilter = { search: '', status: 'active', month: null, year: null, sede_id: null };
@@ -228,13 +221,6 @@ export class Finanzas implements OnInit, OnDestroy {
   reactivateStatus = '';
 
   patientsList: User[] = [];
-
-  showSettingsModal = false;
-  settingsForm: SettingsForm = {
-    patient_id: null, patient_name: '', payment_plan: 'Mensual',
-    payment_amount: 0, payment_due_date: '',
-  };
-  settingsStatus = '';
 
   financials: any = { income_real: 0, income_expected: 0, overdue_amount: 0, overdue_users_count: 0 };
 
@@ -413,7 +399,6 @@ export class Finanzas implements OnInit, OnDestroy {
   private checkDeepLinks() {
     const params = this.route.snapshot.queryParams;
     if (params['search_patient']) this.searchQuery = params['search_patient'];
-    if (params['action'] === 'register') setTimeout(() => this.openRegisterModal(), 800);
   }
 
   private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadFinancialSummary(); this.loadPaymentHistory(); this.loadContractAlerts(); }
@@ -559,6 +544,7 @@ export class Finanzas implements OnInit, OnDestroy {
       this.adminService.getContractsFiltered(params).subscribe({
         next: (res) => {
           this.contracts = (res.contracts || []) as any;
+          this.buildContractProgressMap();
           this.contractsLoading = false;
           this.updateContractSummary();
           this.cdr.markForCheck();
@@ -569,6 +555,30 @@ export class Finanzas implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  buildContractProgressMap() {
+    this.contractProgressMap = {};
+    this.patientContractMap = {};
+    for (const c of this.contracts) {
+      if (c.status === 'active' || c.status === 'pending') {
+        this.contractProgressMap[c.patient_id] = {
+          paid: c.paid_count || 0,
+          total: c.installment_count || 0,
+          amount: c.installment_amount || 0,
+          collected: (c.paid_count || 0) * (c.installment_amount || 0),
+        };
+      }
+      if (c.status === 'active' && !this.patientContractMap[c.patient_id]) {
+        this.patientContractMap[c.patient_id] = c;
+      }
+    }
+  }
+
+  getContractProgress(patientId: number): { paid: number; total: number; pct: number } {
+    const p = this.contractProgressMap[patientId];
+    if (!p || p.total === 0) return { paid: 0, total: 0, pct: 0 };
+    return { paid: p.paid, total: p.total, pct: Math.round((p.paid / p.total) * 100) };
   }
 
   get contractFilterMonthValue(): string {
@@ -623,6 +633,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   openCreateContractModal() {
     console.log('[FINANZAS] openCreateContractModal called');
+    this.isEditingContract = false;
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
       installment_count: 4, start_date: new Date().toISOString().substring(1, 10),
@@ -676,8 +687,7 @@ export class Finanzas implements OnInit, OnDestroy {
       return;
     }
     this.createContractStatus = '';
-    const isEdit = this.selectedPatientContract && this.selectedPatientContract.patient_id === this.createContractForm.patient_id;
-    if (isEdit) {
+    if (this.isEditingContract) {
       this.subscriptions.add(
         this.adminService.updateContract(this.selectedPatientContract!.id, {
           name: this.createContractForm.name,
@@ -741,15 +751,26 @@ export class Finanzas implements OnInit, OnDestroy {
     };
     this.payInstallmentStatus = '';
     this.showPayInstallmentModal = true;
+    this.cdr.markForCheck();
+  }
+
+  openPayFirstUnpaidInstallment() {
+    if (!this.selectedPatientContract) return;
+    const unpaid = (this.selectedPatientContract.installments || [])
+      .find(i => i.status !== 'paid' && i.status !== 'cancelled');
+    if (unpaid) {
+      this.openPayInstallmentModal(unpaid, this.selectedPatientContract);
+    }
   }
 
   submitPayInstallment() {
     if (!this.payInstallmentForm.installment_id) return;
     this.payInstallmentStatus = '';
-    const data = {
+    const data: any = {
       amount: this.payInstallmentForm.amount,
       method: this.payInstallmentForm.method,
       reference: this.payInstallmentForm.reference,
+      payment_date: this.payInstallmentForm.payment_date || undefined,
       payment_notes: this.payInstallmentForm.payment_notes,
     };
     this.subscriptions.add(
@@ -772,6 +793,77 @@ export class Finanzas implements OnInit, OnDestroy {
     );
   }
 
+  generateBoleta() {
+    if (!this.selectedPatientContract) return;
+    const c = this.selectedPatientContract;
+    const paidInstallments = (c.installments || []).filter((i: any) => i.status === 'paid');
+    const now = new Date();
+    const boletaNo = `BOLE-${c.id}-${now.getFullYear()}`;
+
+    let installmentsHtml = '';
+    for (const inst of paidInstallments) {
+      installmentsHtml += `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px">${inst.description || 'Cuota #' + inst.number}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:center">${inst.due_date || '—'}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:right">S/ ${(inst.paid_amount || inst.amount).toFixed(2)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;text-align:center">${inst.payment_method || '—'}</td>
+      </tr>`;
+    }
+
+    const totalPaid = paidInstallments.reduce((s: number, i: any) => s + (i.paid_amount || i.amount || 0), 0);
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Boleta ${boletaNo}</title>
+<style>
+  @media print { body { margin: 0; } }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 30px; max-width: 700px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #16a34a; padding-bottom: 15px; margin-bottom: 20px; }
+  .logo { font-size: 20px; font-weight: 900; color: #16a34a; }
+  .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .info-box { background: #f8faf8; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+  .info-label { font-size: 10px; text-transform: uppercase; color: #888; font-weight: 600; }
+  .info-value { font-size: 13px; font-weight: 700; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+  th { background: #16a34a; color: white; padding: 8px; font-size: 11px; text-transform: uppercase; text-align: left; }
+  th:nth-child(3), th:nth-child(4) { text-align: right; }
+  .total-row { font-size: 15px; font-weight: 900; color: #16a34a; text-align: right; padding: 12px 0; border-top: 2px solid #16a34a; }
+  .footer { font-size: 10px; color: #999; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
+  .btn-print { background: #16a34a; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 15px; }
+  .btn-print:hover { background: #15803d; }
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="logo">CENTRO DE TERAPIAS JUAN PABLO II</div>
+    <div class="subtitle">RUC: 20546879261 | Recibo de Pago</div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:12px;font-weight:700">${boletaNo}</div>
+    <div style="font-size:11px;color:#666">Fecha: ${now.toLocaleDateString('es-PE')}</div>
+  </div>
+</div>
+<div class="info-grid">
+  <div class="info-box"><div class="info-label">Paciente</div><div class="info-value">${c.patient_name || '—'}</div></div>
+  <div class="info-box"><div class="info-label">Contrato</div><div class="info-value">${c.name || '—'}</div></div>
+  <div class="info-box"><div class="info-label">Plan</div><div class="info-value">${c.billing_type || 'Mensual'} — S/ ${c.installment_amount?.toFixed(2) || '0.00'}/cuota</div></div>
+  <div class="info-box"><div class="info-label">Total Contrato</div><div class="info-value">S/ ${c.total_amount?.toFixed(2) || '0.00'}</div></div>
+</div>
+<h3 style="font-size:13px;color:#666;margin-bottom:5px">Pagos Registrados (${paidInstallments.length} cuotas)</h3>
+<table>
+  <thead><tr>
+    <th>Cuota</th><th style="text-align:center">Vencimiento</th><th style="text-align:right">Monto</th><th style="text-align:center">Método</th>
+  </tr></thead>
+  <tbody>${installmentsHtml || '<tr><td colspan="4" style="padding:12px;text-align:center;color:#999">No hay pagos registrados</td></tr>'}</tbody>
+</table>
+<div class="total-row">TOTAL PAGADO: S/ ${totalPaid.toFixed(2)}</div>
+<div class="footer">Centro de Terapias Juan Pablo II — Este documento no constituye factura electrónica ante SUNAT. Sirve como constancia de pago.<br>Generado: ${now.toLocaleString('es-PE')}</div>
+<button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>
+</body></html>`;
+
+    const w = window.open('', '_blank', 'width=750,height=900');
+    if (w) { w.document.write(html); w.document.close(); }
+  }
+
   openCancelContractModal(contract: Contract) {
     this.cancelContractForm = {
       contract_id: contract.id,
@@ -784,6 +876,7 @@ export class Finanzas implements OnInit, OnDestroy {
     };
     this.cancelContractStatus = '';
     this.showCancelContractModal = true;
+    this.cdr.markForCheck();
   }
 
   submitCancelContract() {
@@ -822,6 +915,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.reactivateNextPaymentDate = '';
     this.reactivateStatus = '';
     this.showReactivateContractModal = true;
+    this.cdr.markForCheck();
   }
 
   submitReactivateContract() {
@@ -886,7 +980,7 @@ export class Finanzas implements OnInit, OnDestroy {
   getPatientRowClass = (p: PatientRow, _i: number): string => {
     const classes: string[] = [];
     if (getPatientStatus(p) === 'deudor') classes.push('bg-error-container/10');
-    if (getPatientStatus(p) === 'sin_plan') classes.push('bg-surface-container-high/40');
+    if (getPatientStatus(p) === 'sin_plan' || !this.patientContractMap[p.id]) classes.push('bg-surface-container-high/40');
     if (isOverdue(p)) classes.push('border-l-2 border-l-error');
     return classes.join(' ');
   };
@@ -894,7 +988,11 @@ export class Finanzas implements OnInit, OnDestroy {
   get filteredPatients(): PatientRow[] {
     let result = [...this.patients];
     if (this.patientStatusFilter !== 'all') {
-      result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
+      if (this.patientStatusFilter === 'sin_contrato') {
+        result = result.filter(p => !this.patientContractMap[p.id]);
+      } else {
+        result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
+      }
     }
     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
@@ -934,7 +1032,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'sin_plan') {
+  setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'sin_contrato') {
     this.patientStatusFilter = filter;
     this.patientPage = 1;
     this.cdr.markForCheck();
@@ -943,36 +1041,70 @@ export class Finanzas implements OnInit, OnDestroy {
   togglePatientExpand(patient: PatientRow) {
     if (this.expandedPatientId === patient.id) {
       this.expandedPatientId = null;
+      this.selectedPatientContracts = [];
       this.selectedPatientContract = null;
       this.cdr.markForCheck();
       return;
     }
     this.expandedPatientId = patient.id;
+    this.selectedPatientContracts = [];
     this.selectedPatientContract = null;
     this.contractLoading = true;
     this.cdr.markForCheck();
     this.loadPatientContract(patient.id);
   }
 
+  selectContract(contract: ContractDetail) {
+    this.selectedPatientContract = contract;
+    this.cdr.markForCheck();
+  }
+
+  openCreateContractForCurrentPatient() {
+    const patient = this.patients.find(p => p.id === this.expandedPatientId);
+    if (patient) this.openCreateContractForPatient(patient);
+  }
+
   private loadPatientContract(patientId: number) {
     this.subscriptions.add(
       this.adminService.getContractsFiltered({ patient_id: patientId }).subscribe({
         next: (res) => {
-          const contracts = (res.contracts || []) as any;
-          const active = contracts.find((c: any) => c.status === 'active');
-          if (active) {
-            this.adminService.getContractDetail(active.id).subscribe({
-              next: (detailRes) => {
-                this.selectedPatientContract = detailRes.contract as any;
-                this.contractLoading = false;
-                this.cdr.markForCheck();
-              },
-              error: () => { this.contractLoading = false; this.cdr.markForCheck(); }
-            });
-          } else {
+          const contracts = (res.contracts || []) as any[];
+          if (contracts.length === 0) {
+            this.selectedPatientContracts = [];
+            this.selectedPatientContract = null;
             this.contractLoading = false;
             this.cdr.markForCheck();
+            return;
           }
+          const detailRequests = contracts.map((c: any) =>
+            this.adminService.getContractDetail(c.id)
+          );
+          let loaded = 0;
+          const allDetails: ContractDetail[] = [];
+          detailRequests.forEach((req: any) => {
+            req.subscribe({
+              next: (detailRes: any) => {
+                allDetails.push(detailRes.contract as ContractDetail);
+                loaded++;
+                if (loaded === contracts.length) {
+                  allDetails.sort((a: any, b: any) => (b.status === 'active' ? 1 : 0) - (a.status === 'active' ? 1 : 0));
+                  this.selectedPatientContracts = allDetails;
+                  this.selectedPatientContract = allDetails[0] || null;
+                  this.contractLoading = false;
+                  this.cdr.markForCheck();
+                }
+              },
+              error: () => {
+                loaded++;
+                if (loaded === contracts.length) {
+                  this.selectedPatientContracts = allDetails;
+                  this.selectedPatientContract = allDetails[0] || null;
+                  this.contractLoading = false;
+                  this.cdr.markForCheck();
+                }
+              }
+            });
+          });
         },
         error: () => { this.contractLoading = false; this.cdr.markForCheck(); }
       })
@@ -995,13 +1127,14 @@ export class Finanzas implements OnInit, OnDestroy {
       therapy_goals: (patient as any).therapy_goals || '',
       notes: (patient as any).notes || '',
     };
-    this.editingPatientDetails = true;
+    this.showEditPatientModal = true;
     this.patientDetailStatus = '';
+    this.cdr.markForCheck();
     this.cdr.markForCheck();
   }
 
   cancelEditPatientDetails() {
-    this.editingPatientDetails = false;
+    this.showEditPatientModal = false;
     this.patientDetailForm = {};
     this.patientDetailStatus = '';
     this.cdr.markForCheck();
@@ -1019,7 +1152,7 @@ export class Finanzas implements OnInit, OnDestroy {
           this.patientDetailSaving = false;
           if (res.success) {
             this.patientDetailStatus = 'Guardado correctamente';
-            this.editingPatientDetails = false;
+            this.showEditPatientModal = false;
             this.loadPatientContract(this.expandedPatientId!);
             this.refreshPatients();
           } else {
@@ -1055,6 +1188,7 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   openCreateContractForPatient(patient: PatientRow) {
+    this.isEditingContract = false;
     this.createContractForm = {
       patient_id: patient.id, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
       installment_count: 4, start_date: new Date().toISOString().substring(0, 10),
@@ -1068,6 +1202,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   openEditContractModal() {
     if (!this.selectedPatientContract) return;
+    this.isEditingContract = true;
     this.createContractForm = {
       patient_id: this.selectedPatientContract.patient_id,
       total_amount: this.selectedPatientContract.total_amount,
@@ -1171,104 +1306,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.chartRevenueByLocation = { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
-  openRegisterModal(patient?: PatientRow) {
-    this.registerForm = {
-      patient_id: patient?.id || null, amount: patient?.payment_amount || 0, method: 'transfer', reference: '',
-      next_due_date: '', payment_date: new Date().toISOString().substring(0, 10), discount: 0,
-      document_number: '', guardian_name: '', guardian_dni: '', receipt: null,
-    };
-    this.analyzeResult = null;
-    this.analyzingReceipt = false;
-    this.registerStatus = '';
-    this.showRegisterModal = true;
-    this.cdr.markForCheck();
-  }
-
-  closeRegisterModal() { this.showRegisterModal = false; }
-
-  onFileSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0] || null;
-    this.registerForm.receipt = file;
-    if (file) {
-      this.analyzingReceipt = true;
-      this.subscriptions.add(
-        this.adminService.analyzeReceipt(file, this.registerForm.patient_id ?? undefined).subscribe({
-          next: (res) => {
-            this.analyzeResult = res;
-            this.analyzingReceipt = false;
-            if (res.amount) this.registerForm.amount = parseFloat(res.amount);
-            if (res.reference) this.registerForm.reference = res.reference;
-            if (res.method) this.registerForm.method = res.method;
-            if (res.next_due_date) this.registerForm.next_due_date = res.next_due_date;
-            this.cdr.markForCheck();
-          },
-          error: () => { this.analyzingReceipt = false; this.cdr.markForCheck(); },
-        }),
-      );
-    }
-  }
-
-  submitRegisterPayment() {
-    this.registerStatus = 'Registrando...';
-    const fd = new FormData();
-    if (this.registerForm.patient_id) fd.append('patient_id', String(this.registerForm.patient_id));
-    fd.append('amount', String(this.registerForm.amount));
-    fd.append('method', this.registerForm.method);
-    if (this.registerForm.reference) fd.append('reference', this.registerForm.reference);
-    if (this.registerForm.next_due_date) fd.append('next_due_date', this.registerForm.next_due_date);
-    if (this.registerForm.payment_date) fd.append('payment_date', this.registerForm.payment_date);
-    fd.append('discount', String(this.registerForm.discount));
-    if (this.registerForm.document_number) fd.append('document_number', this.registerForm.document_number);
-    if (this.registerForm.guardian_name) fd.append('guardian_name', this.registerForm.guardian_name);
-    if (this.registerForm.receipt) fd.append('receipt', this.registerForm.receipt);
-
-    this.subscriptions.add(this.adminService.registerPayment(fd).subscribe({
-      next: (res: any) => {
-        if (res.success) {
-          this.registerStatus = 'Pago registrado exitosamente';
-          setTimeout(() => { this.closeRegisterModal(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); this.loadSummaryData(); }, 1500);
-        } else {
-          this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => { this.registerStatus = 'Error de conexión al servidor'; this.cdr.markForCheck(); },
-    }));
-  }
-
-  get needsRecalculation(): boolean { return this.registerForm.amount > 0 && this.registerForm.discount > 0; }
-  get hasMissingData(): boolean { return !this.registerForm.document_number || !this.registerForm.guardian_name; }
-
-  openSettingsModal(patient: PatientRow) {
-    this.settingsForm = {
-      patient_id: patient.id, patient_name: patient.username,
-      payment_plan: patient.plan_frequency || 'Mensual', payment_amount: patient.payment_amount,
-      payment_due_date: patient.next_due_date || '',
-    };
-    this.settingsStatus = '';
-    this.showSettingsModal = true;
-  }
-
-  closeSettingsModal() { this.showSettingsModal = false; }
-
-  submitSettings() {
-    this.settingsStatus = 'Guardando...';
-    const data: any = {};
-    if (this.settingsForm.payment_amount > 0) data.payment_amount = this.settingsForm.payment_amount;
-    if (this.settingsForm.payment_due_date) data.payment_due_date = this.settingsForm.payment_due_date;
-    if (this.settingsForm.payment_plan) data.payment_plan = this.settingsForm.payment_plan;
-
-    this.subscriptions.add(this.adminService.updatePaymentSettings(this.settingsForm.patient_id!, data).subscribe({
-      next: (res: any) => {
-        if (res.success) { this.settingsStatus = 'Configuración guardada'; setTimeout(() => { this.closeSettingsModal(); this.loadPaymentsDebtReport(); }, 1500); }
-        else { this.settingsStatus = 'Error: ' + (res.message || res.error || 'Desconocido'); }
-        this.cdr.markForCheck();
-      },
-      error: () => { this.settingsStatus = 'Error de conexión'; this.cdr.markForCheck(); },
-    }));
-  }
-
-  get incompletePlanPatients(): PatientRow[] { return this.patients.filter((p) => !p.has_plan_config); }
+  get patientsWithoutContractCount(): number { return this.patients.filter(p => !this.patientContractMap[p.id]).length; }
 
   async generateReport() {
     const c = await firstValueFrom(this.confirmService.confirm({ title: 'Generar Reporte', message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?', confirmText: 'Generar', cancelText: 'Cancelar', variant: 'warning' }));
@@ -1307,12 +1345,14 @@ export class Finanzas implements OnInit, OnDestroy {
     this.expenseModalMode = 'therapist_payment';
     this.expenseForm = { category: 'therapist_payment', therapist_id: therapist.therapist.id, therapist_name: therapist.therapist.username, amount: therapist.balance > 0 ? therapist.balance : 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: `Pago a ${therapist.therapist.username}`, receipt: null };
     this.showExpenseModal = true;
+    this.cdr.markForCheck();
   }
 
   openOperationalModal() {
     this.expenseModalMode = 'operational';
     this.expenseForm = { category: 'operational', therapist_id: null, therapist_name: '', amount: 0, method: 'transfer', date: new Date().toISOString().split('T')[0], description: '', receipt: null };
     this.showExpenseModal = true;
+    this.cdr.markForCheck();
   }
 
   closeExpenseModal() { this.showExpenseModal = false; }

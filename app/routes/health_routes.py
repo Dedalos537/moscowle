@@ -85,11 +85,13 @@ def list_routes():
         return jsonify({'error': 'invalid key'}), 403
     rules = []
     for rule in current_app.url_map.iter_rules():
-        rules.append({
-            'endpoint': rule.endpoint,
-            'methods': sorted(rule.methods - {'OPTIONS', 'HEAD'}),
-            'rule': str(rule),
-        })
+        rules.append(
+            {
+                'endpoint': rule.endpoint,
+                'methods': sorted(rule.methods - {'OPTIONS', 'HEAD'}),
+                'rule': str(rule),
+            }
+        )
     return jsonify({'routes': sorted(rules, key=lambda r: r['rule'])})
 
 
@@ -377,6 +379,91 @@ def debug_query():
                 }
             )
 
+        elif test == 'appointments':
+            # Diagnóstico del bug de sesiones vacías: fechas reales de todas
+            # las sesiones (solo lectura). Permite ver si start_time cae fuera
+            # de los rangos que consulta el frontend.
+            from sqlalchemy import text as _text
+
+            limit = int(req.args.get('limit', 200))
+            rows = db.session.execute(
+                _text(
+                    'SELECT id, therapist_id, patient_id, title, status, '
+                    'start_time, end_time, attendance '
+                    'FROM appointment ORDER BY start_time ASC LIMIT :lim'
+                ),
+                {'lim': limit},
+            ).fetchall()
+            appts = []
+            for r in rows:
+                appts.append(
+                    {
+                        'id': r.id,
+                        'therapist_id': r.therapist_id,
+                        'patient_id': r.patient_id,
+                        'title': r.title,
+                        'status': r.status,
+                        'start_time': str(r.start_time) if r.start_time else None,
+                        'end_time': str(r.end_time) if r.end_time else None,
+                        'attendance': r.attendance,
+                    }
+                )
+            return jsonify(
+                {
+                    'test': 'appointments',
+                    'count': len(appts),
+                    'min_start': str(rows[0].start_time) if rows and rows[0].start_time else None,
+                    'max_start': str(rows[-1].start_time) if rows and rows[-1].start_time else None,
+                    'appointments': appts,
+                }
+            )
+
+        elif test == 'appointment_range':
+            # Simula exactamente el filtro del frontend (start/end YYYY-MM-DD)
+            # para validar si las sesiones caen dentro del rango esperado.
+            from sqlalchemy import text as _text
+
+            start = req.args.get('start', '')
+            end = req.args.get('end', '')
+            try:
+                from app.models import User as _User
+                from app.utils import get_user_day_utc_range
+
+                admin = _User.query.filter(_User.role == 'admin').first()
+                if admin:
+                    start_dt, _ = get_user_day_utc_range(admin, start[:10])
+                    _, end_dt = get_user_day_utc_range(admin, end[:10])
+                    rows = db.session.execute(
+                        _text(
+                            'SELECT id, therapist_id, patient_id, status, start_time '
+                            'FROM appointment WHERE start_time >= :s AND start_time < :e '
+                            'ORDER BY start_time ASC LIMIT 200'
+                        ),
+                        {'s': start_dt, 'e': end_dt},
+                    ).fetchall()
+                else:
+                    rows = []
+            except Exception:
+                rows = []
+            return jsonify(
+                {
+                    'test': 'appointment_range',
+                    'start': start,
+                    'end': end,
+                    'count': len(rows),
+                    'rows': [
+                        {
+                            'id': r.id,
+                            'therapist_id': r.therapist_id,
+                            'patient_id': r.patient_id,
+                            'status': r.status,
+                            'start_time': str(r.start_time) if r.start_time else None,
+                        }
+                        for r in rows
+                    ],
+                }
+            )
+
         else:
             return jsonify(
                 {
@@ -392,6 +479,8 @@ def debug_query():
                         'simulate_chats',
                         'simulate_messages',
                         'test_insert',
+                        'appointments',
+                        'appointment_range',
                     ],
                 }
             ), 400
@@ -431,13 +520,16 @@ def debug_sync_schema():
 def health_llm():
     """Test each LLM provider and return detailed results."""
     import time
+
     results = {}
     test_messages = [{'role': 'user', 'content': 'Responde solo: hola'}]
 
     # GLM-5.2
     try:
-        from app.services.llm_client import get_glm_client, GLM_MODEL
         import os
+
+        from app.services.llm_client import GLM_MODEL, get_glm_client
+
         key = os.environ.get('GLM_API_KEY', '')
         results['glm'] = {'key_set': bool(key), 'key_len': len(key), 'model': GLM_MODEL}
         client = get_glm_client()
@@ -455,14 +547,18 @@ def health_llm():
 
     # Groq
     try:
-        from app.services.llm_client import get_groq_client, GROQ_MODELS
         import os
+
+        from app.services.llm_client import GROQ_MODELS, get_groq_client
+
         key = os.environ.get('GROQ_API_KEY', '')
         results['groq'] = {'key_set': bool(key), 'key_len': len(key)}
         client = get_groq_client()
         if client:
             t0 = time.time()
-            r = client.chat.completions.create(model=GROQ_MODELS[0], messages=test_messages, max_tokens=20, temperature=0.1)
+            r = client.chat.completions.create(
+                model=GROQ_MODELS[0], messages=test_messages, max_tokens=20, temperature=0.1
+            )
             results['groq']['status'] = 'ok'
             results['groq']['response'] = r.choices[0].message.content
             results['groq']['latency_ms'] = int((time.time() - t0) * 1000)
@@ -473,8 +569,10 @@ def health_llm():
 
     # Gemini
     try:
-        from app.services.llm_client import get_gemini_model
         import os
+
+        from app.services.llm_client import get_gemini_model
+
         key = os.environ.get('GEMINI_API_KEY', '')
         results['gemini'] = {'key_set': bool(key), 'key_len': len(key)}
         model = get_gemini_model()
@@ -492,9 +590,15 @@ def health_llm():
     # Full chain test (what MCP actually uses)
     try:
         from app.services.llm_client import llm_chat
+
         t0 = time.time()
         content, provider = llm_chat(test_messages, temperature=0.1, max_tokens=20)
-        results['chain'] = {'status': 'ok', 'provider': provider, 'response': content, 'latency_ms': int((time.time() - t0) * 1000)}
+        results['chain'] = {
+            'status': 'ok',
+            'provider': provider,
+            'response': content,
+            'latency_ms': int((time.time() - t0) * 1000),
+        }
     except Exception as e:
         results['chain'] = {'status': 'error', 'error': str(e)[:500]}
 
@@ -514,21 +618,23 @@ def health_llm_config():
             return '****'
         return k[:4] + '****' + k[-4:]
 
-    return jsonify({
-        'glm': {
-            'key': mask_key(os.environ.get('GLM_API_KEY', '')),
-            'model': 'z-ai/glm-5.2',
-            'base_url': 'https://integrate.api.nvidia.com/v1',
-        },
-        'groq': {
-            'key': mask_key(os.environ.get('GROQ_API_KEY', '')),
-            'models': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-        },
-        'gemini': {
-            'key': mask_key(os.environ.get('GEMINI_API_KEY', '')),
-            'model': 'gemini-2.0-flash',
-        },
-    })
+    return jsonify(
+        {
+            'glm': {
+                'key': mask_key(os.environ.get('GLM_API_KEY', '')),
+                'model': 'z-ai/glm-5.2',
+                'base_url': 'https://integrate.api.nvidia.com/v1',
+            },
+            'groq': {
+                'key': mask_key(os.environ.get('GROQ_API_KEY', '')),
+                'models': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+            },
+            'gemini': {
+                'key': mask_key(os.environ.get('GEMINI_API_KEY', '')),
+                'model': 'gemini-2.0-flash',
+            },
+        }
+    )
 
 
 @health_bp.route('/health/llm/config', methods=['POST'])
@@ -536,6 +642,7 @@ def health_llm_config():
 def health_llm_config_update():
     """Update LLM API keys at runtime. Admin only."""
     from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
     from app.models import User
 
     try:
@@ -561,6 +668,7 @@ def health_llm_config_update():
 
     if updated:
         from app.services.llm_client import reset_clients
+
         reset_clients()
 
     return jsonify({'updated': updated, 'errors': errors})

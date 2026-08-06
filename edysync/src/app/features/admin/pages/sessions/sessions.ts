@@ -213,7 +213,7 @@ export class Sessions implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.adminService.getSedes().subscribe({
         next: (res) => {
-          this.sedes = res.filter(s => s.active);
+          this.sedes = res.filter(s => s.active !== false);
           this.sedesLoading = false;
           this.cdr.markForCheck();
         },
@@ -237,14 +237,18 @@ export class Sessions implements OnInit, OnDestroy {
     );
   }
 
-  private loadSessions() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
-    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
+  private loadSessions(range?: { start: string; end: string }) {
+    const r = range || (() => {
+      const now = new Date();
+      return {
+        start: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0],
+        end: new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0],
+      };
+    })();
     const therapistId = this.selectedTherapistId ?? undefined;
 
     this.subscriptions.add(
-      this.adminService.getSessions(start, end, therapistId).subscribe({
+      this.adminService.getSessions(r.start, r.end, therapistId).subscribe({
         next: (events) => {
           let filtered = events;
           if (this.selectedPatientId) {
@@ -271,12 +275,25 @@ export class Sessions implements OnInit, OnDestroy {
     );
   }
 
+  onMonthChange(month: Date) {
+    const start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString().split('T')[0];
+    const end = new Date(month.getFullYear(), month.getMonth() + 1, 0).toISOString().split('T')[0];
+    this.loadSessions({ start, end });
+  }
+
   onTherapistFilterChange() {
-    this.loadSessions();
+    this.loadSessionsForCurrentMonth();
   }
 
   onPatientFilterChange() {
-    this.loadSessions();
+    this.loadSessionsForCurrentMonth();
+  }
+
+  private loadSessionsForCurrentMonth() {
+    const month = this.calendarWidget?.currentMonth || new Date();
+    const start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString().split('T')[0];
+    const end = new Date(month.getFullYear(), month.getMonth() + 1, 0).toISOString().split('T')[0];
+    this.loadSessions({ start, end });
   }
 
   onDayDblClick(date: Date) {

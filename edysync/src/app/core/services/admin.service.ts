@@ -66,6 +66,18 @@ export class AdminService {
     return this.http.post<ApiResponse>('/api/admin/reset-password', { id: userId, new_password: newPassword });
   }
 
+  listPasswordResets(status: string = 'awaiting_approval'): Observable<ApiResponse<{ items: any[] }>> {
+    return this.http.get<ApiResponse<{ items: any[] }>>(`/admin/api/admin/reset-actions?status=${status}`);
+  }
+
+  approvePasswordReset(resetId: number): Observable<ApiResponse<{ temp_password: string; target_user: any }>> {
+    return this.http.post<ApiResponse<{ temp_password: string; target_user: any }>>(`/admin/api/admin/reset-actions/${resetId}`, { action: 'approve' });
+  }
+
+  rejectPasswordReset(resetId: number, reason?: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>(`/admin/api/admin/reset-actions/${resetId}`, { action: 'reject', reason: reason || '' });
+  }
+
   assignTherapist(patientId: number, therapistIds: number[]): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/api/admin/assign-therapist', { patient_id: patientId, therapist_ids: therapistIds });
   }

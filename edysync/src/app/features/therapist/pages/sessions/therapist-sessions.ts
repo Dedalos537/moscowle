@@ -352,6 +352,30 @@ export class TherapistSessions implements OnInit, OnDestroy {
     this.router.navigate(['/therapist/sessions', event.id, 'review']);
   }
 
+  onMonthChange(month: Date) {
+    const start = toLocalDateString(new Date(month.getFullYear(), month.getMonth(), 1));
+    const end = toLocalDateString(new Date(month.getFullYear(), month.getMonth() + 1, 0));
+    this.subs.add(this.therapistService.getSessions(start, end).subscribe({
+      next: (events) => {
+        this.calendarEvents = events.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          date: new Date(dateFromISO(e.start) + 'T12:00:00'),
+          time: timeFromISO(e.start),
+          endTime: timeFromISO(e.end),
+          status: e.extendedProps?.status || 'scheduled',
+          therapist: e.extendedProps?.therapist,
+          patient: e.extendedProps?.patient,
+        }));
+        this.computeMonthStats();
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      },
+    }));
+  }
+
   private loadCalendarEvents() {
     this.calendarLoading = true;
     this.cdr.markForCheck();

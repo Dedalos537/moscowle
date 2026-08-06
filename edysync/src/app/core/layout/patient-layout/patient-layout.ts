@@ -58,6 +58,7 @@ export class PatientLayout implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
+        this.sidebarService.close();
         const elapsed = Date.now() - this.loadStartTime;
         this.loadElapsed = `${(elapsed / 1000).toFixed(1)}s`;
         setTimeout(() => { this.routeLoading = false; this.cdr.markForCheck(); }, 350);

@@ -115,7 +115,7 @@
                   <span class="text-sm font-semibold text-on-surface truncate">{{ chat.other_user?.username || 'Usuario' }}</span>
                   @if (chat.other_user?.role) {
                     <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant/70 font-medium shrink-0">
-                      {{ roleLabels[chat.other_user!.role] || chat.other_user!.role }}
+                      {{ roleLabels[displayRole(chat.other_user!.role)] || displayRole(chat.other_user!.role) }}
                     </span>
                   }
                 </div>
@@ -162,7 +162,7 @@
             <div class="text-sm font-bold text-on-surface">{{ selectedContact.username }}</div>
             @if (selectedContact.role) {
               <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant/70 font-medium">
-                {{ roleLabels[selectedContact.role] || selectedContact.role }}
+                {{ roleLabels[displayRole(selectedContact.role)] || displayRole(selectedContact.role) }}
               </span>
             }
           </div>

@@ -38,8 +38,20 @@ class Config:
     # Prevent "MySQL server has gone away" during idle periods
     # NOTE: SQLite uses NullPool implicitly — skip pooling options for SQLite.
     _uri = os.getenv('SQLALCHEMY_DATABASE_URI', '')
+    _is_cgi = os.environ.get('MOSCOWLE_CGI') == '1'
     if _uri.startswith('sqlite'):
         SQLALCHEMY_ENGINE_OPTIONS = {}
+    elif _is_cgi:
+        # CGI: cada request es un proceso nuevo que muere al responder. Un pool
+        # grande no aporta (la engine se descarta igual) y bajo concurrencia
+        # satura el limite de conexiones MySQL del cPanel. Pool minimo.
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': 1,
+            'max_overflow': 2,
+            'pool_recycle': 1800,
+            'pool_pre_ping': True,
+            'pool_timeout': 15,
+        }
     else:
         SQLALCHEMY_ENGINE_OPTIONS = {
             'pool_size': 10,
@@ -117,7 +129,7 @@ class Config:
     # ========== CORS ==========
     CORS_ORIGINS = os.getenv(
         'CORS_ORIGINS',
-        'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200 https://moscowle-backend-production.up.railway.app',
+        'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200',
     )
     SOCKET_CORS_ORIGINS = os.getenv('SOCKET_CORS_ORIGINS', 'https://moscowle.ai')
 

@@ -67,6 +67,14 @@ bootstrapApplication(App, {
     provideAnimations(),
     provideBeacon({ backdropColor: 'rgba(0, 0, 0, 0.55)' }),
     importProvidersFrom(SharedModule, CoreModule),
-    { provide: ErrorHandler, useValue: Sentry.createErrorHandler() },
+    {
+      provide: ErrorHandler,
+      useClass: class extends ErrorHandler {
+        override handleError(error: any) {
+          console.error('[ANGULAR-ERROR]', error);
+          try { Sentry.createErrorHandler().handleError(error); } catch (e) { /* noop */ }
+        }
+      }
+    },
   ]
 }).catch(err => console.error(err));

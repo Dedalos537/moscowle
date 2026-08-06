@@ -221,8 +221,8 @@ def init_security(app: Flask) -> None:
                 "'self'",
                 'https://cdnjs.cloudflare.com',
                 'https://api.github.com',
-                'wss://moscowle-backend-production.up.railway.app',
-                'https://moscowle-backend-production.up.railway.app',
+                'wss://backend.centrojuanpabloii.com',
+                'https://backend.centrojuanpabloii.com',
             ],
             'frame-ancestors': ["'none'"],
         }

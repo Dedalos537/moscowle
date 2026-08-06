@@ -2079,7 +2079,7 @@ def handle_update_contract(contract_id, **kwargs):
     return {'error': str(result)}
 
 
-register_tool(
+@tool(
     name='get_patient_stats',
     description='Obtener estadisticas demograficas de pacientes: distribucion por edades, sexo, sede, fecha de ingreso, guardianes, diagnosticos, contratos activos.',
     parameters={
@@ -2089,8 +2089,6 @@ register_tool(
     category='read',
     roles=ROLES_ADMIN,
 )
-
-
 def handle_get_patient_stats():
 
     from app.routes.admin.users import patient_stats
@@ -2100,7 +2098,7 @@ def handle_get_patient_stats():
         return result.get_json()
 
 
-register_tool(
+@tool(
     name='update_patient_details',
     description='Actualizar datos personales de un paciente (DNI, telefono, fecha de nacimiento, sexo, apoderado, diagnostico, etc). Sincroniza con contratos automaticamente.',
     parameters={
@@ -2162,8 +2160,6 @@ register_tool(
     category='write',
     roles=ROLES_ADMIN,
 )
-
-
 def handle_update_patient_details(patient_id, **kwargs):
     from datetime import datetime
 

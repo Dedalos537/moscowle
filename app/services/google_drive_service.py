@@ -1,4 +1,7 @@
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleDriveService:
@@ -16,7 +19,7 @@ class GoogleDriveService:
             from google.oauth2 import service_account
             from googleapiclient.discovery import build
         except ImportError:
-            print('Google Drive libraries not installed. Drive upload disabled.')
+            logger.warning('Google Drive libraries not installed. Drive upload disabled.')
             return
 
         creds_path = os.path.join(os.getcwd(), 'google_credentials.json')
@@ -28,9 +31,9 @@ class GoogleDriveService:
                 self.creds = service_account.Credentials.from_service_account_file(creds_path, scopes=self.SCOPES)
                 self.service = build('drive', 'v3', credentials=self.creds)
             except Exception as e:
-                print(f'Error authenticating with Google Drive: {e}')
+                logger.warning('Error authenticating with Google Drive: %s', e)
         else:
-            print('Google Drive credentials not found. Drive upload disabled.')
+            logger.warning('Google Drive credentials not found. Drive upload disabled.')
 
     def _find_folder(self, name, parent_id):
         """Find a folder by name within a parent folder."""

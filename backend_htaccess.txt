@@ -1,0 +1,6 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION
+# Recreado: la app python "moscowle" en backend.centrojuanpabloii.com
+PassengerEnabled On
+PassengerAppRoot /home/centroju/moscowle
+PassengerPython /home/centroju/virtualenv/moscowle/3.11/bin/python
+PassengerDefaultUser centroju

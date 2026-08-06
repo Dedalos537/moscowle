@@ -29,7 +29,7 @@ def handle_connect():
         emit('user:online', {'user_id': user_id, 'username': current_user.username}, broadcast=True, include_self=False)
 
         return True
-    return False
+    return True
 
 
 @socketio.on('disconnect')

@@ -43,6 +43,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   dayDblClick = output<Date>();
   rangeDblClick = output<{ start: Date; end: Date }>();
   eventClick = output<CalendarWidgetEvent>();
+  monthChange = output<Date>();
   multiSelect = input(false);
   selectedIds = input<Set<number>>(new Set());
   selectionChange = output<number[]>();
@@ -165,11 +166,13 @@ export class CalendarWidget implements OnInit, OnChanges {
   prevMonth() {
     this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() - 1, 1);
     this.buildGrid();
+    this.monthChange.emit(this.currentMonth);
   }
 
   nextMonth() {
     this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + 1, 1);
     this.buildGrid();
+    this.monthChange.emit(this.currentMonth);
   }
 
   today() {
@@ -177,6 +180,7 @@ export class CalendarWidget implements OnInit, OnChanges {
     this.selectedDate = new Date();
     this.clearRange();
     this.buildGrid();
+    this.monthChange.emit(this.currentMonth);
   }
 
   toggleRangeMode() {
@@ -333,6 +337,7 @@ export class CalendarWidget implements OnInit, OnChanges {
     this.selectedDate = new Date(cell.date);
     if (!cell.isCurrentMonth) {
       this.currentMonth = new Date(cell.date.getFullYear(), cell.date.getMonth(), 1);
+      this.monthChange.emit(this.currentMonth);
     }
     this.buildGrid();
     this.dayClick.emit(cell.date);

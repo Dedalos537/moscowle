@@ -269,15 +269,15 @@
 </div>
 } @if (activeTab === 'pagos') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
-  @if (incompletePlanPatients.length > 0) {
+  @if (patientsWithoutContractCount > 0) {
   <div class="flex items-start gap-4 p-4 bg-warning-container border border-warning-container rounded-xl">
     <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-warning text-2xl shrink-0"></fa-icon>
     <div class="flex-1 min-w-0">
       <p class="text-sm font-bold text-warning">
-        {{ incompletePlanPatients.length }} pacientes sin configuración de pago
+        {{ patientsWithoutContractCount }} pacientes sin contrato activo
       </p>
       <p class="text-xs text-warning mt-0.5">
-        Configura el monto, plan, y fecha de vencimiento para estos pacientes.
+        Crea un contrato para cada paciente y empieza a cobrar por cuotas.
       </p>
     </div>
   </div>
@@ -435,14 +435,14 @@
       <p class="text-[10px] font-bold uppercase" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface-variant]="patientStatusFilter !== 'deudor'">Deudores</p>
       <p class="text-xl font-black font-accent" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface]="patientStatusFilter !== 'deudor'">{{ patientStats.deudores }}</p>
     </button>
-    <button (click)="setPatientStatusFilter('sin_plan')"
+    <button (click)="setPatientStatusFilter('sin_contrato')"
       class="rounded-xl p-3 text-center border transition-all cursor-pointer"
-      [class.border-warning]="patientStatusFilter === 'sin_plan'"
-      [class.bg-warning/10]="patientStatusFilter === 'sin_plan'"
-      [class.border-border/30]="patientStatusFilter !== 'sin_plan'"
-      [class.hover:border-warning/40]="patientStatusFilter !== 'sin_plan'">
-      <p class="text-[10px] font-bold uppercase" [class.text-warning]="patientStatusFilter === 'sin_plan'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_plan'">Sin Plan</p>
-      <p class="text-xl font-black font-accent" [class.text-warning]="patientStatusFilter === 'sin_plan'" [class.text-on-surface]="patientStatusFilter !== 'sin_plan'">{{ patientStats.sinPlan }}</p>
+      [class.border-warning]="patientStatusFilter === 'sin_contrato'"
+      [class.bg-warning/10]="patientStatusFilter === 'sin_contrato'"
+      [class.border-border/30]="patientStatusFilter !== 'sin_contrato'"
+      [class.hover:border-warning/40]="patientStatusFilter !== 'sin_contrato'">
+      <p class="text-[10px] font-bold uppercase" [class.text-warning]="patientStatusFilter === 'sin_contrato'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_contrato'">Sin Contrato</p>
+      <p class="text-xl font-black font-accent" [class.text-warning]="patientStatusFilter === 'sin_contrato'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_contrato'">{{ patientStats.sinContrato }}</p>
     </button>
   </div>
 
@@ -528,16 +528,22 @@
               </td>
               <td class="px-4 py-3.5">
                 <div class="flex items-center gap-2 justify-center">
+                  @if (getContractProgress(p.id).total > 0) {
                   <div class="w-16 h-1.5 bg-surface-container-high rounded-full overflow-hidden">
                     <div class="h-full rounded-full transition-all duration-700"
-                      [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
-                      [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
-                      [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
-                      [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"></div>
+                      [ngClass]="{
+                        'bg-success': getContractProgress(p.id).pct >= 75,
+                        'bg-warning': getContractProgress(p.id).pct >= 40 && getContractProgress(p.id).pct < 75,
+                        'bg-error': getContractProgress(p.id).pct < 40
+                      }"
+                      [style.width.%]="getContractProgress(p.id).pct"></div>
                   </div>
                   <span class="text-xs font-bold text-on-surface-variant min-w-[3rem] text-right">
-                    {{ p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100).toFixed(0) : '0' }}%
+                    {{ getContractProgress(p.id).paid }}/{{ getContractProgress(p.id).total }}
                   </span>
+                  } @else {
+                  <span class="text-xs text-on-surface-variant">—</span>
+                  }
                 </div>
               </td>
               <td class="px-4 py-3.5 text-right">
@@ -583,11 +589,30 @@
                     <span class="text-sm text-on-surface-variant">Cargando contrato...</span>
                   </div>
                   } @else if (selectedPatientContract) {
+                  @if (selectedPatientContracts.length > 1) {
+                  <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+                    @for (contract of selectedPatientContracts; track contract.id) {
+                    <button (click)="selectContract(contract)"
+                      class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all"
+                      [class]="contract.id === selectedPatientContract?.id
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface-container-high/50 text-on-surface-variant border-border/30 hover:border-primary/50'">
+                      {{ contract.name }}
+                      <span class="ml-1 text-[10px] font-normal opacity-70">
+                        S/ {{ contract.total_amount.toFixed(0) }}
+                      </span>
+                    </button>
+                    }
+                  </div>
+                  }
                   <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     <div class="lg:col-span-1 space-y-3">
                       <div class="flex items-center gap-2 mb-2">
                         <fa-icon [icon]="['fas', 'file-contract']" class="text-primary"></fa-icon>
                         <span class="text-sm font-bold text-primary">{{ selectedPatientContract.name }}</span>
+                        <button (click)="openCreateContractForCurrentPatient()" class="ml-auto text-[10px] text-primary hover:text-primary/80 font-bold flex items-center gap-1">
+                          <fa-icon [icon]="['fas', 'plus']" class="text-[9px]"></fa-icon> Nuevo Contrato
+                        </button>
                       </div>
                       <div class="grid grid-cols-2 gap-2 text-xs">
                         <div class="bg-surface-container-high/50 rounded-lg p-2.5">
@@ -623,11 +648,13 @@
                           <span class="font-bold text-on-surface">{{ selectedPatientContract.paid_count }}/{{ selectedPatientContract.installment_count }}</span>
                         </div>
                       </div>
-                      <div class="flex gap-2 pt-1">
+                      <div class="flex gap-2 pt-1 flex-wrap">
                         <app-button variant="primary" label="Editar Contrato" [icon]="['fas', 'file-contract']" size="sm"
                           (clicked)="openEditContractModal()"></app-button>
                         <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']" size="sm"
                           (clicked)="startEditPatientDetails()"></app-button>
+                        <app-button variant="secondary" label="Generar Boleta" [icon]="['fas', 'receipt']" size="sm"
+                          (clicked)="generateBoleta()"></app-button>
                         @if (selectedPatientContract.status === 'active') {
                         <app-button variant="danger" label="Cancelar" [icon]="['fas', 'ban']" size="sm"
                           (clicked)="showCancelContractModal = true"></app-button>
@@ -642,19 +669,17 @@
                       <div class="space-y-2 max-h-[350px] overflow-y-auto pr-1">
                         @for (inst of selectedPatientContract.installments; track inst.id; let i = $index) {
                         <div class="flex items-center gap-3 p-3 rounded-xl border transition-all"
-                          [class.bg-success/5]="inst.status === 'paid'"
-                          [class.border-success/30]="inst.status === 'paid'"
-                          [class.bg-error/5]="inst.status === 'pending' && inst.due_date < today"
-                          [class.border-error/30]="inst.status === 'pending' && inst.due_date < today"
-                          [class.bg-surface-container-high/30]="inst.status === 'pending' && inst.due_date >= today"
-                          [class.border-border/20]="inst.status === 'pending' && inst.due_date >= today">
+                          [ngClass]="{
+                            'bg-success/5 border-success/30': inst.status === 'paid',
+                            'bg-error/5 border-error/30': inst.status === 'pending' && inst.due_date < today,
+                            'bg-surface-container-high/30 border-border/20': inst.status === 'pending' && inst.due_date >= today
+                          }">
                           <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                            [class.bg-success/15]="inst.status === 'paid'"
-                            [class.text-success]="inst.status === 'paid'"
-                            [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
-                            [class.text-error]="inst.status === 'pending' && inst.due_date < today"
-                            [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
-                            [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                            [ngClass]="{
+                              'bg-success/15 text-success': inst.status === 'paid',
+                              'bg-error/15 text-error': inst.status === 'pending' && inst.due_date < today,
+                              'bg-surface-container-high text-on-surface-variant': inst.status === 'pending' && inst.due_date >= today
+                            }">
                             {{ i + 1 }}
                           </div>
                           <div class="flex-1 min-w-0">
@@ -668,12 +693,11 @@
                             }
                           </div>
                           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
-                            [class.bg-success/15]="inst.status === 'paid'"
-                            [class.text-success]="inst.status === 'paid'"
-                            [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
-                            [class.text-error]="inst.status === 'pending' && inst.due_date < today"
-                            [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
-                            [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                            [ngClass]="{
+                              'bg-success/15 text-success': inst.status === 'paid',
+                              'bg-error/15 text-error': inst.status === 'pending' && inst.due_date < today,
+                              'bg-surface-container-high text-on-surface-variant': inst.status === 'pending' && inst.due_date >= today
+                            }">
                             @switch (inst.status) {
                               @case ('paid') { Pagada }
                               @case ('partial') { Parcial }
@@ -684,98 +708,14 @@
                             }
                           </span>
                           @if (inst.status !== 'paid' && inst.status !== 'cancelled') {
-                          <button class="btn-ghost !px-2 !py-1 text-[10px] font-bold text-primary shrink-0"
-                            (click)="openPayInstallmentModal(inst, selectedPatientContract!); $event.stopPropagation()">
-                            <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-[12px] mr-1"></fa-icon>Pagar
-                          </button>
+                          <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
+                            (clicked)="openPayInstallmentModal(inst, selectedPatientContract!); $event.stopPropagation()"></app-button>
                           }
                         </div>
                         }
                       </div>
                     </div>
                   </div>
-
-                  @if (editingPatientDetails) {
-                  <div class="mt-4 border-t border-border/20 pt-4 animate-fade-in">
-                    <div class="flex items-center justify-between mb-3">
-                      <h4 class="text-xs font-bold text-on-surface-variant uppercase flex items-center gap-2">
-                        <fa-icon [icon]="['fas', 'user-edit']" class="text-primary"></fa-icon>
-                        Editar Datos del Paciente
-                      </h4>
-                      <button (click)="cancelEditPatientDetails()" class="text-on-surface-variant hover:text-on-surface text-xs">
-                        <fa-icon [icon]="['fas', 'times']"></fa-icon> Cancelar
-                      </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI</label>
-                        <input type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Telefono</label>
-                        <input type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
-                        <input type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
-                        <select [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
-                          <option value="">No especificado</option>
-                          <option value="M">Masculino</option>
-                          <option value="F">Femenino</option>
-                          <option value="Otro">Otro</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
-                        <input type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
-                        <select [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
-                          <option value="">No especificado</option>
-                          <option value="padre">Padre</option>
-                          <option value="madre">Madre</option>
-                          <option value="tutor">Tutor</option>
-                          <option value="otro">Otro</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
-                        <input type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
-                        <input type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Telefono o email">
-                      </div>
-                      <div>
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Diagnostico</label>
-                        <input type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnostico preliminar">
-                      </div>
-                      <div class="md:col-span-2 lg:col-span-3">
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
-                        <textarea [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
-                      </div>
-                      <div class="md:col-span-2 lg:col-span-3">
-                        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
-                        <textarea [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
-                      </div>
-                    </div>
-                    @if (patientDetailStatus) {
-                    <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error]="patientDetailStatus !== 'Guardado correctamente'">
-                      {{ patientDetailStatus }}
-                    </p>
-                    }
-                    <div class="flex gap-2 mt-3">
-                      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
-                        (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
-                      <app-button variant="ghost" label="Cancelar" size="sm"
-                        (clicked)="cancelEditPatientDetails()"></app-button>
-                    </div>
-                  </div>
-                  }
 
                   } @else {
                   <div class="text-center py-8">
@@ -846,183 +786,188 @@
     }
   </div>
 
-    <div class="md:hidden space-y-3 mt-4">
-      @for (p of paginatedPatients; track p.id) {
-      <div class="bg-surface-container-low rounded-xl border border-border/30 p-4 transition-all duration-200 cursor-pointer"
-        [class.border-l-4]="isOverdue(p)" [class.border-l-red-500]="isOverdue(p)"
-        [class.border-l-primary]="expandedPatientId === p.id"
-        [class.bg-primary/5]="expandedPatientId === p.id"
-        [class.opacity-50]="expandedPatientId && expandedPatientId !== p.id"
+    <div class="md:hidden space-y-2 sm:space-y-3 mt-3 sm:mt-4 max-h-[520px] overflow-y-auto rounded-xl border border-border/15 p-2 sm:p-3">
+      @for (p of paginatedPatients; track p.id; let i = $index) {
+      <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'"
+        [class.bg-error-container/10]="isOverdue(p)"
+        [class.bg-surface-container-highest/30]="expandedPatientId === p.id"
         (click)="togglePatientExpand(p)">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div
-              class="w-10 h-10 rounded-full bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
-              {{ getInitials(p.username) }}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-on-surface truncate">{{ p.username }}</p>
-              <p class="text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
-              [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
-              <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
-              {{ getStatusInfo(p).label }}
-            </span>
-            <fa-icon [icon]="expandedPatientId === p.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
-              class="text-on-surface-variant text-[12px]"></fa-icon>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-sm mb-3">
-          <div>
-            <span class="text-label-caps text-on-surface-variant">Sede</span>
-            <p class="text-sm font-medium text-on-surface">{{ p.sede_name || '—' }}</p>
-          </div>
-          <div>
-            <span class="text-label-caps text-on-surface-variant">Terapeuta</span>
-            <p class="text-sm font-medium text-on-surface">{{ p.therapist_name || '—' }}</p>
-          </div>
-          <div>
-            <span class="text-label-caps text-on-surface-variant">Plan</span>
-            <p class="text-sm font-medium text-on-surface">{{ p.plan_name || '—' }}</p>
-          </div>
-          <div>
-            <span class="text-label-caps text-on-surface-variant">Deuda</span>
-            <p class="text-sm font-bold" [class.text-success]="p.payment_amount < 100"
-              [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
-              [class.text-error]="p.payment_amount >= 300">
-              S/ {{ p.payment_amount.toFixed(2) }}
-            </p>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <div class="flex justify-between text-xs text-on-surface-variant mb-1">
-            <span>Progreso</span>
-            <span class="font-bold">{{ p.sessions_attended }}/{{ p.sessions_total }}</span>
-          </div>
-          <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all"
-              [class.bg-success]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 75"
-              [class.bg-warning]="(p.sessions_attended / (p.sessions_total || 1)) * 100 >= 40 && (p.sessions_attended / (p.sessions_total || 1)) * 100 < 75"
-              [class.bg-error-container0]="(p.sessions_attended / (p.sessions_total || 1)) * 100 < 40"
-              [style.width.%]="p.sessions_total > 0 ? ((p.sessions_attended / p.sessions_total) * 100) : 0"></div>
-          </div>
-        </div>
-
-        @if (p.next_due_date) {
-        <div class="flex items-center gap-2 mb-3 text-xs">
-          <fa-icon [icon]="['fas', 'calendar-alt']" class="text-[14px] text-on-surface-variant"></fa-icon>
-          <span class="text-on-surface-variant">Prox. venc.:</span>
-          <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
-          @if (isOverdue(p)) {
-          <span class="text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full">VENCIDO</span>
-          }
-        </div>
-        }
-
-        @if (expandedPatientId === p.id) {
-        <div class="border-t border-border/20 pt-3 mt-3" (click)="$event.stopPropagation()">
-          @if (contractLoading) {
-          <div class="flex items-center justify-center py-6 gap-2">
-            <app-spinner size="sm" colorClass="text-primary"></app-spinner>
-            <span class="text-xs text-on-surface-variant">Cargando contrato...</span>
-          </div>
-          } @else if (selectedPatientContract) {
-          <div class="space-y-3">
-            <div class="flex items-center gap-2">
-              <fa-icon [icon]="['fas', 'file-contract']" class="text-primary"></fa-icon>
-              <span class="text-xs font-bold text-primary">{{ selectedPatientContract.name }}</span>
-            </div>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="bg-surface-container-high/50 rounded-lg p-2">
-                <span class="text-on-surface-variant block">Tipo</span>
-                <span class="font-bold">{{ selectedPatientContract.billing_type }}</span>
+        <div class="p-3 sm:p-4 border-b border-border/15 bg-surface-container-high/30">
+          <div class="flex justify-between items-start gap-2 sm:gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div
+                class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-xs sm:text-sm shrink-0">
+                {{ getInitials(p.username) }}
               </div>
-              <div class="bg-surface-container-high/50 rounded-lg p-2">
-                <span class="text-on-surface-variant block">Total</span>
-                <span class="font-bold">S/ {{ selectedPatientContract.total_amount.toFixed(2) }}</span>
-              </div>
-              <div class="bg-surface-container-high/50 rounded-lg p-2">
-                <span class="text-on-surface-variant block">DNI Paciente</span>
-                <span class="font-bold">{{ selectedPatientContract.patient_dni || '—' }}</span>
-              </div>
-              <div class="bg-surface-container-high/50 rounded-lg p-2">
-                <span class="text-on-surface-variant block">DNI Apoderado</span>
-                <span class="font-bold">{{ selectedPatientContract.guardian_dni || '—' }}</span>
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ p.username }}</p>
+                <p class="text-[10px] sm:text-xs text-on-surface-variant truncate">{{ p.email || '—' }}</p>
               </div>
             </div>
-            @if (selectedPatientContract.guardian_name) {
-            <div class="bg-surface-container-high/50 rounded-lg p-2 text-xs">
-              <span class="text-on-surface-variant block">Apoderado</span>
-              <span class="font-bold">{{ selectedPatientContract.guardian_name }}</span>
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md"
+                [class]="getStatusInfo(p).bg + ' ' + getStatusInfo(p).text">
+                <span class="w-1.5 h-1.5 rounded-full" [class]="getStatusInfo(p).dot"></span>
+                {{ getStatusInfo(p).label }}
+              </span>
+              <fa-icon [icon]="expandedPatientId === p.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
+                class="text-on-surface-variant text-[12px]"></fa-icon>
+            </div>
+          </div>
+        </div>
+        <div class="p-3 sm:p-4 space-y-2 sm:space-y-3">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md bg-surface-container-high text-on-surface-variant">
+                {{ p.sede_name || 'Sin sede' }}
+              </span>
+              <span class="text-on-surface-variant/30">|</span>
+              <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ p.therapist_name || 'Sin terapeuta' }}</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-high/50 rounded-xl p-3 border border-border/20">
+            <div class="flex items-center justify-between">
+              <span class="text-label-caps text-on-surface-variant">Deuda</span>
+              <span class="text-base sm:text-lg font-black"
+                [class.text-success]="p.payment_amount < 100"
+                [class.text-warning]="p.payment_amount >= 100 && p.payment_amount < 300"
+                [class.text-error]="p.payment_amount >= 300">
+                S/ {{ p.payment_amount.toFixed(2) }}
+              </span>
+            </div>
+            @if (p.next_due_date) {
+            <div class="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs">
+              <fa-icon [icon]="['fas', 'calendar-alt']" class="text-on-surface-variant"></fa-icon>
+              <span class="text-on-surface-variant">Prox. venc.:</span>
+              <span class="font-semibold text-on-surface">{{ p.next_due_date | date:'dd/MM/yyyy' }}</span>
+              @if (isOverdue(p)) {
+              <span class="text-[9px] sm:text-[10px] font-black text-error bg-error-container px-1.5 py-0.5 rounded-full ml-auto">VENCIDO</span>
+              }
             </div>
             }
-            <div class="space-y-2 max-h-[250px] overflow-y-auto">
-              @for (inst of selectedPatientContract.installments; track inst.id; let i = $index) {
-              <div class="flex items-center gap-2 p-2 rounded-lg text-xs"
-                [class.bg-success/5]="inst.status === 'paid'"
-                [class.border border-success/30]="inst.status === 'paid'"
-                [class.bg-error/5]="inst.status === 'pending' && inst.due_date < today"
-                [class.border border-error/30]="inst.status === 'pending' && inst.due_date < today"
-                [class.bg-surface-container-high/30]="inst.status === 'pending' && inst.due_date >= today">
-                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                  [class.bg-success/15]="inst.status === 'paid'"
-                  [class.text-success]="inst.status === 'paid'"
-                  [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
-                  [class.text-error]="inst.status === 'pending' && inst.due_date < today"
-                  [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
-                  [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
-                  {{ i + 1 }}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <span class="font-semibold">{{ inst.description || 'Cuota #' + inst.number }}</span>
-                  <span class="text-on-surface-variant ml-1">{{ inst.due_date | date:'dd/MM' }}</span>
-                </div>
-                <span class="font-bold shrink-0">S/ {{ inst.amount.toFixed(0) }}</span>
-                <span class="font-bold shrink-0"
-                  [class.text-success]="inst.status === 'paid'"
-                  [class.text-error]="inst.status === 'pending' && inst.due_date < today"
-                  [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
-                  {{ inst.status === 'paid' ? 'Pagada' : (inst.due_date < today ? 'Vencida' : 'Pendiente') }}
-                </span>
+          </div>
+
+          @if (expandedPatientId === p.id) {
+          <div class="border-t border-border/20 pt-3 mt-1" (click)="$event.stopPropagation()">
+            <div class="mb-3">
+              <div class="flex justify-between text-[10px] sm:text-xs text-on-surface-variant mb-1">
+                <span>Progreso Contrato</span>
+                @if (getContractProgress(p.id).total > 0) {
+                <span class="font-bold">{{ getContractProgress(p.id).paid }}/{{ getContractProgress(p.id).total }} ({{ getContractProgress(p.id).pct }}%)</span>
+                } @else {
+                <span class="font-bold">Sin contrato</span>
+                }
+              </div>
+              @if (getContractProgress(p.id).total > 0) {
+              <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all"
+                  [ngClass]="{
+                    'bg-success': getContractProgress(p.id).pct >= 75,
+                    'bg-warning': getContractProgress(p.id).pct >= 40 && getContractProgress(p.id).pct < 75,
+                    'bg-error': getContractProgress(p.id).pct < 40
+                  }"
+                  [style.width.%]="getContractProgress(p.id).pct"></div>
               </div>
               }
             </div>
-            <div class="flex gap-2 pt-1">
-              <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
-                (clicked)="openEditContractModal()"></app-button>
-              <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
-                (clicked)="openRegisterModal(p)"></app-button>
+
+            @if (contractLoading) {
+            <div class="flex items-center justify-center py-6 gap-2">
+              <app-spinner size="sm" colorClass="text-primary"></app-spinner>
+              <span class="text-xs text-on-surface-variant">Cargando contrato...</span>
             </div>
+            } @else if (selectedPatientContract) {
+            <div class="space-y-3">
+              <div class="flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'file-contract']" class="text-primary"></fa-icon>
+                <span class="text-xs font-bold text-primary">{{ selectedPatientContract.name }}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-surface-container-high/50 rounded-lg p-2">
+                  <span class="text-on-surface-variant block">Tipo</span>
+                  <span class="font-bold">{{ selectedPatientContract.billing_type }}</span>
+                </div>
+                <div class="bg-surface-container-high/50 rounded-lg p-2">
+                  <span class="text-on-surface-variant block">Total</span>
+                  <span class="font-bold">S/ {{ selectedPatientContract.total_amount.toFixed(2) }}</span>
+                </div>
+                <div class="bg-surface-container-high/50 rounded-lg p-2">
+                  <span class="text-on-surface-variant block">DNI Paciente</span>
+                  <span class="font-bold">{{ selectedPatientContract.patient_dni || '—' }}</span>
+                </div>
+                <div class="bg-surface-container-high/50 rounded-lg p-2">
+                  <span class="text-on-surface-variant block">DNI Apoderado</span>
+                  <span class="font-bold">{{ selectedPatientContract.guardian_dni || '—' }}</span>
+                </div>
+              </div>
+              @if (selectedPatientContract.guardian_name) {
+              <div class="bg-surface-container-high/50 rounded-lg p-2 text-xs">
+                <span class="text-on-surface-variant block">Apoderado</span>
+                <span class="font-bold">{{ selectedPatientContract.guardian_name }}</span>
+              </div>
+              }
+              <div class="space-y-2 max-h-[250px] overflow-y-auto">
+                @for (inst of selectedPatientContract.installments; track inst.id; let i = $index) {
+                <div class="flex items-center gap-2 p-2 rounded-lg text-xs border"
+                  [ngClass]="{
+                    'bg-success/5 border-success/30': inst.status === 'paid',
+                    'bg-error/5 border-error/30': inst.status === 'pending' && inst.due_date < today,
+                    'bg-surface-container-high/30 border-surface-container-high/30': inst.status === 'pending' && inst.due_date >= today
+                  }">
+                  <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    [class.bg-success/15]="inst.status === 'paid'"
+                    [class.text-success]="inst.status === 'paid'"
+                    [class.bg-error/15]="inst.status === 'pending' && inst.due_date < today"
+                    [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                    [class.bg-surface-container-high]="inst.status === 'pending' && inst.due_date >= today"
+                    [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                    {{ i + 1 }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <span class="font-semibold">{{ inst.description || 'Cuota #' + inst.number }}</span>
+                    <span class="text-on-surface-variant ml-1">{{ inst.due_date | date:'dd/MM' }}</span>
+                  </div>
+                  <span class="font-bold shrink-0">S/ {{ inst.amount.toFixed(0) }}</span>
+                  <span class="font-bold shrink-0"
+                    [class.text-success]="inst.status === 'paid'"
+                    [class.text-error]="inst.status === 'pending' && inst.due_date < today"
+                    [class.text-on-surface-variant]="inst.status === 'pending' && inst.due_date >= today">
+                    {{ inst.status === 'paid' ? 'Pagada' : (inst.due_date < today ? 'Vencida' : 'Pendiente') }}
+                  </span>
+                </div>
+                }
+              </div>
+              <div class="flex gap-2 pt-1">
+                <app-button variant="primary" label="Editar" [icon]="['fas', 'edit']" size="sm"
+                  (clicked)="openEditContractModal()"></app-button>
+                <app-button variant="ghost" label="Pagar" [icon]="['fas', 'money-bill-wave']" size="sm"
+                  (clicked)="openPayFirstUnpaidInstallment()"></app-button>
+              </div>
+            </div>
+            } @else {
+            <div class="text-center py-4">
+              <fa-icon [icon]="['fas', 'file-contract']" class="text-3xl text-on-surface-variant/40 mb-2 block"></fa-icon>
+              <p class="text-xs text-on-surface-variant mb-2">Sin contrato activo</p>
+              <div class="flex gap-2 justify-center">
+                <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
+                  (clicked)="openCreateContractForPatient(p)"></app-button>
+                <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']" size="sm"
+                  (clicked)="startEditPatientDetails()"></app-button>
+              </div>
+            </div>
+            }
           </div>
           } @else {
-          <div class="text-center py-4">
-            <fa-icon [icon]="['fas', 'file-contract']" class="text-3xl text-on-surface-variant/40 mb-2 block"></fa-icon>
-            <p class="text-xs text-on-surface-variant mb-2">Sin contrato activo</p>
-            <div class="flex gap-2 justify-center">
-              <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
-                (clicked)="openCreateContractForPatient(p)"></app-button>
-              <app-button variant="secondary" label="Editar Datos" [icon]="['fas', 'user-edit']" size="sm"
-                (clicked)="startEditPatientDetails()"></app-button>
-            </div>
+          <div class="flex gap-2 pt-2 border-t border-border/20">
+            <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'plus']" size="sm"
+              (clicked)="openCreateContractForPatient(p)"></app-button>
+            <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p); $event.stopPropagation()" title="Ver Historial">
+              <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
+            </button>
           </div>
           }
         </div>
-        } @else {
-        <div class="flex gap-2 pt-2 border-t border-border/20">
-          <app-button variant="primary" label="Pagar" [icon]="['fas', 'money-bill-wave']"
-            (clicked)="openRegisterModal(p)"></app-button>
-          <app-button variant="secondary" label="Plan" [icon]="['fas', 'cog']"
-            (clicked)="openSettingsModal(p)"></app-button>
-          <button class="btn-ghost !px-3 !py-2" (click)="viewPatientHistory(p); $event.stopPropagation()" title="Ver Historial">
-            <fa-icon [icon]="['fas', 'history']" class="text-[16px]"></fa-icon>
-          </button>
-        </div>
-        }
       </div>
       } @empty {
       <div class="text-center py-12">
@@ -1182,138 +1127,6 @@
 
 </div>
 }
-
-<app-modal [isOpen]="showRegisterModal" title="Registrar Pago" (close)="closeRegisterModal()">
-  <div class="space-y-4">
-    @if (registerForm.patient_id) {
-    <div class="flex items-center gap-3 p-3 bg-primary-container/15 border border-primary-container/30 rounded-lg">
-      <fa-icon [icon]="['fas', 'user']" class="text-primary text-lg shrink-0"></fa-icon>
-      <div>
-        <p class="text-xs font-bold text-primary">Paciente</p>
-        <p class="text-sm font-semibold text-on-surface">
-          {{ getPatientName(registerForm.patient_id) }}
-        </p>
-      </div>
-    </div>
-    }
-    <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">DNI del
-        Paciente</label>
-      <input [(ngModel)]="registerForm.document_number" type="text" placeholder="12345678" class="input-field"
-        maxlength="8" />
-    </div>
-    <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Nombre del
-        Apoderado</label>
-      <input [(ngModel)]="registerForm.guardian_name" type="text" placeholder="Nombre del apoderado o tutor"
-        class="input-field" />
-    </div>
-    <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Fecha de
-        Pago</label>
-      <input [(ngModel)]="registerForm.payment_date" type="date" class="input-field" />
-    </div>
-    <app-input id="amount" label="Monto (S/)" type="number" [(value)]="registerForm.amount"></app-input>
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Método</label>
-        <app-select [(ngModel)]="registerForm.method" [options]="paymentMethodOptions" class="input-field"></app-select>
-      </div>
-      <app-input id="discount" label="Descuento (S/)" type="number" [(value)]="registerForm.discount"></app-input>
-    </div>
-    <app-input id="reference" label="Referencia" [(value)]="registerForm.reference"
-      placeholder="N° de operación"></app-input>
-    <app-input id="next-due" label="Próximo Vencimiento" type="date" [(value)]="registerForm.next_due_date"></app-input>
-
-    @if (needsRecalculation) {
-    <div class="flex items-start gap-3 p-3 bg-info-container border border-info-container rounded-lg">
-      <fa-icon [icon]="['fas', 'info-circle']" class="text-info text-lg shrink-0"></fa-icon>
-      <p class="text-xs text-info">
-        <strong>Recálculo:</strong> El monto final considera el descuento
-        aplicado. Total neto: S/ {{ (registerForm.amount -
-        registerForm.discount).toFixed(2) }}
-      </p>
-    </div>
-    } @if (hasMissingData) {
-    <div class="flex items-start gap-3 p-3 bg-warning-container border border-warning-container rounded-lg">
-      <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-warning text-lg shrink-0"></fa-icon>
-      <div>
-        <p class="text-xs font-bold text-warning">Datos faltantes</p>
-        <p class="text-xs text-warning mt-0.5">
-          @if (!registerForm.document_number) { • DNI del paciente<br />
-          } @if (!registerForm.guardian_name) { • Nombre del apoderado<br />
-          } Se recomienda completar estos campos para el comprobante.
-        </p>
-      </div>
-    </div>
-    }
-
-    <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Voucher
-        (opcional)</label>
-      <input type="file" (change)="onFileSelected($event)" accept="image/*"
-        class="w-full px-4 py-2.5 bg-surface-container-low border border-border rounded-xl text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary file:text-on-primary cursor-pointer" />
-    </div>
-
-    @if (analyzingReceipt) {
-    <div class="flex items-center gap-3 p-3 bg-secondary/5 border border-accent-container rounded-lg">
-      <app-spinner size="sm" colorClass="text-secondary"></app-spinner>
-      <span class="text-xs font-medium text-secondary">Analizando voucher con OCR...</span>
-    </div>
-    } @if (analyzeResult && !analyzingReceipt) {
-    <div class="flex items-start gap-3 p-3 bg-success-container border border-success-container rounded-lg">
-      <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
-      <div>
-        <p class="text-xs font-bold text-success">OCR Completado</p>
-        <p class="text-xs text-success mt-0.5">
-          Monto: S/ {{ analyzeResult.amount || '—' }} | Ref: {{
-          analyzeResult.reference || '—' }} | Método: {{ analyzeResult.method ||
-          '—' }}
-        </p>
-      </div>
-    </div>
-    }
-  </div>
-  <div modal-footer>
-    <div class="flex items-center justify-between w-full">
-      <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
-      <div class="flex gap-2">
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeRegisterModal()"></app-button>
-        <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount"
-          (clicked)="submitRegisterPayment()"></app-button>
-      </div>
-    </div>
-  </div>
-</app-modal>
-
-<app-modal [isOpen]="showSettingsModal" title="Configurar Plan de Pago" (close)="closeSettingsModal()">
-  <div class="space-y-4">
-    <p class="text-sm text-on-surface-variant">
-      Configurando plan para
-      <strong class="text-on-surface">{{ settingsForm.patient_name }}</strong>
-    </p>
-    <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">Frecuencia de
-        Pago</label>
-      <app-select [(ngModel)]="settingsForm.payment_plan" [options]="planFrequencyOptions"
-        class="input-field"></app-select>
-    </div>
-    <app-input id="settings-amount" label="Monto Acordado (S/)" type="number"
-      [(value)]="settingsForm.payment_amount"></app-input>
-    <app-input id="settings-due" label="Fecha de Vencimiento Actual" type="date"
-      [(value)]="settingsForm.payment_due_date"></app-input>
-  </div>
-  <div modal-footer>
-    <div class="flex items-center justify-between w-full">
-      <span class="text-xs text-on-surface-variant">{{ settingsStatus }}</span>
-      <div class="flex gap-2">
-        <app-button variant="ghost" label="Cancelar" (clicked)="closeSettingsModal()"></app-button>
-        <app-button variant="primary" label="Guardar Configuración" [icon]="['fas', 'save']"
-          [disabled]="!settingsForm.payment_amount" (clicked)="submitSettings()"></app-button>
-      </div>
-    </div>
-  </div>
-</app-modal>
 
 @if (activeTab === 'yape') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
@@ -1534,9 +1347,7 @@
               <div class="mt-1 flex items-center gap-2">
                 @if (e.method) {
                 <span class="text-xs border px-1 rounded text-on-surface-variant bg-surface-container-lowest">
-                  {{ e.method === 'transfer' ? 'Transferencia' : e.method ===
-                  'yape_plin' ? 'Yape/Plin' : e.method === 'cash' ? 'Efectivo' :
-                  e.method }}
+                  {{ getExpenseMethodLabel(e.method) }}
                 </span>
                 } @if (e.receipt_image_path) {
                 <a [href]="'/uploads/' + e.receipt_image_path" target="_blank" class="text-primary hover:text-success"
@@ -1563,6 +1374,7 @@
   </div>
   }
 </div>
+}
 
 <app-modal [isOpen]="showExpenseModal"
   [title]="expenseModalMode === 'therapist_payment' ? 'Pagar a Terapeuta' : 'Registrar Gasto'"
@@ -1609,7 +1421,7 @@
 </app-modal>
 
 <!-- Modal: Crear Contrato -->
-<app-modal [isOpen]="showCreateContractModal" title="Nuevo Contrato de Servicio" (close)="showCreateContractModal = false">
+<app-modal [isOpen]="showCreateContractModal" [title]="isEditingContract ? 'Editar Contrato' : 'Nuevo Contrato de Servicio'" (close)="showCreateContractModal = false; isEditingContract = false">
   <div class="space-y-4">
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Paciente *</label>
@@ -1624,6 +1436,7 @@
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Nombre del Contrato</label>
       <input [(ngModel)]="createContractForm.name" type="text" class="input-field" placeholder="Ej: Terapia Grupo A" />
     </div>
+    @if (!isEditingContract) {
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto Total (S/) *</label>
@@ -1644,6 +1457,13 @@
         <input [(ngModel)]="createContractForm.bonus_months" type="number" class="input-field" min="0" />
       </div>
     </div>
+    } @else {
+    <div class="bg-warning-container/20 border border-warning/30 rounded-lg p-3">
+      <p class="text-xs text-warning font-medium">
+        Para cambiar el precio o número de cuotas, cancela este contrato y crea uno nuevo.
+      </p>
+    </div>
+    }
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Frecuencia de Pago *</label>
@@ -1676,46 +1496,53 @@
     }
     <div class="flex gap-2 justify-end">
       <app-button variant="ghost" label="Cancelar" (clicked)="showCreateContractModal = false"></app-button>
-      <app-button variant="primary" label="Crear Contrato" [icon]="['fas', 'save']" (clicked)="submitCreateContract()"></app-button>
+      <app-button variant="primary" [label]="isEditingContract ? 'Guardar Cambios' : 'Crear Contrato'" [icon]="['fas', 'save']" (clicked)="submitCreateContract()"></app-button>
     </div>
   </div>
 </app-modal>
 
 <!-- Modal: Pagar Cuota -->
 <app-modal [isOpen]="showPayInstallmentModal" title="Pagar Cuota" (close)="showPayInstallmentModal = false">
-  <div class="space-y-4">
+  <div class="space-y-3">
     <div class="bg-primary/10 border border-primary/20 rounded-lg p-3">
-      <p class="text-xs font-bold text-primary">{{ payInstallmentForm.contract_name }}</p>
-      <p class="text-sm text-on-surface">Paciente: {{ payInstallmentForm.patient_name }}</p>
-      <p class="text-xs text-on-surface-variant">Cuota #{{ payInstallmentForm.installment_number }} • Vence: {{ payInstallmentForm.due_date | date:'dd/MM/yyyy' }}</p>
+      <p class="text-xs font-bold text-primary">
+        Cuota #{{ payInstallmentForm.installment_number }} • Vence: {{ payInstallmentForm.due_date | date:'dd/MM/yyyy' }}
+      </p>
+      @if (payInstallmentForm.contract_name) {
+      <p class="text-[10px] text-primary/70 mt-1">{{ payInstallmentForm.contract_name }} — {{ payInstallmentForm.patient_name }}</p>
+      }
     </div>
     <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto (S/)</label>
-      <input type="number" [(ngModel)]="payInstallmentForm.amount" class="input-field" min="0"
-        [disabled]="payInstallmentForm.is_free_month" />
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Monto (S/)</label>
+      <input id="pay-amount" type="number" [(ngModel)]="payInstallmentForm.amount" class="input-field text-xs"
+        [disabled]="payInstallmentForm.is_free_month" min="0" />
     </div>
     <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
-      <select [(ngModel)]="payInstallmentForm.method" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
-        <option value="transfer">Transferencia</option>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Método de Pago</label>
+      <select [(ngModel)]="payInstallmentForm.method" class="input-field text-xs">
+        <option value="transfer">Transferencia Bancaria</option>
         <option value="yape">Yape</option>
         <option value="plin">Plin</option>
         <option value="cash">Efectivo</option>
         <option value="card">Tarjeta</option>
       </select>
     </div>
-    <app-input id="pay-date" label="Fecha de Pago" type="date" [(value)]="payInstallmentForm.payment_date"></app-input>
-    <app-input id="pay-ref" label="Referencia" [(value)]="payInstallmentForm.reference"
-      placeholder="N° de operación o referencia"></app-input>
     <div>
-      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Notas</label>
-      <textarea [(ngModel)]="payInstallmentForm.payment_notes" rows="2" class="input-field"
-        placeholder="Detalles del pago..."></textarea>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha de Pago</label>
+      <input type="date" [(ngModel)]="payInstallmentForm.payment_date" class="input-field text-xs">
     </div>
-    @if (payInstallmentStatus) {
-    <p class="text-xs text-error font-medium">{{ payInstallmentStatus }}</p>
-    }
-    <app-button variant="primary" label="Registrar Pago" (clicked)="submitPayInstallment()"></app-button>
+    <app-input id="pay-reference" label="Referencia" [(value)]="payInstallmentForm.reference"
+      placeholder="N° de operación, comprobante..." class="text-xs"></app-input>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+      <textarea [(ngModel)]="payInstallmentForm.payment_notes" rows="2" class="input-field text-xs"
+        placeholder="Detalles adicionales..."></textarea>
+    </div>
+  </div>
+  <div modal-footer>
+    <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="showPayInstallmentModal = false"></app-button>
+    <app-button variant="primary" label="Registrar Pago" [icon]="['fas', 'save']" size="sm"
+      [disabled]="payInstallmentForm.amount <= 0" (clicked)="submitPayInstallment()"></app-button>
   </div>
 </app-modal>
 
@@ -1739,7 +1566,10 @@
         <option value="credit">Crédito para futuro</option>
       </select>
     </div>
-    <app-input id="cancel-date" label="Fecha de Cancelación" type="date" [(value)]="cancelContractForm.cancellation_date"></app-input>
+    <div>
+      <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Fecha de Cancelación</label>
+      <input id="cancel-date" type="date" [ngModel]="cancelContractForm.cancellation_date" (ngModelChange)="cancelContractForm.cancellation_date = $event" class="input-field text-xs" />
+    </div>
     <div>
       <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Comentario</label>
       <textarea [(ngModel)]="cancelContractForm.comment" rows="2" class="input-field"
@@ -1748,7 +1578,7 @@
     @if (cancelContractStatus) {
     <p class="text-xs text-error font-medium">{{ cancelContractStatus }}</p>
     }
-    <app-button variant="danger" label="Cancelar Contrato" (clicked)="submitCancelContract()"></app-button>
+    <button class="btn--danger" (click)="submitCancelContract()">Cancelar Contrato</button>
   </div>
 </app-modal>
 
@@ -1765,4 +1595,73 @@
     <app-button variant="primary" label="Reactivar" (clicked)="submitReactivateContract()"></app-button>
   </div>
 </app-modal>
-}
+
+<app-modal [isOpen]="showEditPatientModal" title="Editar Datos del Paciente" (close)="cancelEditPatientDetails()">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI</label>
+      <input type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Telefono</label>
+      <input type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
+      <input type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
+      <select [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
+        <option value="">No especificado</option>
+        <option value="M">Masculino</option>
+        <option value="F">Femenino</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
+      <input type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
+      <select [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
+        <option value="">No especificado</option>
+        <option value="padre">Padre</option>
+        <option value="madre">Madre</option>
+        <option value="tutor">Tutor</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
+      <input type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
+    </div>
+    <div>
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
+      <input type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Telefono o email">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Diagnostico</label>
+      <input type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnostico preliminar">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
+      <textarea [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+      <textarea [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
+    </div>
+  </div>
+  @if (patientDetailStatus) {
+  <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error]="patientDetailStatus !== 'Guardado correctamente'">
+    {{ patientDetailStatus }}
+  </p>
+  }
+  <div modal-footer>
+    <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="cancelEditPatientDetails()"></app-button>
+    <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
+      (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
+  </div>
+</app-modal>

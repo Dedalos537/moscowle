@@ -39,28 +39,6 @@ export interface Therapist {
   role: string;
 }
 
-export interface RegisterForm {
-  patient_id: number | null;
-  amount: number;
-  method: string;
-  reference: string;
-  next_due_date: string;
-  payment_date: string;
-  discount: number;
-  document_number: string;
-  guardian_name: string;
-  guardian_dni: string;
-  receipt: File | null;
-}
-
-export interface SettingsForm {
-  patient_id: number | null;
-  patient_name: string;
-  payment_plan: string;
-  payment_amount: number;
-  payment_due_date: string;
-}
-
 export interface ExpenseForm {
   category: string;
   therapist_id: number | null;

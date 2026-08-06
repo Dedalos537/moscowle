@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { WakeLockService } from '../../services/wake-lock.service';
+import { SidebarService } from '../../services/sidebar.service';
 import { Sidebar } from '../../components/sidebar/sidebar';
 import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
@@ -37,6 +38,7 @@ export class AdminLayout implements OnInit, OnDestroy {
     private router: Router,
     public confirmService: ConfirmService,
     private wakeLockService: WakeLockService,
+    private sidebarService: SidebarService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -50,6 +52,7 @@ export class AdminLayout implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
+        this.sidebarService.close();
         const elapsed = Date.now() - this.loadStartTime;
         this.loadElapsed = `${(elapsed / 1000).toFixed(1)}s`;
         setTimeout(() => { this.routeLoading = false; this.cdr.markForCheck(); }, 350);

@@ -17,6 +17,22 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from app.extensions import bcrypt, cache, cors, csrf, db, jwt, limiter, login_manager, mail, oauth, socketio
 from config import Config
 
+# Modo CGI (cPanel workaround): cada request es un proceso nuevo y paga el boot
+# de create_app completo. Se desactivan los extras que solo sirven en procesos
+# persistentes (flasgger, scheduler, celery, ollama, create_all) para que cada
+# boot sea lo mas barato posible. La bandera la define app.cgi (MOSCOWLE_CGI=1);
+# Passenger/dev no la ponen y conservan todo el comportamiento.
+IS_CGI = os.environ.get('MOSCOWLE_CGI') == '1'
+
+# Modo LEAN (servidor persistente local, server_local.py): el backend vive en
+# gunicorn en 127.0.0.1:8765 y Apache lo alcanza via el relay app.cgi. Quiere el
+# socketio + API al 100%, pero NO necesita los extras pesados del boot que antes
+# vivian en Railway (flasgger, celery, scheduler APScheduler, ollama, sentry,
+# create_all/migraciones). Se omiten igual que en CGI para que el boot sea
+# ligero y no reviente la memoria del cPanel. La bandera la define
+# server_local.py (MOSCOWLE_LEAN=1). La DB ya existe: no hace falta create_all.
+IS_LEAN = IS_CGI or os.environ.get('MOSCOWLE_LEAN') == '1'
+
 
 def register_auth_loader(app):
     try:
@@ -367,15 +383,16 @@ def create_app(config_class=None):
 
     setup_logging(app)
 
-    try:
-        from flasgger import Swagger
+    if not IS_LEAN:
+        try:
+            from flasgger import Swagger
 
-        from app.swagger_config import swagger_config, swagger_template
+            from app.swagger_config import swagger_config, swagger_template
 
-        swagger = Swagger(app, config=swagger_config, template=swagger_template)
-        app.logger.info('Swagger UI available at /api/docs/')
-    except Exception as e:
-        app.logger.warning(f'Swagger initialization failed: {e}')
+            swagger = Swagger(app, config=swagger_config, template=swagger_template)
+            app.logger.info('Swagger UI available at /api/docs/')
+        except Exception as e:
+            app.logger.warning(f'Swagger initialization failed: {e}')
 
     sentry_dsn = os.environ.get('SENTRY_DSN')
     if sentry_dsn:
@@ -434,8 +451,8 @@ def create_app(config_class=None):
                 'https://cdn.jsdelivr.net',
                 'https://cdnjs.cloudflare.com',
                 'https://api.github.com',
-                'wss://moscowle-backend-production.up.railway.app',
-                'https://moscowle-backend-production.up.railway.app',
+                'wss://backend.centrojuanpabloii.com',
+                'https://backend.centrojuanpabloii.com',
             ],
             'frame-ancestors': ["'self'"],
         }
@@ -509,7 +526,9 @@ def create_app(config_class=None):
             if origin in cors_origins:
                 resp.headers['Access-Control-Allow-Origin'] = origin
             resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
+            resp.headers['Access-Control-Allow-Headers'] = (
+                'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
+            )
             resp.headers['Access-Control-Allow-Credentials'] = 'true'
             resp.headers['Access-Control-Max-Age'] = '3600'
             return resp
@@ -554,13 +573,14 @@ def create_app(config_class=None):
     cache.init_app(app)
     socketio.init_app(app, cors_allowed_origins='*')
 
-    try:
-        from app.celery_app import init_celery
+    if not IS_LEAN:
+        try:
+            from app.celery_app import init_celery
 
-        init_celery(app)
-        app.logger.info('Celery initialized')
-    except Exception as e:
-        app.logger.warning(f'Celery initialization failed (non-fatal): {e}')
+            init_celery(app)
+            app.logger.info('Celery initialized')
+        except Exception as e:
+            app.logger.warning(f'Celery initialization failed (non-fatal): {e}')
 
     from importlib import import_module
 
@@ -597,62 +617,63 @@ def create_app(config_class=None):
 
         from app import models as _all_models
 
-        try:
-            db.create_all()
-            app.logger.info('Database tables created/verified')
-        except Exception as e:
-            app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
+        if not IS_LEAN:
+            try:
+                db.create_all()
+                app.logger.info('Database tables created/verified')
+            except Exception as e:
+                app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
-        try:
-            from sqlalchemy import text
+            try:
+                from sqlalchemy import text
 
-            result = db.session.execute(
-                text(
-                    'SELECT COUNT(*) FROM information_schema.columns '
-                    "WHERE table_name = 'incidente' AND column_name = 'impacto'"
+                result = db.session.execute(
+                    text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'incidente' AND column_name = 'impacto'"
+                    )
                 )
-            )
-            if result.scalar() == 0:
-                app.logger.info('Adding ITIL columns to incidente table...')
-                for col_def in [
-                    'ALTER TABLE incidente ADD COLUMN impacto INTEGER NOT NULL DEFAULT 2',
-                    'ALTER TABLE incidente ADD COLUMN urgencia INTEGER NOT NULL DEFAULT 2',
-                    'ALTER TABLE incidente ADD COLUMN post_mortem TEXT NULL',
-                    'ALTER TABLE incidente ADD COLUMN causa_raiz TEXT NULL',
-                    'ALTER TABLE incidente ADD COLUMN lecciones_aprendidas TEXT NULL',
-                ]:
-                    db.session.execute(text(col_def))
-                db.session.commit()
-                app.logger.info('ITIL columns added successfully')
-            else:
-                app.logger.info('ITIL columns already exist')
-        except Exception as e:
-            app.logger.warning(f'ITIL column migration (non-fatal): {e}')
-            db.session.rollback()
+                if result.scalar() == 0:
+                    app.logger.info('Adding ITIL columns to incidente table...')
+                    for col_def in [
+                        'ALTER TABLE incidente ADD COLUMN impacto INTEGER NOT NULL DEFAULT 2',
+                        'ALTER TABLE incidente ADD COLUMN urgencia INTEGER NOT NULL DEFAULT 2',
+                        'ALTER TABLE incidente ADD COLUMN post_mortem TEXT NULL',
+                        'ALTER TABLE incidente ADD COLUMN causa_raiz TEXT NULL',
+                        'ALTER TABLE incidente ADD COLUMN lecciones_aprendidas TEXT NULL',
+                    ]:
+                        db.session.execute(text(col_def))
+                    db.session.commit()
+                    app.logger.info('ITIL columns added successfully')
+                else:
+                    app.logger.info('ITIL columns already exist')
+            except Exception as e:
+                app.logger.warning(f'ITIL column migration (non-fatal): {e}')
+                db.session.rollback()
 
-        try:
-            from sqlalchemy import text
+            try:
+                from sqlalchemy import text
 
-            result = db.session.execute(
-                text(
-                    "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'sex'"
+                result = db.session.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'sex'"
+                    )
                 )
-            )
-            if result.scalar() == 0:
-                app.logger.info('Adding patient detail columns to user table...')
-                for col_def in [
-                    'ALTER TABLE user ADD COLUMN sex VARCHAR(20) NULL',
-                    'ALTER TABLE user ADD COLUMN preliminary_diagnosis TEXT NULL',
-                    'ALTER TABLE user ADD COLUMN guardian_type VARCHAR(50) NULL',
-                ]:
-                    db.session.execute(text(col_def))
-                db.session.commit()
-                app.logger.info('Patient detail columns added successfully')
-            else:
-                app.logger.info('Patient detail columns already exist')
-        except Exception as e:
-            app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
-            db.session.rollback()
+                if result.scalar() == 0:
+                    app.logger.info('Adding patient detail columns to user table...')
+                    for col_def in [
+                        'ALTER TABLE user ADD COLUMN sex VARCHAR(20) NULL',
+                        'ALTER TABLE user ADD COLUMN preliminary_diagnosis TEXT NULL',
+                        'ALTER TABLE user ADD COLUMN guardian_type VARCHAR(50) NULL',
+                    ]:
+                        db.session.execute(text(col_def))
+                    db.session.commit()
+                    app.logger.info('Patient detail columns added successfully')
+                else:
+                    app.logger.info('Patient detail columns already exist')
+            except Exception as e:
+                app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
+                db.session.rollback()
 
         db.session.remove()
 
@@ -681,6 +702,7 @@ def create_app(config_class=None):
             app.logger.debug('Blueprint registered: %s', name)
         except Exception as e:
             import traceback
+
             app.logger.error('Blueprint %s FAILED to load: %s\n%s', name, e, traceback.format_exc())
 
     @app.cli.command('migrate-messages')
@@ -723,12 +745,13 @@ def create_app(config_class=None):
         db.session.commit()
         click.echo(f'Migrated {count} messages into {len(pairs)} chat(s).')
 
-    try:
-        from app.utils.manage_ollama import init_ia_check
+    if not IS_LEAN:
+        try:
+            from app.utils.manage_ollama import init_ia_check
 
-        init_ia_check()
-    except Exception as e:
-        app.logger.warning('Ollama IA Management initialization failed: %s', e)
+            init_ia_check()
+        except Exception as e:
+            app.logger.warning('Ollama IA Management initialization failed: %s', e)
 
     import json
 
@@ -739,13 +762,14 @@ def create_app(config_class=None):
         except Exception:
             return {}
 
-    try:
-        from app.tasks import init_scheduler
+    if not IS_LEAN:
+        try:
+            from app.tasks import init_scheduler
 
-        init_scheduler(app)
-        app.logger.info('Scheduler initialized')
-    except Exception as e:
-        app.logger.error('Scheduler initialization failed: %s', e)
+            init_scheduler(app)
+            app.logger.info('Scheduler initialized')
+        except Exception as e:
+            app.logger.error('Scheduler initialization failed: %s', e)
 
     app.logger.info('Application initialization complete')
     return app

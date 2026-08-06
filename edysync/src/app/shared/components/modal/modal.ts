@@ -1,4 +1,4 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy, ChangeDetectorRef, effect, inject } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
@@ -15,6 +15,16 @@ export class Modal {
   allowOverflow = input(false);
 
   close = output<void>();
+
+  private cdr = inject(ChangeDetectorRef);
+
+  constructor() {
+    // Force re-render when isOpen changes (parent OnPush may not propagate to child signal input reliably)
+    effect(() => {
+      this.isOpen();
+      this.cdr.markForCheck();
+    });
+  }
 
   closeModal() {
     this.close.emit();

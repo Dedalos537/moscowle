@@ -60,6 +60,9 @@ export class AiAssistantChat implements OnInit, OnDestroy {
   private loadToolsCount() {
     fetch(`${environment.apiBaseUrl || ''}/mcp/tools?mode=${this.mode}`, {
       credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
+      },
     })
       .then(r => r.json())
       .then(data => {
@@ -101,7 +104,10 @@ export class AiAssistantChat implements OnInit, OnDestroy {
 
     fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
+      },
       credentials: 'include',
       body: JSON.stringify({
         message,

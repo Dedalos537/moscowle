@@ -24,8 +24,10 @@ export class WakeLockService implements OnDestroy {
 
       document.addEventListener('visibilitychange', this.onVisibilityChange);
       return true;
-    } catch (err) {
-      console.warn('Wake Lock request failed:', err);
+    } catch (err: any) {
+      if (err.name !== 'NotAllowedError' && err.name !== 'NotFoundError') {
+        console.warn('Wake Lock request failed:', err);
+      }
       return false;
     }
   }

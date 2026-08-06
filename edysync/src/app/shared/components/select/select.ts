@@ -1,4 +1,4 @@
-import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild, OnDestroy, OnInit } from '@angular/core';
+import { Component, input, output, forwardRef, ChangeDetectionStrategy, ChangeDetectorRef, HostListener, ElementRef, ViewChild, OnDestroy, OnInit, effect, inject } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -49,7 +49,18 @@ export class Select implements ControlValueAccessor, OnInit, OnDestroy {
   private onTouched: any = () => {};
   private scrollHandler?: () => void;
 
-  constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {}
+  constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {
+    effect(() => {
+      this.options();
+      this.placeholder();
+      this.label();
+      this.disabled();
+      this.multiple();
+      this.searchable();
+      this.clearable();
+      this.cdr.markForCheck();
+    });
+  }
 
   ngOnInit() {
     this.scrollHandler = () => {

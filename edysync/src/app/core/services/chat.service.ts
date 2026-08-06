@@ -43,7 +43,7 @@ export interface MessageData {
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private socket!: Socket;
-  private readonly SOCKET_URL = environment.docker ? '' : environment.production ? 'https://moscowle-backend-production.up.railway.app' : 'http://127.0.0.1:5001';
+  private readonly SOCKET_URL = environment.docker ? '' : environment.apiBaseUrl || 'https://backend.centrojuanpabloii.com';
 
   private _onlineUsers = new BehaviorSubject<Set<number>>(new Set());
   onlineUsers$ = this._onlineUsers.asObservable();
@@ -71,7 +71,7 @@ export class ChatService {
   connect() {
     if (this.socket?.connected) return;
     this.socket = io(this.SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling'],
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
