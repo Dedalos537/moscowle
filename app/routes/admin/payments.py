@@ -144,12 +144,17 @@ def api_create_expense():
     missing = []
     if not data.get('category'):
         missing.append('category')
-    if not data.get('amount'):
+    if data.get('amount') is None or data.get('amount') == '':
         missing.append('amount')
     if not data.get('date'):
         missing.append('date')
     if missing:
         return jsonify({'success': False, 'error': f'Campos requeridos faltantes: {", ".join(missing)}'}), 400
+
+    try:
+        data['amount'] = float(data['amount'])
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'El monto debe ser un número válido'}), 400
 
     if 'receipt' in request.files:
         file = request.files['receipt']
