@@ -31,6 +31,11 @@
       <span>LLM / IA</span>
       <div class="chrome-tab-indicator"></div>
     </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'telegram'" (click)="switchTab('telegram')">
+      <fa-icon [icon]="['fab', 'telegram']"></fa-icon>
+      <span>Telegram Bot</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
   </div>
 
   @if (activeTab === 'backend') {
@@ -635,6 +640,117 @@
         </div>
       </div>
     }
+  </div>
+}
+
+<!-- Telegram Tab -->
+@if (activeTab === 'telegram') {
+  <div class="tab-section" @fadeInUp>
+    <div class="tab-toolbar">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+            <fa-icon [icon]="['fab', 'telegram']" class="text-[#229ED9]"></fa-icon> Telegram Bot
+          </h2>
+          <p class="text-sm text-on-surface-variant">Vincula tu Telegram para recibir notificaciones y controlar el sistema por chat</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-body space-y-6">
+      @if (tgLoading) {
+        <div class="flex justify-center py-12"><app-spinner></app-spinner></div>
+      } @else if (tgLinkedAccount) {
+        <!-- Linked Status -->
+        <div class="bg-surface-container-lowest rounded-xl border border-success/30 p-6">
+          <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center bg-success/15">
+              <fa-icon [icon]="['fas', 'check-circle']" class="text-3xl text-success"></fa-icon>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-on-surface">Telegram Vinculado</h3>
+              <p class="text-sm text-on-surface-variant">
+                @if (tgLinkedAccount.telegram_username) {
+                  @{{ tgLinkedAccount.telegram_username }}
+                } @else if (tgLinkedAccount.telegram_first_name) {
+                  {{ tgLinkedAccount.telegram_first_name }}
+                } @else {
+                  Chat ID: {{ tgLinkedAccount.telegram_chat_id }}
+                }
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <app-button
+                [variant]="tgLinkedAccount.notifications_enabled ? 'secondary' : 'primary'"
+                [label]="tgLinkedAccount.notifications_enabled ? 'Notificaciones ON' : 'Notificaciones OFF'"
+                [icon]="['fas', tgLinkedAccount.notifications_enabled ? 'bell' : 'bell-slash']"
+                [loading]="tgTogglingNotifications"
+                (clicked)="toggleTelegramNotifications()">
+              </app-button>
+              <app-button variant="danger" label="Desvincular" [icon]="['fas', 'unlink']" [loading]="tgUnlinking" (clicked)="unlinkTelegram()"></app-button>
+            </div>
+          </div>
+          <div class="mt-4 p-3 bg-success/10 border border-success/20 rounded-lg text-sm text-success">
+            <fa-icon [icon]="['fas', 'circle-info']" class="mr-1"></fa-icon>
+            Usa <code class="font-bold">/start</code> en el bot para ver los comandos disponibles.
+          </div>
+        </div>
+      } @else {
+        <!-- Not Linked -->
+        <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+          <div class="flex items-center gap-4 mb-6">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: rgba(34,158,217,0.15)">
+              <fa-icon [icon]="['fab', 'telegram']" class="text-3xl" style="color: #229ED9"></fa-icon>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-on-surface">Vincular Telegram</h3>
+              <p class="text-sm text-on-surface-variant">Conecta tu cuenta de Telegram para recibir notificaciones y controlar el sistema</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="p-4 bg-surface-container-high/50 rounded-xl border border-border/20">
+              <h4 class="text-sm font-bold text-on-surface mb-2">Pasos para vincular:</h4>
+              <ol class="text-sm text-on-surface-variant space-y-1.5 list-decimal list-inside">
+                <li>Abre <a href="https://t.me/CentroJuanPabloIIbot" target="_blank" class="text-primary font-bold hover:underline">@CentroJuanPabloIIbot</a> en Telegram</li>
+                <li>Envía el comando <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code></li>
+                <li>Copia el código de 6 caracteres que te dé el bot</li>
+                <li>Pégalo aquí abajo y haz clic en "Vincular"</li>
+              </ol>
+            </div>
+
+            <div class="flex gap-3">
+              <input
+                type="text"
+                [(ngModel)]="tgLinkCode"
+                placeholder="Código de 6 caracteres (ej: A9QIWG)"
+                maxlength="8"
+                class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono uppercase"
+                (keyup.enter)="linkTelegram()"
+              />
+              <app-button
+                variant="primary"
+                label="Vincular"
+                [icon]="['fas', 'link']"
+                [loading]="tgLinking"
+                (clicked)="linkTelegram()">
+              </app-button>
+            </div>
+
+            @if (tgLinkError) {
+              <div class="p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ tgLinkError }}
+              </div>
+            }
+            @if (tgLinkSuccess) {
+              <div class="p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ tgLinkSuccess }}
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
   </div>
 }
 

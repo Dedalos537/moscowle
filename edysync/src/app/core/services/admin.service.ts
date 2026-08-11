@@ -576,4 +576,21 @@ export class AdminService {
     return this.http.post<{ status: string; message: string }>('/api/server/restart', {}, { headers });
   }
 
+  // --- Telegram Bot ---
+  getTelegramStatus(): Observable<any> {
+    return this.http.get('/api/telegram/status');
+  }
+
+  linkTelegram(code: string): Observable<any> {
+    return this.http.post('/api/telegram/link', { code });
+  }
+
+  unlinkTelegram(chatId: number): Observable<any> {
+    return this.http.post('/api/telegram/unlink', { telegram_chat_id: chatId });
+  }
+
+  toggleTelegramNotifications(chatId: number, enabled: boolean): Observable<any> {
+    return this.http.post('/api/telegram/notifications/toggle', { telegram_chat_id: chatId, enabled });
+  }
+
 }

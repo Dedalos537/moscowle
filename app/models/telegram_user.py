@@ -25,7 +25,12 @@ class TelegramUser(db.Model, AuditMixin):
     notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     last_interaction_at = db.Column(db.DateTime, nullable=True)
 
-    admin_user = db.relationship('User', backref=db.backref('telegram_links', lazy='dynamic'))
+    admin_user = db.relationship(
+        'User',
+        foreign_keys=[admin_user_id],
+        primaryjoin='TelegramUser.admin_user_id == User.id',
+        backref=db.backref('telegram_links', lazy='dynamic'),
+    )
 
     def generate_link_code(self):
         code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
@@ -36,7 +41,8 @@ class TelegramUser(db.Model, AuditMixin):
     def is_link_code_valid(self, code):
         if not self.link_code or not self.link_code_expires_at:
             return False
-        return self.link_code == code.upper() and self.link_code_expires_at > datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
+        return self.link_code == code.upper() and self.link_code_expires_at > now
 
     def __repr__(self):
         return f'<TelegramUser {self.telegram_chat_id} linked={self.is_linked}>'

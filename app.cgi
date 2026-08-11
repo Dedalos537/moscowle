@@ -55,6 +55,10 @@ def _json_response(status_code, body_dict):
     _write(('Status: %d %s\r\n' % (status_code, reason)).encode('latin1'))
     _write(('Content-Type: application/json; charset=utf-8\r\n').encode('latin1'))
     _write(('Content-Length: %d\r\n' % len(payload)).encode('latin1'))
+    _write(b'Access-Control-Allow-Origin: https://moscowle.centrojuanpabloii.com\r\n')
+    _write(b'Access-Control-Allow-Credentials: true\r\n')
+    _write(b'Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n')
+    _write(b'Access-Control-Allow-Headers: Content-Type, Authorization, X-Restart-Secret\r\n')
     _write(b'\r\n')
     _write(payload)
 
@@ -126,6 +130,11 @@ def main():
     path = path_info + ('?' + query if query else '')
 
     # ── Server control endpoints (no Gunicorn needed) ──
+    # Handle OPTIONS preflight for CORS
+    if path_info in (RESTART_PATH, STATUS_PATH) and method == 'OPTIONS':
+        _json_response(200, {'status': 'ok'})
+        return
+
     if path_info == RESTART_PATH and method == 'POST':
         # Verify secret token from header
         secret = os.environ.get('HTTP_X_RESTART_SECRET', '')

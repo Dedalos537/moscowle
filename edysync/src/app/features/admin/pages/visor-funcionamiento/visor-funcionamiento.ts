@@ -17,7 +17,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 
-type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm';
+type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'telegram';
 
 interface PasswordResetRow {
   id: number;
@@ -110,6 +110,17 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   llmEditing = false;
   llmEditKeys: Record<string, string> = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
 
+  // --- Telegram ---
+  tgStatus: any = null;
+  tgLinkedAccount: any = null;
+  tgLoading = false;
+  tgLinkCode = '';
+  tgLinking = false;
+  tgLinkError = '';
+  tgLinkSuccess = '';
+  tgUnlinking = false;
+  tgTogglingNotifications = false;
+
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Centro de Operaciones',
@@ -133,6 +144,9 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     this.activeTab = tab;
     if (tab === 'llm') {
       this.loadLLMConfig();
+    }
+    if (tab === 'telegram') {
+      this.loadTelegramStatus();
     }
   }
 
@@ -456,5 +470,81 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     if (status === 'ok') return '#22c55e';
     if (status === 'client_null') return '#eab308';
     return '#ef4444';
+  }
+
+  // --- Telegram ---
+  loadTelegramStatus() {
+    this.tgLoading = true;
+    this.tgLinkError = '';
+    this.tgLinkSuccess = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.getTelegramStatus().subscribe({
+        next: (res) => {
+          this.tgStatus = res;
+          const accounts = res.linked_accounts || [];
+          this.tgLinkedAccount = accounts.find((a: any) => a.is_linked) || null;
+          this.tgLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.tgLoading = false; this.tgStatus = null; this.tgLinkedAccount = null; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  linkTelegram() {
+    const code = this.tgLinkCode.trim().toUpperCase();
+    if (!code || code.length < 4) {
+      this.tgLinkError = 'Ingresa el código de 6 caracteres que te dio el bot.';
+      return;
+    }
+    this.tgLinking = true;
+    this.tgLinkError = '';
+    this.tgLinkSuccess = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.linkTelegram(code).subscribe({
+        next: (res) => {
+          this.tgLinking = false;
+          if (res.success) {
+            this.tgLinkSuccess = 'Telegram vinculado exitosamente.';
+            this.tgLinkCode = '';
+            this.loadTelegramStatus();
+          } else {
+            this.tgLinkError = res.error || 'No se pudo vincular.';
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.tgLinking = false;
+          this.tgLinkError = err.error?.error || err.message || 'Error al vincular';
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  unlinkTelegram() {
+    if (!this.tgLinkedAccount) return;
+    this.tgUnlinking = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.unlinkTelegram(this.tgLinkedAccount.telegram_chat_id).subscribe({
+        next: () => { this.tgUnlinking = false; this.loadTelegramStatus(); this.cdr.markForCheck(); },
+        error: () => { this.tgUnlinking = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  toggleTelegramNotifications() {
+    if (!this.tgLinkedAccount) return;
+    this.tgTogglingNotifications = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.toggleTelegramNotifications(this.tgLinkedAccount.telegram_chat_id, !this.tgLinkedAccount.notifications_enabled).subscribe({
+        next: () => { this.tgTogglingNotifications = false; this.loadTelegramStatus(); this.cdr.markForCheck(); },
+        error: () => { this.tgTogglingNotifications = false; this.cdr.markForCheck(); },
+      })
+    );
   }
 }
