@@ -17,7 +17,10 @@ externas correctas y preserve la IP real del cliente.
 """
 import http.client
 import os
+import socket
+import subprocess
 import sys
+import time
 
 UPSTREAM_HOST = '127.0.0.1'
 UPSTREAM_PORT = int(os.environ.get('UPSTREAM_PORT', '8765'))
@@ -30,10 +33,88 @@ HOP_BY_HOP = {
     'te', 'trailer', 'transfer-encoding', 'upgrade',
 }
 
+# ── Server control paths (bypass Gunicorn) ──
+RESTART_PATH = '/api/server/restart'
+STATUS_PATH = '/api/server/status'
+RESTART_SECRET = os.environ.get('RESTART_SECRET', 'moscowle-restart-2026')
+BASE = '/home/centroju/moscowle'
+PY = '/home/centroju/virtualenv/moscowle/3.11/bin/python'
+PORT = 8765
+
 
 def _write(data: bytes):
     sys.stdout.buffer.write(data)
     sys.stdout.buffer.flush()
+
+
+def _json_response(status_code, body_dict):
+    """Write a JSON CGI response."""
+    import json
+    payload = json.dumps(body_dict).encode('utf-8')
+    reason = {200: 'OK', 403: 'Forbidden', 502: 'Bad Gateway'}.get(status_code, 'OK')
+    _write(('Status: %d %s\r\n' % (status_code, reason)).encode('latin1'))
+    _write(('Content-Type: application/json; charset=utf-8\r\n').encode('latin1'))
+    _write(('Content-Length: %d\r\n' % len(payload)).encode('latin1'))
+    _write(b'\r\n')
+    _write(payload)
+
+
+def _server_alive():
+    try:
+        s = socket.create_connection((UPSTREAM_HOST, PORT), timeout=3)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+def _restart_server():
+    """Kill old gunicorn, start fresh via ensure_local pattern."""
+    try:
+        subprocess.call(
+            ['pkill', '-f', 'gunicorn.*8765'],
+            stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL
+        )
+    except Exception:
+        pass
+    time.sleep(1)
+
+    logs = os.path.join(BASE, 'logs')
+    os.makedirs(logs, exist_ok=True)
+
+    _clean_env = {k: v for k, v in os.environ.items() if not k.startswith('HTTP_')}
+    for _v in ('SCRIPT_NAME', 'SCRIPT_FILENAME', 'SCRIPT_URL', 'REDIRECT_URL',
+               'REQUEST_METHOD', 'QUERY_STRING', 'REDIRECT_STATUS'):
+        _clean_env.pop(_v, None)
+
+    with open(os.path.join(logs, 'local_server.log'), 'ab') as f:
+        p = subprocess.Popen(
+            [PY, '-m', 'gunicorn',
+             '--worker-class', 'eventlet',
+             '--workers', '1',
+             '--bind', '127.0.0.1:%d' % PORT,
+             '--timeout', '300',
+             '--graceful-timeout', '30',
+             '--max-requests', '1000',
+             '--max-requests-jitter', '200',
+             '--access-logformat', '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(M)s',
+             '--error-logfile', os.path.join(logs, 'gunicorn_err.log'),
+             '--access-logfile', os.path.join(logs, 'gunicorn_acc.log'),
+             'server_local:application'],
+            cwd=BASE,
+            stdin=subprocess.DEVNULL,
+            stdout=f,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            env=_clean_env,
+        )
+
+    # Wait up to 30s for startup
+    for _ in range(30):
+        if _server_alive():
+            return True
+        time.sleep(1)
+    return False
 
 
 def main():
@@ -44,6 +125,34 @@ def main():
     query = os.environ.get('QUERY_STRING', '') or ''
     path = path_info + ('?' + query if query else '')
 
+    # ── Server control endpoints (no Gunicorn needed) ──
+    if path_info == RESTART_PATH and method == 'POST':
+        # Verify secret token from header
+        secret = os.environ.get('HTTP_X_RESTART_SECRET', '')
+        if secret != RESTART_SECRET:
+            _json_response(403, {'error': 'Invalid secret'})
+            return
+        alive_before = _server_alive()
+        if alive_before:
+            _json_response(200, {'status': 'already_running', 'message': 'Backend ya está activo'})
+            return
+        started = _restart_server()
+        if started:
+            _json_response(200, {'status': 'started', 'message': 'Backend iniciado correctamente'})
+        else:
+            _json_response(502, {'status': 'failed', 'message': 'No se pudo iniciar el backend en 30s'})
+        return
+
+    if path_info == STATUS_PATH and method == 'GET':
+        alive = _server_alive()
+        _json_response(200, {
+            'status': 'running' if alive else 'stopped',
+            'host': UPSTREAM_HOST,
+            'port': PORT,
+        })
+        return
+
+    # ── Normal relay to Gunicorn ──
     # Cabeceras desde el entorno CGI (HTTP_*)
     headers = {}
     for key, value in os.environ.items():

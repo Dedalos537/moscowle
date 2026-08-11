@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response';
 import { User, CreateUserPayload } from '../models/user';
 import { Sede, SedeAnalytics } from '../models/sede';
@@ -564,6 +565,15 @@ export class AdminService {
     error?: string;
   }> {
     return this.http.get<any>('/admin/api/app-metrics');
+  }
+
+  getServerStatus(): Observable<{ status: string; host: string; port: number }> {
+    return this.http.get<{ status: string; host: string; port: number }>('/api/server/status');
+  }
+
+  restartServer(): Observable<{ status: string; message: string }> {
+    const headers = new HttpHeaders({ 'X-Restart-Secret': environment.restartSecret || '' });
+    return this.http.post<{ status: string; message: string }>('/api/server/restart', {}, { headers });
   }
 
 }

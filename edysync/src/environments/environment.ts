@@ -3,4 +3,5 @@ export const environment = {
   docker: false,
   apiBaseUrl: '',
   sentryDsn: '',
+  restartSecret: 'moscowle-restart-2026',
 };
