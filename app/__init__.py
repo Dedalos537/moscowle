@@ -679,6 +679,7 @@ def create_app(config_class=None):
         ('metrics', 'app.routes.metrics_routes', 'metrics_bp'),
         ('mcp', 'app.routes.mcp_routes', 'mcp_bp'),
         ('admin_ai', 'app.routes.admin_ai', 'bp'),
+        ('telegram', 'app.routes.telegram_routes', 'telegram_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
@@ -813,12 +814,14 @@ def create_app_lite():
     from app.routes.main import main_bp
     from app.routes.mcp_routes import mcp_bp
     from app.routes.public_routes import public_bp
+    from app.routes.telegram_routes import telegram_bp
 
     csrf.exempt(api_bp)
     csrf.exempt(mcp_bp)
     csrf.exempt(admin_bp)
+    csrf.exempt(telegram_bp)
 
-    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp]:
+    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp, telegram_bp]:
         try:
             app.register_blueprint(bp)
         except Exception as e:
@@ -838,6 +841,7 @@ def create_app_lite():
             r'/admin/*': {'origins': cors_origins},
             r'/mcp/*': {'origins': cors_origins},
             r'/uploads/*': {'origins': cors_origins},
+            r'/api/telegram/*': {'origins': cors_origins},
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],

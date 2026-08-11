@@ -1,3 +1,5 @@
+from flask import current_app
+
 from app.extensions import socketio
 from app.repositories.notification_repository import NotificationRepository
 
@@ -92,4 +94,18 @@ class NotificationService:
             },
             room=f'user_{user_id}',
         )
+
+        try:
+            if current_app.config.get('TELEGRAM_BOT_TOKEN'):
+                from app.services.telegram_bot_service import send_notification_to_telegram
+
+                send_notification_to_telegram(
+                    user_id=user_id,
+                    title=title or notif.title,
+                    message=message,
+                    priority=priority,
+                )
+        except Exception:
+            pass
+
         return notif

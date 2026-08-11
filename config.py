@@ -74,6 +74,11 @@ class Config:
     ALERT_SLACK_WEBHOOK_URL = os.getenv('ALERT_SLACK_WEBHOOK_URL', '')
     ALERT_TELEGRAM_BOT_TOKEN = os.getenv('ALERT_TELEGRAM_BOT_TOKEN', '')
     ALERT_TELEGRAM_CHAT_ID = os.getenv('ALERT_TELEGRAM_CHAT_ID', '')
+
+    # ========== TELEGRAM BOT (Admin MCP Frontend) ==========
+    TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+    TELEGRAM_WEBHOOK_SECRET = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
+    TELEGRAM_WEBHOOK_URL = os.getenv('TELEGRAM_WEBHOOK_URL', '')
     ALERT_EMAIL_TO = os.getenv('ALERT_EMAIL_TO', '')
     ALERT_DB_CONN_THRESHOLD = int(os.getenv('ALERT_DB_CONN_THRESHOLD', '50'))
     ALERT_BRUTE_FORCE_THRESHOLD = int(os.getenv('ALERT_BRUTE_FORCE_THRESHOLD', '20'))
@@ -129,7 +134,8 @@ class Config:
     # ========== CORS ==========
     CORS_ORIGINS = os.getenv(
         'CORS_ORIGINS',
-        'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200',
+        'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com '
+        'http://localhost:4200 http://localhost:8086 http://127.0.0.1:8086 http://localhost:8080 http://127.0.0.1:4200',
     )
     SOCKET_CORS_ORIGINS = os.getenv('SOCKET_CORS_ORIGINS', 'https://moscowle.ai')
 

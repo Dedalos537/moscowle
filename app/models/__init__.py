@@ -12,4 +12,5 @@ from app.models.payment import *
 from app.models.refresh_token import RefreshToken
 from app.models.report import *
 from app.models.service_request import *
+from app.models.telegram_user import TelegramUser
 from app.models.user import *
