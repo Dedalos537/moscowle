@@ -518,13 +518,19 @@ def create_app(config_class=None):
         max_age=3600,
     )
 
+    def _allowed_origin():
+        """Return the request Origin if it's in the allowed list, else first allowed."""
+        origin = request.headers.get('Origin', '')
+        if origin in cors_origins:
+            return origin
+        return cors_origins[0] if cors_origins else ''
+
     @app.before_request
-    def _global_options_handler():
+    def _global_cors_preflight():
+        """Handle ALL OPTIONS preflight requests with full CORS headers."""
         if request.method == 'OPTIONS':
-            origin = request.headers.get('Origin', '')
             resp = app.make_default_options_response()
-            if origin in cors_origins:
-                resp.headers['Access-Control-Allow-Origin'] = origin
+            resp.headers['Access-Control-Allow-Origin'] = _allowed_origin()
             resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
             resp.headers['Access-Control-Allow-Headers'] = (
                 'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
@@ -533,33 +539,11 @@ def create_app(config_class=None):
             resp.headers['Access-Control-Max-Age'] = '3600'
             return resp
 
-    # Dedicated CORS handler for /mcp/* routes (Flask-CORS doesn't work with SSE streaming)
-    # Must echo request Origin for credentials to work; never use '*'
-
-    def _mcp_allowed_origin():
-        origin = request.headers.get('Origin', '')
-        if origin in cors_origins:
-            return origin
-        return cors_origins[0] if cors_origins else ''
-
-    @app.before_request
-    def mcp_cors_preflight():
-        if request.path.startswith('/mcp/') and request.method == 'OPTIONS':
-            resp = app.make_default_options_response()
-            resp.headers['Access-Control-Allow-Origin'] = _mcp_allowed_origin()
-            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
-            resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-            resp.headers['Access-Control-Allow-Credentials'] = 'true'
-            resp.headers['Access-Control-Max-Age'] = '3600'
-            return resp
-
     @app.after_request
-    def mcp_cors_headers(response):
-        if request.path.startswith('/mcp/'):
-            response.headers['Access-Control-Allow-Origin'] = _mcp_allowed_origin()
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-CSRFToken'
-            response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    def _global_cors_headers(response):
+        """Add CORS headers to EVERY response (not just MCP)."""
+        response.headers['Access-Control-Allow-Origin'] = _allowed_origin()
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response
 
     try:
@@ -694,6 +678,7 @@ def create_app(config_class=None):
         ('async_api', 'app.routes.async_api_routes', 'async_api_bp'),
         ('metrics', 'app.routes.metrics_routes', 'metrics_bp'),
         ('mcp', 'app.routes.mcp_routes', 'mcp_bp'),
+        ('admin_ai', 'app.routes.admin_ai', 'bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
@@ -772,4 +757,140 @@ def create_app(config_class=None):
             app.logger.error('Scheduler initialization failed: %s', e)
 
     app.logger.info('Application initialization complete')
+    return app
+
+
+# ──────────────────────────────────────────────────────────────────────
+# create_app_lite: Lightweight Flask factory for shared-hosting CGI
+# Only initializes: db, jwt, bcrypt, login_manager, csrf, cors, mail,
+# oauth, cache, socketio, limiter. Registers 6 essential blueprints.
+# Skips: sentry, flasgger, celery, scheduler, ollama, metrics,
+# proxyfix, talisman, 9 non-essential blueprints.
+# Boot target: <2s on shared hosting (vs 5-14s for full create_app).
+# ──────────────────────────────────────────────────────────────────────
+
+
+def create_app_lite():
+    env = os.environ.get('FLASK_ENV', os.environ.get('FLASK_DEBUG', 'production'))
+    if env in ('production', 'prod'):
+        try:
+            from config import ProductionConfig
+
+            config_class = ProductionConfig
+        except Exception:
+            from config import Config
+
+            config_class = Config
+    else:
+        from config import Config
+
+        config_class = Config
+
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
+    setup_logging(app)
+
+    from flask_jwt_extended import JWTManager
+
+    jwt = JWTManager(app)
+
+    from app.extensions import bcrypt, cache, cors, csrf, db, limiter, login_manager, mail, oauth, socketio
+
+    db.init_app(app)
+    bcrypt.init_app(app)
+    jwt.init_app(app)
+    mail.init_app(app)
+    oauth.init_app(app)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+
+    from app.routes.admin import admin_bp
+    from app.routes.api import api_bp
+    from app.routes.auth import auth_bp
+    from app.routes.chat_routes import chat_bp
+    from app.routes.health_routes import health_bp
+    from app.routes.main import main_bp
+    from app.routes.mcp_routes import mcp_bp
+    from app.routes.public_routes import public_bp
+
+    csrf.exempt(api_bp)
+    csrf.exempt(mcp_bp)
+    csrf.exempt(admin_bp)
+
+    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp]:
+        try:
+            app.register_blueprint(bp)
+        except Exception as e:
+            app.logger.error('Blueprint %s failed: %s', bp.name, e)
+
+    cors_origins = (
+        app.config.get(
+            'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
+        )
+        .replace(',', ' ')
+        .split()
+    )
+    cors.init_app(
+        app,
+        resources={
+            r'/api/*': {'origins': cors_origins},
+            r'/admin/*': {'origins': cors_origins},
+            r'/mcp/*': {'origins': cors_origins},
+            r'/uploads/*': {'origins': cors_origins},
+        },
+        supports_credentials=True,
+        allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        max_age=3600,
+    )
+
+    def _allowed_origin():
+        origin = request.headers.get('Origin', '')
+        if origin in cors_origins:
+            return origin
+        return cors_origins[0] if cors_origins else ''
+
+    @app.before_request
+    def _global_cors_preflight():
+        if request.method == 'OPTIONS':
+            resp = app.make_default_options_response()
+            resp.headers['Access-Control-Allow-Origin'] = _allowed_origin()
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = (
+                'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
+            )
+            resp.headers['Access-Control-Allow-Credentials'] = 'true'
+            resp.headers['Access-Control-Max-Age'] = '3600'
+            return resp
+
+    @app.after_request
+    def _global_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = _allowed_origin()
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response
+
+    try:
+        from flask_wtf.csrf import generate_csrf
+
+        @app.context_processor
+        def inject_csrf_token():
+            return dict(csrf_token=generate_csrf)
+    except Exception:
+        pass
+
+    cache.init_app(app)
+    socketio.init_app(app, cors_allowed_origins='*')
+
+    register_auth_loader(app)
+    register_error_handlers(app)
+
+    with app.app_context():
+        try:
+            db.create_all()
+            app.logger.info('Database tables created/verified (lite)')
+        except Exception as e:
+            app.logger.warning(f'db.create_all failed (non-fatal): {e}')
+
+    app.logger.info('Application initialized (lite mode)')
     return app

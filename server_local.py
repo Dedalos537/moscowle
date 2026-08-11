@@ -42,9 +42,9 @@ except Exception:
 # sentry/create_all/migraciones). El scheduler pasa a cron, la DB ya existe.
 os.environ['MOSCOWLE_LEAN'] = '1'
 
-from app import create_app
+from app import create_app_lite
 
-application = create_app()
+application = create_app_lite()
 
 # El relay app.cgi setea X-Forwarded-Proto/Host/For (IP real del cliente).
 # Sin ProxyFix los url_for(_external=True) generarian http://127.0.0.1:8765/...
