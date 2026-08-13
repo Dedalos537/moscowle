@@ -1,15 +1,14 @@
-from app.models.user import therapist_sede
+from app.models.appointment import Appointment
+from app.models.payment import Payment
+from app.models.user import User, therapist_sede
 from app.routes.api import api_bp
 from app.routes.api._shared import (
-    Appointment,
     AssignTherapistSchema,
     EmailService,
     Message,
-    Payment,
     Sede,
     SessionMetrics,
     UpdateUserSchema,
-    User,
     admin_service,
     api_response,
     bcrypt,
@@ -35,8 +34,10 @@ def _serialize_user(u):
         'admin_password_changed_count': u.admin_password_changed_count or 0,
         'sede_id': u.sede_id,
         'sede_name': u.sede_item.name if u.sede_item else None,
-        'assigned_sedes': [{'id': s.id, 'name': s.name} for s in u.assigned_sedes.all()],
-        'therapist_ids': [t.id for t in u.therapists.all()],
+        'assigned_sedes': [
+            {'id': s.id, 'name': s.name} for s in getattr(u, '_prefetched_sedes', None) or u.assigned_sedes.all()
+        ],
+        'therapist_ids': [t.id for t in getattr(u, '_prefetched_therapists', None) or u.therapists.all()],
         'payment_plan': u.payment_plan,
         'payment_amount': u.payment_amount or 0,
         'sessions_total': u.sessions_total or 0,
@@ -722,3 +723,285 @@ def delete_patient_group(group_id):
     group.is_active = False
     db.session.commit()
     return jsonify({'success': True})
+
+
+# --- PROGRESS OVERVIEW ---
+
+
+@api_bp.route('/admin/progress-overview', methods=['GET'])
+@login_required
+def admin_progress_overview():
+    """Progreso medible del centro desde datos reales:
+    sesiones completadas vs programadas, objetivos logrados vs planificados,
+    notas transcritas y tasa de mejora por terapeuta."""
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'success': False, 'message': 'Forbidden'}), 403
+
+    from datetime import datetime
+
+    from app.models.report import SessionAudit
+    from app.services.dashboard_service import DashboardService
+
+    today = datetime.utcnow()
+    month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_end = today
+
+    try:
+        month_sessions = Appointment.query.filter(
+            Appointment.start_time >= month_start,
+            Appointment.start_time <= month_end,
+        ).all()
+        completed_month = [a for a in month_sessions if a.status == 'completed']
+
+        total_sessions = len(month_sessions)
+        completed_count = len(completed_month)
+        scheduled_count = len([a for a in month_sessions if a.status == 'scheduled'])
+
+        session_ids = [a.id for a in month_sessions]
+        audits = SessionAudit.query.filter(SessionAudit.appointment_id.in_(session_ids)).all() if session_ids else []
+        audit_by_appt = {a.appointment_id: a for a in audits}
+
+        objectives_total = 0
+        objectives_achieved = 0
+        objectives_partial = 0
+        objectives_pending = 0
+        transcribed = 0
+        audited = 0
+        scores = []
+
+        for a in month_sessions:
+            audit = audit_by_appt.get(a.id)
+            if audit:
+                if audit.transcript_text:
+                    transcribed += 1
+                if audit.audit_status == 'completed' and audit.audit_score is not None:
+                    audited += 1
+                    scores.append(audit.audit_score)
+                report = audit.get_report()
+                for obj in report.get('objectives') or []:
+                    objectives_total += 1
+                    classification = obj.get('classification', '')
+                    if classification == 'logrado':
+                        objectives_achieved += 1
+                    elif classification == 'parcial':
+                        objectives_partial += 1
+                    else:
+                        objectives_pending += 1
+
+        avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+
+        therapists = User.query.filter_by(role='terapista', is_active=True).all()
+        therapist_rows = []
+        rates = []
+        ds = DashboardService()
+        for t in therapists:
+            t_appts = [a for a in month_sessions if a.therapist_id == t.id]
+            t_completed = len([a for a in t_appts if a.status == 'completed'])
+            t_audited = 0
+            t_scores = []
+            t_objectives_total = 0
+            t_objectives_achieved = 0
+            for a in t_appts:
+                audit = audit_by_appt.get(a.id)
+                if audit and audit.audit_status == 'completed' and audit.audit_score is not None:
+                    t_audited += 1
+                    t_scores.append(audit.audit_score)
+                if audit:
+                    report = audit.get_report()
+                    for obj in report.get('objectives') or []:
+                        t_objectives_total += 1
+                        if obj.get('classification') == 'logrado':
+                            t_objectives_achieved += 1
+
+            stats = ds.get_therapist_stats(t.id)
+            improvement_rate = stats.get('improvement_rate', 0) or 0
+            if t_completed > 0:
+                rates.append(improvement_rate)
+
+            therapist_rows.append(
+                {
+                    'therapist_id': t.id,
+                    'therapist_name': t.username or t.email,
+                    'sessions_total': len(t_appts),
+                    'sessions_completed': t_completed,
+                    'sessions_completed_pct': round(t_completed / len(t_appts) * 100, 1) if t_appts else 0,
+                    'audited': t_audited,
+                    'avg_score': round(sum(t_scores) / len(t_scores), 1) if t_scores else 0,
+                    'objectives_total': t_objectives_total,
+                    'objectives_achieved': t_objectives_achieved,
+                    'improvement_rate': improvement_rate,
+                }
+            )
+        therapist_rows.sort(key=lambda x: x['sessions_completed'], reverse=True)
+
+        completed_pct = round(completed_count / total_sessions * 100, 1) if total_sessions else 0
+        achieved_pct = round(objectives_achieved / objectives_total * 100, 1) if objectives_total else 0
+        overall_improvement = round(sum(rates) / len(rates), 1) if rates else 0
+
+        trend = []
+        for i in range(5, -1, -1):
+            y, m = today.year, today.month - i
+            while m <= 0:
+                m += 12
+                y -= 1
+            if (y, m) > (today.year, today.month):
+                continue
+            start = datetime(y, m, 1)
+            if m == 12:
+                end = datetime(y + 1, 1, 1)
+            else:
+                end = datetime(y, m + 1, 1)
+            month_appts = [a for a in month_sessions if start <= a.start_time < end]
+            month_completed = [a for a in month_appts if a.status == 'completed']
+            ids = [a.id for a in month_appts]
+            month_audits = SessionAudit.query.filter(SessionAudit.appointment_id.in_(ids)).all() if ids else []
+            month_scores = [a.audit_score for a in month_audits if a.audit_score is not None]
+            month_obj_total = 0
+            month_obj_achieved = 0
+            for a in month_audits:
+                report = a.get_report()
+                for obj in report.get('objectives') or []:
+                    month_obj_total += 1
+                    if obj.get('classification') == 'logrado':
+                        month_obj_achieved += 1
+            trend.append(
+                {
+                    'month': f'{y}-{m:02d}',
+                    'sessions_total': len(month_appts),
+                    'sessions_completed': len(month_completed),
+                    'completed_pct': round(len(month_completed) / len(month_appts) * 100, 1) if month_appts else 0,
+                    'avg_score': round(sum(month_scores) / len(month_scores), 1) if month_scores else 0,
+                    'objectives_total': month_obj_total,
+                    'objectives_achieved': month_obj_achieved,
+                    'objectives_achieved_pct': round(month_obj_achieved / month_obj_total * 100, 1)
+                    if month_obj_total
+                    else 0,
+                }
+            )
+
+        return jsonify(
+            {
+                'success': True,
+                'period': {
+                    'month': f'{today.year}-{today.month:02d}',
+                    'start': month_start.isoformat(),
+                    'end': month_end.isoformat(),
+                },
+                'sessions': {
+                    'total': total_sessions,
+                    'scheduled': scheduled_count,
+                    'completed': completed_count,
+                    'completed_pct': completed_pct,
+                },
+                'objectives': {
+                    'total': objectives_total,
+                    'achieved': objectives_achieved,
+                    'partial': objectives_partial,
+                    'pending': objectives_pending,
+                    'achieved_pct': achieved_pct,
+                },
+                'notes': {'transcribed': transcribed, 'with_audit': len(audit_by_appt)},
+                'avg_audit_score': avg_score,
+                'audited_sessions': audited,
+                'improvement_rate': overall_improvement,
+                'therapists': therapist_rows,
+                'trend': trend,
+            }
+        )
+    except Exception as e:
+        current_app.logger.error(f'Error in admin_progress_overview: {str(e)}')
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@api_bp.route('/admin/activity-logs', methods=['GET'])
+@login_required
+def get_activity_logs():
+    """Get recent activity logs for the Activity tab."""
+    log_type = request.args.get('type', 'all')
+    limit = int(request.args.get('limit', 50))
+
+    logs = []
+
+    try:
+        if log_type in ('all', 'telegram'):
+            from app.models.telegram_user import TelegramUser
+
+            tg_users = (
+                TelegramUser.query.filter(TelegramUser.last_interaction_at.isnot(None))
+                .order_by(TelegramUser.last_interaction_at.desc())
+                .limit(10)
+                .all()
+            )
+
+            for tu in tg_users:
+                logs.append(
+                    {
+                        'id': f'tg_{tu.id}',
+                        'type': 'telegram',
+                        'title': f'@{tu.telegram_username or tu.telegram_first_name or "Usuario"}',
+                        'message': f'Interacción con el bot (vinculado: {"sí" if tu.is_linked else "no"})',
+                        'timestamp': tu.last_interaction_at.isoformat(),
+                        'user': tu.telegram_username or tu.telegram_first_name,
+                    }
+                )
+
+        if log_type in ('all', 'api'):
+            recent_payments = Payment.query.order_by(Payment.id.desc()).limit(8).all()
+            for p in recent_payments:
+                patient = User.query.get(p.patient_id) if p.patient_id else None
+                logs.append(
+                    {
+                        'id': f'pay_{p.id}',
+                        'type': 'api',
+                        'title': f'Pago S/{getattr(p, "amount", 0)}',
+                        'message': f'{getattr(p, "method", "")} — {patient.username if patient else "paciente desconocido"}',
+                        'timestamp': (p.date.isoformat() if getattr(p, 'date', None) else ''),
+                        'user': patient.username if patient else None,
+                    }
+                )
+
+            recent_sessions = Appointment.query.order_by(Appointment.id.desc()).limit(8).all()
+            for s in recent_sessions:
+                logs.append(
+                    {
+                        'id': f'sess_{s.id}',
+                        'type': 'api',
+                        'title': f'Sesión #{s.id}',
+                        'message': f'{s.title or "Sesión"} — Estado: {getattr(s, "status", "N/A")}',
+                        'timestamp': (s.start_time.isoformat() if getattr(s, 'start_time', None) else ''),
+                        'user': None,
+                    }
+                )
+
+        if log_type in ('all', 'errors'):
+            from app.models.notification import Notification
+
+            error_notifs = (
+                Notification.query.filter_by(
+                    type='error',
+                )
+                .order_by(Notification.id.desc())
+                .limit(10)
+                .all()
+            )
+
+            for n in error_notifs:
+                logs.append(
+                    {
+                        'id': f'err_{n.id}',
+                        'type': 'error',
+                        'title': n.title or 'Error del sistema',
+                        'message': n.message,
+                        'timestamp': n.timestamp.isoformat() if getattr(n, 'timestamp', None) else '',
+                        'user': None,
+                    }
+                )
+
+        logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        logs = logs[:limit]
+
+        return jsonify({'success': True, 'logs': logs})
+
+    except Exception as e:
+        current_app.logger.error(f'Error in get_activity_logs: {str(e)}')
+        return jsonify({'success': False, 'logs': [], 'error': str(e)}), 500
