@@ -1066,7 +1066,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   private loadPatientContract(patientId: number) {
     this.subscriptions.add(
-      this.adminService.getContractsFiltered({ patient_id: patientId }).subscribe({
+      this.adminService.getPatientContracts(patientId).subscribe({
         next: (res) => {
           const contracts = (res.contracts || []) as any[];
           if (contracts.length === 0) {

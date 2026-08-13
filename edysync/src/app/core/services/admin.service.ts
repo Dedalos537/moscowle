@@ -164,6 +164,7 @@ export class AdminService {
     if (filters.month) params = params.set('month', filters.month);
     if (filters.year) params = params.set('year', filters.year);
     if (filters.sede_id) params = params.set('sede_id', filters.sede_id);
+    if (filters.patient_id) params = params.set('patient_id', filters.patient_id);
     return this.http.get<{ success: boolean; contracts: any[] }>('/admin/api/contracts', { params });
   }
 
@@ -591,6 +592,13 @@ export class AdminService {
 
   toggleTelegramNotifications(chatId: number, enabled: boolean): Observable<any> {
     return this.http.post('/api/telegram/notifications/toggle', { telegram_chat_id: chatId, enabled });
+  }
+
+  // --- Activity Logs ---
+  getActivityLogs(filter: string = 'all'): Observable<any> {
+    let params = new HttpParams();
+    if (filter && filter !== 'all') params = params.set('type', filter);
+    return this.http.get('/api/admin/activity-logs', { params });
   }
 
 }
