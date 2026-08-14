@@ -9,7 +9,7 @@ test.describe('Login Page - UI', () => {
   });
 
   test('page loads with correct title', async ({ page }) => {
-    await expect(page).toHaveTitle(/EdySync|Moscowle|Login/i);
+    await expect(page).toHaveTitle(/EdySync|Moscowle|Login|Centro Juan Pablo II/i);
   });
 
   test('login form has email and password fields', async ({ page }) => {
