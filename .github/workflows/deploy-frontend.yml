@@ -62,6 +62,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
           local-dir: edysync/dist/edysync/browser/
           server-dir: ${{ secrets.FTP_PATH }}/
           dangerous-clean-slate: true

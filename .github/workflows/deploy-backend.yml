@@ -1,0 +1,83 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'app.cgi'
+      - 'config.py'
+      - 'requirements.txt'
+      - 'runtime.txt'
+      - 'server_local.py'
+      - 'server.py'
+      - 'passenger_wsgi.py'
+      - 'ensure_local.py'
+      - 'wsgi.py'
+      - 'run.py'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify backend compiles
+        run: |
+          python -m py_compile app.cgi config.py server_local.py passenger_wsgi.py wsgi.py run.py
+          python -m compileall -q app
+
+      - name: Deploy backend to cPanel via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftps
+          local-dir: ./
+          server-dir: ${{ secrets.FTP_BACKEND_PATH }}/
+          exclude: |
+            **/.env
+            **/.env.*
+            **/.git/**
+            **/.venv/**
+            **/venv/**
+            **/node_modules/**
+            **/__pycache__/**
+            **/*.pyc
+            **/logs/**
+            **/instance/**
+            **/*.db
+            **/edysync/**
+            **/railway_deploy/**
+            **/.github/**
+            **/docs/**
+            **/wheelhouse*
+            **/PASSENGER*
+            **/migrations/versions/*.pyc
+
+      - name: Restart backend (recarga codigo nuevo)
+        run: |
+          code=$(curl -s -o /tmp/restart.json -w "%{http_code}" -X POST \
+            -H "X-Restart-Secret: ${{ secrets.RESTART_SECRET }}" \
+            -H "Origin: https://moscowle.centrojuanpabloii.com" \
+            "https://backend.centrojuanpabloii.com/api/server/restart?force=1")
+          echo "HTTP $code"
+          cat /tmp/restart.json
+          echo ""
+          if [ "$code" != "200" ]; then
+            echo "::error::Restart fallo ($code). Revisa logs del servidor."
+            exit 1
+          fi
+
+      - name: Smoke test API
+        run: |
+          sleep 2
+          curl -sS "https://backend.centrojuanpabloii.com/api/health" -w "\nHTTP %{http_code}\n"
