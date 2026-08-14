@@ -725,3 +725,15 @@
     font-size: 0.7rem;
   }
 }
+
+/* ─── Touch targets (mobile) ─── */
+@media (max-width: 767px) {
+  .nav-btn,
+  .today-btn,
+  .range-toggle-btn,
+  .range-tab,
+  .range-cancel-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

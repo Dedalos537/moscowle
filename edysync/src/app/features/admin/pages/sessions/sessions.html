@@ -109,13 +109,13 @@
 
       <div class="bg-surface-container-low rounded-xl p-3 border border-border/30">
         <div class="flex items-center justify-between mb-3">
-          <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
+          <button (click)="prevMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-left']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-on-surface">{{ calendarLabel }}</span>
             <button (click)="toggleRangeMode()"
-              class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer"
+              class="px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer min-h-11 inline-flex items-center"
               [class.bg-primary]="rangeMode"
               [class.text-on-primary]="rangeMode"
               [class.border-primary]="rangeMode"
@@ -125,12 +125,12 @@
               <fa-icon [icon]="['fas', 'arrows-alt-h']" class="mr-1"></fa-icon>Rango
             </button>
             @if (rangeMode) {
-              <button (click)="clearRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer">
+              <button (click)="clearRangeSelection()" class="px-2 py-1 text-[10px] font-bold rounded-lg bg-error/10 text-error border border-error/30 transition-all cursor-pointer min-h-11 inline-flex items-center">
                 Cancelar
               </button>
             }
           </div>
-          <button (click)="nextMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
+          <button (click)="nextMonth()" class="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">
             <fa-icon [icon]="['fas', 'chevron-right']" class="text-sm text-on-surface-variant"></fa-icon>
           </button>
         </div>

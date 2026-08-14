@@ -59,84 +59,99 @@
       } @else {
 
       <!-- Desktop table -->
-      <div class="hidden md:block max-h-[520px] overflow-y-auto rounded-xl border border-border/15">
-        <app-table [columns]="columns" [data]="paginatedUsers" [rowClass]="getRowClass" [trackBy]="trackUser"
-          emptyMessage="No se encontraron usuarios" [emptyIcon]="['fas', 'user-slash']">
-
-          <ng-template [tableCell]="'usuario'" let-row>
-            <div class="flex items-center gap-3 w-full min-w-0">
-              <div
-                class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
-                {{ getInitials(row.username) }}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-semibold text-on-surface text-sm truncate" [title]="row.username">{{ row.username }}</p>
-                <p class="text-xs text-on-surface-variant truncate md:hidden" [title]="row.email">{{ row.email }}</p>
-              </div>
-            </div>
-          </ng-template>
-
-          <ng-template [tableCell]="'email'" let-row>
-            <span class="text-sm text-on-surface-variant truncate block" [title]="row.email">
-              {{ row.email }}
-            </span>
-          </ng-template>
-
-          <ng-template [tableCell]="'rol'" let-row>
-            <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-md"
-              [ngClass]="getRoleBadgeClass(row.role)">
-              {{ getRoleBadge(row.role) }}
-            </span>
-          </ng-template>
-
-          <ng-template [tableCell]="'sede'" let-row>
-            @if (row.role === 'jugador' || row.role === 'terapista') {
-              <span class="text-sm text-on-surface-variant">{{ getSedeName(row) }}</span>
-            } @else {
-              <span class="text-on-surface-variant/40">—</span>
+      <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
+        <table class="w-full min-w-[1000px]">
+          <thead>
+            <tr class="bg-surface-container-high/50">
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Usuario</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Email</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
+              <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Activo</th>
+              <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border/20">
+            @for (u of filteredUsers; track u.id) {
+              <tr class="hover:bg-surface-container-low/50 transition-colors"
+                [class.bg-error-container/10]="u.account_status === 'debtor'"
+                [class.bg-surface-container-highest/40]="u.account_status === 'retired'"
+                [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
+                <td class="px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-primary-container/15 flex items-center justify-center text-primary-container font-bold text-sm shrink-0">
+                      {{ getInitials(u.username) }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-bold text-on-surface truncate">{{ u.username }}</p>
+                      <p class="text-xs text-on-surface-variant truncate">{{ u.email || '—' }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ u.email || '—' }}</td>
+                <td class="px-4 py-3.5">
+                  <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-md"
+                    [class]="getRoleBadgeClass(u.role)">
+                    {{ getRoleBadge(u.role) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-on-surface-variant">
+                  @if (u.role === 'jugador' || u.role === 'terapista') {
+                    {{ getSedeName(u) }}
+                  } @else {
+                    <span class="text-on-surface-variant/40">—</span>
+                  }
+                </td>
+                <td class="px-4 py-3.5">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md"
+                    [class]="getStatusClass(u.account_status)">
+                    <span class="w-1.5 h-1.5 rounded-full"
+                      [class.bg-primary]="u.account_status === 'active'"
+                      [class.bg-tertiary]="u.account_status === 'inactive'"
+                      [class.bg-on-surface-variant]="u.account_status === 'retired'"
+                      [class.bg-error]="u.account_status === 'debtor'"></span>
+                    {{ getStatusLabel(u.account_status) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3.5">
+                  <div class="flex justify-center w-full">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" class="sr-only peer" [checked]="u.is_active"
+                        (change)="toggleActive(u, $event)" />
+                      <div
+                        class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
+                      </div>
+                    </label>
+                  </div>
+                </td>
+                <td class="px-4 py-3.5">
+                  <div class="flex justify-end">
+                    <button (click)="openEditDrawer(u)"
+                      class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
+                      title="Editar">
+                      <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="px-4 py-16 text-center">
+                  <fa-icon [icon]="['fas', 'user-slash']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
+                  <p class="text-sm font-medium text-on-surface-variant">No se encontraron usuarios</p>
+                  <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
+                </td>
+              </tr>
             }
-          </ng-template>
-
-          <ng-template [tableCell]="'estado'" let-row>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md"
-              [ngClass]="getStatusClass(row.account_status)">
-              <span class="w-1.5 h-1.5 rounded-full"
-                [class.bg-primary]="row.account_status === 'active'"
-                [class.bg-tertiary]="row.account_status === 'inactive'"
-                [class.bg-on-surface-variant]="row.account_status === 'retired'"
-                [class.bg-error]="row.account_status === 'debtor'"></span>
-              {{ getStatusLabel(row.account_status) }}
-            </span>
-          </ng-template>
-
-          <ng-template [tableCell]="'activo'" let-row>
-            <div class="flex justify-center w-full">
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" class="sr-only peer" [checked]="row.is_active"
-                  (change)="toggleActive(row, $event)" />
-                <div
-                  class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
-                </div>
-              </label>
-            </div>
-          </ng-template>
-
-          <ng-template [tableCell]="'acciones'" let-row>
-            <div class="flex justify-end">
-              <button (click)="openEditDrawer(row)"
-                class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
-                title="Editar">
-                <fa-icon [icon]="['fas', 'pen']" class="text-sm"></fa-icon>
-              </button>
-            </div>
-          </ng-template>
-        </app-table>
+          </tbody>
+        </table>
       </div>
 
       <!-- Mobile cards -->
-      <div class="md:hidden space-y-2 sm:space-y-3 mt-3 sm:mt-4 max-h-[520px] overflow-y-auto rounded-xl border border-border/15 p-2 sm:p-3">
-        @for (u of paginatedUsers; track u.id; let i = $index) {
-        <div class="card overflow-hidden animate-fade-in" [style.animation-delay]="i * 0.04 + 's'"
+      <div class="md:hidden space-y-2 sm:space-y-3 mt-3 sm:mt-4 rounded-xl border border-border/30 p-2 sm:p-3">
+        @for (u of filteredUsers; track u.id) {
+        <div class="card overflow-hidden reveal-row" revealOnScroll
           [class.bg-error-container/10]="u.account_status === 'debtor'"
           [class.bg-surface-container-highest/30]="u.account_status === 'retired'"
           [class.bg-warning-container/20]="!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired'">
@@ -199,38 +214,11 @@
         }
       </div>
 
-      <!-- Pagination footer -->
+      <!-- Footer -->
       <div class="flex items-center justify-between mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-border/20">
         <p class="text-[10px] sm:text-sm text-on-surface-variant">
           {{ filteredUsers.length }} usuario(s) con los filtros aplicados
-          @if (totalPages > 1) {
-            <span class="ml-1 sm:ml-2 text-on-surface-variant/60">· Página {{ currentPage }} de {{ totalPages }}</span>
-          }
         </p>
-        @if (totalPages > 1) {
-        <div class="flex items-center gap-0.5 sm:gap-1">
-          <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1"
-            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'chevron-left']" class="text-[10px] sm:text-xs"></fa-icon>
-          </button>
-          @for (p of pageNumbers; track p) {
-            <button (click)="goToPage(p)"
-              class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-xs sm:text-sm font-medium transition-colors cursor-pointer"
-              [class.bg-primary]="p === currentPage"
-              [class.text-white]="p === currentPage"
-              [class.border]="p !== currentPage"
-              [class.border-border/30]="p !== currentPage"
-              [class.text-on-surface-variant]="p !== currentPage"
-              [class.hover:bg-surface-container-high]="p !== currentPage">
-              {{ p }}
-            </button>
-          }
-          <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages"
-            class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-border/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">
-            <fa-icon [icon]="['fas', 'chevron-right']" class="text-[10px] sm:text-xs"></fa-icon>
-          </button>
-        </div>
-        }
       </div>
       }
     </div>
@@ -410,9 +398,9 @@
     <app-select [multiple]="true" [(ngModel)]="editData.edit_therapist_ids" [options]="editTherapistOptions" class="w-full"></app-select>
   </div>
 
-  <button type="button" (click)="openPatientDetail()" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold cursor-pointer">
+  <button type="button" (click)="startEditPatientDetails()" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold cursor-pointer">
     <fa-icon [icon]="['fas', 'id-card']"></fa-icon>
-    Más Detalles del Paciente
+    Editar Datos del Paciente
   </button>
   }
 
@@ -755,64 +743,77 @@
 </div>
 }
 
-<!-- Patient Detail Modal -->
-<app-modal [isOpen]="showPatientDetailModal" title="Detalle del Paciente" (close)="closePatientDetailModal()" size="lg">
-  @if (patientDetailData) {
-    <div class="space-y-4">
-      <!-- Info Personal -->
-      <div>
-        <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Información Personal</h4>
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          <div><span class="text-on-surface-variant">Nombre:</span> <span class="font-medium">{{ patientDetailData.username }}</span></div>
-          <div><span class="text-on-surface-variant">Email:</span> <span class="font-medium">{{ patientDetailData.email }}</span></div>
-          <div><span class="text-on-surface-variant">Teléfono:</span> <span class="font-medium">{{ patientDetailData.phone || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">DNI:</span> <span class="font-medium">{{ patientDetailData.document_number || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">F. Nacimiento:</span> <span class="font-medium">{{ patientDetailData.date_of_birth || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">Edad:</span> <span class="font-medium">{{ patientDetailData.age != null ? patientDetailData.age + ' años' : '—' }}</span></div>
-          <div><span class="text-on-surface-variant">Sexo:</span> <span class="font-medium">{{ patientDetailData.sex || '—' }}</span></div>
-        </div>
-      </div>
-
-      <!-- Diagnóstico -->
-      @if (patientDetailData.preliminary_diagnosis) {
-        <div class="pt-3 border-t border-border">
-          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Diagnóstico Preliminar</h4>
-          <p class="text-sm text-on-surface">{{ patientDetailData.preliminary_diagnosis }}</p>
-        </div>
-      }
-
-      <!-- Objetivos -->
-      @if (patientDetailData.therapy_goals) {
-        <div class="pt-3 border-t border-border">
-          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Objetivos Terapéuticos</h4>
-          <p class="text-sm text-on-surface">{{ patientDetailData.therapy_goals }}</p>
-        </div>
-      }
-
-      <!-- Apoderado -->
-      <div class="pt-3 border-t border-border">
-        <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Apoderado</h4>
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          <div><span class="text-on-surface-variant">Nombre:</span> <span class="font-medium">{{ patientDetailData.guardian_name || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">Tipo:</span> <span class="font-medium capitalize">{{ patientDetailData.guardian_type || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">DNI:</span> <span class="font-medium">{{ patientDetailData.guardian_dni || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">Teléfono:</span> <span class="font-medium">{{ patientDetailData.guardian_contact || '—' }}</span></div>
-          <div><span class="text-on-surface-variant">Nombre Yape:</span> <span class="font-medium">{{ patientDetailData.yape_name || '—' }}</span></div>
-        </div>
-      </div>
-
-      <!-- Notas -->
-      @if (patientDetailData.notes) {
-        <div class="pt-3 border-t border-border">
-          <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-2">Notas</h4>
-          <p class="text-sm text-on-surface whitespace-pre-wrap">{{ patientDetailData.notes }}</p>
-        </div>
-      }
-    </div>
-  } @else if (patientDetailLoading) {
+<!-- Editar Datos del Paciente Modal -->
+<app-modal [isOpen]="showEditPatientModal" title="Editar Datos del Paciente" (close)="cancelEditPatientDetails()">
+  @if (patientDetailLoading) {
     <div class="py-8 text-center"><app-spinner></app-spinner></div>
+  } @else {
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI</label>
+        <input type="text" [ngModel]="patientDetailForm['document_number']" (ngModelChange)="patientDetailForm['document_number'] = $event" class="input-field text-xs" placeholder="12345678">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Telefono</label>
+        <input type="text" [ngModel]="patientDetailForm['phone']" (ngModelChange)="patientDetailForm['phone'] = $event" class="input-field text-xs" placeholder="999888777">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Fecha Nacimiento</label>
+        <input type="date" [ngModel]="patientDetailForm['date_of_birth']" (ngModelChange)="patientDetailForm['date_of_birth'] = $event" class="input-field text-xs">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Sexo</label>
+        <select [ngModel]="patientDetailForm['sex']" (ngModelChange)="patientDetailForm['sex'] = $event" class="input-field text-xs">
+          <option value="">No especificado</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Nombre Apoderado</label>
+        <input type="text" [ngModel]="patientDetailForm['guardian_name']" (ngModelChange)="patientDetailForm['guardian_name'] = $event" class="input-field text-xs" placeholder="Nombre completo">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Tipo Apoderado</label>
+        <select [ngModel]="patientDetailForm['guardian_type']" (ngModelChange)="patientDetailForm['guardian_type'] = $event" class="input-field text-xs">
+          <option value="">No especificado</option>
+          <option value="padre">Padre</option>
+          <option value="madre">Madre</option>
+          <option value="tutor">Tutor</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">DNI Apoderado</label>
+        <input type="text" [ngModel]="patientDetailForm['guardian_dni']" (ngModelChange)="patientDetailForm['guardian_dni'] = $event" class="input-field text-xs" placeholder="12345678">
+      </div>
+      <div>
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Contacto Apoderado</label>
+        <input type="text" [ngModel]="patientDetailForm['guardian_contact']" (ngModelChange)="patientDetailForm['guardian_contact'] = $event" class="input-field text-xs" placeholder="Telefono o email">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Diagnostico</label>
+        <input type="text" [ngModel]="patientDetailForm['preliminary_diagnosis']" (ngModelChange)="patientDetailForm['preliminary_diagnosis'] = $event" class="input-field text-xs" placeholder="Diagnostico preliminar">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Objetivos de Terapia</label>
+        <textarea [ngModel]="patientDetailForm['therapy_goals']" (ngModelChange)="patientDetailForm['therapy_goals'] = $event" rows="2" class="input-field text-xs" placeholder="Objetivos..."></textarea>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">Notas</label>
+        <textarea [ngModel]="patientDetailForm['notes']" (ngModelChange)="patientDetailForm['notes'] = $event" rows="2" class="input-field text-xs" placeholder="Notas adicionales..."></textarea>
+      </div>
+    </div>
+    @if (patientDetailStatus) {
+    <p class="text-xs mt-2" [class.text-success]="patientDetailStatus === 'Guardado correctamente'" [class.text-error]="patientDetailStatus !== 'Guardado correctamente'">
+      {{ patientDetailStatus }}
+    </p>
+    }
+    <div modal-footer>
+      <app-button variant="ghost" label="Cancelar" size="sm" (clicked)="cancelEditPatientDetails()"></app-button>
+      <app-button variant="primary" label="Guardar Datos" [icon]="['fas', 'save']" size="sm"
+        (clicked)="savePatientDetails()" [loading]="patientDetailSaving"></app-button>
+    </div>
   }
-  <div modal-footer>
-    <app-button variant="ghost" label="Cerrar" (clicked)="closePatientDetailModal()"></app-button>
-  </div>
 </app-modal>

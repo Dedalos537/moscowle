@@ -3,15 +3,15 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideRouter, Routes } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { importProvidersFrom, ErrorHandler } from '@angular/core';
+import { importProvidersFrom, ErrorHandler, APP_INITIALIZER } from '@angular/core';
+import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { provideBeacon } from 'ng-beacon';
 import * as Sentry from '@sentry/angular';
 
 import { App } from './app/app';
 import { environment } from './environments/environment';
-import { SharedModule } from './app/shared/shared-module';
 import { CoreModule } from './app/core/core-module';
-import { MainLayout } from './app/core/layout/main-layout/main-layout';
+import { registerAppIcons } from './app/shared/fontawesome-icons';
 
 if (environment.sentryDsn) {
   Sentry.init({
@@ -50,7 +50,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    component: MainLayout,
+    loadComponent: () => import('./app/core/layout/main-layout/main-layout').then(m => m.MainLayout),
     children: [
       {
         path: '',
@@ -66,7 +66,13 @@ bootstrapApplication(App, {
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),
     provideBeacon({ backdropColor: 'rgba(0, 0, 0, 0.55)' }),
-    importProvidersFrom(SharedModule, CoreModule),
+    importProvidersFrom(CoreModule),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (library: FaIconLibrary) => () => registerAppIcons(library),
+      deps: [FaIconLibrary],
+      multi: true,
+    },
     {
       provide: ErrorHandler,
       useClass: class extends ErrorHandler {

@@ -1,0 +1,28 @@
+.sdg-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.sdg-canvas {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-low);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.sdg-hint {
+  font-size: 0.8125rem;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+  text-align: center;
+}

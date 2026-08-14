@@ -1,0 +1,70 @@
+<app-modal [isOpen]="visible" [title]="title" (close)="closeCancel()">
+  <div class="text-sm">
+    <p class="text-on-surface-variant mb-3">Confirma los datos antes de ejecutar esta acción:</p>
+
+    @if (editing) {
+      <div class="mb-3">
+        <label class="text-xs font-semibold text-on-surface-variant mb-1 block">Datos (JSON editable)</label>
+        <textarea [(ngModel)]="editedJson" rows="8"
+                  class="w-full rounded-lg border border-border px-3 py-2 text-xs bg-surface-container-lowest font-mono outline-none focus:border-primary"></textarea>
+        @if (jsonError) {
+          <p class="text-red-500 text-xs mt-1">{{ jsonError }}</p>
+        }
+      </div>
+    } @else {
+      <div class="space-y-2 mb-3">
+        @for (row of rows; track row.key) {
+          <div class="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 bg-surface-container-lowest">
+            <span class="text-xs text-on-surface-variant">{{ row.label }}</span>
+            <span class="text-sm font-medium text-on-surface break-all text-right">{{ row.value }}</span>
+          </div>
+        }
+      </div>
+
+      @if (hasPatientId()) {
+        <div class="mb-3">
+          <label class="text-xs font-semibold text-on-surface-variant mb-1 block">Cambiar paciente</label>
+          <input [(ngModel)]="patientQuery" (input)="onPatientSearch()"
+                 placeholder="Buscar paciente (mín. 2 letras)..."
+                 class="w-full rounded-lg border border-border px-3 py-2 text-sm bg-surface-container-lowest outline-none focus:border-primary">
+          @if (patientSearching) {
+            <div class="text-xs text-on-surface-variant mt-1.5">
+              <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon> Buscando...
+            </div>
+          }
+          @if (patientResults.length > 0) {
+            <div class="mt-1.5 border border-border rounded-lg overflow-hidden bg-surface-container-lowest">
+              @for (p of patientResults; track p.id) {
+                <button (click)="selectPatient(p)"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-surface-container-high transition-colors">
+                  {{ p.username }}
+                  <span class="text-xs text-on-surface-variant">#{{ p.id }}</span>
+                  @if (p.phone) {
+                    <span class="text-xs text-on-surface-variant block">{{ p.phone }}</span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <div modal-footer>
+    <div class="flex gap-2">
+      <button (click)="closeCancel()"
+              class="px-4 py-2 text-sm font-semibold rounded-lg border border-border text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
+        Cancelar
+      </button>
+      <button (click)="toggleEdit()"
+              class="px-4 py-2 text-sm font-semibold rounded-lg border border-border text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
+        {{ editing ? 'Vista resumen' : 'Editar' }}
+      </button>
+      <button (click)="confirm()"
+              class="px-4 py-2 text-sm font-bold rounded-lg bg-primary text-on-primary hover:opacity-90 transition-opacity cursor-pointer">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</app-modal>

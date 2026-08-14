@@ -68,6 +68,26 @@ def register_auth_loader(app):
         return redirect(url_for('auth.login', next=request.url))
 
 
+def register_jwt_session_blocklist(jwt_instance):
+    """Habilita la validacion de sesiones JWT contra la tabla user_session.
+
+    Si el jti del token no tiene una sesion activa en la DB (revocada o
+    inexistente), el token se rechaza. Si la DB no esta disponible se deja
+    pasar (fail-open) para no tumbar toda la app.
+    """
+
+    @jwt_instance.token_in_blocklist_loader
+    def _token_in_blocklist(_jwt_header, jwt_payload):
+        try:
+            from app.models import UserSession
+
+            return not UserSession.is_jti_valid(jwt_payload.get('jti'))
+        except Exception:
+            return False
+
+    return jwt_instance
+
+
 def setup_logging(app):
     """Logs chéveres con formato JSON y rotación"""
 
@@ -482,6 +502,7 @@ def create_app(config_class=None):
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    register_jwt_session_blocklist(jwt)
     mail.init_app(app)
     oauth.init_app(app)
     login_manager.init_app(app)
@@ -496,6 +517,10 @@ def create_app(config_class=None):
     from app.routes.mcp_routes import mcp_bp
 
     csrf.exempt(mcp_bp)
+
+    from app.routes.telegram_routes import telegram_bp
+
+    csrf.exempt(telegram_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
@@ -514,7 +539,7 @@ def create_app(config_class=None):
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],
-        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
 
@@ -531,7 +556,7 @@ def create_app(config_class=None):
         if request.method == 'OPTIONS':
             resp = app.make_default_options_response()
             resp.headers['Access-Control-Allow-Origin'] = _allowed_origin()
-            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
             resp.headers['Access-Control-Allow-Headers'] = (
                 'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
             )
@@ -801,12 +826,14 @@ def create_app_lite():
     db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    register_jwt_session_blocklist(jwt)
     mail.init_app(app)
     oauth.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
 
     from app.routes.admin import admin_bp
+    from app.routes.admin_ai import bp as admin_ai_bp
     from app.routes.api import api_bp
     from app.routes.auth import auth_bp
     from app.routes.chat_routes import chat_bp
@@ -815,13 +842,16 @@ def create_app_lite():
     from app.routes.mcp_routes import mcp_bp
     from app.routes.public_routes import public_bp
     from app.routes.telegram_routes import telegram_bp
+    from app.routes.uploads import uploads_bp
+    from app.routes.yape_routes import yape_bp
 
     csrf.exempt(api_bp)
     csrf.exempt(mcp_bp)
     csrf.exempt(admin_bp)
     csrf.exempt(telegram_bp)
+    csrf.exempt(uploads_bp)
 
-    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp, telegram_bp]:
+    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp, telegram_bp, yape_bp, admin_ai_bp, uploads_bp]:
         try:
             app.register_blueprint(bp)
         except Exception as e:
@@ -845,7 +875,7 @@ def create_app_lite():
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken', 'X-Requested-With'],
-        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
 
@@ -860,13 +890,35 @@ def create_app_lite():
         if request.method == 'OPTIONS':
             resp = app.make_default_options_response()
             resp.headers['Access-Control-Allow-Origin'] = _allowed_origin()
-            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
             resp.headers['Access-Control-Allow-Headers'] = (
                 'Content-Type, X-App-Key, Authorization, X-CSRFToken, X-Requested-With'
             )
             resp.headers['Access-Control-Allow-Credentials'] = 'true'
             resp.headers['Access-Control-Max-Age'] = '3600'
             return resp
+
+    @app.before_request
+    def _jwt_bootstrap():
+        """Authenticate current_user from JWT cookies/headers so @login_required
+        and admin auth guards work in the lite app factory."""
+        g.request_id = str(uuid4())[:8]
+        g.request_start_time = datetime.utcnow()
+        try:
+            from flask_jwt_extended import get_jwt_identity as _gji
+            from flask_jwt_extended import verify_jwt_in_request as _vji
+
+            _vji(locations=['cookies', 'headers'], optional=True)
+            _uid = _gji()
+            if _uid:
+                from app.models import User as _U
+
+                _user = _U.query.get(int(_uid))
+                if _user:
+                    g._login_user = _user
+                    g.current_user = _user
+        except Exception:
+            pass
 
     @app.after_request
     def _global_cors_headers(response):
@@ -895,6 +947,12 @@ def create_app_lite():
             app.logger.info('Database tables created/verified (lite)')
         except Exception as e:
             app.logger.warning(f'db.create_all failed (non-fatal): {e}')
+        try:
+            from app.utils.ensure_columns import ensure_columns
+
+            ensure_columns()
+        except Exception as e:
+            app.logger.warning(f'ensure_columns failed (non-fatal): {e}')
 
     app.logger.info('Application initialized (lite mode)')
     return app

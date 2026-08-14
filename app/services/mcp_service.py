@@ -2,13 +2,42 @@ import json
 import logging
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
-from app.services.tools_registry import TOOL_REGISTRY, execute_tool, get_tools_for_mode
+from app.services.tools_registry import SAFE_WRITE_TOOLS, TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
 
 MAX_TOOL_RESULT_CHARS = 1500
+
+LIMA_TZ = ZoneInfo('America/Lima')
+
+_DIAS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+_MESES_ES = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+]
+
+
+def get_current_date_context():
+    """Fecha actual en America/Lima para que el LLM nunca adivine 'hoy'."""
+    now = datetime.now(LIMA_TZ)
+    fecha = f'{_DIAS_ES[now.weekday()]} {now.day} de {_MESES_ES[now.month - 1]} de {now.year}'
+    return (
+        f'Hoy es {fecha}. Usa SIEMPRE esta fecha como referencia para \'hoy\'. '
+        'Todos los usuarios están en la zona horaria America/Lima (UTC-5).'
+    )
 
 SYSTEM_PROMPTS = {
     'admin': (
@@ -175,6 +204,10 @@ def _build_tool_prompt(tools):
     lines = [
         'AVAILABLE TOOLS (use format: <function=name{"param": "value"}</function>):',
         'IMPORTANT: ALWAYS include JSON args in {}. Without {} it FAILS.',
+        'IMPORTANT: For any tool that REGISTERS, UPDATES, DELETES, or CHANGES STATE (payments, users, sessions, '
+        'incidents, expenses, messages, contracts, patient groups, reminders), you MUST first collect ALL required '
+        'parameters from the user one by one. If a required parameter is missing, ASK for it. '
+        'Only call the tool once you have every required value. The system will then ask the user to confirm before executing.',
         '',
     ]
     for t in tools:
@@ -193,12 +226,25 @@ def _build_tool_prompt(tools):
 class MCPService:
     """MCP service with GLM-5.2 as primary LLM and multi-provider fallback."""
 
-    def process_message(self, message, user_role, user_id, mode='grande', history=None):
+    def process_message(self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False):
         system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
+
+        if telegram_mode:
+            system_prompt += (
+                '\n\nTELEGRAM MODE:\n'
+                '- You are responding via Telegram chat.\n'
+                '- Keep responses SHORT (max 10 lines).\n'
+                '- Use emoji sparingly for emphasis.\n'
+                '- Format with *bold* and _italic_ for readability.\n'
+                '- For lists, use bullet points.\n'
+                '- If data is long, summarize with count + top 3 items.\n'
+                '- Always end with a clear answer or next step.\n'
+            )
+
         tools = get_tools_for_mode(mode, user_role)
         tool_prompt = _build_tool_prompt(tools)
 
-        full_system = system_prompt + '\n\n' + tool_prompt
+        full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
         messages = [{'role': 'system', 'content': full_system}]
 
         if history:
@@ -208,6 +254,10 @@ class MCPService:
         messages.append({'role': 'user', 'content': message})
 
         tool_calls_log = []
+
+        def _safe_write(name):
+            entry = TOOL_REGISTRY.get(name, {})
+            return bool(entry) and entry.get('category') == 'write' and name not in SAFE_WRITE_TOOLS
 
         for iteration in range(MAX_ITERATIONS):
             try:
@@ -231,7 +281,27 @@ class MCPService:
 
                 if tool_name:
                     logger.info(f'MCP parsed tool call: {tool_name}({tool_args})')
-                    result = execute_tool(tool_name, tool_args, user_id=user_id, role=user_role)
+
+                    # Write tools require explicit confirmation before running.
+                    confirmed_name = (confirmed_tool or {}).get('name')
+                    if _safe_write(tool_name) and not confirmed_name:
+                        return {
+                            'response': 'Acción pendiente de confirmación.',
+                            'tool_calls': tool_calls_log,
+                            'done': False,
+                            'requires_confirmation': True,
+                            'pending_tool': {'name': tool_name, 'args': tool_args, 'tool_call_text': content},
+                            'provider': provider,
+                        }
+
+                    # On confirmation, prefer the args captured at request time (e.g. receipt_url of a voucher).
+                    effective_args = tool_args
+                    if confirmed_name and confirmed_name == tool_name:
+                        saved_args = (confirmed_tool or {}).get('args') or {}
+                        if saved_args:
+                            effective_args = {**tool_args, **saved_args}
+
+                    result = execute_tool(tool_name, effective_args, user_id=user_id, role=user_role)
                     tool_calls_log.append(
                         {
                             'name': tool_name,

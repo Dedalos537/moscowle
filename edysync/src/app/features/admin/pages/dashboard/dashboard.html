@@ -243,7 +243,7 @@
     </div>
     <div class="modal-body">
       <div class="modal-list">
-        @for (p of incompletePatients; track $index) {
+        @for (p of incompletePatients; track p.paciente + p.sede) {
         <div class="modal-list__item modal-list__item--error-hover">
           <div class="modal-list__avatar">{{ p.paciente.charAt(0) }}</div>
           <div>
@@ -286,7 +286,7 @@
     </div>
     <div class="modal-body">
       <div class="modal-list">
-        @for (item of dailyPendings; track $index) {
+        @for (item of dailyPendings; track item.username || item.paciente) {
         <div class="modal-list__item modal-list__item--primary">
           <div class="modal-list__avatar modal-list__avatar--primary">{{ item.paciente.charAt(0) }}</div>
           <div>

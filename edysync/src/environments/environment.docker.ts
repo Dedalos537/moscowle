@@ -3,4 +3,5 @@ export const environment = {
   docker: true,
   apiBaseUrl: '',
   sentryDsn: '',
+  preload: true,
 };

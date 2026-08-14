@@ -149,11 +149,18 @@ export class Finanzas implements OnInit, OnDestroy {
   contractLoading = false;
   today = new Date().toISOString().split('T')[0];
 
-  showEditPatientModal = false;
+  showPatientDetailModal = false;
   isEditingContract = false;
-  patientDetailForm: Record<string, any> = {};
-  patientDetailSaving = false;
+  patientDetailData: any = null;
+  patientDetailLoading = false;
   patientDetailStatus = '';
+
+  showPreviewModal = false;
+  previewImageUrl = '';
+  previewTitle = 'Voucher';
+  previewLoading = false;
+  previewImageError = false;
+  previewBlobUrl = '';
 
   get patientStats() {
     const total = this.patients.length;
@@ -207,6 +214,9 @@ export class Finanzas implements OnInit, OnDestroy {
     payment_date: '', reference: '', payment_notes: '', is_free_month: false,
   };
   payInstallmentStatus = '';
+  payReceiptFile: File | null = null;
+  payAnalyzingReceipt = false;
+  payReceiptError = '';
 
   showCancelContractModal = false;
   cancelContractForm: CancelContractForm = {
@@ -280,6 +290,19 @@ export class Finanzas implements OnInit, OnDestroy {
     amount: 0, method: 'transfer', date: '', description: '', receipt: null,
   };
 
+  showEditPaymentModal = false;
+  editPaymentSaving = false;
+  editPaymentId = 0;
+  editPaymentForm = { amount: 0, method: '', payment_date: '', status: 'completado', description: '' };
+  editReceiptFile: File | null = null;
+  editExistingReceiptPath = '';
+  editReceiptError = '';
+  paymentStatusOptions: SelectOption[] = [
+    { value: 'completado', label: 'Completado' },
+    { value: 'pendiente', label: 'Pendiente' },
+    { value: 'cancelado', label: 'Cancelado' },
+  ];
+
   contractAlerts: { id: number; patient_name: string; contract_name: string; installment_number: number; amount: number; due_date: string; type: 'overdue' | 'upcoming' | 'due_today' }[] = [];
 
   private subscriptions = new Subscription();
@@ -309,6 +332,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.checkDeepLinks();
     this.loadPaymentsData();
     this.loadExpensesData();
+    this.loadContracts();
   }
 
   ngOnDestroy() {
@@ -426,7 +450,7 @@ export class Finanzas implements OnInit, OnDestroy {
             const nameKey = (u.username || u.email || '').toLowerCase().trim();
             const d = debtByName.get(nameKey) || {};
             return {
-              id: u.id, username: u.username || 'Sin nombre', email: u.email || '', phone: u.phone,
+              id: u.id, is_active: u.is_active !== false, username: u.username || 'Sin nombre', email: u.email || '', phone: u.phone,
               sede_name: d.sede_name || u.sede_name || '', therapist_name: d.therapist_name || '',
               plan_name: d.modality || u.plan_type || 'Sin plan', plan_frequency: d.frequency || u.payment_plan || '',
               payment_amount: d.monto || u.payment_amount || 0, sessions_total: u.sessions_total || 0,
@@ -450,6 +474,10 @@ export class Finanzas implements OnInit, OnDestroy {
       next: (res) => { if (res.success && res.data) { this.financials = res.data; this.updateCharts(); } this.cdr.markForCheck(); },
       error: () => this.cdr.markForCheck(),
     }));
+  }
+
+  reloadPaymentHistory() {
+    this.loadPaymentHistory();
   }
 
   private loadPaymentHistory() {
@@ -750,6 +778,9 @@ export class Finanzas implements OnInit, OnDestroy {
       is_free_month: installment.is_free_month,
     };
     this.payInstallmentStatus = '';
+    this.payReceiptFile = null;
+    this.payAnalyzingReceipt = false;
+    this.payReceiptError = '';
     this.showPayInstallmentModal = true;
     this.cdr.markForCheck();
   }
@@ -763,23 +794,73 @@ export class Finanzas implements OnInit, OnDestroy {
     }
   }
 
+  onPayFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    this.payReceiptFile = file;
+    this.payReceiptError = '';
+    if (file) {
+      this.payAnalyzingReceipt = true;
+      this.subscriptions.add(
+        this.adminService.analyzeReceipt(file, this.expandedPatientId ?? undefined).subscribe({
+          next: (res: any) => {
+            this.payAnalyzingReceipt = false;
+            if (res && (res.amount || res.reference || res.method || res.next_due_date)) {
+              if (res.amount) this.payInstallmentForm.amount = parseFloat(res.amount);
+              if (res.reference) this.payInstallmentForm.reference = res.reference;
+              if (res.method) this.payInstallmentForm.method = res.method;
+              if (res.next_due_date && !this.payInstallmentForm.payment_date) {
+                this.payInstallmentForm.payment_date = res.next_due_date;
+              }
+            }
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.payAnalyzingReceipt = false;
+            this.cdr.markForCheck();
+          },
+        }),
+      );
+    }
+  }
+
+  removePayReceipt() {
+    this.payReceiptFile = null;
+    this.payReceiptError = '';
+    this.cdr.markForCheck();
+  }
+
+  get payReceiptObjectUrl(): string | null {
+    return this.payReceiptFile ? URL.createObjectURL(this.payReceiptFile) : null;
+  }
+
   submitPayInstallment() {
     if (!this.payInstallmentForm.installment_id) return;
     this.payInstallmentStatus = '';
-    const data: any = {
-      amount: this.payInstallmentForm.amount,
-      method: this.payInstallmentForm.method,
-      reference: this.payInstallmentForm.reference,
-      payment_date: this.payInstallmentForm.payment_date || undefined,
-      payment_notes: this.payInstallmentForm.payment_notes,
-    };
+    const body: any = this.payReceiptFile ? new FormData() : {};
+    if (body instanceof FormData) {
+      body.append('amount', String(this.payInstallmentForm.amount));
+      body.append('method', this.payInstallmentForm.method);
+      if (this.payInstallmentForm.reference) body.append('reference', this.payInstallmentForm.reference);
+      if (this.payInstallmentForm.payment_date) body.append('payment_date', this.payInstallmentForm.payment_date);
+      body.append('payment_notes', this.payInstallmentForm.payment_notes || '');
+      if (this.payReceiptFile) body.append('receipt', this.payReceiptFile);
+    } else {
+      body.amount = this.payInstallmentForm.amount;
+      body.method = this.payInstallmentForm.method;
+      body.reference = this.payInstallmentForm.reference;
+      body.payment_date = this.payInstallmentForm.payment_date || undefined;
+      body.payment_notes = this.payInstallmentForm.payment_notes;
+    }
     this.subscriptions.add(
-      this.adminService.payInstallment(this.payInstallmentForm.installment_id!, data).subscribe({
+      this.adminService.payInstallment(this.payInstallmentForm.installment_id!, body).subscribe({
         next: (res) => {
           if (res.success) {
             this.showPayInstallmentModal = false;
+            this.payReceiptFile = null;
             this.loadContracts();
-            if (this.expandedContractId) this.toggleContractDetail({ id: this.expandedContractId } as any);
+            this.loadPaymentsData();
+            if (this.expandedPatientId) this.loadPatientContract(this.expandedPatientId);
           } else {
             this.payInstallmentStatus = res.error || 'Error al pagar cuota';
           }
@@ -1111,62 +1192,64 @@ export class Finanzas implements OnInit, OnDestroy {
     );
   }
 
-  startEditPatientDetails() {
-    const patient = this.patients.find(p => p.id === this.expandedPatientId);
-    if (!patient) return;
-    this.patientDetailForm = {
-      document_number: (patient as any).document_number || '',
-      phone: patient.phone || '',
-      date_of_birth: (patient as any).date_of_birth || '',
-      sex: (patient as any).sex || '',
-      guardian_name: (patient as any).guardian_name || '',
-      guardian_type: (patient as any).guardian_type || '',
-      guardian_dni: (patient as any).guardian_dni || '',
-      guardian_contact: (patient as any).guardian_contact || '',
-      preliminary_diagnosis: (patient as any).preliminary_diagnosis || '',
-      therapy_goals: (patient as any).therapy_goals || '',
-      notes: (patient as any).notes || '',
-    };
-    this.showEditPatientModal = true;
-    this.patientDetailStatus = '';
-    this.cdr.markForCheck();
-    this.cdr.markForCheck();
-  }
-
-  cancelEditPatientDetails() {
-    this.showEditPatientModal = false;
-    this.patientDetailForm = {};
-    this.patientDetailStatus = '';
-    this.cdr.markForCheck();
-  }
-
-  savePatientDetails() {
+  openPatientDetail() {
     if (!this.expandedPatientId) return;
-    this.patientDetailSaving = true;
-    this.patientDetailStatus = '';
+    this.showPatientDetailModal = true;
+    this.patientDetailLoading = true;
+    this.patientDetailData = null;
     this.cdr.markForCheck();
-
     this.subscriptions.add(
-      this.adminService.updatePatientDetails(this.expandedPatientId, this.patientDetailForm).subscribe({
-        next: (res) => {
-          this.patientDetailSaving = false;
-          if (res.success) {
-            this.patientDetailStatus = 'Guardado correctamente';
-            this.showEditPatientModal = false;
-            this.loadPatientContract(this.expandedPatientId!);
-            this.refreshPatients();
-          } else {
-            this.patientDetailStatus = res.error || 'Error al guardar';
-          }
+      this.http.get(`/api/admin/patient/${this.expandedPatientId}/detail`).subscribe({
+        next: (res: any) => {
+          this.patientDetailData = res.patient;
+          this.patientDetailLoading = false;
           this.cdr.markForCheck();
         },
         error: () => {
-          this.patientDetailSaving = false;
-          this.patientDetailStatus = 'Error de conexion';
+          this.patientDetailLoading = false;
           this.cdr.markForCheck();
-        }
+        },
       })
     );
+  }
+
+  closePatientDetailModal() {
+    this.showPatientDetailModal = false;
+    this.patientDetailData = null;
+  }
+
+  previewImage(url: string, title = 'Voucher') {
+    this.previewTitle = title;
+    this.showPreviewModal = true;
+    this.previewImageUrl = url;
+    this.previewImageError = false;
+    this.previewLoading = true;
+    this.subscriptions.add(
+      this.http.get(url, { responseType: 'blob' }).subscribe({
+        next: (blob) => {
+          if (this.previewBlobUrl) URL.revokeObjectURL(this.previewBlobUrl);
+          this.previewBlobUrl = URL.createObjectURL(blob);
+          this.previewLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.previewLoading = false;
+          this.previewImageError = true;
+          this.cdr.markForCheck();
+        },
+      }),
+    );
+  }
+
+  closePreview() {
+    this.showPreviewModal = false;
+    this.previewImageUrl = '';
+    this.previewImageError = false;
+    this.previewLoading = false;
+    if (this.previewBlobUrl) {
+      URL.revokeObjectURL(this.previewBlobUrl);
+      this.previewBlobUrl = '';
+    }
   }
 
   private refreshPatients() {
@@ -1203,6 +1286,7 @@ export class Finanzas implements OnInit, OnDestroy {
   openEditContractModal() {
     if (!this.selectedPatientContract) return;
     this.isEditingContract = true;
+    this.loadPatientsList();
     this.createContractForm = {
       patient_id: this.selectedPatientContract.patient_id,
       total_amount: this.selectedPatientContract.total_amount,
@@ -1306,7 +1390,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.chartRevenueByLocation = { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
-  get patientsWithoutContractCount(): number { return this.patients.filter(p => !this.patientContractMap[p.id]).length; }
+  get patientsWithoutContractCount(): number { return this.patients.filter(p => p.is_active !== false && !this.patientContractMap[p.id]).length; }
 
   async generateReport() {
     const c = await firstValueFrom(this.confirmService.confirm({ title: 'Generar Reporte', message: 'Esta operación puede tomar unos segundos. ¿Deseas continuar?', confirmText: 'Generar', cancelText: 'Cancelar', variant: 'warning' }));
@@ -1326,6 +1410,106 @@ export class Finanzas implements OnInit, OnDestroy {
     const c = await firstValueFrom(this.confirmService.confirm({ title: 'Eliminar Pago', message: '¿Eliminar este pago?', confirmText: 'Eliminar', cancelText: 'Cancelar', variant: 'danger' }));
     if (!c) return;
     this.subscriptions.add(this.adminService.deletePayment(id).subscribe({ next: () => { this.paymentHistory = this.paymentHistory.filter((p) => p.id !== id); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
+  }
+
+  editPayment(id: number) {
+    const p = this.paymentHistory.find((x) => x.id === id);
+    if (!p) return;
+    this.editPaymentId = id;
+    this.editPaymentForm = {
+      amount: p.amount || 0,
+      method: p.method || 'efectivo',
+      payment_date: (p.date || '').slice(0, 10),
+      status: p.status || 'completado',
+      description: (p as any).notes || '',
+    };
+    this.editExistingReceiptPath = p.receipt_image_path || '';
+    this.editReceiptFile = null;
+    this.editReceiptError = '';
+    this.showEditPaymentModal = true;
+    this.cdr.markForCheck();
+  }
+
+  editPaymentFromInstallment(inst: any) {
+    this.editPaymentId = inst.payment_id || 0;
+    this.editPaymentForm = {
+      amount: inst.real_amount ?? inst.amount ?? 0,
+      method: inst.payment_method || 'transfer',
+      payment_date: (inst.paid_date || '').slice(0, 10),
+      status: inst.status === 'paid' ? 'completado' : inst.status,
+      description: inst.payment_notes || '',
+    };
+    this.editExistingReceiptPath = inst.receipt_image_path || '';
+    this.editReceiptFile = null;
+    this.editReceiptError = '';
+    this.showEditPaymentModal = true;
+    this.cdr.markForCheck();
+  }
+
+  onEditReceiptSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    if (!file) return;
+    this.editReceiptFile = file;
+    this.editExistingReceiptPath = '';
+    this.editReceiptError = '';
+    this.cdr.markForCheck();
+  }
+
+  removeEditReceipt() {
+    this.editReceiptFile = null;
+    this.editReceiptError = '';
+    this.cdr.markForCheck();
+  }
+
+  get editReceiptObjectUrl(): string | null {
+    return this.editReceiptFile ? URL.createObjectURL(this.editReceiptFile) : null;
+  }
+
+  editReceiptPreviewUrl(): string {
+    if (this.editReceiptFile) return this.editReceiptObjectUrl || '';
+    if (this.editExistingReceiptPath) {
+      const p = this.editExistingReceiptPath;
+      return (p.startsWith('http') || p.startsWith('/')) ? p : '/uploads/' + p;
+    }
+    return '';
+  }
+
+  savePaymentEdit() {
+    if (!this.editPaymentId) return;
+    this.editPaymentSaving = true;
+    const payload: any = this.editReceiptFile ? new FormData() : {
+      amount: this.editPaymentForm.amount,
+      method: this.editPaymentForm.method,
+      payment_date: this.editPaymentForm.payment_date,
+      status: this.editPaymentForm.status,
+    };
+    if (payload instanceof FormData) {
+      payload.append('amount', String(this.editPaymentForm.amount));
+      payload.append('method', this.editPaymentForm.method);
+      payload.append('payment_date', this.editPaymentForm.payment_date);
+      payload.append('status', this.editPaymentForm.status);
+      if (this.editPaymentForm.description) payload.append('description', this.editPaymentForm.description);
+      if (this.editReceiptFile) payload.append('receipt', this.editReceiptFile);
+    } else if (this.editPaymentForm.description) {
+      payload.description = this.editPaymentForm.description;
+    }
+    this.subscriptions.add(this.adminService.updatePayment(this.editPaymentId, payload).subscribe({
+      next: () => {
+        this.showEditPaymentModal = false;
+        this.editPaymentSaving = false;
+        this.editReceiptFile = null;
+        this.toastService.show('Pago actualizado', 'success');
+        this.loadPaymentHistory();
+        if (this.expandedPatientId) this.loadPatientContract(this.expandedPatientId);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.editPaymentSaving = false;
+        this.toastService.show('Error al actualizar el pago', 'error');
+        this.cdr.markForCheck();
+      },
+    }));
   }
 
   viewPatientHistory(patient: PatientRow) { window.open(`/admin/payments/history/${patient.id}`, '_blank'); }

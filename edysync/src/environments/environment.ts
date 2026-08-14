@@ -4,4 +4,5 @@ export const environment = {
   apiBaseUrl: '',
   sentryDsn: '',
   restartSecret: 'moscowle-restart-2026',
+  preload: true,
 };

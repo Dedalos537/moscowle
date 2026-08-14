@@ -431,7 +431,6 @@ def deactivate_admin_token(token_id):
     return redirect(url_for('admin.admin_api_tokens'))
 
 
-@admin_bp.route('/admin/api/csp-reports')
 def _admin_api_auth(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -460,6 +459,12 @@ def _admin_api_auth(f):
         return jsonify({'error': 'No autorizado'}), 403
 
     return wrapper
+
+
+@admin_bp.route('/admin/api/csp-reports')
+@_admin_api_auth
+def admin_api_csp_reports():
+    return api_csp_reports()
 
 
 @admin_bp.route('/api/csp-reports')

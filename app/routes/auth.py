@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
@@ -18,12 +19,61 @@ from app.extensions import bcrypt, csrf, db, limiter
 from app.models.password_reset import PasswordReset
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.models.user_session import UserSession
 from app.schemas.auth_schema import validate_login_input
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailService
 
 auth_bp = Blueprint('auth', __name__)
 auth_service = AuthService()
+
+
+def _token_jti(token):
+    """Extrae el jti (identificador) de un JWT emitido por flask-jwt-extended."""
+    from flask_jwt_extended.utils import decode_token
+
+    try:
+        return decode_token(token).get('jti')
+    except Exception:
+        return None
+
+
+def _client_device_info():
+    ua = request.headers.get('User-Agent', '') or ''
+    return ua[:255]
+
+
+def _client_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    if fwd:
+        return fwd.split(',')[0].strip()[:45]
+    return (request.remote_addr or '')[:45]
+
+
+def _record_session(user, access_token, refresh_token=None):
+    """Persiste una sesion JWT en la DB para permitir revocacion por jti."""
+    try:
+        from flask import current_app as _app
+
+        access_jti = _token_jti(access_token)
+        refresh_jti = _token_jti(refresh_token) if refresh_token else None
+        if not access_jti:
+            return
+        ttl_cfg = _app.config.get('JWT_REFRESH_TOKEN_EXPIRES')
+        ttl_seconds = ttl_cfg.total_seconds() if hasattr(ttl_cfg, 'total_seconds') else 30 * 86400
+        UserSession.create(
+            user_id=user.id,
+            access_jti=access_jti,
+            refresh_jti=refresh_jti or access_jti,
+            ttl_seconds=ttl_seconds,
+            device_info=_client_device_info(),
+            ip_address=_client_ip(),
+        )
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        with suppress(Exception):
+            current_app.logger.debug(f'_record_session failed (non-fatal): {exc}')
 
 
 def _auto_start_session(user):
@@ -82,6 +132,7 @@ def login():
             _auto_start_session(user)
             access_token = create_access_token(identity=str(user.id))
             refresh_token = create_refresh_token(identity=str(user.id))
+            _record_session(user, access_token, refresh_token)
             next_url = request.form.get('next') or request.args.get('next')
             if next_url and _safe_next_url(next_url):
                 response = redirect(next_url)
@@ -110,6 +161,7 @@ def _safe_next_url(target):
 @login_required
 def logout():
     RefreshToken.revoke_all_for_user(current_user.id)
+    UserSession.revoke_all_for_user(current_user.id)
     auth_service.logout()
     response = redirect(url_for('auth.login'))
     unset_jwt_cookies(response)
@@ -125,6 +177,7 @@ def logout():
 def api_logout():
     if current_user.is_authenticated:
         RefreshToken.revoke_all_for_user(current_user.id)
+        UserSession.revoke_all_for_user(current_user.id)
     auth_service.logout()
     response = jsonify({'success': True, 'message': 'Sesión cerrada exitosamente'})
     unset_jwt_cookies(response)
@@ -152,6 +205,7 @@ def api_login():
             _auto_start_session(user)
             access_token = create_access_token(identity=str(user.id))
             refresh_token = create_refresh_token(identity=str(user.id))
+            _record_session(user, access_token, refresh_token)
             csrf_token = generate_csrf()
             response = jsonify(
                 {
@@ -220,16 +274,20 @@ def api_auth_refresh():
         verify_jwt_in_request(refresh=True, locations=['cookies', 'headers'])
         identity = get_jwt_identity()
 
-        # Rotar refresh token: revocar viejo, crear nuevo
+        # Rotar sesion: revocar la fila de la sesion actual y crear una nueva
         claims = get_jwt()
         jti = claims.get('jti')
         if jti:
-            old = RefreshToken.query.filter_by(token_hash=RefreshToken._hash(jti)).first()
+            old = UserSession.find_by_refresh_jti(jti)
             if old:
                 old.revoke()
+                db.session.commit()
 
+        user = User.query.get(int(identity)) if identity else None
         new_refresh_token = create_refresh_token(identity=identity)
         access_token = create_access_token(identity=identity)
+        if user:
+            _record_session(user, access_token, new_refresh_token)
 
         response = jsonify({'success': True, 'message': 'Token refrescado', 'access_token': access_token})
         set_access_cookies(response, access_token)
@@ -238,6 +296,60 @@ def api_auth_refresh():
     except Exception as e:
         current_app.logger.debug(f'Token refresh failed: {e}')
         return jsonify({'success': False, 'error': 'Token inválido o expirado'}), 401
+
+
+@auth_bp.route('/api/auth/sessions', methods=['GET'])
+@login_required
+def api_auth_sessions():
+    """Lista las sesiones JWT activas del usuario en la DB."""
+    try:
+        sessions = UserSession.list_active_for_user(current_user.id)
+        current_jti = None
+        try:
+            from flask_jwt_extended import get_jwt
+
+            current_jti = get_jwt().get('jti')
+        except Exception:
+            pass
+        data = [
+            {
+                'id': s.id,
+                'device_info': s.device_info,
+                'ip_address': s.ip_address,
+                'created_at': s.created_at.isoformat() if s.created_at else None,
+                'expires_at': s.expires_at.isoformat() if s.expires_at else None,
+                'is_current': current_jti in (s.access_jti, s.refresh_jti),
+            }
+            for s in sessions
+        ]
+        return jsonify({'success': True, 'sessions': data})
+    except Exception as e:
+        current_app.logger.warning(f'/api/auth/sessions error: {e}')
+        return jsonify({'success': False, 'error': 'Error al listar sesiones'}), 500
+
+
+@auth_bp.route('/api/auth/sessions/revoke', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_auth_session_revoke():
+    """Revoca una sesion especifica del usuario (o todas si session_id es 'all')."""
+    try:
+        data = request.get_json(silent=True) or {}
+        session_id = data.get('session_id')
+        if session_id == 'all' or data.get('revoke_all'):
+            UserSession.revoke_all_for_user(current_user.id)
+            return jsonify({'success': True, 'message': 'Todas las sesiones fueron revocadas'})
+        if not session_id:
+            return jsonify({'success': False, 'error': 'session_id requerido'}), 400
+        session = UserSession.query.filter_by(id=int(session_id), user_id=current_user.id).first()
+        if not session:
+            return jsonify({'success': False, 'error': 'Sesión no encontrada'}), 404
+        session.revoke()
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Sesión revocada'})
+    except Exception as e:
+        current_app.logger.warning(f'/api/auth/sessions/revoke error: {e}')
+        return jsonify({'success': False, 'error': 'Error al revocar sesión'}), 500
 
 
 @auth_bp.route('/api/auth/reset-password', methods=['POST'])
@@ -308,7 +420,7 @@ def api_reset_password_request():
             except Exception as ne:
                 current_app.logger.error(f'Notif create failed in reset-password: {ne}')
 
-            try:
+            with suppress(Exception):
                 EmailService.send_password_reset_notification_admin(
                     User.query.filter(User.role.in_(['admin', 'supervisor']), User.is_active.is_(True)).first().email
                     if User.query.filter(User.role.in_(['admin', 'supervisor']), User.is_active.is_(True)).first()
@@ -316,8 +428,6 @@ def api_reset_password_request():
                     email,
                     user.username or email,
                 )
-            except Exception:
-                pass
 
         return jsonify({'success': True, 'message': 'Si el email existe, un administrador revisará tu solicitud.'})
     except Exception as e:

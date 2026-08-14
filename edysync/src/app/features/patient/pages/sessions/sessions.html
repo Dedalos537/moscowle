@@ -21,7 +21,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          @for (session of sessions; track $index) {
+          @for (session of sessions; track session.id) {
             <tr class="hover:bg-surface-container-low transition-colors">
               <td class="px-6 py-4 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
               <td class="px-6 py-4 text-sm text-on-surface font-medium">{{ session.title }}</td>

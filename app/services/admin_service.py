@@ -447,10 +447,54 @@ class AdminService:
         return True, user
 
     def list_users(self, role=None):
+        from collections import defaultdict
+
+        from sqlalchemy import select
+        from sqlalchemy.orm import joinedload
+
+        from app.models.user import patient_therapist, therapist_sede
+
         q = User.query
         if role in ('terapista', 'jugador'):
             q = q.filter_by(role=role)
-        return q.order_by(User.username.asc()).all()
+        users = (
+            q.options(joinedload(User.sede_item))
+            .order_by(User.username.asc())
+            .all()
+        )
+
+        if users:
+            uids = [u.id for u in users]
+
+            sedes_by_user = defaultdict(list)
+            rows = db.session.execute(
+                select(therapist_sede.c.therapist_id, therapist_sede.c.sede_id).where(
+                    therapist_sede.c.therapist_id.in_(uids)
+                )
+            ).all()
+            if rows:
+                sede_ids = {sid for _, sid in rows}
+                sedes = {s.id: s for s in Sede.query.filter(Sede.id.in_(sede_ids)).all()}
+                for uid, sid in rows:
+                    sedes_by_user[uid].append(sedes[sid])
+            for u in users:
+                u._prefetched_sedes = sedes_by_user.get(u.id, [])
+
+            therapists_by_patient = defaultdict(list)
+            pt_rows = db.session.execute(
+                select(patient_therapist.c.patient_id, patient_therapist.c.therapist_id).where(
+                    patient_therapist.c.patient_id.in_(uids)
+                )
+            ).all()
+            if pt_rows:
+                therapist_ids = {tid for _, tid in pt_rows}
+                therapists = {t.id: t for t in User.query.filter(User.id.in_(therapist_ids)).all()}
+                for pid, tid in pt_rows:
+                    therapists_by_patient[pid].append(therapists[tid])
+            for u in users:
+                u._prefetched_therapists = therapists_by_patient.get(u.id, [])
+
+        return users
 
     def broadcast_message(self, sender_id, subject, body, target, receiver_id=None):
         from flask import url_for

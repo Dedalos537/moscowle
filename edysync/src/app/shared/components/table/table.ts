@@ -2,6 +2,7 @@ import { Component, Directive, input, contentChildren, TemplateRef, Input } from
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { RevealOnScroll } from '../../directives/reveal-on-scroll';
 
 export interface TableColumn {
   key: string;
@@ -24,7 +25,7 @@ export class TableCell {
 @Component({
   selector: 'app-table',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule],
+  imports: [CommonModule, FontAwesomeModule, RevealOnScroll],
   templateUrl: './table.html',
   styleUrl: './table.scss',
 })
@@ -35,7 +36,6 @@ export class Table<T> {
   emptyIcon = input<IconProp>(['fas', 'inbox']);
   trackBy = input<((index: number, item: T) => any) | undefined>();
   rowClass = input<((item: T, index: number) => string) | undefined>();
-  staggerDelay = input(0.04);
 
   cellDefs = contentChildren(TableCell);
 

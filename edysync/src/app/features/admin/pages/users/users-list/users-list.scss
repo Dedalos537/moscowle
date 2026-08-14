@@ -5,6 +5,10 @@
   }
 }
 
+.card.reveal-row {
+  transition: opacity 0.35s ease, transform var(--transition-base), box-shadow var(--transition-base);
+}
+
 .assign-select::-webkit-scrollbar {
   width: 4px;
 }

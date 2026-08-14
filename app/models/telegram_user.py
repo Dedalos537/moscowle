@@ -25,6 +25,10 @@ class TelegramUser(db.Model, AuditMixin):
     notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     last_interaction_at = db.Column(db.DateTime, nullable=True)
 
+    pending_confirmation = db.Column(db.JSON, nullable=True)
+    pending_confirmation_expires_at = db.Column(db.DateTime, nullable=True)
+    awaiting_patient_name = db.Column(db.JSON, nullable=True)
+
     admin_user = db.relationship(
         'User',
         foreign_keys=[admin_user_id],

@@ -344,6 +344,16 @@ class ContractService:
             'total_refunded': getattr(c, 'total_refunded', None) or 0,
         }
 
+    @staticmethod
+    def _installment_receipt_path(inst):
+        """Return receipt_image_path from the Payment linked to an installment, if any."""
+        if not inst.payment_id:
+            return None
+        payment = Payment.query.get(inst.payment_id)
+        if not payment:
+            return None
+        return payment.receipt_image_path
+
     def get_contract_detail(self, contract_id):
         try:
             contract = Contract.query.get(contract_id)
@@ -370,6 +380,7 @@ class ContractService:
                         'description': getattr(inst, 'description', None),
                         'real_amount': getattr(inst, 'real_amount', None),
                         'refunded_amount': getattr(inst, 'refunded_amount', None) or 0,
+                        'receipt_image_path': self._installment_receipt_path(inst),
                     }
                 )
 
@@ -452,6 +463,7 @@ class ContractService:
                     discount=discount,
                     date=payment_datetime,
                     installment_id=installment.id,
+                    notes=payment_notes,
                 )
                 db.session.add(new_payment)
                 db.session.flush()

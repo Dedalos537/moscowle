@@ -48,11 +48,11 @@ export class AdminService {
   }
 
   updatePatientDetails(userId: number, data: Record<string, any>): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(`/api/admin/users/${userId}/patient-details`, data);
+    return this.http.patch<ApiResponse>(`/admin/api/users/${userId}/patient-details`, data);
   }
 
   getPatientDetails(userId: number): Observable<{ success: boolean; patient: any }> {
-    return this.http.get<{ success: boolean; patient: any }>(`/api/admin/users/${userId}/patient-details`);
+    return this.http.get<{ success: boolean; patient: any }>(`/admin/api/users/${userId}/patient-details`);
   }
 
   deleteUser(id: number): Observable<ApiResponse> {
@@ -129,6 +129,13 @@ export class AdminService {
     return this.http.post<ApiResponse>('/admin/payments/delete/' + paymentId, {});
   }
 
+  updatePayment(paymentId: number, data: { amount?: number; method?: string; payment_date?: string; status?: string; description?: string; receipt_url?: string } | FormData): Observable<any> {
+    if (data instanceof FormData) {
+      return this.http.put<any>(`/admin/api/payments/${paymentId}`, data);
+    }
+    return this.http.put<any>(`/admin/api/payments/${paymentId}`, data);
+  }
+
   getPatientContracts(patientId: number): Observable<{ success: boolean; contracts: any[] }> {
     return this.http.get<{ success: boolean; contracts: any[] }>('/admin/api/contracts', {
       params: new HttpParams().set('patient_id', patientId),
@@ -143,7 +150,7 @@ export class AdminService {
     return this.http.post<{ success: boolean; contract: any; installments_generated: number }>('/admin/api/contracts', data);
   }
 
-  payInstallment(installmentId: number, data: { amount: number; method: string; reference?: string; discount?: number }): Observable<{ success: boolean; payment: any; error?: string }> {
+  payInstallment(installmentId: number, data: any): Observable<{ success: boolean; payment: any; error?: string }> {
     return this.http.post<{ success: boolean; payment: any }>(`/admin/api/installments/${installmentId}/pay`, data);
   }
 

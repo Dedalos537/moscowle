@@ -1,6 +1,6 @@
 <header class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-2 sm:gap-3">
-    <button (click)="toggleSidebar()" class="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-0.5 sm:mr-1" aria-label="Toggle sidebar">
+    <button (click)="toggleSidebar()" class="md:hidden w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-0.5 sm:mr-1" aria-label="Toggle sidebar">
       <fa-icon [icon]="['fas', 'bars']" class="text-sm sm:text-base"></fa-icon>
     </button>
     @if (headerService.icon$ | async; as icon) {
@@ -27,7 +27,7 @@
     <app-preferences-menu></app-preferences-menu>
 
     <div class="relative">
-      <button (click)="toggleNotifications()" class="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
+      <button (click)="toggleNotifications()" class="relative w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
         <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm sm:text-base"></fa-icon>
         @if (unreadCount > 0) {
           <span class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-error rounded-full text-on-error text-[10px] sm:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
@@ -90,7 +90,7 @@
 
     <div class="relative">
       <div (click)="toggleUserMenu()" class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
-        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm sm:text-lg uppercase">
+        <div class="w-10 h-10 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm sm:text-lg uppercase">
           {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
         </div>
         <div class="hidden md:flex flex-col">

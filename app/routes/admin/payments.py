@@ -58,12 +58,12 @@ def create_expense_route():
             ext = os.path.splitext(filename)[1]
             unique_name = f'{uuid.uuid4().hex}{ext}'
 
-            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
 
             file.save(os.path.join(upload_dir, unique_name))
-            data['receipt_image_path'] = f'receipts/{unique_name}'
+            data['receipt_image_path'] = f'vouchers/{unique_name}'
 
     success, res = finance_service.create_expense(data)
 
@@ -162,11 +162,11 @@ def api_create_expense():
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1]
             unique_name = f'{uuid.uuid4().hex}{ext}'
-            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
             file.save(os.path.join(upload_dir, unique_name))
-            data['receipt_image_path'] = f'receipts/{unique_name}'
+            data['receipt_image_path'] = f'vouchers/{unique_name}'
     success, res = finance_service.create_expense(data)
     if success:
         return jsonify(
@@ -350,13 +350,13 @@ def register_payment():
             ext = os.path.splitext(filename)[1]
             unique_name = f'{uuid.uuid4().hex}{ext}'
 
-            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'receipts')
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
 
             file.save(os.path.join(upload_dir, unique_name))
 
-            receipt_path = f'receipts/{unique_name}'
+            receipt_path = f'vouchers/{unique_name}'
 
     try:
         discount_val = float(discount) if discount else 0.0
@@ -502,20 +502,42 @@ def api_edit_payment(payment_id):
         return jsonify({'error': 'Unauthorized'}), 403
     try:
         payment = Payment.query.get_or_404(payment_id)
-        data = request.get_json()
+        data = request.get_json(silent=True)
         if not data:
+            data = {}
+        form = request.form or {}
+        merged = {**form, **data}
+        if not merged and 'receipt' not in request.files:
             return jsonify({'error': 'No data provided'}), 400
+
+        receipt_path = None
+        file = request.files.get('receipt')
+        if file and file.filename and file.filename != '':
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            unique_name = f'{uuid.uuid4().hex}{ext}'
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+            file.save(os.path.join(upload_dir, unique_name))
+            receipt_path = f'vouchers/{unique_name}'
+
         allowed = {'amount', 'method', 'payment_date', 'status', 'description', 'receipt_url'}
         updated = []
         for field in allowed:
-            if field in data:
-                val = data[field]
+            if field in merged:
+                val = merged[field]
                 if field == 'amount':
                     val = float(val)
                 elif field == 'payment_date':
+                    if not val:
+                        continue
                     val = datetime.strptime(val, '%Y-%m-%d').date()
                 setattr(payment, field, val)
                 updated.append(field)
+        if receipt_path:
+            payment.receipt_image_path = receipt_path
+            updated.append('receipt_image_path')
         if not updated:
             return jsonify({'error': 'No valid fields to update'}), 400
         db.session.commit()
@@ -532,6 +554,7 @@ def api_edit_payment(payment_id):
                     'method': payment.method,
                     'payment_date': str(payment.payment_date),
                     'status': getattr(payment, 'status', 'completado'),
+                    'receipt_image_path': payment.receipt_image_path,
                 },
             }
         )

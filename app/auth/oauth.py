@@ -1,9 +1,12 @@
+from contextlib import suppress
+
 from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, redirect, url_for
 from flask_jwt_extended import create_access_token, create_refresh_token, set_access_cookies, set_refresh_cookies
 
 from app.extensions import db
 from app.models.user import User
+from app.routes.auth import _record_session
 
 oauth_bp = Blueprint('oauth', __name__, url_prefix='/auth')
 
@@ -21,10 +24,15 @@ _facebook = _oauth.register(
     name='facebook',
     client_id=None,
     client_secret=None,
-    access_token_url='https://graph.facebook.com/v19.0/oauth/access_token',
+    access_token_url='https://graph.facebook.com/v19.0/oauth/access_token',  # noqa: S106
     authorize_url='https://www.facebook.com/v19.0/dialog/oauth',
     client_kwargs={'scope': 'email public_profile'},
 )
+
+
+def _record_oauth_session(user, access_token, refresh_token):
+    with suppress(Exception):
+        _record_session(user, access_token, refresh_token)
 
 
 def init_oauth(app):
@@ -46,12 +54,15 @@ def google_callback():
     token = _google.authorize_access_token()
     userinfo = _google.parse_id_token(token)
     user = _find_or_create_oauth_user(
-        'google', userinfo['sub'],
-        userinfo.get('email'), userinfo.get('name'),
+        'google',
+        userinfo['sub'],
+        userinfo.get('email'),
+        userinfo.get('name'),
     )
     response = redirect(url_for('main.dashboard'))
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
+    _record_oauth_session(user, access_token, refresh_token)
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
     return response
@@ -69,12 +80,15 @@ def facebook_callback():
     resp = _facebook.get('https://graph.facebook.com/me?fields=id,name,email')
     profile = resp.json()
     user = _find_or_create_oauth_user(
-        'facebook', profile['id'],
-        profile.get('email'), profile.get('name'),
+        'facebook',
+        profile['id'],
+        profile.get('email'),
+        profile.get('name'),
     )
     response = redirect(url_for('main.dashboard'))
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
+    _record_oauth_session(user, access_token, refresh_token)
     set_access_cookies(response, access_token)
     set_refresh_cookies(response, refresh_token)
     return response

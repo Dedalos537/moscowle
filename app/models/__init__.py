@@ -14,3 +14,4 @@ from app.models.report import *
 from app.models.service_request import *
 from app.models.telegram_user import TelegramUser
 from app.models.user import *
+from app.models.user_session import UserSession

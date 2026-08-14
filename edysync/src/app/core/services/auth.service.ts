@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, of } from 'rxjs';
+import { BehaviorSubject, Observable, tap, of, timeout, catchError } from 'rxjs';
+import { DataCacheService } from './cache.service';
+import { PreloadService } from './preload.service';
 
 export interface LoginResponse {
   valid?: boolean;
@@ -17,7 +19,11 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<any>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private cache: DataCacheService,
+    private preload: PreloadService,
+  ) {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       this.currentUserSubject.next(JSON.parse(storedUser));
@@ -26,10 +32,12 @@ export class AuthService {
 
   verifySession(): Observable<any> {
     return this.http.get<any>(this.ME_URL).pipe(
+      timeout(15000),
       tap(res => {
         if (res.id) {
           localStorage.setItem('user', JSON.stringify(res));
           this.currentUserSubject.next(res);
+          this.preload.preloadFor(res.role);
         } else {
           localStorage.removeItem('user');
           this.currentUserSubject.next(null);
@@ -40,6 +48,13 @@ export class AuthService {
 
   login(email: string, password: string): Observable<any> {
     return this.http.post<any>(this.LOGIN_URL, { email, password }).pipe(
+      timeout(60000),
+      catchError(err => {
+        if (err.name === 'TimeoutError') {
+          throw { error: { message: 'El servidor tardó demasiado en responder. Intenta de nuevo.' } };
+        }
+        throw err;
+      }),
       tap(res => {
         if (res.success) {
           localStorage.setItem('user', JSON.stringify(res.user));
@@ -50,6 +65,7 @@ export class AuthService {
             localStorage.setItem('access_token', res.access_token);
           }
           this.currentUserSubject.next(res.user);
+          this.preload.preloadFor(res.user?.role);
         }
       })
     );
@@ -61,6 +77,7 @@ export class AuthService {
         localStorage.removeItem('user');
         localStorage.removeItem('csrf_token');
         localStorage.removeItem('access_token');
+        this.cache.clear();
         this.currentUserSubject.next(null);
       })
     );
@@ -70,6 +87,7 @@ export class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem('csrf_token');
     localStorage.removeItem('access_token');
+    this.cache.clear();
     this.currentUserSubject.next(null);
   }
 

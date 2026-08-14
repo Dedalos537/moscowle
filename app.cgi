@@ -58,7 +58,7 @@ def _json_response(status_code, body_dict):
     _write(b'Access-Control-Allow-Origin: https://moscowle.centrojuanpabloii.com\r\n')
     _write(b'Access-Control-Allow-Credentials: true\r\n')
     _write(b'Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n')
-    _write(b'Access-Control-Allow-Headers: Content-Type, Authorization, X-Restart-Secret\r\n')
+    _write(b'Access-Control-Allow-Headers: Content-Type, Authorization, X-Restart-Secret, X-App-Key\r\n')
     _write(b'\r\n')
     _write(payload)
 
@@ -130,7 +130,6 @@ def main():
     path = path_info + ('?' + query if query else '')
 
     # ── Server control endpoints (no Gunicorn needed) ──
-    # Handle OPTIONS preflight for CORS
     if path_info in (RESTART_PATH, STATUS_PATH) and method == 'OPTIONS':
         _json_response(200, {'status': 'ok'})
         return
@@ -141,8 +140,9 @@ def main():
         if secret != RESTART_SECRET:
             _json_response(403, {'error': 'Invalid secret'})
             return
+        force = 'force=1' in query or 'force=true' in query
         alive_before = _server_alive()
-        if alive_before:
+        if alive_before and not force:
             _json_response(200, {'status': 'already_running', 'message': 'Backend ya está activo'})
             return
         started = _restart_server()

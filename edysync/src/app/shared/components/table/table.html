@@ -18,8 +18,7 @@
       </thead>
       <tbody>
         @for (row of data(); let i = $index; track (trackBy() ?? defaultTrackBy)(i, row)) {
-          <tr [style.animation-delay]="i * staggerDelay() + 's'"
-              [class]="computeRowClass(row, i)">
+          <tr class="reveal-row" [class]="computeRowClass(row, i)" revealOnScroll>
             @for (col of columns(); track col.key) {
               <td [style.text-align]="col.align ?? 'left'">
                 @let tpl = getTemplate(col.key);

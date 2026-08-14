@@ -17,7 +17,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 
-type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'telegram';
+type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'telegram' | 'activity';
 
 interface PasswordResetRow {
   id: number;
@@ -118,8 +118,14 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   tgLinking = false;
   tgLinkError = '';
   tgLinkSuccess = '';
-  tgUnlinking = false;
-  tgTogglingNotifications = false;
+  tgUnlinking: number | false = false;
+  showLinkForm = false;
+
+  // --- Activity ---
+  activityLogs: any[] = [];
+  activityLoading = false;
+  activityError: string | null = null;
+  activityFilter: 'all' | 'telegram' | 'api' | 'errors' = 'all';
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -147,6 +153,9 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     }
     if (tab === 'telegram') {
       this.loadTelegramStatus();
+    }
+    if (tab === 'activity') {
+      this.loadActivity();
     }
   }
 
@@ -506,12 +515,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       this.admin.linkTelegram(code).subscribe({
         next: (res) => {
           this.tgLinking = false;
-          if (res.success) {
+          if (res.status === 'linked') {
             this.tgLinkSuccess = 'Telegram vinculado exitosamente.';
             this.tgLinkCode = '';
+            this.showLinkForm = false;
             this.loadTelegramStatus();
+          } else if (res.error) {
+            this.tgLinkError = res.error;
           } else {
-            this.tgLinkError = res.error || 'No se pudo vincular.';
+            this.tgLinkError = 'No se pudo vincular.';
           }
           this.cdr.markForCheck();
         },
@@ -524,27 +536,67 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  unlinkTelegram() {
-    if (!this.tgLinkedAccount) return;
-    this.tgUnlinking = true;
+  unlinkTelegram(chatId: number) {
+    this.tgUnlinking = chatId;
     this.cdr.markForCheck();
     this.subs.add(
-      this.admin.unlinkTelegram(this.tgLinkedAccount.telegram_chat_id).subscribe({
+      this.admin.unlinkTelegram(chatId).subscribe({
         next: () => { this.tgUnlinking = false; this.loadTelegramStatus(); this.cdr.markForCheck(); },
         error: () => { this.tgUnlinking = false; this.cdr.markForCheck(); },
       })
     );
   }
 
-  toggleTelegramNotifications() {
-    if (!this.tgLinkedAccount) return;
-    this.tgTogglingNotifications = true;
+  formatDate(s: string | null | undefined): string {
+    if (!s) return '—';
+    try { return new Date(s).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); }
+    catch { return s; }
+  }
+
+  // --- Activity ---
+  loadActivity() {
+    this.activityLoading = true;
+    this.activityError = null;
     this.cdr.markForCheck();
+
     this.subs.add(
-      this.admin.toggleTelegramNotifications(this.tgLinkedAccount.telegram_chat_id, !this.tgLinkedAccount.notifications_enabled).subscribe({
-        next: () => { this.tgTogglingNotifications = false; this.loadTelegramStatus(); this.cdr.markForCheck(); },
-        error: () => { this.tgTogglingNotifications = false; this.cdr.markForCheck(); },
+      this.admin.getActivityLogs(this.activityFilter).subscribe({
+        next: (res: any) => {
+          this.activityLogs = res.logs || [];
+          this.activityLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err: any) => {
+          this.activityLoading = false;
+          this.activityError = err.error?.error || 'Error al cargar actividad';
+          this.cdr.markForCheck();
+        },
       })
     );
+  }
+
+  setActivityFilter(filter: 'all' | 'telegram' | 'api' | 'errors') {
+    this.activityFilter = filter;
+    this.loadActivity();
+  }
+
+  activityIcon(type: string): string {
+    const icons: Record<string, string> = {
+      telegram: 'telegram',
+      api: 'code',
+      error: 'exclamation-triangle',
+      system: 'cog',
+    };
+    return icons[type] || 'circle';
+  }
+
+  activityColor(type: string): string {
+    const colors: Record<string, string> = {
+      telegram: '#229ED9',
+      api: '#3b82f6',
+      error: '#ef4444',
+      system: '#94a3b8',
+    };
+    return colors[type] || '#94a3b8';
   }
 }

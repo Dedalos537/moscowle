@@ -1,6 +1,9 @@
 import logging
+import os
+import uuid
 
-from flask import jsonify, request
+from flask import current_app, jsonify, request
+from werkzeug.utils import secure_filename
 
 from app.auth_compat import login_required
 from app.routes.admin import admin_bp
@@ -168,20 +171,43 @@ def reactivate_contract(contract_id):
 def pay_installment(installment_id):
     try:
         data = request.get_json(silent=True) or {}
-        amount = float(data.get('amount', 0))
-        method = data.get('method', 'transfer')
+        form = request.form or {}
+        amount = float(data.get('amount') or form.get('amount') or 0)
+        method = data.get('method') or form.get('method') or 'transfer'
         if not amount:
             return jsonify({'success': False, 'error': 'Monto requerido'}), 400
+
+        reference = data.get('reference') or form.get('reference') or ''
+        payment_date = data.get('payment_date') or form.get('payment_date')
+        payment_notes = data.get('payment_notes') or form.get('payment_notes') or ''
+        is_free_month = data.get('is_free_month', form.get('is_free_month') == 'true')
+        try:
+            discount_val = float(data.get('discount') or form.get('discount') or 0)
+        except (TypeError, ValueError):
+            discount_val = 0.0
+
+        receipt_path = None
+        file = request.files.get('receipt')
+        if file and file.filename and file.filename != '':
+            filename = secure_filename(file.filename)
+            ext = os.path.splitext(filename)[1]
+            unique_name = f'{uuid.uuid4().hex}{ext}'
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'vouchers')
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
+            file.save(os.path.join(upload_dir, unique_name))
+            receipt_path = f'vouchers/{unique_name}'
 
         success, result = contract_service.pay_installment(
             installment_id=installment_id,
             amount=amount,
             method=method,
-            reference=data.get('reference', ''),
-            payment_date=data.get('payment_date'),
-            receipt_path=None,
-            payment_notes=data.get('payment_notes', ''),
-            is_free_month=data.get('is_free_month', False),
+            reference=reference,
+            payment_date=payment_date,
+            receipt_path=receipt_path,
+            payment_notes=payment_notes,
+            is_free_month=is_free_month,
+            discount=discount_val,
         )
 
         if success:
@@ -291,6 +317,44 @@ def migrate_existing_patients():
             User.is_active == True,
             User.payment_amount > 0,
         ).all()
+
+        # Also migrate active patients that only have payment history (no payment_amount set),
+        # inferring their monthly amount from their most common payment amount.
+
+        patients_with_payments = (
+            conn.execute(
+                db.text(
+                    "SELECT u.id, u.username, u.payment_plan, u.payment_due_date, "
+                    "COUNT(p.id) as pay_count, "
+                    "COALESCE(u.payment_amount, 0) as payment_amount "
+                    "FROM user u "
+                    "JOIN payment p ON p.patient_id = u.id "
+                    "WHERE u.role = 'jugador' AND u.is_active = 1 " \
+                    "AND NOT EXISTS (SELECT 1 FROM contract c " \
+                    "  WHERE c.patient_id = u.id AND c.status = 'active') " \
+                    "GROUP BY u.id "
+                    "HAVING COUNT(p.id) > 0"
+                )
+            ).fetchall()
+        )
+
+        by_id = {p.id: p for p in patients}
+        for row in patients_with_payments:
+            if row.id in by_id:
+                continue
+            pat = User.query.get(row.id)
+            if pat:
+                inferred = conn.execute(
+                    db.text(
+                        "SELECT amount, COUNT(*) as cnt FROM payment "
+                        "WHERE patient_id = :pid GROUP BY amount ORDER BY cnt DESC, amount DESC LIMIT 1"
+                    ),
+                    {'pid': row.id},
+                ).fetchone()
+                if inferred and inferred.amount:
+                    pat.payment_amount = float(inferred.amount)
+                    patients.append(pat)
+                    logger.info('Inferred payment_amount %.2f for patient %s', inferred.amount, row.username)
 
         created = 0
         skipped = 0

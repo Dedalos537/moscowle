@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import UTC
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text
 
 from app.extensions import csrf, db

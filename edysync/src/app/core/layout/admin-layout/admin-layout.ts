@@ -33,6 +33,9 @@ export class AdminLayout implements OnInit, OnDestroy {
   error: string | null = null;
 
   private subs = new Subscription();
+  private navTimer: any = null;
+  private navInProgress = false;
+  private readonly OVERLAY_DELAY = 300;
 
   constructor(
     private router: Router,
@@ -46,12 +49,20 @@ export class AdminLayout implements OnInit, OnDestroy {
     this.wakeLockService.request();
     this.subs.add(this.router.events.subscribe(e => {
       if (e instanceof NavigationStart) {
-        this.routeLoading = true;
+        this.navInProgress = true;
         this.loadStartTime = Date.now();
         this.loadElapsed = '';
-        this.cdr.markForCheck();
+        this.clearNavTimer();
+        this.navTimer = setTimeout(() => {
+          if (this.navInProgress) {
+            this.routeLoading = true;
+            this.cdr.markForCheck();
+          }
+        }, this.OVERLAY_DELAY);
       }
       if (e instanceof NavigationEnd || e instanceof NavigationCancel || e instanceof NavigationError) {
+        this.navInProgress = false;
+        this.clearNavTimer();
         this.sidebarService.close();
         const elapsed = Date.now() - this.loadStartTime;
         this.loadElapsed = `${(elapsed / 1000).toFixed(1)}s`;
@@ -62,7 +73,15 @@ export class AdminLayout implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+    this.clearNavTimer();
     this.wakeLockService.release();
+  }
+
+  private clearNavTimer(): void {
+    if (this.navTimer) {
+      clearTimeout(this.navTimer);
+      this.navTimer = null;
+    }
   }
 
   prepareRoute() {

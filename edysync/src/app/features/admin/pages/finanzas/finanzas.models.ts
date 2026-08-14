@@ -1,5 +1,6 @@
 export interface PatientRow {
   id: number;
+  is_active?: boolean;
   username: string;
   email: string;
   phone?: string;
@@ -115,6 +116,7 @@ export interface Installment {
   reminder_sent: boolean;
   real_amount?: number;
   refunded_amount: number;
+  receipt_image_path?: string;
 }
 
 export interface ContractFilter {
@@ -155,6 +157,7 @@ export interface PayInstallmentForm {
   reference: string;
   payment_notes: string;
   is_free_month: boolean;
+  receipt?: File | null;
 }
 
 export interface CancelContractForm {

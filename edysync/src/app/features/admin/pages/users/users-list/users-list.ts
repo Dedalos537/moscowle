@@ -18,7 +18,7 @@ import { Select } from '../../../../../shared/components/select/select';
 import { Input } from '../../../../../shared/components/input/input';
 import { Drawer } from '../../../../../shared/components/drawer/drawer';
 import { Modal } from '../../../../../shared/components/modal/modal';
-import { Table, TableCell } from '../../../../../shared/components/table/table';
+import { RevealOnScroll } from '../../../../../shared/directives/reveal-on-scroll';
 import { UsersStatsCards } from '../components/users-stats-cards/users-stats-cards';
 
 interface UserRow {
@@ -53,19 +53,17 @@ interface UserRow {
 @Component({
   selector: 'app-users-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Drawer, Modal, Table, TableCell, UsersStatsCards],
+  imports: [CommonModule, FormsModule, RouterModule, FontAwesomeModule, Spinner, Button, Select, Input, Drawer, Modal, UsersStatsCards, RevealOnScroll],
   templateUrl: './users-list.html',
   styleUrl: './users-list.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UsersList implements OnInit, OnDestroy {
-  readonly Math = Math;
   @ViewChild('headerActions', { static: true }) headerActions!: TemplateRef<any>;
 
   users: UserRow[] = [];
   filteredUsers: UserRow[] = [];
-  paginatedUsers: UserRow[] = [];
   sedes: Sede[] = [];
   activeSedes: Pick<Sede, 'id' | 'name'>[] = [];
   therapists: { id: number; username: string; email: string }[] = [];
@@ -76,10 +74,6 @@ export class UsersList implements OnInit, OnDestroy {
   selectedTherapistId: number | null = null;
   selectedStatus: string | null = null;
   loading = true;
-
-  currentPage = 1;
-  pageSize = 20;
-  totalPages = 1;
 
   stats = { total: 0, active: 0, inactive: 0, patients: 0, therapists: 0, supervisors: 0, admins: 0, retired: 0, debtors: 0 };
 
@@ -92,6 +86,11 @@ export class UsersList implements OnInit, OnDestroy {
   showPatientDetailModal = false;
   patientDetailData: any = null;
   patientDetailLoading = false;
+
+  showEditPatientModal = false;
+  patientDetailForm: any = {};
+  patientDetailStatus = '';
+  patientDetailSaving = false;
 
   editData: any = {};
   currentEditUser: UserRow | null = null;
@@ -224,13 +223,11 @@ export class UsersList implements OnInit, OnDestroy {
     const sede = params.get('sede');
     const therapist = params.get('therapist');
     const status = params.get('status');
-    const page = params.get('page');
     if (search) this.searchQuery = search;
     if (filter) this.activeFilter = filter;
     if (sede) this.selectedSedeId = Number(sede);
     if (therapist) this.selectedTherapistId = Number(therapist);
     if (status) this.selectedStatus = status;
-    if (page) this.currentPage = Number(page);
   }
 
   private persistFiltersToUrl() {
@@ -240,7 +237,6 @@ export class UsersList implements OnInit, OnDestroy {
     if (this.selectedSedeId) params.set('sede', String(this.selectedSedeId));
     if (this.selectedTherapistId) params.set('therapist', String(this.selectedTherapistId));
     if (this.selectedStatus) params.set('status', this.selectedStatus);
-    if (this.currentPage > 1) params.set('page', String(this.currentPage));
     const qs = params.toString();
     const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     window.history.replaceState({}, '', newUrl);
@@ -367,45 +363,33 @@ export class UsersList implements OnInit, OnDestroy {
     }
 
     this.filteredUsers = result;
-    this.totalPages = Math.max(1, Math.ceil(result.length / this.pageSize));
-    if (this.currentPage > this.totalPages) this.currentPage = 1;
-    this.updatePagination();
     this.calcStats();
     this.persistFiltersToUrl();
-  }
-
-  private updatePagination() {
-    const start = (this.currentPage - 1) * this.pageSize;
-    this.paginatedUsers = this.filteredUsers.slice(start, start + this.pageSize);
+    this.cdr.markForCheck();
   }
 
   setFilter(filter: string) {
     this.activeFilter = filter;
-    this.currentPage = 1;
     this.applyFilters();
   }
 
   onSearch(query: string | number) {
     this.searchQuery = String(query);
-    this.currentPage = 1;
     this.applyFilters();
   }
 
   onSedeChange(sedeId: number | null) {
     this.selectedSedeId = sedeId;
-    this.currentPage = 1;
     this.applyFilters();
   }
 
   onTherapistFilterChange(therapistId: number | null) {
     this.selectedTherapistId = therapistId;
-    this.currentPage = 1;
     this.applyFilters();
   }
 
   onStatusChange(status: string | null) {
     this.selectedStatus = status;
-    this.currentPage = 1;
     this.applyFilters();
   }
 
@@ -419,26 +403,8 @@ export class UsersList implements OnInit, OnDestroy {
     this.selectedSedeId = null;
     this.selectedTherapistId = null;
     this.selectedStatus = null;
-    this.currentPage = 1;
     this.persistFiltersToUrl();
     this.applyFilters();
-  }
-
-  goToPage(page: number) {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.updatePagination();
-    this.persistFiltersToUrl();
-  }
-
-  get pageNumbers(): number[] {
-    const pages: number[] = [];
-    const total = this.totalPages;
-    const current = this.currentPage;
-    const start = Math.max(1, current - 2);
-    const end = Math.min(total, current + 2);
-    for (let i = start; i <= end; i++) pages.push(i);
-    return pages;
   }
 
   toggleActive(user: UserRow, event: Event) {
@@ -773,31 +739,6 @@ export class UsersList implements OnInit, OnDestroy {
     return name?.slice(0, 2).toUpperCase() || 'US';
   }
 
-  trackById(_: number, u: UserRow): number {
-    return u.id;
-  }
-
-  columns = [
-    {key: 'usuario', label: 'Usuario', width: '24%'},
-    {key: 'email', label: 'Email', width: '20%'},
-    {key: 'rol', label: 'Rol', width: '14%'},
-    {key: 'sede', label: 'Sede', width: '14%'},
-    {key: 'estado', label: 'Estado', width: '12%'},
-    {key: 'activo', label: 'Activo', align: 'center' as const, width: '8%'},
-    {key: 'acciones', label: '', align: 'right' as const, width: '8%'},
-  ];
-
-  getRowClass = (u: UserRow, i: number): string => {
-    const classes: string[] = [];
-    if (u.account_status === 'debtor') classes.push('bg-error-container/10');
-    if (u.account_status === 'retired') classes.push('bg-surface-container-highest/40');
-    if (!u.is_active && u.account_status !== 'debtor' && u.account_status !== 'retired') classes.push('bg-warning-container/20');
-    if (u.account_status === 'active' && u.is_active) classes.push('hover:bg-surface-container-high/50');
-    return classes.join(' ');
-  };
-
-  trackUser = (i: number, u: UserRow): number => u.id;
-
   private showSuccessToast(msg: string) {
     this.toastMessage = msg;
     this.toastType = 'success';
@@ -868,7 +809,7 @@ export class UsersList implements OnInit, OnDestroy {
     this.patientDetailData = null;
     this.cdr.markForCheck();
     this.subscriptions.add(
-      this.http.get(`/api/admin/patient/${this.currentEditUser.id}/detail`).subscribe({
+      this.adminService.getPatientDetails(this.currentEditUser.id).subscribe({
         next: (res: any) => {
           this.patientDetailData = res.patient;
           this.patientDetailLoading = false;
@@ -885,6 +826,76 @@ export class UsersList implements OnInit, OnDestroy {
   closePatientDetailModal() {
     this.showPatientDetailModal = false;
     this.patientDetailData = null;
+  }
+
+  startEditPatientDetails() {
+    if (!this.currentEditUser || this.currentEditUser.role !== 'jugador') return;
+    this.showEditPatientModal = true;
+    this.patientDetailLoading = true;
+    this.patientDetailForm = {};
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+    this.subscriptions.add(
+      this.adminService.getPatientDetails(this.currentEditUser.id).subscribe({
+        next: (res: any) => {
+          const p = res.patient;
+          this.patientDetailForm = {
+            document_number: p.document_number || '',
+            phone: p.phone || '',
+            date_of_birth: p.date_of_birth || '',
+            sex: p.sex || '',
+            guardian_name: p.guardian_name || '',
+            guardian_type: p.guardian_type || '',
+            guardian_dni: p.guardian_dni || '',
+            guardian_contact: p.guardian_contact || '',
+            preliminary_diagnosis: p.preliminary_diagnosis || '',
+            therapy_goals: p.therapy_goals || '',
+            notes: p.notes || '',
+          };
+          this.patientDetailLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.patientDetailLoading = false;
+          this.patientDetailStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  cancelEditPatientDetails() {
+    this.showEditPatientModal = false;
+    this.patientDetailForm = {};
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+  }
+
+  savePatientDetails() {
+    if (!this.currentEditUser) return;
+    this.patientDetailSaving = true;
+    this.patientDetailStatus = '';
+    this.cdr.markForCheck();
+    this.subscriptions.add(
+      this.adminService.updatePatientDetails(this.currentEditUser.id, this.patientDetailForm).subscribe({
+        next: (res) => {
+          this.patientDetailSaving = false;
+          if (res.success) {
+            this.patientDetailStatus = 'Guardado correctamente';
+            this.showEditPatientModal = false;
+            this.loadData();
+          } else {
+            this.patientDetailStatus = res.error || 'Error al guardar';
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.patientDetailSaving = false;
+          this.patientDetailStatus = 'Error de conexión';
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   saveGroup() {

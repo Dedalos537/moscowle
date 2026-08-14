@@ -190,6 +190,16 @@ body { font-size: 16px; }
     @apply bg-primary text-on-primary;
   }
 
+  @media (max-width: 767px) {
+    .btn-filter,
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+    }
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -560,4 +570,12 @@ tr {
   display: flex;
   justify-content: end;
   gap: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-row {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }

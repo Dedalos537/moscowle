@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
 export interface ContactUser {
@@ -68,15 +68,18 @@ export class ChatService {
 
   constructor(private http: HttpClient) {}
 
-  connect() {
+  async connect() {
     if (this.socket?.connected) return;
+    const { io } = await import('socket.io-client');
     this.socket = io(this.SOCKET_URL, {
       transports: ['polling'],
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 20,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 10000,
+      reconnectionDelayMax: 60000,
+      randomizationFactor: 0.5,
     });
 
     this.socket.on('connect', () => {

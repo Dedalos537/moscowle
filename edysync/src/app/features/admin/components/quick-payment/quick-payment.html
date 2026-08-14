@@ -175,7 +175,7 @@
             <fa-icon [icon]="['fas', 'check-circle']" class="text-success text-lg shrink-0"></fa-icon>
             <div class="flex-1">
               <p class="text-xs font-bold text-success">Pago registrado</p>
-              <a [href]="lastPaymentReceiptUrl" target="_blank" class="text-xs text-success underline inline-flex items-center gap-1 mt-0.5">
+              <a [href]="getReceiptUrl()" target="_blank" class="text-xs text-success underline inline-flex items-center gap-1 mt-0.5">
                 <fa-icon [icon]="['fas', 'file-pdf']"></fa-icon> Descargar recibo
               </a>
             </div>
@@ -187,7 +187,7 @@
         <span class="text-xs text-on-surface-variant">{{ registerStatus }}</span>
         <div class="flex gap-2">
           <app-button variant="ghost" label="Cancelar" (clicked)="closePaymentForm()"></app-button>
-          <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [disabled]="!registerForm.amount" (clicked)="submitPayment()"></app-button>
+          <app-button variant="primary" label="Registrar" [icon]="['fas', 'save']" [loading]="registering" [disabled]="!registerForm.amount || registering" (clicked)="submitPayment()"></app-button>
         </div>
       </div>
     </div>

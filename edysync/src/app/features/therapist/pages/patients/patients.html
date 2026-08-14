@@ -26,7 +26,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          @for (patient of patients; track $index) {
+          @for (patient of patients; track patient.id) {
             <tr class="hover:bg-surface-container-low transition-colors">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">

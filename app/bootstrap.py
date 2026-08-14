@@ -285,7 +285,7 @@ def init_extensions(app: Flask) -> None:
         },
         supports_credentials=True,
         allow_headers=['Content-Type', 'X-App-Key', 'Authorization', 'X-CSRFToken'],
-        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         max_age=3600,
     )
 

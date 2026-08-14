@@ -1,4 +1,4 @@
-import { Component, input, output, ChangeDetectionStrategy, ChangeDetectorRef, effect, inject } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 
@@ -20,15 +20,6 @@ export class Input {
   icon = input<IconProp>();
 
   valueChange = output<string | number>();
-
-  private cdr = inject(ChangeDetectorRef);
-
-  constructor() {
-    effect(() => {
-      this.value();
-      this.cdr.markForCheck();
-    });
-  }
 
   onInput(event: Event) {
     const input = event.target as HTMLInputElement;

@@ -66,7 +66,12 @@ export class FloatingUiService {
   }
 
   private updateOverlayHidden(): void {
-    const blocked = OVERLAY_SELECTORS.some((sel) => !!document.querySelector(sel));
+    // Overlays owned by the chat (its own confirm modal, rendered as a child of
+    // <app-ai-chat>) must NOT hide the floating UI, otherwise the chat closes
+    // itself the moment its confirmation dialog opens.
+    const blocked = OVERLAY_SELECTORS.some((sel) =>
+      Array.from(document.querySelectorAll(sel)).some((el) => !el.closest('app-ai-chat')),
+    );
     if (this.hidden() !== blocked) {
       this.hidden.set(blocked);
     }

@@ -36,13 +36,18 @@
           }
         </div>
         <div>
-          <h3>{{ fullScreen ? 'Asistente IA — Centro Juan Pablo II' : 'Asistente IA' }}<span class="mode-badge" [ngClass]="fullScreen ? 'mode-badge--grande' : 'mode-badge--chiquito'">{{ fullScreen ? 'Admin' : 'Consulta' }}</span></h3>
+          <h3>{{ fullScreen ? 'Asistente IA — Centro Juan Pablo II' : 'Asistente IA' }}<span class="mode-badge" [ngClass]="fullScreen ? 'mode-badge--grande' : 'mode-badge--chiquito'">{{ fullScreen ? 'Completo' : 'Solo lectura' }}</span></h3>
           <p>{{ fullScreen ? 'Asistente total del sistema' : 'Asistente IA' }}</p>
         </div>
       </div>
       <div class="chat-header-actions">
+        <button class="chat-sessions-btn" (click)="toggleSessionList()"
+          [class.active]="showSessionList"
+          [title]="'Historial de conversaciones'">
+          <fa-icon [icon]="['fas', 'list']"></fa-icon>
+        </button>
         <button class="chat-expand" (click)="toggleFullScreen()"
-          [title]="fullScreen ? 'Salir de antigravity' : 'Antigravity — pantalla completa'">
+          [title]="fullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'">
           <fa-icon [icon]="['fas', fullScreen ? 'compress' : 'expand']"></fa-icon>
         </button>
         <button class="chat-close" (click)="togglePanel()">
@@ -51,93 +56,131 @@
       </div>
     </div>
 
-    <div class="chat-messages" #scrollContainer>
-      @if (messages.length === 0 && !loading) {
-        <div class="welcome-msg">
-          <div class="icon"><fa-icon [icon]="['fas', 'magic']" class="text-3xl text-primary"></fa-icon></div>
-          <h4>{{ welcomeMessage }}</h4>
-          <p>{{ fullScreen ? 'Estoy aquí para gestionar todo el sistema. Puedes pedirme cualquier cosa:' : 'Pregúntame sobre finanzas, sesiones, o gestiona el centro' }}</p>
-          @if (fullScreen) {
-            <div class="antigravity-capabilities">
-              <div class="capability"><fa-icon [icon]="['fas', 'dollar-sign']"></fa-icon> Registrar pagos</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'user-plus']"></fa-icon> Crear usuarios</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'calendar-plus']"></fa-icon> Crear sesiones</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'users']"></fa-icon> Buscar pacientes</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'envelope']"></fa-icon> Enviar mensajes</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'chart-line']"></fa-icon> Reportes al instante</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'ban']"></fa-icon> Desactivar usuarios</div>
-              <div class="capability"><fa-icon [icon]="['fas', 'file-alt']"></fa-icon> Subir archivos</div>
-            </div>
-          }
-          @if (suggestions.length > 0) {
-            <div class="suggestion-chips">
-              @for (s of suggestions; track s) {
-                <span class="suggestion-chip" (click)="sendSuggestion(s)">{{ s }}</span>
-              }
-            </div>
-          }
+    @if (showSessionList) {
+      <div class="chat-session-list">
+        <div class="session-list-header">
+          <span class="session-list-title">Conversaciones</span>
+          <button class="session-new-btn" (click)="newSession()">
+            <fa-icon [icon]="['fas', 'plus']"></fa-icon>
+            <span>Nueva conversación</span>
+          </button>
         </div>
-      }
-
-      @for (msg of messages; track $index) {
-        <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
-          @if (msg.error) {
-            <div class="error-msg">
-              <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error"></fa-icon>
-              <span>{{ msg.content }}</span>
-            </div>
-          } @else {
-            @if (msg.filePreview) {
-              <img [src]="msg.filePreview" class="file-preview" alt="Archivo adjunto">
-            }
-            <div [innerHTML]="sanitize(msg.content)"></div>
-          }
-          @if (msg.toolCalls && msg.toolCalls.length > 0) {
-            <div class="tool-calls">
-              @for (tc of msg.toolCalls; track tc.name) {
-                <div class="tool-call" [class.tool-call--error]="!tc.success">
-                  <div class="tool-call-header">
-                    <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
-                    <span class="tool-name">{{ tc.name }}</span>
-                    @if (tc.success) {
-                      <span class="tool-badge tool-badge--ok">OK</span>
-                    }
-                  </div>
-                  @if (tc.result) {
-                    <div class="tool-call-result">
-                      <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
-                    </div>
-                  }
+        <div class="session-items">
+          @for (s of sessions; track s.id) {
+            <div class="session-item" [class.session-item--active]="s.id === activeSessionId" (click)="switchSession(s.id)">
+              <div class="session-item-main">
+                <fa-icon [icon]="['fas', 'comment-dots']"></fa-icon>
+                <div class="session-item-text">
+                  <span class="session-item-title">{{ s.title || 'Nueva conversación' }}</span>
+                  <span class="session-item-meta">{{ s.messages.length }} mensaje{{ s.messages.length === 1 ? '' : 's' }}</span>
                 </div>
+              </div>
+              @if (s.id === activeSessionId) {
+                <fa-icon [icon]="['fas', 'check']" class="session-item-check"></fa-icon>
+              } @else {
+                <button class="session-item-delete" (click)="deleteSession($event, s.id)" [title]="'Eliminar conversación'">
+                  <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+                </button>
               }
+            </div>
+          } @empty {
+            <div class="session-empty">
+              <fa-icon [icon]="['fas', 'comments']"></fa-icon>
+              <p>No hay conversaciones guardadas.</p>
             </div>
           }
         </div>
-      }
-
-      @if (loading) {
-        @if (thinkingText) {
-          <div class="message assistant thinking-msg">
-            <div class="thinking-indicator">
-              <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
-              <span>{{ thinkingText }}</span>
-            </div>
-          </div>
-        } @else {
-          <div class="message assistant" style="opacity:1">
-            <div class="typing-indicator">
-              <span></span><span></span><span></span>
-            </div>
+      </div>
+    } @else {
+      <div class="chat-messages" #scrollContainer>
+        @if (messages.length === 0 && !loading) {
+          <div class="welcome-msg">
+            <div class="icon"><fa-icon [icon]="['fas', 'magic']" class="text-3xl text-primary"></fa-icon></div>
+            <h4>{{ welcomeMessage }}</h4>
+            <p>{{ fullScreen ? 'Estoy aquí para gestionar todo el sistema. Puedes pedirme cualquier cosa:' : 'Pregúntame sobre finanzas, sesiones, o gestiona el centro' }}</p>
+            @if (fullScreen) {
+              <div class="assistant-capabilities">
+                <div class="capability"><fa-icon [icon]="['fas', 'dollar-sign']"></fa-icon> Registrar pagos</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'user-plus']"></fa-icon> Crear usuarios</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'calendar-plus']"></fa-icon> Crear sesiones</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'users']"></fa-icon> Buscar pacientes</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'envelope']"></fa-icon> Enviar mensajes</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'chart-line']"></fa-icon> Reportes al instante</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'ban']"></fa-icon> Desactivar usuarios</div>
+                <div class="capability"><fa-icon [icon]="['fas', 'file-alt']"></fa-icon> Subir archivos</div>
+              </div>
+            }
+            @if (suggestions.length > 0) {
+              <div class="suggestion-chips">
+                @for (s of suggestions; track s) {
+                  <span class="suggestion-chip" (click)="sendSuggestion(s)">{{ s }}</span>
+                }
+              </div>
+            }
           </div>
         }
-      }
-    </div>
 
-    @if (actionChips.length > 0 && messages.length > 0 && !fullScreen) {
+        @for (msg of messages; track $index) {
+          <div class="message {{ msg.role }}" [style.animation-delay]="'0.05s'">
+            @if (msg.error) {
+              <div class="error-msg">
+                <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error"></fa-icon>
+                <span>{{ msg.content }}</span>
+              </div>
+            } @else {
+              @if (msg.filePreview) {
+                <img [src]="msg.filePreview" class="file-preview" alt="Archivo adjunto">
+              }
+              <div [innerHTML]="sanitize(msg.content)"></div>
+            }
+            @if (msg.toolCalls && msg.toolCalls.length > 0) {
+              <div class="tool-calls">
+                @for (tc of msg.toolCalls; track tc.name) {
+                  <div class="tool-call" [class.tool-call--error]="!tc.success">
+                    <div class="tool-call-header">
+                      <fa-icon [icon]="['fas', tc.success ? 'check-circle' : 'wrench']" class="tool-icon" [class.text-success]="tc.success"></fa-icon>
+                      <span class="tool-name">{{ tc.name }}</span>
+                      @if (tc.success) {
+                        <span class="tool-badge tool-badge--ok">OK</span>
+                      }
+                    </div>
+                    @if (tc.result) {
+                      <div class="tool-call-result">
+                        <pre>{{ tc.result | slice:0:200 }}{{ tc.result.length > 200 ? '...' : '' }}</pre>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (loading) {
+          @if (thinkingText) {
+            <div class="message assistant thinking-msg">
+              <div class="thinking-indicator">
+                <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
+                <span>{{ thinkingText }}</span>
+              </div>
+            </div>
+          } @else {
+            <div class="message assistant" style="opacity:1">
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (actionChips.length > 0 && messages.length > 0) {
       <div class="quick-actions-bar">
         @for (chip of actionChips; track chip.id) {
           <button class="quick-action-btn" (click)="handleActionChip(chip)" [title]="chip.label">
             <fa-icon [icon]="getIcon(chip.icon)"></fa-icon>
+            <span class="quick-action-label">{{ chip.label }}</span>
           </button>
         }
       </div>
@@ -148,6 +191,22 @@
         <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
         <input type="file" (change)="onFileSelected($event)" hidden>
       </label>
+      <button class="chat-voice" [class.recording]="voiceState === 'recording'"
+        [class.transcribing]="voiceState === 'transcribing'"
+        [title]="voiceState === 'recording' ? 'Detener grabación' : voiceState === 'transcribing' ? 'Transcribiendo...' : 'Hablar'"
+        (click)="toggleVoice()"
+        [disabled]="voiceState === 'transcribing' || loading || uploading">
+        @if (voiceState === 'transcribing') {
+          <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
+        } @else if (voiceState === 'recording') {
+          <fa-icon [icon]="['fas', 'microphone-slash']"></fa-icon>
+        } @else {
+          <fa-icon [icon]="['fas', 'microphone']"></fa-icon>
+        }
+        @if (voiceState === 'recording') {
+          <span class="voice-timer">{{ recordingTime }}s</span>
+        }
+      </button>
       <textarea
         class="chat-input"
         [(ngModel)]="inputMessage"
@@ -166,3 +225,9 @@
     </div>
   </div>
 }
+
+<app-chat-confirm-dialog
+  #confirmDialog
+  (confirmAction)="onConfirmAction($event)"
+  (cancelAction)="onCancelConfirm()">
+</app-chat-confirm-dialog>

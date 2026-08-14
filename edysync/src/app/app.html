@@ -1,5 +1,25 @@
-<app-splash-screen [isReady]="splashReady" />
-<router-outlet />
+@if (serverDown) {
+  <div class="server-down">
+    <div class="server-down-card">
+      <div class="server-down-icon-wrap">
+        <div class="server-down-logo-wrap">
+          <img src="assets/img/logo.svg" alt="Logo" class="server-down-logo" />
+          <span class="server-down-question">?</span>
+        </div>
+      </div>
+      <h1 class="server-down-title">Servidor no disponible</h1>
+      <p class="server-down-text">El servidor está experimentando problemas técnicos. Por favor, intenta más tarde.</p>
+      <app-server-down-game />
+      <button class="server-down-btn" [disabled]="retrying" (click)="retryPage()">
+        <fa-icon [icon]="['fas', retrying ? 'spinner' : 'arrows-rotate']" [class.spinning]="retrying"></fa-icon>
+        {{ retrying ? 'Reintentando...' : 'Reintentar' }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <app-splash-screen [isReady]="splashReady" />
+  <router-outlet />
+}
 <app-alert-modal />
 <app-toast-container />
 <app-recording-overlay />

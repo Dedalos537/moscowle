@@ -9,6 +9,7 @@ import { SelectOption } from '../../../../shared/components/select/select';
 import { Button } from '../../../../shared/components/button/button';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Select } from '../../../../shared/components/select/select';
+import { environment } from '../../../../../environments/environment';
 
 interface PatientHit {
   id: number;
@@ -52,6 +53,7 @@ export class QuickPayment implements OnDestroy {
   lastPaymentReceiptUrl = '';
   analyzeResult: any = null;
   registerStatus = '';
+  registering = false;
 
   paymentMethodOptions: SelectOption[] = [
     {value: 'transfer', label: 'Transferencia'},
@@ -233,6 +235,8 @@ export class QuickPayment implements OnDestroy {
   }
 
   submitPayment() {
+    if (this.registering) return;
+    this.registering = true;
     this.registerStatus = 'Registrando...';
     const formData = new FormData();
     if (this.registerForm.patient_id) formData.append('patient_id', String(this.registerForm.patient_id));
@@ -253,8 +257,11 @@ export class QuickPayment implements OnDestroy {
             this.registerStatus = 'Pago registrado exitosamente';
             this.lastPaymentReceiptUrl = res.receipt_url || '';
             if (this.lastPaymentReceiptUrl) {
+              const base = environment.apiBaseUrl || '';
               const a = document.createElement('a');
-              a.href = this.lastPaymentReceiptUrl;
+              a.href = this.lastPaymentReceiptUrl.startsWith('http')
+                ? this.lastPaymentReceiptUrl
+                : base + this.lastPaymentReceiptUrl;
               a.target = '_blank';
               a.rel = 'noopener';
               a.click();
@@ -264,18 +271,28 @@ export class QuickPayment implements OnDestroy {
               this.closePaymentForm();
               this.clearSearch();
               this.paymentCompleted.emit();
+              this.registering = false;
+              this.cdr.markForCheck();
             }, 1000);
           } else {
             this.registerStatus = 'Error: ' + (res.message || res.error || 'Desconocido');
+            this.registering = false;
           }
           this.cdr.markForCheck();
         },
         error: () => {
           this.registerStatus = 'Error de conexion al servidor';
+          this.registering = false;
           this.cdr.markForCheck();
         },
       }),
     );
+  }
+
+  getReceiptUrl(): string {
+    if (!this.lastPaymentReceiptUrl) return '#';
+    if (this.lastPaymentReceiptUrl.startsWith('http')) return this.lastPaymentReceiptUrl;
+    return (environment.apiBaseUrl || '') + this.lastPaymentReceiptUrl;
   }
 
   ngOnDestroy() {

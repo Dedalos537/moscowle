@@ -3,6 +3,7 @@ import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ToastService } from '../services/toast.service';
+import { SILENT_HTTP } from '../services/preload.service';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
@@ -14,6 +15,9 @@ export class ErrorInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     return next.handle(req).pipe(
       catchError((error: HttpErrorResponse) => {
+        if (req.context.get(SILENT_HTTP)) {
+          return throwError(() => error);
+        }
         this.ngZone.run(() => {
           if (error.status === 0) {
             this.toastService.show('Error de conexión — verifica que el servidor esté disponible', 'error');

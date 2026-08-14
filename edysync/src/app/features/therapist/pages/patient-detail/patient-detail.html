@@ -153,7 +153,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (session of sessions; track $index) {
+                @for (session of sessions; track session.id) {
                   <tr class="border-b border-border/50 hover:bg-surface-container-low transition-colors cursor-pointer" (click)="viewSession(session)">
                     <td class="py-3 text-sm text-on-surface">{{ session.start_time | date:'dd/MM/yyyy' }}</td>
                     <td class="py-3 text-sm text-on-surface">{{ session.title }}</td>

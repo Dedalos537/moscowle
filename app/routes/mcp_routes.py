@@ -2,17 +2,30 @@ import json
 import logging
 import os
 import re
+import tempfile
 import uuid
-from datetime import datetime
 
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from app.auth_compat import current_user
 from app.models import User
+from app.services.audit_service import transcribe_audio
 from app.services.llm_client import llm_chat_stream
-from app.services.mcp_service import SYSTEM_PROMPTS, MCPService, _build_tool_prompt, _parse_text_tool_call, _trim_tool_result
-from app.services.tools_registry import execute_tool, get_tools_for_mode
+from app.services.mcp_service import (
+    SYSTEM_PROMPTS,
+    MCPService,
+    _build_tool_prompt,
+    _parse_text_tool_call,
+    _trim_tool_result,
+    get_current_date_context,
+)
+from app.services.tools_registry import (
+    SAFE_WRITE_TOOLS,
+    TOOL_REGISTRY,
+    execute_tool,
+    get_tools_for_mode,
+)
 
 logger = logging.getLogger('app.mcp')
 
@@ -25,6 +38,112 @@ ALLOWED_ORIGINS = [
     'https://centrojuanpabloii.com',
     'http://localhost:4200',
 ]
+
+# Write tools that are safe to run without a confirmation gate.
+# (Shared SAFE_WRITE_TOOLS lives in tools_registry.py)
+
+
+def _is_write_tool(name):
+    entry = TOOL_REGISTRY.get(name)
+    return bool(entry) and entry.get('category') == 'write'
+
+
+def _requires_confirmation(name):
+    return _is_write_tool(name) and name not in SAFE_WRITE_TOOLS
+
+
+CHIPS_AFTER_TOOL = {
+    'register_payment': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {'id': 'act-debtors', 'type': 'action', 'label': 'Mostrar deudores del mes', 'icon': 'exclamation-circle'},
+    ],
+    'cancel_payment': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'edit_payment': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'send_payment_reminder': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'pay_installment': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'create_session': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {'id': 'act-more-sessions', 'type': 'action', 'label': 'Crear otra sesión', 'icon': 'calendar-plus'},
+    ],
+    'update_session': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+    ],
+    'cancel_session': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+    ],
+    'complete_session': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+    ],
+    'batch_create_sessions': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+    ],
+    'create_user': [
+        {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
+    ],
+    'update_user': [
+        {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
+    ],
+    'delete_user': [
+        {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
+    ],
+    'toggle_user_status': [
+        {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
+    ],
+    'assign_therapist': [
+        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+    ],
+    'create_incident': [
+        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+    ],
+    'update_incident_status': [
+        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+    ],
+    'assign_incident': [
+        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+    ],
+    'create_expense': [
+        {'id': 'nav-expenses', 'type': 'navigation', 'label': 'Ver gastos', 'icon': 'wallet', 'target': '/admin/expenses'},
+    ],
+    'broadcast_message': [
+        {'id': 'nav-messages', 'type': 'navigation', 'label': 'Ver mensajes', 'icon': 'envelope', 'target': '/admin/messages'},
+    ],
+    'send_direct_message': [
+        {'id': 'nav-messages', 'type': 'navigation', 'label': 'Ver mensajes', 'icon': 'envelope', 'target': '/admin/messages'},
+    ],
+    'update_patient': [
+        {'id': 'act-patient-detail', 'type': 'action', 'label': 'Ver detalle del paciente', 'icon': 'user'},
+    ],
+    'update_patient_details': [
+        {'id': 'act-patient-detail', 'type': 'action', 'label': 'Ver detalle del paciente', 'icon': 'user'},
+    ],
+    'create_patient_group': [
+        {'id': 'act-list-groups', 'type': 'action', 'label': 'Listar grupos de pacientes', 'icon': 'users'},
+    ],
+    'create_contract': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'update_contract': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'cancel_contract': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+    'reactivate_contract': [
+        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+    ],
+}
+
+
+def _next_action_chips(tool_name):
+    return list(CHIPS_AFTER_TOOL.get(tool_name, []))
 
 
 def _cors_headers():
@@ -141,7 +260,8 @@ def mcp_chat_stream():
                 tools = get_tools_for_mode(mode, user.role)
                 tool_prompt = _build_tool_prompt(tools)
                 system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
-                messages = [{'role': 'system', 'content': system_prompt + '\n\n' + tool_prompt}]
+                full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
+                messages = [{'role': 'system', 'content': full_system}]
 
                 if history:
                     for h in history[-8:]:
@@ -150,6 +270,51 @@ def mcp_chat_stream():
                 messages.append({'role': 'user', 'content': message})
 
                 tool_calls_log = []
+                last_result_str = ''
+                confirmed_tool = data.get('confirmed_tool') or {}
+
+                # If the user confirmed a pending write action in the modal,
+                # execute it now and feed the real result back into the conversation
+                # so the LLM can produce the final answer (it must NOT re-call the tool).
+                if confirmed_tool.get('name'):
+                    cname = confirmed_tool['name']
+                    cargs = confirmed_tool.get('args') or {}
+                    ctool_call_text = confirmed_tool.get('tool_call_text') or (
+                        f'<function={cname}{json.dumps(cargs, ensure_ascii=False)}</function>'
+                    )
+                    if _requires_confirmation(cname):
+                        yield f'data: {json.dumps({"type": "thinking", "content": "Ejecutando acción confirmada..."})}\n\n'
+                        tc_data = {'type': 'tool_call', 'name': cname, 'args': cargs}
+                        yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
+
+                        result = execute_tool(cname, cargs, user_id=user.id, role=user.role)
+                        tool_calls_log.append({'name': cname, 'args': cargs, 'result': result})
+
+                        trimmed = _trim_tool_result(result)
+                        success = not (isinstance(result, dict) and 'error' in result)
+                        tr_data = {'type': 'tool_result', 'name': cname, 'result': trimmed, 'success': success}
+                        yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
+
+                        last_result_str = _trim_tool_result(result)
+                        messages.append({'role': 'assistant', 'content': ctool_call_text})
+                        messages.append(
+                            {
+                                'role': 'user',
+                                'content': (
+                                    f'[REAL Tool {cname} result — use ONLY this data, do NOT invent anything]:\n'
+                                    f'{last_result_str}\n\n'
+                                    f'IMPORTANT: {cname} was ALREADY executed successfully. '
+                                    f'Do NOT call the tool again. Respond to the user now using ONLY the exact values above. '
+                                    f'If a field is missing, say "no disponible".'
+                                ),
+                            }
+                        )
+
+                        chips = _next_action_chips(cname)
+                        if chips:
+                            yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
+
+                        yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
 
                 for iteration in range(6):
                     try:
@@ -167,9 +332,47 @@ def mcp_chat_stream():
                         tool_name, tool_args = _parse_text_tool_call(full_content)
 
                         if tool_name:
+                            # Never re-execute a tool that was already confirmed & run above.
+                            if confirmed_tool.get('name') and tool_name == confirmed_tool['name'] and last_result_str:
+                                yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                                tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
+                                clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
+                                messages.append({'role': 'assistant', 'content': clean_assistant})
+                                messages.append(
+                                    {
+                                        'role': 'user',
+                                        'content': (
+                                            f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                            f'{last_result_str}\n\n'
+                                            f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                        ),
+                                    }
+                                )
+                                continue
+
                             # Send tool_call event
                             tc_data = {'type': 'tool_call', 'name': tool_name, 'args': tool_args}
                             yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
+
+                            # Write tools require explicit human confirmation before running.
+                            if _requires_confirmation(tool_name):
+                                confirm_payload = {
+                                    'type': 'confirm',
+                                    'name': tool_name,
+                                    'args': tool_args,
+                                    'tool_call_text': full_content,
+                                }
+                                yield f'data: {json.dumps(confirm_payload, ensure_ascii=False)}\n\n'
+                                done_payload = {
+                                    'type': 'done',
+                                    'pending_confirm': {
+                                        'name': tool_name,
+                                        'args': tool_args,
+                                        'tool_call_text': full_content,
+                                    },
+                                }
+                                yield f'data: {json.dumps(done_payload, ensure_ascii=False)}\n\n'
+                                return
 
                             result = execute_tool(tool_name, tool_args, user_id=user.id, role=user.role)
                             tool_calls_log.append({'name': tool_name, 'args': tool_args, 'result': result})
@@ -181,6 +384,7 @@ def mcp_chat_stream():
                             yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                             result_str = _trim_tool_result(result)
+                            last_result_str = result_str
                             tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
                             clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
                             messages.append({'role': 'assistant', 'content': clean_assistant})
@@ -194,6 +398,10 @@ def mcp_chat_stream():
                                     ),
                                 }
                             )
+
+                            chips = _next_action_chips(tool_name)
+                            if chips:
+                                yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
 
                             # Send thinking indicator for next iteration
                             yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
@@ -212,8 +420,41 @@ def mcp_chat_stream():
                             if failed_gen:
                                 tn, ta = _parse_text_tool_call(failed_gen)
                                 if tn:
+                                    # Never re-execute an already-confirmed tool.
+                                    if confirmed_tool.get('name') and tn == confirmed_tool['name'] and last_result_str:
+                                        yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                                        tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                                        clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
+                                        messages.append({'role': 'assistant', 'content': clean_assistant})
+                                        messages.append(
+                                            {
+                                                'role': 'user',
+                                                'content': (
+                                                    f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
+                                                    f'{last_result_str}\n\n'
+                                                    f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                                ),
+                                            }
+                                        )
+                                        continue
+
                                     tc_data = {'type': 'tool_call', 'name': tn, 'args': ta}
                                     yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
+
+                                    if _requires_confirmation(tn):
+                                        confirm_payload = {
+                                            'type': 'confirm',
+                                            'name': tn,
+                                            'args': ta,
+                                            'tool_call_text': failed_gen,
+                                        }
+                                        yield f'data: {json.dumps(confirm_payload, ensure_ascii=False)}\n\n'
+                                        done_payload = {
+                                            'type': 'done',
+                                            'pending_confirm': {'name': tn, 'args': ta, 'tool_call_text': failed_gen},
+                                        }
+                                        yield f'data: {json.dumps(done_payload, ensure_ascii=False)}\n\n'
+                                        return
 
                                     result = execute_tool(tn, ta, user_id=user.id, role=user.role)
                                     tool_calls_log.append({'name': tn, 'args': ta, 'result': result})
@@ -224,6 +465,7 @@ def mcp_chat_stream():
                                     yield f'data: {json.dumps(tr_data, ensure_ascii=False)}\n\n'
 
                                     result_str = _trim_tool_result(result)
+                                    last_result_str = result_str
                                     tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
                                     clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
                                     messages.append({'role': 'assistant', 'content': clean_assistant})
@@ -237,6 +479,9 @@ def mcp_chat_stream():
                                             ),
                                         }
                                     )
+                                    chips = _next_action_chips(tn)
+                                    if chips:
+                                        yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
                                     yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
                                     continue
 
@@ -358,6 +603,59 @@ def mcp_upload():
     return resp
 
 
+@mcp_bp.route('/transcribe', methods=['POST'])
+def mcp_transcribe():
+    """Transcribe audio from chat. Audio is deleted after transcription."""
+    user = _get_current_user()
+    cors = _cors_headers()
+    if not user:
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    if 'audio' not in request.files:
+        resp = jsonify({'error': 'No se recibió archivo de audio'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    file = request.files['audio']
+    if not file.filename:
+        resp = jsonify({'error': 'No filename'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    allowed = {'webm', 'wav', 'mp3', 'ogg', 'm4a', 'mp4'}
+    if ext not in allowed:
+        resp = jsonify({'error': f'Tipo de audio no permitido: {ext}. Use: {", ".join(sorted(allowed))}'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    tmp_path = os.path.join(tempfile.gettempdir(), f'audio_{uuid.uuid4().hex[:12]}.{ext}')
+    try:
+        file.save(tmp_path)
+        result = transcribe_audio(tmp_path)
+        resp = jsonify({'success': True, 'text': result.get('text', '')})
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+    except Exception as e:
+        logger.error(f'MCP transcribe error: {e}', exc_info=True)
+        resp = jsonify({'error': str(e)})
+        resp.status_code = 500
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+
 def _ocr_voucher(file_path, ext):
     """Use available LLM vision to extract payment data from voucher image."""
     try:
@@ -385,7 +683,6 @@ def _ocr_voucher(file_path, ext):
             from app.services.llm_client import get_gemini_model
             gemini = get_gemini_model()
             if gemini:
-                import google.generativeai as genai
                 response = gemini.generate_content([
                     prompt,
                     {'inline_data': {'mime_type': mime, 'data': img_b64}}
@@ -401,7 +698,8 @@ def _ocr_voucher(file_path, ext):
 
         # Try Groq with llama vision
         try:
-            import os, json
+            import json
+            import os
             api_key = os.environ.get('GROQ_API_KEY', '')
             if api_key:
                 import requests as req

@@ -91,7 +91,7 @@ class Config:
     GLM_API_KEY = os.getenv('GLM_API_KEY')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-    LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'glm')
+    LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 
     # ========== FILE UPLOADS ==========

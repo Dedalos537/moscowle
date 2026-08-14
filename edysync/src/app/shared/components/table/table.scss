@@ -30,8 +30,8 @@ tbody {
   background: var(--color-surface-container-lowest);
 }
 
-tbody tr {
-  transition: background-color 0.15s ease;
+.table-wrapper tbody tr.reveal-row {
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 tbody tr:not(:last-child) {

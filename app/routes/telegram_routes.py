@@ -39,7 +39,7 @@ def webhook():
 @jwt_required()
 def link_account():
     """Link a Telegram account using a 6-character code."""
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
     code = (data.get('code') or '').strip().upper()
 
@@ -75,7 +75,7 @@ def link_account():
 @jwt_required()
 def get_status():
     """Get Telegram link status for the current user."""
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     tg_users = TelegramUser.query.filter_by(admin_user_id=user_id, is_active=True).all()
 
     return jsonify(
@@ -100,7 +100,7 @@ def get_status():
 @jwt_required()
 def unlink_account():
     """Unlink a Telegram account."""
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
     chat_id = data.get('telegram_chat_id')
 
@@ -123,7 +123,7 @@ def unlink_account():
 @jwt_required()
 def toggle_notifications():
     """Enable/disable Telegram notifications."""
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json(silent=True) or {}
     chat_id = data.get('telegram_chat_id')
     enabled = data.get('enabled', True)
@@ -133,7 +133,7 @@ def toggle_notifications():
     if not tg_user:
         return jsonify({'error': 'No encontrado'}), 404
 
-    tg_user.notifications_enabled = enabled
+    tg_user.notifications_enabled = bool(enabled)
     db.session.commit()
 
-    return jsonify({'status': 'updated', 'notifications_enabled': enabled})
+    return jsonify({'status': 'updated', 'notifications_enabled': tg_user.notifications_enabled})

@@ -1,5 +1,7 @@
 import logging
+import re
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import current_app
 
@@ -15,7 +17,27 @@ ROLES_ALL = {'admin', 'supervisor', 'terapista', 'jugador'}
 
 logger = logging.getLogger('app')
 
+DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+LIMA_TZ = ZoneInfo('America/Lima')
+
+
+def _today_lima():
+    return datetime.now(LIMA_TZ).strftime('%Y-%m-%d')
+
+
+def _valid_date(value):
+    return bool(DATE_RE.match(str(value)))
+
+
+def _last_day_of_month(year, month):
+    next_month = datetime(year, month, 1) + timedelta(days=31)
+    return (next_month.replace(day=1) - timedelta(days=1)).day
+
 TOOL_REGISTRY = {}
+
+# Write tools that are safe to run without an explicit confirmation gate.
+SAFE_WRITE_TOOLS = {'mark_notifications_read', 'generate_weekly_report'}
 
 
 def tool(name, description, parameters, category='read', roles=None):
@@ -257,7 +279,7 @@ def handle_get_patient_detail(patient_id, **kwargs):
         return {'error': 'Paciente no encontrado'}
     age = None
     if patient.date_of_birth:
-        today = datetime.utcnow().date()
+        today = datetime.now(LIMA_TZ).date()
         age = (today - patient.date_of_birth).days // 365
     sessions = (
         Appointment.query.filter_by(patient_id=patient_id, is_active=True)
@@ -307,6 +329,14 @@ def handle_get_patient_detail(patient_id, **kwargs):
 )
 def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
     try:
+        if start is not None and not _valid_date(start):
+            return {'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}
+        if end is not None and not _valid_date(end):
+            return {'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}
+        if not start and not end:
+            now = datetime.now(LIMA_TZ)
+            start = now.strftime('%Y-%m-01')
+            end = now.strftime(f'%Y-%m-{_last_day_of_month(now.year, now.month)}')
         params = {}
         if start:
             params['start'] = start
@@ -394,17 +424,31 @@ def handle_payment_history(patient_id, **kwargs):
             },
             'reference': {'type': 'string', 'description': 'Numero de operacion o referencia'},
             'payment_date': {'type': 'string', 'description': 'Fecha del pago en formato YYYY-MM-DD'},
+            'receipt_url': {'type': 'string', 'description': 'Ruta o URL del voucher/comprobante de pago (ej: vouchers/xxx.jpg)'},
         },
         'required': ['patient_id', 'amount', 'method', 'payment_date'],
     },
     category='write',
 )
 def handle_register_payment(patient_id, amount, method, payment_date, reference='', **kwargs):
-    patient = User.query.get(patient_id)
+    patient = User.query.get(patient_id) if patient_id else None
+    if not patient and kwargs.get('patient_name'):
+        from sqlalchemy import or_
+
+        name = str(kwargs['patient_name']).strip().lower()
+        patient = User.query.filter(
+            or_(
+                User.username.ilike(f'%{name}%'),
+                User.name.ilike(f'%{name}%'),
+            )
+        ).first()
     if not patient:
         return {'error': 'Paciente no encontrado. Usa search_patients para encontrar el ID.'}
     try:
-        payment_dt = datetime.strptime(payment_date, '%Y-%m-%d') if payment_date else datetime.utcnow()
+        try:
+            payment_dt = datetime.strptime(payment_date, '%Y-%m-%d') if payment_date else datetime.now(LIMA_TZ)
+        except ValueError:
+            payment_dt = datetime.now(LIMA_TZ)
         svc = PaymentService()
         success, result = svc.register_payment(
             patient_id=patient.id,
@@ -414,6 +458,7 @@ def handle_register_payment(patient_id, amount, method, payment_date, reference=
             next_due_date_str=(payment_dt + timedelta(days=30)).strftime('%Y-%m-%d'),
             discount=0.0,
             payment_date=payment_dt,
+            receipt_path=kwargs.get('receipt_url'),
         )
         if success:
             return {
@@ -968,7 +1013,9 @@ def handle_assign_therapist(patient_id, therapist_id, **kwargs):
 )
 def handle_get_sessions_day(date=None, **kwargs):
     try:
-        target = date or datetime.utcnow().strftime('%Y-%m-%d')
+        if date is not None and not _valid_date(date):
+            return {'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}
+        target = date or _today_lima()
         resp = _api_get(f'/api/sessions/day?date={target}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
         return {'success': True, 'date': target, 'count': len(data) if isinstance(data, list) else 0, 'sessions': data}
@@ -1499,7 +1546,7 @@ def handle_get_user_growth(months=6, **kwargs):
 
     from app.models import User
 
-    today = dt.utcnow().date()
+    today = dt.now(LIMA_TZ).date()
     results = []
 
     for i in range(months - 1, -1, -1):
@@ -1558,9 +1605,12 @@ def handle_get_user_growth(months=6, **kwargs):
 )
 def handle_generate_weekly_report(patient_id, **kwargs):
     try:
+        from app.services.report_service import ReportService
+
+        week_start, _ = ReportService().get_this_week_range()
         resp = _api_post(
             '/api/reports/generate-weekly',
-            json={'patient_id': patient_id},
+            json={'patient_id': patient_id, 'week_start': week_start.isoformat()},
             user_id=kwargs.get('_user_id'),
             role=kwargs.get('_role'),
         )
@@ -1877,6 +1927,8 @@ def handle_get_contracts_filtered(**kwargs):
             'payment_date': {'type': 'string', 'description': 'Fecha del pago YYYY-MM-DD'},
             'reference': {'type': 'string', 'description': 'Número de operación'},
             'payment_notes': {'type': 'string', 'description': 'Notas del pago'},
+            'discount': {'type': 'number', 'description': 'Descuento aplicado', 'default': 0},
+            'receipt_url': {'type': 'string', 'description': 'Ruta o URL de la imagen del voucher (ej: receipts/xxx.jpg)'},
             'is_free_month': {'type': 'boolean', 'description': 'Marcar como mes gratis', 'default': False},
         },
         'required': ['installment_id', 'amount', 'method', 'payment_date'],
@@ -1896,6 +1948,8 @@ def handle_pay_installment(installment_id, amount, method, payment_date, **kwarg
         reference=kwargs.get('reference'),
         payment_notes=kwargs.get('payment_notes'),
         is_free_month=kwargs.get('is_free_month', False),
+        discount=kwargs.get('discount') or 0,
+        receipt_path=kwargs.get('receipt_url'),
     )
     if success:
         return {

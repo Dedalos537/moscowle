@@ -160,7 +160,7 @@ export class NotificationService implements OnDestroy {
 
   private startPolling(): void {
     this.stopPolling();
-    this.pollSub = interval(30000).subscribe(() => {
+    this.pollSub = interval(60000).subscribe(() => {
       this.fetchCount();
     });
   }

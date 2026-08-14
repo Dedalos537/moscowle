@@ -1,0 +1,111 @@
+.server-down {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background);
+  z-index: 9999;
+  padding: 1.5rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.server-down-card {
+  background: var(--color-surface-container-lowest);
+  border-radius: 1.25rem;
+  padding: 3rem 2.5rem;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.server-down-spinner {
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+  font-size: 2.5rem;
+}
+
+.server-down-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.server-down-logo-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.server-down-logo {
+  width: 64px;
+  height: 64px;
+}
+
+.server-down-question {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-surface-container-lowest);
+  color: var(--color-primary-fixed-dim);
+  font-size: 1.125rem;
+  font-weight: 800;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.server-down-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin: 0 0 0.75rem;
+}
+
+.server-down-text {
+  font-size: 0.9375rem;
+  color: var(--color-on-surface-variant);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+
+.server-down-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(74, 124, 55, 0.3);
+}
+
+.server-down-btn:hover {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(74, 124, 55, 0.4);
+}
+
+.server-down-btn:active {
+  transform: translateY(0);
+}
