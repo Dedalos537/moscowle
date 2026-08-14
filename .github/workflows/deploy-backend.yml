@@ -83,21 +83,15 @@ jobs:
             quit;
           "
 
-      - name: Restart backend (recarga codigo nuevo)
-        run: |
-          code=$(curl -s -o /tmp/restart.json -w "%{http_code}" -X POST \
-            -H "X-Restart-Secret: ${{ secrets.RESTART_SECRET }}" \
-            -H "Origin: https://moscowle.centrojuanpabloii.com" \
-            "https://backend.centrojuanpabloii.com/api/server/restart?force=1")
-          echo "HTTP $code"
-          cat /tmp/restart.json
-          echo ""
-          if [ "$code" != "200" ]; then
-            echo "::error::Restart fallo ($code). Revisa logs del servidor."
-            exit 1
-          fi
-
       - name: Smoke test API
         run: |
-          sleep 2
-          curl -sS "https://backend.centrojuanpabloii.com/api/health" -w "\nHTTP %{http_code}\n"
+          sleep 5
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" "https://backend.centrojuanpabloii.com/api/health")
+          echo "HTTP $code"
+          cat /tmp/health.json
+          echo ""
+          if [ "$code" != "200" ]; then
+            echo "::error::Smoke test fallo ($code). Revisa logs del servidor."
+            exit 1
+          fi
+          python3 -c "import json; d=json.load(open('/tmp/health.json')); assert d.get('status')=='healthy', d; print('OK:', d.get('status'))"
