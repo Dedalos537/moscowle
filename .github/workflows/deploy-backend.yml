@@ -33,35 +33,52 @@ jobs:
           python -m py_compile app.cgi config.py server_local.py passenger_wsgi.py wsgi.py run.py
           python -m compileall -q app
 
-      - name: Deploy backend to cPanel via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          protocol: ftps
-          local-dir: ./
-          server-dir: ${{ secrets.FTP_BACKEND_PATH }}/
-          exclude: |
-            **/.env
-            **/.env.*
-            **/.git/**
-            **/.venv/**
-            **/venv/**
-            **/node_modules/**
-            **/__pycache__/**
-            **/*.pyc
-            **/logs/**
-            **/instance/**
-            **/*.db
-            **/edysync/**
-            **/railway_deploy/**
-            **/.github/**
-            **/docs/**
-            **/wheelhouse*
-            **/PASSENGER*
-            **/migrations/versions/*.pyc
+      - name: Deploy backend to cPanel via FTPS (lftp, upload-only)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_BACKEND_PATH: ${{ secrets.FTP_BACKEND_PATH }}
+        run: |
+          lftp -e "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set net:max-retries 8;
+            set net:timeout 30;
+            set net:reconnect-interval-base 5;
+            set net:reconnect-interval-multiplier 1;
+            open -u '$FTP_USERNAME','$FTP_PASSWORD' ftp://$FTP_SERVER;
+            mirror -R --no-perms --parallel=2 \
+              --exclude-glob .git/ \
+              --exclude-glob .github/ \
+              --exclude-glob .venv/ \
+              --exclude-glob venv/ \
+              --exclude-glob node_modules/ \
+              --exclude-glob __pycache__/ \
+              --exclude-glob '*.pyc' \
+              --exclude-glob logs/ \
+              --exclude-glob instance/ \
+              --exclude-glob backups/ \
+              --exclude-glob tmp/ \
+              --exclude-glob public/ \
+              --exclude-glob uploads/ \
+              --exclude-glob wheelhouse/ \
+              --exclude-glob 'wheelhouse.tar.gz' \
+              --exclude-glob 'edysync/' \
+              --exclude-glob 'railway_deploy/' \
+              --exclude-glob 'docs/' \
+              --exclude-glob 'PRPs/' \
+              --exclude-glob 'features/' \
+              --exclude-glob 'tests/' \
+              --exclude-glob '.env*' \
+              --exclude-glob '._*' \
+              --exclude-glob '.dockerignore' \
+              --exclude-glob 'deps_ready.txt' \
+              --exclude-glob 'migrations/versions/*.pyc' \
+              ./ '$FTP_BACKEND_PATH';
+            quit;
+          "
 
       - name: Restart backend (recarga codigo nuevo)
         run: |
