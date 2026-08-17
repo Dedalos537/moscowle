@@ -44,6 +44,7 @@ ignore = [
 "app/__init__.py" = ["PLC0415", "F401", "F841", "SIM103", "SIM105", "S110", "E501", "N814"]
 "app/routes/auth.py" = ["PLC0415", "S110"]
 "app/utils/__init__.py" = ["S112"]
+"app/bootstrap.py" = ["PLC0415"]
 
 [tool.ruff.format]
 quote-style = "single"
