@@ -307,6 +307,7 @@ def register_request_handlers(app):
                 or request.path.startswith('/api/public/')
                 or request.path.startswith('/admin/api/')
                 or request.path.startswith('/api/admin/')
+                or request.path.startswith('/api/server/')
                 or current_user.is_authenticated
                 or _has_jwt
             )
@@ -851,7 +852,20 @@ def create_app_lite():
     csrf.exempt(telegram_bp)
     csrf.exempt(uploads_bp)
 
-    for bp in [auth_bp, api_bp, public_bp, mcp_bp, health_bp, chat_bp, main_bp, admin_bp, telegram_bp, yape_bp, admin_ai_bp, uploads_bp]:
+    for bp in [
+        auth_bp,
+        api_bp,
+        public_bp,
+        mcp_bp,
+        health_bp,
+        chat_bp,
+        main_bp,
+        admin_bp,
+        telegram_bp,
+        yape_bp,
+        admin_ai_bp,
+        uploads_bp,
+    ]:
         try:
             app.register_blueprint(bp)
         except Exception as e:

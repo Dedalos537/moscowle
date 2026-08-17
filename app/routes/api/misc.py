@@ -1,3 +1,9 @@
+import contextlib
+import socket
+import subprocess
+import sys
+import time as _time
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     ContactMessage,
@@ -24,6 +30,107 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
+
+UPSTREAM_HOST = '127.0.0.1'
+UPSTREAM_PORT = 8765
+
+
+def _server_alive():
+    try:
+        s = socket.create_connection((UPSTREAM_HOST, UPSTREAM_PORT), timeout=3)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+@api_bp.route('/server/status', methods=['GET'])
+def server_status():
+    alive = _server_alive()
+    return jsonify(
+        {
+            'status': 'running' if alive else 'stopped',
+            'host': UPSTREAM_HOST,
+            'port': UPSTREAM_PORT,
+        }
+    )
+
+
+@api_bp.route('/server/restart', methods=['POST'])
+def server_restart():
+    secret = request.headers.get('X-Restart-Secret', '')
+    expected = current_app.config.get('RESTART_SECRET', os.environ.get('RESTART_SECRET', ''))
+    if not expected or secret != expected:
+        return jsonify({'error': 'Invalid secret'}), 403
+
+    force = request.args.get('force') in ('1', 'true')
+    alive_before = _server_alive()
+    if alive_before and not force:
+        return jsonify({'status': 'already_running', 'message': 'Backend ya esta activo'})
+
+    with contextlib.suppress(Exception):
+        subprocess.call(  # noqa: S603
+            ['/usr/bin/pkill', '-f', 'gunicorn.*8765'],
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+    _time.sleep(1)
+
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    logs = os.path.join(base, 'logs')
+    os.makedirs(logs, exist_ok=True)
+
+    clean_env = {k: v for k, v in os.environ.items() if not k.startswith('HTTP_')}
+    for v in (
+        'SCRIPT_NAME',
+        'SCRIPT_FILENAME',
+        'SCRIPT_URL',
+        'REDIRECT_URL',
+        'REQUEST_METHOD',
+        'QUERY_STRING',
+        'REDIRECT_STATUS',
+    ):
+        clean_env.pop(v, None)
+
+    with open(os.path.join(logs, 'local_server.log'), 'ab') as f:
+        subprocess.Popen(  # noqa: S603
+            [
+                sys.executable,
+                '-m',
+                'gunicorn',
+                '--worker-class',
+                'eventlet',
+                '--workers',
+                '1',
+                '--bind',
+                f'127.0.0.1:{UPSTREAM_PORT}',
+                '--timeout',
+                '300',
+                '--graceful-timeout',
+                '30',
+                '--max-requests',
+                '1000',
+                '--max-requests-jitter',
+                '200',
+                '--error-logfile',
+                os.path.join(logs, 'gunicorn_err.log'),
+                '--access-logfile',
+                os.path.join(logs, 'gunicorn_acc.log'),
+                'server_local:application',
+            ],
+            cwd=base,
+            stdin=subprocess.DEVNULL,
+            stdout=f,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            env=clean_env,
+        )
+
+    for _ in range(30):
+        if _server_alive():
+            return jsonify({'status': 'started', 'message': 'Backend iniciado correctamente'})
+        _time.sleep(1)
+    return jsonify({'status': 'failed', 'message': 'No se pudo iniciar el backend en 30s'}), 502
 
 
 @api_bp.route('/time', methods=['GET'])
