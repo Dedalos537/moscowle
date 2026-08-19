@@ -115,6 +115,7 @@ def get_glm_client():
         if not api_key:
             try:
                 from flask import current_app
+
                 api_key = current_app.config.get('GLM_API_KEY')
             except Exception:
                 pass
@@ -143,6 +144,7 @@ def get_groq_client():
         if not api_key:
             try:
                 from flask import current_app
+
                 api_key = current_app.config.get('GROQ_API_KEY')
             except Exception:
                 pass
@@ -168,6 +170,7 @@ def get_gemini_model():
         if not api_key:
             try:
                 from flask import current_app
+
                 api_key = current_app.config.get('GEMINI_API_KEY')
             except Exception:
                 pass
@@ -228,9 +231,7 @@ def _notify_provider_failure(errors):
         from app.models.telegram_user import TelegramUser
         from app.services.telegram_bot_service import send_telegram_message
 
-        tg_users = TelegramUser.query.filter_by(
-            is_linked=True, is_active=True, notifications_enabled=True
-        ).all()
+        tg_users = TelegramUser.query.filter_by(is_linked=True, is_active=True, notifications_enabled=True).all()
 
         msg = (
             '🔴 *Alerta: Proveedores IA fuera de línea*\n\n'
@@ -265,9 +266,7 @@ def _notify_provider_error(provider_name, error_msg):
         from app.models.telegram_user import TelegramUser
         from app.services.telegram_bot_service import send_telegram_message
 
-        tg_users = TelegramUser.query.filter_by(
-            is_linked=True, is_active=True, notifications_enabled=True
-        ).all()
+        tg_users = TelegramUser.query.filter_by(is_linked=True, is_active=True, notifications_enabled=True).all()
 
         msg = (
             f'⚠️ *Proveedor {provider_name} caído*\n\n'
@@ -381,7 +380,16 @@ def _try_ollama(messages, temperature):
     if not ollama:
         return None
     ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    resp = ollama.chat(model=ollama_model, messages=messages, options={'temperature': temperature})
+    # Optimización para CPU: reducir contexto, paralelismo, keep_alive
+    options = {
+        'temperature': temperature,
+        'num_ctx': 2048,  # Contexto reducido para respuestas rápidas
+        'num_thread': 4,  # Usar todos los cores del i5-4590T
+        'num_gpu': 0,  # Forzar CPU (no hay GPU)
+        'top_p': 0.9,
+        'repeat_penalty': 1.1,
+    }
+    resp = ollama.chat(model=ollama_model, messages=messages, options=options)
     return resp.get('message', {}).get('content', '') or None
 
 
@@ -489,7 +497,16 @@ def _stream_ollama(messages, temperature):
     if not ollama:
         return False
     ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    resp = ollama.chat(model=ollama_model, messages=messages, options={'temperature': temperature})
+    # Optimización para CPU: reducir contexto, paralelismo
+    options = {
+        'temperature': temperature,
+        'num_ctx': 2048,  # Contexto reducido para respuestas rápidas
+        'num_thread': 4,  # Usar todos los cores del i5-4590T
+        'num_gpu': 0,  # Forzar CPU (no hay GPU)
+        'top_p': 0.9,
+        'repeat_penalty': 1.1,
+    }
+    resp = ollama.chat(model=ollama_model, messages=messages, options=options)
     content = resp.get('message', {}).get('content', '')
     if content:
         yield content

@@ -31,22 +31,40 @@ def _tg_request(method, data=None, bot_token=None):
     return result
 
 
-def send_telegram_message(chat_id, text, bot_token=None, reply_markup=None):
-    """Send a text message to a Telegram chat."""
+def send_telegram_message(chat_id, text, bot_token=None, reply_markup=None, parse_mode='Markdown'):
+    """Send a text message to a Telegram chat and return the message_id."""
     if not bot_token:
         return None
     payload = {
         'chat_id': chat_id,
         'text': text[:4096],
-        'parse_mode': 'Markdown',
+        'parse_mode': parse_mode,
     }
     if reply_markup:
         payload['reply_markup'] = reply_markup
     try:
-        return _tg_request('sendMessage', payload, bot_token)
+        result = _tg_request('sendMessage', payload, bot_token)
+        return result.get('result', {}).get('message_id')
     except Exception as e:
         logger.error(f'Telegram sendMessage failed: {e}')
         return None
+
+
+def edit_telegram_message(chat_id, message_id, text, bot_token=None, parse_mode='Markdown'):
+    """Edit an existing message."""
+    if not bot_token or not message_id:
+        return False
+    data = {
+        'chat_id': chat_id,
+        'message_id': message_id,
+        'text': text,
+        'parse_mode': parse_mode,
+    }
+    try:
+        result = _tg_request('editMessageText', data, bot_token)
+        return result.get('ok', False)
+    except Exception:
+        return False
 
 
 def send_typing_action(chat_id, bot_token=None):
@@ -230,7 +248,8 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     """Process a text message through MCP and return the response."""
     from app.services.mcp_service import MCPService
 
-    send_typing_action(chat_id, current_app.config.get('TELEGRAM_BOT_TOKEN'))
+    bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    send_typing_action(chat_id, bot_token)
 
     # Respuestas predefinidas para preguntas comunes
     text_lower = text.lower().strip()
@@ -252,6 +271,13 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
             'response': 'Soy Diego, tu asistente del Centro Juan Pablo II. 💙',
         }
 
+    # Enviar mensaje de "Procesando..." y editarlo con la respuesta
+    processing_msg_id = send_telegram_message(
+        chat_id,
+        '⏳ *Procesando tu solicitud...*',
+        bot_token,
+    )
+
     mcp = MCPService()
     result = mcp.process_message(
         message=text,
@@ -264,9 +290,13 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     if result.get('requires_confirmation'):
         pending = result.get('pending_tool', {})
         if pending.get('name') == 'register_payment' and not (pending.get('args') or {}).get('receipt_url'):
+            response_text = (
+                '📎 Para registrar un pago necesito el *voucher* (envíalo como foto). Después lo confirmo contigo.'
+            )
+            edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
             return {
                 'type': 'response',
-                'response': '📎 Para registrar un pago necesito el *voucher* (envíalo como foto). Después lo confirmo contigo.',
+                'response': response_text,
             }
         _store_pending_confirmation(
             chat_id,
@@ -280,16 +310,20 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
         tool_name = pending.get('name', 'unknown')
         tool_args = pending.get('args', {})
         args_preview = json.dumps(tool_args, ensure_ascii=False)[:200]
+        response_text = result.get('response', 'Acción pendiente de confirmación.')
+        edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
         return {
             'type': 'confirmation_required',
             'tool_name': tool_name,
             'args_preview': args_preview,
-            'response': result.get('response', 'Acción pendiente de confirmación.'),
+            'response': response_text,
         }
 
+    response_text = result.get('response', 'Sin respuesta.')
+    edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
     return {
         'type': 'response',
-        'response': result.get('response', 'Sin respuesta.'),
+        'response': response_text,
     }
 
 
@@ -456,6 +490,14 @@ def handle_webhook_update(update):
 
     if msg.get('text') == '/resumen':
         _handle_quick_command(chat_id, tg_user, 'Dame el resumen financiero del mes actual', bot_token)
+        return
+
+    if msg.get('text') == '/desactivar_sla':
+        _handle_sla_toggle(chat_id, tg_user, False, bot_token)
+        return
+
+    if msg.get('text') == '/activar_sla':
+        _handle_sla_toggle(chat_id, tg_user, True, bot_token)
         return
 
     if not tg_user or not tg_user.is_linked:
@@ -691,7 +733,9 @@ def _handle_help(chat_id, bot_token):
         '/pagos — Registrar pago rápido\n'
         '/pacientes — Buscar paciente\n'
         '/sesiones — Ver sesiones del día\n'
-        '/resumen — Resumen financiero\n\n'
+        '/resumen — Resumen financiero\n'
+        '/desactivar_sla — Desactivar monitoreo SLA\n'
+        '/activar_sla — Activar monitoreo SLA\n\n'
         '*Puedo hacer mucho más:*\n'
         '• 📋 Consultar pacientes, sesiones, pagos\n'
         '• 💰 Registrar pagos (texto o imagen)\n'
@@ -708,6 +752,83 @@ def _handle_help(chat_id, bot_token):
         f'_{BOT_EMOJI} Soy como Chasqui, tu mensajero confiable._',
         bot_token,
     )
+
+
+def _handle_sla_toggle(chat_id, tg_user, enable, bot_token):
+    """Handle SLA enable/disable toggle."""
+    if not tg_user or not tg_user.is_linked:
+        send_telegram_message(
+            chat_id,
+            '⚠️ Tu cuenta no está vinculada.\nUsa /start para vincular.',
+            bot_token,
+        )
+        return
+
+    # Verificar que sea admin
+    from app.models.user import User
+
+    user = User.query.get(tg_user.admin_user_id)
+    if not user or user.rol != 'admin':
+        send_telegram_message(
+            chat_id,
+            '🔒 Solo los administradores pueden cambiar esta configuración.',
+            bot_token,
+        )
+        return
+
+    # Actualizar configuración en la tabla de incidentes
+
+    try:
+        # Usar una tabla de configuración del sistema o una columna en Incidente
+        # Por ahora, usamos una variable de entorno como alternativa rápida
+
+        config_path = '/home/diego/moscowle_ia/.env'
+
+        # Leer archivo actual
+        with open(config_path) as f:
+            env_content = f.read()
+
+        # Actualizar o agregar SLA_ENABLED
+        if 'SLA_ENABLED=' in env_content:
+            if enable:
+                env_content = env_content.replace('SLA_ENABLED=false', 'SLA_ENABLED=true')
+            else:
+                env_content = env_content.replace('SLA_ENABLED=true', 'SLA_ENABLED=false')
+        else:
+            env_content += f'\nSLA_ENABLED={"true" if enable else "false"}\n'
+
+        # Guardar archivo
+        with open(config_path, 'w') as f:
+            f.write(env_content)
+
+        # Reiniciar servicio para aplicar cambios
+        import subprocess
+
+        subprocess.run(
+            ['echo', 'Rucula_530', '|', 'sudo', '-S', 'systemctl', 'restart', 'moscowle.service'],
+            capture_output=True,
+            timeout=10,
+        )
+
+        status = 'activado' if enable else 'desactivado'
+        emoji = '✅' if enable else '❌'
+
+        send_telegram_message(
+            chat_id,
+            f'{emoji} *Monitoreo SLA {status}*\n\n'
+            f'El sistema {"generará" if enable else "no generará"} incidentes automática por violaciones de SLA.',
+            bot_token,
+        )
+
+        logger.info(f'SLA monitoring {status} by user {user.id_usuario}')
+
+    except Exception as e:
+        logger.error(f'Error toggling SLA: {e}')
+        send_telegram_message(
+            chat_id,
+            '❌ Error al cambiar la configuración de SLA. Intenta de nuevo.',
+            bot_token,
+        )
 
 
 def _handle_callback(callback, bot_token):

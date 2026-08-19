@@ -236,6 +236,14 @@ class IncidentDetectionService:
         """
         Detecta incidentes con SLA vencido que no han sido escalados.
         """
+        # Verificar si el SLA está habilitado
+        import os
+
+        sla_enabled = os.environ.get('SLA_ENABLED', 'true').lower() == 'true'
+        if not sla_enabled:
+            logger.info('SLA monitoring disabled, skipping SLA checks')
+            return
+
         ahora = _utcnow()
         vencidos = Incidente.query.filter(
             Incidente.estado.in_(['NUEVO', 'EN_CURSO']),
