@@ -133,13 +133,24 @@ def extract_docx_text(file_path):
 
 
 def transcribe_audio(file_path):
-    """Transcribe audio con Whisper (se borra tras transcripción)"""
-    api_key = os.getenv('GROQ_API_KEY')
-    if not api_key:
-        raise ValueError('GROQ_API_KEY no está configurada en las variables de entorno')
-
+    """Transcribe audio con Whisper local (faster-whisper) o Groq como fallback"""
     if not os.path.exists(file_path):
         raise ValueError(f'Archivo de audio no encontrado: {file_path}')
+
+    # Intentar transcripción local primero (faster-whisper)
+    try:
+        from app.services.local_whisper import transcribe_local
+
+        result = transcribe_local(file_path)
+        logger.info(f'Audio transcrito localmente: {len(result["text"])} caracteres')
+        return result
+    except Exception as local_err:
+        logger.warning(f'Transcripción local falló, intentando Groq: {local_err}')
+
+    # Fallback a Groq si la local falla
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key:
+        raise ValueError('Ni faster-whisper ni GROQ_API_KEY disponibles para transcripción')
 
     try:
         from groq import Groq
@@ -159,7 +170,7 @@ def transcribe_audio(file_path):
         duration = getattr(transcription, 'duration', None)
         language = getattr(transcription, 'language', 'es')
 
-        logger.info(f'Audio transcrito: {len(transcript_text)} caracteres, duración={duration}s')
+        logger.info(f'Audio transcrito vía Groq: {len(transcript_text)} caracteres, duración={duration}s')
 
         return {'text': transcript_text, 'duration': int(duration) if duration else 0, 'language': language}
 

@@ -164,6 +164,68 @@ def download_telegram_file(file_id, bot_token):
         return tmp.name
 
 
+def _parse_telegram_ocr(text):
+    """Parse Tesseract OCR text to extract payment voucher data."""
+    import re
+
+    result = {'amount': None, 'method': None, 'patient_name': None, 'date': None, 'transaction_id': None}
+
+    # Extract amount (S/, S/., soles, or plain numbers)
+    amount_patterns = [
+        r'S/\.?\s*(\d+(?:\.\d{1,2})?)',
+        r'soles\s*(\d+(?:\.\d{1,2})?)',
+        r'monto[:\s]*(\d+(?:\.\d{1,2})?)',
+        r'total[:\s]*(\d+(?:\.\d{1,2})?)',
+        r'(\d+(?:\.\d{1,2})?)\s*(?:soles|PEN|S/)',
+    ]
+    for pattern in amount_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            try:
+                result['amount'] = float(match.group(1))
+                break
+            except ValueError:
+                continue
+
+    # Detect payment method
+    text_lower = text.lower()
+    if 'yape' in text_lower:
+        result['method'] = 'Yape'
+    elif 'plin' in text_lower:
+        result['method'] = 'Plin'
+    elif 'transfer' in text_lower or 'transferencia' in text_lower:
+        result['method'] = 'Transferencia'
+    elif 'efectivo' in text_lower or 'cash' in text_lower:
+        result['method'] = 'Efectivo'
+    elif 'tarjeta' in text_lower or 'card' in text_lower:
+        result['method'] = 'Tarjeta'
+
+    # Extract date
+    date_patterns = [
+        r'(\d{2}/\d{2}/\d{4})',
+        r'(\d{4}-\d{2}-\d{2})',
+        r'(\d{2}-\d{2}-\d{4})',
+    ]
+    for pattern in date_patterns:
+        match = re.search(pattern, text)
+        if match:
+            result['date'] = match.group(1)
+            break
+
+    # Extract transaction ID / operation number
+    tx_patterns = [
+        r'(?:operaci[oó]n|n[uú]mero|ref|codigo)[:\s]*(\w{6,})',
+        r'(\d{8,12})',
+    ]
+    for pattern in tx_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            result['transaction_id'] = match.group(1)
+            break
+
+    return result
+
+
 def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     """Process a text message through MCP and return the response."""
     from app.services.mcp_service import MCPService
@@ -212,7 +274,7 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
 
 
 def process_voice_message(chat_id, file_id, user_id, user_role, mode='grande'):
-    """Download voice, transcribe via Groq, then process through MCP."""
+    """Download voice, transcribe locally via faster-whisper, then process through MCP."""
     bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
     temp_path = download_telegram_file(file_id, bot_token)
 
@@ -226,33 +288,48 @@ def process_voice_message(chat_id, file_id, user_id, user_role, mode='grande'):
             audio_data = f.read()
         os.unlink(temp_path)
 
-        groq_key = current_app.config.get('GROQ_API_KEY')
-        if not groq_key:
-            return {'type': 'error', 'response': 'Servicio de transcripción no disponible.'}
+        # Intentar transcripción local primero (faster-whisper)
+        transcription = None
+        try:
+            from app.services.local_whisper import transcribe_telegram_voice
 
-        import base64
-        import http.client as httplib
+            result = transcribe_telegram_voice(audio_data, filename='voice.ogg')
+            transcription = result.get('text', '').strip()
+            logger.info(f'Transcripción local exitosa: {len(transcription)} caracteres')
+        except Exception as local_err:
+            logger.warning(f'Transcripción local falló, intentando Groq: {local_err}')
 
-        audio_b64 = base64.b64encode(audio_data).decode()
-        conn = httplib.HTTPSConnection('api.groq.com', timeout=30)
-        conn.request(
-            'POST',
-            '/openai/v1/audio/transcriptions',
-            body=json.dumps(
-                {
-                    'model': 'whisper-large-v3',
-                    'audio': f'data:audio/ogg;base64,{audio_b64}',
-                    'response_format': 'text',
-                }
-            ),
-            headers={
-                'Authorization': f'Bearer {groq_key}',
-                'Content-Type': 'application/json',
-            },
-        )
-        resp = conn.getresponse()
-        transcription = resp.read().decode().strip()
-        conn.close()
+        # Fallback a Groq si la local falla
+        if not transcription:
+            groq_key = current_app.config.get('GROQ_API_KEY')
+            if groq_key:
+                try:
+                    import base64
+                    import http.client as httplib
+
+                    audio_b64 = base64.b64encode(audio_data).decode()
+                    conn = httplib.HTTPSConnection('api.groq.com', timeout=30)
+                    conn.request(
+                        'POST',
+                        '/openai/v1/audio/transcriptions',
+                        body=json.dumps(
+                            {
+                                'model': 'whisper-large-v3',
+                                'audio': f'data:audio/ogg;base64,{audio_b64}',
+                                'response_format': 'text',
+                            }
+                        ),
+                        headers={
+                            'Authorization': f'Bearer {groq_key}',
+                            'Content-Type': 'application/json',
+                        },
+                    )
+                    resp = conn.getresponse()
+                    transcription = resp.read().decode().strip()
+                    conn.close()
+                    logger.info(f'Transcripción Groq exitosa: {len(transcription)} caracteres')
+                except Exception as groq_err:
+                    logger.error(f'Groq transcription also failed: {groq_err}')
 
         if not transcription:
             return {'type': 'error', 'response': 'No pude transcribir el audio.'}
@@ -656,7 +733,7 @@ def _handle_quick_command(chat_id, tg_user, text, bot_token):
 
 
 def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mode='grande'):
-    """Process an image (voucher/comprobante) through OCR and MCP."""
+    """Process an image (voucher/comprobante) through local OCR (Tesseract) and MCP."""
     bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
     temp_path = download_telegram_file(file_id, bot_token)
 
@@ -684,67 +761,88 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
 
         os.unlink(temp_path)
 
-        image_b64 = base64.b64encode(image_data).decode()
-
-        groq_key = current_app.config.get('GROQ_API_KEY')
-        if not groq_key:
-            return {
-                'type': 'error',
-                'response': 'Servicio de OCR no disponible. Intenta enviar el monto y paciente manualmente.',
-            }
-
-        import http.client as httplib
-
-        conn = httplib.HTTPSConnection('api.groq.com', timeout=30)
-        conn.request(
-            'POST',
-            '/openai/v1/chat/completions',
-            body=json.dumps(
-                {
-                    'model': 'llama-3.2-90b-vision-preview',
-                    'messages': [
-                        {
-                            'role': 'user',
-                            'content': [
-                                {
-                                    'type': 'text',
-                                    'text': (
-                                        'Extrae los datos de este comprobante de pago. '
-                                        'Responde SOLO con un JSON válido: '
-                                        '{"amount": número, "method": "Efectivo|Yape|Transferencia|Plin", '
-                                        '"patient_name": "nombre si aparece", "date": "YYYY-MM-DD si aparece", '
-                                        '"transaction_id": "número de operación si aparece"}. '
-                                        'Si un dato no se ve, usa null.'
-                                    ),
-                                },
-                                {
-                                    'type': 'image_url',
-                                    'image_url': {'url': f'data:image/jpeg;base64,{image_b64}'},
-                                },
-                            ],
-                        }
-                    ],
-                    'max_tokens': 500,
-                    'temperature': 0.1,
-                }
-            ),
-            headers={
-                'Authorization': f'Bearer {groq_key}',
-                'Content-Type': 'application/json',
-            },
-        )
-        resp = conn.getresponse()
-        result = json.loads(resp.read().decode())
-        conn.close()
-
-        content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-
         ocr_data = None
+
+        # 1. Intentar Tesseract OCR local primero (rápido, sin costo)
         try:
-            json_match = content.replace('```json', '').replace('```', '').strip()
-            ocr_data = json.loads(json_match)
-        except Exception:
-            logger.warning(f'Could not parse OCR response: {content}')
+            import io
+
+            import pytesseract
+            from PIL import Image as PilImage
+
+            img = PilImage.open(io.BytesIO(image_data))
+            if img.mode != 'L':
+                img = img.convert('L')
+            ocr_text = pytesseract.image_to_string(img, lang='spa+eng')
+            logger.info(f'Telegram Tesseract OCR: {ocr_text[:200]}')
+
+            # Parsear el texto OCR para extraer datos del comprobante
+            ocr_data = _parse_telegram_ocr(ocr_text)
+            if ocr_data and ocr_data.get('amount'):
+                logger.info(f'Tesseract OCR exitoso: {ocr_data}')
+        except Exception as tess_err:
+            logger.warning(f'Tesseract OCR falló: {tess_err}')
+
+        # 2. Fallback a Groq vision si Tesseract no funcionó
+        if not ocr_data or not ocr_data.get('amount'):
+            groq_key = current_app.config.get('GROQ_API_KEY')
+            if groq_key:
+                try:
+                    image_b64 = base64.b64encode(image_data).decode()
+                    import http.client as httplib
+
+                    conn = httplib.HTTPSConnection('api.groq.com', timeout=30)
+                    conn.request(
+                        'POST',
+                        '/openai/v1/chat/completions',
+                        body=json.dumps(
+                            {
+                                'model': 'llama-3.2-90b-vision-preview',
+                                'messages': [
+                                    {
+                                        'role': 'user',
+                                        'content': [
+                                            {
+                                                'type': 'text',
+                                                'text': (
+                                                    'Extrae los datos de este comprobante de pago. '
+                                                    'Responde SOLO con un JSON válido: '
+                                                    '{"amount": número, "method": "Efectivo|Yape|Transferencia|Plin", '
+                                                    '"patient_name": "nombre si aparece", "date": "YYYY-MM-DD si aparece", '
+                                                    '"transaction_id": "número de operación si aparece"}. '
+                                                    'Si un dato no se ve, usa null.'
+                                                ),
+                                            },
+                                            {
+                                                'type': 'image_url',
+                                                'image_url': {'url': f'data:image/jpeg;base64,{image_b64}'},
+                                            },
+                                        ],
+                                    }
+                                ],
+                                'max_tokens': 500,
+                                'temperature': 0.1,
+                            }
+                        ),
+                        headers={
+                            'Authorization': f'Bearer {groq_key}',
+                            'Content-Type': 'application/json',
+                        },
+                    )
+                    resp = conn.getresponse()
+                    result = json.loads(resp.read().decode())
+                    conn.close()
+
+                    content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
+
+                    try:
+                        json_match = content.replace('```json', '').replace('```', '').strip()
+                        ocr_data = json.loads(json_match)
+                        logger.info(f'Groq vision OCR exitoso: {ocr_data}')
+                    except Exception:
+                        logger.warning(f'Could not parse Groq OCR response: {content}')
+                except Exception as groq_err:
+                    logger.error(f'Groq vision OCR falló: {groq_err}')
 
         if not ocr_data:
             send_telegram_message(
