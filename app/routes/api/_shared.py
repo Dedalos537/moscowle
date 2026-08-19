@@ -3,6 +3,8 @@ import os
 import time
 import warnings
 
+from flask_wtf.csrf import CSRFProtect
+
 from app.services.admin_service import AdminService
 from app.services.appointment_service import AppointmentService
 from app.services.dashboard_service import DashboardService
@@ -12,6 +14,8 @@ from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.utils import parse_datetime
 from app.utils.sanitizer import sanitize_for_prompt
+
+csrf = CSRFProtect()
 
 warnings.filterwarnings('ignore', message='.*google.generativeai.*ended.*')
 try:

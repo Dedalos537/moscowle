@@ -317,6 +317,7 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
             'tool_name': tool_name,
             'args_preview': args_preview,
             'response': response_text,
+            'already_sent': True,
         }
 
     response_text = result.get('response', 'Sin respuesta.')
@@ -324,6 +325,7 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     return {
         'type': 'response',
         'response': response_text,
+        'already_sent': True,
     }
 
 
@@ -575,6 +577,7 @@ def handle_webhook_update(update):
         return
 
     response_text = result.get('response', 'Sin respuesta.')
+    already_sent = result.get('already_sent', False)
 
     if result.get('type') == 'confirmation_required':
         tool_name = result.get('tool_name', 'unknown')
@@ -587,11 +590,12 @@ def handle_webhook_update(update):
             f'Responde *sí* o *no*.'
         )
         send_telegram_message(chat_id, confirmation_msg, bot_token)
-    elif len(response_text) > 4000:
-        for i in range(0, len(response_text), 4000):
-            send_telegram_message(chat_id, response_text[i : i + 4000], bot_token)
-    else:
-        send_telegram_message(chat_id, response_text, bot_token)
+    elif not already_sent:
+        if len(response_text) > 4000:
+            for i in range(0, len(response_text), 4000):
+                send_telegram_message(chat_id, response_text[i : i + 4000], bot_token)
+        else:
+            send_telegram_message(chat_id, response_text, bot_token)
 
 
 def _handle_start(chat_id, from_user, tg_user, bot_token):
