@@ -232,6 +232,26 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
 
     send_typing_action(chat_id, current_app.config.get('TELEGRAM_BOT_TOKEN'))
 
+    # Respuestas predefinidas para preguntas comunes
+    text_lower = text.lower().strip()
+    identity_triggers = [
+        'quien eres',
+        'quién eres',
+        'que eres',
+        'qué eres',
+        'como te llamas',
+        'cómo te llamas',
+        'tu nombre',
+        'tu nombre',
+        'presentate',
+        'preséntate',
+    ]
+    if any(trigger in text_lower for trigger in identity_triggers):
+        return {
+            'type': 'response',
+            'response': 'Soy Diego, tu asistente del Centro Juan Pablo II. 💙',
+        }
+
     mcp = MCPService()
     result = mcp.process_message(
         message=text,
