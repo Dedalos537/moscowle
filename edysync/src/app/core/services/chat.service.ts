@@ -43,7 +43,7 @@ export interface MessageData {
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private socket!: Socket;
-  private readonly SOCKET_URL = environment.docker ? '' : environment.apiBaseUrl || 'https://backend.centrojuanpabloii.com';
+  private readonly SOCKET_URL = environment.docker ? '' : environment.apiBaseUrl || 'https://api-centrojuanpabloii.online';
 
   private _onlineUsers = new BehaviorSubject<Set<number>>(new Set());
   onlineUsers$ = this._onlineUsers.asObservable();
