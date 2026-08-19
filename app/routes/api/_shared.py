@@ -2,17 +2,33 @@ import json
 import os
 import time
 import warnings
+from datetime import datetime, timedelta  # noqa: F401
 
-from flask_wtf.csrf import CSRFProtect
+import requests  # noqa: F401
+from flask import current_app, jsonify, request  # noqa: F401
+from flask_login import current_user, login_required  # noqa: F401
+from flask_wtf.csrf import CSRFProtect  # noqa: F401
+from sqlalchemy import func, or_  # noqa: F401
+from werkzeug.utils import secure_filename  # noqa: F401
 
+from app.extensions import bcrypt, db, limiter  # noqa: F401
+from app.models.appointment import Appointment, SessionImage, SessionMetrics  # noqa: F401
+from app.models.chat import ContactMessage, Message  # noqa: F401
+from app.models.game import Game  # noqa: F401
+from app.models.payment import Payment  # noqa: F401
+from app.models.user import Sede, User  # noqa: F401
+from app.schemas import AssignTherapistSchema, UpdateUserSchema  # noqa: F401
 from app.services.admin_service import AdminService
 from app.services.appointment_service import AppointmentService
+from app.services.availability_service import AvailabilityService  # noqa: F401
 from app.services.dashboard_service import DashboardService
+from app.services.email_service import EmailService  # noqa: F401
 from app.services.game_service import GameService
 from app.services.notification_service import NotificationService
 from app.services.patient_service import PatientService
 from app.services.report_service import ReportService
 from app.utils import parse_datetime
+from app.utils.api_helpers import api_response  # noqa: F401
 from app.utils.sanitizer import sanitize_for_prompt
 
 csrf = CSRFProtect()
@@ -48,7 +64,7 @@ except Exception:
 from app.services.financial_service import FinancialService
 
 try:
-    from app.services.ai_service import predict_level, start_async_training
+    from app.services.ai_service import predict_level, start_async_training  # noqa: F401
 except ImportError:
     predict_level = None
     start_async_training = None
@@ -66,7 +82,7 @@ _drive_service = None
 
 
 def _get_drive_service():
-    global _drive_service
+    global _drive_service  # noqa: PLW0603
     if _drive_service is None:
         from app.services.google_drive_service import GoogleDriveService
 
@@ -168,13 +184,13 @@ Responde con este JSON exacto (sin markdown):
                 ),
             )
         )
-    for name, fn in providers:
+    for _name, fn in providers:
         try:
             t0 = time.time()
             raw = fn()
             parsed = _parse_json(raw)
             if parsed:
-                parsed['provider'] = name
+                parsed['provider'] = _name
                 parsed['response_time'] = round(time.time() - t0, 2)
                 result.update(parsed)
                 break
