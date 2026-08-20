@@ -796,7 +796,7 @@ def _handle_sla_toggle(chat_id, tg_user, enable, bot_token):
     from app.models.user import User
 
     user = User.query.get(tg_user.admin_user_id)
-    if not user or user.rol != 'admin':
+    if not user or user.role != 'admin':
         send_telegram_message(
             chat_id,
             '🔒 Solo los administradores pueden cambiar esta configuración.',
@@ -901,7 +901,7 @@ def _handle_menu(chat_id, tg_user, bot_token):
     from app.models.user import User
 
     user = User.query.get(tg_user.admin_user_id)
-    is_admin = user and user.rol == 'admin'
+    is_admin = user and user.rolee == 'admin'
 
     keyboard = {
         'inline_keyboard': [
@@ -953,7 +953,7 @@ def _handle_menu_callback(chat_id, data, tg_user, bot_token):
         db.session.commit()
 
     elif data == 'menu_usuario':
-        if not user or user.rol != 'admin':
+        if not user or user.role != 'admin':
             send_telegram_message(chat_id, '🔒 Solo administradores pueden crear usuarios.', bot_token)
             return
         send_telegram_message(
@@ -969,7 +969,7 @@ def _handle_menu_callback(chat_id, data, tg_user, bot_token):
         db.session.commit()
 
     elif data == 'menu_contrato':
-        if not user or user.rol != 'admin':
+        if not user or user.role != 'admin':
             send_telegram_message(chat_id, '🔒 Solo administradores pueden crear contratos.', bot_token)
             return
         send_telegram_message(
