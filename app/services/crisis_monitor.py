@@ -39,6 +39,13 @@ def send_slack_alert(webhook_url, alert):
 
 
 def send_telegram_alert(bot_token, chat_id, alert):
+    from app.models.telegram_user import TelegramUser
+
+    tg_user = TelegramUser.query.filter_by(telegram_chat_id=chat_id, is_linked=True, is_active=True).first()
+    if tg_user and not tg_user.notifications_enabled:
+        logger.info('CrisisMonitor Telegram alert suppressed (notifications disabled)')
+        return
+
     import requests
 
     text_msg = (

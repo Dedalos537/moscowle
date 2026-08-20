@@ -44,19 +44,24 @@ SYSTEM_PROMPTS = {
     'admin': (
         'You are the AI assistant for Centro Juan Pablo II, a mental health center in Peru.\n'
         'You are an ERP chatbot that executes REAL actions in the system.\n\n'
-        'RULES:\n'
+        'CRITICAL RULES:\n'
         '- ALWAYS respond in Spanish.\n'
         '- Be concise: max 3-5 lines per response.\n'
-        '- NEVER invent data. ONLY use the EXACT values returned by tools.\n'
-        '- NEVER modify, estimate, or "fill in" values from tool results. Report EXACTLY what the tool returned.\n'
+        '- NEVER invent, guess, or fabricate ANY data. ONLY use EXACT values from tool results.\n'
+        '- NEVER generate HTML, JavaScript, CSS, or code. You are a chatbot, not a code generator.\n'
+        '- NEVER output code blocks, <html>, <script>, <table>, or any markup.\n'
+        '- If you don\'t have data from a tool, say "No tengo esos datos" and offer to search.\n'
+        '- NEVER modify, estimate, or "fill in" values. Report EXACTLY what the tool returned.\n'
         '- If a tool result is truncated, say "el resultado fue truncado" and show what you received.\n'
         '- NEVER show your reasoning process. Only show the final result.\n'
-        '- When listing items (patients, users, etc.), show a SHORT summary (count + first 5 names + "... and N more").\n'
+        '- When listing items, show a SHORT summary (count + first 5 names).\n'
         '- For payments: ALWAYS ask patient, amount, method, date BEFORE registering.\n'
         '- Before deleting, confirm with the user.\n\n'
-        'TOOL FORMAT (CRITICAL - you MUST include the JSON args):\n'
-        'Correct: <function=search_patients{"query": "Carlos"}</function>\n'
-        'WRONG: <function=search_patients</function>  ← THIS WILL FAIL\n\n'
+        'TOOL FORMAT (you MUST call tools to get real data):\n'
+        'Option 1: <function=search_patients{"query": "Carlos"}</function>\n'
+        'Option 2: search_patients(query: "Carlos")\n'
+        'Both formats work. ALWAYS include the arguments.\n'
+        'WRONG: search_patients  <- missing arguments, WILL FAIL\n\n'
         'EXAMPLE of a correct tool call:\n'
         'User: "Busca al paciente Carlos"\n'
         'You: <function=search_patients{"query": "Carlos"}</function>\n\n'
@@ -146,6 +151,56 @@ _FALLBACK_PATTERNS = [
     re.compile(r'\b(\w+)\s*(\{[^{}]*\})\s*(?:->|$|\n)', re.DOTALL),
 ]
 
+# Pattern for parentheses format: toolname(key: value, key: value)
+_PAREN_PATTERN = re.compile(
+    r'(\w+)\s*\(([^)]*)\)',
+    re.DOTALL,
+)
+
+
+def _parse_paren_args(args_str):
+    """Parse 'key: value, key: value' from parentheses format."""
+    result = {}
+    if not args_str or not args_str.strip():
+        return result
+    # Split by comma, but handle quoted strings
+    parts = []
+    current = ''
+    in_quote = False
+    quote_char = None
+    for ch in args_str:
+        if ch in ('"', "'") and not in_quote:
+            in_quote = True
+            quote_char = ch
+            current += ch
+        elif ch == quote_char and in_quote:
+            in_quote = False
+            quote_char = None
+            current += ch
+        elif ch == ',' and not in_quote:
+            parts.append(current.strip())
+            current = ''
+        else:
+            current += ch
+    if current.strip():
+        parts.append(current.strip())
+
+    for part in parts:
+        if ':' in part:
+            key, _, value = part.partition(':')
+            key = key.strip().strip('"').strip("'")
+            value = value.strip().strip('"').strip("'")
+            # Try to parse as int/float
+            try:
+                value = int(value)
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+            result[key] = value
+    return result
+
 
 def _parse_text_tool_call(text):
     """Extract tool name and args from various tool call formats."""
@@ -182,6 +237,14 @@ def _parse_text_tool_call(text):
                     tool_args = {}
             else:
                 tool_args = {}
+            return tool_name, tool_args
+
+    # Try parentheses format: toolname(key: value, key: value)
+    for match in _PAREN_PATTERN.finditer(text):
+        tool_name = match.group(1)
+        args_str = match.group(2)
+        if tool_name in TOOL_REGISTRY:
+            tool_args = _parse_paren_args(args_str)
             return tool_name, tool_args
 
     return None, None
