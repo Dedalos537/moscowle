@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 
 export interface ThemeSchedule {
@@ -9,6 +10,8 @@ export interface ThemeSchedule {
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private http = inject(HttpClient);
+
   private themeSubject = new BehaviorSubject<string>('light');
   theme$ = this.themeSubject.asObservable();
 
@@ -19,7 +22,7 @@ export class ThemeService {
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-    this.loadSchedule();
+    this.loadScheduleFromAPI();
     const saved = localStorage.getItem('theme');
     const isDark = document.documentElement.classList.contains('dark');
     if (saved === 'dark' || (!saved && isDark)) {
@@ -61,6 +64,7 @@ export class ThemeService {
     };
     localStorage.setItem('themeSchedule', JSON.stringify(this.schedule));
     this.scheduleSubject.next({ ...this.schedule });
+    this.saveScheduleToAPI();
     if (this.schedule.enabled) {
       this.applySchedule();
     }
@@ -91,7 +95,24 @@ export class ThemeService {
     }
   }
 
-  private loadSchedule() {
+  private loadScheduleFromAPI() {
+    this.http.get<ThemeSchedule>('/api/user/schedule').subscribe({
+      next: (data) => {
+        this.schedule = {
+          enabled: !!data.enabled,
+          from: Number.isInteger(data.from) ? Math.max(0, Math.min(23, data.from)) : 22,
+          to: Number.isInteger(data.to) ? Math.max(0, Math.min(23, data.to)) : 7,
+        };
+        localStorage.setItem('themeSchedule', JSON.stringify(this.schedule));
+        this.scheduleSubject.next({ ...this.schedule });
+      },
+      error: () => {
+        this.loadScheduleFromLocal();
+      },
+    });
+  }
+
+  private loadScheduleFromLocal() {
     try {
       const raw = localStorage.getItem('themeSchedule');
       if (raw) {
@@ -105,6 +126,10 @@ export class ThemeService {
     } catch {
       this.schedule = { enabled: false, from: 22, to: 7 };
     }
+  }
+
+  private saveScheduleToAPI() {
+    this.http.put('/api/user/schedule', this.schedule).subscribe({ error: () => {} });
   }
 
   private startScheduleWatcher() {
