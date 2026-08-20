@@ -161,6 +161,28 @@ import { NotificationPreferences } from '../../../core/models/notification';
 
                 <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
                   <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <fa-icon [icon]="['fas', 'bell']" class="text-primary text-sm"></fa-icon>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-on-surface">Activar notificaciones</p>
+                      <p class="text-xs text-on-surface-variant">Toggle maestro: On/Off</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="pref-switch"
+                    (click)="toggleNotificationsGlobal()"
+                    [class.pref-switch--on]="prefs.notifications_enabled"
+                    [attr.aria-label]="prefs.notifications_enabled ? 'Desactivar todas las notificaciones' : 'Activar todas las notificaciones'"
+                  >
+                    <span class="pref-switch__knob"></span>
+                  </button>
+                </div>
+
+                @if (prefs.notifications_enabled) {
+                <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                  <div class="flex items-center gap-3 min-w-0">
                     <div class="w-8 h-8 rounded-lg bg-warning-container flex items-center justify-center shrink-0">
                       <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning text-sm"></fa-icon>
                     </div>
@@ -308,6 +330,7 @@ import { NotificationPreferences } from '../../../core/models/notification';
                     </button>
                   </div>
                 </div>
+                }
               </div>
             }
           </div>
@@ -378,6 +401,7 @@ export class PreferencesMenu {
 
   get prefs() {
     return this.notifService.preferences() || {
+      notifications_enabled: true,
       debt_enabled: true, activity_enabled: true, system_enabled: true,
       alert_enabled: true, payment_enabled: true, sound_enabled: true, browser_notifications: false
     };
@@ -481,6 +505,14 @@ export class PreferencesMenu {
   toggleCharts(): void {
     this.settings.toggleHideCharts();
     this.cdr.markForCheck();
+  }
+
+  toggleNotificationsGlobal(): void {
+    const prefs = this.notifService.preferences();
+    if (!prefs) return;
+    this.notifService.updatePreferences({ notifications_enabled: !prefs.notifications_enabled }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
   }
 
   toggleCategory(cat: string): void {
