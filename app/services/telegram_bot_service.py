@@ -901,7 +901,7 @@ def _handle_menu(chat_id, tg_user, bot_token):
     from app.models.user import User
 
     user = User.query.get(tg_user.admin_user_id)
-    is_admin = user and user.rolee == 'admin'
+    is_admin = user and user.role == 'admin'
 
     keyboard = {
         'inline_keyboard': [
