@@ -308,6 +308,7 @@ def register_request_handlers(app):
                 or request.path.startswith('/admin/api/')
                 or request.path.startswith('/api/admin/')
                 or request.path.startswith('/api/server/')
+                or request.path.startswith('/api/notifications')
                 or current_user.is_authenticated
                 or _has_jwt
             )

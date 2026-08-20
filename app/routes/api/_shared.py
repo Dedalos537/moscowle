@@ -7,11 +7,11 @@ from datetime import datetime, timedelta  # noqa: F401
 
 import requests  # noqa: F401
 from flask import current_app, jsonify, request, url_for  # noqa: F401
-from flask_login import current_user, login_required  # noqa: F401
 from flask_wtf.csrf import CSRFProtect  # noqa: F401
 from sqlalchemy import func, or_  # noqa: F401
 from werkzeug.utils import secure_filename  # noqa: F401
 
+from app.auth_compat import current_user, login_required  # noqa: F401
 from app.extensions import bcrypt, db, limiter  # noqa: F401
 from app.models.appointment import Appointment, SessionImage, SessionMetrics  # noqa: F401
 from app.models.chat import ContactMessage, Message  # noqa: F401

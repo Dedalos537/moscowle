@@ -520,6 +520,10 @@ def handle_webhook_update(update):
         _handle_notification_toggle(chat_id, tg_user, bot_token)
         return
 
+    if msg.get('text') == '/menu' or msg.get('text') == '/comandos':
+        _handle_menu(chat_id, tg_user, bot_token)
+        return
+
     if not tg_user or not tg_user.is_linked:
         send_telegram_message(
             chat_id,
@@ -758,7 +762,8 @@ def _handle_help(chat_id, bot_token):
         '/resumen — Resumen financiero\n'
         '/desactivar_sla — Desactivar monitoreo SLA\n'
         '/activar_sla — Activar monitoreo SLA\n'
-        '/notificaciones — Activar/desactivar notificaciones\n\n'
+        '/notificaciones — Activar/desactivar notificaciones\n'
+        '/menu — Ver menú de comandos\n\n'
         '*Puedo hacer mucho más:*\n'
         '• 📋 Consultar pacientes, sesiones, pagos\n'
         '• 💰 Registrar pagos (texto o imagen)\n'
@@ -881,6 +886,125 @@ def _handle_notification_toggle(chat_id, tg_user, bot_token):
     logger.info(f'Notifications {"enabled" if tg_user.notifications_enabled else "disabled"} for chat {chat_id}')
 
 
+def _handle_menu(chat_id, tg_user, bot_token):
+    """Handle /menu command — show inline keyboard with common operations."""
+    if not tg_user or not tg_user.is_linked:
+        send_telegram_message(
+            chat_id,
+            '⚠️ Tu cuenta no está vinculada.\nUsa /start para vincular.',
+            bot_token,
+        )
+        return
+
+    import json as _json
+
+    from app.models.user import User
+
+    user = User.query.get(tg_user.admin_user_id)
+    is_admin = user and user.rol == 'admin'
+
+    keyboard = {
+        'inline_keyboard': [
+            [{'text': '💰 Subir pago', 'callback_data': 'menu_pago'}],
+            [{'text': '👤 Crear usuario', 'callback_data': 'menu_usuario'}],
+            [{'text': '📋 Crear contrato', 'callback_data': 'menu_contrato'}],
+            [{'text': '🔑 Cambiar contraseña', 'callback_data': 'menu_password'}],
+            [{'text': '🔔 Notificaciones', 'callback_data': 'menu_notif'}],
+            [{'text': '📊 Resumen', 'callback_data': 'menu_resumen'}],
+        ]
+    }
+
+    if not is_admin:
+        keyboard['inline_keyboard'] = [
+            [{'text': '💰 Subir pago', 'callback_data': 'menu_pago'}],
+            [{'text': '🔔 Notificaciones', 'callback_data': 'menu_notif'}],
+            [{'text': '📊 Resumen', 'callback_data': 'menu_resumen'}],
+        ]
+
+    send_telegram_message(
+        chat_id,
+        '🦜 *Menú de Chasqui*\n\nSelecciona una opción:',
+        bot_token,
+        reply_markup=_json.dumps(keyboard),
+    )
+
+
+def _handle_menu_callback(chat_id, data, tg_user, bot_token):
+    """Handle menu callback queries."""
+    if not tg_user or not tg_user.is_linked:
+        return
+
+    from app import db
+    from app.models.user import User
+
+    user = User.query.get(tg_user.admin_user_id)
+
+    if data == 'menu_pago':
+        send_telegram_message(
+            chat_id,
+            '💰 *Subir pago*\n\nEnvía los datos del pago:\n'
+            '• Paciente (nombre o ID)\n'
+            '• Monto\n'
+            '• Método (Efectivo/Yape/Transferencia/Plin)\n\n'
+            'O envía una foto del comprobante.',
+            bot_token,
+        )
+        tg_user.awaiting_input = 'payment'
+        db.session.commit()
+
+    elif data == 'menu_usuario':
+        if not user or user.rol != 'admin':
+            send_telegram_message(chat_id, '🔒 Solo administradores pueden crear usuarios.', bot_token)
+            return
+        send_telegram_message(
+            chat_id,
+            '👤 *Crear usuario*\n\nEnvía los datos:\n'
+            '• Nombre de usuario\n'
+            '• Nombre completo\n'
+            '• Email\n'
+            '• Rol (admin/supervisor/terapista/jugador)',
+            bot_token,
+        )
+        tg_user.awaiting_input = 'create_user'
+        db.session.commit()
+
+    elif data == 'menu_contrato':
+        if not user or user.rol != 'admin':
+            send_telegram_message(chat_id, '🔒 Solo administradores pueden crear contratos.', bot_token)
+            return
+        send_telegram_message(
+            chat_id,
+            '📋 *Crear contrato*\n\nEnvía los datos:\n'
+            '• Paciente (nombre o ID)\n'
+            '• Tipo de contrato\n'
+            '• Fecha de inicio\n'
+            '• Fecha de fin',
+            bot_token,
+        )
+        tg_user.awaiting_input = 'create_contract'
+        db.session.commit()
+
+    elif data == 'menu_password':
+        send_telegram_message(
+            chat_id,
+            '🔑 *Cambiar contraseña*\n\nEnvía tu nueva contraseña.',
+            bot_token,
+        )
+        tg_user.awaiting_input = 'change_password'
+        db.session.commit()
+
+    elif data == 'menu_notif':
+        _handle_notification_toggle(chat_id, tg_user, bot_token)
+
+    elif data == 'menu_resumen':
+        _handle_quick_command(
+            chat_id,
+            tg_user,
+            'Dame un resumen rápido de hoy: pacientes activos, sesiones programadas, y pagos recientes',
+            bot_token,
+        )
+
+
 def _handle_callback(callback, bot_token):
     """Handle inline keyboard callback queries."""
     data = callback.get('data', '')
@@ -888,6 +1012,14 @@ def _handle_callback(callback, bot_token):
     callback_id = callback.get('id')
 
     if not chat_id:
+        return
+
+    if data.startswith('menu_'):
+        from app.models.telegram_user import TelegramUser
+
+        tg_user = TelegramUser.query.filter_by(telegram_chat_id=chat_id).first()
+        _handle_menu_callback(chat_id, data, tg_user, bot_token)
+        _tg_request('answerCallbackQuery', {'callback_query_id': callback_id}, bot_token)
         return
 
     if data == 'confirm_yes':
