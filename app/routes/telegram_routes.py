@@ -1,5 +1,6 @@
 import hmac
 import logging
+import time
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -10,6 +11,30 @@ from app.models.telegram_user import TelegramUser
 logger = logging.getLogger('app.telegram')
 
 telegram_bp = Blueprint('telegram', __name__, url_prefix='/api/telegram')
+
+# Track processed update_ids to prevent duplicate processing (max 1000 entries)
+_processed_updates: dict[int, float] = {}
+_MAX_PROCESSED = 1000
+
+
+def _cleanup_old_updates():
+    """Remove entries older than 5 minutes."""
+    now = time.time()
+    cutoff = now - 300
+    to_remove = [uid for uid, ts in _processed_updates.items() if ts < cutoff]
+    for uid in to_remove:
+        del _processed_updates[uid]
+
+
+def _is_duplicate(update_id: int) -> bool:
+    """Check if this update was already processed."""
+    _cleanup_old_updates()
+    if update_id in _processed_updates:
+        return True
+    _processed_updates[update_id] = time.time()
+    if len(_processed_updates) > _MAX_PROCESSED:
+        _cleanup_old_updates()
+    return False
 
 
 @telegram_bp.route('/webhook', methods=['POST'])
@@ -24,6 +49,11 @@ def webhook():
     update = request.get_json(silent=True)
     if not update:
         return jsonify({'error': 'bad request'}), 400
+
+    update_id = update.get('update_id')
+    if update_id and _is_duplicate(update_id):
+        logger.debug(f'Duplicate update_id {update_id}, skipping')
+        return jsonify({'status': 'ok'}), 200
 
     try:
         from app.services.telegram_bot_service import handle_webhook_update

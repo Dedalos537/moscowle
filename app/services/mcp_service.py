@@ -356,6 +356,52 @@ class MCPService:
             entry = TOOL_REGISTRY.get(name, {})
             return bool(entry) and entry.get('category') == 'write' and name not in SAFE_WRITE_TOOLS
 
+        # If confirmed_tool is provided, execute it directly without calling LLM
+        if confirmed_tool and confirmed_tool.get('name'):
+            tool_name = confirmed_tool['name']
+            tool_args = confirmed_tool.get('args') or {}
+            logger.info(f'MCP confirmed tool execution: {tool_name}({tool_args})')
+
+            try:
+                result = execute_tool(tool_name, tool_args, user_id=user_id, role=user_role)
+                tool_calls_log.append(
+                    {
+                        'name': tool_name,
+                        'args': tool_args,
+                        'result': result,
+                        'timestamp': datetime.utcnow().isoformat(),
+                    }
+                )
+
+                result_str = _trim_tool_result(result)
+                # Generate a natural response from the result
+                messages.append(
+                    {
+                        'role': 'user',
+                        'content': (
+                            f'[Tool {tool_name} result — use ONLY this data]:\n'
+                            f'{result_str}\n\n'
+                            f'Respond to the user using ONLY the exact values above. '
+                            f'Keep it SHORT and natural. Use emoji for confirmation.'
+                        ),
+                    }
+                )
+
+                content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024)
+                return {
+                    'response': content or f'✅ Operación ejecutada: {tool_name}',
+                    'tool_calls': tool_calls_log,
+                    'done': True,
+                    'provider': provider,
+                }
+            except Exception as e:
+                logger.error(f'MCP confirmed tool execution error: {e}', exc_info=True)
+                return {
+                    'response': f'❌ Error ejecutando la operación: {str(e)[:200]}',
+                    'tool_calls': tool_calls_log,
+                    'done': True,
+                }
+
         for iteration in range(MAX_ITERATIONS):
             try:
                 content, provider = llm_chat(
