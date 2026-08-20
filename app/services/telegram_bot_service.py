@@ -502,6 +502,10 @@ def handle_webhook_update(update):
         _handle_sla_toggle(chat_id, tg_user, True, bot_token)
         return
 
+    if msg.get('text') == '/notificaciones' or msg.get('text') == '/notifications':
+        _handle_notification_toggle(chat_id, tg_user, bot_token)
+        return
+
     if not tg_user or not tg_user.is_linked:
         send_telegram_message(
             chat_id,
@@ -739,7 +743,8 @@ def _handle_help(chat_id, bot_token):
         '/sesiones — Ver sesiones del día\n'
         '/resumen — Resumen financiero\n'
         '/desactivar_sla — Desactivar monitoreo SLA\n'
-        '/activar_sla — Activar monitoreo SLA\n\n'
+        '/activar_sla — Activar monitoreo SLA\n'
+        '/notificaciones — Activar/desactivar notificaciones\n\n'
         '*Puedo hacer mucho más:*\n'
         '• 📋 Consultar pacientes, sesiones, pagos\n'
         '• 💰 Registrar pagos (texto o imagen)\n'
@@ -833,6 +838,33 @@ def _handle_sla_toggle(chat_id, tg_user, enable, bot_token):
             '❌ Error al cambiar la configuración de SLA. Intenta de nuevo.',
             bot_token,
         )
+
+
+def _handle_notification_toggle(chat_id, tg_user, bot_token):
+    """Handle /notificaciones command — toggle notifications on/off."""
+    if not tg_user or not tg_user.is_linked:
+        send_telegram_message(
+            chat_id,
+            '⚠️ Tu cuenta no está vinculada.\nUsa /start para vincular.',
+            bot_token,
+        )
+        return
+
+    from app import db
+
+    tg_user.notifications_enabled = not tg_user.notifications_enabled
+    db.session.commit()
+
+    status = 'activadas' if tg_user.notifications_enabled else 'desactivadas'
+    emoji = '🔔' if tg_user.notifications_enabled else '🔕'
+
+    send_telegram_message(
+        chat_id,
+        f'{emoji} Notificaciones {status}.',
+        bot_token,
+    )
+
+    logger.info(f'Notifications {"enabled" if tg_user.notifications_enabled else "disabled"} for chat {chat_id}')
 
 
 def _handle_callback(callback, bot_token):

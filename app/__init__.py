@@ -472,8 +472,12 @@ def create_app(config_class=None):
                 'https://cdn.jsdelivr.net',
                 'https://cdnjs.cloudflare.com',
                 'https://api.github.com',
+                'wss://api-centrojuanpabloii.online',
+                'https://api-centrojuanpabloii.online',
                 'wss://backend.centrojuanpabloii.com',
                 'https://backend.centrojuanpabloii.com',
+                'wss://moscowle.centrojuanpabloii.com',
+                'https://moscowle.centrojuanpabloii.com',
             ],
             'frame-ancestors': ["'self'"],
         }
@@ -581,7 +585,7 @@ def create_app(config_class=None):
     except Exception:
         app.logger.debug('flask-wtf not available, skipping csrf_token injection')
     cache.init_app(app)
-    socketio.init_app(app, cors_allowed_origins='*')
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet', manage_session=False)
 
     if not IS_LEAN:
         try:
@@ -950,7 +954,7 @@ def create_app_lite():
         pass
 
     cache.init_app(app)
-    socketio.init_app(app, cors_allowed_origins='*')
+    socketio.init_app(app, cors_allowed_origins='*', async_mode='eventlet', manage_session=False)
 
     register_auth_loader(app)
     register_error_handlers(app)

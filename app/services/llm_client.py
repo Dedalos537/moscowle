@@ -380,10 +380,10 @@ def _try_ollama(messages, temperature):
     if not ollama:
         return None
     ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    # Optimización para CPU: reducir contexto, paralelismo, keep_alive
+    # Optimización para CPU: paralelismo, keep_alive
     options = {
         'temperature': temperature,
-        'num_ctx': 2048,  # Contexto reducido para respuestas rápidas
+        'num_ctx': 4096,  # Increased for tool calling with small models
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
         'top_p': 0.9,
@@ -497,10 +497,10 @@ def _stream_ollama(messages, temperature):
     if not ollama:
         return False
     ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    # Optimización para CPU: reducir contexto, paralelismo
+    # Optimización para CPU: paralelismo
     options = {
         'temperature': temperature,
-        'num_ctx': 2048,  # Contexto reducido para respuestas rápidas
+        'num_ctx': 4096,  # Increased for tool calling with small models
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
         'top_p': 0.9,

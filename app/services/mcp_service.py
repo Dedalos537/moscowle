@@ -35,15 +35,15 @@ def get_current_date_context():
     now = datetime.now(LIMA_TZ)
     fecha = f'{_DIAS_ES[now.weekday()]} {now.day} de {_MESES_ES[now.month - 1]} de {now.year}'
     return (
-        f'Hoy es {fecha}. Usa SIEMPRE esta fecha como referencia para \'hoy\'. '
+        f"Hoy es {fecha}. Usa SIEMPRE esta fecha como referencia para 'hoy'. "
         'Todos los usuarios están en la zona horaria America/Lima (UTC-5).'
     )
+
 
 SYSTEM_PROMPTS = {
     'admin': (
         'You are the AI assistant for Centro Juan Pablo II, a mental health center in Peru.\n'
         'You are an ERP chatbot that executes REAL actions in the system.\n\n'
-
         'RULES:\n'
         '- ALWAYS respond in Spanish.\n'
         '- Be concise: max 3-5 lines per response.\n'
@@ -54,13 +54,16 @@ SYSTEM_PROMPTS = {
         '- When listing items (patients, users, etc.), show a SHORT summary (count + first 5 names + "... and N more").\n'
         '- For payments: ALWAYS ask patient, amount, method, date BEFORE registering.\n'
         '- Before deleting, confirm with the user.\n\n'
-
         'TOOL FORMAT (CRITICAL - you MUST include the JSON args):\n'
         'Correct: <function=search_patients{"query": "Carlos"}</function>\n'
         'WRONG: <function=search_patients</function>  ← THIS WILL FAIL\n\n'
-
+        'EXAMPLE of a correct tool call:\n'
+        'User: "Busca al paciente Carlos"\n'
+        'You: <function=search_patients{"query": "Carlos"}</function>\n\n'
+        'EXAMPLE with multiple params:\n'
+        'User: "Registra pago de Juan por 100 soles en efectivo"\n'
+        'You: <function=register_payment{"patient_id": 5, "amount": 100, "method": "Efectivo", "payment_date": "2026-08-18"}</function>\n\n'
         'TOOLS BY CATEGORY:\n\n'
-
         'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_user_detail, create_user, update_user, delete_user, assign_therapist, update_patient, toggle_user_status\n'
         'SESSIONS: get_sessions, get_sessions_day, create_session, update_session, cancel_session, complete_session, batch_create_sessions\n'
         'INCIDENTS: create_incident, list_incidents, get_incident_detail, update_incident_status, assign_incident\n'
@@ -69,13 +72,11 @@ SYSTEM_PROMPTS = {
         'REPORTS: generate_weekly_report, get_weekly_summary, get_monthly_reports, get_therapist_efficiency, get_user_growth (user registration metrics by month)\n'
         'MESSAGING: broadcast_message, send_direct_message, get_notifications, mark_notifications_read\n'
         'CONTRACTS: list_contracts\n\n'
-
         'PAYMENT WORKFLOW:\n'
         '1. search_patients to find the patient ID\n'
         '2. Ask: amount, method (Efectivo/Yape/Transferencia/IA/Copilot), date\n'
         '3. Only THEN call register_payment with ALL 4 params\n'
         '4. Confirm the result\n\n'
-
         'VOUCHER IMAGE PROCESSING:\n'
         'When user sends an image (voucher/comprobante):\n'
         '1. The frontend uploads image to /mcp/upload and gets OCR data\n'
@@ -85,23 +86,19 @@ SYSTEM_PROMPTS = {
         '5. Confirm all extracted data with user before registering\n'
         '6. Store image URL as receipt_url in the payment\n'
         '7. NEVER say "Juan Pérez" or "S/100" if OCR did not return those values\n\n'
-
         'EDITING PAYMENTS:\n'
         '1. get_payment_history(patient_id) to find the payment ID\n'
         '2. edit_payment(payment_id, amount=..., method=..., payment_date=..., status=..., receipt_url=...)\n'
         '3. Confirm changes to user\n\n'
-
         'DELETING PAYMENTS:\n'
         '1. get_payment_history(patient_id) to find the payment ID\n'
         '2. Show user the payment details and ask for confirmation\n'
         '3. cancel_payment(payment_id) — ONLY after user confirms\n\n'
-
         'FINANCIAL QUERIES:\n'
         '- get_financial_summary with month=5, year=2026 for May 2026\n'
         '- ALWAYS include year parameter (current year is 2026)\n'
         '- compare_periods to compare any two months side by side\n'
         '- get_user_growth for registration trends\n\n'
-
         'MESSAGING WORKFLOW:\n'
         '1. search_patients or list_users to find the user ID\n'
         '2. send_direct_message with receiver_id AND content (BOTH required)\n'
@@ -137,22 +134,57 @@ TOOL_CALL_PATTERN = re.compile(
     re.DOTALL,
 )
 
+# Broader fallback patterns for small models that deviate from the exact format
+_FALLBACK_PATTERNS = [
+    # Without braces: <function=search_patients</function> or <function=search_patients></function>
+    re.compile(r'<function=(\w+)\s*</function>', re.DOTALL),
+    # With single quotes: <function=search_patients{'query': 'Carlos'}</function>
+    re.compile(r"<function=(\w+)\s*(' .*?')\s*</function>", re.DOTALL),
+    # Markdown code block: ```function=search_patients{...}```
+    re.compile(r'```[^`]*<function=(\w+)\s*(\{.*?\})?\s*</function>', re.DOTALL),
+    # Partial: search_patients{"query":"Carlos"} (no <function> tags)
+    re.compile(r'\b(\w+)\s*(\{[^{}]*\})\s*(?:->|$|\n)', re.DOTALL),
+]
+
 
 def _parse_text_tool_call(text):
-    """Extract tool name and args from text like <function=search_patients{"query":"Carlos"}</function>."""
+    """Extract tool name and args from various tool call formats."""
+    # Try strict pattern first
     match = TOOL_CALL_PATTERN.search(text)
-    if not match:
-        return None, None
-    tool_name = match.group(1)
-    args_str = match.group(2)
-    if args_str:
-        try:
-            tool_args = json.loads(args_str)
-        except json.JSONDecodeError:
+    if match:
+        tool_name = match.group(1)
+        args_str = match.group(2)
+        if args_str:
+            try:
+                tool_args = json.loads(args_str)
+            except json.JSONDecodeError:
+                tool_args = {}
+        else:
             tool_args = {}
-    else:
-        tool_args = {}
-    return tool_name, tool_args
+        # Only return if the tool name is actually registered
+        if tool_name in TOOL_REGISTRY:
+            return tool_name, tool_args
+
+    # Try fallback patterns
+    for pattern in _FALLBACK_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            tool_name = match.group(1)
+            args_str = match.group(2) if match.lastindex >= 2 else None
+            if tool_name not in TOOL_REGISTRY:
+                continue
+            if args_str:
+                # Try to fix single quotes to double quotes
+                fixed = args_str.replace("'", '"')
+                try:
+                    tool_args = json.loads(fixed)
+                except json.JSONDecodeError:
+                    tool_args = {}
+            else:
+                tool_args = {}
+            return tool_name, tool_args
+
+    return None, None
 
 
 def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
@@ -226,7 +258,9 @@ def _build_tool_prompt(tools):
 class MCPService:
     """MCP service with GLM-5.2 as primary LLM and multi-provider fallback."""
 
-    def process_message(self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False):
+    def process_message(
+        self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
+    ):
         system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
 
         if telegram_mode:
