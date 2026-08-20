@@ -1,6 +1,7 @@
 import http.client
 import json
 import logging
+import re
 import tempfile
 from datetime import UTC, datetime
 
@@ -184,24 +185,33 @@ def download_telegram_file(file_id, bot_token):
 
 def _parse_telegram_ocr(text):
     """Parse Tesseract OCR text to extract payment voucher data."""
-    import re
-
     result = {'amount': None, 'method': None, 'patient_name': None, 'date': None, 'transaction_id': None}
 
-    # Extract amount (S/, S/., soles, or plain numbers)
+    # Extract amount (S/, S/., soles, or plain numbers) - more flexible patterns
     amount_patterns = [
-        r'S/\.?\s*(\d+(?:\.\d{1,2})?)',
-        r'soles\s*(\d+(?:\.\d{1,2})?)',
-        r'monto[:\s]*(\d+(?:\.\d{1,2})?)',
-        r'total[:\s]*(\d+(?:\.\d{1,2})?)',
-        r'(\d+(?:\.\d{1,2})?)\s*(?:soles|PEN|S/)',
+        r'S/\.?\s*(\d+(?:[.,]\d{1,2})?)',
+        r'soles\s*(\d+(?:[.,]\d{1,2})?)',
+        r'monto[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'total[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'(\d+(?:[.,]\d{1,2})?)\s*(?:soles|PEN|S/)',
+        r'enviado[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'recibido[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'importe[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'pago[:\s]*(\d+(?:[.,]\d{1,2})?)',
+        r'(\d+(?:[.,]\d{1,2})?)\s*S/',
+        r'(\d{2,6}(?:\.\d{2})?)\b',
     ]
     for pattern in amount_patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
             try:
-                result['amount'] = float(match.group(1))
-                break
+                # Handle comma as decimal separator (common in Peru)
+                amount_str = match.group(1).replace(',', '.')
+                amount = float(amount_str)
+                # Sanity check: amount should be between 0.01 and 1000000
+                if 0.01 <= amount <= 1000000:
+                    result['amount'] = amount
+                    break
             except ValueError:
                 continue
 
@@ -940,27 +950,107 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
 
         ocr_data = None
 
+        # 0. Si el usuario envió caption con datos, usarlos directamente
+        if caption and caption.strip():
+            amount_match = re.search(r'(\d+(?:\.\d{1,2})?)', caption)
+            if amount_match:
+                ocr_data = {
+                    'amount': float(amount_match.group(1)),
+                    'method': None,
+                    'patient_name': None,
+                    'date': None,
+                    'transaction_id': None,
+                }
+                caption_lower = caption.lower()
+                if 'yape' in caption_lower:
+                    ocr_data['method'] = 'Yape'
+                elif 'plin' in caption_lower:
+                    ocr_data['method'] = 'Plin'
+                elif 'transfer' in caption_lower:
+                    ocr_data['method'] = 'Transferencia'
+                elif 'efectivo' in caption_lower or 'cash' in caption_lower:
+                    ocr_data['method'] = 'Efectivo'
+                if ocr_data.get('amount'):
+                    logger.info(f'Datos extraídos del caption: {ocr_data}')
+
         # 1. Intentar Tesseract OCR local primero (rápido, sin costo)
-        try:
-            import io
+        if not ocr_data or not ocr_data.get('amount'):
+            try:
+                import io
 
-            import pytesseract
-            from PIL import Image as PilImage
+                import pytesseract
+                from PIL import Image as PilImage
+                from PIL import ImageFilter, ImageOps
 
-            img = PilImage.open(io.BytesIO(image_data))
-            if img.mode != 'L':
-                img = img.convert('L')
-            ocr_text = pytesseract.image_to_string(img, lang='spa+eng')
-            logger.info(f'Telegram Tesseract OCR: {ocr_text[:200]}')
+                img = PilImage.open(io.BytesIO(image_data))
 
-            # Parsear el texto OCR para extraer datos del comprobante
-            ocr_data = _parse_telegram_ocr(ocr_text)
-            if ocr_data and ocr_data.get('amount'):
-                logger.info(f'Tesseract OCR exitoso: {ocr_data}')
-        except Exception as tess_err:
-            logger.warning(f'Tesseract OCR falló: {tess_err}')
+                # Preprocesamiento mejorado para capturas de pantalla
+                if img.mode != 'L':
+                    img = img.convert('L')
 
-        # 2. Fallback a Groq vision si Tesseract no funcionó
+                # Aumentar contraste
+                img = ImageOps.autocontrast(img, cutoff=2)
+
+                # Aplicar sharpening para mejorar bordes de texto
+                img = img.filter(ImageFilter.SHARPEN)
+
+                # Binarización adaptativa (Otsu-like)
+                threshold = 128
+                img = img.point(lambda x: 255 if x > threshold else 0, '1')
+
+                # Escalar para mejorar OCR (2x)
+                img = img.resize((img.width * 2, img.height * 2), PilImage.LANCZOS)
+
+                ocr_text = pytesseract.image_to_string(
+                    img,
+                    lang='spa+eng',
+                    config='--psm 6 --oem 3',
+                )
+                logger.info(f'Telegram Tesseract OCR: {ocr_text[:300]}')
+
+                ocr_data = _parse_telegram_ocr(ocr_text)
+                if ocr_data and ocr_data.get('amount'):
+                    logger.info(f'Tesseract OCR exitoso: {ocr_data}')
+            except Exception as tess_err:
+                logger.warning(f'Tesseract OCR falló: {tess_err}')
+
+        # 2. Fallback a Ollama vision si Tesseract no funcionó
+        if not ocr_data or not ocr_data.get('amount'):
+            try:
+                import ollama as ollama_lib
+
+                ollama_host = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')
+                client = ollama_lib.Client(host=ollama_host)
+
+                response = client.chat(
+                    model='qwen2.5:1.5b',
+                    messages=[
+                        {
+                            'role': 'user',
+                            'content': (
+                                'Extrae los datos de este comprobante de pago peruano. '
+                                'Responde SOLO con un JSON válido sin texto adicional: '
+                                '{"amount": número, "method": "Efectivo|Yape|Transferencia|Plin", '
+                                '"patient_name": "nombre si aparece", "date": "YYYY-MM-DD si aparece", '
+                                '"transaction_id": "número de operación si aparece"}. '
+                                'Si un dato no se ve, usa null. Ejemplo: {"amount": 150, "method": "Yape", "patient_name": null, "date": null, "transaction_id": null}'
+                            ),
+                        }
+                    ],
+                    options={'temperature': 0.1, 'num_ctx': 2048},
+                )
+
+                content = response.get('message', {}).get('content', '')
+                logger.info(f'Ollama vision response: {content[:200]}')
+
+                json_match = re.search(r'\{[^{}]*\}', content)
+                if json_match:
+                    ocr_data = json.loads(json_match.group())
+                    logger.info(f'Ollama vision OCR exitoso: {ocr_data}')
+            except Exception as ollama_err:
+                logger.warning(f'Ollama vision OCR falló: {ollama_err}')
+
+        # 3. Fallback a Groq vision si Ollama no funcionó
         if not ocr_data or not ocr_data.get('amount'):
             groq_key = current_app.config.get('GROQ_API_KEY')
             if groq_key:
