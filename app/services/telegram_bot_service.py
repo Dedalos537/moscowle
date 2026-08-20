@@ -990,14 +990,13 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
                 image_b64 = b64.b64encode(image_data).decode()
 
                 prompt = (
-                    'Look at this payment receipt image from Peru (Yape, Plin, or bank transfer). '
-                    'Extract the following data and respond ONLY with a valid JSON object, no other text:\n'
-                    '{"amount": number, "method": "Efectivo|Yape|Transferencia|Plin", '
-                    '"patient_name": "name if visible", "date": "YYYY-MM-DD if visible", '
-                    '"transaction_id": "operation number if visible"}\n'
-                    'If a field is not visible, use null.\n'
-                    'IMPORTANT: The amount is the main payment amount shown prominently (e.g. S/225), '
-                    'NOT small numbers like security codes or phone digits.'
+                    'Read this Peruvian payment receipt. '
+                    'Return ONLY this JSON format:\n'
+                    '{"amount": <number>, "method": "<Yape or Plin or Transferencia>", '
+                    '"patient_name": "<person name shown>", "date": "<date shown>", '
+                    '"transaction_id": "<operation number>"}\n'
+                    'Use null for any field you cannot read. '
+                    'The amount is the big number like S/225.'
                 )
 
                 response = client.chat(
