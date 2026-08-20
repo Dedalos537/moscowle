@@ -977,7 +977,56 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
                 if ocr_data.get('amount'):
                     logger.info(f'Datos extraídos del caption: {ocr_data}')
 
-        # 1. Intentar Tesseract OCR local primero (rápido, sin costo)
+        # 1. Usar moondream vision (modelo local que SÍ puede leer imágenes)
+        if not ocr_data or not ocr_data.get('amount'):
+            try:
+                import base64 as b64
+
+                import ollama as ollama_lib
+
+                ollama_host = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')
+                client = ollama_lib.Client(host=ollama_host)
+
+                image_b64 = b64.b64encode(image_data).decode()
+
+                prompt = (
+                    'Look at this payment receipt image from Peru (Yape, Plin, or bank transfer). '
+                    'Extract the following data and respond ONLY with a valid JSON object, no other text:\n'
+                    '{"amount": number, "method": "Efectivo|Yape|Transferencia|Plin", '
+                    '"patient_name": "name if visible", "date": "YYYY-MM-DD if visible", '
+                    '"transaction_id": "operation number if visible"}\n'
+                    'If a field is not visible, use null.\n'
+                    'IMPORTANT: The amount is the main payment amount shown prominently (e.g. S/225), '
+                    'NOT small numbers like security codes or phone digits.'
+                )
+
+                response = client.chat(
+                    model='moondream:1.8b',
+                    messages=[
+                        {
+                            'role': 'user',
+                            'content': prompt,
+                            'images': [image_b64],
+                        }
+                    ],
+                    options={'temperature': 0.1, 'num_ctx': 2048},
+                )
+
+                content = response.get('message', {}).get('content', '')
+                logger.info(f'Moondream vision response: {content[:500]}')
+
+                json_match = re.search(r'\{[^{}]*\}', content)
+                if json_match:
+                    try:
+                        ocr_data = json.loads(json_match.group())
+                        if ocr_data.get('amount'):
+                            logger.info(f'Moondream vision OCR exitoso: {ocr_data}')
+                    except json.JSONDecodeError:
+                        logger.warning(f'Could not parse moondream response: {content[:200]}')
+            except Exception as moondream_err:
+                logger.warning(f'Moondream vision OCR falló: {moondream_err}')
+
+        # 2. Fallback a Tesseract OCR si moondream no funcionó
         if not ocr_data or not ocr_data.get('amount'):
             try:
                 import io
@@ -988,28 +1037,18 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
 
                 img = PilImage.open(io.BytesIO(image_data))
 
-                # Preprocesamiento mejorado para capturas de pantalla de apps
                 if img.mode != 'L':
                     img = img.convert('L')
 
-                # Aumentar contraste agresivamente
                 img = ImageOps.autocontrast(img, cutoff=5)
-
-                # Ecualizar histograma para mejorar distribución de tonos
                 img = ImageOps.equalize(img)
-
-                # Aplicar sharpening para mejorar bordes de texto
                 img = img.filter(ImageFilter.SHARPEN)
                 img = img.filter(ImageFilter.SHARPEN)
 
-                # Binarización con umbral más bajo para capturas oscuras
                 threshold = 100
                 img = img.point(lambda x: 255 if x > threshold else 0, '1')
-
-                # Escalar 3x para mejorar OCR
                 img = img.resize((img.width * 3, img.height * 3), PilImage.LANCZOS)
 
-                # Intentar con diferentes configuraciones PSM
                 ocr_text = ''
                 for psm in ['--psm 6', '--psm 4', '--psm 3']:
                     try:
@@ -1033,8 +1072,7 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
             except Exception as tess_err:
                 logger.warning(f'Tesseract OCR falló: {tess_err}')
 
-        # 2. Fallback a Groq vision si Tesseract no funcionó
-        # NOTA: Ollama qwen2.5:1.5b es text-only, no puede procesar imágenes
+        # 3. Fallback a Groq vision si ambos fallaron
         if not ocr_data or not ocr_data.get('amount'):
             groq_key = current_app.config.get('GROQ_API_KEY')
             if groq_key:
