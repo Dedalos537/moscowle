@@ -228,11 +228,15 @@ def _parse_telegram_ocr(text):
     elif 'tarjeta' in text_lower or 'card' in text_lower:
         result['method'] = 'Tarjeta'
 
-    # Extract date
+    # Extract date - more formats for Peruvian apps
     date_patterns = [
         r'(\d{2}/\d{2}/\d{4})',
         r'(\d{4}-\d{2}-\d{2})',
         r'(\d{2}-\d{2}-\d{4})',
+        r'(\d{1,2}\s+(?:de\s+)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)[a-z]*\.?\s+(?:de\s+)?\d{4})',
+        r'(\d{1,2}\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?\d{4})',
+        r'(\d{2}\.\d{2}\.\d{4})',
+        r'(\d{2}\s+\d{2}\s+\d{4})',
     ]
     for pattern in date_patterns:
         match = re.search(pattern, text)
@@ -984,28 +988,43 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
 
                 img = PilImage.open(io.BytesIO(image_data))
 
-                # Preprocesamiento mejorado para capturas de pantalla
+                # Preprocesamiento mejorado para capturas de pantalla de apps
                 if img.mode != 'L':
                     img = img.convert('L')
 
-                # Aumentar contraste
-                img = ImageOps.autocontrast(img, cutoff=2)
+                # Aumentar contraste agresivamente
+                img = ImageOps.autocontrast(img, cutoff=5)
+
+                # Ecualizar histograma para mejorar distribución de tonos
+                img = ImageOps.equalize(img)
 
                 # Aplicar sharpening para mejorar bordes de texto
                 img = img.filter(ImageFilter.SHARPEN)
+                img = img.filter(ImageFilter.SHARPEN)
 
-                # Binarización adaptativa (Otsu-like)
-                threshold = 128
+                # Binarización con umbral más bajo para capturas oscuras
+                threshold = 100
                 img = img.point(lambda x: 255 if x > threshold else 0, '1')
 
-                # Escalar para mejorar OCR (2x)
-                img = img.resize((img.width * 2, img.height * 2), PilImage.LANCZOS)
+                # Escalar 3x para mejorar OCR
+                img = img.resize((img.width * 3, img.height * 3), PilImage.LANCZOS)
 
-                ocr_text = pytesseract.image_to_string(
-                    img,
-                    lang='spa+eng',
-                    config='--psm 6 --oem 3',
-                )
+                # Intentar con diferentes configuraciones PSM
+                ocr_text = ''
+                for psm in ['--psm 6', '--psm 4', '--psm 3']:
+                    try:
+                        text = pytesseract.image_to_string(
+                            img,
+                            lang='spa+eng',
+                            config=f'{psm} --oem 3',
+                        )
+                        if text.strip():
+                            ocr_text = text
+                            break
+                    except Exception as psm_err:
+                        logger.debug(f'PSM {psm} failed: {psm_err}')
+                        continue
+
                 logger.info(f'Telegram Tesseract OCR: {ocr_text[:300]}')
 
                 ocr_data = _parse_telegram_ocr(ocr_text)
@@ -1014,43 +1033,8 @@ def process_image_message(chat_id, file_id, user_id, user_role, caption=None, mo
             except Exception as tess_err:
                 logger.warning(f'Tesseract OCR falló: {tess_err}')
 
-        # 2. Fallback a Ollama vision si Tesseract no funcionó
-        if not ocr_data or not ocr_data.get('amount'):
-            try:
-                import ollama as ollama_lib
-
-                ollama_host = os.environ.get('OLLAMA_HOST', 'http://127.0.0.1:11434')
-                client = ollama_lib.Client(host=ollama_host)
-
-                response = client.chat(
-                    model='qwen2.5:1.5b',
-                    messages=[
-                        {
-                            'role': 'user',
-                            'content': (
-                                'Extrae los datos de este comprobante de pago peruano. '
-                                'Responde SOLO con un JSON válido sin texto adicional: '
-                                '{"amount": número, "method": "Efectivo|Yape|Transferencia|Plin", '
-                                '"patient_name": "nombre si aparece", "date": "YYYY-MM-DD si aparece", '
-                                '"transaction_id": "número de operación si aparece"}. '
-                                'Si un dato no se ve, usa null. Ejemplo: {"amount": 150, "method": "Yape", "patient_name": null, "date": null, "transaction_id": null}'
-                            ),
-                        }
-                    ],
-                    options={'temperature': 0.1, 'num_ctx': 2048},
-                )
-
-                content = response.get('message', {}).get('content', '')
-                logger.info(f'Ollama vision response: {content[:200]}')
-
-                json_match = re.search(r'\{[^{}]*\}', content)
-                if json_match:
-                    ocr_data = json.loads(json_match.group())
-                    logger.info(f'Ollama vision OCR exitoso: {ocr_data}')
-            except Exception as ollama_err:
-                logger.warning(f'Ollama vision OCR falló: {ollama_err}')
-
-        # 3. Fallback a Groq vision si Ollama no funcionó
+        # 2. Fallback a Groq vision si Tesseract no funcionó
+        # NOTA: Ollama qwen2.5:1.5b es text-only, no puede procesar imágenes
         if not ocr_data or not ocr_data.get('amount'):
             groq_key = current_app.config.get('GROQ_API_KEY')
             if groq_key:
