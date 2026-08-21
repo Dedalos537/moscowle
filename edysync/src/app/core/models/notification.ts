@@ -44,6 +44,7 @@ export interface NotificationItem {
 }
 
 export interface NotificationPreferences {
+  notifications_enabled: boolean;
   debt_enabled: boolean;
   activity_enabled: boolean;
   system_enabled: boolean;
