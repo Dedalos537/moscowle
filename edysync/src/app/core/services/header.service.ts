@@ -1,4 +1,4 @@
-import { Injectable, TemplateRef } from '@angular/core';
+import { Injectable, TemplateRef, signal } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
 export interface HeaderConfig {
@@ -21,6 +21,9 @@ export class HeaderService {
   subtitle$ = this.subtitleSub.asObservable();
   icon$ = this.iconSub.asObservable();
   actionTemplate$ = this.actionTemplateSub.asObservable();
+
+  /** When true, header is hidden (used by settings page) */
+  hidden = signal(false);
 
   setConfig(config: HeaderConfig) {
     if (config.title !== undefined) this.titleSub.next(config.title);

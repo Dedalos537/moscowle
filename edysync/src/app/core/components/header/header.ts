@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, effect, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, effect, ElementRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { HeaderService } from '../../services/header.service';
@@ -38,6 +38,11 @@ export class Header implements OnInit, OnDestroy {
 
   CATEGORY_ICONS = CATEGORY_ICONS;
   CATEGORY_COLORS = CATEGORY_COLORS;
+  public headerService = inject(HeaderService);
+  private hiddenEffect = effect(() => {
+    this.headerService.hidden();
+    this.cdr.markForCheck();
+  });
   private notifEffect = effect(() => {
     this.notifications = this.notifService.notifications();
     this.unreadCount = this.notifService.unreadCount();
@@ -46,7 +51,6 @@ export class Header implements OnInit, OnDestroy {
 
   constructor(
     private el: ElementRef,
-    public headerService: HeaderService,
     private adminService: AdminService,
     private authService: AuthService,
     private recordingService: RecordingService,
@@ -56,6 +60,10 @@ export class Header implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     public notifService: NotificationService,
   ) {}
+
+  get isVisible(): boolean {
+    return !this.headerService.hidden();
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(e: MouseEvent) {

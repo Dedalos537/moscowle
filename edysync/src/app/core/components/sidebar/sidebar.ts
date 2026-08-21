@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, HostListener, ElementRef } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, ElementRef } from '@angular/core';
+import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
@@ -7,7 +7,7 @@ import { SidebarService } from '../../services/sidebar.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
 import { NotificationService } from '../../services/notification.service';
 import { HelpStateService } from '../../../shared/contextual-help/services/help-state.service';
-import { Subscription } from 'rxjs';
+import { Subscription, filter } from 'rxjs';
 
 interface NavItem {
   path: string;
@@ -28,6 +28,7 @@ interface NavItem {
 })
 export class Sidebar implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
+  private router = inject(Router);
   hideCharts = this.settings.hideCharts;
 
   userRole: string = '';
@@ -101,6 +102,15 @@ export class Sidebar implements OnInit, OnDestroy {
       this.isOpen = open;
       this.cdr.markForCheck();
     }));
+
+    // Auto-collapse sidebar on every navigation (desktop)
+    this.subs.add(
+      this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
+        this.collapsed = true;
+        this.isHovered = false;
+        this.cdr.markForCheck();
+      })
+    );
   }
 
   ngOnDestroy() {

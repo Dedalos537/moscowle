@@ -1,3 +1,4 @@
+@if (isVisible) {
 <header class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-colors duration-300">
   <div class="flex items-center gap-2 sm:gap-3">
     <button (click)="toggleSidebar()" class="md:hidden w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-0.5 sm:mr-1" aria-label="Toggle sidebar">
@@ -116,6 +117,7 @@
     </div>
   </div>
 </header>
+}
 @if (showLogoutWarning) {
   <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" (click)="cancelLogout()">
     <div class="bg-surface-container-lowest rounded-xl shadow-soft border border-border/30 max-w-sm w-full p-6 animate-fade-in" (click)="$event.stopPropagation()">
