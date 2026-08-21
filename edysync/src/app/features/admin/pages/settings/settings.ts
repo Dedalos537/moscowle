@@ -1,10 +1,11 @@
-import { Component, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { ThemeService, type ThemeSchedule } from '../../../../core/services/theme.service';
 import { GlobalSettingsService, COLOR_PRESETS, type FontSize } from '../../../../core/services/global-settings.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { AdminService } from '../../../../core/services/admin.service';
+import { HeaderService } from '../../../../core/services/header.service';
 
 @Component({
   selector: 'app-settings',
@@ -12,393 +13,489 @@ import { AdminService } from '../../../../core/services/admin.service';
   imports: [FontAwesomeModule],
   template: `
     <div class="settings-page">
-      <div class="settings-header">
-        <h1 class="text-h3 font-bold text-on-surface">Configuración</h1>
-        <p class="text-body-sm text-on-surface-variant mt-1">Personaliza tu experiencia en la plataforma</p>
-      </div>
 
       <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
-      <section class="settings-section">
-        <h2 class="settings-section__title">
-          <fa-icon [icon]="['fas', 'palette']" class="text-primary"></fa-icon>
-          Apariencia
-        </h2>
-
-        <!-- Modo oscuro -->
-        <div class="settings-row">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-surface-container-low">
-              <fa-icon [icon]="['fas', isDark ? 'sun' : 'moon']" class="text-on-surface-variant"></fa-icon>
-            </div>
-            <div>
-              <p class="settings-row__label">Modo oscuro</p>
-              <p class="settings-row__desc">Tema visual de la plataforma</p>
-            </div>
+      <section class="settings-card">
+        <div class="settings-card__header">
+          <div class="settings-card__icon settings-card__icon--green">
+            <fa-icon [icon]="['fas', 'palette']"></fa-icon>
           </div>
-          <button type="button" class="pref-switch" (click)="toggleDark()" [class.pref-switch--on]="isDark">
-            <span class="pref-switch__knob"></span>
-          </button>
-        </div>
-
-        <!-- Programar modo oscuro -->
-        <div class="settings-row">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-surface-container-low">
-              <fa-icon [icon]="['fas', 'clock']" class="text-primary"></fa-icon>
-            </div>
-            <div>
-              <p class="settings-row__label">Programar modo oscuro</p>
-              <p class="settings-row__desc">Cambio automático por horario</p>
-            </div>
-          </div>
-          <button type="button" class="pref-switch" (click)="toggleSchedule()" [class.pref-switch--on]="schedule.enabled">
-            <span class="pref-switch__knob"></span>
-          </button>
-        </div>
-
-        @if (schedule.enabled) {
-          <div class="settings-schedule-row">
-            <div class="settings-schedule-select">
-              <label class="text-xs font-medium text-on-surface-variant">De</label>
-              <select [value]="schedule.from" (change)="setScheduleFrom(+$any($event.target).value)">
-                @for (h of hours; track h) {
-                  <option [value]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-                }
-              </select>
-            </div>
-            <fa-icon [icon]="['fas', 'arrow-right']" class="text-on-surface-variant text-xs mt-4"></fa-icon>
-            <div class="settings-schedule-select">
-              <label class="text-xs font-medium text-on-surface-variant">Hasta</label>
-              <select [value]="schedule.to" (change)="setScheduleTo(+$any($event.target).value)">
-                @for (h of hours; track h) {
-                  <option [value]="h">{{ h.toString().padStart(2, '0') }}:00</option>
-                }
-              </select>
-            </div>
-          </div>
-        }
-
-        <!-- Tamaño de fuente -->
-        <div class="settings-row">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-surface-container-low">
-              <fa-icon [icon]="['fas', 'text-height']" class="text-on-surface-variant"></fa-icon>
-            </div>
-            <div>
-              <p class="settings-row__label">Tamaño de fuente</p>
-              <p class="settings-row__desc">Ajusta el tamaño del texto general</p>
-            </div>
-          </div>
-          <div class="settings-chip-group">
-            <button type="button" class="settings-chip" [class.settings-chip--active]="fontSize() === 'small'" (click)="setFontSize('small')">A</button>
-            <button type="button" class="settings-chip settings-chip--md" [class.settings-chip--active]="fontSize() === 'medium'" (click)="setFontSize('medium')">A</button>
-            <button type="button" class="settings-chip settings-chip--lg" [class.settings-chip--active]="fontSize() === 'large'" (click)="setFontSize('large')">A</button>
+          <div>
+            <h2 class="settings-card__title">Apariencia</h2>
+            <p class="settings-card__subtitle">Personaliza el tema visual de la plataforma</p>
           </div>
         </div>
 
-        <!-- Color primario -->
-        <div class="settings-row settings-row--column">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-surface-container-low">
-              <fa-icon [icon]="['fas', 'droplet']" class="text-on-surface-variant"></fa-icon>
+        <div class="settings-card__body">
+          <!-- Modo oscuro -->
+          <div class="setting-item">
+            <div class="setting-item__left">
+              <div class="setting-item__icon">
+                <fa-icon [icon]="['fas', isDark ? 'sun' : 'moon']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Modo oscuro</span>
+                <span class="setting-item__desc">Tema visual de la plataforma</span>
+              </div>
             </div>
-            <div>
-              <p class="settings-row__label">Color primario</p>
-              <p class="settings-row__desc">Color principal del panel de navegación y acentos</p>
-            </div>
+            <button type="button" class="toggle" [class.toggle--on]="isDark" (click)="toggleDark()">
+              <span class="toggle__thumb"></span>
+            </button>
           </div>
-          <div class="settings-color-grid">
-            @for (color of colorPresets; track color.name) {
-              <button
-                type="button"
-                class="settings-color-swatch"
-                [class.settings-color-swatch--active]="primaryColor() === color.name"
-                [style.background]="color.light"
-                (click)="setPrimaryColor(color.name)"
-                [attr.aria-label]="color.label"
-              >
-                @if (primaryColor() === color.name) {
-                  <fa-icon [icon]="['fas', 'check']" class="text-white text-xs"></fa-icon>
-                }
-              </button>
-            }
-          </div>
-        </div>
 
-        <!-- Ocultar gráficos -->
-        <div class="settings-row">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-surface-container-low">
-              <fa-icon [icon]="['fas', 'chart-bar']" class="text-on-surface-variant"></fa-icon>
+          <!-- Programar modo oscuro -->
+          <div class="setting-item">
+            <div class="setting-item__left">
+              <div class="setting-item__icon">
+                <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Programar modo oscuro</span>
+                <span class="setting-item__desc">Cambio automático por horario</span>
+              </div>
             </div>
-            <div>
-              <p class="settings-row__label">Ocultar gráficos</p>
-              <p class="settings-row__desc">Reduce elementos visuales en paneles</p>
+            <button type="button" class="toggle" [class.toggle--on]="schedule.enabled" (click)="toggleSchedule()">
+              <span class="toggle__thumb"></span>
+            </button>
+          </div>
+
+          @if (schedule.enabled) {
+            <div class="setting-item setting-item--indent">
+              <div class="schedule-selects">
+                <div class="schedule-field">
+                  <label>De</label>
+                  <select [value]="schedule.from" (change)="setScheduleFrom(+$any($event.target).value)">
+                    @for (h of hours; track h) {
+                      <option [value]="h">{{ h.toString().padStart(2, '0') }}:00</option>
+                    }
+                  </select>
+                </div>
+                <fa-icon [icon]="['fas', 'arrow-right']" class="schedule-arrow"></fa-icon>
+                <div class="schedule-field">
+                  <label>Hasta</label>
+                  <select [value]="schedule.to" (change)="setScheduleTo(+$any($event.target).value)">
+                    @for (h of hours; track h) {
+                      <option [value]="h">{{ h.toString().padStart(2, '0') }}:00</option>
+                    }
+                  </select>
+                </div>
+              </div>
+            </div>
+          }
+
+          <div class="setting-divider"></div>
+
+          <!-- Tamaño de fuente -->
+          <div class="setting-item">
+            <div class="setting-item__left">
+              <div class="setting-item__icon">
+                <fa-icon [icon]="['fas', 'text-height']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Tamaño de fuente</span>
+                <span class="setting-item__desc">Ajusta el tamaño del texto general</span>
+              </div>
+            </div>
+            <div class="font-size-group">
+              <button type="button" class="font-btn" [class.font-btn--active]="fontSize() === 'small'" (click)="setFontSize('small')">A</button>
+              <button type="button" class="font-btn font-btn--md" [class.font-btn--active]="fontSize() === 'medium'" (click)="setFontSize('medium')">A</button>
+              <button type="button" class="font-btn font-btn--lg" [class.font-btn--active]="fontSize() === 'large'" (click)="setFontSize('large')">A</button>
             </div>
           </div>
-          <button type="button" class="pref-switch" (click)="toggleHideCharts()" [class.pref-switch--on]="hideCharts()">
-            <span class="pref-switch__knob"></span>
-          </button>
+
+          <div class="setting-divider"></div>
+
+          <!-- Color primario -->
+          <div class="setting-item setting-item--column">
+            <div class="setting-item__left">
+              <div class="setting-item__icon">
+                <fa-icon [icon]="['fas', 'droplet']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Color primario</span>
+                <span class="setting-item__desc">Color principal del panel de navegación y acentos</span>
+              </div>
+            </div>
+            <div class="color-grid">
+              @for (color of colorPresets; track color.name) {
+                <button
+                  type="button"
+                  class="color-swatch"
+                  [class.color-swatch--active]="primaryColor() === color.name"
+                  [style.background]="color.light"
+                  (click)="setPrimaryColor(color.name)"
+                  [attr.aria-label]="color.label"
+                >
+                  @if (primaryColor() === color.name) {
+                    <fa-icon [icon]="['fas', 'check']"></fa-icon>
+                  }
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="setting-divider"></div>
+
+          <!-- Ocultar gráficos -->
+          <div class="setting-item">
+            <div class="setting-item__left">
+              <div class="setting-item__icon">
+                <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Ocultar gráficos</span>
+                <span class="setting-item__desc">Reduce elementos visuales en paneles</span>
+              </div>
+            </div>
+            <button type="button" class="toggle" [class.toggle--on]="hideCharts()" (click)="toggleHideCharts()">
+              <span class="toggle__thumb"></span>
+            </button>
+          </div>
         </div>
       </section>
 
       <!-- ═══════════════════════ NOTIFICACIONES ═══════════════════════ -->
-      <section class="settings-section">
-        <h2 class="settings-section__title">
-          <fa-icon [icon]="['fas', 'bell']" class="text-primary"></fa-icon>
-          Notificaciones
-        </h2>
-
-        <!-- Toggle maestro -->
-        <div class="settings-row settings-row--highlight">
-          <div class="settings-row__info">
-            <div class="settings-row__icon bg-primary/10">
-              <fa-icon [icon]="['fas', 'bell']" class="text-primary"></fa-icon>
-            </div>
-            <div>
-              <p class="settings-row__label font-bold">Activar notificaciones</p>
-              <p class="settings-row__desc">Toggle maestro: On/Off</p>
-            </div>
+      <section class="settings-card">
+        <div class="settings-card__header">
+          <div class="settings-card__icon settings-card__icon--amber">
+            <fa-icon [icon]="['fas', 'bell']"></fa-icon>
           </div>
-          <button type="button" class="pref-switch" (click)="toggleNotificationsGlobal()" [class.pref-switch--on]="notifPrefs.notifications_enabled">
-            <span class="pref-switch__knob"></span>
-          </button>
+          <div>
+            <h2 class="settings-card__title">Notificaciones</h2>
+            <p class="settings-card__subtitle">Gestiona cómo recibes las alertas</p>
+          </div>
         </div>
 
-        @if (notifPrefs.notifications_enabled) {
-          <!-- Deudas -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-warning/10">
-                <fa-icon [icon]="['fas', 'money-bill-wave']" class="text-warning"></fa-icon>
+        <div class="settings-card__body">
+          <!-- Toggle maestro -->
+          <div class="setting-item setting-item--highlight">
+            <div class="setting-item__left">
+              <div class="setting-item__icon setting-item__icon--primary">
+                <fa-icon [icon]="['fas', 'bell']"></fa-icon>
               </div>
-              <p class="settings-row__label">Deudas</p>
+              <div class="setting-item__text">
+                <span class="setting-item__label setting-item__label--bold">Activar notificaciones</span>
+                <span class="setting-item__desc">Toggle maestro: On/Off</span>
+              </div>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleCategory('debt')" [class.pref-switch--on]="notifPrefs.debt_enabled">
-              <span class="pref-switch__knob"></span>
+            <button type="button" class="toggle" [class.toggle--on]="notifPrefs.notifications_enabled" (click)="toggleNotificationsGlobal()">
+              <span class="toggle__thumb"></span>
             </button>
           </div>
 
-          <!-- Actividad -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-info/10">
-                <fa-icon [icon]="['fas', 'calendar-alt']" class="text-info"></fa-icon>
+          @if (notifPrefs.notifications_enabled) {
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon setting-item__icon--amber">
+                  <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Deudas</span>
               </div>
-              <p class="settings-row__label">Actividad</p>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.debt_enabled" (click)="toggleCategory('debt')">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleCategory('activity')" [class.pref-switch--on]="notifPrefs.activity_enabled">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
 
-          <!-- Sistema -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-surface-container-low">
-                <fa-icon [icon]="['fas', 'cog']" class="text-primary"></fa-icon>
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon setting-item__icon--blue">
+                  <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Actividad</span>
               </div>
-              <p class="settings-row__label">Sistema</p>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.activity_enabled" (click)="toggleCategory('activity')">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleCategory('system')" [class.pref-switch--on]="notifPrefs.system_enabled">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
 
-          <!-- Alertas -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-error/10">
-                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="text-error"></fa-icon>
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon">
+                  <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Sistema</span>
               </div>
-              <p class="settings-row__label">Alertas</p>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.system_enabled" (click)="toggleCategory('system')">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleCategory('alert')" [class.pref-switch--on]="notifPrefs.alert_enabled">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
 
-          <!-- Pagos -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-tertiary/10">
-                <fa-icon [icon]="['fas', 'credit-card']" class="text-tertiary"></fa-icon>
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon setting-item__icon--red">
+                  <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Alertas</span>
               </div>
-              <p class="settings-row__label">Pagos</p>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.alert_enabled" (click)="toggleCategory('alert')">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleCategory('payment')" [class.pref-switch--on]="notifPrefs.payment_enabled">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
 
-          <!-- Telegram -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-[#229ED9]/15">
-                <fa-icon [icon]="['fab', 'telegram']" class="text-[#229ED9]"></fa-icon>
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon setting-item__icon--purple">
+                  <fa-icon [icon]="['fas', 'credit-card']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Pagos</span>
               </div>
-              <div>
-                <p class="settings-row__label">Notif. Telegram</p>
-                <p class="settings-row__desc">
-                  @if (telegramLoading) { Cargando… }
-                  @else if (telegramAccounts.length === 0) { Sin cuenta vinculada }
-                  @else { {{ telegramAccounts.length }} cuenta(s) vinculada(s) }
-                </p>
-              </div>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.payment_enabled" (click)="toggleCategory('payment')">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch"
-              [disabled]="telegramLoading || telegramToggling !== null || telegramAccounts.length === 0"
-              (click)="toggleTelegramNotifications()"
-              [class.pref-switch--on]="telegramAllEnabled()">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
 
-          <!-- Sonido -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-surface-container-low">
-                <fa-icon [icon]="['fas', 'volume-up']" class="text-on-surface-variant"></fa-icon>
-              </div>
-              <p class="settings-row__label">Sonido</p>
-            </div>
-            <button type="button" class="pref-switch" (click)="toggleSound()" [class.pref-switch--on]="notifPrefs.sound_enabled">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
+            <div class="setting-divider"></div>
 
-          <!-- Notificaciones del navegador -->
-          <div class="settings-row">
-            <div class="settings-row__info">
-              <div class="settings-row__icon bg-surface-container-low">
-                <fa-icon [icon]="['fas', 'desktop']" class="text-on-surface-variant"></fa-icon>
+            <!-- Telegram -->
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon setting-item__icon--telegram">
+                  <fa-icon [icon]="['fab', 'telegram']"></fa-icon>
+                </div>
+                <div class="setting-item__text">
+                  <span class="setting-item__label">Notif. Telegram</span>
+                  <span class="setting-item__desc">
+                    @if (telegramLoading) { Cargando… }
+                    @else if (telegramAccounts.length === 0) { Sin cuenta vinculada }
+                    @else { {{ telegramAccounts.length }} cuenta(s) vinculada(s) }
+                  </span>
+                </div>
               </div>
-              <div>
-                <p class="settings-row__label">Notif. Escritorio</p>
-                <p class="settings-row__desc">Notificaciones del navegador</p>
-              </div>
+              <button type="button" class="toggle"
+                [disabled]="telegramLoading || telegramToggling !== null || telegramAccounts.length === 0"
+                [class.toggle--on]="telegramAllEnabled()"
+                (click)="toggleTelegramNotifications()">
+                <span class="toggle__thumb"></span>
+              </button>
             </div>
-            <button type="button" class="pref-switch" (click)="toggleBrowserNotif()" [class.pref-switch--on]="notifPrefs.browser_notifications">
-              <span class="pref-switch__knob"></span>
-            </button>
-          </div>
-        }
+
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon">
+                  <fa-icon [icon]="['fas', 'volume-up']"></fa-icon>
+                </div>
+                <span class="setting-item__label">Sonido</span>
+              </div>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.sound_enabled" (click)="toggleSound()">
+                <span class="toggle__thumb"></span>
+              </button>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-item__left">
+                <div class="setting-item__icon">
+                  <fa-icon [icon]="['fas', 'desktop']"></fa-icon>
+                </div>
+                <div class="setting-item__text">
+                  <span class="setting-item__label">Notif. Escritorio</span>
+                  <span class="setting-item__desc">Notificaciones del navegador</span>
+                </div>
+              </div>
+              <button type="button" class="toggle" [class.toggle--on]="notifPrefs.browser_notifications" (click)="toggleBrowserNotif()">
+                <span class="toggle__thumb"></span>
+              </button>
+            </div>
+          }
+        </div>
       </section>
+
+      <!-- Save button -->
+      <div class="settings-save-bar">
+        <button type="button" class="save-btn" (click)="saveAll()" [class.save-btn--saving]="saving" [disabled]="saving">
+          @if (saving) {
+            <span class="save-spinner"></span>
+            <span>Guardando…</span>
+          } @else if (saved) {
+            <fa-icon [icon]="['fas', 'check']"></fa-icon>
+            <span>Guardado</span>
+          } @else {
+            <fa-icon [icon]="['fas', 'save']"></fa-icon>
+            <span>Guardar cambios</span>
+          }
+        </button>
+      </div>
     </div>
   `,
   styles: [`
     .settings-page {
-      max-width: 720px;
+      max-width: 680px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
+      padding: 1.5rem 1.25rem 5rem;
     }
-    .settings-header { margin-bottom: 2rem; }
 
-    .settings-section {
+    /* ── Card ─────────────────────────────────────────────── */
+    .settings-card {
       background: var(--color-surface-container-lowest);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      border: 1px solid var(--color-outline-variant);
+      border-radius: 1rem;
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
     }
-    .settings-section__title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--color-on-surface-variant);
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
+    .settings-card:hover { border-color: var(--color-outline); }
+
+    .settings-card__header {
+      display: flex; align-items: center; gap: 0.875rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--color-surface-container-low);
       border-bottom: 1px solid var(--color-outline-variant);
     }
-
-    .settings-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.75rem 0.5rem;
-      border-radius: var(--radius-lg);
-      transition: background var(--transition-fast);
+    .settings-card__icon {
+      width: 2.5rem; height: 2.5rem; border-radius: 0.75rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; color: var(--color-on-surface-variant);
+      background: var(--color-surface-container-highest);
+      flex-shrink: 0;
     }
-    .settings-row:hover { background: var(--color-surface-container-low); }
-    .settings-row--column { flex-direction: column; align-items: stretch; }
-    .settings-row--highlight { background: var(--color-surface-container-low); }
-    .settings-row__info { display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1; }
-    .settings-row__icon {
-      width: 2.25rem; height: 2.25rem; border-radius: var(--radius-md);
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      font-size: 0.8rem;
-    }
-    .settings-row__label { font-size: 0.9rem; font-weight: 600; color: var(--color-on-surface); }
-    .settings-row__desc { font-size: 0.75rem; color: var(--color-on-surface-variant); margin-top: 0.1rem; }
+    .settings-card__icon--green { color: #2e7d32; background: #dcedc8; }
+    .settings-card__icon--amber { color: #d97706; background: #fef3c7; }
+    .settings-card__title { font-size: 1rem; font-weight: 700; color: var(--color-on-surface); }
+    .settings-card__subtitle { font-size: 0.78rem; color: var(--color-on-surface-variant); margin-top: 0.1rem; }
 
-    .pref-switch {
-      position: relative; width: 40px; height: 22px; border-radius: 999px;
+    .settings-card__body { padding: 0.25rem 0; }
+
+    /* ── Setting row ─────────────────────────────────────── */
+    .setting-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      padding: 0.875rem 1.5rem;
+      transition: background 0.15s;
+    }
+    .setting-item:hover { background: var(--color-surface-container-low); }
+    .setting-item--column { flex-direction: column; align-items: stretch; }
+    .setting-item--highlight { background: var(--color-surface-container-low); }
+    .setting-item--indent { padding-left: 3.5rem; }
+
+    .setting-item__left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1; }
+    .setting-item__icon {
+      width: 2rem; height: 2rem; border-radius: 0.5rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; color: var(--color-on-surface-variant);
+      background: var(--color-surface-container-highest); flex-shrink: 0;
+    }
+    .setting-item__icon--primary { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 12%, transparent); }
+    .setting-item__icon--amber { color: #d97706; background: #fef3c7; }
+    .setting-item__icon--blue { color: #2563eb; background: #dbeafe; }
+    .setting-item__icon--red { color: #dc2626; background: #fee2e2; }
+    .setting-item__icon--purple { color: #7c3aed; background: #ede9fe; }
+    .setting-item__icon--telegram { color: #229ED9; background: #e8f5fd; }
+
+    .setting-item__text { display: flex; flex-direction: column; }
+    .setting-item__label { font-size: 0.875rem; font-weight: 600; color: var(--color-on-surface); }
+    .setting-item__label--bold { font-weight: 700; }
+    .setting-item__desc { font-size: 0.72rem; color: var(--color-on-surface-variant); margin-top: 0.1rem; }
+
+    .setting-divider {
+      height: 1px; margin: 0 1.5rem;
+      background: var(--color-outline-variant);
+    }
+
+    /* ── Toggle switch ───────────────────────────────────── */
+    .toggle {
+      position: relative; width: 42px; height: 24px; border-radius: 999px;
       border: none; cursor: pointer; background: var(--color-outline-variant);
-      transition: background 0.2s; flex-shrink: 0; padding: 0;
+      transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      flex-shrink: 0; padding: 0;
     }
-    .pref-switch--on { background: var(--color-primary); }
-    .pref-switch__knob {
-      position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
-      border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
+    .toggle--on { background: var(--color-primary); }
+    .toggle__thumb {
+      position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+      border-radius: 50%; background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .pref-switch--on .pref-switch__knob { transform: translateX(18px); }
-    .pref-switch:disabled { opacity: 0.4; cursor: not-allowed; }
+    .toggle--on .toggle__thumb { transform: translateX(18px); }
+    .toggle:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    .settings-schedule-row {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0 0.5rem 0.75rem;
+    /* ── Schedule selects ────────────────────────────────── */
+    .schedule-selects { display: flex; align-items: center; gap: 0.75rem; width: 100%; }
+    .schedule-field { flex: 1; }
+    .schedule-field label {
+      display: block; font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--color-on-surface-variant); margin-bottom: 0.25rem;
     }
-    .settings-schedule-select { flex: 1; }
-    .settings-schedule-select select {
-      width: 100%; margin-top: 0.25rem; height: 2.25rem; border-radius: var(--radius-md);
-      background: var(--color-surface-container-low); color: var(--color-on-surface);
-      font-size: 0.85rem; padding: 0 0.5rem; border: 1px solid var(--color-outline-variant);
-      outline: none; cursor: pointer;
+    .schedule-field select {
+      width: 100%; height: 2.25rem; border-radius: 0.5rem;
+      background: var(--color-surface-container-high); color: var(--color-on-surface);
+      font-size: 0.85rem; padding: 0 0.5rem;
+      border: 1px solid var(--color-outline-variant); outline: none; cursor: pointer;
+      transition: border-color 0.15s;
     }
-    .settings-schedule-select select:focus { border-color: var(--color-primary); }
+    .schedule-field select:focus { border-color: var(--color-primary); }
+    .schedule-arrow { color: var(--color-on-surface-variant); font-size: 0.7rem; margin-top: 1.25rem; }
 
-    .settings-chip-group { display: flex; gap: 0.375rem; }
-    .settings-chip {
-      width: 2rem; height: 2rem; border-radius: var(--radius-md); border: 1px solid var(--color-outline-variant);
-      background: var(--color-surface); color: var(--color-on-surface); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-weight: 600;
-      transition: all 0.15s;
+    /* ── Font size buttons ───────────────────────────────── */
+    .font-size-group { display: flex; gap: 0.25rem; }
+    .font-btn {
+      width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
+      border: 1.5px solid var(--color-outline-variant); background: var(--color-surface);
+      color: var(--color-on-surface); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600; transition: all 0.15s;
     }
-    .settings-chip { font-size: 0.75rem; }
-    .settings-chip--md { font-size: 0.9rem; }
-    .settings-chip--lg { font-size: 1.05rem; }
-    .settings-chip--active {
-      background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary);
+    .font-btn { font-size: 0.75rem; }
+    .font-btn--md { font-size: 0.9rem; }
+    .font-btn--lg { font-size: 1.05rem; }
+    .font-btn--active {
+      background: var(--color-primary); color: var(--color-on-primary);
+      border-color: var(--color-primary);
     }
 
-    .settings-color-grid {
-      display: flex; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap;
+    /* ── Color swatches ──────────────────────────────────── */
+    .color-grid { display: flex; gap: 0.625rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .color-swatch {
+      width: 2.75rem; height: 2.75rem; border-radius: 50%;
+      border: 3px solid transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      color: white; font-size: 0.7rem;
     }
-    .settings-color-swatch {
-      width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 3px solid transparent;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    .color-swatch:hover { transform: scale(1.12); box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+    .color-swatch--active {
+      border-color: var(--color-on-surface); transform: scale(1.12);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
     }
-    .settings-color-swatch:hover { transform: scale(1.15); }
-    .settings-color-swatch--active { border-color: var(--color-on-surface); transform: scale(1.15); }
+
+    /* ── Save bar ────────────────────────────────────────── */
+    .settings-save-bar {
+      display: flex; justify-content: flex-end; padding: 0.5rem 0 2rem;
+      position: sticky; bottom: 0;
+    }
+    .save-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.75rem; border-radius: 0.75rem;
+      border: none; cursor: pointer;
+      background: var(--color-primary); color: var(--color-on-primary);
+      font-size: 0.9rem; font-weight: 700;
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
+      transition: all 0.2s;
+    }
+    .save-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 40%, transparent); }
+    .save-btn:active { transform: translateY(0); }
+    .save-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+    .save-btn--saving { background: var(--color-on-surface-variant); }
+    .save-spinner {
+      width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Settings {
+export class Settings implements OnInit, OnDestroy {
   private theme = inject(ThemeService);
   private settings = inject(GlobalSettingsService);
   private notifService = inject(NotificationService);
   private admin = inject(AdminService);
+  private headerService = inject(HeaderService);
   private cdr = inject(ChangeDetectorRef);
 
   hours = Array.from({ length: 24 }, (_, i) => i);
   colorPresets = COLOR_PRESETS;
+
+  saving = false;
+  saved = false;
 
   get isDark() { return (this.theme.theme$ as any).value === 'dark'; }
   get schedule(): ThemeSchedule { return this.theme.getSchedule(); }
@@ -417,10 +514,50 @@ export class Settings {
     sound_enabled: true, browser_notifications: false,
   };
 
+  ngOnInit() {
+    this.headerService.setConfig({
+      title: 'Configuración',
+      subtitle: 'Personaliza tu experiencia en la plataforma',
+      icon: ['fas', 'cog'],
+    });
+  }
+
+  ngOnDestroy() {
+    this.headerService.reset();
+  }
+
   constructor() {
     this.theme.theme$.subscribe(() => this.cdr.markForCheck());
     this.theme.schedule$.subscribe(() => this.cdr.markForCheck());
     this.loadTelegramStatus();
+  }
+
+  saveAll(): void {
+    this.saving = true;
+    this.cdr.markForCheck();
+
+    const prefs = this.notifPrefs;
+    this.notifService.updatePreferences({
+      notifications_enabled: prefs.notifications_enabled,
+      debt_enabled: prefs.debt_enabled,
+      activity_enabled: prefs.activity_enabled,
+      system_enabled: prefs.system_enabled,
+      alert_enabled: prefs.alert_enabled,
+      payment_enabled: prefs.payment_enabled,
+      sound_enabled: prefs.sound_enabled,
+      browser_notifications: prefs.browser_notifications,
+    }).subscribe({
+      next: () => {
+        this.saving = false;
+        this.saved = true;
+        this.cdr.markForCheck();
+        setTimeout(() => { this.saved = false; this.cdr.markForCheck(); }, 2500);
+      },
+      error: () => {
+        this.saving = false;
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   toggleDark(): void {
