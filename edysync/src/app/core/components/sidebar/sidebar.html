@@ -51,13 +51,5 @@
       [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
       <fa-icon [icon]="['fas', helpState.panelOpen() ? 'times' : 'question']"></fa-icon>
     </button>
-    @if (notifCount > 0) {
-      <div class="sidebar-notif-badge">
-        <fa-icon [icon]="['fas', 'bell']" class="text-xs"></fa-icon>
-        @if (isExpanded) {
-          <span>{{ notifCount > 9 ? '9+' : notifCount }}</span>
-        }
-      </div>
-    }
   </div>
 </aside>

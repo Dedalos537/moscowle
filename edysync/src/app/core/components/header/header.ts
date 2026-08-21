@@ -10,14 +10,13 @@ import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 import { Button } from '../../../shared/components/button/button';
-import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
 import { NotificationService } from '../../services/notification.service';
 import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationItem } from '../../models/notification';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Button, PreferencesMenu],
+  imports: [CommonModule, FontAwesomeModule, Button],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,10 +38,6 @@ export class Header implements OnInit, OnDestroy {
   CATEGORY_ICONS = CATEGORY_ICONS;
   CATEGORY_COLORS = CATEGORY_COLORS;
   public headerService = inject(HeaderService);
-  private hiddenEffect = effect(() => {
-    this.headerService.hidden();
-    this.cdr.markForCheck();
-  });
   private notifEffect = effect(() => {
     this.notifications = this.notifService.notifications();
     this.unreadCount = this.notifService.unreadCount();
@@ -60,10 +55,6 @@ export class Header implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     public notifService: NotificationService,
   ) {}
-
-  get isVisible(): boolean {
-    return !this.headerService.hidden();
-  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(e: MouseEvent) {

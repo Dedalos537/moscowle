@@ -5,7 +5,6 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
-import { NotificationService } from '../../services/notification.service';
 import { HelpStateService } from '../../../shared/contextual-help/services/help-state.service';
 import { Subscription, filter } from 'rxjs';
 
@@ -34,18 +33,11 @@ export class Sidebar implements OnInit, OnDestroy {
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
-  notifCount = 0;
 
   /** Desktop collapsed state (icons only) */
   collapsed = true;
   /** Hover state for desktop expansion */
   isHovered = false;
-
-  private notifService = inject(NotificationService);
-  private notifEffect = effect(() => {
-    this.notifCount = this.notifService.unreadCount();
-    this.cdr.markForCheck();
-  });
 
   private subs = new Subscription();
 
@@ -54,7 +46,7 @@ export class Sidebar implements OnInit, OnDestroy {
     { path: '/admin/sessions', label: 'Sesiones Globales', subtitle: 'Todas las sesiones', icon: ['fas', 'calendar-alt'], supervisor: true },
     { path: '/admin/users', label: 'Admin Usuarios', subtitle: 'Gestión de usuarios', icon: ['fas', 'users'] },
     { path: '/admin/sedes', label: 'Sedes', subtitle: 'Sucursales', icon: ['fas', 'building'], supervisor: true },
-    { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'university'], supervisor: true, hideWhenNoCharts: true },
+    { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'university'], supervisor: true },
 
     { path: '/admin/games', label: 'Admin Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
     { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
