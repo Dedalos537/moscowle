@@ -34,6 +34,14 @@ body { font-size: 16px; }
   --color-on-primary-container: #1f3800;
   --color-surface-container-highest: #e1e4d7;
 
+  --color-surface-tint: #75a83a;
+  --color-primary-hover: color-mix(in srgb, #75a83a 85%, black);
+  --color-primary-container-hover: color-mix(in srgb, #75a83a 15%, transparent);
+  --color-loader-bg: color-mix(in srgb, #75a83a 6%, #f8fbed);
+  --color-border-accent: color-mix(in srgb, #75a83a 30%, transparent);
+  --color-nav-active-bg: color-mix(in srgb, #75a83a 12%, transparent);
+  --color-nav-active-border: #75a83a;
+
   --color-border: #e1e4d7;
   --color-success: #2e7d32;
   --color-success-container: #dcedc8;
@@ -90,6 +98,14 @@ body { font-size: 16px; }
   --color-accent: #d97757;
   --color-accent-container: #4a2a1a;
   --color-inverse-on-surface: #1a1c16;
+
+  --color-surface-tint: #a5d087;
+  --color-primary-hover: color-mix(in srgb, #a5d087 85%, black);
+  --color-primary-container-hover: color-mix(in srgb, #a5d087 15%, transparent);
+  --color-loader-bg: color-mix(in srgb, #a5d087 6%, #121314);
+  --color-border-accent: color-mix(in srgb, #a5d087 30%, transparent);
+  --color-nav-active-bg: color-mix(in srgb, #a5d087 12%, transparent);
+  --color-nav-active-border: #a5d087;
 }
 
 .dark body {
@@ -503,6 +519,7 @@ input, select, textarea, .input-field {
 }
 input:focus, select:focus, textarea:focus, .input-field:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  border-color: var(--color-primary);
 }
 
 .app-button {

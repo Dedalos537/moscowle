@@ -75,10 +75,33 @@ export class GlobalSettingsService {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    document.documentElement.style.setProperty('--color-primary', hex);
-    document.documentElement.style.setProperty('--color-primary-rgb', `${r}, ${g}, ${b}`);
-    document.documentElement.style.setProperty('--color-primary-container', hex);
-    document.documentElement.style.setProperty('--color-on-primary', '#ffffff');
+    const root = document.documentElement.style;
+
+    // Base primary
+    root.setProperty('--color-primary', hex);
+    root.setProperty('--color-primary-rgb', `${r}, ${g}, ${b}`);
+
+    // Container / on-container (slightly lighter/darker)
+    root.setProperty('--color-primary-container', hex);
+    root.setProperty('--color-on-primary', isDark ? '#1a1a1a' : '#ffffff');
+    root.setProperty('--color-on-primary-container', isDark ? '#ffffff' : '#1a1a1a');
+
+    // Surface tint — subtle primary wash on surfaces
+    root.setProperty('--color-surface-tint', hex);
+
+    // Sidebar / nav active background uses primary at low opacity
+    root.setProperty('--color-nav-active-bg', `color-mix(in srgb, ${hex} 12%, transparent)`);
+    root.setProperty('--color-nav-active-border', hex);
+
+    // Hover states
+    root.setProperty('--color-primary-hover', `color-mix(in srgb, ${hex} 85%, black)`);
+    root.setProperty('--color-primary-container-hover', `color-mix(in srgb, ${hex} 15%, transparent)`);
+
+    // Loading screen overlay
+    root.setProperty('--color-loader-bg', `color-mix(in srgb, ${hex} 6%, var(--color-background))`);
+
+    // Borders and outlines derived from primary
+    root.setProperty('--color-border-accent', `color-mix(in srgb, ${hex} 30%, transparent)`);
   }
 
   /** Reapply primary color when theme toggles (light↔dark) */

@@ -1,18 +1,26 @@
 @if (isOpen) {
   <div class="sidebar-overlay" (click)="sidebarService.close()"></div>
 }
-<aside class="sidebar" [class.sidebar--open]="isOpen">
-  <div class="sidebar-brand">
+<aside
+  class="sidebar"
+  [class.sidebar--open]="isOpen"
+  [class.sidebar--collapsed]="collapsed && !isHovered"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()">
+
+  <!-- Brand / Logo -->
+  <div class="sidebar-brand" (click)="toggleCollapse()" role="button" tabindex="0" (keydown.enter)="toggleCollapse()">
     <div class="sidebar-logo">
-      <img src="assets/img/logo.svg" alt="Logo" class="w-10 h-10 object-contain">
-      <div>
-        <span class="sidebar-brand-name">Centro Juan Pablo II</span>
-      </div>
+      <img src="assets/img/logo.svg" alt="Logo" class="sidebar-logo__img">
+      @if (isExpanded) {
+        <div class="sidebar-logo__text">
+          <span class="sidebar-brand-name">Centro Juan Pablo II</span>
+        </div>
+      }
     </div>
   </div>
 
-  <div class="sidebar-section-label">Navegación</div>
-
+  <!-- Navigation -->
   <nav class="sidebar-nav">
     @for (item of navItems; track item.path) {
       <a
@@ -22,25 +30,33 @@
         class="nav-link"
         [class.nav-link--active]="rla.isActive"
         (click)="sidebarService.close()"
-      >
+        [title]="collapsed && !isHovered ? item.label : null">
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
-        <span>{{ item.label }}</span>
+        @if (isExpanded) {
+          <div class="nav-link-text">
+            <span class="nav-link-label">{{ item.label }}</span>
+            @if (item.subtitle) {
+              <span class="nav-link-sub">{{ item.subtitle }}</span>
+            }
+          </div>
+        }
       </a>
     }
   </nav>
 
+  <!-- Footer -->
   <div class="sidebar-footer">
-    <div class="relative">
-      <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
-        [title]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'"
-        [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
-        <fa-icon [icon]="['fas', helpState.panelOpen() ? 'times' : 'question']"></fa-icon>
-      </button>
-    </div>
+    <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
+      [title]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'"
+      [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
+      <fa-icon [icon]="['fas', helpState.panelOpen() ? 'times' : 'question']"></fa-icon>
+    </button>
     @if (notifCount > 0) {
       <div class="sidebar-notif-badge">
         <fa-icon [icon]="['fas', 'bell']" class="text-xs"></fa-icon>
-        <span>{{ notifCount > 9 ? '9+' : notifCount }}</span>
+        @if (isExpanded) {
+          <span>{{ notifCount > 9 ? '9+' : notifCount }}</span>
+        }
       </div>
     }
   </div>

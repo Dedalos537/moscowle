@@ -13,7 +13,7 @@ import { HeaderService } from '../../../../core/services/header.service';
   imports: [FontAwesomeModule],
   template: `
     <div class="settings-page">
-
+      <div class="settings-cards-grid">
       <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
       <section class="settings-card">
         <div class="settings-card__header">
@@ -298,6 +298,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           }
         </div>
       </section>
+      </div>
 
       <!-- Save button -->
       <div class="settings-save-bar">
@@ -318,9 +319,21 @@ import { HeaderService } from '../../../../core/services/header.service';
   `,
   styles: [`
     .settings-page {
-      max-width: 680px;
+      max-width: 900px;
       margin: 0 auto;
-      padding: 1.5rem 1.25rem 5rem;
+      padding: 1rem 1rem 5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .settings-page {
+        max-width: 100%;
+        padding: 1.25rem 2rem 5rem;
+      }
+      .settings-page .settings-cards-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+      }
     }
 
     /* ── Card ─────────────────────────────────────────────── */
@@ -328,7 +341,6 @@ import { HeaderService } from '../../../../core/services/header.service';
       background: var(--color-surface-container-lowest);
       border: 1px solid var(--color-outline-variant);
       border-radius: 1rem;
-      margin-bottom: 1.25rem;
       overflow: hidden;
       transition: border-color 0.2s;
     }
@@ -347,8 +359,8 @@ import { HeaderService } from '../../../../core/services/header.service';
       background: var(--color-surface-container-highest);
       flex-shrink: 0;
     }
-    .settings-card__icon--green { color: #2e7d32; background: #dcedc8; }
-    .settings-card__icon--amber { color: #d97706; background: #fef3c7; }
+    .settings-card__icon--green { color: var(--color-success); background: var(--color-success-container); }
+    .settings-card__icon--amber { color: var(--color-warning); background: var(--color-warning-container); }
     .settings-card__title { font-size: 1rem; font-weight: 700; color: var(--color-on-surface); }
     .settings-card__subtitle { font-size: 0.78rem; color: var(--color-on-surface-variant); margin-top: 0.1rem; }
 
@@ -372,12 +384,12 @@ import { HeaderService } from '../../../../core/services/header.service';
       font-size: 0.75rem; color: var(--color-on-surface-variant);
       background: var(--color-surface-container-highest); flex-shrink: 0;
     }
-    .setting-item__icon--primary { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 12%, transparent); }
-    .setting-item__icon--amber { color: #d97706; background: #fef3c7; }
-    .setting-item__icon--blue { color: #2563eb; background: #dbeafe; }
-    .setting-item__icon--red { color: #dc2626; background: #fee2e2; }
-    .setting-item__icon--purple { color: #7c3aed; background: #ede9fe; }
-    .setting-item__icon--telegram { color: #229ED9; background: #e8f5fd; }
+    .setting-item__icon--primary { color: var(--color-primary); background: var(--color-nav-active-bg, color-mix(in srgb, var(--color-primary) 12%, transparent)); }
+    .setting-item__icon--amber { color: var(--color-warning); background: var(--color-warning-container); }
+    .setting-item__icon--blue { color: var(--color-info); background: var(--color-info-container); }
+    .setting-item__icon--red { color: var(--color-error); background: var(--color-error-container); }
+    .setting-item__icon--purple { color: #7c3aed; background: color-mix(in srgb, #7c3aed 12%, transparent); }
+    .setting-item__icon--telegram { color: #229ED9; background: color-mix(in srgb, #229ED9 12%, transparent); }
 
     .setting-item__text { display: flex; flex-direction: column; }
     .setting-item__label { font-size: 0.875rem; font-weight: 600; color: var(--color-on-surface); }

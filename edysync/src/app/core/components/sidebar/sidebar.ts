@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, Signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, HostListener, ElementRef } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 interface NavItem {
   path: string;
   label: string;
+  subtitle?: string;
   icon: IconProp;
   supervisor?: boolean;
   hideWhenNoCharts?: boolean;
@@ -34,6 +35,11 @@ export class Sidebar implements OnInit, OnDestroy {
   isOpen = false;
   notifCount = 0;
 
+  /** Desktop collapsed state (icons only) */
+  collapsed = true;
+  /** Hover state for desktop expansion */
+  isHovered = false;
+
   private notifService = inject(NotificationService);
   private notifEffect = effect(() => {
     this.notifCount = this.notifService.unreadCount();
@@ -43,17 +49,17 @@ export class Sidebar implements OnInit, OnDestroy {
   private subs = new Subscription();
 
   readonly allItems: NavItem[] = [
-    { path: '/admin/dashboard', label: 'Panel Admin', icon: ['fas', 'tachometer-alt'], supervisor: true },
-    { path: '/admin/sessions', label: 'Sesiones Globales', icon: ['fas', 'calendar-alt'], supervisor: true },
-    { path: '/admin/users', label: 'Admin Usuarios', icon: ['fas', 'users'] },
-    { path: '/admin/sedes', label: 'Sedes', icon: ['fas', 'building'], supervisor: true },
-    { path: '/admin/finanzas', label: 'Finanzas', icon: ['fas', 'university'], supervisor: true, hideWhenNoCharts: true },
+    { path: '/admin/dashboard', label: 'Panel Admin', subtitle: 'Resumen general', icon: ['fas', 'tachometer-alt'], supervisor: true },
+    { path: '/admin/sessions', label: 'Sesiones Globales', subtitle: 'Todas las sesiones', icon: ['fas', 'calendar-alt'], supervisor: true },
+    { path: '/admin/users', label: 'Admin Usuarios', subtitle: 'Gestión de usuarios', icon: ['fas', 'users'] },
+    { path: '/admin/sedes', label: 'Sedes', subtitle: 'Sucursales', icon: ['fas', 'building'], supervisor: true },
+    { path: '/admin/finanzas', label: 'Finanzas', subtitle: 'Ingresos y gastos', icon: ['fas', 'university'], supervisor: true, hideWhenNoCharts: true },
 
-    { path: '/admin/games', label: 'Admin Juegos', icon: ['fas', 'gamepad'] },
-    { path: '/admin/reports', label: 'Admin Reportes', icon: ['fas', 'chart-bar'], supervisor: true },
-    { path: '/admin/messages', label: 'Admin Mensajes', icon: ['fas', 'envelope'], supervisor: true },
-    { path: '/admin/visor-funcionamiento', label: 'Centro de Operaciones', icon: ['fas', 'desktop'], supervisor: true },
-    { path: '/admin/settings', label: 'Configuración', icon: ['fas', 'cog'] },
+    { path: '/admin/games', label: 'Admin Juegos', subtitle: 'Terapia recreativa', icon: ['fas', 'gamepad'] },
+    { path: '/admin/reports', label: 'Admin Reportes', subtitle: 'Estadísticas', icon: ['fas', 'chart-bar'], supervisor: true },
+    { path: '/admin/messages', label: 'Admin Mensajes', subtitle: 'Comunicación', icon: ['fas', 'envelope'], supervisor: true },
+    { path: '/admin/visor-funcionamiento', label: 'Centro de Operaciones', subtitle: 'Monitoreo', icon: ['fas', 'desktop'], supervisor: true },
+    { path: '/admin/settings', label: 'Configuración', subtitle: 'Preferencias', icon: ['fas', 'cog'] },
   ];
 
   get navItems(): NavItem[] {
@@ -67,6 +73,11 @@ export class Sidebar implements OnInit, OnDestroy {
     return items;
   }
 
+  /** Whether sidebar should visually expand */
+  get isExpanded(): boolean {
+    return !this.collapsed || this.isHovered;
+  }
+
   private hideChartsEffect = effect(() => {
     this.hideCharts();
     this.cdr.markForCheck();
@@ -78,6 +89,7 @@ export class Sidebar implements OnInit, OnDestroy {
     private auth: AuthService,
     public sidebarService: SidebarService,
     private cdr: ChangeDetectorRef,
+    private el: ElementRef,
   ) {}
 
   ngOnInit() {
@@ -93,6 +105,23 @@ export class Sidebar implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+  }
+
+  toggleCollapse() {
+    this.collapsed = !this.collapsed;
+    this.cdr.markForCheck();
+  }
+
+  onMouseEnter() {
+    if (this.collapsed) {
+      this.isHovered = true;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onMouseLeave() {
+    this.isHovered = false;
+    this.cdr.markForCheck();
   }
 
   toggleHelp() {

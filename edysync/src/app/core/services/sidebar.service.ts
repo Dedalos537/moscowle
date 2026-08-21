@@ -6,6 +6,7 @@ export class SidebarService {
   private openSubject = new BehaviorSubject<boolean>(false);
   open$ = this.openSubject.asObservable();
 
+  /** Mobile: overlay open/close */
   toggle() {
     this.openSubject.next(!this.openSubject.value);
   }
