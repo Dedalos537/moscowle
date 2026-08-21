@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
+import { GlobalSettingsService } from './global-settings.service';
 
 export interface ThemeSchedule {
   enabled: boolean;
@@ -11,6 +12,7 @@ export interface ThemeSchedule {
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private http = inject(HttpClient);
+  private globalSettings = inject(GlobalSettingsService);
 
   private themeSubject = new BehaviorSubject<string>('light');
   theme$ = this.themeSubject.asObservable();
@@ -48,6 +50,8 @@ export class ThemeService {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('theme', theme);
+    // Re-derive all primary-derived colors for the new theme
+    this.globalSettings.reapplyPrimaryColor();
   }
 
   // ── Programación por hora ────────────────────────────────────────────────

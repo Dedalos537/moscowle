@@ -160,7 +160,7 @@
   justify-content: center;
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: background-color 0.2s, transform 0.2s;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
   flex-shrink: 0;
 }
 
@@ -178,6 +178,8 @@
     z-index: 50;
     transform: translateX(-100%);
     width: 16rem;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.3s ease;
   }
   .sidebar.sidebar--open {
     transform: translateX(0);
@@ -192,14 +194,4 @@
     z-index: 40;
     background-color: rgba(0, 0, 0, 0.4);
   }
-}
-
-/* ── Help panel styles ─────────────────────────────── */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
 }

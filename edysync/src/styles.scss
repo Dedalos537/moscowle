@@ -29,10 +29,11 @@ body { font-size: 16px; }
   --color-surface-variant: #e1e4d7;
   --color-surface-container: #edefe2;
   --color-on-surface-variant: #43493a;
-  --color-primary-container: #75a83a;
+  --color-primary-container: #c4e89e;
   --color-secondary: #5e6461;
   --color-on-primary-container: #1f3800;
   --color-surface-container-highest: #e1e4d7;
+  --color-primary-fixed: #75a83a;
 
   --color-surface-tint: #75a83a;
   --color-primary-hover: color-mix(in srgb, #75a83a 85%, black);
@@ -115,7 +116,7 @@ body { font-size: 16px; }
 
 .dark * {
   border-color: var(--color-outline-variant);
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 @utility text-h1 {
@@ -233,10 +234,19 @@ body { font-size: 16px; }
 
   .card {
     @apply bg-surface-container-lowest border border-border rounded-xl transition-all duration-200;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .card:hover {
+    box-shadow: var(--shadow-hover);
   }
 
   .stat-card {
     @apply bg-surface-container-lowest border border-border rounded-xl p-4;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
   }
 
   .btn-primary {
@@ -339,7 +349,7 @@ body { font-size: 16px; }
 
 .fc-day-today .fc-daygrid-day-number {
   background-color: var(--color-primary);
-  color: white !important;
+  color: var(--color-on-primary) !important;
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -492,21 +502,6 @@ body { font-size: 16px; }
   --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-.card {
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
-}
-.card:hover {
-  box-shadow: var(--shadow-hover);
-}
-
-.stat-card {
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
-}
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover);
-}
-
 button, .btn-primary, .btn-secondary, .btn-ghost, .btn-danger {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
 }
@@ -594,5 +589,13 @@ tr {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+
+  /* Disable all animations and transitions for reduced motion */
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

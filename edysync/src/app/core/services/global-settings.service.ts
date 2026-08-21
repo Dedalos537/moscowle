@@ -81,20 +81,23 @@ export class GlobalSettingsService {
     root.setProperty('--color-primary', hex);
     root.setProperty('--color-primary-rgb', `${r}, ${g}, ${b}`);
 
-    // Container / on-container (slightly lighter/darker)
-    root.setProperty('--color-primary-container', hex);
+    // Container: lighter in light mode, darker in dark mode
+    const containerHex = isDark
+      ? `color-mix(in srgb, ${hex} 20%, #000000)`
+      : `color-mix(in srgb, ${hex} 30%, #ffffff)`;
+    root.setProperty('--color-primary-container', containerHex);
     root.setProperty('--color-on-primary', isDark ? '#1a1a1a' : '#ffffff');
     root.setProperty('--color-on-primary-container', isDark ? '#ffffff' : '#1a1a1a');
 
     // Surface tint — subtle primary wash on surfaces
-    root.setProperty('--color-surface-tint', hex);
+    root.setProperty('--color-surface-tint', `color-mix(in srgb, ${hex} 8%, transparent)`);
 
     // Sidebar / nav active background uses primary at low opacity
     root.setProperty('--color-nav-active-bg', `color-mix(in srgb, ${hex} 12%, transparent)`);
     root.setProperty('--color-nav-active-border', hex);
 
     // Hover states
-    root.setProperty('--color-primary-hover', `color-mix(in srgb, ${hex} 85%, black)`);
+    root.setProperty('--color-primary-hover', `color-mix(in srgb, ${hex} 85%, ${isDark ? '#ffffff' : '#000000'})`);
     root.setProperty('--color-primary-container-hover', `color-mix(in srgb, ${hex} 15%, transparent)`);
 
     // Loading screen overlay
@@ -102,6 +105,22 @@ export class GlobalSettingsService {
 
     // Borders and outlines derived from primary
     root.setProperty('--color-border-accent', `color-mix(in srgb, ${hex} 30%, transparent)`);
+
+    // Accent: complementary hue derived from primary
+    const accentR = Math.min(255, r + 80);
+    const accentG = Math.max(0, g - 30);
+    const accentB = Math.max(0, b - 40);
+    root.setProperty('--color-accent', `rgb(${accentR}, ${accentG}, ${accentB})`);
+    root.setProperty('--color-accent-container', `color-mix(in srgb, rgb(${accentR}, ${accentG}, ${accentB}) 12%, transparent)`);
+
+    // Semantic colors with proper contrast for current theme
+    root.setProperty('--color-success', isDark ? '#66bb6a' : '#2e7d32');
+    root.setProperty('--color-success-container', isDark ? '#1b3a1b' : '#dcedc8');
+    root.setProperty('--color-warning', isDark ? '#ffb74d' : '#d97706');
+    root.setProperty('--color-warning-container', isDark ? '#3d2e00' : '#fff3cd');
+    root.setProperty('--color-info', isDark ? '#64b5f6' : '#2563eb');
+    root.setProperty('--color-info-container', isDark ? '#0d2744' : '#d1e4ff');
+    root.setProperty('--color-border', isDark ? '#3e4040' : `color-mix(in srgb, ${hex} 20%, #e0e0e0)`);
   }
 
   /** Reapply primary color when theme toggles (light↔dark) */

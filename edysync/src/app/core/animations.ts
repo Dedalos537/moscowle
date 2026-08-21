@@ -4,6 +4,7 @@ import {
 } from '@angular/animations';
 
 const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+const EASE_IN = 'cubic-bezier(0.4, 0, 1, 1)';
 const DURATION = '400ms';
 const FAST = '250ms';
 const SLOW = '600ms';
@@ -53,7 +54,7 @@ export const scaleIn = trigger('scaleIn', [
 export const bounceIn = trigger('bounceIn', [
   transition(':enter', [
     style({ opacity: 0, transform: 'scale(0.8)' }),
-    animate(`${FAST} ${EASE}`, style({ opacity: 1, transform: 'scale(1.05)' })),
+    animate(`${FAST} ${EASE}`, style({ opacity: 1, transform: 'scale(1.08)' })),
     animate(`${FAST} ${EASE}`, style({ transform: 'scale(1)' }))
   ])
 ]);
@@ -107,7 +108,7 @@ export const routeAnimations = trigger('routeAnimations', [
     ], { optional: true }),
     query(':leave', [
       style({ position: 'absolute', inset: 0 }),
-      animate(`180ms ${EASE}`, style({ opacity: 0 }))
+      animate(`180ms ${EASE_IN}`, style({ opacity: 0 }))
     ], { optional: true }),
     query(':enter', [
       animate(`300ms ${EASE}`, style({ opacity: 1 }))
@@ -134,8 +135,8 @@ export const pulse = trigger('pulse', [
 
 export const shimmerBar = trigger('shimmerBar', [
   transition(':enter', [
-    style({ width: '0%' }),
-    animate(`${DURATION} ${EASE}`, style({ width: '100%' }))
+    style({ transform: 'scaleX(0)', transformOrigin: 'left' }),
+    animate(`${DURATION} ${EASE}`, style({ transform: 'scaleX(1)' }))
   ])
 ]);
 
@@ -145,7 +146,7 @@ export const viewSlide = trigger('viewSlide', [
     animate(`400ms ${EASE}`, style({ opacity: 1, transform: 'translateX(0) scale(1)', filter: 'blur(0px)' }))
   ]),
   transition(':leave', [
-    animate(`250ms ${EASE}`, style({ opacity: 0, transform: 'translateX(-30px) scale(0.97)', filter: 'blur(4px)' }))
+    animate(`250ms ${EASE_IN}`, style({ opacity: 0, transform: 'translateX(-30px) scale(0.97)', filter: 'blur(4px)' }))
   ])
 ]);
 
@@ -155,6 +156,6 @@ export const statsSlide = trigger('statsSlide', [
     animate(`350ms 100ms ${EASE}`, style({ opacity: 1, transform: 'translateY(0) scale(1)' }))
   ]),
   transition(':leave', [
-    animate(`200ms ${EASE}`, style({ opacity: 0, transform: 'translateY(-10px) scale(0.95)' }))
+    animate(`200ms ${EASE_IN}`, style({ opacity: 0, transform: 'translateY(-10px) scale(0.95)' }))
   ])
 ]);
