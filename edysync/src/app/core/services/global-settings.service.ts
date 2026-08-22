@@ -78,58 +78,80 @@ export class GlobalSettingsService {
     if (!preset) return;
     const isDark = document.documentElement.classList.contains('dark');
     const hex = isDark ? preset.dark : preset.light;
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
     const root = document.documentElement.style;
+    const [h, s, l] = this.hexToHsl(hex);
 
     // Base primary
     root.setProperty('--color-primary', hex);
-    root.setProperty('--color-primary-rgb', `${r}, ${g}, ${b}`);
+    root.setProperty('--color-primary-rgb', this.hexToRgbStr(hex));
 
-    // Container: lighter in light mode, darker in dark mode
-    const containerHex = isDark
-      ? `color-mix(in srgb, ${hex} 20%, #000000)`
-      : `color-mix(in srgb, ${hex} 30%, #ffffff)`;
-    root.setProperty('--color-primary-container', containerHex);
+    // Container: lighter tint for light, darker for dark
+    root.setProperty('--color-primary-container', isDark
+      ? this.hslToHex(h, Math.max(20, s * 0.6), Math.min(25, l * 0.4))
+      : this.hslToHex(h, Math.max(15, s * 0.5), Math.min(92, l + (95 - l) * 0.7)));
     root.setProperty('--color-on-primary', isDark ? '#1a1a1a' : '#ffffff');
     root.setProperty('--color-on-primary-container', isDark ? '#ffffff' : '#1a1a1a');
 
-    // Surface tint — subtle primary wash on surfaces
+    // Surface tint — subtle primary wash
     root.setProperty('--color-surface-tint', `color-mix(in srgb, ${hex} 8%, transparent)`);
 
-    // Sidebar / nav active background uses primary at low opacity
+    // Sidebar / nav active
     root.setProperty('--color-nav-active-bg', `color-mix(in srgb, ${hex} 12%, transparent)`);
     root.setProperty('--color-nav-active-border', hex);
 
-    // Hover states
-    root.setProperty('--color-primary-hover', `color-mix(in srgb, ${hex} 85%, ${isDark ? '#ffffff' : '#000000'})`);
+    // Hover states — darken in light, lighten in dark
+    root.setProperty('--color-primary-hover', isDark
+      ? this.hslToHex(h, s, Math.min(75, l + 15))
+      : this.hslToHex(h, s, Math.max(25, l - 15)));
     root.setProperty('--color-primary-container-hover', `color-mix(in srgb, ${hex} 15%, transparent)`);
 
-    // Loading screen overlay
+    // Loading overlay
     root.setProperty('--color-loader-bg', `color-mix(in srgb, ${hex} 6%, var(--color-background))`);
 
-    // Borders and outlines derived from primary
+    // Borders
     root.setProperty('--color-border-accent', `color-mix(in srgb, ${hex} 30%, transparent)`);
 
-    // Accent: complementary hue derived from primary
-    const accentR = Math.min(255, r + 80);
-    const accentG = Math.max(0, g - 30);
-    const accentB = Math.max(0, b - 40);
-    root.setProperty('--color-accent', `rgb(${accentR}, ${accentG}, ${accentB})`);
-    root.setProperty('--color-accent-container', `color-mix(in srgb, rgb(${accentR}, ${accentG}, ${accentB}) 12%, transparent)`);
+    // === Harmonious palette from HSL ===
 
-    // Semantic colors with proper contrast for current theme
-    root.setProperty('--color-success', isDark ? '#66bb6a' : '#2e7d32');
-    root.setProperty('--color-success-container', isDark ? '#1b3a1b' : '#dcedc8');
-    root.setProperty('--color-warning', isDark ? '#ffb74d' : '#d97706');
-    root.setProperty('--color-warning-container', isDark ? '#3d2e00' : '#fff3cd');
-    root.setProperty('--color-info', isDark ? '#64b5f6' : '#2563eb');
-    root.setProperty('--color-info-container', isDark ? '#0d2744' : '#d1e4ff');
+    // Complementary (180 deg shift)
+    const compH = (h + 180) % 360;
+    root.setProperty('--color-accent', this.hslToHex(compH, Math.min(90, s + 10), isDark ? Math.min(65, l + 10) : Math.max(35, l - 5)));
+    root.setProperty('--color-accent-container', this.hslToHex(compH, Math.max(15, s * 0.4), isDark ? 20 : 92));
+
+    // Analogous (+30 deg)
+    root.setProperty('--color-analogous', this.hslToHex((h + 30) % 360, s, l));
+
+    // Triadic (+120, +240)
+    root.setProperty('--color-triadic-1', this.hslToHex((h + 120) % 360, Math.max(30, s * 0.7), l));
+    root.setProperty('--color-triadic-2', this.hslToHex((h + 240) % 360, Math.max(30, s * 0.7), l));
+
+    // Tonal scale 50–900
+    for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
+      const stepL = isDark
+        ? Math.min(90, 20 + (step / 900) * 70)
+        : Math.max(10, 95 - (step / 900) * 75);
+      const stepS = Math.max(10, s * (1 - Math.abs(500 - step) / 600));
+      root.setProperty(`--color-primary-${step}`, this.hslToHex(h, stepS, stepL));
+    }
+
+    // Semantic: success (green-shifted)
+    const successH = h < 180 ? Math.min(h + 40, 150) : Math.max(h - 40, 120);
+    root.setProperty('--color-success', this.hslToHex(successH, isDark ? 55 : 60, isDark ? 50 : 35));
+    root.setProperty('--color-success-container', this.hslToHex(successH, isDark ? 30 : 35, isDark ? 15 : 88));
+
+    // Semantic: warning (amber)
+    root.setProperty('--color-warning', this.hslToHex(45, isDark ? 90 : 85, isDark ? 55 : 50));
+    root.setProperty('--color-warning-container', this.hslToHex(45, isDark ? 40 : 50, isDark ? 18 : 92));
+
+    // Semantic: info (shifted toward blue)
+    const infoH = Math.max(200, Math.min(220, h + Math.abs(210 - h) * 0.3));
+    root.setProperty('--color-info', this.hslToHex(infoH, isDark ? 60 : 70, isDark ? 55 : 45));
+    root.setProperty('--color-info-container', this.hslToHex(infoH, isDark ? 30 : 40, isDark ? 18 : 90));
+
     root.setProperty('--color-border', isDark ? '#3e4040' : `color-mix(in srgb, ${hex} 20%, #e0e0e0)`);
   }
 
-  /** Reapply primary color when theme toggles (light↔dark) */
+  /** Reapply primary color when theme toggles (light/dark) */
   reapplyPrimaryColor(): void {
     this.applyPrimaryColor(this.primaryColor());
   }
@@ -168,5 +190,45 @@ export class GlobalSettingsService {
 
   private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean }>): void {
     this.http.put('/api/user/preferences', data).subscribe({ error: () => {} });
+  }
+
+  // --- HSL color utilities ---
+
+  private hexToHsl(hex: string): [number, number, number] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+  }
+
+  private hslToHex(h: number, s: number, l: number): string {
+    s /= 100;
+    l /= 100;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) => {
+      const k = (n + h / 30) % 12;
+      const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      return Math.round(255 * color).toString(16).padStart(2, '0');
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+  }
+
+  private hexToRgbStr(hex: string): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
   }
 }

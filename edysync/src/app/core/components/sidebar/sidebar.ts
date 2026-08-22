@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { SidebarService } from '../../services/sidebar.service';
 import { GlobalSettingsService } from '../../services/global-settings.service';
 import { HelpStateService } from '../../../shared/contextual-help/services/help-state.service';
+import { Logo } from '../../../shared/components/logo/logo';
 import { Subscription, filter } from 'rxjs';
 
 interface NavItem {
@@ -20,7 +21,7 @@ interface NavItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterModule, FontAwesomeModule],
+  imports: [RouterModule, FontAwesomeModule, Logo],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

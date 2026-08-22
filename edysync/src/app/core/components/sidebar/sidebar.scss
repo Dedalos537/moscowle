@@ -11,9 +11,10 @@
   flex-direction: column;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.3s ease;
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
   z-index: 30;
+  position: relative;
 }
 
 /* Pinned: full width with inline labels */
@@ -37,17 +38,6 @@
   width: 2rem;
   height: 2rem;
   flex-shrink: 0;
-  background-color: var(--color-primary);
-  -webkit-mask-image: url('/assets/img/logo.svg');
-  mask-image: url('/assets/img/logo.svg');
-  -webkit-mask-type: alpha;
-  mask-type: alpha;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
 }
 
 .sidebar-brand-name {
@@ -64,7 +54,7 @@
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: visible;
   padding: 0.5rem;
   position: relative;
 }
