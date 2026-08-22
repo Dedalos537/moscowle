@@ -483,7 +483,7 @@ import { HeaderService } from '../../../../core/services/header.service';
     }
     .color-swatch__primary,
     .color-swatch__secondary {
-      position: absolute; width: 100%; height: 100%;
+      position: absolute; width: 100%; height: 100%; pointer-events: none;
     }
     .color-swatch__primary {
       clip-path: polygon(0 0, 100% 0, 0 100%);
@@ -542,8 +542,10 @@ export class Settings implements OnInit, OnDestroy {
   saving = false;
   saved = false;
 
+  currentSchedule: ThemeSchedule = { enabled: false, from: 22, to: 7 };
+
   get isDark() { return (this.theme.theme$ as any).value === 'dark'; }
-  get schedule(): ThemeSchedule { return this.theme.getSchedule(); }
+  get schedule() { return this.currentSchedule; }
   get fontSize() { return this.settings.fontSize; }
   get primaryColor() { return this.settings.primaryColor; }
   get hideCharts() { return this.settings.hideCharts; }
@@ -574,7 +576,10 @@ export class Settings implements OnInit, OnDestroy {
 
   constructor() {
     this.theme.theme$.subscribe(() => this.cdr.markForCheck());
-    this.theme.schedule$.subscribe(() => this.cdr.markForCheck());
+    this.theme.schedule$.subscribe(s => {
+      this.currentSchedule = { ...s };
+      this.cdr.markForCheck();
+    });
     this.loadTelegramStatus();
   }
 
@@ -613,18 +618,20 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   toggleSchedule(): void {
-    const s = this.theme.getSchedule();
-    this.theme.setSchedule({ ...s, enabled: !s.enabled });
+    this.currentSchedule = { ...this.currentSchedule, enabled: !this.currentSchedule.enabled };
+    this.theme.setSchedule({ ...this.currentSchedule });
     this.cdr.markForCheck();
   }
 
   setScheduleFrom(hour: number): void {
-    this.theme.setSchedule({ ...this.theme.getSchedule(), from: hour });
+    this.currentSchedule = { ...this.currentSchedule, from: hour };
+    this.theme.setSchedule({ ...this.currentSchedule });
     this.cdr.markForCheck();
   }
 
   setScheduleTo(hour: number): void {
-    this.theme.setSchedule({ ...this.theme.getSchedule(), to: hour });
+    this.currentSchedule = { ...this.currentSchedule, to: hour };
+    this.theme.setSchedule({ ...this.currentSchedule });
     this.cdr.markForCheck();
   }
 
