@@ -6,7 +6,6 @@ import { routeAnimations } from '../../animations';
 import { ConfirmService } from '../../services/confirm.service';
 import { WakeLockService } from '../../services/wake-lock.service';
 import { SidebarService } from '../../services/sidebar.service';
-import { HeaderService } from '../../services/header.service';
 import { Sidebar } from '../../components/sidebar/sidebar';
 import { Header } from '../../components/header/header';
 import { Spinner } from '../../../shared/components/spinner/spinner';
@@ -43,7 +42,6 @@ export class AdminLayout implements OnInit, OnDestroy {
     public confirmService: ConfirmService,
     private wakeLockService: WakeLockService,
     private sidebarService: SidebarService,
-    private headerService: HeaderService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -66,9 +64,6 @@ export class AdminLayout implements OnInit, OnDestroy {
         this.navInProgress = false;
         this.clearNavTimer();
         this.sidebarService.close();
-        // Hide header on settings page
-        const url = e instanceof NavigationEnd ? e.urlAfterRedirects : '';
-        this.headerService.hidden.set(url.includes('/settings'));
         const elapsed = Date.now() - this.loadStartTime;
         this.loadElapsed = `${(elapsed / 1000).toFixed(1)}s`;
         setTimeout(() => { this.routeLoading = false; this.cdr.markForCheck(); }, 350);

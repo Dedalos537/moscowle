@@ -30,7 +30,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           <!-- Modo oscuro -->
           <div class="setting-item">
             <div class="setting-item__left">
-              <div class="setting-item__icon">
+              <div class="setting-item__icon setting-item__icon--primary">
                 <fa-icon [icon]="['fas', isDark ? 'sun' : 'moon']"></fa-icon>
               </div>
               <div class="setting-item__text">
@@ -46,7 +46,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           <!-- Programar modo oscuro -->
           <div class="setting-item">
             <div class="setting-item__left">
-              <div class="setting-item__icon">
+              <div class="setting-item__icon setting-item__icon--blue">
                 <fa-icon [icon]="['fas', 'clock']"></fa-icon>
               </div>
               <div class="setting-item__text">
@@ -88,7 +88,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           <!-- Tamaño de fuente -->
           <div class="setting-item">
             <div class="setting-item__left">
-              <div class="setting-item__icon">
+              <div class="setting-item__icon setting-item__icon--primary">
                 <fa-icon [icon]="['fas', 'text-height']"></fa-icon>
               </div>
               <div class="setting-item__text">
@@ -108,7 +108,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           <!-- Color primario -->
           <div class="setting-item setting-item--column">
             <div class="setting-item__left">
-              <div class="setting-item__icon">
+              <div class="setting-item__icon setting-item__icon--primary">
                 <fa-icon [icon]="['fas', 'droplet']"></fa-icon>
               </div>
               <div class="setting-item__text">
@@ -139,7 +139,7 @@ import { HeaderService } from '../../../../core/services/header.service';
           <!-- Ocultar gráficos -->
           <div class="setting-item">
             <div class="setting-item__left">
-              <div class="setting-item__icon">
+              <div class="setting-item__icon setting-item__icon--primary">
                 <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
               </div>
               <div class="setting-item__text">
@@ -210,7 +210,7 @@ import { HeaderService } from '../../../../core/services/header.service';
 
             <div class="setting-item">
               <div class="setting-item__left">
-                <div class="setting-item__icon">
+                <div class="setting-item__icon setting-item__icon--blue">
                   <fa-icon [icon]="['fas', 'cog']"></fa-icon>
                 </div>
                 <span class="setting-item__label">Sistema</span>
@@ -271,7 +271,7 @@ import { HeaderService } from '../../../../core/services/header.service';
 
             <div class="setting-item">
               <div class="setting-item__left">
-                <div class="setting-item__icon">
+                <div class="setting-item__icon setting-item__icon--primary">
                   <fa-icon [icon]="['fas', 'volume-up']"></fa-icon>
                 </div>
                 <span class="setting-item__label">Sonido</span>
@@ -283,7 +283,7 @@ import { HeaderService } from '../../../../core/services/header.service';
 
             <div class="setting-item">
               <div class="setting-item__left">
-                <div class="setting-item__icon">
+                <div class="setting-item__icon setting-item__icon--primary">
                   <fa-icon [icon]="['fas', 'desktop']"></fa-icon>
                 </div>
                 <div class="setting-item__text">

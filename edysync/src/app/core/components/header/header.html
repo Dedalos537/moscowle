@@ -25,7 +25,7 @@
     }
 
     <div class="relative">
-      <button (click)="toggleNotifications()" class="relative w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
+      <button (click)="$event.stopPropagation(); toggleNotifications()" class="relative w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
         <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm sm:text-base"></fa-icon>
         @if (unreadCount > 0) {
           <span class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-error rounded-full text-on-error text-[10px] sm:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
