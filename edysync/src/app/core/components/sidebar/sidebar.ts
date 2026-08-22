@@ -34,10 +34,10 @@ export class Sidebar implements OnInit, OnDestroy {
   error: string | null = null;
   isOpen = false;
 
-  /** Desktop collapsed state (icons only) */
-  collapsed = true;
-  /** Hover state for desktop expansion */
-  isHovered = false;
+  /** Whether sidebar is pinned open (16rem, labels visible) */
+  pinned = false;
+  /** Index of the hovered nav item (for floating panel) */
+  hoveredIndex: number | null = null;
 
   private subs = new Subscription();
 
@@ -66,11 +66,6 @@ export class Sidebar implements OnInit, OnDestroy {
     return items;
   }
 
-  /** Whether sidebar should visually expand */
-  get isExpanded(): boolean {
-    return !this.collapsed || this.isHovered;
-  }
-
   private hideChartsEffect = effect(() => {
     this.hideCharts();
     this.cdr.markForCheck();
@@ -95,11 +90,12 @@ export class Sidebar implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     }));
 
-    // Auto-collapse sidebar on every navigation (desktop)
+    // Auto-collapse on navigation only when NOT pinned
     this.subs.add(
       this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-        this.collapsed = true;
-        this.isHovered = false;
+        if (!this.pinned) {
+          this.hoveredIndex = null;
+        }
         this.cdr.markForCheck();
       })
     );
@@ -109,20 +105,23 @@ export class Sidebar implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
-  toggleCollapse() {
-    this.collapsed = !this.collapsed;
+  togglePin() {
+    this.pinned = !this.pinned;
+    if (this.pinned) {
+      this.hoveredIndex = null;
+    }
     this.cdr.markForCheck();
   }
 
-  onMouseEnter() {
-    if (this.collapsed) {
-      this.isHovered = true;
+  onItemHover(index: number) {
+    if (!this.pinned) {
+      this.hoveredIndex = index;
       this.cdr.markForCheck();
     }
   }
 
-  onMouseLeave() {
-    this.isHovered = false;
+  onItemLeave() {
+    this.hoveredIndex = null;
     this.cdr.markForCheck();
   }
 

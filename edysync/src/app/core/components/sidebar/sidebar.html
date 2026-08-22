@@ -4,39 +4,47 @@
 <aside
   class="sidebar"
   [class.sidebar--open]="isOpen"
-  [class.sidebar--collapsed]="collapsed && !isHovered"
-  (mouseenter)="onMouseEnter()"
-  (mouseleave)="onMouseLeave()">
+  [class.sidebar--pinned]="pinned">
 
   <!-- Brand / Logo -->
-  <div class="sidebar-brand" (click)="toggleCollapse()" role="button" tabindex="0" (keydown.enter)="toggleCollapse()">
-    <div class="sidebar-logo">
-      <img src="assets/img/logo.svg" alt="Logo" class="sidebar-logo__img">
-      @if (isExpanded) {
-        <div class="sidebar-logo__text">
-          <span class="sidebar-brand-name">Centro Juan Pablo II</span>
-        </div>
-      }
-    </div>
+  <div class="sidebar-brand">
+    <img src="assets/img/logo.svg" alt="Logo" class="sidebar-logo__img">
+    @if (pinned) {
+      <span class="sidebar-brand-name">Centro Juan Pablo II</span>
+    }
   </div>
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems; track item.path; let i = $index) {
       <a
         [routerLink]="item.path"
         routerLinkActive="nav-link--active"
         #rla="routerLinkActive"
         class="nav-link"
         [class.nav-link--active]="rla.isActive"
+        [class.nav-link--hovered]="hoveredIndex === i"
         (click)="sidebarService.close()"
-        [title]="collapsed && !isHovered ? item.label : null">
+        (mouseenter)="onItemHover(i)"
+        (mouseleave)="onItemLeave()">
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
-        @if (isExpanded) {
+
+        <!-- Inline text when pinned -->
+        @if (pinned) {
           <div class="nav-link-text">
             <span class="nav-link-label">{{ item.label }}</span>
             @if (item.subtitle) {
               <span class="nav-link-sub">{{ item.subtitle }}</span>
+            }
+          </div>
+        }
+
+        <!-- Floating panel on hover (not pinned) -->
+        @if (!pinned && hoveredIndex === i) {
+          <div class="nav-link-float">
+            <span class="nav-link-float__label">{{ item.label }}</span>
+            @if (item.subtitle) {
+              <span class="nav-link-float__sub">{{ item.subtitle }}</span>
             }
           </div>
         }
@@ -46,6 +54,15 @@
 
   <!-- Footer -->
   <div class="sidebar-footer">
+    <button
+      type="button"
+      class="sidebar-pin-btn"
+      [class.sidebar-pin-btn--active]="pinned"
+      (click)="togglePin()"
+      [title]="pinned ? 'Desanclar sidebar' : 'Anclar sidebar abierto'"
+      [attr.aria-label]="pinned ? 'Desanclar sidebar' : 'Anclar sidebar abierto'">
+      <fa-icon [icon]="['fas', pinned ? 'thumbtack' : 'thumbtack']"></fa-icon>
+    </button>
     <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
       [title]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'"
       [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
