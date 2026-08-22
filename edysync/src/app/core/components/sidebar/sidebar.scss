@@ -16,8 +16,8 @@
   z-index: 30;
 }
 
-/* Expanded: full width with labels (hover or pinned) */
-.sidebar--expanded {
+/* Pinned: full width with inline labels */
+.sidebar--pinned {
   width: 16rem;
 }
 
@@ -40,6 +40,8 @@
   background-color: var(--color-primary);
   -webkit-mask-image: url('/assets/img/logo.svg');
   mask-image: url('/assets/img/logo.svg');
+  -webkit-mask-type: alpha;
+  mask-type: alpha;
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -64,6 +66,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0.5rem;
+  position: relative;
 }
 
 .nav-link {
@@ -102,7 +105,7 @@
   font-size: 0.875rem;
 }
 
-/* ── Inline text (expanded mode) ───────────────────── */
+/* ── Inline text (pinned mode) ─────────────────────── */
 .nav-link-text {
   display: flex;
   flex-direction: column;
@@ -127,6 +130,54 @@
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.05rem;
+}
+
+/* ── Expanded tab on hover (individual item) ───────── */
+.nav-link--hovered {
+  position: relative;
+  z-index: 10;
+}
+
+.nav-link-expand {
+  position: absolute;
+  left: 100%;
+  top: -0.125rem;
+  bottom: -0.125rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 12rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--color-surface-container-lowest, #fff);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  box-shadow: 4px 2px 12px rgba(0, 0, 0, 0.1),
+              2px 1px 4px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  pointer-events: none;
+  animation: tab-slide 0.12s ease-out;
+}
+
+@keyframes tab-slide {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.nav-link-expand__label {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+}
+
+.nav-link-expand__sub {
+  font-size: 0.6875rem;
+  color: var(--color-on-surface-variant);
+  opacity: 0.75;
+  white-space: nowrap;
+  margin-top: 0.125rem;
 }
 
 /* ── Footer ────────────────────────────────────────── */
@@ -175,7 +226,7 @@
   .sidebar.sidebar--open {
     transform: translateX(0);
   }
-  .sidebar--expanded {
+  .sidebar--pinned {
     width: 16rem;
   }
   .sidebar-overlay {
@@ -184,5 +235,8 @@
     inset: 0;
     z-index: 40;
     background-color: rgba(0, 0, 0, 0.4);
+  }
+  .nav-link-expand {
+    display: none;
   }
 }
