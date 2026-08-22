@@ -140,12 +140,13 @@ import { HeaderService } from '../../../../core/services/header.service';
                   type="button"
                   class="color-swatch"
                   [class.color-swatch--active]="primaryColor() === color.name"
-                  [style.background]="color.light"
                   (click)="setPrimaryColor(color.name)"
                   [attr.aria-label]="color.label"
                 >
+                  <span class="color-swatch__primary" [style.background]="color.light"></span>
+                  <span class="color-swatch__secondary" [style.background]="color.secondaryLight"></span>
                   @if (primaryColor() === color.name) {
-                    <fa-icon [icon]="['fas', 'check']"></fa-icon>
+                    <span class="color-swatch__check"><fa-icon [icon]="['fas', 'check']"></fa-icon></span>
                   }
                 </button>
               }
@@ -478,7 +479,21 @@ import { HeaderService } from '../../../../core/services/header.service';
       border: 3px solid transparent; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: all 0.15s; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      color: white; font-size: 0.7rem;
+      position: relative; overflow: hidden;
+    }
+    .color-swatch__primary,
+    .color-swatch__secondary {
+      position: absolute; width: 100%; height: 100%;
+    }
+    .color-swatch__primary {
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+    .color-swatch__secondary {
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    }
+    .color-swatch__check {
+      position: relative; z-index: 1; color: white;
+      font-size: 0.7rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
     }
     .color-swatch:hover { transform: scale(1.12); box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
     .color-swatch--active {

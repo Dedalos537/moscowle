@@ -8,15 +8,17 @@ export interface ColorPreset {
   label: string;
   light: string;
   dark: string;
+  secondaryLight: string;
+  secondaryDark: string;
 }
 
 export const COLOR_PRESETS: ColorPreset[] = [
-  { name: 'green',  label: 'Verde',     light: '#75a83a', dark: '#a5d087' },
-  { name: 'blue',   label: 'Azul',      light: '#2563eb', dark: '#60a5fa' },
-  { name: 'purple', label: 'Púrpura',   light: '#7c3aed', dark: '#a78bfa' },
-  { name: 'rose',   label: 'Rosa',      light: '#db2777', dark: '#f472b6' },
-  { name: 'orange', label: 'Naranja',   light: '#ea580c', dark: '#fb923c' },
-  { name: 'teal',   label: 'Turquesa',  light: '#0891b2', dark: '#22d3ee' },
+  { name: 'green',    label: 'Verde',    light: '#75a83a', dark: '#a5d087', secondaryLight: '#4a7a14', secondaryDark: '#c8e09e' },
+  { name: 'blue',     label: 'Azul',     light: '#2196F3', dark: '#64B5F6', secondaryLight: '#1565C0', secondaryDark: '#42A5F5' },
+  { name: 'purple',   label: 'Morado',   light: '#9C27B0', dark: '#CE93D8', secondaryLight: '#FFCA28', secondaryDark: '#FFD54F' },
+  { name: 'rose',     label: 'Fucsia',   light: '#E91E63', dark: '#F48FB1', secondaryLight: '#880E4F', secondaryDark: '#C2185B' },
+  { name: 'orange',   label: 'Naranja',  light: '#FF9800', dark: '#FFB74D', secondaryLight: '#BF360C', secondaryDark: '#E64A19' },
+  { name: 'teal',     label: 'Turquesa', light: '#00BCD4', dark: '#4DD0E1', secondaryLight: '#006064', secondaryDark: '#0097A7' },
 ];
 
 const FONT_SIZE_MAP: Record<FontSize, string> = {
@@ -78,12 +80,17 @@ export class GlobalSettingsService {
     if (!preset) return;
     const isDark = document.documentElement.classList.contains('dark');
     const hex = isDark ? preset.dark : preset.light;
+    const secHex = isDark ? preset.secondaryDark : preset.secondaryLight;
     const root = document.documentElement.style;
     const [h, s, l] = this.hexToHsl(hex);
 
     // Base primary
     root.setProperty('--color-primary', hex);
     root.setProperty('--color-primary-rgb', this.hexToRgbStr(hex));
+
+    // Secondary (contrast) color
+    root.setProperty('--color-secondary', secHex);
+    root.setProperty('--color-secondary-rgb', this.hexToRgbStr(secHex));
 
     // Container: lighter tint for light, darker for dark
     root.setProperty('--color-primary-container', isDark
@@ -92,14 +99,22 @@ export class GlobalSettingsService {
     root.setProperty('--color-on-primary', isDark ? '#1a1a1a' : '#ffffff');
     root.setProperty('--color-on-primary-container', isDark ? '#ffffff' : '#1a1a1a');
 
-    // Surface tint — subtle primary wash
+    // Secondary container
+    const [sh, ss, sl] = this.hexToHsl(secHex);
+    root.setProperty('--color-secondary-container', isDark
+      ? this.hslToHex(sh, Math.max(20, ss * 0.5), Math.min(25, sl * 0.5))
+      : this.hslToHex(sh, Math.max(15, ss * 0.4), Math.min(93, sl + (95 - sl) * 0.7)));
+    root.setProperty('--color-on-secondary', isDark ? '#1a1a1a' : '#ffffff');
+    root.setProperty('--color-on-secondary-container', isDark ? '#ffffff' : '#1a1a1a');
+
+    // Surface tint
     root.setProperty('--color-surface-tint', `color-mix(in srgb, ${hex} 8%, transparent)`);
 
     // Sidebar / nav active
     root.setProperty('--color-nav-active-bg', `color-mix(in srgb, ${hex} 12%, transparent)`);
     root.setProperty('--color-nav-active-border', hex);
 
-    // Hover states — darken in light, lighten in dark
+    // Hover states
     root.setProperty('--color-primary-hover', isDark
       ? this.hslToHex(h, s, Math.min(75, l + 15))
       : this.hslToHex(h, s, Math.max(25, l - 15)));
@@ -111,19 +126,11 @@ export class GlobalSettingsService {
     // Borders
     root.setProperty('--color-border-accent', `color-mix(in srgb, ${hex} 30%, transparent)`);
 
-    // === Harmonious palette from HSL ===
-
-    // Complementary (180 deg shift)
-    const compH = (h + 180) % 360;
-    root.setProperty('--color-accent', this.hslToHex(compH, Math.min(90, s + 10), isDark ? Math.min(65, l + 10) : Math.max(35, l - 5)));
-    root.setProperty('--color-accent-container', this.hslToHex(compH, Math.max(15, s * 0.4), isDark ? 20 : 92));
-
-    // Analogous (+30 deg)
-    root.setProperty('--color-analogous', this.hslToHex((h + 30) % 360, s, l));
-
-    // Triadic (+120, +240)
-    root.setProperty('--color-triadic-1', this.hslToHex((h + 120) % 360, Math.max(30, s * 0.7), l));
-    root.setProperty('--color-triadic-2', this.hslToHex((h + 240) % 360, Math.max(30, s * 0.7), l));
+    // Accent = secondary (contrast) color
+    root.setProperty('--color-accent', secHex);
+    root.setProperty('--color-accent-container', isDark
+      ? this.hslToHex(sh, Math.max(15, ss * 0.4), 20)
+      : this.hslToHex(sh, Math.max(15, ss * 0.4), 92));
 
     // Tonal scale 50–900
     for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
@@ -134,7 +141,7 @@ export class GlobalSettingsService {
       root.setProperty(`--color-primary-${step}`, this.hslToHex(h, stepS, stepL));
     }
 
-    // Semantic: success (green-shifted)
+    // Semantic: success (green-shifted from primary hue)
     const successH = h < 180 ? Math.min(h + 40, 150) : Math.max(h - 40, 120);
     root.setProperty('--color-success', this.hslToHex(successH, isDark ? 55 : 60, isDark ? 50 : 35));
     root.setProperty('--color-success-container', this.hslToHex(successH, isDark ? 30 : 35, isDark ? 15 : 88));
@@ -151,7 +158,6 @@ export class GlobalSettingsService {
     root.setProperty('--color-border', isDark ? '#3e4040' : `color-mix(in srgb, ${hex} 20%, #e0e0e0)`);
   }
 
-  /** Reapply primary color when theme toggles (light/dark) */
   reapplyPrimaryColor(): void {
     this.applyPrimaryColor(this.primaryColor());
   }
