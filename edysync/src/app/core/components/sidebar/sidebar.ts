@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject, effect } from '@angular/core';
 import { Router, NavigationEnd, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
@@ -29,15 +29,14 @@ export class Sidebar implements OnInit, OnDestroy {
   private settings = inject(GlobalSettingsService);
   private router = inject(Router);
   hideCharts = this.settings.hideCharts;
+  pinned = this.settings.sidebarPinned;
 
   userRole: string = '';
   error: string | null = null;
   isOpen = false;
 
-  /** Whether sidebar is pinned open (16rem, labels visible) */
-  pinned = false;
-  /** Index of the hovered nav item (for floating panel) */
-  hoveredIndex: number | null = null;
+  /** Hover state: sidebar expands on desktop when hovering any item */
+  isHovered = false;
 
   private subs = new Subscription();
 
@@ -66,8 +65,18 @@ export class Sidebar implements OnInit, OnDestroy {
     return items;
   }
 
+  /** Whether sidebar visually shows labels */
+  get isExpanded(): boolean {
+    return this.pinned() || this.isHovered;
+  }
+
   private hideChartsEffect = effect(() => {
     this.hideCharts();
+    this.cdr.markForCheck();
+  });
+
+  private pinnedEffect = effect(() => {
+    this.pinned();
     this.cdr.markForCheck();
   });
 
@@ -77,7 +86,6 @@ export class Sidebar implements OnInit, OnDestroy {
     private auth: AuthService,
     public sidebarService: SidebarService,
     private cdr: ChangeDetectorRef,
-    private el: ElementRef,
   ) {}
 
   ngOnInit() {
@@ -93,8 +101,8 @@ export class Sidebar implements OnInit, OnDestroy {
     // Auto-collapse on navigation only when NOT pinned
     this.subs.add(
       this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
-        if (!this.pinned) {
-          this.hoveredIndex = null;
+        if (!this.pinned()) {
+          this.isHovered = false;
         }
         this.cdr.markForCheck();
       })
@@ -105,23 +113,15 @@ export class Sidebar implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
-  togglePin() {
-    this.pinned = !this.pinned;
-    if (this.pinned) {
-      this.hoveredIndex = null;
-    }
-    this.cdr.markForCheck();
-  }
-
-  onItemHover(index: number) {
-    if (!this.pinned) {
-      this.hoveredIndex = index;
+  onMouseEnter() {
+    if (!this.pinned()) {
+      this.isHovered = true;
       this.cdr.markForCheck();
     }
   }
 
-  onItemLeave() {
-    this.hoveredIndex = null;
+  onMouseLeave() {
+    this.isHovered = false;
     this.cdr.markForCheck();
   }
 

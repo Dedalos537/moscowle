@@ -85,6 +85,24 @@ import { HeaderService } from '../../../../core/services/header.service';
 
           <div class="setting-divider"></div>
 
+          <!-- Anclar sidebar -->
+          <div class="setting-item">
+            <div class="setting-item__left">
+              <div class="setting-item__icon setting-item__icon--primary">
+                <fa-icon [icon]="['fas', 'thumbtack']"></fa-icon>
+              </div>
+              <div class="setting-item__text">
+                <span class="setting-item__label">Anclar sidebar</span>
+                <span class="setting-item__desc">Mantener menú lateral expandido</span>
+              </div>
+            </div>
+            <button type="button" class="toggle" [class.toggle--on]="sidebarPinned()" (click)="toggleSidebarPinned()">
+              <span class="toggle__thumb"></span>
+            </button>
+          </div>
+
+          <div class="setting-divider"></div>
+
           <!-- Tamaño de fuente -->
           <div class="setting-item">
             <div class="setting-item__left">
@@ -514,6 +532,7 @@ export class Settings implements OnInit, OnDestroy {
   get fontSize() { return this.settings.fontSize; }
   get primaryColor() { return this.settings.primaryColor; }
   get hideCharts() { return this.settings.hideCharts; }
+  get sidebarPinned() { return this.settings.sidebarPinned; }
   get notifPrefs() { return this.notifService.preferences() || this.defaultPrefs; }
 
   telegramAccounts: any[] = [];
@@ -606,6 +625,11 @@ export class Settings implements OnInit, OnDestroy {
 
   toggleHideCharts(): void {
     this.settings.toggleHideCharts();
+    this.cdr.markForCheck();
+  }
+
+  toggleSidebarPinned(): void {
+    this.settings.setSidebarPinned(!this.sidebarPinned());
     this.cdr.markForCheck();
   }
 

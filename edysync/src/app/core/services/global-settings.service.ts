@@ -33,6 +33,7 @@ export class GlobalSettingsService {
   hideCharts = signal<boolean>(this.loadLocal('edysync_hide_charts') === 'true');
   fontSize = signal<FontSize>((this.loadLocal('edysync_font_size') as FontSize) || 'medium');
   primaryColor = signal<string>(this.loadLocal('edysync_primary_color') || 'green');
+  sidebarPinned = signal<boolean>(this.loadLocal('edysync_sidebar_pinned') === 'true');
 
   constructor() {
     this.applyFontSize(this.fontSize());
@@ -59,6 +60,11 @@ export class GlobalSettingsService {
     this.saveLocal('edysync_primary_color', colorName);
     this.applyPrimaryColor(colorName);
     this.saveToAPI({ primary_color: colorName });
+  }
+
+  setSidebarPinned(pinned: boolean): void {
+    this.sidebarPinned.set(pinned);
+    this.saveLocal('edysync_sidebar_pinned', String(pinned));
   }
 
   private applyFontSize(size: FontSize): void {

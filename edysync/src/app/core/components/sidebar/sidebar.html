@@ -4,47 +4,35 @@
 <aside
   class="sidebar"
   [class.sidebar--open]="isOpen"
-  [class.sidebar--pinned]="pinned">
+  [class.sidebar--expanded]="isExpanded"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()">
 
   <!-- Brand / Logo -->
   <div class="sidebar-brand">
-    <img src="assets/img/logo.svg" alt="Logo" class="sidebar-logo__img">
-    @if (pinned) {
+    <span class="sidebar-logo-img" role="img" aria-label="Logo Centro Juan Pablo II"></span>
+    @if (isExpanded) {
       <span class="sidebar-brand-name">Centro Juan Pablo II</span>
     }
   </div>
 
   <!-- Navigation -->
   <nav class="sidebar-nav">
-    @for (item of navItems; track item.path; let i = $index) {
+    @for (item of navItems; track item.path) {
       <a
         [routerLink]="item.path"
         routerLinkActive="nav-link--active"
         #rla="routerLinkActive"
         class="nav-link"
         [class.nav-link--active]="rla.isActive"
-        [class.nav-link--hovered]="hoveredIndex === i"
         (click)="sidebarService.close()"
-        (mouseenter)="onItemHover(i)"
-        (mouseleave)="onItemLeave()">
+        [title]="!isExpanded ? item.label : null">
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
-
-        <!-- Inline text when pinned -->
-        @if (pinned) {
+        @if (isExpanded) {
           <div class="nav-link-text">
             <span class="nav-link-label">{{ item.label }}</span>
             @if (item.subtitle) {
               <span class="nav-link-sub">{{ item.subtitle }}</span>
-            }
-          </div>
-        }
-
-        <!-- Floating panel on hover (not pinned) -->
-        @if (!pinned && hoveredIndex === i) {
-          <div class="nav-link-float">
-            <span class="nav-link-float__label">{{ item.label }}</span>
-            @if (item.subtitle) {
-              <span class="nav-link-float__sub">{{ item.subtitle }}</span>
             }
           </div>
         }
@@ -54,15 +42,6 @@
 
   <!-- Footer -->
   <div class="sidebar-footer">
-    <button
-      type="button"
-      class="sidebar-pin-btn"
-      [class.sidebar-pin-btn--active]="pinned"
-      (click)="togglePin()"
-      [title]="pinned ? 'Desanclar sidebar' : 'Anclar sidebar abierto'"
-      [attr.aria-label]="pinned ? 'Desanclar sidebar' : 'Anclar sidebar abierto'">
-      <fa-icon [icon]="['fas', pinned ? 'thumbtack' : 'thumbtack']"></fa-icon>
-    </button>
     <button type="button" class="sidebar-help-btn" (click)="toggleHelp()"
       [title]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'"
       [attr.aria-label]="helpState.panelOpen() ? 'Cerrar ayuda' : 'Ayuda'">
