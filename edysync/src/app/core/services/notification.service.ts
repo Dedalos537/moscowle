@@ -1,6 +1,6 @@
 import { Injectable, signal, inject, OnDestroy, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subscription, interval } from 'rxjs';
+import { Observable, Subscription, interval, tap } from 'rxjs';
 import { NotificationItem, NotificationPreferences } from '../models/notification';
 import { AdminService } from './admin.service';
 import { ChatService } from './chat.service';
@@ -21,6 +21,16 @@ export class NotificationService implements OnDestroy {
   preferences = signal<NotificationPreferences | null>(null);
   loading = signal(false);
   socketConnected = signal(false);
+
+  private readonly _defaultPrefs: NotificationPreferences = {
+    notifications_enabled: true, debt_enabled: true, activity_enabled: true,
+    system_enabled: true, alert_enabled: true, payment_enabled: true,
+    sound_enabled: true, browser_notifications: false,
+  };
+
+  get defaultPrefs(): NotificationPreferences {
+    return { ...this._defaultPrefs };
+  }
 
   private subs = new Subscription();
   private pollSub: Subscription | null = null;
@@ -140,18 +150,16 @@ export class NotificationService implements OnDestroy {
   fetchPreferences(): void {
     this.adminService.getNotificationPreferences().subscribe({
       next: (data) => this.preferences.set(data),
-      error: () => {},
+      error: () => this.preferences.set({ ...this._defaultPrefs }),
     });
   }
 
   updatePreferences(data: Partial<NotificationPreferences>): Observable<any> {
-    const obs = this.adminService.updateNotificationPreferences(data);
-    obs.subscribe({
-      next: () => {
-        this.preferences.update(p => p ? { ...p, ...data } : null);
-      },
-    });
-    return obs;
+    return this.adminService.updateNotificationPreferences(data).pipe(
+      tap(() => {
+        this.preferences.update(p => p ? { ...p, ...data } : { ...this._defaultPrefs, ...data });
+      }),
+    );
   }
 
   getNotificationsByCategory(category: string): Observable<NotificationItem[]> {

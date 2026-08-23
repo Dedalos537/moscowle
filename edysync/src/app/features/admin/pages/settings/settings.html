@@ -1,0 +1,323 @@
+<div class="settings-page">
+  <div class="settings-cards-grid">
+  <!-- ═══════════════════════ APARIENCIA ═══════════════════════ -->
+  <section class="settings-card">
+    <div class="settings-card__header">
+      <div class="settings-card__icon settings-card__icon--green">
+        <fa-icon [icon]="['fas', 'palette']"></fa-icon>
+      </div>
+      <div>
+        <h2 class="settings-card__title">Apariencia</h2>
+        <p class="settings-card__subtitle">Personaliza el tema visual de la plataforma</p>
+      </div>
+    </div>
+
+    <div class="settings-card__body">
+      <!-- Modo oscuro -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', isDark ? 'sun' : 'moon']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Modo oscuro</span>
+            <span class="setting-item__desc">Tema visual de la plataforma</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" [class.toggle--on]="isDark" (click)="toggleDark()">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      <!-- Programar modo oscuro -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--blue">
+            <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Programar modo oscuro</span>
+            <span class="setting-item__desc">Cambio automático por horario</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" [class.toggle--on]="schedule.enabled" (click)="toggleSchedule()">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      @if (schedule.enabled) {
+        <div class="setting-item setting-item--indent">
+          <div class="schedule-selects">
+            <div class="schedule-field">
+              <label>De</label>
+              <select #fromSelect (change)="setScheduleFrom(+$any($event.target).value)">
+                @for (h of hours; track h) {
+                  <option [value]="h" [selected]="schedule.from === h">{{ h.toString().padStart(2, '0') }}:00</option>
+                }
+              </select>
+            </div>
+            <fa-icon [icon]="['fas', 'arrow-right']" class="schedule-arrow"></fa-icon>
+            <div class="schedule-field">
+              <label>Hasta</label>
+              <select #toSelect (change)="setScheduleTo(+$any($event.target).value)">
+                @for (h of hours; track h) {
+                  <option [value]="h" [selected]="schedule.to === h">{{ h.toString().padStart(2, '0') }}:00</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="setting-divider"></div>
+
+      <!-- Anclar sidebar -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'thumbtack']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Anclar sidebar</span>
+            <span class="setting-item__desc">Mantener menú lateral expandido</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" [class.toggle--on]="sidebarPinned()" (click)="toggleSidebarPinned()">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <!-- Tamaño de fuente -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'text-height']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Tamaño de fuente</span>
+            <span class="setting-item__desc">Ajusta el tamaño del texto general</span>
+          </div>
+        </div>
+        <div class="font-size-group">
+          <button type="button" class="font-btn" [class.font-btn--active]="fontSize() === 'small'" (click)="setFontSize('small')">A</button>
+          <button type="button" class="font-btn font-btn--md" [class.font-btn--active]="fontSize() === 'medium'" (click)="setFontSize('medium')">A</button>
+          <button type="button" class="font-btn font-btn--lg" [class.font-btn--active]="fontSize() === 'large'" (click)="setFontSize('large')">A</button>
+        </div>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <!-- Color primario -->
+      <div class="setting-item setting-item--column">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'droplet']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Color primario</span>
+            <span class="setting-item__desc">Color principal del panel de navegación y acentos</span>
+          </div>
+        </div>
+        <div class="color-grid">
+          @for (color of colorPresets; track color.name) {
+            <button
+              type="button"
+              class="color-swatch"
+              [class.color-swatch--active]="primaryColor() === color.name"
+              (click)="setPrimaryColor(color.name)"
+              [attr.aria-label]="color.label"
+            >
+              <span class="color-swatch__primary" [style.background]="color.light"></span>
+              <span class="color-swatch__secondary" [style.background]="color.secondaryLight"></span>
+              @if (primaryColor() === color.name) {
+                <span class="color-swatch__check"><fa-icon [icon]="['fas', 'check']"></fa-icon></span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <!-- Ocultar gráficos -->
+      <div class="setting-item">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label">Ocultar gráficos</span>
+            <span class="setting-item__desc">Reduce elementos visuales en paneles</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" [class.toggle--on]="hideCharts()" (click)="toggleHideCharts()">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ NOTIFICACIONES ═══════════════════════ -->
+  <section class="settings-card">
+    <div class="settings-card__header">
+      <div class="settings-card__icon settings-card__icon--amber">
+        <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+      </div>
+      <div>
+        <h2 class="settings-card__title">Notificaciones</h2>
+        <p class="settings-card__subtitle">Gestiona cómo recibes las alertas</p>
+      </div>
+    </div>
+
+    <div class="settings-card__body">
+      <!-- Toggle maestro -->
+      <div class="setting-item setting-item--highlight">
+        <div class="setting-item__left">
+          <div class="setting-item__icon setting-item__icon--primary">
+            <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+          </div>
+          <div class="setting-item__text">
+            <span class="setting-item__label setting-item__label--bold">Activar notificaciones</span>
+            <span class="setting-item__desc">Toggle maestro: On/Off</span>
+          </div>
+        </div>
+        <button type="button" class="toggle" [class.toggle--on]="notifPrefs.notifications_enabled" (click)="toggleNotificationsGlobal()">
+          <span class="toggle__thumb"></span>
+        </button>
+      </div>
+
+      @if (notifPrefs.notifications_enabled) {
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--amber">
+              <fa-icon [icon]="['fas', 'money-bill-wave']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Deudas</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.debt_enabled" (click)="toggleCategory('debt')">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--blue">
+              <fa-icon [icon]="['fas', 'calendar-alt']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Actividad</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.activity_enabled" (click)="toggleCategory('activity')">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--blue">
+              <fa-icon [icon]="['fas', 'cog']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Sistema</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.system_enabled" (click)="toggleCategory('system')">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--red">
+              <fa-icon [icon]="['fas', 'exclamation-triangle']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Alertas</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.alert_enabled" (click)="toggleCategory('alert')">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--purple">
+              <fa-icon [icon]="['fas', 'credit-card']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Pagos</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.payment_enabled" (click)="toggleCategory('payment')">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <!-- Telegram -->
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--telegram">
+              <fa-icon [icon]="['fab', 'telegram']"></fa-icon>
+            </div>
+            <div class="setting-item__text">
+              <span class="setting-item__label">Notif. Telegram</span>
+              <span class="setting-item__desc">
+                @if (telegramLoading) { Cargando… }
+                @else if (telegramAccounts.length === 0) { Sin cuenta vinculada }
+                @else { {{ telegramAccounts.length }} cuenta(s) vinculada(s) }
+              </span>
+            </div>
+          </div>
+          <button type="button" class="toggle"
+            [disabled]="telegramLoading || telegramToggling !== null || telegramAccounts.length === 0"
+            [class.toggle--on]="telegramAllEnabled()"
+            (click)="toggleTelegramNotifications()">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--primary">
+              <fa-icon [icon]="['fas', 'volume-up']"></fa-icon>
+            </div>
+            <span class="setting-item__label">Sonido</span>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.sound_enabled" (click)="toggleSound()">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--primary">
+              <fa-icon [icon]="['fas', 'desktop']"></fa-icon>
+            </div>
+            <div class="setting-item__text">
+              <span class="setting-item__label">Notif. Escritorio</span>
+              <span class="setting-item__desc">Notificaciones del navegador</span>
+            </div>
+          </div>
+          <button type="button" class="toggle" [class.toggle--on]="notifPrefs.browser_notifications" (click)="toggleBrowserNotif()">
+            <span class="toggle__thumb"></span>
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+  </div>
+
+  <!-- Save button -->
+  <div class="settings-save-bar">
+    <button type="button" class="save-btn" (click)="saveAll()" [class.save-btn--saving]="saving" [disabled]="saving">
+      @if (saving) {
+        <span class="save-spinner"></span>
+        <span>Guardando…</span>
+      } @else if (saved) {
+        <fa-icon [icon]="['fas', 'check']"></fa-icon>
+        <span>Guardado</span>
+      } @else {
+        <fa-icon [icon]="['fas', 'save']"></fa-icon>
+        <span>Guardar cambios</span>
+      }
+    </button>
+  </div>
+</div>

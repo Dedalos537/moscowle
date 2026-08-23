@@ -99,6 +99,11 @@ export class ThemeService {
     }
   }
 
+  /** Public: re-fetch schedule from API (e.g. after login) */
+  refreshScheduleFromAPI(): void {
+    this.loadScheduleFromAPI();
+  }
+
   private loadScheduleFromAPI() {
     this.http.get<ThemeSchedule>('/api/user/schedule').subscribe({
       next: (data) => {
@@ -130,6 +135,7 @@ export class ThemeService {
     } catch {
       this.schedule = { enabled: false, from: 22, to: 7 };
     }
+    this.scheduleSubject.next({ ...this.schedule });
   }
 
   private saveScheduleToAPI() {

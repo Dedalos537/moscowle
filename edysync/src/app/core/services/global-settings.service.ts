@@ -107,9 +107,6 @@ export class GlobalSettingsService {
     root.setProperty('--color-on-secondary', isDark ? '#1a1a1a' : '#ffffff');
     root.setProperty('--color-on-secondary-container', isDark ? '#ffffff' : '#1a1a1a');
 
-    // Surface tint
-    root.setProperty('--color-surface-tint', `color-mix(in srgb, ${hex} 8%, transparent)`);
-
     // Sidebar / nav active
     root.setProperty('--color-nav-active-bg', `color-mix(in srgb, ${hex} 12%, transparent)`);
     root.setProperty('--color-nav-active-border', hex);
@@ -156,6 +153,50 @@ export class GlobalSettingsService {
     root.setProperty('--color-info-container', this.hslToHex(infoH, isDark ? 30 : 40, isDark ? 18 : 90));
 
     root.setProperty('--color-border', isDark ? '#3e4040' : `color-mix(in srgb, ${hex} 20%, #e0e0e0)`);
+
+    // ── Background / surface tinting with secondary color ───────────
+    const secMixPct = isDark ? 4 : 6;
+    const secMixPctLight = isDark ? 3 : 4;
+    const secMixPctLighter = isDark ? 2 : 3;
+    const baseLight = isDark ? '#1e1f20' : '#f8fbed';
+    const baseMid = isDark ? '#242526' : '#edefe2';
+    const baseHigh = isDark ? '#2a2b2d' : '#e7e9dc';
+    const baseHighest = isDark ? '#373839' : '#e1e4d7';
+
+    // Main page background — subtle secondary tint
+    root.setProperty('--color-background', isDark
+      ? baseLight
+      : `color-mix(in srgb, ${secHex} ${secMixPct}%, ${baseLight})`);
+    root.setProperty('--color-surface', isDark
+      ? baseLight
+      : `color-mix(in srgb, ${secHex} ${secMixPct}%, ${baseLight})`);
+    root.setProperty('--color-surface-bright', isDark
+      ? baseHighest
+      : `color-mix(in srgb, ${secHex} ${secMixPctLighter}%, ${baseLight})`);
+    root.setProperty('--color-surface-dim', isDark
+      ? baseLight
+      : `color-mix(in srgb, ${secHex} ${secMixPctLight}%, #d9dbce)`);
+
+    // Surface containers — cards, panels, modals
+    root.setProperty('--color-surface-container-lowest', isDark ? '#18191a' : '#ffffff');
+    root.setProperty('--color-surface-container-low', isDark
+      ? '#1a1b1c'
+      : `color-mix(in srgb, ${secHex} ${secMixPctLighter}%, #f3f5e7)`);
+    root.setProperty('--color-surface-container', isDark
+      ? baseMid
+      : `color-mix(in srgb, ${secHex} ${secMixPctLight}%, ${baseMid})`);
+    root.setProperty('--color-surface-container-high', isDark
+      ? baseHigh
+      : `color-mix(in srgb, ${secHex} ${secMixPct}%, ${baseHigh})`);
+    root.setProperty('--color-surface-container-highest', isDark
+      ? baseHighest
+      : `color-mix(in srgb, ${secHex} ${secMixPct}%, ${baseHighest})`);
+    root.setProperty('--color-surface-variant', isDark
+      ? baseHighest
+      : `color-mix(in srgb, ${secHex} ${secMixPctLight}%, ${baseHighest})`);
+
+    // Surface tint (the subtle color wash over surfaces)
+    root.setProperty('--color-surface-tint', `color-mix(in srgb, ${secHex} ${isDark ? 6 : 8}%, transparent)`);
   }
 
   reapplyPrimaryColor(): void {
