@@ -30,6 +30,8 @@ export class ThemeService {
     if (saved === 'dark' || (!saved && isDark)) {
       this.themeSubject.next('dark');
       document.documentElement.classList.add('dark');
+      // Must reapply CSS variables so background matches dark class
+      setTimeout(() => this.globalSettings.reapplyPrimaryColor(), 0);
     } else {
       this.themeSubject.next('light');
       document.documentElement.classList.remove('dark');
@@ -114,9 +116,12 @@ export class ThemeService {
         };
         localStorage.setItem('themeSchedule', JSON.stringify(this.schedule));
         this.scheduleSubject.next({ ...this.schedule });
+        // Apply schedule immediately so dark mode is correct on page load
+        this.applySchedule();
       },
       error: () => {
         this.loadScheduleFromLocal();
+        this.applySchedule();
       },
     });
   }

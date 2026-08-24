@@ -59,6 +59,8 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   // --- Backend status ---
   serverStatus: 'unknown' | 'running' | 'stopped' = 'unknown';
   serverStatusLoading = true;
+  serverHost = '127.0.0.1';
+  serverPort = 5000;
   restarting = false;
   restartMessage = '';
   restartError = '';
@@ -169,6 +171,8 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       this.admin.getServerStatus().subscribe({
         next: (res) => {
           this.serverStatus = (res.status as any) || 'unknown';
+          this.serverHost = res.host || '127.0.0.1';
+          this.serverPort = res.port || 5000;
           this.serverStatusLoading = false;
           this.cdr.markForCheck();
         },
