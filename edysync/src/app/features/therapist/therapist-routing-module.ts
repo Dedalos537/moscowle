@@ -33,6 +33,7 @@ const routes: Routes = [
       { path: 'reports', component: TherapistReports },
       { path: 'analytics', component: TherapistAnalytics },
       { path: 'incidents', component: IncidentsList, data: { viewMode: 'therapist' } },
+      { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

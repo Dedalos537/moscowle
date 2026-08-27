@@ -601,6 +601,54 @@ export class AdminService {
     return this.http.post('/api/telegram/notifications/toggle', { telegram_chat_id: chatId, enabled });
   }
 
+  // --- Chasqui Bot Config ---
+  getTelegramConfig(): Observable<any> {
+    return this.http.get('/api/telegram/config');
+  }
+
+  updateTelegramConfig(data: { bot_name?: string; bot_emoji?: string; persona_message?: string; system_prompt?: string; is_active?: boolean }): Observable<any> {
+    return this.http.put('/api/telegram/config', data);
+  }
+
+  getWebhookStatus(): Observable<any> {
+    return this.http.get('/api/telegram/webhook/status');
+  }
+
+  setupWebhook(url: string, secret_token?: string): Observable<any> {
+    return this.http.post('/api/telegram/webhook/setup', { url, secret_token });
+  }
+
+  deleteWebhook(): Observable<any> {
+    return this.http.delete('/api/telegram/webhook');
+  }
+
+  sendTestMessage(chatId: number, text: string): Observable<any> {
+    return this.http.post('/api/telegram/test', { chat_id: chatId, text });
+  }
+
+  // --- Chasqui FAQ ---
+  getFaqList(category?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (category) params = params.set('category', category);
+    return this.http.get<any[]>('/api/telegram/faq', { params });
+  }
+
+  createFaq(data: { question: string; answer: string; category?: string; keywords?: string }): Observable<any> {
+    return this.http.post('/api/telegram/faq', data);
+  }
+
+  updateFaq(id: number, data: { question?: string; answer?: string; category?: string; keywords?: string; is_active?: boolean }): Observable<any> {
+    return this.http.put(`/api/telegram/faq/${id}`, data);
+  }
+
+  deleteFaq(id: number): Observable<any> {
+    return this.http.delete(`/api/telegram/faq/${id}`);
+  }
+
+  searchFaq(query: string, limit?: number): Observable<any[]> {
+    return this.http.post<any[]>('/api/telegram/faq/search', { query, limit: limit || 5 });
+  }
+
   // --- Activity Logs ---
   getActivityLogs(filter: string = 'all'): Observable<any> {
     let params = new HttpParams();

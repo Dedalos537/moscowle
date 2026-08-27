@@ -77,6 +77,11 @@
         <fa-icon [icon]="['fas', 'triangle-exclamation']" [class.!text-primary-container]="rli.isActive"></fa-icon>
         <span>Incidencias</span>
       </a>
+      <a routerLink="/patient/kanban" routerLinkActive="active" #rlk="routerLinkActive"
+         class="nav-link" [class.active]="rlk.isActive" (click)="sidebarService.close()">
+        <fa-icon [icon]="['fas', 'columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
+        <span>Mis Tareas</span>
+      </a>
       <a routerLink="/patient/messages" routerLinkActive="active" #rlmg="routerLinkActive"
          class="nav-link" [class.active]="rlmg.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlmg.isActive"></fa-icon>

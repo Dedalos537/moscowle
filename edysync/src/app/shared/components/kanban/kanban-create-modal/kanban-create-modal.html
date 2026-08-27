@@ -1,0 +1,184 @@
+@if (isOpen()) {
+  <div class="modal-overlay" (click)="onBackdropClick($event)">
+    <div class="modal-card">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-on-surface font-headline">
+          {{ editTask() ? 'Editar Tarea' : 'Nueva Tarea' }}
+        </h3>
+        <button (click)="onClose()" class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+          <svg class="w-5 h-5 text-on-surface-variant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form (ngSubmit)="onSubmit()" class="space-y-4">
+        <!-- Title -->
+        <div>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Título *</label>
+          <input
+            type="text"
+            [(ngModel)]="title"
+            name="title"
+            required
+            class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                   border border-outline-variant focus:outline-none focus:ring-2
+                   focus:ring-primary/40 transition-colors"
+            placeholder="Nombre de la tarea"
+          />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-on-surface-variant mb-1">Descripción</label>
+          <textarea
+            [(ngModel)]="description"
+            name="description"
+            rows="3"
+            class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                   border border-outline-variant focus:outline-none focus:ring-2
+                   focus:ring-primary/40 transition-colors resize-none"
+            placeholder="Detalles de la tarea..."
+          ></textarea>
+        </div>
+
+        <!-- Therapy Type + Priority row -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Tipo de Terapia</label>
+            <select
+              [(ngModel)]="therapy_type"
+              name="therapy_type"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors"
+            >
+              <option value="">Sin tipo</option>
+              <option value="terapia_lenguaje">Terapia de Lenguaje</option>
+              <option value="terapia_ocupacional">Terapia Ocupacional</option>
+              <option value="psicologia">Psicología</option>
+              <option value="neuropsicologia">Neuropsicología</option>
+              <option value="fisioterapia">Fisioterapia</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Prioridad</label>
+            <div class="flex gap-2 mt-1">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" [(ngModel)]="priority" name="priority" [value]="1" class="accent-red-500" />
+                <span class="text-sm text-red-500 font-medium">Alta</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" [(ngModel)]="priority" name="priority" [value]="2" class="accent-amber-500" />
+                <span class="text-sm text-amber-500 font-medium">Media</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" [(ngModel)]="priority" name="priority" [value]="3" class="accent-green-500" />
+                <span class="text-sm text-green-500 font-medium">Baja</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assigned to + Session row -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Asignar a</label>
+            <select
+              [(ngModel)]="assigned_to_id"
+              name="assigned_to_id"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors"
+            >
+              <option [ngValue]="null">Sin asignar</option>
+              @for (user of users; track user.id) {
+                <option [ngValue]="user.id">{{ user.full_name || user.email }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Vincular a Sesión</label>
+            <select
+              [(ngModel)]="session_id"
+              name="session_id"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors"
+            >
+              <option [ngValue]="null">Sin sesión</option>
+              @for (session of sessions; track session.id) {
+                <option [ngValue]="session.id">{{ session.title || 'Sesión #' + session.id }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Timer + Sede row -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Tiempo límite (min)</label>
+            <input
+              type="number"
+              [(ngModel)]="max_minutes"
+              name="max_minutes"
+              min="0"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors"
+              placeholder="0 = sin límite"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-on-surface-variant mb-1">Sede</label>
+            <select
+              [(ngModel)]="sede_id"
+              name="sede_id"
+              class="w-full px-4 py-2.5 rounded-xl bg-surface-container text-on-surface
+                     border border-outline-variant focus:outline-none focus:ring-2
+                     focus:ring-primary/40 transition-colors"
+            >
+              <option [ngValue]="null">Todas</option>
+              @for (sede of sedes; track sede.id) {
+                <option [ngValue]="sede.id">{{ sede.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            (click)="onClose()"
+            class="px-5 py-2.5 rounded-2xl text-on-surface-variant font-medium
+                   hover:bg-surface-container-high transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="!title.trim() || isSaving"
+            class="px-6 py-2.5 rounded-2xl bg-primary text-on-primary font-semibold
+                   hover:shadow-lg hover:shadow-primary/25 active:scale-[0.97]
+                   transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            @if (isSaving) {
+              <span class="inline-flex items-center gap-2">
+                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Guardando...
+              </span>
+            } @else {
+              {{ editTask() ? 'Guardar Cambios' : 'Crear Tarea' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

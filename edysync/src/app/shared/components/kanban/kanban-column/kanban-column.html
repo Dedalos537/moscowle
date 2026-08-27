@@ -1,0 +1,56 @@
+<div class="kanban-column">
+  <!-- Column header -->
+  <div class="kanban-column__header">
+    <div class="flex items-center gap-2">
+      <span
+        class="w-2.5 h-2.5 rounded-full shrink-0"
+        [style.background]="column().color"
+      ></span>
+      <h3 class="text-sm font-semibold text-on-surface uppercase tracking-wide">
+        {{ column().title }}
+      </h3>
+    </div>
+    <span
+      class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2
+             text-xs font-bold rounded-full"
+      [class]="column().tasks.length > 0
+        ? 'bg-surface-container-high text-on-surface'
+        : 'bg-surface-container-low text-on-surface-variant'"
+    >
+      {{ column().tasks.length }}
+    </span>
+  </div>
+
+  <!-- Drop list -->
+  <div
+    cdkDropList
+    [cdkDropListData]="column().tasks"
+    [id]="column().id"
+    [cdkDropListConnectedTo]="connectedLists()"
+    (cdkDropListDropped)="onDrop($event)"
+    class="kanban-column__body"
+  >
+    @for (task of column().tasks; track task.id) {
+      <div cdkDrag [cdkDragData]="task">
+        <app-kanban-task-card
+          [task]="task"
+          [viewMode]="viewMode()"
+          (taskClicked)="taskClicked.emit($event)"
+          (taskMoved)="taskMoved.emit()"
+          (taskDeleted)="taskDeleted.emit()"
+          (taskEdited)="taskEdited.emit()"
+        ></app-kanban-task-card>
+      </div>
+    }
+
+    @if (column().tasks.length === 0) {
+      <div class="kanban-column__empty">
+        <svg class="w-8 h-8 text-outline-variant/50 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <p class="text-sm text-on-surface-variant/60">No hay tareas</p>
+      </div>
+    }
+  </div>
+</div>

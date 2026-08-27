@@ -28,6 +28,7 @@ const routes: Routes = [
       { path: 'profile', component: PatientProfile },
       { path: 'my-therapist', component: PatientMyTherapist },
       { path: 'incidents', component: IncidentsList, data: { viewMode: 'patient' } },
+      { path: 'kanban', loadComponent: () => import('./pages/kanban/kanban').then(m => m.KanbanPage) },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

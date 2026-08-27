@@ -82,6 +82,11 @@
         <fa-icon [icon]="['fas', 'envelope']" [class.!text-primary-container]="rlm.isActive"></fa-icon>
         <span>Mensajes</span>
       </a>
+      <a routerLink="/therapist/kanban" routerLinkActive="active" #rlk="routerLinkActive"
+         class="nav-link" [class.active]="rlk.isActive" (click)="sidebarService.close()">
+        <fa-icon [icon]="['fas', 'columns']" [class.!text-primary-container]="rlk.isActive"></fa-icon>
+        <span>Kanban</span>
+      </a>
       <a routerLink="/therapist/profile" routerLinkActive="active" #rlpf="routerLinkActive"
          class="nav-link" [class.active]="rlpf.isActive" (click)="sidebarService.close()">
         <fa-icon [icon]="['fas', 'user-circle']" [class.!text-primary-container]="rlpf.isActive"></fa-icon>

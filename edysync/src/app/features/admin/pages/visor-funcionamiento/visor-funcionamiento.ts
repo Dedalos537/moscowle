@@ -123,6 +123,29 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   tgUnlinking: number | false = false;
   showLinkForm = false;
 
+  // --- Chasqui Config ---
+  tgConfig: any = null;
+  tgConfigLoading = false;
+  tgConfigSaving = false;
+  tgConfigError = '';
+  tgConfigSuccess = '';
+  tgConfigEdit: any = {};
+  tgWebhookStatus: any = null;
+  tgWebhookLoading = false;
+  tgWebhookSetupUrl = '';
+  tgWebhookSecret = '';
+  tgTestChatId = '';
+  tgTestMessage = '';
+  tgTestSending = false;
+
+  // --- FAQ ---
+  tgFaqList: any[] = [];
+  tgFaqLoading = false;
+  tgFaqCategory = '';
+  tgFaqEditing: any = null;
+  tgFaqSaving = false;
+  tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
+
   // --- Activity ---
   activityLogs: any[] = [];
   activityLoading = false;
@@ -155,6 +178,9 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     }
     if (tab === 'telegram') {
       this.loadTelegramStatus();
+      this.loadTgConfig();
+      this.loadFaq();
+      this.loadWebhookStatus();
     }
     if (tab === 'activity') {
       this.loadActivity();
@@ -549,6 +575,131 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         error: () => { this.tgUnlinking = false; this.cdr.markForCheck(); },
       })
     );
+  }
+
+  // --- Chasqui Config ---
+  loadTgConfig() {
+    this.tgConfigLoading = true;
+    this.tgConfigError = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.getTelegramConfig().subscribe({
+        next: (res) => { this.tgConfig = res; this.tgConfigEdit = { ...res }; this.tgConfigLoading = false; this.cdr.markForCheck(); },
+        error: (err) => { this.tgConfigLoading = false; this.tgConfigError = 'Error al cargar config'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  saveTgConfig() {
+    this.tgConfigSaving = true;
+    this.tgConfigError = '';
+    this.tgConfigSuccess = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.updateTelegramConfig({
+        bot_name: this.tgConfigEdit.bot_name,
+        bot_emoji: this.tgConfigEdit.bot_emoji,
+        persona_message: this.tgConfigEdit.persona_message,
+        system_prompt: this.tgConfigEdit.system_prompt,
+      }).subscribe({
+        next: (res) => { this.tgConfig = res; this.tgConfigSaving = false; this.tgConfigSuccess = 'Configuración guardada'; this.cdr.markForCheck(); },
+        error: (err) => { this.tgConfigSaving = false; this.tgConfigError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  loadWebhookStatus() {
+    this.tgWebhookLoading = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.getWebhookStatus().subscribe({
+        next: (res) => { this.tgWebhookStatus = res; this.tgWebhookLoading = false; this.cdr.markForCheck(); },
+        error: (err) => { this.tgWebhookLoading = false; this.tgWebhookStatus = { ok: false, error: 'Error' }; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  setupWebhook() {
+    if (!this.tgWebhookSetupUrl.trim()) return;
+    this.tgWebhookLoading = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.setupWebhook(this.tgWebhookSetupUrl, this.tgWebhookSecret || undefined).subscribe({
+        next: (res) => { this.tgWebhookLoading = false; if (res.ok) this.loadWebhookStatus(); this.cdr.markForCheck(); },
+        error: () => { this.tgWebhookLoading = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  deleteWebhook() {
+    this.tgWebhookLoading = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.deleteWebhook().subscribe({
+        next: () => { this.tgWebhookLoading = false; this.loadWebhookStatus(); this.cdr.markForCheck(); },
+        error: () => { this.tgWebhookLoading = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  sendTestMessage() {
+    if (!this.tgTestChatId || !this.tgTestMessage) return;
+    this.tgTestSending = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.sendTestMessage(Number(this.tgTestChatId), this.tgTestMessage).subscribe({
+        next: (res) => { this.tgTestSending = false; this.tgTestMessage = ''; this.cdr.markForCheck(); },
+        error: () => { this.tgTestSending = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  // --- FAQ ---
+  loadFaq() {
+    this.tgFaqLoading = true;
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.getFaqList(this.tgFaqCategory || undefined).subscribe({
+        next: (res) => { this.tgFaqList = res; this.tgFaqLoading = false; this.cdr.markForCheck(); },
+        error: () => { this.tgFaqLoading = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  startCreateFaq() {
+    this.tgFaqEditing = null;
+    this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
+  }
+
+  startEditFaq(faq: any) {
+    this.tgFaqEditing = faq.id;
+    this.tgFaqForm = { question: faq.question, answer: faq.answer, category: faq.category, keywords: faq.keywords || '' };
+  }
+
+  saveFaq() {
+    if (!this.tgFaqForm.question || !this.tgFaqForm.answer) return;
+    this.tgFaqSaving = true;
+    this.cdr.markForCheck();
+    const obs = this.tgFaqEditing
+      ? this.admin.updateFaq(this.tgFaqEditing, this.tgFaqForm)
+      : this.admin.createFaq(this.tgFaqForm);
+    this.subs.add(
+      obs.subscribe({
+        next: () => { this.tgFaqSaving = false; this.tgFaqEditing = null; this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' }; this.loadFaq(); this.cdr.markForCheck(); },
+        error: () => { this.tgFaqSaving = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  deleteFaq(id: number) {
+    this.subs.add(
+      this.admin.deleteFaq(id).subscribe({ next: () => this.loadFaq() })
+    );
+  }
+
+  cancelFaqEdit() {
+    this.tgFaqEditing = null;
+    this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
   }
 
   formatDate(s: string | null | undefined): string {

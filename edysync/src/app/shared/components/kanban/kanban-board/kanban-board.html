@@ -1,0 +1,149 @@
+<section class="kanban-board">
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <h2 class="text-2xl font-bold text-on-surface font-headline">
+      Tablero de Tareas
+    </h2>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Filters -->
+      <select
+        class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+               border border-outline-variant focus:outline-none focus:ring-2
+               focus:ring-primary/40 transition-colors"
+        (change)="loadTasks()"
+      >
+        <option value="">Todos los tipos</option>
+        <option value="terapia_lenguaje">Terapia de Lenguaje</option>
+        <option value="terapia_ocupacional">Terapia Ocupacional</option>
+        <option value="psicologia">Psicología</option>
+        <option value="neuropsicologia">Neuropsicología</option>
+        <option value="fisioterapia">Fisioterapia</option>
+      </select>
+
+      <select
+        class="px-3 py-2 text-sm rounded-xl bg-surface-container text-on-surface
+               border border-outline-variant focus:outline-none focus:ring-2
+               focus:ring-primary/40 transition-colors"
+        (change)="loadTasks()"
+      >
+        <option value="">Todas las prioridades</option>
+        <option value="urgent">Urgente</option>
+        <option value="high">Alta</option>
+        <option value="medium">Media</option>
+        <option value="low">Baja</option>
+      </select>
+
+      @if (viewMode() !== 'patient') {
+        <button
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl
+                 bg-primary text-on-primary font-semibold text-sm
+                 hover:shadow-lg hover:shadow-primary/25
+                 active:scale-[0.97] transition-all duration-200"
+          (click)="openCreateModal()"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Nueva Tarea
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    @for (col of columns; track col.id) {
+      <div
+        class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-container
+               border border-outline-variant/50"
+      >
+        <span
+          class="w-3 h-3 rounded-full shrink-0"
+          [style.background]="col.color"
+        ></span>
+        <div>
+          <p class="text-xs font-medium text-on-surface-variant uppercase tracking-wide">
+            {{ col.title }}
+          </p>
+          <p class="text-lg font-bold text-on-surface tabular-nums">
+            {{ col.tasks.length }}
+          </p>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Kanban columns -->
+  <div
+    class="kanban-columns"
+    cdkDropListGroup
+  >
+    @for (col of columns; track col.id) {
+      <div class="kanban-column">
+        <!-- Column header -->
+        <div class="kanban-column__header">
+          <div class="flex items-center gap-2">
+            <span
+              class="w-2.5 h-2.5 rounded-full"
+              [style.background]="col.color"
+            ></span>
+            <h3 class="text-sm font-semibold text-on-surface uppercase tracking-wide">
+              {{ col.title }}
+            </h3>
+          </div>
+          <span
+            class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2
+                   text-xs font-bold rounded-full"
+            [class]="col.tasks.length > 0
+              ? 'bg-surface-container-high text-on-surface'
+              : 'bg-surface-container-low text-on-surface-variant'"
+          >
+            {{ col.tasks.length }}
+          </span>
+        </div>
+
+        <!-- Drop list -->
+        <div
+          cdkDropList
+          [cdkDropListData]="col.tasks"
+          [id]="col.id"
+          [cdkDropListConnectedTo]="getConnectedLists(col.id)"
+          (cdkDropListDropped)="onDrop($event)"
+          class="kanban-column__body"
+        >
+          @for (task of col.tasks; track task.id) {
+            <app-kanban-task-card
+              cdkDrag
+              [task]="task"
+              [viewMode]="viewMode()"
+              (taskClicked)="openTaskDetail($event)"
+              (taskMoved)="onTaskMoved()"
+              (taskDeleted)="onTaskDeleted()"
+              (taskEdited)="onTaskEdited()"
+            ></app-kanban-task-card>
+          }
+
+          @if (col.tasks.length === 0) {
+            <div class="kanban-column__empty">
+              <svg class="w-8 h-8 text-outline-variant/50 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+              <p class="text-sm text-on-surface-variant/60">No hay tareas</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Create modal -->
+@if (showCreateModal) {
+  <app-kanban-create-modal
+    [isOpen]="showCreateModal"
+    (close)="closeCreateModal()"
+    (created)="onTaskCreated()"
+  ></app-kanban-create-modal>
+}

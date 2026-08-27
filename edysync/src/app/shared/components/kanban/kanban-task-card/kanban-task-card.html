@@ -1,0 +1,134 @@
+<div
+  class="kanban-card"
+  [class.kanban-card--expired]="urgency === 'expired'"
+  [class.kanban-card--warning]="urgency === 'warning'"
+  (click)="onCardClick()"
+  role="button"
+  tabindex="0"
+>
+  <!-- Top row: priority dot + title + attachment badge -->
+  <div class="kanban-card__top">
+    <span
+      class="w-2 h-2 rounded-full shrink-0"
+      [class]="priorityClass"
+      [attr.title]="priorityLabel"
+    ></span>
+    <h4 class="kanban-card__title">{{ task().title }}</h4>
+    @if (task().attachment_count > 0) {
+      <span class="kanban-card__badge kanban-card__badge--attachment">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+        </svg>
+        {{ task().attachment_count }}
+      </span>
+    }
+  </div>
+
+  <!-- Description preview -->
+  @if (task().description) {
+    <p class="kanban-card__description">{{ task().description }}</p>
+  }
+
+  <!-- Timer section -->
+  @if (task().timer_start) {
+    <div class="kanban-card__timer" [class.kanban-card__timer--warning]="urgency === 'warning'" [class.kanban-card__timer--expired]="urgency === 'expired'">
+      <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="kanban-card__countdown">{{ countdown }}</span>
+    </div>
+  }
+
+  <!-- Quick-move buttons -->
+  <div class="kanban-card__move-row">
+    @for (col of otherColumns(); track col) {
+      <button
+        class="kanban-card__move-btn"
+        [title]="columnLabels[col]"
+        (click)="onMoveToColumn(col); $event.stopPropagation()"
+        type="button"
+      >
+        @switch (col) {
+          @case ('todo') {
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          }
+          @case ('in-progress') {
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          }
+          @case ('review') {
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          }
+          @case ('done') {
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 13l4 4L19 7"/>
+            </svg>
+          }
+        }
+      </button>
+    }
+  </div>
+
+  <!-- Bottom row -->
+  <div class="kanban-card__bottom">
+    <div class="kanban-card__meta">
+      @if (task().assigned_to_name) {
+        <span class="kanban-card__meta-item">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          {{ task().assigned_to_name }}
+        </span>
+      }
+      @if (task().therapy_type) {
+        <span class="kanban-card__badge kanban-card__badge--therapy">
+          {{ task().therapy_type }}
+        </span>
+      }
+      @if (task().session_id) {
+        <span class="kanban-card__badge kanban-card__badge--session">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          Vinculada a sesión
+        </span>
+      }
+    </div>
+
+    <div class="kanban-card__actions">
+      @if (showExtendButtons) {
+        <button class="kanban-card__extend-btn" type="button" (click)="onExtend(15); $event.stopPropagation()" title="Extender 15 min">+15m</button>
+        <button class="kanban-card__extend-btn" type="button" (click)="onExtend(30); $event.stopPropagation()" title="Extender 30 min">+30m</button>
+        <button class="kanban-card__extend-btn" type="button" (click)="onExtend(60); $event.stopPropagation()" title="Extender 60 min">+60m</button>
+      }
+      @if (canDelete) {
+        <button
+          class="kanban-card__delete-btn"
+          type="button"
+          (click)="onDelete($event)"
+          title="Eliminar tarea"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      }
+    </div>
+  </div>
+</div>

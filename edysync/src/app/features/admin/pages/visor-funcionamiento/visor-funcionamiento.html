@@ -655,169 +655,346 @@
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
-            <fa-icon [icon]="['fab', 'telegram']" class="text-[#229ED9]"></fa-icon> Telegram Bot
+            <fa-icon [icon]="['fab', 'telegram']" class="text-[#229ED9]"></fa-icon> Telegram Bot — Chasqui 🦜
           </h2>
-          <p class="text-sm text-on-surface-variant">Vincula tu Telegram para recibir notificaciones y controlar el sistema por chat</p>
+          <p class="text-sm text-on-surface-variant">Configura el bot, gestiona FAQ, vincula dispositivos y prueba mensajes</p>
         </div>
       </div>
     </div>
 
     <div class="tab-body space-y-6">
+
+      <!-- ═══ Section 1: Estado del Bot ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#229ED9]/15">
+            <fa-icon [icon]="['fas', 'signal']" class="text-[#229ED9]"></fa-icon>
+          </div>
+          <h3 class="text-lg font-bold text-on-surface">Estado del Bot</h3>
+        </div>
+        @if (tgConfigLoading) {
+          <div class="flex justify-center py-6"><app-spinner></app-spinner></div>
+        } @else if (tgConfig) {
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-surface-container-high/50 rounded-xl p-4 border border-border/20">
+              <div class="text-xs text-on-surface-variant mb-1">Bot Activo</div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full" [style.background]="tgConfig.is_active ? '#22c55e' : '#ef4444'"></span>
+                <span class="font-bold text-on-surface">{{ tgConfig.is_active ? 'Sí' : 'No' }}</span>
+              </div>
+            </div>
+            <div class="bg-surface-container-high/50 rounded-xl p-4 border border-border/20">
+              <div class="text-xs text-on-surface-variant mb-1">Token</div>
+              <div class="font-mono text-sm text-on-surface">{{ tgConfig.bot_token_masked }}</div>
+            </div>
+            <div class="bg-surface-container-high/50 rounded-xl p-4 border border-border/20">
+              <div class="text-xs text-on-surface-variant mb-1">Cuentas Vinculadas</div>
+              <div class="font-bold text-on-surface text-lg">{{ tgStatus?.linked_accounts?.length || 0 }}</div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- ═══ Section 2: Configuración del Bot ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/15">
+            <fa-icon [icon]="['fas', 'gear']" class="text-primary"></fa-icon>
+          </div>
+          <h3 class="text-lg font-bold text-on-surface">Configuración del Bot</h3>
+        </div>
+        @if (tgConfig) {
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs text-on-surface-variant mb-1 block">Nombre del bot</label>
+                <input type="text" [(ngModel)]="tgConfigEdit.bot_name" class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              </div>
+              <div>
+                <label class="text-xs text-on-surface-variant mb-1 block">Emoji</label>
+                <input type="text" [(ngModel)]="tgConfigEdit.bot_emoji" class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm" maxlength="4" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-on-surface-variant mb-1 block">Mensaje de presentación</label>
+              <textarea [(ngModel)]="tgConfigEdit.persona_message" rows="2" class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm resize-none"></textarea>
+            </div>
+            <div class="flex items-center gap-3">
+              <app-button variant="primary" label="Guardar Config" [icon]="['fas', 'save']" [loading]="tgConfigSaving" (clicked)="saveTgConfig()"></app-button>
+              @if (tgConfigSuccess) {
+                <span class="text-sm text-success flex items-center gap-1"><fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ tgConfigSuccess }}</span>
+              }
+              @if (tgConfigError) {
+                <span class="text-sm text-error flex items-center gap-1"><fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ tgConfigError }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- ═══ Section 3: Editor de Prompt del Sistema ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#FFCA28]/15">
+            <fa-icon [icon]="['fas', 'terminal']" class="text-[#FFCA28]"></fa-icon>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-on-surface">Prompt del Sistema</h3>
+            <p class="text-xs text-on-surface-variant">Personaliza las instrucciones del bot. Si está vacío, usa el prompt por defecto.</p>
+          </div>
+        </div>
+        @if (tgConfig) {
+          <textarea [(ngModel)]="tgConfigEdit.system_prompt" rows="8" placeholder="(Opcional) Instrucciones personalizadas para el bot..."
+            class="w-full px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono resize-y"></textarea>
+        }
+      </div>
+
+      <!-- ═══ Section 4: FAQ / Base de Conocimiento ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#75a83a]/15">
+              <fa-icon [icon]="['fas', 'book']" class="text-[#75a83a]"></fa-icon>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-on-surface">FAQ / Base de Conocimiento</h3>
+              <p class="text-xs text-on-surface-variant">{{ tgFaqList.length }} preguntas frecuentes</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <select [(ngModel)]="tgFaqCategory" (ngModelChange)="loadFaq()" class="px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-xs">
+              <option value="">Todas</option>
+              <option value="general">General</option>
+              <option value="citas">Citas</option>
+              <option value="servicios">Servicios</option>
+              <option value="pagos">Pagos</option>
+              <option value="emergencia">Emergencia</option>
+            </select>
+            <app-button variant="primary" label="Nueva FAQ" [icon]="['fas', 'plus']" (clicked)="startCreateFaq()"></app-button>
+          </div>
+        </div>
+
+        <!-- FAQ Form -->
+        @if (!tgFaqEditing && tgFaqForm.question === '' && tgFaqForm.answer === '') {
+        } @else {
+          <div class="bg-surface-container-high/50 rounded-xl border border-primary/30 p-4 mb-4 space-y-3" @fadeInUp>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-on-surface">{{ tgFaqEditing ? 'Editar FAQ' : 'Nueva FAQ' }}</span>
+              <button (click)="cancelFaqEdit()" class="text-on-surface-variant hover:text-on-surface"><fa-icon [icon]="['fas', 'times']"></fa-icon></button>
+            </div>
+            <input type="text" [(ngModel)]="tgFaqForm.question" placeholder="Pregunta" class="w-full px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+            <textarea [(ngModel)]="tgFaqForm.answer" rows="2" placeholder="Respuesta" class="w-full px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm resize-none"></textarea>
+            <div class="grid grid-cols-2 gap-3">
+              <input type="text" [(ngModel)]="tgFaqForm.category" placeholder="Categoría" class="px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              <input type="text" [(ngModel)]="tgFaqForm.keywords" placeholder="Keywords (separadas por coma)" class="px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+            </div>
+            <app-button variant="primary" [label]="tgFaqEditing ? 'Actualizar' : 'Crear'" [icon]="['fas', 'save']" [loading]="tgFaqSaving" (clicked)="saveFaq()"></app-button>
+          </div>
+        }
+
+        <!-- FAQ Table -->
+        @if (tgFaqLoading) {
+          <div class="flex justify-center py-6"><app-spinner></app-spinner></div>
+        } @else if (tgFaqList.length === 0) {
+          <p class="text-sm text-on-surface-variant text-center py-6">No hay FAQ registradas</p>
+        } @else {
+          <div class="space-y-2">
+            @for (faq of tgFaqList; track faq.id) {
+              <div class="bg-surface-container-high/50 rounded-xl border border-border/20 p-4 hover:shadow-soft transition-shadow">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                      <span class="text-sm font-bold text-on-surface">{{ faq.question }}</span>
+                      <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold">{{ faq.category }}</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant line-clamp-2">{{ faq.answer }}</p>
+                    @if (faq.keywords) {
+                      <p class="text-[10px] text-on-surface-variant mt-1"><fa-icon [icon]="['fas', 'tags']" class="mr-1"></fa-icon>{{ faq.keywords }}</p>
+                    }
+                  </div>
+                  <div class="flex gap-1 shrink-0">
+                    <button (click)="startEditFaq(faq)" class="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors" title="Editar">
+                      <fa-icon [icon]="['fas', 'pencil']" class="text-xs"></fa-icon>
+                    </button>
+                    <button (click)="deleteFaq(faq.id)" class="p-2 rounded-lg hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors" title="Eliminar">
+                      <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- ═══ Section 5: Webhook ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#E91E63]/15">
+            <fa-icon [icon]="['fas', 'link']" class="text-[#E91E63]"></fa-icon>
+          </div>
+          <h3 class="text-lg font-bold text-on-surface">Webhook</h3>
+        </div>
+        @if (tgWebhookLoading) {
+          <div class="flex justify-center py-4"><app-spinner></app-spinner></div>
+        } @else if (tgWebhookStatus) {
+          <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="bg-surface-container-high/50 rounded-xl p-3 border border-border/20">
+                <div class="text-xs text-on-surface-variant mb-1">URL Registrada</div>
+                <div class="text-sm font-mono text-on-surface break-all">{{ tgWebhookStatus.url || '—' }}</div>
+              </div>
+              <div class="bg-surface-container-high/50 rounded-xl p-3 border border-border/20">
+                <div class="text-xs text-on-surface-variant mb-1">Pendientes</div>
+                <div class="text-sm font-bold text-on-surface">{{ tgWebhookStatus.pending_update_count || 0 }}</div>
+              </div>
+            </div>
+            @if (tgWebhookStatus.last_error_message) {
+              <div class="p-3 bg-error/10 border border-error/30 rounded-xl text-xs text-error">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ tgWebhookStatus.last_error_message }}
+              </div>
+            }
+            <div class="flex gap-3 flex-wrap">
+              <input type="text" [(ngModel)]="tgWebhookSetupUrl" placeholder="URL del webhook (ej: https://api-centrojuanpabloii.online/api/telegram/webhook)" class="flex-1 min-w-[300px] px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              <input type="text" [(ngModel)]="tgWebhookSecret" placeholder="Secret token (opcional)" class="w-48 px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              <app-button variant="primary" label="Configurar" [icon]="['fas', 'check']" [loading]="tgWebhookLoading" (clicked)="setupWebhook()"></app-button>
+              <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash']" [loading]="tgWebhookLoading" (clicked)="deleteWebhook()"></app-button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- ═══ Section 6: Mensaje de Prueba ═══ -->
+      <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-[#00BCD4]/15">
+            <fa-icon [icon]="['fas', 'paper-plane']" class="text-[#00BCD4]"></fa-icon>
+          </div>
+          <h3 class="text-lg font-bold text-on-surface">Mensaje de Prueba</h3>
+        </div>
+        <div class="flex gap-3 flex-wrap">
+          <input type="number" [(ngModel)]="tgTestChatId" placeholder="Chat ID" class="w-40 px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+          <input type="text" [(ngModel)]="tgTestMessage" placeholder="Mensaje de prueba..." class="flex-1 min-w-[200px] px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" (keyup.enter)="sendTestMessage()" />
+          <app-button variant="primary" label="Enviar" [icon]="['fas', 'paper-plane']" [loading]="tgTestSending" (clicked)="sendTestMessage()"></app-button>
+        </div>
+      </div>
+
+      <!-- ═══ Section 7: Dispositivos Vinculados (existing) ═══ -->
       @if (tgLoading) {
-        <div class="flex justify-center py-12"><app-spinner></app-spinner></div>
+        <div class="flex justify-center py-6"><app-spinner></app-spinner></div>
       } @else if (tgStatus && tgStatus.linked_accounts && tgStatus.linked_accounts.length > 0) {
-        <!-- Linked Devices List -->
         <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-success/15">
-                <fa-icon [icon]="['fas', 'check-circle']" class="text-2xl text-success"></fa-icon>
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-success/15">
+                <fa-icon [icon]="['fas', 'check-circle']" class="text-success"></fa-icon>
               </div>
               <div>
                 <h3 class="text-lg font-bold text-on-surface">Dispositivos Vinculados</h3>
-                <p class="text-sm text-on-surface-variant">{{ tgStatus.linked_accounts.length }} cuenta(s) conectada(s) a Telegram</p>
+                <p class="text-xs text-on-surface-variant">{{ tgStatus.linked_accounts.length }} cuenta(s) conectada(s)</p>
               </div>
             </div>
             <app-button variant="primary" label="Vincular Nuevo" [icon]="['fas', 'plus']" (clicked)="showLinkForm = true"></app-button>
           </div>
-
           <div class="space-y-3">
             @for (account of tgStatus.linked_accounts; track account.telegram_chat_id) {
               <div class="bg-surface-container-high/50 rounded-xl border border-border/20 p-4 hover:shadow-soft transition-shadow">
                 <div class="flex items-center justify-between gap-4">
                   <div class="flex items-center gap-4 flex-1 min-w-0">
-                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                          [style.background]="account.is_linked ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)'">
-                      <fa-icon [icon]="['fab', 'telegram']" class="text-xl"
+                      <fa-icon [icon]="['fab', 'telegram']" class="text-lg"
                                [style.color]="account.is_linked ? '#229ED9' : '#94a3b8'"></fa-icon>
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 mb-1 flex-wrap">
                         @if (account.telegram_username) {
                           <span class="text-sm font-bold text-on-surface">@{{ account.telegram_username }}</span>
-                        } @else if (account.telegram_first_name) {
-                          <span class="text-sm font-bold text-on-surface">{{ account.telegram_first_name }}</span>
                         } @else {
                           <span class="text-sm font-bold text-on-surface">Chat #{{ account.telegram_chat_id }}</span>
                         }
                         <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
                               [class]="account.is_linked ? 'bg-success/15 text-success' : 'bg-surface-container-high text-on-surface-variant'">
-                          {{ account.is_linked ? 'ACTIVO' : 'DESCONECTADO' }}
+                          {{ account.is_linked ? 'ACTIVO' : 'OFF' }}
                         </span>
-                        @if (account.notifications_enabled) {
-                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold">
-                            <fa-icon [icon]="['fas', 'bell']" class="mr-0.5"></fa-icon> NOTIF
-                          </span>
-                        }
                       </div>
-                      <div class="flex items-center gap-4 text-xs text-on-surface-variant mt-1 flex-wrap">
-                        @if (account.linked_at) {
-                          <span><fa-icon [icon]="['fas', 'link']" class="mr-1"></fa-icon>Vinculado: {{ formatDate(account.linked_at) }}</span>
-                        }
+                      <div class="text-xs text-on-surface-variant mt-1">
                         @if (account.last_interaction) {
-                          <span><fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>Última interacción: {{ formatDate(account.last_interaction) }}</span>
+                          <span><fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>{{ formatDate(account.last_interaction) }}</span>
                         }
                       </div>
                     </div>
                   </div>
-                  <div class="flex gap-2 shrink-0">
-                    <app-button variant="danger" label="Desvincular" [icon]="['fas', 'unlink']"
-                      [loading]="tgUnlinking === account.telegram_chat_id"
-                      (clicked)="unlinkTelegram(account.telegram_chat_id)">
-                    </app-button>
-                  </div>
+                  <app-button variant="danger" label="Desvincular" [icon]="['fas', 'unlink']"
+                    [loading]="tgUnlinking === account.telegram_chat_id"
+                    (clicked)="unlinkTelegram(account.telegram_chat_id)">
+                  </app-button>
                 </div>
               </div>
             }
           </div>
         </div>
 
-        <!-- Link Form (hidden by default) -->
         @if (showLinkForm) {
           <div class="bg-surface-container-lowest rounded-xl border border-primary/30 p-6" @fadeInUp>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3">
               <h3 class="font-bold text-on-surface flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon> Vincular Nuevo Dispositivo
+                <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon> Vincular Nuevo
               </h3>
-              <button (click)="showLinkForm = false" class="text-on-surface-variant hover:text-on-surface transition-colors">
-                <fa-icon [icon]="['fas', 'times']"></fa-icon>
-              </button>
+              <button (click)="showLinkForm = false" class="text-on-surface-variant hover:text-on-surface"><fa-icon [icon]="['fas', 'times']"></fa-icon></button>
             </div>
-            <p class="text-sm text-on-surface-variant mb-4">
-              Envía <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code> al bot en Telegram y pega el código aquí.
-            </p>
+            <p class="text-sm text-on-surface-variant mb-3">Envía <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code> al bot y pega el código aquí.</p>
             <div class="flex gap-3">
-              <input
-                type="text"
-                [(ngModel)]="tgLinkCode"
-                placeholder="Código de 6 caracteres"
-                maxlength="8"
+              <input type="text" [(ngModel)]="tgLinkCode" placeholder="Código de 6 caracteres" maxlength="8"
                 class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono uppercase"
-                (keyup.enter)="linkTelegram()"
-              />
+                (keyup.enter)="linkTelegram()" />
               <app-button variant="primary" label="Vincular" [icon]="['fas', 'link']" [loading]="tgLinking" (clicked)="linkTelegram()"></app-button>
             </div>
             @if (tgLinkError) {
-              <div class="mt-3 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ tgLinkError }}
-              </div>
+              <div class="mt-3 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error">{{ tgLinkError }}</div>
             }
             @if (tgLinkSuccess) {
-              <div class="mt-3 p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ tgLinkSuccess }}
-              </div>
+              <div class="mt-3 p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success">{{ tgLinkSuccess }}</div>
             }
           </div>
         }
       } @else {
         <!-- No Linked Devices -->
         <div class="bg-surface-container-lowest rounded-xl border border-border/20 p-6">
-          <div class="flex items-center gap-4 mb-6">
-            <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: rgba(34,158,217,0.15)">
-              <fa-icon [icon]="['fab', 'telegram']" class="text-3xl" style="color: #229ED9"></fa-icon>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center" style="background: rgba(34,158,217,0.15)">
+              <fa-icon [icon]="['fab', 'telegram']" class="text-2xl" style="color: #229ED9"></fa-icon>
             </div>
-            <div class="flex-1">
+            <div>
               <h3 class="text-lg font-bold text-on-surface">Vincular Telegram</h3>
-              <p class="text-sm text-on-surface-variant">Conecta tu cuenta de Telegram para recibir notificaciones y controlar el sistema</p>
+              <p class="text-sm text-on-surface-variant">Conecta tu cuenta para recibir notificaciones</p>
             </div>
           </div>
-
-          <div class="space-y-4">
+          <div class="space-y-3">
             <div class="p-4 bg-surface-container-high/50 rounded-xl border border-border/20">
-              <h4 class="text-sm font-bold text-on-surface mb-2">Pasos para vincular:</h4>
               <ol class="text-sm text-on-surface-variant space-y-1.5 list-decimal list-inside">
-                <li>Abre <a href="https://t.me/CentroJuanPabloIIbot" target="_blank" class="text-primary font-bold hover:underline">@CentroJuanPabloIIbot</a> en Telegram</li>
-                <li>Envía el comando <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code></li>
-                <li>Copia el código de 6 caracteres que te dé el bot</li>
-                <li>Pégalo aquí abajo y haz clic en "Vincular"</li>
+                <li>Abre <a href="https://t.me/CentroJuanPabloIIbot" target="_blank" class="text-primary font-bold hover:underline">@CentroJuanPabloIIbot</a></li>
+                <li>Envía <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code></li>
+                <li>Copia el código de 6 caracteres</li>
+                <li>Pégalo aquí</li>
               </ol>
             </div>
-
             <div class="flex gap-3">
-              <input
-                type="text"
-                [(ngModel)]="tgLinkCode"
-                placeholder="Código de 6 caracteres (ej: A9QIWG)"
-                maxlength="8"
+              <input type="text" [(ngModel)]="tgLinkCode" placeholder="Código (ej: A9QIWG)" maxlength="8"
                 class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono uppercase"
-                (keyup.enter)="linkTelegram()"
-              />
+                (keyup.enter)="linkTelegram()" />
               <app-button variant="primary" label="Vincular" [icon]="['fas', 'link']" [loading]="tgLinking" (clicked)="linkTelegram()"></app-button>
             </div>
-
             @if (tgLinkError) {
-              <div class="p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'exclamation-circle']"></fa-icon> {{ tgLinkError }}
-              </div>
+              <div class="p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error">{{ tgLinkError }}</div>
             }
             @if (tgLinkSuccess) {
-              <div class="p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success flex items-center gap-2">
-                <fa-icon [icon]="['fas', 'check-circle']"></fa-icon> {{ tgLinkSuccess }}
-              </div>
+              <div class="p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success">{{ tgLinkSuccess }}</div>
             }
           </div>
         </div>
       }
+
     </div>
   </div>
 }
