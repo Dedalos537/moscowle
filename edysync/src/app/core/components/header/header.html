@@ -33,53 +33,132 @@
       </button>
 
       @if (showNotifications) {
-        <div class="absolute right-0 mt-3 w-80 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col max-h-[80vh] animate-fade-in">
-          <div class="p-4 border-b border-border/30 flex justify-between items-center bg-surface-container-low/80 rounded-t-xl">
-            <h3 class="text-sm font-bold text-on-surface">Notificaciones</h3>
-            <div class="flex items-center gap-2">
-              @if (unreadCount > 0) {
-                <button (click)="markAllAsRead()" class="text-label-caps text-primary-container hover:text-primary-container/80 transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-primary-container/10">
-                  <fa-icon [icon]="['fas', 'check-double']" class="text-xs"></fa-icon>
-                  Marcar leidas
+        <div class="absolute right-0 mt-3 w-96 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col max-h-[85vh] animate-fade-in">
+          <!-- Header -->
+          <div class="p-4 border-b border-border/30 bg-surface-container-low/80 rounded-t-xl">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-bold text-on-surface flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'bell']" class="text-primary"></fa-icon>
+                Notificaciones
+                @if (unreadCount > 0) {
+                  <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-error/15 text-error font-bold">{{ unreadCount }}</span>
+                }
+              </h3>
+              <div class="flex items-center gap-1">
+                @if (unreadCount > 0) {
+                  <button (click)="markAllAsRead()" class="text-[10px] text-primary-container hover:text-primary-container/80 transition-colors px-2 py-1 rounded-lg hover:bg-primary-container/10">
+                    Marcar leidas
+                  </button>
+                }
+                <button (click)="showNotifications = false" class="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                  <fa-icon [icon]="['fas', 'times']" class="text-xs"></fa-icon>
+                </button>
+              </div>
+            </div>
+            <!-- Category filters -->
+            <div class="flex gap-1 overflow-x-auto custom-scrollbar pb-1">
+              <button (click)="filterCategory('')"
+                class="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                [class]="selectedCategory === '' ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'">
+                Todos
+              </button>
+              @for (cat of availableCategories; track cat) {
+                <button (click)="filterCategory(cat)"
+                  class="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all whitespace-nowrap"
+                  [class]="selectedCategory === cat ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'">
+                  {{ getCatLabel(cat) }}
                 </button>
               }
-              <button (click)="showNotifications = false" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
-                <fa-icon [icon]="['fas', 'times']" class="text-sm"></fa-icon>
-              </button>
             </div>
           </div>
+
+          <!-- Groups list -->
           <div class="p-2 overflow-y-auto flex-1 custom-scrollbar">
-            @for (notif of notifications; track notif.id) {
-              <div (click)="markOneRead(notif.id)" class="p-3 hover:bg-primary-container/5 rounded-xl transition-colors border-b border-border/10 last:border-0 cursor-pointer">
-                <div class="flex items-start gap-3">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                       [style.background]="'color-mix(in srgb, ' + getCatColor(notif.category) + ' 15%, transparent)'">
-                      <fa-icon [icon]="getCatIcon(notif.category)" class="text-sm"
-                               [style.color]="getCatColor(notif.category)"></fa-icon>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    @if (notif.title) {
-                      <p class="text-xs font-semibold text-on-surface mb-0.5">{{ notif.title }}</p>
-                    }
-                    <p class="text-body-sm text-on-surface leading-snug break-words">{{ notif.message }}</p>
-                    <p class="text-label-caps text-on-surface-variant mt-1 flex items-center gap-1">
-                      <fa-icon [icon]="['fas', 'clock']" class="text-xs leading-none"></fa-icon> {{ notif.timestamp }}
-                    </p>
-                  </div>
-                  @if (notif.priority === 'urgent') {
-                    <span class="w-2 h-2 rounded-full bg-error shrink-0 mt-2"></span>
-                  } @else if (notif.priority === 'high') {
-                    <span class="w-2 h-2 rounded-full bg-warning shrink-0 mt-2"></span>
-                  }
-                </div>
-              </div>
-            } @empty {
+            @if (loading()) {
+              <div class="flex justify-center py-8"><app-spinner></app-spinner></div>
+            } @else if (notifGroups().length === 0) {
               <div class="p-8 text-center">
                 <div class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center mx-auto mb-3 text-outline">
                   <fa-icon [icon]="['fas', 'bell-slash']" class="text-2xl"></fa-icon>
                 </div>
                 <p class="text-body-sm text-on-surface-variant">No tienes notificaciones nuevas</p>
+                <p class="text-xs text-on-surface-variant/60 mt-1">Las notificaciones agrupadas aparecerán aquí</p>
               </div>
+            } @else {
+              @for (group of notifGroups(); track group.id) {
+                <div class="mb-2 rounded-xl border transition-all"
+                     [class]="expandedGroupId() === group.id ? 'border-primary/30 bg-surface-container-high/30' : 'border-border/10 hover:bg-primary-container/5'">
+                  <!-- Group header -->
+                  <div (click)="toggleGroupExpand(group.id)"
+                    class="p-3 cursor-pointer flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                         [style.background]="'color-mix(in srgb, ' + getCatColor(group.category) + ' 15%, transparent)'">
+                      <fa-icon [icon]="getCatIcon(group.category)" class="text-sm"
+                               [style.color]="getCatColor(group.category)"></fa-icon>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-0.5">
+                        <p class="text-sm font-bold text-on-surface truncate">{{ group.title }}</p>
+                        @if (group.count > 1) {
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-bold shrink-0">{{ group.count }}×</span>
+                        }
+                      </div>
+                      @if (group.summary) {
+                        <p class="text-xs text-on-surface-variant line-clamp-2">{{ group.summary }}</p>
+                      }
+                      <div class="flex items-center gap-2 mt-1">
+                        <span class="text-[10px] text-on-surface-variant flex items-center gap-1">
+                          <fa-icon [icon]="['fas', 'clock']" class="text-[8px]"></fa-icon> {{ group.timestamp }}
+                        </span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                              [class]="getPriorityClass(group.priority)">
+                          {{ getPriorityLabel(group.priority) }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0 mt-1">
+                      @if (!group.is_read) {
+                        <span class="w-2 h-2 rounded-full bg-primary"></span>
+                      }
+                      <fa-icon [icon]="expandedGroupId() === group.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
+                               class="text-xs text-on-surface-variant"></fa-icon>
+                    </div>
+                  </div>
+
+                  <!-- Expanded items -->
+                  @if (expandedGroupId() === group.id) {
+                    <div class="px-3 pb-3 border-t border-border/10">
+                      @if (groupItemsLoading()) {
+                        <div class="flex justify-center py-4"><app-spinner></app-spinner></div>
+                      } @else {
+                        @for (item of groupItems(); track item.id) {
+                          <div class="py-2 border-b border-border/5 last:border-0">
+                            <div class="flex items-start gap-2">
+                              <span class="text-[10px] mt-1 shrink-0"
+                                    [class]="item.priority === 'urgent' ? 'text-error' : item.priority === 'high' ? 'text-warning' : 'text-on-surface-variant'">●</span>
+                              <div class="flex-1 min-w-0">
+                                <p class="text-xs text-on-surface leading-snug">{{ item.message }}</p>
+                                <p class="text-[10px] text-on-surface-variant mt-0.5">{{ item.timestamp }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        }
+                        @if (group.count > groupItems().length) {
+                          <p class="text-[10px] text-on-surface-variant text-center py-2">
+                            +{{ group.count - groupItems().length }} más...
+                          </p>
+                        }
+                      }
+                      <div class="flex gap-2 mt-2 pt-2 border-t border-border/10">
+                        <button (click)="markGroupAsRead(group.id); $event.stopPropagation()"
+                          class="flex-1 text-[10px] text-center py-1.5 rounded-lg bg-primary-container/10 text-primary-container hover:bg-primary-container/20 transition-colors">
+                          Marcar leído
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             }
           </div>
         </div>

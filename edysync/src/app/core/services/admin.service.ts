@@ -279,6 +279,37 @@ export class AdminService {
     return this.http.post<ApiResponse>('/api/notifications/mark-read', { id: notifId });
   }
 
+  // ─── Notification Groups (new system) ───────────────────────────────
+
+  getNotificationGroups(category?: string): Observable<any[]> {
+    const url = category ? `/api/notifications/groups?category=${category}` : '/api/notifications/groups';
+    return this.http.get<any[]>(url);
+  }
+
+  getNotificationGroupItems(groupId: number, limit: number = 20): Observable<any[]> {
+    return this.http.get<any[]>(`/api/notifications/groups/${groupId}/items?limit=${limit}`);
+  }
+
+  markNotificationGroupRead(groupId: number): Observable<any> {
+    return this.http.post<any>(`/api/notifications/groups/${groupId}/read`, {});
+  }
+
+  markAllNotificationGroupsRead(): Observable<any> {
+    return this.http.post<any>('/api/notifications/groups/read-all', {});
+  }
+
+  toggleNotificationGroupCollapse(groupId: number): Observable<any> {
+    return this.http.post<any>(`/api/notifications/groups/${groupId}/collapse`, {});
+  }
+
+  getNotificationGroupsSummary(days: number = 1): Observable<any> {
+    return this.http.get<any>(`/api/notifications/groups/summary?days=${days}`);
+  }
+
+  sendTestNotificationDigest(): Observable<any> {
+    return this.http.post<any>('/api/notifications/digest/test', {});
+  }
+
   getExpenses(startDate?: string, endDate?: string, category?: string): Observable<{ success: boolean; data: Expense[] }> {
     let params = new HttpParams();
     if (startDate) params = params.set('start_date', startDate);

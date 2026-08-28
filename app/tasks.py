@@ -325,6 +325,21 @@ def run_notification_cleanup(app):
             print(f'Error in run_notification_cleanup: {e}')
 
 
+def run_daily_notification_digest(app):
+    """Send daily notification digest to all active users at 6:00 AM."""
+    with app.app_context():
+        try:
+            from app.services.daily_digest_service import generate_daily_digests
+
+            result = generate_daily_digests()
+            print(f'Daily digest: {result["sent"]} sent, {result["failed"]} failed out of {result["total"]} users')
+        except Exception as e:
+            print(f'Error in run_daily_notification_digest: {e}')
+            import traceback
+
+            traceback.print_exc()
+
+
 def send_whatsapp_debt_reminders(app):
     """Send WhatsApp reminders for overdue installments (daily at 9am)."""
     with app.app_context():
@@ -427,6 +442,15 @@ def init_scheduler(app):
     )
 
     scheduler.add_job(func=lambda: run_notification_cleanup(app), trigger='cron', day_of_week='sun', hour=4, minute=0)
+
+    # --- Daily Notification Digest (6:00 AM) ---
+    scheduler.add_job(
+        func=lambda: run_daily_notification_digest(app),
+        trigger='cron',
+        hour=6,
+        minute=0,
+        id='daily_notif_digest',
+    )
 
     scheduler.add_job(
         func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza'

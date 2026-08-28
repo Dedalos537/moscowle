@@ -331,6 +331,50 @@ import { NotificationPreferences } from '../../../core/models/notification';
                   </div>
                 </div>
                 }
+
+                <!-- Daily Digest Settings -->
+                <div class="border-t border-border/10 pt-2 mt-2 space-y-1">
+                  <div class="flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-surface-container-low/60 transition-colors">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-8 h-8 rounded-lg bg-[#3b82f6]/15 flex items-center justify-center shrink-0">
+                        <fa-icon [icon]="['fas', 'chart-bar']" class="text-[#3b82f6] text-sm"></fa-icon>
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-sm font-semibold text-on-surface">Resumen Diario</p>
+                        <p class="text-xs text-on-surface-variant">Reporte a las 6:00 AM</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="pref-switch"
+                      (click)="toggleDigest()"
+                      [class.pref-switch--on]="prefs.digest_enabled"
+                    >
+                      <span class="pref-switch__knob"></span>
+                    </button>
+                  </div>
+                  @if (prefs.digest_enabled) {
+                    <div class="px-3 pb-2">
+                      <div class="flex gap-1 bg-surface-container-high rounded-lg p-1">
+                        <button (click)="setDigestChannel('telegram')"
+                          class="flex-1 text-[10px] py-1.5 rounded-md font-bold transition-all"
+                          [class]="prefs.digest_channel === 'telegram' ? 'bg-[#229ED9] text-white' : 'text-on-surface-variant'">
+                          <fa-icon [icon]="['fab', 'telegram']" class="mr-1"></fa-icon>TG
+                        </button>
+                        <button (click)="setDigestChannel('email')"
+                          class="flex-1 text-[10px] py-1.5 rounded-md font-bold transition-all"
+                          [class]="prefs.digest_channel === 'email' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'">
+                          <fa-icon [icon]="['fas', 'envelope']" class="mr-1"></fa-icon>Email
+                        </button>
+                        <button (click)="setDigestChannel('both')"
+                          class="flex-1 text-[10px] py-1.5 rounded-md font-bold transition-all"
+                          [class]="prefs.digest_channel === 'both' ? 'bg-success text-on-success' : 'text-on-surface-variant'">
+                          Ambos
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
               </div>
             }
           </div>
@@ -403,7 +447,8 @@ export class PreferencesMenu {
     return this.notifService.preferences() || {
       notifications_enabled: true,
       debt_enabled: true, activity_enabled: true, system_enabled: true,
-      alert_enabled: true, payment_enabled: true, sound_enabled: true, browser_notifications: false
+      alert_enabled: true, payment_enabled: true, sound_enabled: true, browser_notifications: false,
+      digest_enabled: true, digest_channel: 'both' as const,
     };
   }
 
@@ -540,6 +585,20 @@ export class PreferencesMenu {
       this.notifService.requestBrowserPermission();
     }
     this.notifService.updatePreferences({ browser_notifications: newVal }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
+  }
+
+  toggleDigest(): void {
+    const prefs = this.notifService.preferences();
+    if (!prefs) return;
+    this.notifService.updatePreferences({ digest_enabled: !prefs.digest_enabled }).subscribe(() => {
+      this.cdr.markForCheck();
+    });
+  }
+
+  setDigestChannel(channel: 'telegram' | 'email' | 'both'): void {
+    this.notifService.updatePreferences({ digest_channel: channel }).subscribe(() => {
       this.cdr.markForCheck();
     });
   }

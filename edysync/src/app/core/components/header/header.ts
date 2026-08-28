@@ -10,13 +10,14 @@ import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { ConfirmService } from '../../services/confirm.service';
 import { Button } from '../../../shared/components/button/button';
+import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../services/notification.service';
-import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationItem } from '../../models/notification';
+import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationGroup } from '../../models/notification';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Button],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,20 +27,25 @@ export class Header implements OnInit, OnDestroy {
   showUserMenu = false;
   showLogoutWarning = false;
 
-  notifications: any[] = [];
   unreadCount = 0;
   user: any = null;
   isRecording = false;
   error: string | null = null;
+
+  selectedCategory = '';
+  availableCategories = ['message', 'session', 'payment', 'alert', 'system'];
+
   private userSub!: Subscription;
   private recordingSub!: Subscription;
   private subs = new Subscription();
 
   CATEGORY_ICONS = CATEGORY_ICONS;
   CATEGORY_COLORS = CATEGORY_COLORS;
+  CATEGORY_LABELS = CATEGORY_LABELS;
+
   public headerService = inject(HeaderService);
+
   private notifEffect = effect(() => {
-    this.notifications = this.notifService.notifications();
     this.unreadCount = this.notifService.unreadCount();
     this.cdr.markForCheck();
   });
@@ -78,7 +84,7 @@ export class Header implements OnInit, OnDestroy {
       this.isRecording = state === 'recording' || state === 'starting' || state === 'mic_error';
       this.cdr.markForCheck();
     });
-    this.notifService.fetchNotifications();
+    this.notifService.fetchGroups();
   }
 
   ngOnDestroy() {
@@ -87,20 +93,54 @@ export class Header implements OnInit, OnDestroy {
     this.subs.unsubscribe();
   }
 
+  // ─── Notification Group methods ────────────────────────────────────
+
+  notifGroups(): NotificationGroup[] {
+    let groups = this.notifService.groups();
+    if (this.selectedCategory) {
+      groups = groups.filter(g => g.category === this.selectedCategory);
+    }
+    return groups;
+  }
+
+  expandedGroupId(): number | null {
+    return this.notifService.expandedGroupId();
+  }
+
+  groupItems() {
+    return this.notifService.groupItems();
+  }
+
+  groupItemsLoading(): boolean {
+    return this.notifService.groupItemsLoading();
+  }
+
+  loading(): boolean {
+    return this.notifService.loading();
+  }
+
   toggleNotifications() {
     this.showNotifications = !this.showNotifications;
     this.showUserMenu = false;
     if (this.showNotifications) {
-      this.notifService.fetchNotifications();
+      this.notifService.fetchGroups();
     }
   }
 
-  markAllAsRead() {
-    this.notifService.markAllRead();
+  filterCategory(category: string) {
+    this.selectedCategory = category;
   }
 
-  markOneRead(notifId: number) {
-    this.notifService.markOneRead(notifId);
+  toggleGroupExpand(groupId: number) {
+    this.notifService.expandGroup(groupId);
+  }
+
+  markAllAsRead() {
+    this.notifService.markAllGroupsRead();
+  }
+
+  markGroupAsRead(groupId: number) {
+    this.notifService.markGroupRead(groupId);
   }
 
   toggleUserMenu() {
@@ -118,6 +158,30 @@ export class Header implements OnInit, OnDestroy {
 
   getCatColor(cat: string): string {
     return (CATEGORY_COLORS as any)[cat] || 'var(--color-primary-container)';
+  }
+
+  getCatLabel(cat: string): string {
+    return (CATEGORY_LABELS as any)[cat] || cat;
+  }
+
+  getPriorityClass(priority: string): string {
+    switch (priority) {
+      case 'urgent': return 'bg-error/15 text-error';
+      case 'high': return 'bg-warning/15 text-warning';
+      case 'normal': return 'bg-surface-container-high text-on-surface-variant';
+      case 'low': return 'bg-surface-container-high text-on-surface-variant/60';
+      default: return 'bg-surface-container-high text-on-surface-variant';
+    }
+  }
+
+  getPriorityLabel(priority: string): string {
+    switch (priority) {
+      case 'urgent': return 'Urgente';
+      case 'high': return 'Alta';
+      case 'normal': return 'Normal';
+      case 'low': return 'Baja';
+      default: return priority;
+    }
   }
 
   async logout() {
@@ -157,5 +221,4 @@ export class Header implements OnInit, OnDestroy {
   cancelLogout() {
     this.showLogoutWarning = false;
   }
-
 }
