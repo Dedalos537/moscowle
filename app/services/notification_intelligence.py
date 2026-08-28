@@ -116,19 +116,42 @@ def add_item_to_group(
     is_new_group = group is None
 
     if is_new_group:
-        group = NotificationGroup(
-            user_id=user_id,
-            group_key=group_key,
-            category=category,
-            priority=effective_priority,
-            title=title,
-            count=0,
-            last_item_at=datetime.utcnow(),
-            is_read=False,
-            is_collapsed=True,
-        )
-        db.session.add(group)
-        db.session.flush()  # Get the ID
+        try:
+            group = NotificationGroup(
+                user_id=user_id,
+                group_key=group_key,
+                category=category,
+                priority=effective_priority,
+                title=title,
+                count=0,
+                last_item_at=datetime.utcnow(),
+                is_read=False,
+                is_collapsed=True,
+            )
+            db.session.add(group)
+            db.session.flush()
+        except Exception:
+            db.session.rollback()
+            group = (
+                NotificationGroup.query.filter_by(user_id=user_id, group_key=group_key, is_active=True)
+                .filter(NotificationGroup.last_item_at >= cutoff)
+                .first()
+            )
+            if not group:
+                group = NotificationGroup(
+                    user_id=user_id,
+                    group_key=group_key,
+                    category=category,
+                    priority=effective_priority,
+                    title=title,
+                    count=0,
+                    last_item_at=datetime.utcnow(),
+                    is_read=False,
+                    is_collapsed=True,
+                )
+                db.session.add(group)
+                db.session.flush()
+            is_new_group = False
 
     # Create the item
     item = NotificationItem(

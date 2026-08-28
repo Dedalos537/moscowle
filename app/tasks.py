@@ -176,7 +176,7 @@ def run_daily_audits(app):
 
 
 def generate_weekly_reports(app):
-    """Auto-generate weekly reports for all therapists/patients on Saturday."""
+    """Auto-generate weekly reports for all therapists/patients on Saturday + AI-powered digest."""
     with app.app_context():
         try:
             from app.services.report_service import ReportService
@@ -211,13 +211,22 @@ def generate_weekly_reports(app):
 
             db.session.commit()
             print(f'Weekly reports: {len(generated)} generated for week {week_start} - {week_end}')
+
+            # Send AI-powered weekly report via Telegram + Email
+            try:
+                from app.services.automated_reports_service import generate_weekly_reports as send_ai_reports
+                result = send_ai_reports()
+                print(f'AI Weekly reports sent: {result}')
+            except Exception as e2:
+                print(f'AI Weekly report send failed: {e2}')
+
         except Exception as e:
             db.session.rollback()
             print(f'Error in generate_weekly_reports: {e}')
 
 
 def generate_monthly_reports(app):
-    """Auto-generate monthly reports on the 1st of each month."""
+    """Auto-generate monthly reports on the 1st of each month + AI-powered digest."""
     with app.app_context():
         try:
             from datetime import date
@@ -236,18 +245,9 @@ def generate_monthly_reports(app):
                 month -= 1
             generated = rs.generate_all_monthly_reports(year, month)
             month_name = {
-                1: 'Enero',
-                2: 'Febrero',
-                3: 'Marzo',
-                4: 'Abril',
-                5: 'Mayo',
-                6: 'Junio',
-                7: 'Julio',
-                8: 'Agosto',
-                9: 'Setiembre',
-                10: 'Octubre',
-                11: 'Noviembre',
-                12: 'Diciembre',
+                1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+                5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+                9: 'Setiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
             }.get(month, str(month))
             admin_users = User.query.filter_by(role='admin').all()
             for admin in admin_users:
@@ -260,6 +260,15 @@ def generate_monthly_reports(app):
                 db.session.add(notif)
             db.session.commit()
             print(f'Monthly reports: {len(generated)} generated for {month_name} {year}')
+
+            # Send AI-powered monthly report via Telegram + Email
+            try:
+                from app.services.automated_reports_service import generate_monthly_reports as send_ai_reports
+                result = send_ai_reports()
+                print(f'AI Monthly reports sent: {result}')
+            except Exception as e2:
+                print(f'AI Monthly report send failed: {e2}')
+
         except Exception as e:
             db.session.rollback()
             print(f'Error in generate_monthly_reports: {e}')
@@ -295,6 +304,17 @@ def generate_quarterly_reports(app):
         except Exception as e:
             db.session.rollback()
             print(f'Error in generate_quarterly_reports: {e}')
+
+
+def generate_annual_reports_task(app):
+    """Auto-generate annual reports on Jan 1 + AI-powered digest."""
+    with app.app_context():
+        try:
+            from app.services.automated_reports_service import generate_annual_reports
+            result = generate_annual_reports()
+            print(f'Annual reports: {result}')
+        except Exception as e:
+            print(f'Error in generate_annual_reports_task: {e}')
 
 
 def run_daily_backup(app):
@@ -439,6 +459,12 @@ def init_scheduler(app):
 
     scheduler.add_job(
         func=lambda: generate_quarterly_reports(app), trigger='cron', month='1,4,7,10', day=1, hour=22, minute=0
+    )
+
+    # --- Annual Report (Jan 1 at 10 PM) ---
+    scheduler.add_job(
+        func=lambda: generate_annual_reports_task(app), trigger='cron', month=1, day=1, hour=22, minute=0,
+        id='annual_reports',
     )
 
     scheduler.add_job(func=lambda: run_notification_cleanup(app), trigger='cron', day_of_week='sun', hour=4, minute=0)

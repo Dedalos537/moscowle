@@ -203,6 +203,132 @@ server.tool('get_sede_stats', 'Obtener estadísticas por sede.', {}, async () =>
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 });
 
+// ─── AI Analysis ────────────────────────────────────────────────────
+server.tool('get_ai_analysis', 'Análisis de tendencias con IA: finanzas, pacientes, terapeutas.', {
+  period: z.string().optional().describe('Período: week, month, quarter, year'),
+}, async ({ period }) => {
+  const data = await api('/admin/api/financial-summary', { period: period || 'month' });
+  const overview = await api('/admin/api/overview');
+  const efficiency = await api('/api/therapist/efficiency');
+
+  const prompt = `Eres el analista del Centro Juan Pablo II. Datos:\n\nFINANZAS: ${JSON.stringify(data)}\n\nVISTA GENERAL: ${JSON.stringify(overview)}\n\nEFICIENCIA TERAPEUTAS: ${JSON.stringify(efficiency)}\n\nGenera un análisis en español con:\n1. Tendencias financieras\n2. Rendimiento de pacientes\n3. Eficiencia de terapeutas\n4. Alertas y recomendaciones\n5. Predicciones para el próximo período\nMáximo 15 líneas, tono ejecutivo.`;
+
+  try {
+    const llmRes = await fetch(`${API_BASE}/api/ai/gemini`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}) },
+      body: JSON.stringify({ prompt }),
+    });
+    if (llmRes.ok) {
+      const llmData = await llmRes.json();
+      return { content: [{ type: 'text', text: `📊 *Análisis AI*\n\n${llmData.response || llmData.answer || JSON.stringify(llmData)}` }] };
+    }
+  } catch (e) {}
+
+  return { content: [{ type: 'text', text: `Datos sin procesar:\n\nFinanzas: ${JSON.stringify(data, null, 2)}\n\nEficiencia: ${JSON.stringify(efficiency, null, 2)}` }] };
+});
+
+server.tool('get_predictions', 'Predicciones de ingresos y pacientes basadas en datos históricos.', {}, async () => {
+  const financial = await api('/admin/api/financial-summary', { period: 'month' });
+  const overview = await api('/admin/api/overview');
+  const deudores = await api('/api/admin/deudores');
+
+  let deudoresCount = 0;
+  let deudoresAmount = 0;
+  if (deudores && deudores.deudores) {
+    deudoresCount = deudores.deudores.length;
+    deudoresAmount = deudores.deudores.reduce((sum, d) => sum + (d.total_owed || 0), 0);
+  }
+
+  const incomeReal = financial?.data?.income_real || 0;
+  const incomeExpected = financial?.data?.income_expected || 0;
+  const patients = overview?.data?.patients || 0;
+
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const daysInMonth = 30;
+  const projected = dayOfMonth > 0 ? (incomeReal / dayOfMonth) * daysInMonth : 0;
+
+  const text = `🔮 *Predicciones Centro Juan Pablo II*
+
+💰 *Ingresos:*
+• Real este mes: S/ ${incomeReal.toFixed(0)}
+• Meta: S/ ${incomeExpected.toFixed(0)}
+• Cobranza: ${incomeExpected > 0 ? ((incomeReal / incomeExpected) * 100).toFixed(0) : 0}%
+• Proyección fin de mes: S/ ${projected.toFixed(0)}
+
+👥 *Pacientes:*
+• Activos: ${patients}
+• En mora: ${deudoresCount} usuarios
+• Monto en mora: S/ ${deudoresAmount.toFixed(0)}
+
+📈 *Tendencias:*
+• ${incomeReal > incomeExpected * 0.5 ? '✅ Ingresos van bien' : '⚠️ Ingresos por debajo del esperado'}
+• ${deudoresCount < 5 ? '✅ Pocos deudores' : '⚠️ Muchos deudores, revisar cobranza'}
+
+💡 *Recomendación:*
+• ${deudoresCount > 0 ? `Contactar a ${deudoresCount} pacientes morosos` : 'No hay mora pendiente'}
+• ${projected < incomeExpected ? 'Considerar estrategias de upselling' : 'Mantener ritmo actual'}`;
+
+  return { content: [{ type: 'text', text }] };
+});
+
+server.tool('generate_report', 'Generar reporte personalizado con IA.', {
+  type: z.string().describe('Tipo: daily, weekly, monthly, annual'),
+}, async ({ type }) => {
+  const financial = await api('/admin/api/financial-summary', { period: type === 'daily' ? 'week' : type === 'weekly' ? 'week' : type === 'annual' ? 'year' : 'month' });
+  const overview = await api('/admin/api/overview');
+  const efficiency = await api('/api/therapist/efficiency');
+
+  const prompt = `Genera un reporte ${type} para el Centro Juan Pablo II.\n\nDATOS:\nFinanzas: ${JSON.stringify(financial)}\nOverview: ${JSON.stringify(overview)}\nEficiencia: ${JSON.stringify(efficiency)}\n\nIncluye: BSC scores, análisis financiero, rendimiento, predicciones, recomendaciones. Español, formato ejecutivo, máximo 20 líneas.`;
+
+  try {
+    const llmRes = await fetch(`${API_BASE}/api/ai/gemini`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}) },
+      body: JSON.stringify({ prompt }),
+    });
+    if (llmRes.ok) {
+      const llmData = await llmRes.json();
+      return { content: [{ type: 'text', text: `📋 *Reporte ${type.toUpperCase()}*\n\n${llmData.response || llmData.answer || JSON.stringify(llmData)}` }] };
+    }
+  } catch (e) {}
+
+  return { content: [{ type: 'text', text: `Reporte ${type}:\n\nFinanzas: ${JSON.stringify(financial, null, 2)}` }] };
+});
+
+server.tool('get_data_export', 'Exportar datos para análisis externo (CSV/JSON).', {
+  type: z.string().describe('Tipo de dato: payments, sessions, patients, all'),
+  format: z.string().optional().describe('Formato: json (default) o csv'),
+}, async ({ type, format }) => {
+  let data = {};
+  if (type === 'payments' || type === 'all') {
+    data.payments = await api('/admin/api/payments/all');
+  }
+  if (type === 'sessions' || type === 'all') {
+    data.sessions = await api('/api/sessions');
+  }
+  if (type === 'patients' || type === 'all') {
+    data.patients = await api('/api/patients');
+  }
+  if (type === 'all') {
+    data.financial = await api('/admin/api/financial-summary');
+    data.overview = await api('/admin/api/overview');
+  }
+
+  if (format === 'csv') {
+    if (data.payments && data.payments.payments) {
+      const headers = 'ID,Paciente,Monto,Fecha,Estado,Metodo\n';
+      const rows = data.payments.payments.map(p =>
+        `${p.id},${p.patient_name || ''},${p.amount},${p.date},${p.status},${p.method || ''}`
+      ).join('\n');
+      return { content: [{ type: 'text', text: headers + rows }] };
+    }
+  }
+
+  return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+});
+
 // ─── Start ──────────────────────────────────────────────────────────
 async function main() {
   const transport = new StdioServerTransport();
