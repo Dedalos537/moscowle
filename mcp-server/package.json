@@ -1,0 +1,20 @@
+{
+  "name": "moscowle-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for Moscowle ERP - Centro Juan Pablo II",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "moscowle-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["mcp", "moscowle", "erp"],
+  "author": "Diego Centeno",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  }
+}
