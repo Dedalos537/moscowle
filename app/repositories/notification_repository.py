@@ -6,7 +6,8 @@ Provides CRUD operations for NotificationGroup and NotificationItem.
 from datetime import datetime, timedelta
 
 from app.models import db
-from app.models.notification_group import NotificationGroup, NotificationItem, UserNotificationPreference
+from app.models.notification import UserNotificationPreference
+from app.models.notification_group import NotificationGroup, NotificationItem
 
 
 class NotificationRepository:

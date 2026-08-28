@@ -251,7 +251,7 @@ class NotificationService:
     # ─── Helpers ─────────────────────────────────────────────────────────────
 
     def _get_preferences(self, user_id):
-        from app.models.notification_group import UserNotificationPreference as Pref
+        from app.models.notification import UserNotificationPreference as Pref
 
         prefs = Pref.query.filter_by(user_id=user_id).first()
         if not prefs:
@@ -261,7 +261,7 @@ class NotificationService:
         return prefs
 
     def _update_preferences(self, user_id, data):
-        from app.models.notification_group import UserNotificationPreference as Pref
+        from app.models.notification import UserNotificationPreference as Pref
 
         prefs = Pref.query.filter_by(user_id=user_id).first()
         if not prefs:

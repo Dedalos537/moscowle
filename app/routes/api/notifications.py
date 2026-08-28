@@ -39,7 +39,7 @@ def get_notification_groups():
                     'is_collapsed': g.is_collapsed,
                     'ai_summary_generated': g.ai_summary_generated,
                     'timestamp': g.last_item_at.strftime('%d %b, %H:%M'),
-                    'last_item_at': g.last_item_at.isoformat(),
+                    'last_item_at': g.last_item_at.isoformat() + 'Z',
                 }
             )
         return jsonify(result)
@@ -66,6 +66,7 @@ def get_notification_group_items(group_id):
                     'icon': item.icon,
                     'link': item.link,
                     'timestamp': item.timestamp.strftime('%d %b, %H:%M'),
+                    'timestamp_iso': item.timestamp.isoformat() + 'Z',
                 }
             )
         return jsonify(result)
@@ -105,6 +106,22 @@ def toggle_group_collapse(group_id):
         group = notification_service.toggle_group_collapse(group_id, current_user.id)
         if group:
             return jsonify({'success': True, 'is_collapsed': group.is_collapsed})
+        return jsonify({'success': False, 'message': 'Group not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@api_bp.route('/notifications/groups/<int:group_id>', methods=['DELETE'])
+@login_required
+def delete_notification_group(group_id):
+    """Delete a notification group and its items."""
+    try:
+        from app.services.notification_intelligence import delete_group
+
+        deleted = delete_group(group_id, current_user.id)
+        if deleted:
+            count = notification_service.get_count(current_user.id)
+            return jsonify({'success': True, 'unread_count': count})
         return jsonify({'success': False, 'message': 'Group not found'}), 404
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

@@ -210,6 +210,16 @@ def toggle_group_collapse(group_id, user_id):
     return group
 
 
+def delete_group(group_id, user_id):
+    """Delete a notification group and its items."""
+    group = NotificationGroup.query.filter_by(id=group_id, user_id=user_id).first()
+    if group:
+        db.session.delete(group)
+        db.session.commit()
+        return True
+    return False
+
+
 def get_groups_for_digest(user_id, since=None):
     """Get groups for the daily digest report."""
     query = NotificationGroup.query.filter_by(user_id=user_id, is_active=True)

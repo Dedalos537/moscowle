@@ -36,6 +36,8 @@ class UserNotificationPreference(db.Model, AuditMixin):
     payment_enabled = db.Column(db.Boolean, default=True)
     sound_enabled = db.Column(db.Boolean, default=True)
     browser_notifications = db.Column(db.Boolean, default=False)
+    digest_enabled = db.Column(db.Boolean, default=True)
+    digest_channel = db.Column(db.String(20), default='both')
 
     user = db.relationship(
         'User',

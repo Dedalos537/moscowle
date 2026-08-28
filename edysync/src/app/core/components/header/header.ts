@@ -33,7 +33,11 @@ export class Header implements OnInit, OnDestroy {
   error: string | null = null;
 
   selectedCategory = '';
-  availableCategories = ['message', 'session', 'payment', 'alert', 'system'];
+  availableCategories = [
+    'message', 'session', 'payment', 'alert', 'system',
+    'debt', 'activity', 'audit', 'security', 'report',
+    'game', 'contact', 'user_mgmt', 'reminder',
+  ];
 
   private userSub!: Subscription;
   private recordingSub!: Subscription;
@@ -143,6 +147,19 @@ export class Header implements OnInit, OnDestroy {
     this.notifService.markGroupRead(groupId);
   }
 
+  deleteGroup(groupId: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.notifService.deleteGroup(groupId);
+  }
+
+  navigateToItem(link: string | null, event: MouseEvent) {
+    event.stopPropagation();
+    if (link) {
+      this.showNotifications = false;
+      this.router.navigateByUrl(link);
+    }
+  }
+
   toggleUserMenu() {
     this.showUserMenu = !this.showUserMenu;
     this.showNotifications = false;
@@ -182,6 +199,19 @@ export class Header implements OnInit, OnDestroy {
       case 'low': return 'Baja';
       default: return priority;
     }
+  }
+
+  timeAgo(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'ahora';
+    if (seconds < 3600) return `hace ${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `hace ${Math.floor(seconds / 3600)}h`;
+    if (seconds < 604800) return `hace ${Math.floor(seconds / 86400)}d`;
+    return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
   }
 
   async logout() {

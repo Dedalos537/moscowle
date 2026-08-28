@@ -310,6 +310,10 @@ export class AdminService {
     return this.http.post<any>('/api/notifications/digest/test', {});
   }
 
+  deleteNotificationGroup(groupId: number): Observable<any> {
+    return this.http.delete<any>(`/api/notifications/groups/${groupId}`);
+  }
+
   getExpenses(startDate?: string, endDate?: string, category?: string): Observable<{ success: boolean; data: Expense[] }> {
     let params = new HttpParams();
     if (startDate) params = params.set('start_date', startDate);

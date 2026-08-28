@@ -86,7 +86,7 @@
               </div>
             } @else {
               @for (group of notifGroups(); track group.id) {
-                <div class="mb-2 rounded-xl border transition-all"
+                <div class="mb-2 rounded-xl border transition-all group"
                      [class]="expandedGroupId() === group.id ? 'border-primary/30 bg-surface-container-high/30' : 'border-border/10 hover:bg-primary-container/5'">
                   <!-- Group header -->
                   <div (click)="toggleGroupExpand(group.id)"
@@ -108,7 +108,7 @@
                       }
                       <div class="flex items-center gap-2 mt-1">
                         <span class="text-[10px] text-on-surface-variant flex items-center gap-1">
-                          <fa-icon [icon]="['fas', 'clock']" class="text-[8px]"></fa-icon> {{ group.timestamp }}
+                          <fa-icon [icon]="['fas', 'clock']" class="text-[8px]"></fa-icon> {{ timeAgo(group.last_item_at) }}
                         </span>
                         <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
                               [class]="getPriorityClass(group.priority)">
@@ -120,6 +120,11 @@
                       @if (!group.is_read) {
                         <span class="w-2 h-2 rounded-full bg-primary"></span>
                       }
+                      <button (click)="deleteGroup(group.id, $event)"
+                        class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface-variant/40 hover:text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100"
+                        title="Eliminar notificación">
+                        <fa-icon [icon]="['fas', 'times']" class="text-[10px]"></fa-icon>
+                      </button>
                       <fa-icon [icon]="expandedGroupId() === group.id ? ['fas', 'chevron-up'] : ['fas', 'chevron-down']"
                                class="text-xs text-on-surface-variant"></fa-icon>
                     </div>
@@ -132,13 +137,22 @@
                         <div class="flex justify-center py-4"><app-spinner></app-spinner></div>
                       } @else {
                         @for (item of groupItems(); track item.id) {
-                          <div class="py-2 border-b border-border/5 last:border-0">
+                          <div class="py-2 border-b border-border/5 last:border-0"
+                               [class]="item.link ? 'cursor-pointer hover:bg-primary-container/5 rounded-lg px-1 -mx-1 transition-colors' : ''"
+                               (click)="item.link ? navigateToItem(item.link, $event) : null">
                             <div class="flex items-start gap-2">
                               <span class="text-[10px] mt-1 shrink-0"
                                     [class]="item.priority === 'urgent' ? 'text-error' : item.priority === 'high' ? 'text-warning' : 'text-on-surface-variant'">●</span>
                               <div class="flex-1 min-w-0">
                                 <p class="text-xs text-on-surface leading-snug">{{ item.message }}</p>
-                                <p class="text-[10px] text-on-surface-variant mt-0.5">{{ item.timestamp }}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                  <p class="text-[10px] text-on-surface-variant">{{ timeAgo(item.timestamp_iso) }}</p>
+                                  @if (item.link) {
+                                    <span class="text-[10px] text-primary-container flex items-center gap-0.5">
+                                      <fa-icon [icon]="['fas', 'arrow-right']" class="text-[8px]"></fa-icon> Ver
+                                    </span>
+                                  }
+                                </div>
                               </div>
                             </div>
                           </div>

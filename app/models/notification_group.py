@@ -72,6 +72,7 @@ class NotificationItem(db.Model):
     icon = db.Column(db.String(50), nullable=True)
     link = db.Column(db.String(255), nullable=True)
     metadata_json = db.Column(db.JSON, nullable=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     user = db.relationship(

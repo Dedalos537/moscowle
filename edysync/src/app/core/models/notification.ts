@@ -87,6 +87,7 @@ export interface NotificationGroupItem {
   icon: string | null;
   link: string | null;
   timestamp: string;
+  timestamp_iso: string;
 }
 
 export interface NotificationPreferences {

@@ -219,6 +219,19 @@ export class NotificationService implements OnDestroy {
     });
   }
 
+  deleteGroup(groupId: number): void {
+    this.adminService.deleteNotificationGroup(groupId).subscribe({
+      next: () => {
+        this.groups.update(groups => groups.filter(g => g.id !== groupId));
+        this.unreadCount.update(c => Math.max(0, c - 1));
+        if (this.expandedGroupId() === groupId) {
+          this.expandedGroupId.set(null);
+          this.groupItems.set([]);
+        }
+      },
+    });
+  }
+
   fetchGroupsSummary(days: number = 1): void {
     this.adminService.getNotificationGroupsSummary(days).subscribe({
       next: (data) => this.digestSummary.set(data),
@@ -273,8 +286,9 @@ export class NotificationService implements OnDestroy {
 
   private startPolling(): void {
     this.stopPolling();
-    this.pollSub = interval(60000).subscribe(() => {
+    this.pollSub = interval(30000).subscribe(() => {
       this.fetchCount();
+      this.fetchGroups();
     });
   }
 

@@ -48,7 +48,7 @@ def generate_daily_digests():
 
 def _send_digest_for_user(user, since):
     """Generate and send digest for a single user via their preferred channels."""
-    from app.models.notification_group import UserNotificationPreference
+    from app.models.notification import UserNotificationPreference
 
     prefs = UserNotificationPreference.query.filter_by(user_id=user.id).first()
     if not prefs or not getattr(prefs, 'digest_enabled', True):
