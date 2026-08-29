@@ -38,6 +38,7 @@ ignore = [
 "app/models/*" = ["N"]
 "app/routes/api/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "SIM102", "E712"]
 "app/routes/admin/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "F811", "F821", "S110", "SIM102", "SIM105"]
+"app/routes/telegram_routes.py" = ["PLC0415", "F841", "SIM210", "E501", "E722", "S110"]
 "app/services/*" = ["PLC0415", "S110", "E501"]
 "app/tasks.py" = ["PLC0415", "E402", "S110", "E501"]
 "app/routes/therapist_routes.py" = ["PLC0415", "F841", "SIM210", "E501", "E722", "S110", "SIM102", "SIM105", "E712", "PLW0603"]

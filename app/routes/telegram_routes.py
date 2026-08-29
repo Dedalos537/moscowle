@@ -1,5 +1,6 @@
 import hmac
 import logging
+import threading
 import time
 
 from flask import Blueprint, current_app, jsonify, request
@@ -39,7 +40,11 @@ def _is_duplicate(update_id: int) -> bool:
 
 @telegram_bp.route('/webhook', methods=['POST'])
 def webhook():
-    """Handle incoming Telegram updates (webhook mode)."""
+    """Handle incoming Telegram updates (webhook mode).
+
+    Responds immediately (200) and processes the message in a background thread
+    to avoid Telegram's 30-second timeout.
+    """
     secret = current_app.config.get('TELEGRAM_WEBHOOK_SECRET')
     if secret:
         sig = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
@@ -55,12 +60,18 @@ def webhook():
         logger.debug(f'Duplicate update_id {update_id}, skipping')
         return jsonify({'status': 'ok'}), 200
 
-    try:
-        from app.services.telegram_bot_service import handle_webhook_update
+    # Process in background thread to avoid Telegram 30s timeout
+    def _process_bg():
+        with current_app.app_context():
+            try:
+                from app.services.telegram_bot_service import handle_webhook_update
 
-        handle_webhook_update(update)
-    except Exception as e:
-        logger.error(f'Webhook processing error: {e}', exc_info=True)
+                handle_webhook_update(update)
+            except Exception as e:
+                logger.error(f'Webhook processing error: {e}', exc_info=True)
+
+    t = threading.Thread(target=_process_bg, daemon=True)
+    t.start()
 
     return jsonify({'status': 'ok'}), 200
 
