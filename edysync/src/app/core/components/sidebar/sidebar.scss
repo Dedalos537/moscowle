@@ -215,6 +215,7 @@
   }
   .sidebar.sidebar--open {
     transform: translateX(0);
+    width: 16rem;
   }
   .sidebar--pinned {
     width: 16rem;
@@ -225,8 +226,13 @@
     inset: 0;
     z-index: 40;
     background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
   }
   .nav-link-expand {
     display: none;
+  }
+  /* Show labels when sidebar is open on mobile */
+  .nav-link-text {
+    display: flex;
   }
 }

@@ -1,16 +1,16 @@
-<header [class.header--hidden]="headerService.hidden()" class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-3 sm:px-6 shrink-0 transition-colors duration-300">
-  <div class="flex items-center gap-2 sm:gap-3">
-    <button (click)="toggleSidebar()" class="md:hidden w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors mr-0.5 sm:mr-1" aria-label="Toggle sidebar">
+<header [class.header--hidden]="headerService.hidden()" class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-2 sm:px-6 shrink-0 transition-colors duration-300">
+  <div class="flex items-center gap-1.5 sm:gap-3 min-w-0">
+    <button (click)="toggleSidebar()" class="md:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors shrink-0" aria-label="Toggle sidebar">
       <fa-icon [icon]="['fas', 'bars']" class="text-sm sm:text-base"></fa-icon>
     </button>
     @if (headerService.icon$ | async; as icon) {
       @if (icon && icon.length && icon.length === 2) {
-        <fa-icon [icon]="icon" class="text-primary-container text-lg sm:text-xl"></fa-icon>
+        <fa-icon [icon]="icon" class="text-primary-container text-lg sm:text-xl shrink-0"></fa-icon>
       }
     }
     <div class="flex flex-col min-w-0">
-      <h1 class="text-base sm:text-xl font-bold text-on-surface truncate">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
-      <p class="text-xs sm:text-body-sm text-on-surface-variant hidden sm:block truncate">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
+      <h1 class="text-sm sm:text-xl font-bold text-on-surface leading-tight">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
+      <p class="text-[10px] sm:text-body-sm text-on-surface-variant hidden sm:block truncate">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
     </div>
   </div>
 

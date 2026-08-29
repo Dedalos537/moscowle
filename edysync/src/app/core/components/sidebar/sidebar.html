@@ -30,8 +30,8 @@
         [title]="!pinned() ? item.label : null">
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
 
-        <!-- Inline text when pinned -->
-        @if (pinned()) {
+        <!-- Inline text when pinned OR when open on mobile -->
+        @if (pinned() || isOpen) {
           <div class="nav-link-text">
             <span class="nav-link-label">{{ item.label }}</span>
             @if (item.subtitle) {
@@ -40,8 +40,8 @@
           </div>
         }
 
-        <!-- Expanded tab on hover (not pinned) -->
-        @if (!pinned() && hoveredIndex === i) {
+        <!-- Expanded tab on hover (not pinned, not open on mobile) -->
+        @if (!pinned() && !isOpen && hoveredIndex === i) {
           <div class="nav-link-expand">
             <span class="nav-link-expand__label">{{ item.label }}</span>
             @if (item.subtitle) {
