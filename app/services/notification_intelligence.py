@@ -132,12 +132,10 @@ def add_item_to_group(
             db.session.flush()
         except Exception:
             db.session.rollback()
-            group = (
-                NotificationGroup.query.filter_by(user_id=user_id, group_key=group_key, is_active=True)
-                .filter(NotificationGroup.last_item_at >= cutoff)
-                .first()
-            )
+            # Find ANY existing group with this key (not just recent ones)
+            group = NotificationGroup.query.filter_by(user_id=user_id, group_key=group_key, is_active=True).first()
             if not group:
+                # Last resort: create with merge to handle race conditions
                 group = NotificationGroup(
                     user_id=user_id,
                     group_key=group_key,
@@ -149,7 +147,7 @@ def add_item_to_group(
                     is_read=False,
                     is_collapsed=True,
                 )
-                db.session.add(group)
+                db.session.merge(group)
                 db.session.flush()
             is_new_group = False
 
