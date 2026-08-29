@@ -40,8 +40,9 @@ class NotificationService:
         priority='normal',
         icon=None,
         metadata_json=None,
+        skip_telegram=False,
         event_type=None,
-        **event_kwargs,
+        event_kwargs=None,
     ):
         """Create a grouped notification with optional real-time push.
 
@@ -66,7 +67,7 @@ class NotificationService:
 
         # Route through the intelligence engine
         etype = event_type or self._infer_event_type(category, notif_type, metadata_json)
-        kwargs = dict(event_kwargs)
+        kwargs = dict(event_kwargs or {})
         if metadata_json and isinstance(metadata_json, dict):
             kwargs.update(metadata_json)
 
@@ -105,7 +106,7 @@ class NotificationService:
         )
 
         # Telegram: only for urgent/high priority or when group count hits threshold
-        if priority in ('urgent', 'high') or (group.count >= 5 and group.count % 5 == 0):
+        if not skip_telegram and (priority in ('urgent', 'high') or (group.count >= 5 and group.count % 5 == 0)):
             try:
                 if current_app.config.get('TELEGRAM_BOT_TOKEN'):
                     from app.services.telegram_bot_service import send_notification_to_telegram

@@ -14,7 +14,6 @@ from flask import current_app
 from app.extensions import db
 from app.models import User
 from app.services.notification_intelligence import (
-    generate_ai_digest_summary,
     get_groups_for_digest,
 )
 
@@ -100,22 +99,27 @@ def _gather_bsc_data(user):
 
     # ── Financial Perspective ──
     try:
-        from app.models.payment import Payment, Expense
+        from app.models.payment import Expense, Payment
 
         # Current month income
-        income_real = db.session.query(
-            db.func.coalesce(db.func.sum(Payment.amount), 0)
-        ).filter(
-            Payment.date >= month_start,
-            Payment.status.in_(['paid', 'completed']),
-        ).scalar()
+        income_real = (
+            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
+            .filter(
+                Payment.date >= month_start,
+                Payment.status.in_(['paid', 'completed']),
+            )
+            .scalar()
+        )
 
         # Expected income (all active patients * payment_amount)
         from app.models.user import User as UserModel
+
         active_patients = UserModel.query.filter_by(role='jugador', is_active=True).count()
-        avg_payment = db.session.query(
-            db.func.coalesce(db.func.avg(Payment.amount), 0)
-        ).filter(Payment.date >= last_month_start).scalar()
+        avg_payment = (
+            db.session.query(db.func.coalesce(db.func.avg(Payment.amount), 0))
+            .filter(Payment.date >= last_month_start)
+            .scalar()
+        )
         income_expected = active_patients * float(avg_payment) if avg_payment else 0
 
         # Overdue payments
@@ -124,30 +128,40 @@ def _gather_bsc_data(user):
             Payment.date < today,
         ).count()
 
-        overdue_amount = db.session.query(
-            db.func.coalesce(db.func.sum(Payment.amount), 0)
-        ).filter(
-            Payment.status.in_(['pending', 'overdue']),
-            Payment.date < today,
-        ).scalar()
+        overdue_amount = (
+            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
+            .filter(
+                Payment.status.in_(['pending', 'overdue']),
+                Payment.date < today,
+            )
+            .scalar()
+        )
 
         # Expenses this month
-        expenses = db.session.query(
-            db.func.coalesce(db.func.sum(Expense.amount), 0)
-        ).filter(Expense.date >= month_start).scalar()
+        expenses = (
+            db.session.query(db.func.coalesce(db.func.sum(Expense.amount), 0))
+            .filter(Expense.date >= month_start)
+            .scalar()
+        )
 
         net_profit = float(income_real) - float(expenses)
 
         # Last month comparison
-        last_month_income = db.session.query(
-            db.func.coalesce(db.func.sum(Payment.amount), 0)
-        ).filter(
-            Payment.date >= last_month_start,
-            Payment.date <= last_month_end,
-            Payment.status.in_(['paid', 'completed']),
-        ).scalar()
+        last_month_income = (
+            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
+            .filter(
+                Payment.date >= last_month_start,
+                Payment.date <= last_month_end,
+                Payment.status.in_(['paid', 'completed']),
+            )
+            .scalar()
+        )
 
-        income_trend = ((float(income_real) - float(last_month_income)) / float(last_month_income) * 100) if float(last_month_income) > 0 else 0
+        income_trend = (
+            ((float(income_real) - float(last_month_income)) / float(last_month_income) * 100)
+            if float(last_month_income) > 0
+            else 0
+        )
 
         data['financial'] = {
             'income_real': float(income_real),
@@ -157,7 +171,9 @@ def _gather_bsc_data(user):
             'overdue_amount': float(overdue_amount),
             'expenses': float(expenses),
             'net_profit': net_profit,
-            'collection_rate': round(float(income_real) / float(income_expected) * 100, 1) if income_expected > 0 else 0,
+            'collection_rate': round(float(income_real) / float(income_expected) * 100, 1)
+            if income_expected > 0
+            else 0,
         }
     except Exception as e:
         logger.warning(f'Financial data gathering failed: {e}')
@@ -195,23 +211,29 @@ def _gather_bsc_data(user):
         # Average accuracy (last 7 days)
         from app.models.appointment import Appointment, SessionMetrics
 
-        avg_accuracy = db.session.query(
-            db.func.coalesce(db.func.avg(SessionMetrics.accurracy), 0)
-        ).filter(
-            SessionMetrics.date >= week_ago,
-        ).scalar()
+        avg_accuracy = (
+            db.session.query(db.func.coalesce(db.func.avg(SessionMetrics.accurracy), 0))
+            .filter(
+                SessionMetrics.date >= week_ago,
+            )
+            .scalar()
+        )
 
         # Patients inactive > 2 weeks
         two_weeks_ago = today - timedelta(days=14)
-        inactive_patients = db.session.query(UserModel.id).filter(
-            UserModel.role == 'jugador',
-            UserModel.is_active == True,
-            UserModel.id.notin_(
-                db.session.query(Appointment.patient_id).filter(
-                    Appointment.start_time >= datetime.combine(two_weeks_ago, datetime.min.time())
-                )
-            ),
-        ).count()
+        inactive_patients = (
+            db.session.query(UserModel.id)
+            .filter(
+                UserModel.role == 'jugador',
+                UserModel.is_active.is_(True),
+                UserModel.id.notin_(
+                    db.session.query(Appointment.patient_id).filter(
+                        Appointment.start_time >= datetime.combine(two_weeks_ago, datetime.min.time())
+                    )
+                ),
+            )
+            .count()
+        )
 
         data['patients'] = {
             'total': total_patients,
@@ -227,8 +249,6 @@ def _gather_bsc_data(user):
 
     # ── Therapist Perspective ──
     try:
-        from sqlalchemy import func
-
         therapists = UserModel.query.filter_by(role='terapista', is_active=True).all()
         therapist_stats = []
 
@@ -242,21 +262,26 @@ def _gather_bsc_data(user):
                 Appointment.start_time >= datetime.combine(week_ago, datetime.min.time()),
                 Appointment.status == 'completed',
             ).count()
-            t_accuracy = db.session.query(
-                db.func.coalesce(db.func.avg(SessionMetrics.accuracy), 0)
-            ).join(Appointment, SessionMetrics.appointment_id == Appointment.id).filter(
-                Appointment.therapist_id == t.id,
-                SessionMetrics.date >= week_ago,
-            ).scalar()
+            t_accuracy = (
+                db.session.query(db.func.coalesce(db.func.avg(SessionMetrics.accuracy), 0))
+                .join(Appointment, SessionMetrics.appointment_id == Appointment.id)
+                .filter(
+                    Appointment.therapist_id == t.id,
+                    SessionMetrics.date >= week_ago,
+                )
+                .scalar()
+            )
 
             efficiency = round(t_completed / t_sessions * 100, 1) if t_sessions > 0 else 0
-            therapist_stats.append({
-                'name': t.username,
-                'sessions': t_sessions,
-                'completed': t_completed,
-                'accuracy': round(float(t_accuracy), 1),
-                'efficiency': efficiency,
-            })
+            therapist_stats.append(
+                {
+                    'name': t.username,
+                    'sessions': t_sessions,
+                    'completed': t_completed,
+                    'accuracy': round(float(t_accuracy), 1),
+                    'efficiency': efficiency,
+                }
+            )
 
         # Sort by efficiency
         therapist_stats.sort(key=lambda x: x['efficiency'], reverse=True)
@@ -264,7 +289,9 @@ def _gather_bsc_data(user):
         data['therapists'] = {
             'total': len(therapists),
             'stats': therapist_stats[:10],
-            'avg_efficiency': round(sum(t['efficiency'] for t in therapist_stats) / len(therapist_stats), 1) if therapist_stats else 0,
+            'avg_efficiency': round(sum(t['efficiency'] for t in therapist_stats) / len(therapist_stats), 1)
+            if therapist_stats
+            else 0,
         }
     except Exception as e:
         logger.warning(f'Therapist data gathering failed: {e}')
@@ -286,11 +313,13 @@ def _gather_bsc_data(user):
         # Audit scores (last 7 days)
         from app.models.report import SessionAudit
 
-        avg_audit = db.session.query(
-            db.func.coalesce(db.func.avg(SessionAudit.audit_score), 0)
-        ).filter(
-            SessionAudit.audited_at >= datetime.combine(week_ago, datetime.min.time()),
-        ).scalar()
+        avg_audit = (
+            db.session.query(db.func.coalesce(db.func.avg(SessionAudit.audit_score), 0))
+            .filter(
+                SessionAudit.audited_at >= datetime.combine(week_ago, datetime.min.time()),
+            )
+            .scalar()
+        )
 
         data['growth'] = {
             'incidents_week': incidents_week,
@@ -365,44 +394,48 @@ def _generate_ai_bsc_summary(bsc_data, groups, user_role):
         if bsc_data.get('financial'):
             fin = bsc_data['financial']
             context_parts.append(
-                f"FINANZAS: Ingresos S/{fin['income_real']:.0f} (meta S/{fin['income_expected']:.0f}, "
-                f"{fin['collection_rate']:.0f}% cobranza). Mora: {fin['overdue_count']} usuarios S/{fin['overdue_amount']:.0f}. "
-                f"Gastos S/{fin['expenses']:.0f}. Utilidad neta S/{fin['net_profit']:.0f}."
+                f'FINANZAS: Ingresos S/{fin["income_real"]:.0f} (meta S/{fin["income_expected"]:.0f}, '
+                f'{fin["collection_rate"]:.0f}% cobranza). Mora: {fin["overdue_count"]} usuarios S/{fin["overdue_amount"]:.0f}. '
+                f'Gastos S/{fin["expenses"]:.0f}. Utilidad neta S/{fin["net_profit"]:.0f}.'
             )
 
         if bsc_data.get('patients'):
             pat = bsc_data['patients']
             context_parts.append(
-                f"PACIENTES: {pat['total']} activos. Sesiones hoy: {pat['sessions_today']} "
-                f"({pat['sessions_completed']} completadas). Asistencia 7d: {pat['attendance_rate']}%. "
-                f"Precisión promedio: {pat['avg_accuracy']}%. Inactivos >2sem: {pat['inactive_2weeks']}."
+                f'PACIENTES: {pat["total"]} activos. Sesiones hoy: {pat["sessions_today"]} '
+                f'({pat["sessions_completed"]} completadas). Asistencia 7d: {pat["attendance_rate"]}%. '
+                f'Precisión promedio: {pat["avg_accuracy"]}%. Inactivos >2sem: {pat["inactive_2weeks"]}.'
             )
 
         if bsc_data.get('therapists'):
             ther = bsc_data['therapists']
             top3 = ther['stats'][:3]
-            top_str = ', '.join([f"{t['name']}({t['efficiency']}%)" for t in top3])
+            top_str = ', '.join([f'{t["name"]}({t["efficiency"]}%)' for t in top3])
             context_parts.append(
-                f"TERAPEUTAS: {ther['total']} activos. Eficiencia promedio: {ther['avg_efficiency']}%. "
-                f"Top 3: {top_str}."
+                f'TERAPEUTAS: {ther["total"]} activos. Eficiencia promedio: {ther["avg_efficiency"]}%. '
+                f'Top 3: {top_str}.'
             )
 
         if bsc_data.get('growth'):
             gro = bsc_data['growth']
             context_parts.append(
-                f"CRECIMIENTO: Incidentes abiertos: {gro['incidents_open']}. "
-                f"Score auditoría promedio: {gro['avg_audit_score']}/100."
+                f'CRECIMIENTO: Incidentes abiertos: {gro["incidents_open"]}. '
+                f'Score auditoría promedio: {gro["avg_audit_score"]}/100.'
             )
 
         if bsc_data.get('predictions'):
             pred = bsc_data['predictions']
             pred_parts = []
             if 'revenue_next_month' in pred:
-                pred_parts.append(f"Ingreso proyectado mes: S/{pred['revenue_next_month']:.0f} (confianza {pred.get('revenue_confidence', 'baja')})")
+                pred_parts.append(
+                    f'Ingreso proyectado mes: S/{pred["revenue_next_month"]:.0f} (confianza {pred.get("revenue_confidence", "baja")})'
+                )
             if pred.get('churn_risk', 0) > 0:
-                pred_parts.append(f"Riesgo abandono: {pred['churn_risk']} pacientes (severidad {pred.get('churn_severity', 'media')})")
+                pred_parts.append(
+                    f'Riesgo abandono: {pred["churn_risk"]} pacientes (severidad {pred.get("churn_severity", "media")})'
+                )
             if pred_parts:
-                context_parts.append(f"PREDICCIONES: {'; '.join(pred_parts)}.")
+                context_parts.append(f'PREDICCIONES: {"; ".join(pred_parts)}.')
 
         context_text = '\n'.join(context_parts)
 
@@ -450,18 +483,20 @@ def _fallback_summary(bsc_data, groups):
     parts = []
     if bsc_data.get('financial'):
         fin = bsc_data['financial']
-        parts.append(f"Ingresos: S/{fin['income_real']:.0f}/{fin['income_expected']:.0f}")
+        parts.append(f'Ingresos: S/{fin["income_real"]:.0f}/{fin["income_expected"]:.0f}')
     if bsc_data.get('patients'):
         pat = bsc_data['patients']
-        parts.append(f"Pacientes: {pat['total']}, Asistencia: {pat['attendance_rate']}%")
+        parts.append(f'Pacientes: {pat["total"]}, Asistencia: {pat["attendance_rate"]}%')
     if bsc_data.get('therapists'):
-        parts.append(f"Terapeutas: {bsc_data['therapists']['total']}, Eficiencia: {bsc_data['therapists']['avg_efficiency']}%")
+        parts.append(
+            f'Terapeutas: {bsc_data["therapists"]["total"]}, Eficiencia: {bsc_data["therapists"]["avg_efficiency"]}%'
+        )
 
     body = '\n'.join(parts) if parts else 'Sin datos disponibles hoy.'
     total = sum(g.count for g in (groups or []))
 
     return {
-        'title': f"🦜 Resumen Diario — {datetime.now().strftime('%d/%m/%Y')}",
+        'title': f'🦜 Resumen Diario — {datetime.now().strftime("%d/%m/%Y")}',
         'body': body,
         'highlights': [f'{total} notificaciones pendientes'],
         'bsc_scores': {'finance': 5, 'patients': 5, 'therapists': 5, 'growth': 5},
@@ -533,9 +568,9 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
     }.get(user.role, user.role)
 
     lines = [
-        ai_summary.get('title', f"🦜 Resumen Diario"),
-        f"👤 {user.username} ({role_label})",
-        f"📅 {datetime.now().strftime('%A %d/%m/%Y')}",
+        ai_summary.get('title', '🦜 Resumen Diario'),
+        f'👤 {user.username} ({role_label})',
+        f'📅 {datetime.now().strftime("%A %d/%m/%Y")}',
         '',
     ]
 
@@ -543,7 +578,10 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
     bsc_scores = ai_summary.get('bsc_scores', {})
     if bsc_scores:
         lines.append('📊 *Balanced Scorecard:*')
-        score_emoji = lambda s: '🟢' if s >= 7 else '🟡' if s >= 5 else '🔴'
+
+        def score_emoji(s):
+            return '🟢' if s >= 7 else '🟡' if s >= 5 else '🔴'
+
         labels = {'finance': 'Finanzas', 'patients': 'Pacientes', 'therapists': 'Terapeutas', 'growth': 'Crecimiento'}
         for key, label in labels.items():
             score = bsc_scores.get(key, 5)
@@ -554,8 +592,12 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
     if bsc_data.get('financial'):
         fin = bsc_data['financial']
         lines.append('💰 *Finanzas:*')
-        lines.append(f'  Ingresos: S/{fin["income_real"]:.0f} / S/{fin["income_expected"]:.0f} ({fin["collection_rate"]:.0f}%)')
-        lines.append(f'  Tendencia: {"📈" if fin["income_trend"] > 0 else "📉"} {fin["income_trend"]:+.1f}% vs mes anterior')
+        lines.append(
+            f'  Ingresos: S/{fin["income_real"]:.0f} / S/{fin["income_expected"]:.0f} ({fin["collection_rate"]:.0f}%)'
+        )
+        lines.append(
+            f'  Tendencia: {"📈" if fin["income_trend"] > 0 else "📉"} {fin["income_trend"]:+.1f}% vs mes anterior'
+        )
         lines.append(f'  Mora: {fin["overdue_count"]} usuarios (S/{fin["overdue_amount"]:.0f})')
         lines.append(f'  Gastos: S/{fin["expenses"]:.0f} → Utilidad: S/{fin["net_profit"]:.0f}')
         lines.append('')
@@ -564,7 +606,9 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
     if bsc_data.get('patients'):
         pat = bsc_data['patients']
         lines.append('🏥 *Pacientes:*')
-        lines.append(f'  Activos: {pat["total"]} | Sesiones hoy: {pat["sessions_today"]}/{pat["sessions_completed"]} completadas')
+        lines.append(
+            f'  Activos: {pat["total"]} | Sesiones hoy: {pat["sessions_today"]}/{pat["sessions_completed"]} completadas'
+        )
         lines.append(f'  Asistencia 7d: {pat["attendance_rate"]}% | Precisión: {pat["avg_accuracy"]}%')
         if pat['inactive_2weeks'] > 0:
             lines.append(f'  ⚠️ {pat["inactive_2weeks"]} pacientes inactivos >2 semanas')
@@ -584,7 +628,9 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
         pred = bsc_data['predictions']
         lines.append('🔮 *Predicciones (IA):*')
         if 'revenue_next_month' in pred:
-            lines.append(f'  Ingreso proyectado: S/{pred["revenue_next_month"]:.0f} (confianza {pred.get("revenue_confidence", "baja")})')
+            lines.append(
+                f'  Ingreso proyectado: S/{pred["revenue_next_month"]:.0f} (confianza {pred.get("revenue_confidence", "baja")})'
+            )
         if pred.get('churn_risk', 0) > 0:
             lines.append(f'  ⚠️ Riesgo abandono: {pred["churn_risk"]} pacientes')
         if pred.get('efficiency_alert'):
@@ -620,8 +666,12 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
     }.get(user.role, user.role)
 
     bsc_scores = ai_summary.get('bsc_scores', {})
-    score_color = lambda s: '#10b981' if s >= 7 else '#f59e0b' if s >= 5 else '#ef4444'
-    score_bg = lambda s: '#d1fae5' if s >= 7 else '#fef3c7' if s >= 5 else '#fee2e2'
+
+    def score_color(s):
+        return '#10b981' if s >= 7 else '#f59e0b' if s >= 5 else '#ef4444'
+
+    def score_bg(s):
+        return '#d1fae5' if s >= 7 else '#fef3c7' if s >= 5 else '#fee2e2'
 
     # Financial section
     fin_html = ''
@@ -643,8 +693,8 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
                     <div style="font-size:20px;font-weight:700;color:#ef4444;">S/{fin['overdue_amount']:.0f}</div>
                     <div style="font-size:11px;color:#6b7280;">Mora ({fin['overdue_count']})</div>
                 </div>
-                <div style="flex:1;min-width:120px;text-align:center;padding:10px;background:{score_bg(fin['collection_rate']/10)}border-radius:6px;">
-                    <div style="font-size:20px;font-weight:700;color:{score_color(fin['collection_rate']/10)};">{fin['collection_rate']:.0f}%</div>
+                <div style="flex:1;min-width:120px;text-align:center;padding:10px;background:{score_bg(fin['collection_rate'] / 10)}border-radius:6px;">
+                    <div style="font-size:20px;font-weight:700;color:{score_color(fin['collection_rate'] / 10)};">{fin['collection_rate']:.0f}%</div>
                     <div style="font-size:11px;color:#6b7280;">Cobranza</div>
                 </div>
             </div>
@@ -666,8 +716,8 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
                     <div style="font-size:20px;font-weight:700;color:#059669;">{pat['sessions_completed']}/{pat['sessions_today']}</div>
                     <div style="font-size:11px;color:#6b7280;">Sesiones Hoy</div>
                 </div>
-                <div style="flex:1;min-width:100px;text-align:center;padding:10px;background:{score_bg(pat['attendance_rate']/10)}border-radius:6px;">
-                    <div style="font-size:20px;font-weight:700;color:{score_color(pat['attendance_rate']/10)};">{pat['attendance_rate']}%</div>
+                <div style="flex:1;min-width:100px;text-align:center;padding:10px;background:{score_bg(pat['attendance_rate'] / 10)}border-radius:6px;">
+                    <div style="font-size:20px;font-weight:700;color:{score_color(pat['attendance_rate'] / 10)};">{pat['attendance_rate']}%</div>
                     <div style="font-size:11px;color:#6b7280;">Asistencia</div>
                 </div>
                 <div style="flex:1;min-width:100px;text-align:center;padding:10px;background:#f8f9fa;border-radius:6px;">
@@ -717,9 +767,13 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
         pred = bsc_data['predictions']
         items = []
         if 'revenue_next_month' in pred:
-            items.append(f"<div style='padding:6px 0;'>💰 Ingreso proyectado: <strong>S/{pred['revenue_next_month']:.0f}</strong> <span style='color:#6b7280;'>(confianza {pred.get('revenue_confidence', 'baja')})</span></div>")
+            items.append(
+                f"<div style='padding:6px 0;'>💰 Ingreso proyectado: <strong>S/{pred['revenue_next_month']:.0f}</strong> <span style='color:#6b7280;'>(confianza {pred.get('revenue_confidence', 'baja')})</span></div>"
+            )
         if pred.get('churn_risk', 0) > 0:
-            items.append(f"<div style='padding:6px 0;'>⚠️ Riesgo abandono: <strong>{pred['churn_risk']} pacientes</strong></div>")
+            items.append(
+                f"<div style='padding:6px 0;'>⚠️ Riesgo abandono: <strong>{pred['churn_risk']} pacientes</strong></div>"
+            )
         if pred.get('efficiency_alert'):
             items.append(f"<div style='padding:6px 0;'>ℹ️ {pred['efficiency_alert']}</div>")
 
@@ -807,11 +861,20 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
 def _category_label(category):
     """Human-readable category label."""
     labels = {
-        'message': 'Mensajes', 'session': 'Sesiones', 'game': 'Juegos',
-        'payment': 'Pagos', 'alert': 'Alertas', 'incident': 'Incidentes',
-        'security': 'Seguridad', 'report': 'Reportes', 'audit': 'Auditorías',
-        'contact': 'Contacto', 'user_mgmt': 'Usuarios', 'system': 'Sistema',
-        'debt': 'Deudas', 'activity': 'Actividad',
+        'message': 'Mensajes',
+        'session': 'Sesiones',
+        'game': 'Juegos',
+        'payment': 'Pagos',
+        'alert': 'Alertas',
+        'incident': 'Incidentes',
+        'security': 'Seguridad',
+        'report': 'Reportes',
+        'audit': 'Auditorías',
+        'contact': 'Contacto',
+        'user_mgmt': 'Usuarios',
+        'system': 'Sistema',
+        'debt': 'Deudas',
+        'activity': 'Actividad',
     }
     return labels.get(category, category.title())
 

@@ -20,7 +20,7 @@ GLM_MODEL = 'z-ai/glm-5.2'
 
 GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
 GEMINI_MODEL = 'gemini-2.0-flash'
-OLLAMA_MODEL_DEFAULT = 'llama3.1:8b'
+OLLAMA_MODEL_DEFAULT = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
 
 _RATE_LIMIT_RETRIES = 2
 _RATE_LIMIT_BACKOFF = 2.0

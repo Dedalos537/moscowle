@@ -215,6 +215,7 @@ def generate_weekly_reports(app):
             # Send AI-powered weekly report via Telegram + Email
             try:
                 from app.services.automated_reports_service import generate_weekly_reports as send_ai_reports
+
                 result = send_ai_reports()
                 print(f'AI Weekly reports sent: {result}')
             except Exception as e2:
@@ -245,9 +246,18 @@ def generate_monthly_reports(app):
                 month -= 1
             generated = rs.generate_all_monthly_reports(year, month)
             month_name = {
-                1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
-                5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
-                9: 'Setiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+                1: 'Enero',
+                2: 'Febrero',
+                3: 'Marzo',
+                4: 'Abril',
+                5: 'Mayo',
+                6: 'Junio',
+                7: 'Julio',
+                8: 'Agosto',
+                9: 'Setiembre',
+                10: 'Octubre',
+                11: 'Noviembre',
+                12: 'Diciembre',
             }.get(month, str(month))
             admin_users = User.query.filter_by(role='admin').all()
             for admin in admin_users:
@@ -264,6 +274,7 @@ def generate_monthly_reports(app):
             # Send AI-powered monthly report via Telegram + Email
             try:
                 from app.services.automated_reports_service import generate_monthly_reports as send_ai_reports
+
                 result = send_ai_reports()
                 print(f'AI Monthly reports sent: {result}')
             except Exception as e2:
@@ -311,6 +322,7 @@ def generate_annual_reports_task(app):
     with app.app_context():
         try:
             from app.services.automated_reports_service import generate_annual_reports
+
             result = generate_annual_reports()
             print(f'Annual reports: {result}')
         except Exception as e:
@@ -463,7 +475,12 @@ def init_scheduler(app):
 
     # --- Annual Report (Jan 1 at 10 PM) ---
     scheduler.add_job(
-        func=lambda: generate_annual_reports_task(app), trigger='cron', month=1, day=1, hour=22, minute=0,
+        func=lambda: generate_annual_reports_task(app),
+        trigger='cron',
+        month=1,
+        day=1,
+        hour=22,
+        minute=0,
         id='annual_reports',
     )
 

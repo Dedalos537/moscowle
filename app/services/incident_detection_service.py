@@ -235,8 +235,8 @@ class IncidentDetectionService:
     def _check_expired_slas(cls):
         """
         Detecta incidentes con SLA vencido que no han sido escalados.
+        Agrupa todas las notificaciones en UN solo mensaje Telegram.
         """
-        # Verificar si el SLA está habilitado
         import os
 
         sla_enabled = os.environ.get('SLA_ENABLED', 'true').lower() == 'true'
@@ -252,10 +252,31 @@ class IncidentDetectionService:
             Incidente.is_active,
         ).all()
 
+        if not vencidos:
+            return
+
+        # Deduplicate: only notify if last notification was > 1 hour ago
+        incidentes_a_notificar = []
+
         for incidente in vencidos:
+            # Check if we already notified recently (use fecha_limite_sla as proxy)
+            # If SLA breached more than 1 hour ago and we already notified, skip
+            horas_vencido = (ahora - incidente.fecha_limite_sla).total_seconds() / 3600
+            if horas_vencido > 24:
+                # SLA breached more than 24h ago - don't keep notifying
+                continue
+            incidentes_a_notificar.append(incidente)
+
+        if not incidentes_a_notificar:
+            return
+
+        # Send ONE grouped notification instead of individual ones
+        try:
             from app.services.incident_notification_service import IncidentNotificationService
 
-            IncidentNotificationService.notify_sla_breach(incidente)
+            IncidentNotificationService.notify_sla_breach_grouped(incidentes_a_notificar)
+        except Exception as e:
+            logger.error(f'Failed to send grouped SLA notification: {e}')
 
     @classmethod
     def _create_incident(cls, **kwargs) -> Incidente:

@@ -183,30 +183,37 @@ def _gather_period_data(since, until, period_type):
     data = {'since': since.isoformat(), 'until': until.isoformat(), 'period': period_type}
 
     try:
-        from app.models.payment import Payment, Expense
         from app.models.appointment import Appointment, SessionMetrics
-        from app.models.user import User as UserModel
-        from app.models.report import SessionAudit
         from app.models.incidente import Incidente
+        from app.models.payment import Expense, Payment
+        from app.models.report import SessionAudit
+        from app.models.user import User as UserModel
 
         # Financial
-        income = db.session.query(
-            db.func.coalesce(db.func.sum(Payment.amount), 0)
-        ).filter(
-            Payment.date >= since, Payment.date <= until,
-            Payment.status.in_(['paid', 'completed']),
-        ).scalar()
+        income = (
+            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
+            .filter(
+                Payment.date >= since,
+                Payment.date <= until,
+                Payment.status.in_(['paid', 'completed']),
+            )
+            .scalar()
+        )
 
-        expenses = db.session.query(
-            db.func.coalesce(db.func.sum(Expense.amount), 0)
-        ).filter(Expense.date >= since, Expense.date <= until).scalar()
+        expenses = (
+            db.session.query(db.func.coalesce(db.func.sum(Expense.amount), 0))
+            .filter(Expense.date >= since, Expense.date <= until)
+            .scalar()
+        )
 
-        overdue = db.session.query(
-            db.func.coalesce(db.func.sum(Payment.amount), 0)
-        ).filter(
-            Payment.date < since,
-            Payment.status.in_(['pending', 'overdue']),
-        ).scalar()
+        overdue = (
+            db.session.query(db.func.coalesce(db.func.sum(Payment.amount), 0))
+            .filter(
+                Payment.date < since,
+                Payment.status.in_(['pending', 'overdue']),
+            )
+            .scalar()
+        )
 
         data['financial'] = {
             'income': float(income),
@@ -218,20 +225,25 @@ def _gather_period_data(since, until, period_type):
         # Patients
         total_patients = UserModel.query.filter_by(role='jugador', is_active=True).count()
         sessions = Appointment.query.filter(
-            Appointment.start_time >= since, Appointment.start_time <= until,
+            Appointment.start_time >= since,
+            Appointment.start_time <= until,
         ).count()
         completed = Appointment.query.filter(
-            Appointment.start_time >= since, Appointment.start_time <= until,
+            Appointment.start_time >= since,
+            Appointment.start_time <= until,
             Appointment.status == 'completed',
         ).count()
         attended = Appointment.query.filter(
-            Appointment.start_time >= since, Appointment.start_time <= until,
+            Appointment.start_time >= since,
+            Appointment.start_time <= until,
             Appointment.attendance == 'present',
         ).count()
 
-        avg_accuracy = db.session.query(
-            db.func.coalesce(db.func.avg(SessionMetrics.accurracy), 0)
-        ).filter(SessionMetrics.date >= since, SessionMetrics.date <= until).scalar()
+        avg_accuracy = (
+            db.session.query(db.func.coalesce(db.func.avg(SessionMetrics.accurracy), 0))
+            .filter(SessionMetrics.date >= since, SessionMetrics.date <= until)
+            .scalar()
+        )
 
         data['patients'] = {
             'total': total_patients,
@@ -248,19 +260,23 @@ def _gather_period_data(since, until, period_type):
         for t in therapists:
             t_sessions = Appointment.query.filter(
                 Appointment.therapist_id == t.id,
-                Appointment.start_time >= since, Appointment.start_time <= until,
+                Appointment.start_time >= since,
+                Appointment.start_time <= until,
             ).count()
             t_completed = Appointment.query.filter(
                 Appointment.therapist_id == t.id,
-                Appointment.start_time >= since, Appointment.start_time <= until,
+                Appointment.start_time >= since,
+                Appointment.start_time <= until,
                 Appointment.status == 'completed',
             ).count()
-            ther_stats.append({
-                'name': t.username,
-                'sessions': t_sessions,
-                'completed': t_completed,
-                'efficiency': round(t_completed / t_sessions * 100, 1) if t_sessions > 0 else 0,
-            })
+            ther_stats.append(
+                {
+                    'name': t.username,
+                    'sessions': t_sessions,
+                    'completed': t_completed,
+                    'efficiency': round(t_completed / t_sessions * 100, 1) if t_sessions > 0 else 0,
+                }
+            )
         ther_stats.sort(key=lambda x: x['efficiency'], reverse=True)
         data['therapists'] = ther_stats
 
@@ -271,9 +287,11 @@ def _gather_period_data(since, until, period_type):
         }
 
         # Audit
-        avg_audit = db.session.query(
-            db.func.coalesce(db.func.avg(SessionAudit.audit_score), 0)
-        ).filter(SessionAudit.audited_at >= since).scalar()
+        avg_audit = (
+            db.session.query(db.func.coalesce(db.func.avg(SessionAudit.audit_score), 0))
+            .filter(SessionAudit.audited_at >= since)
+            .scalar()
+        )
         data['audit'] = {'avg_score': round(float(avg_audit), 1)}
 
     except Exception as e:
@@ -294,30 +312,34 @@ def _generate_ai_report(data, period_type, user_role):
 
         if data.get('financial'):
             fin = data['financial']
-            context_parts.append(f"FINANZAS: Ingresos S/{fin['income']:.0f}, Gastos S/{fin['expenses']:.0f}, Utilidad neta S/{fin['net']:.0f}, Mora S/{fin['overdue']:.0f}")
+            context_parts.append(
+                f'FINANZAS: Ingresos S/{fin["income"]:.0f}, Gastos S/{fin["expenses"]:.0f}, Utilidad neta S/{fin["net"]:.0f}, Mora S/{fin["overdue"]:.0f}'
+            )
 
         if data.get('patients'):
             pat = data['patients']
-            context_parts.append(f"PACIENTES: {pat['total']} activos, {pat['sessions']} sesiones, {pat['completed']} completadas, Asistencia {pat['attendance_rate']}%, Precisión {pat['avg_accuracy']}%")
+            context_parts.append(
+                f'PACIENTES: {pat["total"]} activos, {pat["sessions"]} sesiones, {pat["completed"]} completadas, Asistencia {pat["attendance_rate"]}%, Precisión {pat["avg_accuracy"]}%'
+            )
 
         if data.get('therapists'):
             top3 = data['therapists'][:3]
-            top_str = ', '.join([f"{t['name']}({t['efficiency']}%)" for t in top3])
-            context_parts.append(f"TERAPEUTAS: Top 3: {top_str}")
+            top_str = ', '.join([f'{t["name"]}({t["efficiency"]}%)' for t in top3])
+            context_parts.append(f'TERAPEUTAS: Top 3: {top_str}')
 
         if data.get('incidents'):
             inc = data['incidents']
-            context_parts.append(f"INCIDENTES: {inc['total']} totales, {inc['open']} abiertos")
+            context_parts.append(f'INCIDENTES: {inc["total"]} totales, {inc["open"]} abiertos')
 
         if data.get('prev'):
             prev_fin = data['prev'].get('financial', {})
             curr_fin = data.get('financial', {})
             if prev_fin.get('income', 0) > 0:
                 change = (curr_fin['income'] - prev_fin['income']) / prev_fin['income'] * 100
-                context_parts.append(f"TENDENCIA: Ingresos {change:+.1f}% vs período anterior")
+                context_parts.append(f'TENDENCIA: Ingresos {change:+.1f}% vs período anterior')
 
         if data.get('monthly_breakdown'):
-            context_parts.append(f"MESES: {len(data['monthly_breakdown'])} meses de datos")
+            context_parts.append(f'MESES: {len(data["monthly_breakdown"])} meses de datos')
 
         context_text = '\n'.join(context_parts)
 
@@ -359,13 +381,13 @@ def _fallback_report(data, period_type):
     parts = []
     if data.get('financial'):
         fin = data['financial']
-        parts.append(f"Ingresos: S/{fin['income']:.0f}, Gastos: S/{fin['expenses']:.0f}")
+        parts.append(f'Ingresos: S/{fin["income"]:.0f}, Gastos: S/{fin["expenses"]:.0f}')
     if data.get('patients'):
         pat = data['patients']
-        parts.append(f"Pacientes: {pat['total']}, Asistencia: {pat['attendance_rate']}%")
+        parts.append(f'Pacientes: {pat["total"]}, Asistencia: {pat["attendance_rate"]}%')
 
     return {
-        'title': f"📊 Reporte {period_type.title()} — {datetime.now().strftime('%d/%m/%Y')}",
+        'title': f'📊 Reporte {period_type.title()} — {datetime.now().strftime("%d/%m/%Y")}',
         'body': '\n'.join(parts) if parts else 'Sin datos disponibles.',
         'highlights': [],
         'bsc_scores': {'finance': 5, 'patients': 5, 'therapists': 5, 'growth': 5},
@@ -378,12 +400,17 @@ def _fallback_report(data, period_type):
 
 def _build_report_text(user, ai_summary, data, period_type):
     """Build plain-text report for Telegram."""
-    role_label = {'admin': 'Administrador', 'supervisor': 'Supervisor', 'terapista': 'Terapeuta', 'jugador': 'Paciente'}.get(user.role, user.role)
+    role_label = {
+        'admin': 'Administrador',
+        'supervisor': 'Supervisor',
+        'terapista': 'Terapeuta',
+        'jugador': 'Paciente',
+    }.get(user.role, user.role)
 
     lines = [
-        ai_summary.get('title', f"📊 Reporte {period_type.title()}"),
-        f"👤 {user.username} ({role_label})",
-        f"📅 {datetime.now().strftime('%d/%m/%Y')}",
+        ai_summary.get('title', f'📊 Reporte {period_type.title()}'),
+        f'👤 {user.username} ({role_label})',
+        f'📅 {datetime.now().strftime("%d/%m/%Y")}',
         '',
     ]
 
@@ -391,7 +418,12 @@ def _build_report_text(user, ai_summary, data, period_type):
     bsc = ai_summary.get('bsc_scores', {})
     if bsc:
         lines.append('📊 *Balanced Scorecard:*')
-        for key, label in [('finance', 'Finanzas'), ('patients', 'Pacientes'), ('therapists', 'Terapeutas'), ('growth', 'Crecimiento')]:
+        for key, label in [
+            ('finance', 'Finanzas'),
+            ('patients', 'Pacientes'),
+            ('therapists', 'Terapeutas'),
+            ('growth', 'Crecimiento'),
+        ]:
             s = bsc.get(key, 5)
             emoji = '🟢' if s >= 7 else '🟡' if s >= 5 else '🔴'
             lines.append(f'  {emoji} {label}: {s}/10')
@@ -448,17 +480,30 @@ def _build_report_text(user, ai_summary, data, period_type):
 
 def _build_report_html(user, ai_summary, data, period_type):
     """Build HTML report for email."""
-    role_label = {'admin': 'Administrador', 'supervisor': 'Supervisor', 'terapista': 'Terapeuta', 'jugador': 'Paciente'}.get(user.role, user.role)
+    role_label = {
+        'admin': 'Administrador',
+        'supervisor': 'Supervisor',
+        'terapista': 'Terapeuta',
+        'jugador': 'Paciente',
+    }.get(user.role, user.role)
     bsc = ai_summary.get('bsc_scores', {})
 
-    score_color = lambda s: '#10b981' if s >= 7 else '#f59e0b' if s >= 5 else '#ef4444'
-    score_bg = lambda s: '#d1fae5' if s >= 7 else '#fef3c7' if s >= 5 else '#fee2e2'
+    def score_color(s):
+        return '#10b981' if s >= 7 else '#f59e0b' if s >= 5 else '#ef4444'
+
+    def score_bg(s):
+        return '#d1fae5' if s >= 7 else '#fef3c7' if s >= 5 else '#fee2e2'
 
     # BSC cards
     bsc_html = ''
     if bsc:
         cards = ''
-        for key, label in [('finance', '💰 Finanzas'), ('patients', '🏥 Pacientes'), ('therapists', '👨‍⚕️ Terapeutas'), ('growth', '📈 Crecimiento')]:
+        for key, label in [
+            ('finance', '💰 Finanzas'),
+            ('patients', '🏥 Pacientes'),
+            ('therapists', '👨‍⚕️ Terapeutas'),
+            ('growth', '📈 Crecimiento'),
+        ]:
             s = bsc.get(key, 5)
             cards += f'<div style="flex:1;min-width:100px;text-align:center;padding:12px;background:{score_bg(s)};border-radius:8px;"><div style="font-size:11px;color:#6b7280;">{label}</div><div style="font-size:24px;font-weight:700;color:{score_color(s)};">{s}/10</div></div>'
         bsc_html = f'<div style="background:white;border-radius:8px;padding:16px;margin-bottom:16px;border:1px solid #e5e7eb;"><h3 style="margin:0 0 12px;font-size:14px;">📊 Balanced Scorecard</h3><div style="display:flex;gap:12px;flex-wrap:wrap;">{cards}</div></div>'
@@ -531,10 +576,12 @@ def _send_report_telegram(user, text):
     """Send report via Telegram."""
     try:
         from app.services.telegram_bot_service import send_telegram_message
+
         bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
         if not bot_token:
             return
         from app.models.telegram_user import TelegramUser
+
         tg_users = TelegramUser.query.filter_by(admin_user_id=user.id, is_linked=True, is_active=True).all()
         for tg in tg_users:
             send_telegram_message(tg.telegram_chat_id, text, bot_token)
@@ -549,6 +596,7 @@ def _send_report_email(user, html, period_type):
         if not user.email:
             return
         from app.services.email_service import EmailService
+
         subject = f'📊 Reporte {period_type} — Centro Juan Pablo II ({datetime.now().strftime("%d/%m/%Y")})'
         EmailService.send_notification_email(subject=subject, recipients=[user.email], body=html)
         logger.info(f'Report sent via email to {user.email}')

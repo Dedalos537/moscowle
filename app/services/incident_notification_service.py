@@ -75,6 +75,64 @@ class IncidentNotificationService:
         cls._notify_inapp_sla_breach(incidente)
 
     @classmethod
+    def notify_sla_breach_grouped(cls, incidentes: list):
+        """Envía UN SOLO mensaje agrupado con todos los SLA vencidos. Reemplaza los mensajes individuales."""
+        if not incidentes:
+            return
+
+        logger.info('Sending grouped SLA breach notification for %d incidents', len(incidentes))
+
+        # Build grouped message
+        lines = [f'🚨 *{len(incidentes)} INCIDENTES CON SLA VENCIDO*']
+        lines.append('')
+        for i, inc in enumerate(incidentes[:15], 1):  # max 15 in message
+            sla_str = inc.fecha_limite_sla.strftime('%d/%m %H:%M') if inc.fecha_limite_sla else 'N/A'
+            horas = inc.horas_invertidas or 0
+            lines.append(f'{i}. *#{inc.id_incidente}* {inc.titulo}')
+            lines.append(f'   P{inc.prioridad} | {inc.categoria} | SLA: {sla_str} | {horas:.0f}h')
+        if len(incidentes) > 15:
+            lines.append(f'\n... y {len(incidentes) - 15} más')
+
+        telegram_msg = '\n'.join(lines)
+
+        # Send ONE Telegram message
+        try:
+            from app.services.telegram_bot_service import send_telegram_message
+
+            send_telegram_message(telegram_msg)
+            logger.info('Grouped SLA Telegram sent: %d incidents', len(incidentes))
+        except Exception as e:
+            logger.error(f'Failed to send grouped SLA Telegram: {e}')
+
+        # Send ONE email with all incidents
+        try:
+            cls._send_email_sla_breach_grouped(incidentes)
+        except Exception as e:
+            logger.error(f'Failed to send grouped SLA email: {e}')
+
+        # Send ONE in-app notification (not per-incident to avoid flood)
+        try:
+            from app.models.user import User
+
+            msg_inapp = f'🚨 {len(incidentes)} incidentes con SLA vencido. Requieren atención inmediata.'
+            admins = User.query.filter_by(role='admin', is_active=True).all()
+            notif_service = NotificationService()
+            for admin in admins:
+                notif_service.notify_user(
+                    user_id=admin.id,
+                    message=msg_inapp,
+                    title='SLA Vencido (Agrupado)',
+                    notif_type='alert',
+                    link='/admin/incidents',
+                    category='alert',
+                    priority='high',
+                    icon=['fas', 'triangle-exclamation'],
+                    skip_telegram=True,
+                )
+        except Exception as e:
+            logger.error(f'Failed to send grouped in-app notification: {e}')
+
+    @classmethod
     def notify_resolution(cls, incidente: Incidente):
         """Notifica resolución al creador."""
         logger.info('Notifying resolution for incident #%s', incidente.id_incidente)
@@ -190,6 +248,35 @@ class IncidentNotificationService:
             EmailService.send_notification_email(subject, recipients, body)
         except Exception as e:
             logger.exception('Failed to send SLA breach email: %s', e)
+
+    @classmethod
+    def _send_email_sla_breach_grouped(cls, incidentes: list):
+        """Send ONE email with all SLA breaches grouped."""
+        recipients = cls._get_admin_emails()
+        if not recipients:
+            return
+
+        subject = f'[Moscowle] {len(incidentes)} INCIDENTES CON SLA VENCIDO'
+        lines = [
+            f'ALERTA: {len(incidentes)} incidentes tienen SLA vencido.\n',
+            f'{"ID":<8} {"Título":<40} {"Categ."} {"P":>2} {"SLA":>16} {"Horas":>6}',
+            '-' * 85,
+        ]
+        for inc in incidentes[:20]:
+            sla_str = inc.fecha_limite_sla.strftime('%d/%m/%Y %H:%M') if inc.fecha_limite_sla else 'N/A'
+            horas = inc.horas_invertidas or 0
+            lines.append(
+                f'#{inc.id_incidente:<7} {inc.titulo[:40]:<40} {inc.categoria} {inc.prioridad:>2} {sla_str:>16} {horas:>5.1f}h'
+            )
+        if len(incidentes) > 20:
+            lines.append(f'\n... y {len(incidentes) - 20} más')
+        lines.append('\nRequiere atención inmediata.')
+
+        body = '\n'.join(lines)
+        try:
+            EmailService.send_notification_email(subject, recipients, body)
+        except Exception as e:
+            logger.exception('Failed to send grouped SLA email: %s', e)
 
     @classmethod
     def _send_email_resolution(cls, incidente: Incidente):
