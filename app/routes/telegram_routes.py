@@ -63,13 +63,15 @@ def webhook():
     import eventlet
 
     def _process_bg():
-        with current_app.app_context():
-            try:
+        try:
+            logger.info(f'BG: Processing update_id={update_id}')
+            with current_app.app_context():
                 from app.services.telegram_bot_service import handle_webhook_update
 
                 handle_webhook_update(update)
-            except Exception as e:
-                logger.error(f'Webhook processing error: {e}', exc_info=True)
+                logger.info(f'BG: Done processing update_id={update_id}')
+        except Exception as e:
+            logger.error(f'Webhook processing error: {e}', exc_info=True)
 
     eventlet.spawn(_process_bg)
 
