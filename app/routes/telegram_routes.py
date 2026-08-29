@@ -61,11 +61,14 @@ def webhook():
 
     # Process in background green thread to avoid Telegram 30s timeout
     import eventlet
+    from flask import current_app as _app
+
+    app_ref = _app._get_current_object()
 
     def _process_bg():
         try:
             logger.info(f'BG: Processing update_id={update_id}')
-            with current_app.app_context():
+            with app_ref.app_context():
                 from app.services.telegram_bot_service import handle_webhook_update
 
                 handle_webhook_update(update)
