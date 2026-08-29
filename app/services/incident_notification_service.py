@@ -99,7 +99,8 @@ class IncidentNotificationService:
         try:
             from app.services.telegram_bot_service import send_telegram_message
 
-            send_telegram_message(telegram_msg)
+            chat_id = 1597773810
+            send_telegram_message(chat_id, telegram_msg)
             logger.info('Grouped SLA Telegram sent: %d incidents', len(incidentes))
         except Exception as e:
             logger.error(f'Failed to send grouped SLA Telegram: {e}')
