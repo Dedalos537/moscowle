@@ -1,10 +1,17 @@
 <ng-template #headerActions>
-  <div class="text-center hidden sm:block">
-    <div class="text-2xl font-bold text-primary leading-none">{{ activeCount }}</div>
-    <p class="text-label-caps text-on-surface-variant mt-1">activas</p>
-  </div>
+  <div class="flex items-center gap-2 sm:gap-3">
+    <div class="text-center hidden sm:block">
+      <div class="text-2xl font-bold text-primary leading-none">{{ activeCount }}</div>
+      <p class="text-label-caps text-on-surface-variant mt-1">activas</p>
+    </div>
 
-  <app-button variant="primary" label="Nueva Sede" [icon]="['fas', 'plus']" (clicked)="openCreateDrawer()"></app-button>
+    <button (click)="openCreateDrawer()"
+      class="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
+      <fa-icon [icon]="['fas', 'plus']" class="text-[10px] sm:text-xs"></fa-icon>
+      <span class="hidden sm:inline">Nueva Sede</span>
+      <span class="sm:hidden">Nueva</span>
+    </button>
+  </div>
 </ng-template>
 
 <div class="p-1 animate-fade-in-up space-y-6" [@fadeInUp]>

@@ -1,21 +1,23 @@
-<header [class.header--hidden]="headerService.hidden()" class="sticky top-0 z-40 h-14 sm:h-20 bg-surface/80 backdrop-blur-md border-b border-border flex items-center justify-between px-2 sm:px-6 shrink-0 transition-colors duration-300">
-  <div class="flex items-center gap-1.5 sm:gap-3 min-w-0">
-    <button (click)="toggleSidebar()" class="md:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors shrink-0" aria-label="Toggle sidebar">
-      <fa-icon [icon]="['fas', 'bars']" class="text-sm sm:text-base"></fa-icon>
+<header [class.header--hidden]="headerService.hidden()" class="sticky top-0 z-40 min-h-14 sm:h-20 bg-surface/80 backdrop-blur-md sm:border-b sm:border-border border-none flex items-center justify-between px-2 sm:px-6 shrink-0 transition-colors duration-300 gap-2">
+  <div class="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
+    <button (click)="toggleSidebar()" class="md:hidden w-10 h-10 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors shrink-0" aria-label="Toggle sidebar">
+      <fa-icon [icon]="['fas', 'bars']" class="text-sm"></fa-icon>
     </button>
     @if (headerService.icon$ | async; as icon) {
       @if (icon && icon.length && icon.length === 2) {
-        <fa-icon [icon]="icon" class="text-primary-container text-lg sm:text-xl shrink-0"></fa-icon>
+        <fa-icon [icon]="icon" class="text-primary-container text-lg shrink-0 hidden sm:block"></fa-icon>
       }
     }
     <div class="flex flex-col min-w-0">
-      <h1 class="text-sm sm:text-xl font-bold text-on-surface leading-tight">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
+      <h1 class="text-xs sm:text-xl font-bold text-on-surface leading-tight">{{ (headerService.title$ | async) || 'Panel de Administración' }}</h1>
       <p class="text-[10px] sm:text-body-sm text-on-surface-variant hidden sm:block truncate">{{ (headerService.subtitle$ | async) || 'Control integral de terapeutas y pacientes' }}</p>
     </div>
   </div>
 
-  <div class="flex items-center gap-1.5 sm:gap-3">
-    <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
+  <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+    <div class="flex items-center gap-1 sm:gap-2">
+      <ng-container *ngTemplateOutlet="(headerService.actionTemplate$ | async) || null"></ng-container>
+    </div>
 
     @if (isRecording) {
       <div class="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-error-container border border-error-container">
@@ -25,8 +27,8 @@
     }
 
     <div class="relative">
-      <button (click)="$event.stopPropagation(); toggleNotifications()" class="relative w-11 h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
-        <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm sm:text-base"></fa-icon>
+      <button (click)="$event.stopPropagation(); toggleNotifications()" class="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
+        <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm"></fa-icon>
         @if (unreadCount > 0) {
           <span class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-error rounded-full text-on-error text-[10px] sm:text-xs flex items-center justify-center font-bold border-2 border-surface">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
         }
@@ -180,15 +182,15 @@
     </div>
 
     <div class="relative">
-      <div (click)="toggleUserMenu()" class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
-        <div class="w-10 h-10 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-sm sm:text-lg uppercase">
+      <div (click)="toggleUserMenu()" class="flex items-center gap-1.5 sm:gap-3 pl-1.5 sm:pl-4 sm:border-l sm:border-border/50 cursor-pointer hover:opacity-80 transition-opacity select-none">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold text-xs sm:text-lg uppercase shrink-0">
           {{ user?.username?.charAt(0) || user?.email?.charAt(0) || 'U' }}
         </div>
         <div class="hidden md:flex flex-col">
           <span class="font-bold text-on-surface text-sm max-w-[120px] truncate">{{ user?.username || 'Usuario' }}</span>
           <span class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</span>
         </div>
-        <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs sm:text-sm transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
+        <fa-icon [icon]="['fas', 'chevron-down']" class="text-on-surface-variant text-xs hidden sm:block transition-transform" [class.rotate-180]="showUserMenu"></fa-icon>
       </div>
 
       @if (showUserMenu) {

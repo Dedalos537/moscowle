@@ -625,11 +625,18 @@
 </app-drawer>
 
 <ng-template #headerActions>
-  <div class="flex gap-1.5 sm:gap-2">
-    <app-button variant="ghost" label="Grupos" [icon]="['fas', 'object-group']"
-      (clicked)="openGroupModal()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
-    <app-button variant="primary" label="Nuevo Usuario" [icon]="['fas', 'user-plus']"
-      (clicked)="openCreateDrawer()" class="text-xs sm:text-sm !px-2 sm:!px-3 !py-1 sm:!py-1.5"></app-button>
+  <div class="flex items-center gap-1 sm:gap-2">
+    <button (click)="openGroupModal()"
+      class="flex items-center gap-1 px-2 py-1 text-[10px] sm:text-sm font-semibold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer whitespace-nowrap">
+      <fa-icon [icon]="['fas', 'object-group']" class="text-[10px] sm:text-xs"></fa-icon>
+      <span class="hidden sm:inline">Grupos</span>
+    </button>
+    <button (click)="openCreateDrawer()"
+      class="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
+      <fa-icon [icon]="['fas', 'user-plus']" class="text-[10px] sm:text-xs"></fa-icon>
+      <span class="hidden sm:inline">Nuevo Usuario</span>
+      <span class="sm:hidden">Nuevo</span>
+    </button>
   </div>
 </ng-template>
 

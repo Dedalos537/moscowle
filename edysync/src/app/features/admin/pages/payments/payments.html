@@ -1,6 +1,17 @@
 <ng-template #headerActions>
-  <app-button variant="ghost" label="Ayuda" [icon]="['fas', 'question-circle']" (clicked)="showHelp()"></app-button>
-  <app-button variant="primary" label="Generar Reporte" [icon]="['fas', 'file-export']" (clicked)="generateReport()"></app-button>
+  <div class="flex items-center gap-1 sm:gap-2">
+    <button (click)="showHelp()"
+      class="flex items-center gap-1 px-2 py-1 text-[10px] sm:text-sm font-semibold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer">
+      <fa-icon [icon]="['fas', 'question-circle']" class="text-[10px] sm:text-xs"></fa-icon>
+      <span class="hidden sm:inline">Ayuda</span>
+    </button>
+    <button (click)="generateReport()"
+      class="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
+      <fa-icon [icon]="['fas', 'file-export']" class="text-[10px] sm:text-xs"></fa-icon>
+      <span class="hidden sm:inline">Generar Reporte</span>
+      <span class="sm:hidden">Reporte</span>
+    </button>
+  </div>
 </ng-template>
 
 <div class="p-4 md:p-8 space-y-6 animate-fade-in" [@fadeInUp]>
