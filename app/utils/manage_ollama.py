@@ -15,7 +15,7 @@ def is_ollama_running():
         return s.connect_ex(('127.0.0.1', 11434)) == 0
 
 
-def check_model_exists(model_name='llama3.1:8b'):
+def check_model_exists(model_name='qwen2.5:1.5b'):
     """Verifica si el modelo específico está disponible en Ollama."""
     try:
         response = requests.get('http://127.0.0.1:11434/api/tags')
@@ -67,12 +67,12 @@ def init_ia_check():
     """Función para ser llamada desde el arranque de Flask."""
     logger.info('--- [ IA CHECK: COMPAÑERO LLAMA ] ---')
     if start_ollama():
-        if check_model_exists('llama3.1:8b'):
-            logger.info('Modelo llama3.1:8b listo para usar.')
+        if check_model_exists('qwen2.5:1.5b'):
+            logger.info('Modelo qwen2.5:1.5b listo para usar.')
             return True
         else:
-            logger.warning("Ollama está activo pero el modelo 'llama3.1:8b' no se encontró.")
-            logger.info("Ejecuta 'ollama pull llama3.1:8b' en tu terminal.")
+            logger.warning("Ollama está activo pero el modelo 'qwen2.5:1.5b' no se encontró.")
+            logger.info("Ejecuta 'ollama pull qwen2.5:1.5b' en tu terminal.")
             return False
     else:
         logger.error('No se pudo conectar con Ollama. La IA estará desactivada.')
