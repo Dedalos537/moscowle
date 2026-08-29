@@ -1,6 +1,5 @@
 import hmac
 import logging
-import threading
 import time
 
 from flask import Blueprint, current_app, jsonify, request
@@ -60,7 +59,9 @@ def webhook():
         logger.debug(f'Duplicate update_id {update_id}, skipping')
         return jsonify({'status': 'ok'}), 200
 
-    # Process in background thread to avoid Telegram 30s timeout
+    # Process in background green thread to avoid Telegram 30s timeout
+    import eventlet
+
     def _process_bg():
         with current_app.app_context():
             try:
@@ -70,8 +71,7 @@ def webhook():
             except Exception as e:
                 logger.error(f'Webhook processing error: {e}', exc_info=True)
 
-    t = threading.Thread(target=_process_bg, daemon=True)
-    t.start()
+    eventlet.spawn(_process_bg)
 
     return jsonify({'status': 'ok'}), 200
 
