@@ -12,7 +12,7 @@ logger = logging.getLogger('app.telegram')
 CONFIRMATION_TTL_SECONDS = 300
 
 # Bot personality
-BOT_NAME = 'Chasqui'
+BOT_NAME = 'Diego'
 BOT_EMOJI = '🦜'
 
 
@@ -307,7 +307,8 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
             response_text = (
                 '📎 Para registrar un pago necesito el *voucher* (envíalo como foto). Después lo confirmo contigo.'
             )
-            edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
+            if not edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token):
+                send_telegram_message(chat_id, response_text, bot_token)
             return {
                 'type': 'response',
                 'response': response_text,
@@ -325,7 +326,8 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
         tool_args = pending.get('args', {})
         args_preview = json.dumps(tool_args, ensure_ascii=False)[:200]
         response_text = result.get('response', 'Acción pendiente de confirmación.')
-        edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
+        if not edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token):
+            send_telegram_message(chat_id, response_text, bot_token)
         return {
             'type': 'confirmation_required',
             'tool_name': tool_name,
@@ -335,7 +337,8 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
         }
 
     response_text = result.get('response', 'Sin respuesta.')
-    edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token)
+    if not edit_telegram_message(chat_id, processing_msg_id, response_text, bot_token):
+        send_telegram_message(chat_id, response_text, bot_token)
     return {
         'type': 'response',
         'response': response_text,
@@ -777,7 +780,7 @@ def _handle_help(chat_id, bot_token):
         '• "Resumen financiero de mayo"\n'
         '• "Sesiones pendientes de Carlos"\n'
         '• [Envía una foto de comprobante]\n\n'
-        f'_{BOT_EMOJI} Soy como Chasqui, tu mensajero confiable._',
+        f'_{BOT_EMOJI} Soy {BOT_NAME}, tu asistente del Centro Juan Pablo II._',
         bot_token,
     )
 
@@ -923,7 +926,7 @@ def _handle_menu(chat_id, tg_user, bot_token):
 
     send_telegram_message(
         chat_id,
-        '🦜 *Menú de Chasqui*\n\nSelecciona una opción:',
+        f'🦜 *Menú de {BOT_NAME}*\n\nSelecciona una opción:',
         bot_token,
         reply_markup=_json.dumps(keyboard),
     )

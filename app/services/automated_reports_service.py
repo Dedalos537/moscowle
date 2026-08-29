@@ -473,7 +473,7 @@ def _build_report_text(user, ai_summary, data, period_type):
             lines.append(f'• {r}')
         lines.append('')
 
-    lines.append('_Reporte generado por Chasqui 🦜_')
+    lines.append('_Reporte generado por Diego 🦜_')
 
     return '\n'.join(lines)
 
@@ -562,7 +562,7 @@ def _build_report_html(user, ai_summary, data, period_type):
             {rec_html}
             {monthly_html}
             <div style="text-align:center;padding:16px;font-size:12px;color:#9ca3af;">
-                Reporte generado automáticamente por Chasqui 🦜 — Centro Juan Pablo II
+                Reporte generado automáticamente por Diego 🦜 — Centro Juan Pablo II
             </div>
         </div>
     </body>

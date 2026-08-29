@@ -651,7 +651,7 @@ def _build_digest_text(user, ai_summary, bsc_data, groups):
         lines.append(f'🔔 *Notificaciones:* {total} en {len(groups)} grupos')
 
     lines.append('')
-    lines.append('_Generado por Chasqui 🦜 — Centro Juan Pablo II_')
+    lines.append('_Generado por Diego 🦜 — Centro Juan Pablo II_')
 
     return '\n'.join(lines)
 
@@ -850,7 +850,7 @@ def _build_digest_html(user, ai_summary, bsc_data, groups):
             {'<div style="background:white;border-radius:8px;padding:16px;border:1px solid #e5e7eb;"><h3 style="margin:0 0 8px;font-size:14px;color:#374151;">🔔 Notificaciones</h3><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f8f9fa;"><th style="padding:6px;text-align:left;"></th><th style="padding:6px;text-align:left;">Cat.</th><th style="padding:6px;text-align:left;">Grupo</th><th style="padding:6px;text-align:center;">Nº</th></tr></thead><tbody>' + groups_html + '</tbody></table></div>' if groups_html else ''}
 
             <div style="text-align:center;padding:16px;font-size:12px;color:#9ca3af;">
-                Generado automáticamente por Chasqui 🦜 — Centro Juan Pablo II<br>
+                Generado automáticamente por Diego 🦜 — Centro Juan Pablo II<br>
                 <a href="https://api-centrojuanpabloii.online" style="color:#2563eb;">Ver panel</a>
             </div>
         </div>
