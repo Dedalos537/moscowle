@@ -1,5 +1,6 @@
 import hmac
 import logging
+import os
 import time
 
 from flask import Blueprint, current_app, jsonify, request
@@ -183,3 +184,153 @@ def toggle_notifications():
     db.session.commit()
 
     return jsonify({'status': 'updated', 'notifications_enabled': tg_user.notifications_enabled})
+
+
+@telegram_bp.route('/dashboard', methods=['GET'])
+@jwt_required()
+def get_bot_dashboard():
+    """Unified dashboard: bot config + channels + recent conversations + activity."""
+    data = {}
+
+    # ── Bot config ────────────────────────────────────────────────────
+    bot_token_full = current_app.config.get('TELEGRAM_BOT_TOKEN', '')
+    bot_token_masked = f'{bot_token_full[:8]}...{bot_token_full[-4:]}' if len(bot_token_full) > 12 else '—'
+    bot_name = os.getenv('TELEGRAM_BOT_NAME', 'Diego')
+    bot_emoji = os.getenv('TELEGRAM_BOT_EMOJI', '\U0001f99c')
+    is_active = bool(bot_token_full)
+    persona_msg = os.getenv('TELEGRAM_PERSONA_MESSAGE', '')
+    system_prompt = os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
+    webhook_url = os.getenv('TELEGRAM_WEBHOOK_URL', '')
+    webhook_secret = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
+
+    data['bot'] = {
+        'name': bot_name,
+        'emoji': bot_emoji,
+        'is_active': is_active,
+        'bot_token_masked': bot_token_masked,
+        'persona_message': persona_msg,
+        'system_prompt': system_prompt,
+        'webhook_url': webhook_url,
+        'webhook_secret': webhook_secret,
+    }
+
+    # ── Channels ──────────────────────────────────────────────────────
+    tg_accounts = TelegramUser.query.filter_by(is_active=True).all()
+    linked = [t for t in tg_accounts if t.is_linked]
+    tg_status = {
+        'active': is_active and len(linked) > 0,
+        'linked_count': len(linked),
+        'total_accounts': len(tg_accounts),
+        'accounts': [
+            {
+                'chat_id': t.telegram_chat_id,
+                'username': t.telegram_username,
+                'first_name': t.telegram_first_name,
+                'is_linked': t.is_linked,
+                'notifications_enabled': t.notifications_enabled,
+                'last_interaction': t.last_interaction_at.isoformat() if t.last_interaction_at else None,
+            }
+            for t in tg_accounts[:20]
+        ],
+    }
+
+    data['channels'] = {
+        'web': {'active': True, 'label': 'Chat Web', 'icon': 'globe'},
+        'telegram': tg_status,
+        'whatsapp': {'active': False, 'label': 'WhatsApp (Baileys)', 'icon': 'whatsapp', 'status': 'coming_soon'},
+        'instagram': {'active': False, 'label': 'Instagram DMs', 'icon': 'instagram', 'status': 'coming_soon'},
+    }
+
+    # ── Recent conversations (last 10 per channel) ───────────────────
+    conversations = []
+
+    # Telegram conversations
+    for t in linked:
+        last = t.last_interaction_at.isoformat() if t.last_interaction_at else None
+        conversations.append(
+            {
+                'channel': 'telegram',
+                'chat_id': t.telegram_chat_id,
+                'contact': t.telegram_username or t.telegram_first_name or f'Chat #{t.telegram_chat_id}',
+                'last_message': None,
+                'timestamp': last,
+                'unread': 0,
+                'status': 'active',
+            }
+        )
+
+    # Contact messages (web form)
+    try:
+        from app.models import ContactMessage
+
+        recent_contacts = ContactMessage.query.order_by(ContactMessage.created_at.desc()).limit(10).all()
+        for cm in recent_contacts:
+            first = cm.first_name or ''
+            last = cm.last_name or ''
+            name = f'{first} {last}'.strip() or cm.email or 'Anónimo'
+            conversations.append(
+                {
+                    'channel': 'web',
+                    'chat_id': cm.id,
+                    'contact': name,
+                    'last_message': (cm.message[:120] + '…') if cm.message and len(cm.message) > 120 else cm.message,
+                    'timestamp': cm.created_at.isoformat() if cm.created_at else None,
+                    'unread': 0 if cm.status == 'read' else 1,
+                    'status': cm.status,
+                }
+            )
+    except Exception as exc:
+        logger.debug(f'Could not load contact messages: {exc}')
+
+    # Sort by timestamp desc
+    conversations.sort(key=lambda c: c['timestamp'] or '', reverse=True)
+    data['conversations'] = conversations[:30]
+
+    # ── Activity (last 10) ───────────────────────────────────────────
+    activity = []
+
+    # Recent telegram interactions
+    for t in linked:
+        if t.last_interaction_at:
+            activity.append(
+                {
+                    'type': 'telegram',
+                    'title': f'@{t.telegram_username or t.telegram_first_name or "Usuario"}',
+                    'message': f'Interacción con el bot (vinculado: {"sí" if t.is_linked else "no"})',
+                    'timestamp': t.last_interaction_at.isoformat(),
+                }
+            )
+
+    # Recent payments
+    try:
+        from app.models import Appointment, Payment, User
+
+        recent_payments = Payment.query.order_by(Payment.id.desc()).limit(5).all()
+        for p in recent_payments:
+            patient = User.query.get(p.patient_id) if p.patient_id else None
+            activity.append(
+                {
+                    'type': 'api',
+                    'title': f'Pago S/{getattr(p, "amount", 0)}',
+                    'message': f'{getattr(p, "method", "")} — {patient.username if patient else "paciente desconocido"}',
+                    'timestamp': (p.date.isoformat() if getattr(p, 'date', None) else ''),
+                }
+            )
+
+        recent_sessions = Appointment.query.order_by(Appointment.id.desc()).limit(5).all()
+        for s in recent_sessions:
+            activity.append(
+                {
+                    'type': 'api',
+                    'title': f'Sesión #{s.id}',
+                    'message': 'Sesión terapéutica',
+                    'timestamp': s.start_time.isoformat() if s.start_time else '',
+                }
+            )
+    except Exception as exc:
+        logger.debug(f'Could not load activity data: {exc}')
+
+    activity.sort(key=lambda a: a['timestamp'] or '', reverse=True)
+    data['activity'] = activity[:20]
+
+    return jsonify(data)

@@ -16,8 +16,9 @@ import { Input } from '../../../../shared/components/input/input';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
+import { BotPanel } from '../bot-panel/bot-panel';
 
-type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'telegram' | 'activity';
+type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'bot';
 
 interface PasswordResetRow {
   id: number;
@@ -39,7 +40,7 @@ interface PasswordResetRow {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
@@ -112,46 +113,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   llmEditing = false;
   llmEditKeys: Record<string, string> = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
 
-  // --- Telegram ---
-  tgStatus: any = null;
-  tgLinkedAccount: any = null;
-  tgLoading = false;
-  tgLinkCode = '';
-  tgLinking = false;
-  tgLinkError = '';
-  tgLinkSuccess = '';
-  tgUnlinking: number | false = false;
-  showLinkForm = false;
-
-  // --- Chasqui Config ---
-  tgConfig: any = null;
-  tgConfigLoading = false;
-  tgConfigSaving = false;
-  tgConfigError = '';
-  tgConfigSuccess = '';
-  tgConfigEdit: any = {};
-  tgWebhookStatus: any = null;
-  tgWebhookLoading = false;
-  tgWebhookSetupUrl = '';
-  tgWebhookSecret = '';
-  tgTestChatId = '';
-  tgTestMessage = '';
-  tgTestSending = false;
-
-  // --- FAQ ---
-  tgFaqList: any[] = [];
-  tgFaqLoading = false;
-  tgFaqCategory = '';
-  tgFaqEditing: any = null;
-  tgFaqSaving = false;
-  tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
-
-  // --- Activity ---
-  activityLogs: any[] = [];
-  activityLoading = false;
-  activityError: string | null = null;
-  activityFilter: 'all' | 'telegram' | 'api' | 'errors' = 'all';
-
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Centro de Operaciones',
@@ -175,15 +136,6 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     this.activeTab = tab;
     if (tab === 'llm') {
       this.loadLLMConfig();
-    }
-    if (tab === 'telegram') {
-      this.loadTelegramStatus();
-      this.loadTgConfig();
-      this.loadFaq();
-      this.loadWebhookStatus();
-    }
-    if (tab === 'activity') {
-      this.loadActivity();
     }
   }
 
@@ -509,249 +461,5 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     if (status === 'ok') return '#22c55e';
     if (status === 'client_null') return '#eab308';
     return '#ef4444';
-  }
-
-  // --- Telegram ---
-  loadTelegramStatus() {
-    this.tgLoading = true;
-    this.tgLinkError = '';
-    this.tgLinkSuccess = '';
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.getTelegramStatus().subscribe({
-        next: (res) => {
-          this.tgStatus = res;
-          const accounts = res.linked_accounts || [];
-          this.tgLinkedAccount = accounts.find((a: any) => a.is_linked) || null;
-          this.tgLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: (err) => { this.tgLoading = false; this.tgStatus = null; this.tgLinkedAccount = null; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  linkTelegram() {
-    const code = this.tgLinkCode.trim().toUpperCase();
-    if (!code || code.length < 4) {
-      this.tgLinkError = 'Ingresa el código de 6 caracteres que te dio el bot.';
-      return;
-    }
-    this.tgLinking = true;
-    this.tgLinkError = '';
-    this.tgLinkSuccess = '';
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.linkTelegram(code).subscribe({
-        next: (res) => {
-          this.tgLinking = false;
-          if (res.status === 'linked') {
-            this.tgLinkSuccess = 'Telegram vinculado exitosamente.';
-            this.tgLinkCode = '';
-            this.showLinkForm = false;
-            this.loadTelegramStatus();
-          } else if (res.error) {
-            this.tgLinkError = res.error;
-          } else {
-            this.tgLinkError = 'No se pudo vincular.';
-          }
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.tgLinking = false;
-          this.tgLinkError = err.error?.error || err.message || 'Error al vincular';
-          this.cdr.markForCheck();
-        },
-      })
-    );
-  }
-
-  unlinkTelegram(chatId: number) {
-    this.tgUnlinking = chatId;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.unlinkTelegram(chatId).subscribe({
-        next: () => { this.tgUnlinking = false; this.loadTelegramStatus(); this.cdr.markForCheck(); },
-        error: () => { this.tgUnlinking = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  // --- Chasqui Config ---
-  loadTgConfig() {
-    this.tgConfigLoading = true;
-    this.tgConfigError = '';
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.getTelegramConfig().subscribe({
-        next: (res) => { this.tgConfig = res; this.tgConfigEdit = { ...res }; this.tgConfigLoading = false; this.cdr.markForCheck(); },
-        error: (err) => { this.tgConfigLoading = false; this.tgConfigError = 'Error al cargar config'; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  saveTgConfig() {
-    this.tgConfigSaving = true;
-    this.tgConfigError = '';
-    this.tgConfigSuccess = '';
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.updateTelegramConfig({
-        bot_name: this.tgConfigEdit.bot_name,
-        bot_emoji: this.tgConfigEdit.bot_emoji,
-        persona_message: this.tgConfigEdit.persona_message,
-        system_prompt: this.tgConfigEdit.system_prompt,
-      }).subscribe({
-        next: (res) => { this.tgConfig = res; this.tgConfigSaving = false; this.tgConfigSuccess = 'Configuración guardada'; this.cdr.markForCheck(); },
-        error: (err) => { this.tgConfigSaving = false; this.tgConfigError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  loadWebhookStatus() {
-    this.tgWebhookLoading = true;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.getWebhookStatus().subscribe({
-        next: (res) => { this.tgWebhookStatus = res; this.tgWebhookLoading = false; this.cdr.markForCheck(); },
-        error: (err) => { this.tgWebhookLoading = false; this.tgWebhookStatus = { ok: false, error: 'Error' }; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  setupWebhook() {
-    if (!this.tgWebhookSetupUrl.trim()) return;
-    this.tgWebhookLoading = true;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.setupWebhook(this.tgWebhookSetupUrl, this.tgWebhookSecret || undefined).subscribe({
-        next: (res) => { this.tgWebhookLoading = false; if (res.ok) this.loadWebhookStatus(); this.cdr.markForCheck(); },
-        error: () => { this.tgWebhookLoading = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  deleteWebhook() {
-    this.tgWebhookLoading = true;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.deleteWebhook().subscribe({
-        next: () => { this.tgWebhookLoading = false; this.loadWebhookStatus(); this.cdr.markForCheck(); },
-        error: () => { this.tgWebhookLoading = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  sendTestMessage() {
-    if (!this.tgTestChatId || !this.tgTestMessage) return;
-    this.tgTestSending = true;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.sendTestMessage(Number(this.tgTestChatId), this.tgTestMessage).subscribe({
-        next: (res) => { this.tgTestSending = false; this.tgTestMessage = ''; this.cdr.markForCheck(); },
-        error: () => { this.tgTestSending = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  // --- FAQ ---
-  loadFaq() {
-    this.tgFaqLoading = true;
-    this.cdr.markForCheck();
-    this.subs.add(
-      this.admin.getFaqList(this.tgFaqCategory || undefined).subscribe({
-        next: (res) => { this.tgFaqList = res; this.tgFaqLoading = false; this.cdr.markForCheck(); },
-        error: () => { this.tgFaqLoading = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  startCreateFaq() {
-    this.tgFaqEditing = null;
-    this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
-  }
-
-  startEditFaq(faq: any) {
-    this.tgFaqEditing = faq.id;
-    this.tgFaqForm = { question: faq.question, answer: faq.answer, category: faq.category, keywords: faq.keywords || '' };
-  }
-
-  saveFaq() {
-    if (!this.tgFaqForm.question || !this.tgFaqForm.answer) return;
-    this.tgFaqSaving = true;
-    this.cdr.markForCheck();
-    const obs = this.tgFaqEditing
-      ? this.admin.updateFaq(this.tgFaqEditing, this.tgFaqForm)
-      : this.admin.createFaq(this.tgFaqForm);
-    this.subs.add(
-      obs.subscribe({
-        next: () => { this.tgFaqSaving = false; this.tgFaqEditing = null; this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' }; this.loadFaq(); this.cdr.markForCheck(); },
-        error: () => { this.tgFaqSaving = false; this.cdr.markForCheck(); },
-      })
-    );
-  }
-
-  deleteFaq(id: number) {
-    this.subs.add(
-      this.admin.deleteFaq(id).subscribe({ next: () => this.loadFaq() })
-    );
-  }
-
-  cancelFaqEdit() {
-    this.tgFaqEditing = null;
-    this.tgFaqForm = { question: '', answer: '', category: 'general', keywords: '' };
-  }
-
-  formatDate(s: string | null | undefined): string {
-    if (!s) return '—';
-    try { return new Date(s).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); }
-    catch { return s; }
-  }
-
-  // --- Activity ---
-  loadActivity() {
-    this.activityLoading = true;
-    this.activityError = null;
-    this.cdr.markForCheck();
-
-    this.subs.add(
-      this.admin.getActivityLogs(this.activityFilter).subscribe({
-        next: (res: any) => {
-          this.activityLogs = res.logs || [];
-          this.activityLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: (err: any) => {
-          this.activityLoading = false;
-          this.activityError = err.error?.error || 'Error al cargar actividad';
-          this.cdr.markForCheck();
-        },
-      })
-    );
-  }
-
-  setActivityFilter(filter: 'all' | 'telegram' | 'api' | 'errors') {
-    this.activityFilter = filter;
-    this.loadActivity();
-  }
-
-  activityIcon(type: string): string {
-    const icons: Record<string, string> = {
-      telegram: 'telegram',
-      api: 'code',
-      error: 'exclamation-triangle',
-      system: 'cog',
-    };
-    return icons[type] || 'circle';
-  }
-
-  activityColor(type: string): string {
-    const colors: Record<string, string> = {
-      telegram: '#229ED9',
-      api: '#3b82f6',
-      error: '#ef4444',
-      system: '#94a3b8',
-    };
-    return colors[type] || '#94a3b8';
   }
 }

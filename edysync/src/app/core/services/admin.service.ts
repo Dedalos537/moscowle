@@ -691,4 +691,9 @@ export class AdminService {
     return this.http.get('/api/admin/activity-logs', { params });
   }
 
+  // --- Bot Dashboard (unified) ---
+  getBotDashboard(): Observable<any> {
+    return this.http.get('/api/telegram/dashboard');
+  }
+
 }

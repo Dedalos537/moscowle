@@ -1,0 +1,440 @@
+<div class="bot-panel">
+
+  @if (loading) {
+    <div class="flex justify-center py-20"><app-spinner size="md" colorClass="text-primary"></app-spinner></div>
+  } @else if (error) {
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <fa-icon [icon]="['fas', 'exclamation-circle']" class="text-error text-4xl mb-4"></fa-icon>
+      <p class="text-error font-semibold text-lg mb-4">{{ error }}</p>
+      <app-button variant="primary" label="Reintentar" [icon]="['fas', 'sync']" (clicked)="loadDashboard()"></app-button>
+    </div>
+  } @else {
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         HEADER — Brand mark: Chasqui · Diego
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-header">
+      <div class="bot-header__brand">
+        <div class="bot-header__logo">
+          <app-logo style="width: 28px; height: 28px; --logo-color: #ffffff;"></app-logo>
+        </div>
+        <div>
+          <h2 class="bot-header__title">Chasqui <span class="bot-header__dot">·</span> Diego</h2>
+          <p class="bot-header__sub">{{ bot?.emoji || '🦜' }} Asistente del Centro Juan Pablo II</p>
+        </div>
+      </div>
+      <div class="bot-header__actions">
+        <span class="bot-header__status" [class.bot-header__status--active]="bot?.is_active">
+          <span class="bot-header__status-dot"></span>
+          {{ bot?.is_active ? 'Activo' : 'Inactivo' }}
+        </span>
+        @if (!editing) {
+          <app-button variant="secondary" label="Configurar" [icon]="['fas', 'gear']" (clicked)="startEdit()"></app-button>
+        }
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 1 — Canales (grid 4 columnas)
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-section">
+      <h3 class="bot-section__title">
+        <fa-icon [icon]="['fas', 'tower-broadcast']" class="text-primary"></fa-icon>
+        Canales
+      </h3>
+      <div class="bot-channels">
+        @for (ch of ['web', 'telegram', 'whatsapp', 'instagram']; track ch) {
+          <div class="bot-channel"
+               [class.bot-channel--active]="channels[ch]?.active || channels[ch]?.status !== 'coming_soon'"
+               [class.bot-channel--coming]="channels[ch]?.status === 'coming_soon'">
+            <div class="bot-channel__icon" [style.background]="channelColor(ch) + '15'">
+              <fa-icon [icon]="['fab', channelIcon(ch)]" [style.color]="channelColor(ch)"></fa-icon>
+            </div>
+            <div class="bot-channel__info">
+              <div class="bot-channel__name">{{ channels[ch]?.label || channelLabel(ch) }}</div>
+              @if (channels[ch]?.status === 'coming_soon') {
+                <div class="bot-channel__badge bot-channel__badge--coming">Próximamente</div>
+              } @else if (channels['telegram']) {
+                <div class="bot-channel__badge" [class.bot-channel__badge--ok]="channels[ch]?.active"
+                     [class.bot-channel__badge--off]="!channels[ch]?.active">
+                  @if (ch === 'telegram') {
+                    {{ channels.telegram?.linked_count || 0 }} vinculada(s)
+                  } @else {
+                    {{ channels[ch]?.active ? 'Activo' : 'Inactivo' }}
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 2 — Config editor / Prompt editor
+         ═══════════════════════════════════════════════════════════════ -->
+    @if (editing) {
+      <div class="bot-section bot-section--edit" @fadeInUp>
+        <div class="bot-section__head">
+          <h3 class="bot-section__title">
+            <fa-icon [icon]="['fas', 'gear']" class="text-primary"></fa-icon>
+            Configuración del Bot
+          </h3>
+          <app-button variant="ghost" label="Cancelar" (clicked)="cancelEdit()"></app-button>
+        </div>
+
+        @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess" class="mb-4"></app-alert> }
+        @if (saveError) { <app-alert type="error" [message]="saveError" class="mb-4"></app-alert> }
+
+        <div class="bot-config-grid">
+          <div class="bot-config-field">
+            <label class="bot-config-label">Nombre del bot</label>
+            <input type="text" [(ngModel)]="editForm.bot_name" class="bot-config-input" />
+          </div>
+          <div class="bot-config-field">
+            <label class="bot-config-label">Emoji</label>
+            <input type="text" [(ngModel)]="editForm.bot_emoji" class="bot-config-input" maxlength="4" />
+          </div>
+        </div>
+
+        <div class="bot-config-field">
+          <label class="bot-config-label">Mensaje de presentación</label>
+          <textarea [(ngModel)]="editForm.persona_message" rows="2" class="bot-config-input bot-config-textarea"></textarea>
+        </div>
+
+        <div class="bot-config-field">
+          <label class="bot-config-label">Prompt del sistema</label>
+          <p class="bot-config-hint">Instrucciones personalizadas para el bot. Si está vacío, usa el prompt por defecto.</p>
+          <textarea [(ngModel)]="editForm.system_prompt" rows="6" placeholder="(Opcional) Instrucciones personalizadas..."
+            class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
+        </div>
+
+        <div class="flex items-center gap-3 mt-4">
+          <app-button variant="primary" label="Guardar" [icon]="['fas', 'save']" [loading]="saving" (clicked)="saveConfig()"></app-button>
+          <app-button variant="ghost" label="Cancelar" (clicked)="cancelEdit()"></app-button>
+        </div>
+      </div>
+    }
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 3 — Conversaciones recientes
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-section">
+      <div class="bot-section__head">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'comments']" class="text-primary"></fa-icon>
+          Conversaciones Recientes
+          <span class="bot-section__count">{{ filteredConversations().length }}</span>
+        </h3>
+        <div class="bot-section__filters">
+          @for (f of convFilterOptions; track f) {
+            <button class="bot-filter-btn" [class.bot-filter-btn--active]="convFilter === f"
+                    (click)="setConvFilter(f)">
+              @if (f !== 'all') {
+                <fa-icon [icon]="['fab', channelIcon(f)]" class="text-xs"></fa-icon>
+              }
+              {{ f === 'all' ? 'Todos' : channelLabel(f) }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filteredConversations().length === 0) {
+        <div class="bot-empty">
+          <fa-icon [icon]="['fas', 'inbox']" class="text-3xl mb-2"></fa-icon>
+          <p>No hay conversaciones recientes</p>
+        </div>
+      } @else {
+        <div class="bot-conversations">
+          @for (conv of filteredConversations(); track conv.chat_id) {
+            <div class="bot-conv" [class.bot-conv--unread]="conv.unread > 0">
+              <div class="bot-conv__avatar" [style.background]="channelColor(conv.channel) + '15'">
+                <fa-icon [icon]="['fab', channelIcon(conv.channel)]" [style.color]="channelColor(conv.channel)"></fa-icon>
+              </div>
+              <div class="bot-conv__content">
+                <div class="bot-conv__header">
+                  <span class="bot-conv__name">{{ conv.contact }}</span>
+                  <span class="bot-conv__time">{{ formatDate(conv.timestamp) }}</span>
+                </div>
+                @if (conv.last_message) {
+                  <p class="bot-conv__preview">{{ conv.last_message }}</p>
+                }
+                <div class="bot-conv__meta">
+                  <span class="bot-conv__channel-tag" [style.color]="channelColor(conv.channel)">
+                    {{ channelLabel(conv.channel) }}
+                  </span>
+                  @if (conv.unread > 0) {
+                    <span class="bot-conv__unread">{{ conv.unread }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 4 — Dispositivos Vinculados + FAQ + Webhook + Test
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-section">
+      <div class="bot-section__head">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon>
+          Vinculación Telegram
+        </h3>
+        <app-button variant="primary" label="Vincular Nuevo" [icon]="['fas', 'plus']" (clicked)="showLinkForm = true"></app-button>
+      </div>
+
+      @if (tgStatus?.linked_accounts?.length) {
+        <div class="bot-accounts">
+          @for (account of tgStatus.linked_accounts; track account.telegram_chat_id) {
+            <div class="bot-account">
+              <div class="bot-account__icon"
+                   [style.background]="account.is_linked ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)'">
+                <fa-icon [icon]="['fab', 'telegram']"
+                         [style.color]="account.is_linked ? '#229ED9' : '#94a3b8'"></fa-icon>
+              </div>
+              <div class="bot-account__info">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold text-on-surface">
+                    @if (account.telegram_username) { @{{ account.telegram_username }} } @else { Chat #{{ account.telegram_chat_id }} }
+                  </span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                        [class]="account.is_linked ? 'bg-success/15 text-success' : 'bg-surface-container-high text-on-surface-variant'">
+                    {{ account.is_linked ? 'ACTIVO' : 'OFF' }}
+                  </span>
+                </div>
+                <div class="text-xs text-on-surface-variant mt-1">
+                  @if (account.last_interaction) {
+                    <fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>{{ formatDate(account.last_interaction) }}
+                  }
+                </div>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                @if (account.notifications_enabled !== undefined) {
+                  <button (click)="toggleNotifications(account.telegram_chat_id, !account.notifications_enabled)"
+                    class="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors"
+                    [title]="account.notifications_enabled ? 'Desactivar notificaciones' : 'Activar notificaciones'">
+                    <fa-icon [icon]="account.notifications_enabled ? ['fas', 'bell'] : ['fas', 'bell-slash']" class="text-sm"></fa-icon>
+                  </button>
+                }
+                <app-button variant="danger" label="Desvincular" [icon]="['fas', 'unlink']"
+                  [loading]="unlinking === account.telegram_chat_id"
+                  (clicked)="unlinkTelegram(account.telegram_chat_id)">
+                </app-button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="bot-empty">
+          <fa-icon [icon]="['fab', 'telegram']" class="text-3xl mb-2" style="color: #229ED9"></fa-icon>
+          <p>No hay dispositivos vinculados</p>
+        </div>
+      }
+
+      @if (showLinkForm) {
+        <div class="bot-section bot-section--inline" @fadeInUp>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-on-surface flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon> Vincular Nuevo
+            </h4>
+            <button (click)="showLinkForm = false" class="text-on-surface-variant hover:text-on-surface">
+              <fa-icon [icon]="['fas', 'times']"></fa-icon>
+            </button>
+          </div>
+          <p class="text-sm text-on-surface-variant mb-3">Envía <code class="px-1.5 py-0.5 bg-surface-container-high rounded text-xs font-mono font-bold">/start</code> al bot y pega el código aquí.</p>
+          <div class="flex gap-3">
+            <input type="text" [(ngModel)]="linkCode" placeholder="Código de 6 caracteres" maxlength="8"
+              class="flex-1 px-4 py-3 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono uppercase"
+              (keyup.enter)="linkTelegram()" />
+            <app-button variant="primary" label="Vincular" [icon]="['fas', 'link']" [loading]="linking" (clicked)="linkTelegram()"></app-button>
+          </div>
+          @if (linkError) {
+            <div class="mt-3 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error">{{ linkError }}</div>
+          }
+          @if (linkSuccess) {
+            <div class="mt-3 p-3 bg-success/10 border border-success/30 rounded-lg text-sm text-success">{{ linkSuccess }}</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 5 — FAQ / Base de Conocimiento
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-section">
+      <div class="bot-section__head">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'book']" class="text-primary"></fa-icon>
+          FAQ / Base de Conocimiento
+          <span class="bot-section__count">{{ faqList.length }}</span>
+        </h3>
+        <div class="flex items-center gap-2">
+          <select [(ngModel)]="faqCategory" (ngModelChange)="loadFaq()" class="px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-xs">
+            <option value="">Todas</option>
+            <option value="general">General</option>
+            <option value="citas">Citas</option>
+            <option value="servicios">Servicios</option>
+            <option value="pagos">Pagos</option>
+            <option value="emergencia">Emergencia</option>
+          </select>
+          <app-button variant="primary" label="Nueva FAQ" [icon]="['fas', 'plus']" (clicked)="startCreateFaq()"></app-button>
+        </div>
+      </div>
+
+      @if (showFaqForm) {
+        <div class="bot-section bot-section--inline bot-section--edit" @fadeInUp>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-on-surface">{{ faqEditing ? 'Editar FAQ' : 'Nueva FAQ' }}</span>
+            <button (click)="cancelFaqEdit()" class="text-on-surface-variant hover:text-on-surface"><fa-icon [icon]="['fas', 'times']"></fa-icon></button>
+          </div>
+          <input type="text" [(ngModel)]="faqForm.question" placeholder="Pregunta" class="bot-config-input mt-3" />
+          <textarea [(ngModel)]="faqForm.answer" rows="2" placeholder="Respuesta" class="bot-config-input bot-config-textarea"></textarea>
+          <div class="bot-config-grid">
+            <input type="text" [(ngModel)]="faqForm.category" placeholder="Categoría" class="bot-config-input" />
+            <input type="text" [(ngModel)]="faqForm.keywords" placeholder="Keywords (separadas por coma)" class="bot-config-input" />
+          </div>
+          <app-button variant="primary" [label]="faqEditing ? 'Actualizar' : 'Crear'" [icon]="['fas', 'save']" [loading]="faqSaving" (clicked)="saveFaq()" class="mt-3"></app-button>
+        </div>
+      }
+
+      @if (faqLoading) {
+        <div class="flex justify-center py-6"><app-spinner size="sm" colorClass="text-primary"></app-spinner></div>
+      } @else if (faqList.length === 0) {
+        <div class="bot-empty">
+          <fa-icon [icon]="['fas', 'book']" class="text-3xl mb-2"></fa-icon>
+          <p>No hay FAQ registradas</p>
+        </div>
+      } @else {
+        <div class="bot-faq-list">
+          @for (faq of faqList; track faq.id) {
+            <div class="bot-faq-item">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-sm font-bold text-on-surface">{{ faq.question }}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary font-bold">{{ faq.category }}</span>
+                </div>
+                <p class="text-xs text-on-surface-variant line-clamp-2">{{ faq.answer }}</p>
+                @if (faq.keywords) {
+                  <p class="text-[10px] text-on-surface-variant mt-1"><fa-icon [icon]="['fas', 'tags']" class="mr-1"></fa-icon>{{ faq.keywords }}</p>
+                }
+              </div>
+              <div class="flex gap-1 shrink-0">
+                <button (click)="startEditFaq(faq)" class="p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors" title="Editar">
+                  <fa-icon [icon]="['fas', 'pencil']" class="text-xs"></fa-icon>
+                </button>
+                <button (click)="deleteFaq(faq.id)" class="p-2 rounded-lg hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors" title="Eliminar">
+                  <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 6 — Webhook + Mensaje de Prueba
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-grid-2">
+      <!-- Webhook -->
+      <div class="bot-section">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'link']" class="text-primary"></fa-icon>
+          Webhook
+        </h3>
+        @if (webhookLoading) {
+          <div class="flex justify-center py-4"><app-spinner size="sm" colorClass="text-primary"></app-spinner></div>
+        } @else if (webhookStatus) {
+          <div class="space-y-3">
+            <div class="bg-surface-container-high/50 rounded-xl p-3 border border-border/20">
+              <div class="text-xs text-on-surface-variant mb-1">URL Registrada</div>
+              <div class="text-sm font-mono text-on-surface break-all">{{ webhookStatus.url || '—' }}</div>
+            </div>
+            <div class="bg-surface-container-high/50 rounded-xl p-3 border border-border/20">
+              <div class="text-xs text-on-surface-variant mb-1">Pendientes</div>
+              <div class="text-sm font-bold text-on-surface">{{ webhookStatus.pending_update_count || 0 }}</div>
+            </div>
+            @if (webhookStatus.last_error_message) {
+              <div class="p-3 bg-error/10 border border-error/30 rounded-xl text-xs text-error">
+                <fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ webhookStatus.last_error_message }}
+              </div>
+            }
+            <div class="flex gap-2 flex-wrap">
+              <input type="text" [(ngModel)]="webhookSetupUrl" placeholder="URL del webhook" class="flex-1 min-w-[200px] px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              <input type="text" [(ngModel)]="webhookSecret" placeholder="Secret (opcional)" class="w-36 px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+              <app-button variant="primary" label="Configurar" [icon]="['fas', 'check']" [loading]="webhookLoading" (clicked)="setupWebhook()"></app-button>
+              <app-button variant="danger" label="Eliminar" [icon]="['fas', 'trash']" [loading]="webhookLoading" (clicked)="deleteWebhook()"></app-button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Test message -->
+      <div class="bot-section">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'paper-plane']" class="text-primary"></fa-icon>
+          Mensaje de Prueba
+        </h3>
+        <div class="flex gap-2 flex-wrap">
+          <input type="number" [(ngModel)]="testChatId" placeholder="Chat ID" class="w-28 px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" />
+          <input type="text" [(ngModel)]="testMessage" placeholder="Mensaje de prueba..." class="flex-1 min-w-[150px] px-3 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm" (keyup.enter)="sendTestMessage()" />
+          <app-button variant="primary" label="Enviar" [icon]="['fas', 'paper-plane']" [loading]="testSending" (clicked)="sendTestMessage()"></app-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 7 — Actividad Reciente
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="bot-section">
+      <div class="bot-section__head">
+        <h3 class="bot-section__title">
+          <fa-icon [icon]="['fas', 'gauge-high']" class="text-primary"></fa-icon>
+          Actividad Reciente
+        </h3>
+        <div class="bot-section__filters">
+          @for (f of activityFilterOptions; track f) {
+            <button class="bot-filter-btn" [class.bot-filter-btn--active]="activityFilter === f"
+                    (click)="setActivityFilter(f)">
+              {{ f === 'all' ? 'Todos' : f | uppercase }}
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filteredActivity().length === 0) {
+        <div class="bot-empty">
+          <fa-icon [icon]="['fas', 'inbox']" class="text-3xl mb-2"></fa-icon>
+          <p>No hay actividad reciente</p>
+        </div>
+      } @else {
+        <div class="bot-activity">
+          @for (log of filteredActivity(); track log.timestamp) {
+            <div class="bot-activity-item">
+              <div class="bot-activity-icon" [style.background]="activityColor(log.type) + '15'">
+                <fa-icon [icon]="['fas', activityIcon(log.type)]" [style.color]="activityColor(log.type)"></fa-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <span class="text-sm font-bold text-on-surface">{{ log.title }}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                        [class]="log.type === 'error' ? 'bg-error/15 text-error' : 'bg-surface-container-high text-on-surface-variant'">
+                    {{ log.type | uppercase }}
+                  </span>
+                </div>
+                <p class="text-xs text-on-surface-variant line-clamp-1">{{ log.message }}</p>
+                <div class="text-[10px] text-on-surface-variant/60 mt-0.5">
+                  <fa-icon [icon]="['fas', 'clock']" class="mr-1"></fa-icon>{{ formatDate(log.timestamp) }}
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  }
+</div>
