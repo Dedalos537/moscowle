@@ -160,7 +160,7 @@ class Config:
 
     # ========== JWT CONFIGURATION ==========
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', os.getenv('APP_SECRET_KEY', SECRET_KEY))
-    JWT_TOKEN_LOCATION = ['cookies']
+    JWT_TOKEN_LOCATION = ['cookies', 'headers']
     JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'False') == 'True'
     JWT_COOKIE_CSRF_PROTECT = False
     JWT_CSRF_IN_COOKIES = False

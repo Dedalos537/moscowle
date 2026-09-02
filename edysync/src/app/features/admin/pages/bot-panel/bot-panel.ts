@@ -9,6 +9,15 @@ import { Button } from '../../../../shared/components/button/button';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { Logo } from '../../../../shared/components/logo/logo';
 
+type TabId = 'dashboard' | 'config' | 'telegram' | 'faq' | 'webhook' | 'test';
+
+interface TabDef {
+  id: TabId;
+  label: string;
+  icon: [string, string];
+  badge?: number;
+}
+
 @Component({
   selector: 'app-bot-panel',
   standalone: true,
@@ -24,6 +33,17 @@ export class BotPanel implements OnInit, OnDestroy {
 
   loading = true;
   error: string | null = null;
+
+  activeTab: TabId = 'dashboard';
+
+  tabs: TabDef[] = [
+    { id: 'dashboard', label: 'Resumen', icon: ['fas', 'gauge-high'] },
+    { id: 'config', label: 'Configuración', icon: ['fas', 'gear'] },
+    { id: 'telegram', label: 'Telegram', icon: ['fab', 'telegram'] },
+    { id: 'faq', label: 'FAQ', icon: ['fas', 'book'] },
+    { id: 'webhook', label: 'Webhook', icon: ['fas', 'link'] },
+    { id: 'test', label: 'Pruebas', icon: ['fas', 'flask'] },
+  ];
 
   // Bot data
   bot: any = null;
@@ -57,6 +77,8 @@ export class BotPanel implements OnInit, OnDestroy {
   testChatId = '';
   testMessage = '';
   testSending = false;
+  testResponse = '';
+  testError = '';
 
   // Linked accounts
   tgStatus: any = null;
@@ -67,10 +89,8 @@ export class BotPanel implements OnInit, OnDestroy {
   linkSuccess = '';
   unlinking: number | false = false;
 
-  // Activity filter
+  // Filters
   activityFilter: 'all' | 'telegram' | 'api' | 'errors' = 'all';
-
-  // Conversations filter
   convFilter = 'all';
   convFilterOptions = ['all', 'web', 'telegram', 'whatsapp', 'instagram'];
   activityFilterOptions = ['all', 'telegram', 'api', 'errors'];
@@ -81,6 +101,14 @@ export class BotPanel implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.unsubscribe();
+  }
+
+  setTab(id: TabId) {
+    this.activeTab = id;
+    this.cdr.markForCheck();
+    if (id === 'telegram' && !this.tgStatus) this.loadLinkedAccounts();
+    if (id === 'webhook' && !this.webhookStatus) this.loadWebhookStatus();
+    if (id === 'faq' && this.faqList.length === 0) this.loadFaq();
   }
 
   loadDashboard() {
@@ -110,10 +138,7 @@ export class BotPanel implements OnInit, OnDestroy {
   loadLinkedAccounts() {
     this.subs.add(
       this.admin.getTelegramStatus().subscribe({
-        next: (res) => {
-          this.tgStatus = res;
-          this.cdr.markForCheck();
-        },
+        next: (res) => { this.tgStatus = res; this.cdr.markForCheck(); },
         error: () => this.cdr.markForCheck(),
       })
     );
@@ -183,7 +208,7 @@ export class BotPanel implements OnInit, OnDestroy {
         persona_message: this.editForm.persona_message,
         system_prompt: this.editForm.system_prompt,
       }).subscribe({
-        next: (res) => {
+        next: () => {
           this.bot = { ...this.bot, ...this.editForm };
           this.saving = false;
           this.editing = false;
@@ -257,11 +282,22 @@ export class BotPanel implements OnInit, OnDestroy {
   sendTestMessage() {
     if (!this.testChatId || !this.testMessage) return;
     this.testSending = true;
+    this.testResponse = '';
+    this.testError = '';
     this.cdr.markForCheck();
     this.subs.add(
       this.admin.sendTestMessage(Number(this.testChatId), this.testMessage).subscribe({
-        next: () => { this.testSending = false; this.testMessage = ''; this.cdr.markForCheck(); },
-        error: () => { this.testSending = false; this.cdr.markForCheck(); },
+        next: (res) => {
+          this.testSending = false;
+          this.testResponse = res?.message || 'Mensaje enviado';
+          this.testMessage = '';
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.testSending = false;
+          this.testError = err.error?.error || err.message || 'Error al enviar';
+          this.cdr.markForCheck();
+        },
       })
     );
   }
@@ -323,22 +359,15 @@ export class BotPanel implements OnInit, OnDestroy {
     );
   }
 
-  // ─── Activity filter ────────────────────────────────────────────────
-  setConvFilter(f: string) {
-    this.convFilter = f;
-  }
-
-  setActivityFilter(f: string) {
-    this.activityFilter = f as any;
-    this.loadDashboard();
-  }
+  // ─── Filters ────────────────────────────────────────────────────────
+  setConvFilter(f: string) { this.convFilter = f; }
+  setActivityFilter(f: string) { this.activityFilter = f as any; }
 
   filteredActivity(): any[] {
     if (this.activityFilter === 'all') return this.activity;
     return this.activity.filter(a => a.type === this.activityFilter);
   }
 
-  // ─── Conversation filter ────────────────────────────────────────────
   filteredConversations(): any[] {
     if (this.convFilter === 'all') return this.conversations;
     return this.conversations.filter(c => c.channel === this.convFilter);
@@ -358,10 +387,7 @@ export class BotPanel implements OnInit, OnDestroy {
 
   channelColor(ch: string): string {
     const colors: Record<string, string> = {
-      web: '#22c55e',
-      telegram: '#229ED9',
-      whatsapp: '#25D366',
-      instagram: '#E4405F',
+      web: '#22c55e', telegram: '#229ED9', whatsapp: '#25D366', instagram: '#E4405F',
     };
     return colors[ch] || '#94a3b8';
   }
@@ -379,11 +405,5 @@ export class BotPanel implements OnInit, OnDestroy {
   activityColor(type: string): string {
     const colors: Record<string, string> = { telegram: '#229ED9', api: '#3b82f6', error: '#ef4444', system: '#94a3b8' };
     return colors[type] || '#94a3b8';
-  }
-
-  copyPassword() {
-    if (this.bot?.bot_token_masked) {
-      navigator.clipboard?.writeText(this.bot.bot_token_masked);
-    }
   }
 }
