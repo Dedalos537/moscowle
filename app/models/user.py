@@ -34,6 +34,7 @@ class User(db.Model, UserMixin, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=False, nullable=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
+    login_code = db.Column(db.String(20), unique=True, nullable=True, index=True)
     password = db.Column(db.String(1200), nullable=False)
     role = db.Column(db.String(50), nullable=False)
     oauth_provider = db.Column(db.String(50), nullable=True)
@@ -111,3 +112,23 @@ class User(db.Model, UserMixin, AuditMixin):
     )
 
     payments = db.relationship('Payment', foreign_keys='Payment.patient_id', backref='patient', lazy=True)
+
+    ROLE_CODE_MAP = {
+        'jugador': 'PCJP',
+        'terapista': 'TCJP',
+        'admin': 'ACJP',
+        'supervisor': 'SCJP',
+    }
+
+    @staticmethod
+    def generate_login_code(role):
+        prefix = User.ROLE_CODE_MAP.get(role, 'UCJP')
+        last = User.query.filter(User.login_code.like(f'{prefix}%')).order_by(User.id.desc()).first()
+        if last and last.login_code:
+            try:
+                num = int(last.login_code.replace(prefix, '')) + 1
+            except ValueError:
+                num = User.query.filter(User.login_code.like(f'{prefix}%')).count() + 1
+        else:
+            num = 1
+        return f'{prefix}{num}'

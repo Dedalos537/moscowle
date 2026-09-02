@@ -8,6 +8,12 @@ class UserRepository:
         return User.query.filter_by(email=email).first()
 
     @staticmethod
+    def get_by_login_code(code):
+        if not code:
+            return None
+        return User.query.filter_by(login_code=code.upper().strip()).first()
+
+    @staticmethod
     def get_by_id(user_id):
         return User.query.get(int(user_id))
 

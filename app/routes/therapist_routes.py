@@ -843,6 +843,7 @@ def add_patient():
         is_active=is_full_account,
         assigned_therapist_id=current_user.id,
     )
+    new_patient.login_code = User.generate_login_code('jugador')
     new_patient.therapists.append(current_user)
     db.session.add(new_patient)
     db.session.commit()
@@ -1032,9 +1033,9 @@ def api_patient_detail(patient_id):
     yape_name = None
     try:
         from app.models.payment import YapeTransaction
+
         latest_yape = (
-            YapeTransaction.query
-            .filter(YapeTransaction.is_active == True)
+            YapeTransaction.query.filter(YapeTransaction.is_active == True)
             .order_by(YapeTransaction.transaction_date.desc())
             .first()
         )
@@ -1047,9 +1048,12 @@ def api_patient_detail(patient_id):
     age = None
     if patient.date_of_birth:
         from datetime import date
+
         today = date.today()
-        age = today.year - patient.date_of_birth.year - (
-            (today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day)
+        age = (
+            today.year
+            - patient.date_of_birth.year
+            - ((today.month, today.day) < (patient.date_of_birth.month, patient.date_of_birth.day))
         )
 
     return jsonify(

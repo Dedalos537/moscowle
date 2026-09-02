@@ -32,14 +32,14 @@
       <form (ngSubmit)="doLogin()" class="space-y-5">
 
           <div>
-               <label class="block text-sm font-bold text-on-surface mb-1.5 transition-colors">Correo Electrónico</label>
+               <label class="block text-sm font-bold text-on-surface mb-1.5 transition-colors">Correo o Código</label>
                <div class="relative w-full">
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
-                       <fa-icon [icon]="['fas', 'envelope']" class="text-lg"></fa-icon>
+                       <fa-icon [icon]="['fas', 'user']" class="text-lg"></fa-icon>
                    </span>
-                     <input type="email" id="email" name="email" [(ngModel)]="email" (input)="onEmailInput()"
+                     <input type="text" id="email" name="email" [(ngModel)]="email" (input)="onEmailInput()"
                          class="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-border/50 rounded-xl outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-                         placeholder="usuario@ejemplo.com" required>
+                         placeholder="usuario@ejemplo.com o PCJP1" required>
                </div>
                @if (emailError) {
                  <span class="text-xs text-error mt-1.5 block">{{ emailError }}</span>
@@ -143,8 +143,8 @@
         <div class="help-step">
           <div class="help-step-num">1</div>
           <div class="help-step-content">
-            <strong>Correo Electrónico</strong>
-            <p>Escribe el correo que registraste en la plataforma, por ejemplo: <em>usuario@ejemplo.com</em></p>
+            <strong>Correo o Código</strong>
+            <p>Escribe tu correo electrónico o tu código de acceso (ej: <em>PCJP1</em>, <em>TCJP2</em>, <em>ACJP1</em>).</p>
           </div>
         </div>
 

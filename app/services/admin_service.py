@@ -114,6 +114,7 @@ class AdminService:
             role=role,
             is_active=is_active,
         )
+        user.login_code = User.generate_login_code(role)
 
         if data.get('phone'):
             user.phone = data.get('phone')
@@ -311,6 +312,7 @@ class AdminService:
         if 'date_of_birth' in data and data['date_of_birth']:
             try:
                 from datetime import datetime
+
                 user.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
             except Exception:
                 pass
@@ -328,10 +330,8 @@ class AdminService:
                         user.sede_id = s.id
                 else:
                     user.sede_id = None
-            except:
+            except Exception:
                 pass
-
-        if 'sede_ids' in data and user.role == 'terapista':
             try:
                 sids = data.get('sede_ids')
                 if isinstance(sids, str):
@@ -339,7 +339,7 @@ class AdminService:
 
                     try:
                         sids = json.loads(sids)
-                    except:
+                    except Exception:
                         sids = [int(x) for x in sids.split(',') if x.strip()]
 
                 if isinstance(sids, list):
@@ -457,11 +457,7 @@ class AdminService:
         q = User.query
         if role in ('terapista', 'jugador'):
             q = q.filter_by(role=role)
-        users = (
-            q.options(joinedload(User.sede_item))
-            .order_by(User.username.asc())
-            .all()
-        )
+        users = q.options(joinedload(User.sede_item)).order_by(User.username.asc()).all()
 
         if users:
             uids = [u.id for u in users]

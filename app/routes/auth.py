@@ -190,14 +190,14 @@ def api_logout():
 def api_login():
     try:
         data = request.get_json(silent=True) or {}
-        email = (data.get('email') or '').strip().lower()
+        identifier = (data.get('email') or data.get('login_code') or '').strip()
         password = data.get('password') or ''
         remember = data.get('remember', False)
 
-        if not email or not password:
-            return jsonify({'success': False, 'error': 'Email y contraseña requeridos'}), 400
+        if not identifier or not password:
+            return jsonify({'success': False, 'error': 'Correo/Código y contraseña requeridos'}), 400
 
-        success, user = auth_service.login(email, password, remember=remember)
+        success, user = auth_service.login(identifier, password, remember=remember)
 
         if success == 'mfa_required':
             return jsonify({'success': False, 'mfa_required': True, 'email': user.email}), 401
@@ -217,6 +217,7 @@ def api_login():
                         'email': user.email,
                         'username': user.username,
                         'role': user.role,
+                        'login_code': user.login_code,
                         'timezone': getattr(user, 'timezone', None) or 'America/Lima',
                     },
                 }
@@ -237,12 +238,12 @@ def api_login():
 def api_auth_validate():
     try:
         data = request.get_json(silent=True) or {}
-        email = (data.get('email') or '').strip().lower()
+        identifier = (data.get('email') or data.get('login_code') or '').strip()
         password = data.get('password') or ''
-        if not email or not password:
+        if not identifier or not password:
             return jsonify({'valid': False})
 
-        is_valid = auth_service.validate_credentials(email, password)
+        is_valid = auth_service.validate_credentials(identifier, password)
         return jsonify({'valid': is_valid})
     except Exception as e:
         current_app.logger.warning(f'/api/auth/validate error: {e}')
@@ -259,6 +260,7 @@ def api_auth_me():
                 'email': current_user.email,
                 'username': current_user.username,
                 'role': current_user.role,
+                'login_code': getattr(current_user, 'login_code', None),
                 'timezone': getattr(current_user, 'timezone', None) or 'America/Lima',
             }
         )

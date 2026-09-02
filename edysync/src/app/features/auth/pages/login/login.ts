@@ -88,7 +88,7 @@ export class Login implements OnInit, OnDestroy {
       const r = logo.getBoundingClientRect();
       this.guidePos = { top: r.top - 8, left: r.right + 16, arrowLeft: 16 };
     }
-    this.guideText = 'Ingresa aquí el correo electrónico que te enviamos para tu login';
+    this.guideText = 'Ingresa tu correo electrónico o código de acceso (ej: PCJP1)';
     this.guideStep = 1;
     this.guideVisible = true;
     this.cdr.markForCheck();
@@ -136,7 +136,7 @@ export class Login implements OnInit, OnDestroy {
   }
 
   onEmailInput() {
-    if (this.guideStep === 1 && this.email.trim().length > 5) {
+    if (this.guideStep === 1 && this.email.trim().length > 2) {
       this.guideStep = 2;
       this.guideText = 'Ahora ingresa la contraseña que te enviamos';
       this.cdr.markForCheck();
@@ -171,7 +171,7 @@ export class Login implements OnInit, OnDestroy {
   }
 
   get isFormValid(): boolean {
-    const valid = this.email.trim().length > 5 && this.password.length > 0;
+    const valid = this.email.trim().length >= 3 && this.password.length > 0;
     if (valid !== this._lastFormValid) {
       this._lastFormValid = valid;
       this.cdr.markForCheck();
@@ -187,7 +187,7 @@ export class Login implements OnInit, OnDestroy {
     this.emailError = '';
     this.passwordError = '';
     if (!this.email.trim()) {
-      this.emailError = 'El correo es obligatorio';
+      this.emailError = 'El correo o código es obligatorio';
     }
     if (!this.password) {
       this.passwordError = 'La contraseña es obligatoria';
