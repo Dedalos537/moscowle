@@ -35,7 +35,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S", "PL", "B", "SIM"]
-"app/models/*" = ["N"]
+"app/models/*" = ["N", "F403"]
 "app/routes/api/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "SIM102", "E712"]
 "app/routes/admin/*" = ["PLC0415", "F841", "SIM210", "E501", "E722", "F811", "F821", "S110", "SIM102", "SIM105"]
 "app/routes/telegram_routes.py" = ["PLC0415", "F841", "SIM210", "E501", "E722", "S110"]

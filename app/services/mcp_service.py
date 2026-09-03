@@ -338,6 +338,24 @@ class MCPService:
                 '- Always end with a clear answer or next step.\n'
             )
 
+        # Chasqui MCP auto-fill: teach the bot to read logs and self-correct.
+        try:
+            from app.models.bot_config import BotConfig
+
+            if BotConfig.get_or_create().mcp_prompt_enabled:
+                system_prompt += (
+                    '\n\nSELF-SUPERVISION & AUTOCORRECCIÓN (MCP):\n'
+                    '- Si no estás seguro de un dato o una operación falló, NO inventes respuestas.\n'
+                    '- Ante un error de ejecución, usa las herramientas de logs/disponibles para REVISAR el estado '
+                    'real antes de responder al usuario.\n'
+                    '- Si detectas que una consulta devolvió datos incompletos o un error, explícalo con claridad '
+                    'y sugiere el siguiente paso concreto.\n'
+                    '- Nunca afirmes que una operación se completó si no tienes confirmación de la herramienta.\n'
+                    '- Si hay un fallo recurrente, indica que se revisará y sugiere re-intentar.\n'
+                )
+        except Exception:
+            pass
+
         tools = get_tools_for_mode(mode, user_role)
         tool_prompt = _build_tool_prompt(tools)
 

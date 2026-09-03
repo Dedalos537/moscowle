@@ -7,6 +7,8 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app import db
+from app.models.bot_config import BotConfig
+from app.models.faq import Faq
 from app.models.telegram_user import TelegramUser
 
 logger = logging.getLogger('app.telegram')
@@ -195,11 +197,20 @@ def get_bot_dashboard():
     # ── Bot config ────────────────────────────────────────────────────
     bot_token_full = current_app.config.get('TELEGRAM_BOT_TOKEN', '')
     bot_token_masked = f'{bot_token_full[:8]}...{bot_token_full[-4:]}' if len(bot_token_full) > 12 else '—'
-    bot_name = os.getenv('TELEGRAM_BOT_NAME', 'Diego')
-    bot_emoji = os.getenv('TELEGRAM_BOT_EMOJI', '\U0001f99c')
+    # Prefer persisted BotConfig, fall back to env defaults
+    try:
+        bot_cfg = BotConfig.get_or_create()
+        bot_name = bot_cfg.bot_name or os.getenv('TELEGRAM_BOT_NAME', 'Diego')
+        bot_emoji = bot_cfg.bot_emoji or os.getenv('TELEGRAM_BOT_EMOJI', '\U0001f99c')
+        persona_msg = bot_cfg.persona_message or os.getenv('TELEGRAM_PERSONA_MESSAGE', '')
+        system_prompt = bot_cfg.system_prompt or os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
+    except Exception:
+        bot_cfg = None
+        bot_name = os.getenv('TELEGRAM_BOT_NAME', 'Diego')
+        bot_emoji = os.getenv('TELEGRAM_BOT_EMOJI', '\U0001f99c')
+        persona_msg = os.getenv('TELEGRAM_PERSONA_MESSAGE', '')
+        system_prompt = os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
     is_active = bool(bot_token_full)
-    persona_msg = os.getenv('TELEGRAM_PERSONA_MESSAGE', '')
-    system_prompt = os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
     webhook_url = os.getenv('TELEGRAM_WEBHOOK_URL', '')
     webhook_secret = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
 
@@ -213,6 +224,17 @@ def get_bot_dashboard():
         'webhook_url': webhook_url,
         'webhook_secret': webhook_secret,
     }
+
+    if bot_cfg is not None:
+        data['bot']['config'] = {
+            'auto_faq_enabled': bot_cfg.auto_faq_enabled,
+            'auto_faq_threshold': bot_cfg.auto_faq_threshold,
+            'mcp_prompt_enabled': bot_cfg.mcp_prompt_enabled,
+            'notify_supervision_enabled': bot_cfg.notify_supervision_enabled,
+            'intervention_enabled': bot_cfg.intervention_enabled,
+        }
+        data['bot']['proposed_faq_count'] = Faq.query.filter_by(status='proposed').count()
+        data['bot']['faq_count'] = Faq.query.filter_by(status='active', is_active=True).count()
 
     # ── Channels ──────────────────────────────────────────────────────
     tg_accounts = TelegramUser.query.filter_by(is_active=True).all()
@@ -334,3 +356,251 @@ def get_bot_dashboard():
     data['activity'] = activity[:20]
 
     return jsonify(data)
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Chasqui Bot Config
+# ────────────────────────────────────────────────────────────────────────
+@telegram_bp.route('/config', methods=['GET', 'PUT'])
+@jwt_required()
+def bot_config_endpoint():
+    """Get or update the bot's persisted configuration (persona, prompt, toggles)."""
+    cfg = BotConfig.get_or_create()
+
+    if request.method == 'GET':
+        return jsonify(cfg.to_dict())
+
+    data = request.get_json(silent=True) or {}
+    if 'bot_name' in data:
+        cfg.bot_name = str(data['bot_name'])[:120]
+    if 'bot_emoji' in data:
+        cfg.bot_emoji = str(data['bot_emoji'])[:16]
+    if 'persona_message' in data:
+        cfg.persona_message = data['persona_message']
+    if 'system_prompt' in data:
+        cfg.system_prompt = data['system_prompt']
+    for key in ('auto_faq_enabled', 'mcp_prompt_enabled', 'notify_supervision_enabled', 'intervention_enabled'):
+        if key in data:
+            setattr(cfg, key, bool(data[key]))
+    if 'auto_faq_threshold' in data:
+        from contextlib import suppress
+
+        with suppress(TypeError, ValueError):
+            cfg.auto_faq_threshold = max(1, int(data['auto_faq_threshold']))
+    db.session.commit()
+    return jsonify({'status': 'ok', 'config': cfg.to_dict()})
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Chasqui FAQ (CRUD + auto-growth)
+# ────────────────────────────────────────────────────────────────────────
+@telegram_bp.route('/faq', methods=['GET', 'POST'])
+@jwt_required()
+def faq_list():
+    cfg = BotConfig.get_or_create()
+    if request.method == 'POST':
+        data = request.get_json(silent=True) or {}
+        question = (data.get('question') or '').strip()
+        answer = (data.get('answer') or '').strip()
+        if not question or not answer:
+            return jsonify({'error': 'question y answer son obligatorios'}), 400
+        faq = Faq(
+            question=question,
+            answer=answer,
+            category=(data.get('category') or 'general'),
+            keywords=data.get('keywords') or '',
+            is_active=bool(data.get('is_active', True)),
+            source='manual',
+            status='active',
+        )
+        db.session.add(faq)
+        db.session.commit()
+        return jsonify({'status': 'ok', 'faq': faq.to_dict()}), 201
+
+    category = request.args.get('category')
+    q = Faq.query.filter(Faq.status == 'active')
+    if category:
+        q = q.filter_by(category=category)
+    faqs = q.order_by(Faq.usage_count.desc(), Faq.id.desc()).all()
+    return jsonify([f.to_dict() for f in faqs])
+
+
+@telegram_bp.route('/faq/proposed', methods=['GET'])
+@jwt_required()
+def faq_proposed():
+    """Pending auto-proposed FAQs (repeated unanswered questions) for approval."""
+    faqs = Faq.query.filter_by(status='proposed').order_by(Faq.usage_count.desc()).all()
+    return jsonify([f.to_dict() for f in faqs])
+
+
+@telegram_bp.route('/faq/autogrow', methods=['POST'])
+@jwt_required()
+def faq_autogrow():
+    """Manually trigger auto-growth: promote repeated unanswered questions to proposed FAQs."""
+    from app.services.faq_service import auto_propose_faq
+
+    created = auto_propose_faq()
+    return jsonify({'status': 'ok', 'proposed': created})
+
+
+@telegram_bp.route('/faq/search', methods=['POST'])
+@jwt_required()
+def faq_search():
+    from app.services.faq_service import match_faq
+
+    data = request.get_json(silent=True) or {}
+    query = data.get('query') or ''
+    limit = data.get('limit', 5)
+    matches = match_faq(query, limit=int(limit))
+    return jsonify([{'id': m['id'], 'score': m['score'], 'faq': m['faq'].to_dict()} for m in matches])
+
+
+@telegram_bp.route('/faq/<int:faq_id>', methods=['PUT', 'DELETE'])
+@jwt_required()
+def faq_item(faq_id):
+    faq = Faq.query.get(faq_id)
+    if not faq:
+        return jsonify({'error': 'FAQ no encontrada'}), 404
+
+    if request.method == 'DELETE':
+        db.session.delete(faq)
+        db.session.commit()
+        return jsonify({'status': 'ok'})
+
+    data = request.get_json(silent=True) or {}
+    if 'question' in data:
+        faq.question = data['question']
+    if 'answer' in data:
+        faq.answer = data['answer']
+    if 'category' in data:
+        faq.category = data['category'] or 'general'
+    if 'keywords' in data:
+        faq.keywords = data['keywords']
+    if 'is_active' in data:
+        faq.is_active = bool(data['is_active'])
+    if data.get('approve'):
+        # Approve a proposed (auto) FAQ -> make it active
+        faq.status = 'active'
+        faq.is_active = True
+        faq.source = 'auto'
+    db.session.commit()
+    return jsonify({'status': 'ok', 'faq': faq.to_dict()})
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Chasqui Webhook
+# ────────────────────────────────────────────────────────────────────────
+@telegram_bp.route('/webhook/status', methods=['GET'])
+@jwt_required()
+def webhook_status():
+    try:
+        from app.services.telegram_bot_service import _tg_request
+
+        token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+        if not token:
+            return jsonify({'ok': False, 'error': 'TELEGRAM_BOT_TOKEN no configurado', 'active': False})
+        info = _tg_request('getWebhookInfo', None, token)
+        result = info.get('result', {})
+        return jsonify(
+            {
+                'ok': info.get('ok'),
+                'active': bool(result.get('url')),
+                'url': result.get('url'),
+                'pending_update_count': result.get('pending_update_count', 0),
+                'last_error_message': result.get('last_error_message'),
+                'last_error_date': result.get('last_error_date'),
+                'max_connections': result.get('max_connections'),
+                'raw': result,
+            }
+        )
+    except Exception as e:
+        logger.error(f'webhook status error: {e}')
+        return jsonify({'ok': False, 'error': str(e), 'active': False})
+
+
+@telegram_bp.route('/webhook/setup', methods=['POST'])
+@jwt_required()
+def webhook_setup():
+    data = request.get_json(silent=True) or {}
+    url = (data.get('url') or '').strip()
+    secret = data.get('secret_token') or ''
+    from app.services.telegram_bot_service import _tg_request
+
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    if not token:
+        return jsonify({'ok': False, 'error': 'TELEGRAM_BOT_TOKEN no configurado'})
+    if not url:
+        return jsonify({'ok': False, 'error': 'url requerida'}), 400
+
+    payload = {'url': url}
+    if secret:
+        payload['secret_token'] = secret
+    try:
+        result = _tg_request('setWebhook', payload, token)
+        if secret:
+            os.environ['TELEGRAM_WEBHOOK_SECRET'] = secret
+        return jsonify({'ok': result.get('ok'), 'description': result.get('description'), 'result': result})
+    except Exception as e:
+        logger.error(f'webhook setup error: {e}')
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+@telegram_bp.route('/webhook', methods=['DELETE'])
+@jwt_required()
+def webhook_delete():
+    from app.services.telegram_bot_service import _tg_request
+
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    if not token:
+        return jsonify({'ok': False, 'error': 'TELEGRAM_BOT_TOKEN no configurado'})
+    try:
+        result = _tg_request('deleteWebhook', None, token)
+        return jsonify({'ok': result.get('ok'), 'result': result})
+    except Exception as e:
+        logger.error(f'webhook delete error: {e}')
+        return jsonify({'ok': False, 'error': str(e)})
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Chasqui Test message
+# ────────────────────────────────────────────────────────────────────────
+@telegram_bp.route('/test', methods=['POST'])
+@jwt_required()
+def send_test():
+    data = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id')
+    text = (data.get('text') or '').strip()
+    if not chat_id or not text:
+        return jsonify({'error': 'chat_id y text son obligatorios'}), 400
+
+    from app.services.telegram_bot_service import send_telegram_message
+
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    ok = send_telegram_message(int(chat_id), text, token)
+    if ok:
+        return jsonify({'status': 'sent', 'message': 'Mensaje de prueba enviado'})
+    return jsonify(
+        {'error': 'No se pudo enviar el mensaje (revisa el chat_id y que el usuario haya iniciado el bot)'}
+    ), 400
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Chasqui Intervention: admin replies from the panel as the bot
+# ────────────────────────────────────────────────────────────────────────
+@telegram_bp.route('/reply', methods=['POST'])
+@jwt_required()
+def bot_reply():
+    """Admin intervention: send a message to a Telegram chat directly from the panel."""
+    data = request.get_json(silent=True) or {}
+    chat_id = data.get('chat_id')
+    text = (data.get('text') or '').strip()
+    if not chat_id or not text:
+        return jsonify({'error': 'chat_id y text son obligatorios'}), 400
+
+    from app.services.telegram_bot_service import send_telegram_message
+
+    token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    ok = send_telegram_message(int(chat_id), text, token)
+    if ok:
+        return jsonify({'status': 'sent', 'message': 'Mensaje enviado como el bot'})
+    return jsonify({'error': 'No se pudo enviar (revisa que el chat exista y haya iniciado el bot)'}), 400

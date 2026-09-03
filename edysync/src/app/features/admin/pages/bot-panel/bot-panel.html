@@ -180,7 +180,34 @@
                             <span class="bot-conv__unread">{{ conv.unread }}</span>
                           }
                         </div>
+                        @if (replyOpen === conv.chat_id && canReply(conv)) {
+                          <div class="bot-reply-box">
+                            <textarea [(ngModel)]="replyText" rows="2" placeholder="Escribe tu respuesta como el bot..."
+                              class="bot-config-input bot-config-textarea"></textarea>
+                            @if (replyMsg) {
+                              <div class="text-xs text-success mt-1"><fa-icon [icon]="['fas', 'check-circle']" class="mr-1"></fa-icon>{{ replyMsg }}</div>
+                            }
+                            @if (replyErr) {
+                              <div class="text-xs text-error mt-1"><fa-icon [icon]="['fas', 'exclamation-triangle']" class="mr-1"></fa-icon>{{ replyErr }}</div>
+                            }
+                            <div class="flex gap-2 mt-2">
+                              <app-button variant="primary" label="Enviar" [icon]="['fas', 'paper-plane']"
+                                [loading]="replySending" (clicked)="sendReply(conv)"></app-button>
+                            </div>
+                          </div>
+                        }
                       </div>
+                      @if (canReply(conv)) {
+                        <div class="bot-conv__actions">
+                          <button (click)="toggleReply(conv)"
+                                  class="bot-reply-btn"
+                                  [class.bot-reply-btn--active]="replyOpen === conv.chat_id"
+                                  title="Responder como el bot">
+                            <fa-icon [icon]="replyOpen === conv.chat_id ? ['fas', 'times'] : ['fas', 'reply']"></fa-icon>
+                            <span>{{ replyOpen === conv.chat_id ? 'Cerrar' : 'Responder' }}</span>
+                          </button>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
@@ -302,6 +329,75 @@
                   <app-button variant="ghost" label="Cancelar" (clicked)="cancelEdit()"></app-button>
                 </div>
               }
+            </div>
+
+            <div class="bot-section">
+              <h3 class="bot-section__title">
+                <fa-icon [icon]="['fas', 'wand-magic-sparkles']" class="text-primary"></fa-icon>
+                Opciones Inteligentes (Chasqui)
+              </h3>
+              <p class="text-sm text-on-surface-variant mb-4">
+                La base de conocimientos crece con el uso y el bot puede supervisarse y autocorregirse.
+              </p>
+
+              @if (saveSuccess) { <app-alert type="success" [message]="saveSuccess" class="mb-4"></app-alert> }
+              @if (saveError) { <app-alert type="error" [message]="saveError" class="mb-4"></app-alert> }
+
+              <div class="bot-toggle-row">
+                <div class="flex-1">
+                  <div class="bot-toggle-label">FAQ auto-creciente</div>
+                  <div class="bot-toggle-hint">Detecta preguntas que el bot no responde y propone nuevas FAQ automáticamente.</div>
+                </div>
+                <label class="bot-switch">
+                  <input type="checkbox" [(ngModel)]="cfgAutoFaq" />
+                  <span class="bot-switch__slider"></span>
+                </label>
+              </div>
+
+              <div class="bot-toggle-row">
+                <div class="flex-1">
+                  <div class="bot-toggle-label">Umbral de repetición</div>
+                  <div class="bot-toggle-hint">Veces que una misma pregunta debe repetirse para proponerse como FAQ.</div>
+                </div>
+                <input type="number" [(ngModel)]="cfgFaqThreshold" min="1" class="bot-config-input w-20 text-center" />
+              </div>
+
+              <div class="bot-toggle-row">
+                <div class="flex-1">
+                  <div class="bot-toggle-label">Supervisión y autocorrección (MCP)</div>
+                  <div class="bot-toggle-hint">El prompt del bot incluye directivas para leer logs y autocorregirse ante errores.</div>
+                </div>
+                <label class="bot-switch">
+                  <input type="checkbox" [(ngModel)]="cfgMcpPrompt" />
+                  <span class="bot-switch__slider"></span>
+                </label>
+              </div>
+
+              <div class="bot-toggle-row">
+                <div class="flex-1">
+                  <div class="bot-toggle-label">Notificaciones a supervisión</div>
+                  <div class="bot-toggle-hint">Envía alertas a los dispositivos vinculados en eventos urgentes o de alto impacto.</div>
+                </div>
+                <label class="bot-switch">
+                  <input type="checkbox" [(ngModel)]="cfgNotifySupervision" />
+                  <span class="bot-switch__slider"></span>
+                </label>
+              </div>
+
+              <div class="bot-toggle-row">
+                <div class="flex-1">
+                  <div class="bot-toggle-label">Intervención en el chat</div>
+                  <div class="bot-toggle-hint">Permite responder manualmente a las conversaciones desde el panel.</div>
+                </div>
+                <label class="bot-switch">
+                  <input type="checkbox" [(ngModel)]="cfgIntervention" />
+                  <span class="bot-switch__slider"></span>
+                </label>
+              </div>
+
+              <div class="mt-4">
+                <app-button variant="primary" label="Guardar Opciones" [icon]="['fas', 'save']" [loading]="saving" (clicked)="saveConfigToggles()"></app-button>
+              </div>
             </div>
           </div>
         }
@@ -470,10 +566,60 @@
                 </div>
               }
             </div>
+
+            <div class="bot-section">
+              <div class="bot-section__head">
+                <h3 class="bot-section__title">
+                  <fa-icon [icon]="['fas', 'wand-magic-sparkles']" class="text-primary"></fa-icon>
+                  Propuestas Auto-generadas
+                  <span class="bot-section__count">{{ proposedFaqs.length }}</span>
+                </h3>
+                <div class="flex items-center gap-2">
+                  <app-button variant="ghost" label="Actualizar" [icon]="['fas', 'sync']" (clicked)="loadProposedFaqs()"></app-button>
+                  <app-button variant="primary" label="Generar" [icon]="['fas', 'magic']" (clicked)="triggerAutoGrow()"></app-button>
+                </div>
+              </div>
+              <p class="text-sm text-on-surface-variant mb-4">
+                Estas preguntas se repitieron y el bot no supo responderlas. Revísalas y aprueba las que quieras sumar a la base de conocimiento.
+              </p>
+
+              @if (autogrowMsg) { <app-alert type="success" [message]="autogrowMsg" class="mb-3"></app-alert> }
+              @if (autogrowErr) { <app-alert type="error" [message]="autogrowErr" class="mb-3"></app-alert> }
+
+              @if (proposedLoading) {
+                <div class="flex justify-center py-6"><app-spinner size="sm" colorClass="text-primary"></app-spinner></div>
+              } @else if (proposedFaqs.length === 0) {
+                <div class="bot-empty">
+                  <fa-icon [icon]="['fas', 'magic']" class="text-3xl mb-2"></fa-icon>
+                  <p>No hay propuestas pendientes</p>
+                  <p class="text-xs text-on-surface-variant">Genera propuestas para auto-detectar preguntas que el bot no responde.</p>
+                </div>
+              } @else {
+                <div class="bot-faq-list bot-faq-list--proposed">
+                  @for (faq of proposedFaqs; track faq.id) {
+                    <div class="bot-faq-item">
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                          <span class="text-sm font-bold text-on-surface">{{ faq.question }}</span>
+                          <span class="text-[10px] px-2 py-0.5 rounded-full bg-warning/15 text-warning font-bold">{{ faq.usage_count }}×</span>
+                        </div>
+                        <p class="text-xs text-on-surface-variant line-clamp-2 italic">{{ faq.answer }}</p>
+                      </div>
+                      <div class="flex gap-1 shrink-0">
+                        <button (click)="approveFaq(faq.id)" class="p-2 rounded-lg hover:bg-success/10 text-on-surface-variant hover:text-success transition-colors" title="Aprobar y activar">
+                          <fa-icon [icon]="['fas', 'check-circle']" class="text-xs"></fa-icon>
+                        </button>
+                        <button (click)="rejectFaq(faq.id)" class="p-2 rounded-lg hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors" title="Rechazar">
+                          <fa-icon [icon]="['fas', 'trash']" class="text-xs"></fa-icon>
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           </div>
         }
-
-        <!-- ══════ TAB: Webhook ═══════════════════════════════════════ -->
         @if (activeTab === 'webhook') {
           <div class="bot-tab">
             <div class="bot-section">

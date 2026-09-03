@@ -285,6 +285,21 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
             'response': 'Soy Diego, tu asistente del Centro Juan Pablo II. 💙',
         }
 
+    # FAQ matching (auto-growing knowledge base): answer directly on strong match,
+    # else track unanswered for later auto-proposal.
+    try:
+        from app.services.faq_service import match_faq, note_unanswered, record_usage
+
+        matches = match_faq(text, limit=1)
+        if matches and matches[0]['score'] >= 6:
+            faq = matches[0]['faq']
+            record_usage([faq.id])
+            send_telegram_message(chat_id, faq.answer, bot_token)
+            return {'type': 'response', 'response': faq.answer, 'already_sent': True, 'faq_id': faq.id}
+        note_unanswered(text)
+    except Exception:
+        pass
+
     # Enviar mensaje de "Procesando..." y editarlo con la respuesta
     processing_msg_id = send_telegram_message(
         chat_id,

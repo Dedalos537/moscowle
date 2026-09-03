@@ -641,7 +641,7 @@ export class AdminService {
     return this.http.get('/api/telegram/config');
   }
 
-  updateTelegramConfig(data: { bot_name?: string; bot_emoji?: string; persona_message?: string; system_prompt?: string; is_active?: boolean }): Observable<any> {
+  updateTelegramConfig(data: { bot_name?: string; bot_emoji?: string; persona_message?: string; system_prompt?: string; is_active?: boolean; auto_faq_enabled?: boolean; auto_faq_threshold?: number; mcp_prompt_enabled?: boolean; notify_supervision_enabled?: boolean; intervention_enabled?: boolean }): Observable<any> {
     return this.http.put('/api/telegram/config', data);
   }
 
@@ -694,6 +694,24 @@ export class AdminService {
   // --- Bot Dashboard (unified) ---
   getBotDashboard(): Observable<any> {
     return this.http.get('/api/telegram/dashboard');
+  }
+
+  // --- Chasqui Intervention: reply as the bot ---
+  replyToChat(chatId: number, text: string): Observable<any> {
+    return this.http.post('/api/telegram/reply', { chat_id: chatId, text });
+  }
+
+  // --- Chasqui FAQ auto-growth ---
+  getProposedFaqs(): Observable<any[]> {
+    return this.http.get<any[]>('/api/telegram/faq/proposed');
+  }
+
+  triggerAutoGrow(): Observable<any> {
+    return this.http.post('/api/telegram/faq/autogrow', {});
+  }
+
+  approveFaq(id: number): Observable<any> {
+    return this.http.put(`/api/telegram/faq/${id}`, { approve: true });
   }
 
 }

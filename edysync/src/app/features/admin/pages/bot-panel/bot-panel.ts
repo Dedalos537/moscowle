@@ -95,6 +95,26 @@ export class BotPanel implements OnInit, OnDestroy {
   convFilterOptions = ['all', 'web', 'telegram', 'whatsapp', 'instagram'];
   activityFilterOptions = ['all', 'telegram', 'api', 'errors'];
 
+  // Intervention (reply as bot)
+  replyOpen: number | null = null;
+  replyText = '';
+  replySending = false;
+  replyMsg = '';
+  replyErr = '';
+
+  // Proposed (auto-grown) FAQs
+  proposedFaqs: any[] = [];
+  proposedLoading = false;
+  autogrowMsg = '';
+  autogrowErr = '';
+
+  // Config toggles
+  cfgAutoFaq = true;
+  cfgFaqThreshold = 3;
+  cfgMcpPrompt = true;
+  cfgNotifySupervision = true;
+  cfgIntervention = true;
+
   ngOnInit() {
     this.loadDashboard();
   }
@@ -109,6 +129,7 @@ export class BotPanel implements OnInit, OnDestroy {
     if (id === 'telegram' && !this.tgStatus) this.loadLinkedAccounts();
     if (id === 'webhook' && !this.webhookStatus) this.loadWebhookStatus();
     if (id === 'faq' && this.faqList.length === 0) this.loadFaq();
+    if (id === 'faq' && this.proposedFaqs.length === 0) this.loadProposedFaqs();
   }
 
   loadDashboard() {
@@ -123,6 +144,14 @@ export class BotPanel implements OnInit, OnDestroy {
           this.channels = res.channels || {};
           this.conversations = res.conversations || [];
           this.activity = res.activity || [];
+          const cfg = res.bot?.config;
+          if (cfg) {
+            this.cfgAutoFaq = cfg.auto_faq_enabled;
+            this.cfgFaqThreshold = cfg.auto_faq_threshold;
+            this.cfgMcpPrompt = cfg.mcp_prompt_enabled;
+            this.cfgNotifySupervision = cfg.notify_supervision_enabled;
+            this.cfgIntervention = cfg.intervention_enabled;
+          }
           this.loading = false;
           this.cdr.markForCheck();
         },
@@ -371,6 +400,107 @@ export class BotPanel implements OnInit, OnDestroy {
   filteredConversations(): any[] {
     if (this.convFilter === 'all') return this.conversations;
     return this.conversations.filter(c => c.channel === this.convFilter);
+  }
+
+  // ─── Intervention: reply as bot ─────────────────────────────────────
+  toggleReply(conv: any) {
+    this.replyOpen = this.replyOpen === conv.chat_id ? null : conv.chat_id;
+    this.replyText = '';
+    this.replyMsg = '';
+    this.replyErr = '';
+    this.cdr.markForCheck();
+  }
+
+  canReply(conv: any): boolean {
+    return conv.channel === 'telegram' && !!conv.chat_id;
+  }
+
+  sendReply(conv: any) {
+    const text = this.replyText.trim();
+    if (!text) return;
+    this.replySending = true;
+    this.replyMsg = '';
+    this.replyErr = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.replyToChat(Number(conv.chat_id), text).subscribe({
+        next: (res) => {
+          this.replySending = false;
+          this.replyMsg = res?.message || 'Respondido';
+          this.replyText = '';
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.replySending = false;
+          this.replyErr = err.error?.error || err.message || 'Error al enviar';
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  // ─── Config toggles save ────────────────────────────────────────────
+  saveConfigToggles() {
+    this.saving = true;
+    this.saveSuccess = '';
+    this.saveError = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.updateTelegramConfig({
+        auto_faq_enabled: this.cfgAutoFaq,
+        auto_faq_threshold: this.cfgFaqThreshold,
+        mcp_prompt_enabled: this.cfgMcpPrompt,
+        notify_supervision_enabled: this.cfgNotifySupervision,
+        intervention_enabled: this.cfgIntervention,
+      }).subscribe({
+        next: () => { this.saving = false; this.saveSuccess = 'Opciones guardadas'; this.saveError = ''; this.cdr.markForCheck(); },
+        error: (err) => { this.saving = false; this.saveError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  // ─── Proposed (auto-grown) FAQ ──────────────────────────────────────
+  loadProposedFaqs() {
+    this.proposedLoading = true;
+    this.autogrowMsg = '';
+    this.autogrowErr = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.getProposedFaqs().subscribe({
+        next: (res) => { this.proposedFaqs = res || []; this.proposedLoading = false; this.cdr.markForCheck(); },
+        error: () => { this.proposedFaqs = []; this.proposedLoading = false; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  triggerAutoGrow() {
+    this.autogrowErr = '';
+    this.autogrowMsg = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.triggerAutoGrow().subscribe({
+        next: (res) => { this.autogrowMsg = `Generadas ${res?.proposed || 0} propuestas nuevas`; this.loadProposedFaqs(); this.cdr.markForCheck(); },
+        error: (err) => { this.autogrowErr = err.error?.error || err.message || 'Error'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  approveFaq(faqId: number) {
+    this.subs.add(
+      this.admin.approveFaq(faqId).subscribe({
+        next: () => { this.proposedFaqs = this.proposedFaqs.filter(f => f.id !== faqId); this.loadFaq(); this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  rejectFaq(faqId: number) {
+    this.subs.add(
+      this.admin.deleteFaq(faqId).subscribe({
+        next: () => { this.proposedFaqs = this.proposedFaqs.filter(f => f.id !== faqId); this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); },
+      })
+    );
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────

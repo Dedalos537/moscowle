@@ -522,4 +522,14 @@ def init_scheduler(app):
         id='incident_escalation',
     )
 
+    # --- Chasqui FAQ auto-growth (promote repeated unanswered Qs) ---
+    from app.services.faq_service import hourly_auto_grow
+
+    scheduler.add_job(
+        func=_wrap(hourly_auto_grow),
+        trigger='interval',
+        hours=1,
+        id='faq_auto_grow',
+    )
+
     scheduler.start()
