@@ -18,6 +18,7 @@ import {
   faBell,
   faBellSlash,
   faBolt,
+  faBook,
   faBrain,
   faBriefcase,
   faBug,
@@ -64,6 +65,7 @@ import {
   faComment,
   faCommentDollar,
   faCommentDots,
+  faComments,
   faCompass,
   faCompress,
   faCopy,
@@ -95,10 +97,12 @@ import {
   faFilter,
   faFilterCircleXmark,
   faFlag,
+  faFlask,
   faFloppyDisk,
   faFolderOpen,
   faGamepad,
   faGaugeHigh,
+  faGear,
   faHandHoldingDollar,
   faHardDrive,
   faHeadset,
@@ -160,9 +164,11 @@ import {
   faStop,
   faStopwatch,
   faSun,
+  faSync,
   faTableCellsLarge,
   faTags,
   faTerminal,
+  faTimes,
   faToggleOn,
   faTrain,
   faTrash,
@@ -297,13 +303,14 @@ import {
 } from '@fortawesome/free-regular-svg-icons';
 
 import {
-  faWhatsapp,
+  faInstagram,
   faTelegram,
+  faWhatsapp,
 } from '@fortawesome/free-brands-svg-icons';
 
-const fasIcons = [faAdd, faArrowDown, faArrowDownWideShort, faArrowLeft, faArrowRight, faArrowRightFromFile, faArrowRightRotate, faArrowUp, faArrowsAlt, faArrowsAltH, faArrowsRotate, faBan, faBank, faBarChart, faBars, faBell, faBellSlash, faBolt, faBrain, faBriefcase, faBug, faBuilding, faBullseye, faCalendar, faCalendarAlt, faCalendarCheck, faCalendarDay, faCalendarPlus, faCalendarTimes, faCamera, faCashRegister, faCertificate, faChain, faChartLine, faChartPie, faCheck, faCheckCircle, faCheckDouble, faChevronDown, faChevronLeft, faChevronRight, faChevronUp, faCircle, faCircleExclamation, faCircleInfo, faCircleMinus, faCirclePlay, faCirclePlus, faCircleQuestion, faCircleUser, faCircleXmark, faClipboardCheck, faClipboardList, faClock, faClockRotateLeft, faClose, faCloudArrowUp, faCode, faCog, faCogs, faCoins, faComment, faCommentDollar, faCommentDots, faCompass, faCompress, faCopy, faCreditCard, faDesktop, faDollar, faDownload, faDriversLicense, faEdit, faEllipsisV, faEnvelope, faEnvelopeOpenText, faExchangeAlt, faExclamationTriangle, faExpand, faExternalLinkAlt, faEye, faEyeSlash, faFile, faFileAlt, faFileArrowDown, faFileArrowUp, faFileAudio, faFileContract, faFileCsv, faFileInvoiceDollar, faFilePdf, faFileWord, faFilter, faFilterCircleXmark, faFlag, faFloppyDisk, faFolderOpen, faGamepad, faGaugeHigh, faHandHoldingDollar, faHardDrive, faHeadset, faHeartPulse, faHome, faHourglass2, faImage, faInbox, faKey, faLayerGroup, faLeaf, faLightbulb, faLink, faList, faListCheck, faLocationDot, faLock, faMagic, faMagnifyingGlass, faMagnifyingGlassMinus, faMailReply, faMap, faMapSigns, faMemory, faMicrochip, faMicrophone, faMicrophoneAlt, faMicrophoneSlash, faMobileAlt, faMoneyBillWave, faMoon, faNetworkWired, faNoteSticky, faObjectGroup, faPaperPlane, faPaperclip, faPause, faPen, faPencil, faPercent, faPhone, faPhoneAlt, faPlay, faPlus, faPrint, faQuestion, faReceipt, faRightFromBracket, faRightToBracket, faRobot, faRocket, faRotate, faServer, faShieldAlt, faSliders, faSpinner, faStar, faStethoscope, faStop, faStopwatch, faSun, faTableCellsLarge, faTags, faTerminal, faToggleOn, faTrain, faTrash, faTrashAlt, faTrophy, faUnlink, faUpload, faUser, faUserAltSlash, faUserCheck, faUserClock, faUserCog, faUserDoctor, faUserEdit, faUserFriends, faUserNurse, faUserPlus, faUserShield, faUsers, faUsersCog, faVolumeHigh, faVolumeUp, faWallet, faWrench, faXmark, faThumbtack, faTextHeight, faDroplet, faChartBar, faSave, faPalette];
+const fasIcons = [faAdd, faArrowDown, faArrowDownWideShort, faArrowLeft, faArrowRight, faArrowRightFromFile, faArrowRightRotate, faArrowUp, faArrowsAlt, faArrowsAltH, faArrowsRotate, faBan, faBank, faBarChart, faBars, faBell, faBellSlash, faBolt, faBook, faBrain, faBriefcase, faBug, faBuilding, faBullseye, faCalendar, faCalendarAlt, faCalendarCheck, faCalendarDay, faCalendarPlus, faCalendarTimes, faCamera, faCashRegister, faCertificate, faChain, faChartLine, faChartPie, faCheck, faCheckCircle, faCheckDouble, faChevronDown, faChevronLeft, faChevronRight, faChevronUp, faCircle, faCircleExclamation, faCircleInfo, faCircleMinus, faCirclePlay, faCirclePlus, faCircleQuestion, faCircleUser, faCircleXmark, faClipboardCheck, faClipboardList, faClock, faClockRotateLeft, faClose, faCloudArrowUp, faCode, faCog, faCogs, faCoins, faComment, faCommentDollar, faCommentDots, faComments, faCompass, faCompress, faCopy, faCreditCard, faDesktop, faDollar, faDownload, faDriversLicense, faEdit, faEllipsisV, faEnvelope, faEnvelopeOpenText, faExchangeAlt, faExclamationTriangle, faExpand, faExternalLinkAlt, faEye, faEyeSlash, faFile, faFileAlt, faFileArrowDown, faFileArrowUp, faFileAudio, faFileContract, faFileCsv, faFileInvoiceDollar, faFilePdf, faFileWord, faFilter, faFilterCircleXmark, faFlag, faFlask, faFloppyDisk, faFolderOpen, faGamepad, faGaugeHigh, faGear, faHandHoldingDollar, faHardDrive, faHeadset, faHeartPulse, faHome, faHourglass2, faImage, faInbox, faKey, faLayerGroup, faLeaf, faLightbulb, faLink, faList, faListCheck, faLocationDot, faLock, faMagic, faMagnifyingGlass, faMagnifyingGlassMinus, faMailReply, faMap, faMapSigns, faMemory, faMicrochip, faMicrophone, faMicrophoneAlt, faMicrophoneSlash, faMobileAlt, faMoneyBillWave, faMoon, faNetworkWired, faNoteSticky, faObjectGroup, faPaperPlane, faPaperclip, faPause, faPen, faPencil, faPercent, faPhone, faPhoneAlt, faPlay, faPlus, faPrint, faQuestion, faReceipt, faRightFromBracket, faRightToBracket, faRobot, faRocket, faRotate, faServer, faShieldAlt, faSliders, faSpinner, faStar, faStethoscope, faStop, faStopwatch, faSun, faSync, faTableCellsLarge, faTags, faTerminal, faTimes, faToggleOn, faTrain, faTrash, faTrashAlt, faTrophy, faUnlink, faUpload, faUser, faUserAltSlash, faUserCheck, faUserClock, faUserCog, faUserDoctor, faUserEdit, faUserFriends, faUserNurse, faUserPlus, faUserShield, faUsers, faUsersCog, faVolumeHigh, faVolumeUp, faWallet, faWrench, faXmark, faThumbtack, faTextHeight, faDroplet, faChartBar, faSave, faPalette];
 const farIcons = [farCalendarAlt, farCalendarCheck, farCircle];
-const fabIcons = [faWhatsapp, faTelegram];
+const fabIcons = [faWhatsapp, faInstagram, faTelegram];
 
 export function registerAppIcons(library: FaIconLibrary): void {
   library.addIcons(...fasIcons);
