@@ -62,15 +62,16 @@
       <div class="hidden md:block overflow-x-auto rounded-xl border border-border/30">
         <table class="w-full min-w-[1000px]">
           <thead>
-            <tr class="bg-surface-container-high/50">
-              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Usuario</th>
-              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Email</th>
-              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
-              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
-              <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
-              <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Activo</th>
-              <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
-            </tr>
+<tr class="bg-surface-container-high/50">
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Usuario</th>
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Código</th>
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Email</th>
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
+                <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
+                <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Activo</th>
+                <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
+              </tr>
           </thead>
           <tbody class="divide-y divide-border/20">
             @for (u of filteredUsers; track u.id) {
@@ -88,6 +89,9 @@
                       <p class="text-xs text-on-surface-variant truncate">{{ u.email || '—' }}</p>
                     </div>
                   </div>
+                </td>
+                <td class="px-4 py-3.5 text-sm font-mono text-on-surface-variant">
+                  {{ u.login_code || '—' }}
                 </td>
                 <td class="px-4 py-3.5 text-sm text-on-surface-variant">{{ u.email || '—' }}</td>
                 <td class="px-4 py-3.5">

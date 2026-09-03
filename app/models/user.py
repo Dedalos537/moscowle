@@ -56,6 +56,7 @@ class User(db.Model, UserMixin, AuditMixin):
     therapy_goals = db.Column(db.Text, nullable=True)
     timezone = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
+    preferences = db.Column(db.JSON, nullable=True)
     assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     assigned_therapist = db.relationship(
         'User',

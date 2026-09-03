@@ -32,7 +32,7 @@ from app.routes.api._shared import (
 )
 
 UPSTREAM_HOST = '127.0.0.1'
-UPSTREAM_PORT = 8765
+UPSTREAM_PORT = 5000
 
 
 def _server_alive():
@@ -42,6 +42,33 @@ def _server_alive():
         return True
     except Exception:
         return False
+
+
+@api_bp.route('/user/preferences', methods=['GET', 'PUT'])
+@login_required
+def user_preferences():
+    """Get or update user UI preferences (font_size, primary_color, hide_charts)."""
+    try:
+        if request.method == 'GET':
+            prefs = current_user.preferences or {}
+            return jsonify(
+                {
+                    'font_size': prefs.get('font_size', 'medium'),
+                    'primary_color': prefs.get('primary_color', '#2563eb'),
+                    'hide_charts': prefs.get('hide_charts', False),
+                }
+            )
+        else:
+            data = request.get_json() or {}
+            if not isinstance(data, dict):
+                return jsonify({'success': False, 'message': 'Datos inválidos'}), 400
+            current_prefs = current_user.preferences or {}
+            current_prefs.update(data)
+            current_user.preferences = current_prefs
+            db.session.commit()
+            return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @api_bp.route('/server/status', methods=['GET'])
@@ -68,9 +95,13 @@ def server_restart():
     if alive_before and not force:
         return jsonify({'status': 'already_running', 'message': 'Backend ya esta activo'})
 
+    # In production, the main server is managed by systemd (moscowle.service on port 5000).
+    # This restart is for local development (server_local.py on port 8765).
+    # We'll just attempt to restart the local dev server if it's running.
+    local_port = 8765
     with contextlib.suppress(Exception):
         subprocess.call(  # noqa: S603
-            ['/usr/bin/pkill', '-f', 'gunicorn.*8765'],
+            ['/usr/bin/pkill', '-f', f'gunicorn.*{local_port}'],
             stderr=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
         )
@@ -103,7 +134,7 @@ def server_restart():
                 '--workers',
                 '1',
                 '--bind',
-                f'127.0.0.1:{UPSTREAM_PORT}',
+                f'127.0.0.1:{local_port}',
                 '--timeout',
                 '300',
                 '--graceful-timeout',

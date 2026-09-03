@@ -28,6 +28,7 @@ def _serialize_user(u):
         'id': u.id,
         'email': u.email,
         'username': u.username,
+        'login_code': u.login_code,
         'role': u.role,
         'is_active': u.is_active,
         'account_status': u.account_status or 'active',
@@ -432,7 +433,7 @@ def admin_sedes_active():
         if current_user.role not in ('admin', 'supervisor'):
             return jsonify({'success': False, 'message': 'Forbidden'}), 403
         sedes = (
-            Sede.query.filter(db.or_(Sede.is_active == True, Sede.is_active == None)).order_by(Sede.name.asc()).all()
+            Sede.query.filter(db.or_(Sede.is_active == True, Sede.is_active.is_(None))).order_by(Sede.name.asc()).all()
         )
         result = [{'id': s.id, 'name': s.name, 'address': s.address} for s in sedes]
         return jsonify(result)

@@ -25,6 +25,7 @@ interface UserRow {
   id: number;
   username: string;
   email: string;
+  login_code?: string;
   role: string;
   is_active: boolean;
   account_status: string;

@@ -50,12 +50,12 @@
               <p class="text-on-surface font-medium">{{ user.username }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-on-surface-variant mb-1">Email</label>
-              <p class="text-on-surface font-medium">{{ user.email }}</p>
+              <label class="block text-sm font-medium text-on-surface-variant mb-1">Código de Usuario</label>
+              <p class="text-on-surface font-medium font-mono">{{ user.login_code || '—' }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-on-surface-variant mb-1">Rol</label>
-              <p class="text-on-surface font-medium">{{ roleLabel }}</p>
+              <label class="block text-sm font-medium text-on-surface-variant mb-1">Email</label>
+              <p class="text-on-surface font-medium">{{ user.email }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-on-surface-variant mb-1">Estado</label>
