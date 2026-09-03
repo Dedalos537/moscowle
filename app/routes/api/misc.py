@@ -4,6 +4,8 @@ import subprocess
 import sys
 import time as _time
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     ContactMessage,
@@ -65,6 +67,40 @@ def user_preferences():
             current_prefs = current_user.preferences or {}
             current_prefs.update(data)
             current_user.preferences = current_prefs
+            flag_modified(current_user, 'preferences')
+            db.session.commit()
+            return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@api_bp.route('/user/schedule', methods=['GET', 'PUT'])
+@login_required
+def user_schedule():
+    """Get or update user dark mode schedule (from hour, to hour, enabled)."""
+    try:
+        if request.method == 'GET':
+            prefs = current_user.preferences or {}
+            sched = prefs.get('theme_schedule') or {}
+            return jsonify(
+                {
+                    'enabled': bool(sched.get('enabled', False)),
+                    'from': int(sched.get('from', 22)),
+                    'to': int(sched.get('to', 7)),
+                }
+            )
+        else:
+            data = request.get_json() or {}
+            if not isinstance(data, dict):
+                return jsonify({'success': False, 'message': 'Datos inválidos'}), 400
+            current_prefs = current_user.preferences or {}
+            current_prefs['theme_schedule'] = {
+                'enabled': bool(data.get('enabled', False)),
+                'from': max(0, min(23, int(data.get('from', 22)))),
+                'to': max(0, min(23, int(data.get('to', 7)))),
+            }
+            current_user.preferences = current_prefs
+            flag_modified(current_user, 'preferences')
             db.session.commit()
             return jsonify({'success': True})
     except Exception as e:
