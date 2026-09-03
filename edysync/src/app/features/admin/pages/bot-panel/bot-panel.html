@@ -110,7 +110,7 @@
                        [class.bot-channel--active]="channels[ch]?.active || channels[ch]?.status !== 'coming_soon'"
                        [class.bot-channel--coming]="channels[ch]?.status === 'coming_soon'">
                     <div class="bot-channel__icon" [style.background]="channelColor(ch) + '15'">
-                      <fa-icon [icon]="['fab', channelIcon(ch)]" [style.color]="channelColor(ch)"></fa-icon>
+                      <fa-icon [icon]="channelIconDef(ch)" [style.color]="channelColor(ch)"></fa-icon>
                     </div>
                     <div class="bot-channel__info">
                       <div class="bot-channel__name">{{ channels[ch]?.label || channelLabel(ch) }}</div>
@@ -145,7 +145,7 @@
                   @for (f of convFilterOptions; track f) {
                     <button class="bot-filter-btn" [class.bot-filter-btn--active]="convFilter === f"
                             (click)="setConvFilter(f)">
-                      @if (f !== 'all') { <fa-icon [icon]="['fab', channelIcon(f)]" class="text-xs"></fa-icon> }
+                      @if (f !== 'all') { <fa-icon [icon]="channelIconDef(f)" class="text-xs"></fa-icon> }
                       {{ f === 'all' ? 'Todos' : channelLabel(f) }}
                     </button>
                   }
@@ -162,7 +162,7 @@
                   @for (conv of filteredConversations(); track conv.chat_id) {
                     <div class="bot-conv" [class.bot-conv--unread]="conv.unread > 0">
                       <div class="bot-conv__avatar" [style.background]="channelColor(conv.channel) + '15'">
-                        <fa-icon [icon]="['fab', channelIcon(conv.channel)]" [style.color]="channelColor(conv.channel)"></fa-icon>
+                        <fa-icon [icon]="channelIconDef(conv.channel)" [style.color]="channelColor(conv.channel)"></fa-icon>
                       </div>
                       <div class="bot-conv__content">
                         <div class="bot-conv__header">

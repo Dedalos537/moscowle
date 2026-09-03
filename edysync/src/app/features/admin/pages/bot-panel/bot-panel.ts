@@ -381,8 +381,15 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   channelIcon(ch: string): string {
-    const icons: Record<string, string> = { web: 'globe', telegram: 'telegram', whatsapp: 'whatsapp', instagram: 'instagram' };
-    return icons[ch] || 'circle';
+    return this.channelIconDef(ch)[1];
+  }
+
+  channelIconDef(ch: string): [string, string] {
+    const brands: Record<string, string> = { telegram: 'telegram', whatsapp: 'whatsapp', instagram: 'instagram' };
+    const solid: Record<string, string> = { web: 'globe' };
+    if (brands[ch]) return ['fab', brands[ch]];
+    if (solid[ch]) return ['fas', solid[ch]];
+    return ['fas', 'circle'];
   }
 
   channelColor(ch: string): string {
