@@ -6,7 +6,7 @@ interface CacheEntry {
   uid: string | null;
 }
 
-const STORAGE_KEY = 'moscowle_data_cache_v1';
+const STORAGE_KEY = 'moscowle_data_cache_v2';
 
 @Injectable({
   providedIn: 'root'
