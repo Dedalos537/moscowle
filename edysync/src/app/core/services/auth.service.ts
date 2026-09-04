@@ -83,6 +83,19 @@ export class AuthService {
     );
   }
 
+  refreshToken(refreshToken?: string): Observable<any> {
+    return this.http.post<any>('/api/auth/refresh', {}).pipe(
+      tap(res => {
+        if (res.access_token) {
+          localStorage.setItem('access_token', res.access_token);
+        }
+        if (res.refresh_token) {
+          localStorage.setItem('refresh_token', res.refresh_token);
+        }
+      })
+    );
+  }
+
   clearSession(): void {
     localStorage.removeItem('user');
     localStorage.removeItem('csrf_token');

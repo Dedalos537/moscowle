@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { AdminService } from '../../../../core/services/admin.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { Spinner } from '../../../../shared/components/spinner/spinner';
 import { Button } from '../../../../shared/components/button/button';
 import { Alert } from '../../../../shared/components/alert/alert';
@@ -28,6 +29,7 @@ interface TabDef {
 })
 export class BotPanel implements OnInit, OnDestroy {
   private admin = inject(AdminService);
+  private auth = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private subs = new Subscription();
 
@@ -117,6 +119,7 @@ export class BotPanel implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDashboard();
+    this.checkAuth();
   }
 
   ngOnDestroy() {
@@ -130,16 +133,27 @@ export class BotPanel implements OnInit, OnDestroy {
     if (id === 'webhook' && !this.webhookStatus) this.loadWebhookStatus();
     if (id === 'faq' && this.faqList.length === 0) this.loadFaq();
     if (id === 'faq' && this.proposedFaqs.length === 0) this.loadProposedFaqs();
+    this.error = null;
   }
 
-  loadDashboard() {
-    this.loading = true;
+  private checkAuth() {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (!token) {
+      console.warn('[BotPanel] No auth token found');
+    }
+  }
+
+  loadDashboard(showLoading = true) {
+    if (showLoading) {
+      this.loading = true;
+    }
     this.error = null;
     this.cdr.markForCheck();
 
     this.subs.add(
       this.admin.getBotDashboard().subscribe({
         next: (res) => {
+          console.log('[BotPanel] Dashboard loaded:', res);
           this.bot = res.bot;
           this.channels = res.channels || {};
           this.conversations = res.conversations || [];
@@ -156,12 +170,43 @@ export class BotPanel implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: (err) => {
+          console.error('[BotPanel] Dashboard load error:', err);
+          const status = err?.status;
+          let msg = '';
+          if (status === 401 || status === 403) {
+            msg = 'Sesión expirada. Por favor, vuelve a iniciar sesión.';
+            this.triggerAuthRefresh();
+          } else if (status === 0) {
+            msg = 'No se puede conectar al servidor. Verifica tu conexión.';
+          } else {
+            msg = err?.error?.error || err?.message || err?.statusText || `Error ${status || ''}: al cargar dashboard del bot`;
+          }
+          this.error = msg;
           this.loading = false;
-          this.error = err.error?.error || err.message || 'Error al cargar dashboard del bot';
           this.cdr.markForCheck();
         },
       })
     );
+  }
+
+  private triggerAuthRefresh() {
+    console.log('[BotPanel] Attempting token refresh...');
+    this.auth.refreshToken().subscribe({
+      next: (res) => {
+        if (res.access_token) {
+          localStorage.setItem('access_token', res.access_token);
+        }
+        if (res.refresh_token) {
+          localStorage.setItem('refresh_token', res.refresh_token);
+        }
+        console.log('[BotPanel] Token refreshed, retrying dashboard load...');
+        this.loadDashboard(false);
+      },
+      error: (err) => {
+        console.error('[BotPanel] Token refresh failed:', err);
+        window.location.href = '/app/auth/login';
+      },
+    });
   }
 
   loadLinkedAccounts() {
