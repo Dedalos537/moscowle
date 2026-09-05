@@ -253,6 +253,7 @@ export class UsersList implements OnInit, OnDestroy {
               id: u.id,
               username: u.username,
               email: u.email,
+              login_code: u.login_code || '',
               role: u.role,
               is_active: u.is_active ?? true,
               account_status: u.account_status || 'active',
