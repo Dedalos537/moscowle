@@ -13,6 +13,17 @@ import { environment } from './environments/environment';
 import { CoreModule } from './app/core/core-module';
 import { registerAppIcons } from './app/shared/fontawesome-icons';
 
+// Force include all FontAwesome icons to prevent tree-shaking
+import {
+  faTimesCircle,
+  faQuestionCircle,
+  faSearch,
+  faPlayCircle,
+  faExclamationCircle,
+  faMinusCircle,
+  faTowerBroadcast,
+} from '@fortawesome/free-solid-svg-icons';
+
 if (environment.sentryDsn) {
   Sentry.init({
     dsn: environment.sentryDsn,

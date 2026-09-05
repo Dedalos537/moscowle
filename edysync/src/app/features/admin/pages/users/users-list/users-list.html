@@ -130,7 +130,14 @@
                   </div>
                 </td>
                 <td class="px-4 py-3.5">
-                  <div class="flex justify-end">
+                  <div class="flex justify-end gap-1">
+                    @if (u.role === 'jugador') {
+                      <button (click)="viewPatientDetail(u)"
+                        class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
+                        title="Ver detalle del paciente">
+                        <fa-icon [icon]="['fas', 'eye']" class="text-sm"></fa-icon>
+                      </button>
+                    }
                     <button (click)="openEditDrawer(u)"
                       class="w-8 h-8 rounded-lg hover:bg-primary/10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all cursor-pointer"
                       title="Editar">
@@ -192,9 +199,18 @@
                   {{ getStatusLabel(u.account_status) }}
                 </span>
               </div>
-              <button (click)="openEditDrawer(u)" class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer">
-                Editar
-              </button>
+              <div class="flex gap-1">
+                @if (u.role === 'jugador') {
+                  <button (click)="viewPatientDetail(u)"
+                    class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer flex items-center gap-1">
+                    <fa-icon [icon]="['fas', 'eye']" class="text-xs"></fa-icon>
+                    <span class="hidden sm:inline">Detalle</span>
+                  </button>
+                }
+                <button (click)="openEditDrawer(u)" class="btn-ghost text-[10px] sm:text-xs !px-2 sm:!px-3 !py-1 sm:!py-1.5 cursor-pointer">
+                  Editar
+                </button>
+              </div>
             </div>
 
             @if (u.role === 'jugador') {

@@ -5,6 +5,7 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { Sedes } from './pages/sedes/sedes';
 import { UsersList } from './pages/users/users-list/users-list';
 import { UserDetail } from './pages/users/user-detail/user-detail';
+import { PatientDetail } from './pages/patient-detail/patient-detail';
 import { PaymentHistory } from './pages/payment-history/payment-history';
 import { Sessions } from './pages/sessions/sessions';
 import { Expenses } from './pages/expenses/expenses';
@@ -31,6 +32,7 @@ const routes: Routes = [
       { path: 'sedes', component: Sedes },
       { path: 'users', component: UsersList },
       { path: 'users/:id', component: UserDetail },
+      { path: 'patients/:id', component: PatientDetail },
       { path: 'finanzas', loadComponent: () => import('./pages/finanzas/finanzas').then(m => m.Finanzas) },
       { path: 'payments', loadComponent: () => import('./pages/payments/payments').then(m => m.Payments) },
       { path: 'payments/history/:userId', component: PaymentHistory },

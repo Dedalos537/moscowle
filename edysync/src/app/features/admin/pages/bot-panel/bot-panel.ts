@@ -35,6 +35,14 @@ export class BotPanel implements OnInit, OnDestroy {
 
   loading = true;
   error: string | null = null;
+  debugLog: string[] = [];
+
+  private log(msg: string, data?: any) {
+    const entry = `[${new Date().toISOString()}] ${msg}`;
+    this.debugLog.push(entry);
+    console.log('[BotPanel DEBUG]', entry, data ?? '');
+    if (data) console.log(data);
+  }
 
   activeTab: TabId = 'dashboard';
 
@@ -118,8 +126,17 @@ export class BotPanel implements OnInit, OnDestroy {
   cfgIntervention = true;
 
   ngOnInit() {
-    this.loadDashboard();
-    this.checkAuth();
+    this.log('ngOnInit started');
+    try {
+      this.loadDashboard();
+      this.checkAuth();
+      this.log('ngOnInit completed');
+    } catch (e: any) {
+      this.log('ngOnInit SYNC ERROR', e);
+      this.error = 'Error crítico en inicialización: ' + (e?.message || String(e));
+      this.loading = false;
+      this.cdr.markForCheck();
+    }
   }
 
   ngOnDestroy() {
@@ -144,6 +161,7 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   loadDashboard(showLoading = true) {
+    this.log('loadDashboard called', { showLoading });
     if (showLoading) {
       this.loading = true;
     }
@@ -153,11 +171,12 @@ export class BotPanel implements OnInit, OnDestroy {
     this.subs.add(
       this.admin.getBotDashboard().subscribe({
         next: (res) => {
-          console.log('[BotPanel] Dashboard loaded:', res);
+          this.log('Dashboard loaded successfully', res);
           this.bot = res.bot;
           this.channels = res.channels || {};
           this.conversations = res.conversations || [];
           this.activity = res.activity || [];
+          this.log('Data assigned', { bot: !!this.bot, channels: Object.keys(this.channels), convCount: this.conversations.length, activityCount: this.activity.length });
           const cfg = res.bot?.config;
           if (cfg) {
             this.cfgAutoFaq = cfg.auto_faq_enabled;
@@ -165,12 +184,14 @@ export class BotPanel implements OnInit, OnDestroy {
             this.cfgMcpPrompt = cfg.mcp_prompt_enabled;
             this.cfgNotifySupervision = cfg.notify_supervision_enabled;
             this.cfgIntervention = cfg.intervention_enabled;
+            this.log('Config toggles set', cfg);
           }
           this.loading = false;
           this.cdr.markForCheck();
+          this.log('Dashboard loading complete');
         },
         error: (err) => {
-          console.error('[BotPanel] Dashboard load error:', err);
+          this.log('Dashboard load ERROR', { status: err?.status, statusText: err?.statusText, message: err?.message, error: err?.error });
           const status = err?.status;
           let msg = '';
           if (status === 401 || status === 403) {
@@ -190,20 +211,21 @@ export class BotPanel implements OnInit, OnDestroy {
   }
 
   private triggerAuthRefresh() {
-    console.log('[BotPanel] Attempting token refresh...');
+    this.log('Attempting token refresh...');
     this.auth.refreshToken().subscribe({
       next: (res) => {
+        this.log('Token refresh response', res);
         if (res.access_token) {
           localStorage.setItem('access_token', res.access_token);
         }
         if (res.refresh_token) {
           localStorage.setItem('refresh_token', res.refresh_token);
         }
-        console.log('[BotPanel] Token refreshed, retrying dashboard load...');
+        this.log('Token refreshed, retrying dashboard load...');
         this.loadDashboard(false);
       },
       error: (err) => {
-        console.error('[BotPanel] Token refresh failed:', err);
+        this.log('Token refresh failed', err);
         window.location.href = '/app/auth/login';
       },
     });

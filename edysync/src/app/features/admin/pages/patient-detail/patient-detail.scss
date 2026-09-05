@@ -1,0 +1,47 @@
+.admin-patient-detail {
+  .input-field {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-outline) 30%, transparent);
+    border-radius: var(--radius);
+    background: var(--color-surface-container-highest);
+    color: var(--color-on-surface);
+    transition: all 0.15s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+    }
+
+    &::placeholder {
+      color: var(--color-on-surface-variant);
+      opacity: 0.6;
+    }
+  }
+
+  select.input-field {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    padding-right: 2rem;
+  }
+
+  textarea.input-field {
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  .reveal-row {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .reveal-row.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

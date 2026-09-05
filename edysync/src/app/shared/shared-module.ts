@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { FontAwesomeModule, FaIconLibrary } from '@fortawesome/angular-fontawesome';
-import { registerAppIcons } from './fontawesome-icons';
+import { fas } from '@fortawesome/free-solid-svg-icons';
+import { far } from '@fortawesome/free-regular-svg-icons';
+import { fab } from '@fortawesome/free-brands-svg-icons';
 
 import { Button } from './components/button/button';
 import { Card } from './components/card/card';
@@ -31,6 +33,7 @@ import { Select } from './components/select/select';
 })
 export class SharedModule {
   constructor(library: FaIconLibrary) {
-    registerAppIcons(library);
+    // Add entire icon packs to prevent tree-shaking
+    library.addIconPacks(fas, far, fab);
   }
 }

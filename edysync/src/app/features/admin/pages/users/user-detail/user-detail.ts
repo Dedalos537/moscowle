@@ -175,4 +175,10 @@ export class UserDetail implements OnInit, OnDestroy {
   goBack() {
     this.router.navigate(['/admin/users']);
   }
+
+  viewPatientDetail() {
+    if (this.user?.role === 'jugador') {
+      this.router.navigate(['/admin/patients', this.userId]);
+    }
+  }
 }

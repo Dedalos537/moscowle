@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, TemplateRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
@@ -198,6 +198,7 @@ export class UsersList implements OnInit, OnDestroy {
     private headerService: HeaderService,
     private confirmService: ConfirmService,
     private cdr: ChangeDetectorRef,
+    private router: Router,
   ) {}
 
   ngOnInit() {
@@ -442,6 +443,10 @@ export class UsersList implements OnInit, OnDestroy {
         error: () => this.cdr.markForCheck(),
       }),
     );
+  }
+
+  viewPatientDetail(user: UserRow) {
+    this.router.navigate(['/admin/patients', user.id]);
   }
 
   openEditDrawer(user: UserRow) {

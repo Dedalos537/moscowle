@@ -727,5 +727,19 @@
       </div>
     </div>
 
+    <!-- DEBUG PANEL - visible on screen -->
+    <div class="debug-panel" style="position: fixed; bottom: 0; right: 0; width: 500px; max-height: 300px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px 0 0 0; padding: 12px; font-family: monospace; font-size: 11px; color: #0f0; overflow-y: auto; z-index: 9999; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #333;">
+        <strong style="color: #0f0;">🔍 BotPanel Debug Log</strong>
+        <button (click)="debugLog = []" style="background: none; border: 1px solid #333; color: #f88; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;">Clear</button>
+      </div>
+      @for (entry of debugLog; track entry) {
+        <div style="white-space: pre-wrap; word-break: break-word; line-height: 1.3; border-bottom: 1px solid #222; padding: 2px 0;">
+          {{ entry }}
+        </div>
+      } @if (debugLog.length === 0) {
+        <div style="color: #666; text-align: center; padding: 20px;">(no debug entries yet)</div>
+      }
+    </div>
   }
 </div>
