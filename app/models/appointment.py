@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from app.extensions import db
@@ -72,6 +73,9 @@ class Appointment(db.Model, AuditMixin):
     therapy_type = db.Column(db.String(120), nullable=True)
     duration_minutes = db.Column(db.Integer, nullable=True)
 
+    group_id = db.Column(db.Integer, db.ForeignKey('patient_group.id'), nullable=True, index=True)
+    group_session_key = db.Column(db.String(50), nullable=True, index=True)
+
     games = db.Column(db.Text, nullable=True)
     attendance = db.Column(db.String(20), default='pending')
     status_changed_at = db.Column(db.DateTime, nullable=True)
@@ -93,10 +97,8 @@ class Appointment(db.Model, AuditMixin):
         if self.appointment_games:
             return [ag.game.filename for ag in self.appointment_games]
         if self.games:
-            import json
-
             try:
                 return json.loads(self.games)
-            except:
+            except (ValueError, TypeError):
                 return []
         return []

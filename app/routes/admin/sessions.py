@@ -132,6 +132,7 @@ def batch_create_sessions():
     title = data.get('title', '')
     sede = data.get('sede', '')
     session_type = data.get('session_type', 'individual')
+    group_id = data.get('group_id')
 
     if not all([therapist_id, patient_ids, start_time_str, end_time_str]):
         return jsonify({'error': 'Faltan datos requeridos'}), 400
@@ -184,6 +185,8 @@ def batch_create_sessions():
                         end_time=session_end,
                         status='completed' if is_past and unlock_past else 'scheduled',
                         location=sede,
+                        group_id=group_id,
+                        group_session_key=f'{group_id}:{date_str}' if group_id else None,
                         created_at=datetime.utcnow(),
                     )
                     db.session.add(appt)
@@ -243,6 +246,8 @@ def batch_create_sessions():
                         start_time=session_start,
                         end_time=session_end,
                         status='completed' if is_past and unlock_past else 'scheduled',
+                        group_id=group_id,
+                        group_session_key=f'{group_id}:{current_date_iter.strftime("%Y-%m-%d")}' if group_id else None,
                         created_at=datetime.utcnow(),
                     )
                     db.session.add(appt)

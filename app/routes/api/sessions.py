@@ -1309,9 +1309,35 @@ def submit_session_feedback(session_id):
     audit.feedback_progress = progress
     audit.feedback_notes = notes
     audit.feedback_submitted_at = datetime.utcnow()
+
+    propagated = 0
+    if appt.group_session_key and appt.group_id:
+        siblings = Appointment.query.filter(
+            Appointment.group_session_key == appt.group_session_key,
+            Appointment.group_id == appt.group_id,
+            Appointment.id != appt.id,
+            Appointment.therapist_id == appt.therapist_id,
+        ).all()
+        for sibling in siblings:
+            s_audit = SessionAudit.query.filter_by(appointment_id=sibling.id).first()
+            if not s_audit:
+                s_audit = SessionAudit(appointment_id=sibling.id)
+                db.session.add(s_audit)
+            s_audit.feedback_engagement = engagement
+            s_audit.feedback_progress = progress
+            s_audit.feedback_notes = notes
+            s_audit.feedback_submitted_at = datetime.utcnow()
+            propagated += 1
+
     db.session.commit()
 
-    return jsonify({'success': True, 'message': 'Feedback guardado'})
+    return jsonify(
+        {
+            'success': True,
+            'message': 'Feedback guardado',
+            'propagated_sessions': propagated,
+        }
+    )
 
 
 @api_bp.route('/sessions/<int:session_id>/briefing', methods=['GET'])

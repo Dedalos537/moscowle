@@ -740,6 +740,12 @@
       <input type="text" [(ngModel)]="groupForm.name" placeholder="Ej: Grupo Manana A" class="input-field text-sm w-full">
     </div>
 
+    <div>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Terapeuta Asignado</label>
+      <app-select [(ngModel)]="groupForm.therapist_id" [options]="groupTherapistOptions" (ngModelChange)="onGroupTherapistChange($event)" class="w-full"></app-select>
+      <p class="text-[10px] text-on-surface-variant mt-1">Se cargan los pacientes asignados a este terapeuta.</p>
+    </div>
+
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-label-caps text-on-surface-variant mb-1.5 block">Sede</label>
@@ -750,17 +756,17 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio</label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Inicio <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
         <input type="time" [(ngModel)]="groupForm.start_time" class="input-field text-sm w-full">
       </div>
       <div>
-        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin</label>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Hora Fin <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
         <input type="time" [(ngModel)]="groupForm.end_time" class="input-field text-sm w-full">
       </div>
     </div>
 
     <div>
-      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dias de la Semana</label>
+      <label class="text-label-caps text-on-surface-variant mb-1.5 block">Dias de la Semana <span class="text-[9px] font-normal text-on-surface-variant/60">(opcional)</span></label>
       <div class="flex flex-wrap gap-1.5">
         @for (day of [{v:0,l:'Lu'},{v:1,l:'Ma'},{v:2,l:'Mi'},{v:3,l:'Ju'},{v:4,l:'Vi'},{v:5,l:'Sa'},{v:6,l:'Do'}]; track day.v) {
           <label class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-border/30 hover:bg-primary/5 cursor-pointer select-none transition-colors"
@@ -777,16 +783,31 @@
 
     <div>
       <label class="text-label-caps text-on-surface-variant mb-1.5 block">Pacientes del Grupo</label>
+      <div class="relative mb-2">
+        <fa-icon [icon]="['fas', 'search']" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant/50"></fa-icon>
+        <input type="text" [(ngModel)]="groupSearchQuery" placeholder="Buscar paciente..."
+          class="input-field text-sm w-full pl-9">
+      </div>
       <div class="max-h-48 overflow-y-auto border border-border/20 rounded-xl p-2 space-y-1">
-        @for (p of patientOptionsForGroup; track p.id) {
-          <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors"
-            [class.bg-primary-container/10]="groupForm.member_ids?.includes(p.id)">
-            <input type="checkbox" [checked]="groupForm.member_ids?.includes(p.id)"
-              (change)="toggleGroupMember(p.id)" class="rounded text-primary focus:ring-primary" />
-            <span class="text-sm text-on-surface">{{ p.username }}</span>
-          </label>
-        } @empty {
-          <p class="text-xs text-on-surface-variant/50 text-center py-4">No hay pacientes disponibles</p>
+        @if (groupPatientsLoading) {
+          <p class="text-xs text-on-surface-variant/60 text-center py-4"><app-spinner class="inline"></app-spinner> Cargando pacientes...</p>
+        } @else if (groupFilteredPatients.length === 0) {
+          <p class="text-xs text-on-surface-variant/50 text-center py-4">
+            @if (groupForm.therapist_id) {
+              El terapeuta no tiene pacientes asignados
+            } @else {
+              No hay pacientes disponibles
+            }
+          </p>
+        } @else {
+          @for (p of groupFilteredPatients; track p.id) {
+            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-container-high cursor-pointer transition-colors"
+              [class.bg-primary-container/10]="groupForm.member_ids?.includes(p.id)">
+              <input type="checkbox" [checked]="groupForm.member_ids?.includes(p.id)"
+                (change)="toggleGroupMember(p.id)" class="rounded text-primary focus:ring-primary" />
+              <span class="text-sm text-on-surface">{{ p.username }}</span>
+            </label>
+          }
         }
       </div>
     </div>
@@ -827,6 +848,9 @@
             </div>
           </div>
           <div class="space-y-1 text-xs text-on-surface-variant">
+            @if (g.therapist_name) {
+              <p><fa-icon [icon]="['fas', 'user-md']" class="mr-1"></fa-icon>{{ g.therapist_name }}</p>
+            }
             @if (g.sede_name) {
               <p><fa-icon [icon]="['fas', 'map-marker-alt']" class="mr-1"></fa-icon>{{ g.sede_name }}</p>
             }

@@ -111,6 +111,9 @@ export class UsersList implements OnInit, OnDestroy {
   patientGroups: any[] = [];
   groupForm: any = {};
   editingGroupId: number | null = null;
+  groupTherapistPatients: any[] | null = null;
+  groupSearchQuery = '';
+  groupPatientsLoading = false;
 
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
@@ -194,6 +197,10 @@ export class UsersList implements OnInit, OnDestroy {
 
   get therapistOptionsAll(): SelectOption[] {
     return this.therapists.map(t => ({value: t.id, label: t.username}));
+  }
+
+  get groupTherapistOptions(): SelectOption[] {
+    return [{value: null, label: '— Seleccionar terapeuta —'}, ...this.therapistOptionsAll];
   }
 
   get patientSedeOptions(): SelectOption[] {
@@ -847,10 +854,13 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   openGroupModal(group?: any) {
+    this.groupTherapistPatients = null;
+    this.groupSearchQuery = '';
     if (group) {
       this.editingGroupId = group.id;
       this.groupForm = {
         name: group.name,
+        therapist_id: group.therapist_id || null,
         sede_id: group.sede_id,
         start_time: group.start_time || '',
         end_time: group.end_time || '',
@@ -862,6 +872,7 @@ export class UsersList implements OnInit, OnDestroy {
       this.editingGroupId = null;
       this.groupForm = {
         name: '',
+        therapist_id: null,
         sede_id: null,
         start_time: '',
         end_time: '',
@@ -871,6 +882,9 @@ export class UsersList implements OnInit, OnDestroy {
       };
     }
     this.showGroupModal = true;
+    if (this.groupForm.therapist_id) {
+      this.loadTherapistPatients(this.groupForm.therapist_id);
+    }
     this.cdr.markForCheck();
   }
 
@@ -878,6 +892,44 @@ export class UsersList implements OnInit, OnDestroy {
     this.showGroupModal = false;
     this.editingGroupId = null;
     this.groupForm = {};
+    this.groupTherapistPatients = null;
+    this.groupSearchQuery = '';
+  }
+
+  onGroupTherapistChange(therapistId: number) {
+    if (therapistId) {
+      this.loadTherapistPatients(therapistId);
+    } else {
+      this.groupTherapistPatients = null;
+      this.groupForm.member_ids = [];
+      this.cdr.markForCheck();
+    }
+  }
+
+  loadTherapistPatients(therapistId: number) {
+    this.groupPatientsLoading = true;
+    this.cdr.markForCheck();
+    this.subscriptions.add(
+      this.adminService.getPatientsByTherapist(therapistId).subscribe({
+        next: (patients: any[]) => {
+          this.groupTherapistPatients = (patients || []).map((p: any) => ({id: p.id, username: p.username}));
+          const validIds = this.groupTherapistPatients.map((p: any) => p.id);
+          const current = this.groupForm.member_ids || [];
+          const kept = current.filter((id: number) => validIds.includes(id));
+          if (kept.length !== current.length) {
+            this.groupForm.member_ids = kept;
+          }
+          this.groupPatientsLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.groupTherapistPatients = [];
+          this.groupPatientsLoading = false;
+          this.groupForm.member_ids = [];
+          this.cdr.markForCheck();
+        },
+      })
+    );
   }
 
   openPatientDetail() {
@@ -982,6 +1034,7 @@ export class UsersList implements OnInit, OnDestroy {
 
     const payload = {
       name: f.name,
+      therapist_id: f.therapist_id,
       sede_id: f.sede_id,
       start_time: f.start_time,
       end_time: f.end_time,
@@ -1058,6 +1111,14 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   get patientOptionsForGroup(): { id: number; username: string }[] {
-    return this.users.filter(u => u.role === 'jugador').map(u => ({ id: u.id, username: u.username }));
+    return (this.groupTherapistPatients ?? this.users.filter(u => u.role === 'jugador'))
+      .map((u: any) => ({ id: u.id, username: u.username }));
+  }
+
+  get groupFilteredPatients(): { id: number; username: string }[] {
+    const q = (this.groupSearchQuery || '').trim().toLowerCase();
+    const base = this.patientOptionsForGroup;
+    if (!q) return base;
+    return base.filter(p => p.username.toLowerCase().includes(q));
   }
 }

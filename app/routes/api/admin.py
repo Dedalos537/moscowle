@@ -719,6 +719,7 @@ def create_patient_group():
         return jsonify({'success': False, 'message': 'Nombre es requerido'}), 400
     group = PatientGroup(
         name=data['name'],
+        therapist_id=data.get('therapist_id'),
         sede_id=data.get('sede_id'),
         start_time=data.get('start_time'),
         end_time=data.get('end_time'),
@@ -744,6 +745,8 @@ def update_patient_group(group_id):
     data = request.get_json()
     if 'name' in data:
         group.name = data['name']
+    if 'therapist_id' in data:
+        group.therapist_id = data['therapist_id']
     if 'sede_id' in data:
         group.sede_id = data['sede_id']
     if 'start_time' in data:

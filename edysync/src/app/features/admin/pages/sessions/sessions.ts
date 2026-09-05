@@ -538,6 +538,7 @@ export class Sessions implements OnInit, OnDestroy {
 
     if (isGroup && group) {
       payload.patient_ids = group.member_ids || [];
+      payload.group_id = group.id;
     } else if (f.patient_id) {
       payload.patient_id = parseInt(f.patient_id);
     }
