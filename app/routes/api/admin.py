@@ -1,3 +1,5 @@
+import json
+
 from app.models.appointment import Appointment
 from app.models.payment import Payment
 from app.models.user import User, therapist_sede
@@ -696,6 +698,13 @@ def get_capacity_metrics():
 # --- PATIENT GROUPS ---
 
 
+def _group_session_dates(data):
+    dates = data.get('session_dates') or []
+    if isinstance(dates, str):
+        dates = [d for d in dates.split(',') if d]
+    return json.dumps([d for d in dates if d])
+
+
 @api_bp.route('/admin/patient-groups', methods=['GET'])
 @login_required
 def list_patient_groups():
@@ -724,6 +733,7 @@ def create_patient_group():
         start_time=data.get('start_time'),
         end_time=data.get('end_time'),
         work_days=data.get('work_days', '0,1,2,3,4'),
+        session_dates=_group_session_dates(data),
         notes=data.get('notes'),
     )
     if data.get('member_ids'):
@@ -755,6 +765,8 @@ def update_patient_group(group_id):
         group.end_time = data['end_time']
     if 'work_days' in data:
         group.work_days = data['work_days']
+    if 'session_dates' in data:
+        group.session_dates = _group_session_dates(data)
     if 'notes' in data:
         group.notes = data['notes']
     if 'member_ids' in data:

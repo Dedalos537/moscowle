@@ -115,6 +115,13 @@ export class UsersList implements OnInit, OnDestroy {
   groupSearchQuery = '';
   groupPatientsLoading = false;
 
+  groupCalendarMonth: Date = new Date();
+  groupCalendarDays: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
+  groupRangeMode = false;
+  groupRangeStartStr: string | null = null;
+  groupUnlockPast = false;
+  groupMonths = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   showToast = false;
@@ -856,6 +863,9 @@ export class UsersList implements OnInit, OnDestroy {
   openGroupModal(group?: any) {
     this.groupTherapistPatients = null;
     this.groupSearchQuery = '';
+    this.groupRangeMode = false;
+    this.groupRangeStartStr = null;
+    this.groupCalendarMonth = new Date();
     if (group) {
       this.editingGroupId = group.id;
       this.groupForm = {
@@ -865,6 +875,7 @@ export class UsersList implements OnInit, OnDestroy {
         start_time: group.start_time || '',
         end_time: group.end_time || '',
         work_days: group.work_days ? group.work_days.split(',').map(Number) : [0,1,2,3,4],
+        dates: Array.isArray(group.session_dates) ? [...group.session_dates] : [],
         notes: group.notes || '',
         member_ids: group.member_ids || [],
       };
@@ -877,11 +888,13 @@ export class UsersList implements OnInit, OnDestroy {
         start_time: '',
         end_time: '',
         work_days: [0,1,2,3,4],
+        dates: [] as string[],
         notes: '',
         member_ids: [],
       };
     }
     this.showGroupModal = true;
+    this.buildGroupCalendar();
     if (this.groupForm.therapist_id) {
       this.loadTherapistPatients(this.groupForm.therapist_id);
     }
@@ -1039,6 +1052,7 @@ export class UsersList implements OnInit, OnDestroy {
       start_time: f.start_time,
       end_time: f.end_time,
       work_days: f.work_days?.join(','),
+      session_dates: f.dates || [],
       notes: f.notes,
       member_ids: f.member_ids,
     };
@@ -1095,23 +1109,125 @@ export class UsersList implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  toggleGroupDay(day: number) {
-    const days = this.groupForm.work_days || [];
-    const idx = days.indexOf(day);
+  get groupCalendarLabel(): string {
+    return `${this.groupMonths[this.groupCalendarMonth.getMonth()]} ${this.groupCalendarMonth.getFullYear()}`;
+  }
+
+  private buildGroupCalendar() {
+    const year = this.groupCalendarMonth.getFullYear();
+    const month = this.groupCalendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startOfWeek = new Date(firstDay);
+    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const weeks: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
+    let cursor = new Date(startOfWeek);
+
+    for (let w = 0; w < 6; w++) {
+      const week: { date: Date; day: number; selected: boolean; disabled: boolean }[] = [];
+      for (let d = 0; d < 7; d++) {
+        const dateStr = cursor.toISOString().split('T')[0];
+        const isPast = cursor.getTime() < today.getTime() && cursor.getMonth() === month && !this.groupUnlockPast;
+        week.push({
+          date: new Date(cursor),
+          day: cursor.getDate(),
+          selected: this.groupForm.dates?.includes(dateStr),
+          disabled: isPast,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(week);
+      if (cursor.getMonth() !== month && weeks.length >= 4) break;
+    }
+
+    this.groupCalendarDays = weeks;
+  }
+
+  groupPrevMonth() {
+    this.groupCalendarMonth = new Date(this.groupCalendarMonth.getFullYear(), this.groupCalendarMonth.getMonth() - 1, 1);
+    this.buildGroupCalendar();
+    this.cdr.markForCheck();
+  }
+
+  groupNextMonth() {
+    this.groupCalendarMonth = new Date(this.groupCalendarMonth.getFullYear(), this.groupCalendarMonth.getMonth() + 1, 1);
+    this.buildGroupCalendar();
+    this.cdr.markForCheck();
+  }
+
+  toggleGroupDate(dateStr: string) {
+    const dates = this.groupForm.dates || [];
+    const idx = dates.indexOf(dateStr);
     if (idx >= 0) {
-      this.groupForm.work_days = days.filter((d: number) => d !== day);
+      this.groupForm.dates = dates.filter((d: string) => d !== dateStr);
+    } else if (dates.length < 10) {
+      this.groupForm.dates = [...dates, dateStr];
+    }
+    this.buildGroupCalendar();
+    this.cdr.markForCheck();
+  }
+
+  toggleGroupCalendarDate(day: { date: Date; day: number; selected: boolean; disabled: boolean }) {
+    if (day.disabled) return;
+    const dateStr = day.date.toISOString().split('T')[0];
+
+    if (this.groupRangeMode) {
+      if (!this.groupRangeStartStr) {
+        this.groupRangeStartStr = dateStr;
+        this.toggleGroupDate(dateStr);
+      } else {
+        const start = new Date(this.groupRangeStartStr);
+        const end = new Date(dateStr);
+        const minDate = start < end ? this.groupRangeStartStr : dateStr;
+        const maxDate = start < end ? dateStr : this.groupRangeStartStr;
+        const current = new Date(minDate);
+        while (current <= new Date(maxDate)) {
+          const ds = current.toISOString().split('T')[0];
+          if (!(this.groupForm.dates || []).includes(ds) && (this.groupForm.dates || []).length < 10) {
+            this.groupForm.dates = [...(this.groupForm.dates || []), ds];
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        this.groupRangeStartStr = null;
+        this.groupRangeMode = false;
+        this.buildGroupCalendar();
+      }
     } else {
-      this.groupForm.work_days = [...days, day];
+      this.toggleGroupDate(dateStr);
     }
     this.cdr.markForCheck();
   }
 
-  get groupDayLabels(): string[] {
-    return ['Lu','Ma','Mi','Ju','Vi','Sa','Do'];
+  toggleGroupRangeMode() {
+    this.groupRangeMode = !this.groupRangeMode;
+    this.groupRangeStartStr = null;
+    this.cdr.markForCheck();
+  }
+
+  clearGroupRangeSelection() {
+    this.groupRangeMode = false;
+    this.groupRangeStartStr = null;
+    this.cdr.markForCheck();
+  }
+
+  toggleGroupUnlockPast() {
+    this.groupUnlockPast = !this.groupUnlockPast;
+    this.buildGroupCalendar();
+    this.cdr.markForCheck();
+  }
+
+  removeGroupDate(dateStr: string) {
+    this.groupForm.dates = (this.groupForm.dates || []).filter((d: string) => d !== dateStr);
+    this.buildGroupCalendar();
+    this.cdr.markForCheck();
   }
 
   get patientOptionsForGroup(): { id: number; username: string }[] {
-    return (this.groupTherapistPatients ?? this.users.filter(u => u.role === 'jugador'))
+    if (!this.groupForm.therapist_id) return [];
+    return (this.groupTherapistPatients ?? [])
       .map((u: any) => ({ id: u.id, username: u.username }));
   }
 

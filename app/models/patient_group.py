@@ -1,3 +1,5 @@
+import json
+
 from app.extensions import db
 from app.models.base import AuditMixin
 
@@ -18,6 +20,7 @@ class PatientGroup(db.Model, AuditMixin):
     start_time = db.Column(db.String(5), nullable=True)
     end_time = db.Column(db.String(5), nullable=True)
     work_days = db.Column(db.String(20), nullable=True, default='0,1,2,3,4')
+    session_dates = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
 
@@ -26,6 +29,10 @@ class PatientGroup(db.Model, AuditMixin):
     members = db.relationship('User', secondary=patient_group_member, backref='patient_groups', lazy=True)
 
     def to_dict(self):
+        try:
+            session_dates = json.loads(self.session_dates) if self.session_dates else []
+        except (ValueError, TypeError):
+            session_dates = [d for d in self.session_dates.split(',') if d] if self.session_dates else []
         return {
             'id': self.id,
             'name': self.name,
@@ -36,6 +43,7 @@ class PatientGroup(db.Model, AuditMixin):
             'start_time': self.start_time,
             'end_time': self.end_time,
             'work_days': self.work_days,
+            'session_dates': session_dates,
             'notes': self.notes,
             'is_active': self.is_active,
             'member_ids': [m.id for m in self.members],

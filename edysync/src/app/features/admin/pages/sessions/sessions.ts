@@ -499,6 +499,14 @@ export class Sessions implements OnInit, OnDestroy {
       const sede = this.sedes.find(s => s.id === group.sede_id);
       if (sede) this.createForm.sede = sede.name;
     }
+    const groupDates: string[] = Array.isArray(group.session_dates) ? group.session_dates : [];
+    if (groupDates.length) {
+      this.createForm.dates = groupDates.filter(Boolean).slice(0, 10);
+      const notes: Record<string, string> = {};
+      this.createForm.dates.forEach(d => { notes[d] = this.createForm.dayNotes[d] || ''; });
+      this.createForm.dayNotes = notes;
+      this.buildCalendarGrid();
+    }
     this.cdr.markForCheck();
   }
 
