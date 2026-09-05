@@ -6,6 +6,14 @@
 
 @if (!loading && patient) {
   <div class="space-y-6">
+    <div class="flex items-center justify-between mb-2">
+      <button (click)="goBack()"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border/30 bg-surface-container-lowest text-on-surface text-sm font-medium hover:bg-surface-container-high transition-colors cursor-pointer">
+        <fa-icon [icon]="['fas', 'arrow-left']" class="text-xs"></fa-icon>
+        Volver a Pacientes
+      </button>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Patient Info Card -->
       <div class="lg:col-span-1">

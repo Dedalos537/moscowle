@@ -86,7 +86,7 @@
                     </div>
                     <div class="min-w-0">
                       <p class="text-sm font-bold text-on-surface truncate">{{ u.username }}</p>
-                      <p class="text-xs text-on-surface-variant truncate">{{ u.email || '—' }}</p>
+                      <p class="text-xs text-on-surface-variant truncate font-mono">{{ u.login_code || u.email || '—' }}</p>
                     </div>
                   </div>
                 </td>
@@ -175,7 +175,7 @@
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold text-on-surface text-sm sm:text-base truncate">{{ u.username }}</p>
-                  <p class="text-[10px] sm:text-xs text-on-surface-variant truncate">{{ u.email }}</p>
+                  <p class="text-[10px] sm:text-xs text-on-surface-variant truncate font-mono">{{ u.login_code || '—' }}</p>
                 </div>
               </div>
               <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">

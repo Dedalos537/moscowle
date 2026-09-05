@@ -347,7 +347,7 @@ export class UsersList implements OnInit, OnDestroy {
 
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
-      result = result.filter((u) => u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+      result = result.filter((u) => u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.login_code?.toLowerCase().includes(q));
     }
 
     if (this.selectedSedeId) {

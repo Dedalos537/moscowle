@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -48,6 +48,7 @@ export class PatientDetail implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private headerService: HeaderService,
     private adminService: AdminService,
     private http: HttpClient,
@@ -202,5 +203,9 @@ export class PatientDetail implements OnInit, OnDestroy {
     this.showEditPatientModal = false;
     this.patientDetailStatus = '';
     this.cdr.markForCheck();
+  }
+
+  goBack() {
+    this.router.navigate(['/admin/users']);
   }
 }
