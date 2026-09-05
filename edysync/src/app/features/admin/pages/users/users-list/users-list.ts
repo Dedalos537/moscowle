@@ -78,11 +78,11 @@ export class UsersList implements OnInit, OnDestroy {
   activeSedes: Pick<Sede, 'id' | 'name'>[] = [];
   therapists: { id: number; username: string; email: string }[] = [];
 
-  activeFilter = 'all';
+  activeFilter = 'jugador';
   searchQuery = '';
   selectedSedeId: number | null = null;
   selectedTherapistId: number | null = null;
-  selectedStatus: string | null = null;
+  selectedStatus: string | null = 'active';
   loading = true;
 
   stats = { total: 0, active: 0, inactive: 0, patients: 0, therapists: 0, supervisors: 0, admins: 0, retired: 0, debtors: 0 };
@@ -414,15 +414,15 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   get hasActiveFilters(): boolean {
-    return this.searchQuery !== '' || this.activeFilter !== 'all' || this.selectedSedeId !== null || this.selectedTherapistId !== null || this.selectedStatus !== null;
+    return this.searchQuery !== '' || this.activeFilter !== 'jugador' || this.selectedSedeId !== null || this.selectedTherapistId !== null || this.selectedStatus !== 'active';
   }
 
   clearAllFilters() {
     this.searchQuery = '';
-    this.activeFilter = 'all';
+    this.activeFilter = 'jugador';
     this.selectedSedeId = null;
     this.selectedTherapistId = null;
-    this.selectedStatus = null;
+    this.selectedStatus = 'active';
     this.persistFiltersToUrl();
     this.applyFilters();
   }
