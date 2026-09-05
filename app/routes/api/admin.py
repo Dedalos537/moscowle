@@ -305,6 +305,54 @@ def api_admin_update_user():
         return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
 
 
+@api_bp.route('/admin/update-user-status', methods=['POST'])
+@login_required
+def api_admin_update_user_status():
+    try:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+
+        data = request.get_json(silent=True) or {}
+        user_id = data.get('user_id')
+        new_status = data.get('account_status')
+        justification = (data.get('justification') or '').strip()
+
+        if not user_id:
+            return jsonify({'success': False, 'message': 'user_id requerido'}), 400
+        if not new_status:
+            return jsonify({'success': False, 'message': 'account_status requerido'}), 400
+
+        success, result = admin_service.change_user_status(
+            user_id, new_status, justification, changed_by_id=current_user.id
+        )
+        if not success:
+            return jsonify({'success': False, 'message': result}), 400
+
+        return jsonify({'success': True, 'log': result.to_dict() if hasattr(result, 'to_dict') else result})
+    except Exception as e:
+        current_app.logger.error(f'Error updating user status: {str(e)}')
+        return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
+
+@api_bp.route('/admin/user-status-history', methods=['POST'])
+@login_required
+def api_admin_user_status_history():
+    try:
+        if current_user.role != 'admin':
+            return jsonify({'success': False, 'message': 'Acceso denegado'}), 403
+
+        data = request.get_json(silent=True) or {}
+        user_id = data.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'message': 'user_id requerido'}), 400
+
+        logs = admin_service.list_user_status_logs(user_id)
+        return jsonify({'success': True, 'logs': logs})
+    except Exception as e:
+        current_app.logger.error(f'Error fetching user status history: {str(e)}')
+        return jsonify({'success': False, 'message': f'Server Error: {str(e)}'}), 500
+
+
 @api_bp.route('/admin/delete-user', methods=['POST'])
 @login_required
 def api_admin_delete_user():

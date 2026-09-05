@@ -68,7 +68,6 @@
                 <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Rol</th>
                 <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Sede</th>
                 <th class="px-4 py-3.5 text-left text-label-caps text-on-surface-variant">Estado</th>
-                <th class="px-4 py-3.5 text-center text-label-caps text-on-surface-variant">Activo</th>
                 <th class="px-4 py-3.5 text-right text-label-caps text-on-surface-variant">Acciones</th>
               </tr>
           </thead>
@@ -108,26 +107,18 @@
                   }
                 </td>
                 <td class="px-4 py-3.5">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md"
-                    [class]="getStatusClass(u.account_status)">
+                  <button (click)="openStatusModal(u)"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-md cursor-pointer transition-all hover:brightness-90"
+                    [class]="getStatusClass(u.account_status)"
+                    title="Cambiar estado">
                     <span class="w-1.5 h-1.5 rounded-full"
                       [class.bg-primary]="u.account_status === 'active'"
                       [class.bg-tertiary]="u.account_status === 'inactive'"
                       [class.bg-on-surface-variant]="u.account_status === 'retired'"
                       [class.bg-error]="u.account_status === 'debtor'"></span>
                     {{ getStatusLabel(u.account_status) }}
-                  </span>
-                </td>
-                <td class="px-4 py-3.5">
-                  <div class="flex justify-center w-full">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" class="sr-only peer" [checked]="u.is_active"
-                        (change)="toggleActive(u, $event)" />
-                      <div
-                        class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary">
-                      </div>
-                    </label>
-                  </div>
+                    <fa-icon [icon]="['fas', 'chevron-down']" class="text-[10px] opacity-60"></fa-icon>
+                  </button>
                 </td>
                 <td class="px-4 py-3.5">
                   <div class="flex justify-end gap-1">
@@ -148,7 +139,7 @@
               </tr>
             } @empty {
               <tr>
-                <td colspan="6" class="px-4 py-16 text-center">
+                <td colspan="5" class="px-4 py-16 text-center">
                   <fa-icon [icon]="['fas', 'user-slash']" class="text-4xl text-on-surface-variant mb-2 block"></fa-icon>
                   <p class="text-sm font-medium text-on-surface-variant">No se encontraron usuarios</p>
                   <p class="text-xs text-on-surface-variant mt-1">Intenta ajustar los filtros de búsqueda.</p>
@@ -178,13 +169,6 @@
                   <p class="text-[10px] sm:text-xs text-on-surface-variant truncate font-mono">{{ u.login_code || '—' }}</p>
                 </div>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                <input type="checkbox" class="sr-only peer" [checked]="u.is_active"
-                  (change)="toggleActive(u, $event)" />
-                <div
-                  class="w-8 h-4.5 bg-surface-container-highest peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border after:border-border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-primary">
-                </div>
-              </label>
             </div>
           </div>
           <div class="p-3 sm:p-4 space-y-2 sm:space-y-3">
@@ -194,10 +178,13 @@
                   [ngClass]="getRoleBadgeClass(u.role)">{{ getRoleBadge(u.role) }}</span>
                 <span class="text-on-surface-variant/30">|</span>
                 <span class="text-[10px] sm:text-xs text-on-surface-variant">{{ getSedeName(u) }}</span>
-                <span class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md"
-                  [ngClass]="getStatusClass(u.account_status)">
+                <button (click)="openStatusModal(u)"
+                  class="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-md cursor-pointer transition-all hover:brightness-90"
+                  [ngClass]="getStatusClass(u.account_status)"
+                  title="Cambiar estado">
                   {{ getStatusLabel(u.account_status) }}
-                </span>
+                  <fa-icon [icon]="['fas', 'chevron-down']" class="text-[8px] opacity-60"></fa-icon>
+                </button>
               </div>
               <div class="flex gap-1">
                 @if (u.role === 'jugador') {
@@ -659,6 +646,92 @@
     </button>
   </div>
 </ng-template>
+
+<!-- Cambiar Estado Modal -->
+<app-modal [isOpen]="showStatusModal" [title]="'Cambiar Estado del Usuario'" (close)="closeStatusModal()" [allowOverflow]="true">
+  @if (statusModalUser) {
+    <div class="space-y-4">
+      <div class="rounded-xl bg-surface-container-high/50 border border-border/20 p-3 sm:p-4">
+        <p class="text-sm font-bold text-on-surface truncate">{{ statusModalUser.username }}</p>
+        <p class="text-xs text-on-surface-variant font-mono mt-0.5">{{ statusModalUser.login_code || statusModalUser.email || '—' }}</p>
+      </div>
+
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">Nuevo Estado</label>
+        <app-select [(ngModel)]="statusModalStatus" [options]="accountStatusOptions" class="w-full"></app-select>
+      </div>
+
+      <div class="rounded-xl bg-primary-container/10 border border-primary/20 p-3 text-xs text-on-surface">
+        <fa-icon [icon]="['fas', 'info-circle']" class="text-primary-container mr-1"></fa-icon>
+        Se va a cambiar el estado de <strong>{{ statusModalUser.username }}</strong> de
+        <strong>{{ getStatusLabel(statusModalUser.account_status) }}</strong> a
+        <strong>{{ getStatusLabel(statusModalStatus) }}</strong>.
+      </div>
+
+      <div>
+        <label class="text-label-caps text-on-surface-variant mb-1.5 block">
+          Justificación <span class="text-on-surface-variant/50 font-normal">(opcional)</span>
+        </label>
+        <textarea [(ngModel)]="statusModalJustification"
+          class="input-field text-sm w-full min-h-20 resize-y"
+          placeholder="Ej: Deudor desde hace 2 meses, se le dio de baja temporalmente..."></textarea>
+        <p class="text-[10px] text-on-surface-variant/60 mt-1">Se registrará junto con la fecha y hora del cambio.</p>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-label-caps text-on-surface-variant block">Historial de Cambios</label>
+          @if (statusHistoryLoading) {
+            <fa-icon [icon]="['fas', 'spinner']" class="text-xs text-on-surface-variant animate-spin"></fa-icon>
+          }
+        </div>
+        @if (statusHistory.length === 0) {
+          <p class="text-xs text-on-surface-variant/60 text-center py-4 bg-surface-container-high/30 rounded-xl">
+            Sin cambios registrados hasta ahora
+          </p>
+        } @else {
+          <div class="max-h-44 overflow-y-auto border border-border/20 rounded-xl divide-y divide-border/10 bg-surface-container-high/30">
+            @for (log of statusHistory; track log.id) {
+              <div class="p-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-xs font-semibold text-on-surface">
+                    {{ getStatusLabel(log.old_status) }}
+                    <fa-icon [icon]="['fas', 'arrow-right']" class="text-[10px] text-on-surface-variant mx-1"></fa-icon>
+                    {{ getStatusLabel(log.new_status) }}
+                  </p>
+                  <p class="text-[10px] text-on-surface-variant whitespace-nowrap">{{ formatStatusTimestamp(log.changed_at) }}</p>
+                </div>
+                <p class="text-[10px] text-on-surface-variant mt-0.5">
+                  @if (log.changed_by_username) {
+                    <span class="font-medium">{{ log.changed_by_username }}</span> ·
+                  }
+                  @if (log.justification) {
+                    {{ log.justification }}
+                  } @else {
+                    Sin justificación
+                  }
+                </p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div modal-footer>
+        <div class="flex justify-end gap-2 w-full">
+          <button (click)="closeStatusModal()" class="btn-ghost text-sm cursor-pointer">Cancelar</button>
+          <button (click)="confirmStatusChange()" [disabled]="statusModalSaving || statusModalStatus === statusModalUser.account_status"
+            class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-fixed-dim transition-colors shadow-soft disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
+            @if (statusModalSaving) {
+              <fa-icon [icon]="['fas', 'spinner']" class="animate-spin mr-1"></fa-icon>
+            }
+            Confirmar Cambio
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</app-modal>
 
 <!-- Patient Groups Modal -->
 <app-modal [isOpen]="showGroupModal" [title]="editingGroupId ? 'Editar Grupo' : 'Nuevo Grupo de Pacientes'" (close)="closeGroupModal()" size="lg">

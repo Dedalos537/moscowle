@@ -296,6 +296,25 @@ class AdminService:
             user.role = data['role']
         if 'is_active' in data:
             user.is_active = bool(data['is_active'])
+        if 'account_status' in data:
+            from app.models.user_status_log import UserStatusLog
+
+            new_status = (data['account_status'] or 'active').strip().lower()
+            if new_status not in ('active', 'inactive', 'debtor', 'retired'):
+                return False, 'Estado inválido'
+            old_status = user.account_status or 'active'
+            user.account_status = new_status
+            if old_status != new_status:
+                justification = (data.get('justification') or '').strip()
+                db.session.add(
+                    UserStatusLog(
+                        user_id=user.id,
+                        old_status=old_status,
+                        new_status=new_status,
+                        justification=justification or None,
+                        changed_by_id=data.get('changed_by_id'),
+                    )
+                )
 
         if 'sex' in data:
             user.sex = data['sex']
@@ -445,6 +464,44 @@ class AdminService:
 
         db.session.commit()
         return True, user
+
+    def change_user_status(self, user_id, new_status, justification='', changed_by_id=None):
+        from datetime import UTC
+
+        from app.models.user_status_log import UserStatusLog
+
+        user = User.query.get(user_id)
+        if not user:
+            return False, 'Usuario no encontrado'
+
+        new_status = (new_status or '').strip().lower() or 'active'
+        if new_status not in ('active', 'inactive', 'debtor', 'retired'):
+            return False, 'Estado inválido'
+
+        old_status = user.account_status or 'active'
+        if old_status == new_status:
+            return False, 'El usuario ya tiene ese estado'
+
+        user.account_status = new_status
+        log = UserStatusLog(
+            user_id=user.id,
+            old_status=old_status,
+            new_status=new_status,
+            justification=(justification or '').strip() or None,
+            changed_by_id=changed_by_id,
+            changed_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        db.session.add(log)
+        db.session.commit()
+        return True, log
+
+    def list_user_status_logs(self, user_id, limit=50):
+        from app.models.user_status_log import UserStatusLog
+
+        logs = (
+            UserStatusLog.query.filter_by(user_id=user_id).order_by(UserStatusLog.changed_at.desc()).limit(limit).all()
+        )
+        return [log.to_dict() for log in logs]
 
     def list_users(self, role=None):
         from collections import defaultdict

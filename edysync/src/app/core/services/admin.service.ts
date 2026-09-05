@@ -47,6 +47,18 @@ export class AdminService {
     return this.http.post<ApiResponse>('/api/admin/update-user', data);
   }
 
+  updateUserStatus(userId: number, accountStatus: string, justification?: string): Observable<ApiResponse> {
+    return this.http.post<ApiResponse>('/api/admin/update-user-status', {
+      user_id: userId,
+      account_status: accountStatus,
+      justification: justification || '',
+    });
+  }
+
+  getUserStatusHistory(userId: number): Observable<{ success: boolean; logs: any[] }> {
+    return this.http.post<{ success: boolean; logs: any[] }>('/api/admin/user-status-history', { user_id: userId });
+  }
+
   updatePatientDetails(userId: number, data: Record<string, any>): Observable<ApiResponse> {
     return this.http.patch<ApiResponse>(`/admin/api/users/${userId}/patient-details`, data);
   }

@@ -51,6 +51,15 @@ interface UserRow {
   work_days?: string;
 }
 
+interface StatusLogRow {
+  id: number;
+  old_status: string;
+  new_status: string;
+  justification: string;
+  changed_by_username: string | null;
+  changed_at: string;
+}
+
 @Component({
   selector: 'app-users-list',
   standalone: true,
@@ -106,6 +115,14 @@ export class UsersList implements OnInit, OnDestroy {
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   showToast = false;
+
+  showStatusModal = false;
+  statusModalUser: UserRow | null = null;
+  statusModalStatus = 'active';
+  statusModalJustification = '';
+  statusModalSaving = false;
+  statusHistory: StatusLogRow[] = [];
+  statusHistoryLoading = false;
 
   private sedeLookup: Record<string, string> = {};
   private subscriptions = new Subscription();
@@ -410,28 +427,82 @@ export class UsersList implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
-  toggleActive(user: UserRow, event: Event) {
-    const checked = (event.target as HTMLInputElement).checked;
-    const prev = user.is_active;
-    user.is_active = checked;
+  openStatusModal(user: UserRow) {
+    this.statusModalUser = user;
+    this.statusModalStatus = user.account_status || 'active';
+    this.statusModalJustification = '';
+    this.statusHistory = [];
+    this.showStatusModal = true;
+    this.loadStatusHistory(user.id);
+    this.cdr.markForCheck();
+  }
+
+  closeStatusModal() {
+    this.showStatusModal = false;
+    this.statusModalUser = null;
+    this.cdr.markForCheck();
+  }
+
+  loadStatusHistory(userId: number) {
+    this.statusHistoryLoading = true;
     this.subscriptions.add(
-      this.adminService.updateUser({ id: user.id, is_active: checked }).subscribe({
+      this.adminService.getUserStatusHistory(userId).subscribe({
         next: (res: any) => {
-          if (res.success) {
-            this.showSuccessToast(checked ? 'Usuario activado' : 'Usuario desactivado');
-          } else {
-            user.is_active = prev;
-            this.showErrorToast(res.message || 'Error al actualizar');
-          }
+          this.statusHistory = res.logs || [];
+          this.statusHistoryLoading = false;
           this.cdr.markForCheck();
         },
         error: () => {
-          user.is_active = prev;
-          this.showErrorToast('Error de conexion');
+          this.statusHistoryLoading = false;
           this.cdr.markForCheck();
         },
       }),
     );
+  }
+
+  confirmStatusChange() {
+    const user = this.statusModalUser;
+    if (!user || this.statusModalSaving) return;
+    if (this.statusModalStatus === user.account_status) {
+      this.showErrorToast('El usuario ya tiene ese estado');
+      return;
+    }
+    this.statusModalSaving = true;
+    this.subscriptions.add(
+      this.adminService
+        .updateUserStatus(user.id, this.statusModalStatus, this.statusModalJustification)
+        .subscribe({
+          next: (res: any) => {
+            this.statusModalSaving = false;
+            if (res.success) {
+              user.account_status = this.statusModalStatus;
+              this.statusModalJustification = '';
+              this.showSuccessToast('Estado del usuario actualizado');
+              this.loadStatusHistory(user.id);
+            } else {
+              this.showErrorToast(res.message || 'Error al actualizar el estado');
+            }
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.statusModalSaving = false;
+            this.showErrorToast('Error de conexion');
+            this.cdr.markForCheck();
+          },
+        }),
+    );
+  }
+
+  formatStatusTimestamp(iso: string): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('es-PE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   assignTherapist(user: UserRow) {
