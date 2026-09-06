@@ -606,6 +606,12 @@ export class BotPanel implements OnInit, OnDestroy {
     return icons[type] || 'circle';
   }
 
+  activityIconDef(type: string): [string, string] {
+    if (type === 'telegram') return ['fab', 'telegram'];
+    const icons: Record<string, string> = { api: 'code', error: 'exclamation-triangle', system: 'cog' };
+    return ['fas', icons[type] || 'circle'];
+  }
+
   activityColor(type: string): string {
     const colors: Record<string, string> = { telegram: '#229ED9', api: '#3b82f6', error: '#ef4444', system: '#94a3b8' };
     return colors[type] || '#94a3b8';
