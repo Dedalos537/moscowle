@@ -303,6 +303,90 @@
       }
     </div>
   </section>
+
+  <!-- ═══════════════════════ HUELLA DIGITAL ═══════════════════════ -->
+  @if (authSupported()) {
+    <section class="settings-card">
+      <div class="settings-card__header">
+        <div class="settings-card__icon settings-card__icon--blue">
+          <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
+        </div>
+        <div>
+          <h2 class="settings-card__title">Huella digital</h2>
+          <p class="settings-card__subtitle">Ingresa a tu cuenta con tu huella o sensor del dispositivo</p>
+        </div>
+      </div>
+
+      <div class="settings-card__body">
+        <div class="setting-item setting-item--highlight">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--blue">
+              <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
+            </div>
+            <div class="setting-item__text">
+              <span class="setting-item__label">Dispositivos registrados</span>
+              <span class="setting-item__desc">
+                @if (wfLoading) { Cargando… }
+                @else if (wfCredentials.length === 0) { Aún no tienes dispositivos registrados }
+                @else { {{ wfCredentials.length }} dispositivo(s) activo(s) }
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-divider"></div>
+
+        <div class="setting-item">
+          <div class="setting-item__left">
+            <div class="setting-item__icon setting-item__icon--primary">
+              <fa-icon [icon]="['fas', 'mobile-alt']"></fa-icon>
+            </div>
+            <div class="setting-item__text">
+              <span class="setting-item__label">Nombre del dispositivo</span>
+              <span class="setting-item__desc">Opcional, ej: "Mi laptop"</span>
+              <input type="text" [(ngModel)]="wfDeviceName"
+                class="mt-2 w-full px-3 py-2 rounded-lg bg-surface-container-low border border-border/50 outline-none text-sm text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Nombre del dispositivo (opcional)">
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="mt-4 w-full py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 cursor-pointer bg-primary text-on-primary transition-opacity"
+          [class.opacity-60]="wfRegistering"
+          (click)="registerFingerprint()">
+          @if (wfRegistering) {
+            <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
+            Registrando...
+          } @else {
+            <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
+            REGISTRAR DISPOSITIVO
+          }
+        </button>
+
+        @if (wfCredentials.length > 0) {
+          <div class="setting-divider"></div>
+          <div class="mt-2 space-y-2">
+            @for (cred of wfCredentials; track cred.id) {
+              <div class="flex items-center justify-between rounded-lg px-3 py-2.5 bg-surface-container-low border border-border/50">
+                <div class="flex items-center gap-3">
+                  <fa-icon [icon]="['fas', 'mobile-alt']" class="text-outline"></fa-icon>
+                  <div>
+                    <div class="text-sm font-semibold text-on-surface">{{ cred.device_name || 'Dispositivo' }}</div>
+                    <div class="text-xs text-outline">{{ cred.created_at | date: 'dd/MM/yyyy' }}</div>
+                  </div>
+                </div>
+                <button type="button" class="text-error cursor-pointer bg-transparent border-none"
+                  [attr.aria-label]="'Eliminar ' + (cred.device_name || 'dispositivo')"
+                  (click)="deleteCredential(cred.id)">
+                  <fa-icon [icon]="['fas', 'trash']"></fa-icon>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
   </div>
 
   <!-- Save button -->

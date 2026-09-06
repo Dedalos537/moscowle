@@ -57,18 +57,61 @@ export class AuthService {
       }),
       tap(res => {
         if (res.success) {
-          localStorage.setItem('user', JSON.stringify(res.user));
-          if (res.csrf_token) {
-            localStorage.setItem('csrf_token', res.csrf_token);
-          }
-          if (res.access_token) {
-            localStorage.setItem('access_token', res.access_token);
-          }
-          this.currentUserSubject.next(res.user);
-          this.preload.preloadFor(res.user?.role);
+          this._persistSession(res);
         }
       })
     );
+  }
+
+  webauthnLoginOptions(identifier: string): Observable<any> {
+    return this.http.post<any>('/api/auth/webauthn/login/options', { identifier }).pipe(
+      timeout(15000),
+      catchError(err => {
+        if (err.name === 'TimeoutError') {
+          throw { error: { message: 'El servidor tardó demasiado en responder. Intenta de nuevo.' } };
+        }
+        throw err;
+      })
+    );
+  }
+
+  webauthnLoginVerify(identifier: string, credential: any): Observable<any> {
+    return this.http.post<any>('/api/auth/webauthn/login/verify', { identifier, credential }).pipe(
+      timeout(60000),
+      tap(res => {
+        if (res.success) {
+          this._persistSession(res);
+        }
+      })
+    );
+  }
+
+  webauthnRegisterOptions(): Observable<any> {
+    return this.http.post<any>('/api/auth/webauthn/register/options', {}).pipe(timeout(15000));
+  }
+
+  webauthnRegisterVerify(credential: any, device_name?: string): Observable<any> {
+    return this.http.post<any>('/api/auth/webauthn/register/verify', { credential, device_name }).pipe(timeout(60000));
+  }
+
+  getCredentials(): Observable<any> {
+    return this.http.get<any>('/api/auth/webauthn/credentials').pipe(timeout(15000));
+  }
+
+  deleteCredential(id: number): Observable<any> {
+    return this.http.delete<any>(`/api/auth/webauthn/credentials/${id}`).pipe(timeout(15000));
+  }
+
+  private _persistSession(res: any): void {
+    localStorage.setItem('user', JSON.stringify(res.user));
+    if (res.csrf_token) {
+      localStorage.setItem('csrf_token', res.csrf_token);
+    }
+    if (res.access_token) {
+      localStorage.setItem('access_token', res.access_token);
+    }
+    this.currentUserSubject.next(res.user);
+    this.preload.preloadFor(res.user?.role);
   }
 
   logout(): Observable<any> {

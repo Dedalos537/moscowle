@@ -19,3 +19,5 @@ from app.models.telegram_user import TelegramUser as TelegramUser
 from app.models.user import *
 from app.models.user_session import UserSession as UserSession
 from app.models.user_status_log import UserStatusLog as UserStatusLog
+from app.models.webauthn import WebAuthnChallenge as WebAuthnChallenge
+from app.models.webauthn import WebAuthnCredential as WebAuthnCredential

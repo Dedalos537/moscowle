@@ -184,6 +184,13 @@ class Config:
     # ========== APP-SECRET (for App-Key validation) ==========
     APP_SECRET_KEY = os.getenv('APP_SECRET_KEY', 'dev-app-key-change-in-production')
 
+    # ========== WEBAUTHN / FINGERPRINT LOGIN ==========
+    WEBAUTHN_RP_ID = os.getenv('WEBAUTHN_RP_ID', 'api-centrojuanpabloii.online')
+    WEBAUTHN_RP_NAME = os.getenv('WEBAUTHN_RP_NAME', 'Centro Juan Pablo II')
+    WEBAUTHN_ORIGINS = os.getenv(
+        'WEBAUTHN_ORIGINS', f'https://{os.getenv("WEBAUTHN_RP_ID", "api-centrojuanpabloii.online")}'
+    )
+
     # ========== CSRF CONFIGURATION ==========
     WTF_CSRF_ENABLED = os.getenv('WTF_CSRF_ENABLED', 'True') == 'True'
     WTF_CSRF_TIME_LIMIT = int(os.getenv('WTF_CSRF_TIME_LIMIT', '3600'))

@@ -97,6 +97,23 @@
                   INICIAR SESION
               }
            </button>
+
+           @if (authSupported()) {
+             <div class="webauthn-separator mt-6 flex items-center gap-3">
+               <span class="flex-1 h-px bg-border/50"></span>
+               <span class="text-xs text-outline transition-colors">o</span>
+               <span class="flex-1 h-px bg-border/50"></span>
+             </div>
+
+             <button type="button" id="webauthn-btn"
+               [disabled]="isLoading"
+               (click)="loginWithFingerprint(); dismissGuide()"
+               class="mt-4 w-full py-3.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 border cursor-pointer"
+               [class.opacity-60]="isLoading">
+               <fa-icon [icon]="['fas', 'fingerprint']" class="text-xl"></fa-icon>
+               INGRESAR CON HUELLA
+             </button>
+           }
       </form>
 
        <div class="mt-8 pt-6 border-t border-border/50 text-center">

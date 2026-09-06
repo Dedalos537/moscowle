@@ -3,11 +3,12 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRe
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FloatingUiService } from '../../../../core/services/floating-ui.service';
 import { Alert } from '../../../../shared/components/alert/alert';
 import { PreferencesMenu } from '../../../../shared/components/preferences-menu/preferences-menu';
+import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shared/utils/webauthn';
 
 @Component({
   selector: 'app-login',
@@ -224,5 +225,67 @@ export class Login implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     }));
+  }
+
+  authSupported(): boolean {
+    return typeof window !== 'undefined' && !!window.PublicKeyCredential;
+  }
+
+  async loginWithFingerprint() {
+    this.emailError = '';
+    this.error = null;
+    this.alertMessage = '';
+    if (!this.email.trim()) {
+      this.emailError = 'Escribe tu correo o código antes de usar la huella';
+      this.cdr.markForCheck();
+      return;
+    }
+    this.isLoading = true;
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    try {
+      const res = await firstValueFrom(this.authService.webauthnLoginOptions(this.email.trim()));
+      if (!res?.success || !res.options) {
+        throw { error: { message: res?.error || 'No se pudo iniciar el ingreso con huella.' } };
+      }
+      const options = res.options;
+      options.challenge = base64urlToBuffer(options.challenge);
+      if (options.userHandle) {
+        options.userHandle = base64urlToBuffer(options.userHandle);
+      }
+      if (options.allowCredentials?.length) {
+        options.allowCredentials = options.allowCredentials.map((c: { id: string; type: string }) => ({
+          ...c,
+          id: base64urlToBuffer(c.id),
+        }));
+      }
+      const credential = await navigator.credentials.get({ publicKey: options });
+      if (!credential) {
+        throw { error: { message: 'Autenticación cancelada por el usuario.' } };
+      }
+      const serialized = serializeWebauthnCredential(credential as PublicKeyCredential);
+      const verify = await firstValueFrom(this.authService.webauthnLoginVerify(this.email.trim(), serialized));
+      if (!verify?.success) {
+        throw { error: { message: verify?.error || 'La huella no fue válida.' } };
+      }
+      const route = verify.user?.role === 'admin' ? '/admin/dashboard'
+                  : verify.user?.role === 'supervisor' ? '/admin/dashboard'
+                  : verify.user?.role === 'terapista' ? '/therapist/dashboard'
+                  : verify.user?.role === 'jugador' ? '/patient/dashboard'
+                  : '/';
+      this.router.navigate([route]).finally(() => {
+        this.isLoading = false;
+        this.loading = false;
+        this.cdr.markForCheck();
+      });
+    } catch (err: any) {
+      this.isLoading = false;
+      this.loading = false;
+      this.error = err?.error?.message || 'No se pudo iniciar sesión con huella. Intenta con tu contraseña.';
+      this.alertType = 'error';
+      this.alertMessage = this.error ?? '';
+      this.cdr.markForCheck();
+    }
   }
 }
