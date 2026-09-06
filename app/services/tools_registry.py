@@ -34,6 +34,7 @@ def _last_day_of_month(year, month):
     next_month = datetime(year, month, 1) + timedelta(days=31)
     return (next_month.replace(day=1) - timedelta(days=1)).day
 
+
 TOOL_REGISTRY = {}
 
 # Write tools that are safe to run without an explicit confirmation gate.
@@ -59,6 +60,7 @@ CORE_TOOL_NAMES = [
     'search_patients',
     'list_patients',
     'list_users',
+    'get_therapist_patients',
     'get_patient_detail',
     'get_user_detail',
     'create_user',
@@ -261,6 +263,52 @@ def handle_list_users(role=None, **kwargs):
 
 
 @tool(
+    name='get_therapist_patients',
+    description=(
+        'Cantidad y lista de pacientes (jugadores) que tiene asignados un terapeuta. '
+        'Uso tipico: "cuantos usuarios tiene el terapeuta Milagros" '
+        '-> get_therapist_patients({"therapist_name": "Milagros"})'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'therapist_name': {
+                'type': 'string',
+                'description': 'Nombre o email del terapeuta (minimo 2 caracteres)',
+            },
+        },
+        'required': ['therapist_name'],
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR | {'terapista'},
+)
+def handle_get_therapist_patients(therapist_name=None, **kwargs):
+    name = (str(therapist_name or '')).strip()
+    if len(name) < 2:
+        return {
+            'error': 'Parametro "therapist_name" requerido (minimo 2 caracteres). '
+            'Ejemplo: get_therapist_patients({"therapist_name": "Milagros"})'
+        }
+    therapist = User.query.filter(
+        User.role == 'terapista',
+        db.or_(User.username.ilike(f'%{name}%'), User.email.ilike(f'%{name}%')),
+    ).first()
+    if not therapist:
+        return {'error': 'No se encontro un terapeuta con ese nombre.'}
+    patients = (
+        User.query.filter_by(role='jugador', assigned_therapist_id=therapist.id, is_active=True)
+        .order_by(User.username)
+        .all()
+    )
+    return {
+        'success': True,
+        'therapist': {'id': therapist.id, 'username': therapist.username, 'email': therapist.email},
+        'count': len(patients),
+        'patients': [{'id': p.id, 'username': p.username, 'email': p.email} for p in patients],
+    }
+
+
+@tool(
     name='get_patient_detail',
     description='Detalle completo de un paciente: datos, diagnostico, apoderado, pagos recientes, sesiones recientes.',
     parameters={
@@ -424,7 +472,10 @@ def handle_payment_history(patient_id, **kwargs):
             },
             'reference': {'type': 'string', 'description': 'Numero de operacion o referencia'},
             'payment_date': {'type': 'string', 'description': 'Fecha del pago en formato YYYY-MM-DD'},
-            'receipt_url': {'type': 'string', 'description': 'Ruta o URL del voucher/comprobante de pago (ej: vouchers/xxx.jpg)'},
+            'receipt_url': {
+                'type': 'string',
+                'description': 'Ruta o URL del voucher/comprobante de pago (ej: vouchers/xxx.jpg)',
+            },
         },
         'required': ['patient_id', 'amount', 'method', 'payment_date'],
     },
@@ -1738,8 +1789,7 @@ def handle_get_notifications(category=None, **kwargs):
 )
 def handle_mark_notifications_read(**kwargs):
     try:
-        resp = _api_post('/api/notifications/mark-read', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
-        data = resp.get_json() if resp else {}
+        _api_post('/api/notifications/mark-read', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         return {'success': True, 'message': 'Notificaciones marcadas como leidas'}
     except Exception as e:
         return {'error': str(e)}
@@ -1928,7 +1978,10 @@ def handle_get_contracts_filtered(**kwargs):
             'reference': {'type': 'string', 'description': 'Número de operación'},
             'payment_notes': {'type': 'string', 'description': 'Notas del pago'},
             'discount': {'type': 'number', 'description': 'Descuento aplicado', 'default': 0},
-            'receipt_url': {'type': 'string', 'description': 'Ruta o URL de la imagen del voucher (ej: receipts/xxx.jpg)'},
+            'receipt_url': {
+                'type': 'string',
+                'description': 'Ruta o URL de la imagen del voucher (ej: receipts/xxx.jpg)',
+            },
             'is_free_month': {'type': 'boolean', 'description': 'Marcar como mes gratis', 'default': False},
         },
         'required': ['installment_id', 'amount', 'method', 'payment_date'],
