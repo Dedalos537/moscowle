@@ -8,10 +8,20 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.extensions import db
 from app.models import KanbanAttachment, KanbanTask, User
+from app.services.notification_service import NotificationService
 
 kanban_bp = Blueprint('kanban', __name__, url_prefix='/api/kanban')
 
 logger = logging.getLogger('app.kanban')
+
+_notification_service = NotificationService()
+
+KANBAN_COLUMN_LABELS = {
+    'todo': 'Por hacer',
+    'in-progress': 'En progreso',
+    'review': 'Revisión',
+    'done': 'Hecho',
+}
 
 ALLOWED_COLUMNS = ('todo', 'in-progress', 'review', 'done')
 ALLOWED_PRIORITIES = (1, 2, 3)
@@ -108,6 +118,43 @@ def _get_task_or_404(task_id):
     return task, None
 
 
+def _kanban_recipient(task):
+    target_id = task.assigned_to_id or task.created_by_id
+    if not target_id:
+        return None
+    return db.session.get(User, target_id)
+
+
+def _kanban_link(recipient):
+    if recipient.role in ('admin', 'supervisor'):
+        return '/app/admin/kanban'
+    if recipient.role in ('terapista', 'terapeuta'):
+        return '/app/therapist/kanban'
+    return '/app/patient/kanban'
+
+
+def _notify_kanban_task(task, event_type, title, message, priority='normal'):
+    recipient = _kanban_recipient(task)
+    if not recipient or not recipient.is_active:
+        return
+    try:
+        _notification_service.notify_user(
+            user_id=recipient.id,
+            title=title,
+            message=message,
+            notif_type='info',
+            link=_kanban_link(recipient),
+            category='system',
+            priority=priority,
+            icon='tasks',
+            event_type=event_type,
+            event_kwargs={'task_id': task.id},
+            metadata_json={'task_id': task.id, 'column': task.column},
+        )
+    except Exception:
+        logger.exception('Error notifying kanban task %s', task.id)
+
+
 @kanban_bp.route('/tasks', methods=['GET'])
 @jwt_required()
 def list_tasks():
@@ -201,6 +248,13 @@ def create_task():
         )
         db.session.add(task)
         db.session.commit()
+        if task.assigned_to_id and task.assigned_to_id != user.id:
+            _notify_kanban_task(
+                task,
+                'task_created',
+                'Nueva tarea asignada',
+                f'Te asignaron una nueva tarea: {task.title}',
+            )
         return jsonify(_task_dict(task)), 201
     except Exception as e:
         db.session.rollback()
@@ -219,6 +273,7 @@ def update_task(task_id):
         return err
     try:
         data = request.get_json(silent=True) or {}
+        old_column = task.column
         editable = {
             'title': lambda v: (v or '').strip() or None,
             'therapy_type': lambda v: v or None,
@@ -247,6 +302,18 @@ def update_task(task_id):
             task.is_expired = False
         task.updated_at = _now()
         db.session.commit()
+        if old_column != task.column and task.column in KANBAN_COLUMN_LABELS:
+            _notify_kanban_task(
+                task,
+                'task_moved',
+                'Tarea de kanban actualizada',
+                (
+                    f'Tarea "{task.title}" cambió de '
+                    f'"{KANBAN_COLUMN_LABELS.get(old_column, old_column)}" a '
+                    f'"{KANBAN_COLUMN_LABELS.get(task.column, task.column)}"'
+                ),
+                priority='high',
+            )
         return jsonify(_task_dict(task))
     except Exception as e:
         db.session.rollback()
@@ -264,8 +331,17 @@ def delete_task(task_id):
     if err:
         return err
     try:
+        recipient = _kanban_recipient(task)
+        title = task.title
         db.session.delete(task)
         db.session.commit()
+        if recipient and recipient.id != user.id and recipient.is_active:
+            _notify_kanban_task(
+                task,
+                'task_deleted',
+                'Tarea de kanban eliminada',
+                f'Tarea eliminada: {title}',
+            )
         return jsonify({'success': True, 'deleted_id': task_id})
     except Exception as e:
         db.session.rollback()

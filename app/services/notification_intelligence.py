@@ -30,6 +30,7 @@ GROUP_TTL = {
     'system': 1800,  # 30 minutes
     'debt': 86400,  # 24 hours
     'activity': 1800,  # 30 minutes
+    'kanban': 3600,  # 1 hour
 }
 
 # ─── AI summarization thresholds ───────────────────────────────────────────
@@ -71,6 +72,10 @@ def compute_group_key(event_type, **kwargs):
         'chatbot_action': lambda k: (f'chatbot:{k.get("action", "general")}', 'system', 'low'),
         'broadcast': lambda k: (f'broadcast:{k.get("sender_id", "admin")}', 'system', 'normal'),
         'whatsapp_reminder': lambda k: (f'wa:{k.get("patient_id", "unknown")}', 'payment', 'normal'),
+        'task_created': lambda k: (f'kanban:{k.get("task_id", "unknown")}', 'system', 'normal'),
+        'task_updated': lambda k: (f'kanban:{k.get("task_id", "unknown")}', 'system', 'normal'),
+        'task_moved': lambda k: (f'kanban:{k.get("task_id", "unknown")}', 'system', 'high'),
+        'task_deleted': lambda k: (f'kanban:{k.get("task_id", "unknown")}', 'system', 'normal'),
     }
 
     builder = builders.get(event_type)
