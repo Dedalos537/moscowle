@@ -529,6 +529,10 @@ def create_app(config_class=None):
     from app.routes.telegram_routes import telegram_bp
 
     csrf.exempt(telegram_bp)
+
+    from app.routes.kanban_routes import kanban_bp
+
+    csrf.exempt(kanban_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
@@ -713,6 +717,7 @@ def create_app(config_class=None):
         ('mcp', 'app.routes.mcp_routes', 'mcp_bp'),
         ('admin_ai', 'app.routes.admin_ai', 'bp'),
         ('telegram', 'app.routes.telegram_routes', 'telegram_bp'),
+        ('kanban', 'app.routes.kanban_routes', 'kanban_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
@@ -846,6 +851,7 @@ def create_app_lite():
     from app.routes.auth import auth_bp
     from app.routes.chat_routes import chat_bp
     from app.routes.health_routes import health_bp
+    from app.routes.kanban_routes import kanban_bp
     from app.routes.main import main_bp
     from app.routes.mcp_routes import mcp_bp
     from app.routes.public_routes import public_bp
@@ -858,6 +864,7 @@ def create_app_lite():
     csrf.exempt(admin_bp)
     csrf.exempt(telegram_bp)
     csrf.exempt(uploads_bp)
+    csrf.exempt(kanban_bp)
 
     for bp in [
         auth_bp,
@@ -872,6 +879,7 @@ def create_app_lite():
         yape_bp,
         admin_ai_bp,
         uploads_bp,
+        kanban_bp,
     ]:
         try:
             app.register_blueprint(bp)

@@ -7,6 +7,7 @@ from app.models.contract import *
 from app.models.faq import Faq as Faq
 from app.models.game import *
 from app.models.incidente import *
+from app.models.kanban import *
 from app.models.notification import *
 from app.models.password_reset import PasswordReset as PasswordReset
 from app.models.patient_group import *
