@@ -128,7 +128,7 @@ def verify_registration(user, payload):
             credential_id=cred_id,
             public_key=bytes_to_base64url(verification.credential_public_key),
             sign_count=verification.sign_count,
-            aaguid=bytes_to_base64url(verification.aaguid) if verification.aaguid else None,
+            aaguid=verification.aaguid if verification.aaguid else None,
             device_name=(payload.get('device_name') or 'Dispositivo')[:120],
             transports=(payload.get('transports') if payload.get('transports') else None),
         )
