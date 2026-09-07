@@ -206,6 +206,7 @@ def test_credentials_list_and_delete(client, webauthn_staff):
     resp = client.get('/api/auth/webauthn/credentials')
     assert resp.status_code == 200
     assert resp.get_json()['credentials'] == []
+    assert resp.headers.get('Cache-Control') == 'no-store, max-age=0'
     resp = client.delete('/api/auth/webauthn/credentials/999')
     assert resp.status_code == 404
 

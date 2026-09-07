@@ -14,7 +14,8 @@ const EXCLUDED = [
   '/api/auth/me',
   '/api/logout',
   '/api/login',
-  '/api/sessions/current'
+  '/api/sessions/current',
+  '/api/auth/webauthn/'
 ];
 
 const SHORT_TTL_MS = 30 * 1000;
@@ -124,6 +125,10 @@ export class CacheInterceptor implements HttpInterceptor {
 
     const clean = this.normalizeUrl(url);
     const noQuery = clean.split('?')[0];
+
+    if (noQuery.includes('/api/auth/webauthn/')) {
+      this.cache.invalidateContaining('/api/auth/webauthn');
+    }
 
     if (noQuery.includes('/api/admin/')) {
       this.cache.invalidateContaining('/api/admin');

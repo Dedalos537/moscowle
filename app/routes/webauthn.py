@@ -23,6 +23,12 @@ webauthn_bp = Blueprint('webauthn', __name__, url_prefix='/api/auth/webauthn')
 logger = logging.getLogger('app.webauthn')
 
 
+@webauthn_bp.after_request
+def _no_store(response):
+    response.headers['Cache-Control'] = 'no-store, max-age=0'
+    return response
+
+
 def _current_identity():
     identity = get_jwt_identity()
     if not identity:
