@@ -35,6 +35,9 @@ export class Login implements OnInit, OnDestroy {
 
   showHelp = false;
 
+  wfModalOpen = false;
+  wfChecking = false;
+
   guideStep = 0; // 0=none, 1=email, 2=password, 3=button, 4=done
   guidePos = { top: 0, left: 0, arrowLeft: 50 };
   guideText = '';
@@ -43,6 +46,8 @@ export class Login implements OnInit, OnDestroy {
   private guideTimer: any;
   private resizeHandler: (() => void) | null = null;
   private _lastFormValid = false;
+  private wfIdentifierKey = 'moscowle_webauthn_identity';
+  private lastCheckedEmail = '';
 
   private subs = new Subscription();
 
@@ -63,6 +68,7 @@ export class Login implements OnInit, OnDestroy {
       }
     }));
     this.scheduleGuide();
+    this.restoreRemembered();
   }
 
   ngOnDestroy() {
@@ -151,6 +157,100 @@ export class Login implements OnInit, OnDestroy {
       this.guideText = 'Perfecto! Presiona INICIAR SESIÓN para acceder';
       this.cdr.markForCheck();
       setTimeout(() => this.ngZone.run(() => this.positionGuide('login-btn')), 350);
+    }
+  }
+
+  onPasswordFocus() {
+    if (!this.authSupported() || this.wfModalOpen) return;
+    const email = this.email.trim();
+    if (email.length < 3 || email === this.lastCheckedEmail) return;
+    this.wfChecking = true;
+    this.cdr.markForCheck();
+    this.authService.webauthnLoginOptions(email).subscribe({
+      next: (res) => {
+        this.wfChecking = false;
+        this.lastCheckedEmail = email;
+        if (res?.success && res.options && email === this.email.trim()) {
+          this.wfModalOpen = true;
+          this.cdr.markForCheck();
+        }
+      },
+      error: () => {
+        this.wfChecking = false;
+        this.lastCheckedEmail = email;
+      },
+    });
+  }
+
+  private restoreRemembered() {
+    if (!this.authSupported()) return;
+    let identifier = '';
+    try {
+      const raw = localStorage.getItem(this.wfIdentifierKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        identifier = typeof parsed?.identifier === 'string' ? parsed.identifier.trim() : '';
+      }
+    } catch {
+      identifier = '';
+    }
+    if (!identifier) return;
+    this.email = identifier;
+    this.cdr.markForCheck();
+    this.preAuthorize(identifier, true);
+  }
+
+  private preAuthorize(identifier: string, openModalOnOk: boolean) {
+    const email = identifier.trim();
+    if (!email || this.wfChecking) return;
+    this.wfChecking = true;
+    this.authService.webauthnLoginOptions(email).subscribe({
+      next: (res) => {
+        this.wfChecking = false;
+        this.lastCheckedEmail = email;
+        if (res?.success && res.options) {
+          if (openModalOnOk) {
+            this.wfModalOpen = true;
+            this.cdr.markForCheck();
+          }
+        } else {
+          this.clearRemembered();
+        }
+      },
+      error: (err) => {
+        this.wfChecking = false;
+        this.lastCheckedEmail = email;
+        if (err?.status === 404) {
+          this.clearRemembered();
+          if (this.wfModalOpen) {
+            this.wfModalOpen = false;
+            this.cdr.markForCheck();
+          }
+        }
+      },
+    });
+  }
+
+  closeWfModal() {
+    this.wfModalOpen = false;
+    this.cdr.markForCheck();
+    const el = document.getElementById('password') as HTMLInputElement | null;
+    if (el) el.focus();
+  }
+
+  private persistIdentity() {
+    try {
+      localStorage.setItem(this.wfIdentifierKey, JSON.stringify({ identifier: this.email.trim(), at: Date.now() }));
+    } catch {
+      // almacenamiento no disponible
+    }
+  }
+
+  private clearRemembered() {
+    try {
+      localStorage.removeItem(this.wfIdentifierKey);
+    } catch {
+      // almacenamiento no disponible
     }
   }
 
@@ -274,6 +374,8 @@ export class Login implements OnInit, OnDestroy {
                   : verify.user?.role === 'terapista' ? '/therapist/dashboard'
                   : verify.user?.role === 'jugador' ? '/patient/dashboard'
                   : '/';
+      this.persistIdentity();
+      this.wfModalOpen = false;
       this.router.navigate([route]).finally(() => {
         this.isLoading = false;
         this.loading = false;
@@ -282,7 +384,14 @@ export class Login implements OnInit, OnDestroy {
     } catch (err: any) {
       this.isLoading = false;
       this.loading = false;
-      this.error = err?.error?.message || 'No se pudo iniciar sesión con huella. Intenta con tu contraseña.';
+      this.wfModalOpen = false;
+      const errText = String(err?.message || err?.error?.message || err?.name || '');
+      const cancelled = err?.name === 'NotAllowedError'
+        || errText.includes('NotAllowedError')
+        || errText.includes('cancelado')
+        || errText.includes('cancelled')
+        || errText.includes('no permitida');
+      this.error = cancelled ? 'La autenticación por huella fue cancelada. Usa tu contraseña.' : (err?.error?.message || 'No se pudo iniciar sesión con huella. Intenta con tu contraseña.');
       this.alertType = 'error';
       this.alertMessage = this.error ?? '';
       this.cdr.markForCheck();

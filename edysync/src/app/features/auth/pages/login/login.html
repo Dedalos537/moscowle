@@ -52,7 +52,7 @@
                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none transition-colors">
                        <fa-icon [icon]="['fas', 'lock']" class="text-lg"></fa-icon>
                    </span>
-                     <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password" (input)="onPasswordInput()"
+                     <input type="password" [type]="showPassword ? 'text' : 'password'" id="password" name="password" [(ngModel)]="password" (input)="onPasswordInput()" (focus)="onPasswordFocus()"
                          class="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-border/50 rounded-lg outline-none transition-all text-on-surface placeholder-outline/50 font-medium focus:border-primary focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
                          placeholder="Ingresa tu contraseña" required>
 
@@ -186,6 +186,44 @@
           ¿Más dudas? Escríbenos a
           <a href="mailto:info@centrojuanpabloii.com" class="help-email">info@centrojuanpabloii.com</a>
         </div>
+      </div>
+    </div>
+  }
+
+  @if (wfModalOpen) {
+    <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="w-full max-w-sm rounded-2xl bg-surface-container-lowest border border-border/50 shadow-2xl p-6 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4" style="color: var(--color-primary);">
+          <fa-icon [icon]="['fas', 'fingerprint']" class="text-3xl"></fa-icon>
+        </div>
+        <h3 class="text-lg font-bold text-on-surface">¿Ingresar con huella?</h3>
+        <p class="text-sm text-on-surface-variant mt-1 mb-5">
+          Se detectó una huella registrada en este dispositivo para
+          <strong class="text-on-surface">{{ email }}</strong>.
+        </p>
+        <div class="rounded-xl bg-surface-container-low border border-border/50 px-4 py-3 flex items-center justify-between mb-5">
+          <span class="text-sm font-semibold text-on-surface">Touch ID</span>
+          <span class="flex items-center gap-2 text-outline">
+            <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
+            <fa-icon [icon]="['fas', 'arrow-right']"></fa-icon>
+          </span>
+        </div>
+        <button type="button"
+          [disabled]="isLoading || wfChecking"
+          (click)="loginWithFingerprint(); dismissGuide()"
+          class="w-full py-3 rounded-lg font-bold text-sm bg-primary text-on-primary flex items-center justify-center gap-2 cursor-pointer transition-opacity disabled:opacity-60">
+          @if (isLoading || wfChecking) {
+            <fa-icon [icon]="['fas', 'spinner']" class="fa-spin"></fa-icon>
+            Verificando...
+          } @else {
+            <fa-icon [icon]="['fas', 'fingerprint']"></fa-icon>
+            INGRESAR CON HUELLA
+          }
+        </button>
+        <button type="button" (click)="closeWfModal()"
+          class="mt-2 w-full py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:text-on-surface border-none bg-transparent cursor-pointer">
+          Usar contraseña
+        </button>
       </div>
     </div>
   }

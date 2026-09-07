@@ -137,6 +137,7 @@ export class Settings implements OnInit, OnDestroy {
         throw { error: { message: verify?.error || 'No se pudo guardar la huella.' } };
       }
       this.wfDeviceName = '';
+      this.persistIdentity();
       this.loadCredentials();
     } catch (err: any) {
       console.error('registro de huella falló', err);
@@ -151,6 +152,19 @@ export class Settings implements OnInit, OnDestroy {
       next: () => this.loadCredentials(),
       error: () => this.cdr.markForCheck(),
     });
+  }
+
+  private persistIdentity(): void {
+    try {
+      const raw = localStorage.getItem('user');
+      const u = raw ? JSON.parse(raw) : null;
+      const identifier = (u?.email || u?.login_code || '').trim();
+      if (identifier) {
+        localStorage.setItem('moscowle_webauthn_identity', JSON.stringify({ identifier, at: Date.now() }));
+      }
+    } catch {
+      // almacenamiento no disponible
+    }
   }
 
   saveAll(): void {
