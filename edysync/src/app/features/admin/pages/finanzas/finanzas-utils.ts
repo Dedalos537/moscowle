@@ -85,7 +85,7 @@ export function getPatientStatus(p: PatientRow): string {
   if (!p.contract_status) return 'sin_contrato';
   if (p.contract_status === 'cancelled') return 'cancelado';
   if (p.contract_status === 'pending') return 'sin_contrato';
-  if ((p.contract_overdue || 0) > 0 || (p.contract_pending || 0) > 0) return 'deudor';
+  if ((p.contract_overdue || 0) > 0) return 'deudor';
   return 'al_dia';
 }
 
