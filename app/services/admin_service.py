@@ -181,6 +181,49 @@ class AdminService:
         db.session.add(user)
         db.session.commit()
 
+        contract_created = False
+        if role == 'jugador':
+            modality = 0
+            with contextlib.suppress(TypeError, ValueError):
+                modality = int(data.get('modality', 0))
+            if modality > 0:
+                try:
+                    from app.services.contract_service import ContractService
+
+                    payment_amount = float(data.get('payment_amount', 0))
+                    payment_freq = data.get('payment_frequency', 'monthly')
+
+                    billing_map = {
+                        'monthly': 'Mensual',
+                        'mensual': 'Mensual',
+                        'quincenal': 'Quincenal',
+                        'biweekly': 'Quincenal',
+                        'weekly': 'Semanal',
+                        'semanal': 'Semanal',
+                    }
+                    billing_type = billing_map.get(payment_freq.strip().lower(), 'Mensual')
+                    inst_map = {'Semanal': 48, 'Quincenal': 24, 'Mensual': 12, 'Anual': 1}
+                    installment_count = inst_map.get(billing_type, 12)
+                    cycle_amount = payment_amount or 0
+                    total_amount = round(cycle_amount * installment_count, 2) if cycle_amount else 0
+
+                    start_date = data.get('start_date')
+                    name = data.get('nombre_contrato') or f'Plan Terapias {user.username}'
+
+                    contract_svc = ContractService()
+                    if total_amount > 0:
+                        cs_ok, cs_result = contract_svc.create_contract(
+                            patient_id=user.id,
+                            total_amount=total_amount,
+                            installment_count=installment_count,
+                            name=name,
+                            start_date=start_date,
+                            billing_type=billing_type,
+                        )
+                        contract_created = bool(cs_ok)
+                except Exception as exc:
+                    print(f'Error creating automatic contract: {exc}')
+
         if role == 'jugador' and data.get('generate_schedule'):
             try:
                 start_date_str = data.get('start_date')
@@ -199,7 +242,11 @@ class AdminService:
             with contextlib.suppress(Exception):
                 self.email_service.send_welcome_email(email, plain_password, user.username)
 
-        return True, {'user': user, 'temp_password': plain_password if is_active else 'N/A (Presencial)'}
+        return True, {
+            'user': user,
+            'temp_password': plain_password if is_active else 'N/A (Presencial)',
+            'contract_created': contract_created,
+        }
 
     def generate_schedule(self, user, therapist_id, start_dt, modality, days_of_week=None):
         total_sessions = 0

@@ -221,7 +221,12 @@
     </div>
 
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 px-6">
-        <h3 class="text-lg font-semibold text-textDark" id="viewTitle">Estado de Pagos de Pacientes</h3>
+        <div class="flex flex-col md:flex-row items-center gap-3">
+            <h3 class="text-lg font-semibold text-textDark" id="viewTitle">Estado de Pagos de Pacientes</h3>
+            <button type="button" onclick="openNewContractModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-soft hover:bg-opacity-90 transition-all shadow-sm">
+                <i class="fas fa-file-signature"></i> Nuevo Contrato de Servicio
+            </button>
+        </div>
         <div class="flex flex-col md:flex-row flex-wrap items-center gap-2 w-full md:w-auto">
 
              <!-- Month Filter (Initially Hidden) -->
@@ -832,5 +837,221 @@
             }
         }
     });
+</script>
+
+<!-- Nuevo Contrato de Servicio Modal -->
+<div id="newContractModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-soft shadow-soft w-full max-w-2xl p-6 relative max-h-[90vh] flex flex-col">
+        <button type="button" onclick="closeNewContractModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 class="text-xl font-bold text-charcoal mb-1 flex items-center gap-2">
+            <i class="fas fa-file-signature text-primary"></i> Nuevo Contrato de Servicio
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">Registra un contrato de terapia para un paciente existente.</p>
+
+        <div class="flex-1 overflow-y-auto pr-1 space-y-5">
+            <div class="mb-2">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Paciente <span class="text-red-500">*</span></label>
+                <select id="contract_patient_id" class="w-full px-3 py-2 border rounded-soft focus:ring-primary focus:border-primary bg-gray-50">
+                    <option value="">Seleccionar paciente...</option>
+                </select>
+                <p id="contract_patient_hint" class="text-xs text-orange-500 mt-1 hidden">Cargando pacientes...</p>
+            </div>
+
+            {{ inputs.text_input('contract-name', 'Nombre del Contrato', 'Ej: Plan Terapias Set 2026') }}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {{ inputs.select_input('contract-modality', 'Modalidad (Sesiones)', [
+                    {'value': '1', 'label': '1x Semana (4 Sesiones/Pago)'},
+                    {'value': '2', 'label': '2x Semana (8 Sesiones/Pago)'},
+                    {'value': '3', 'label': '3x Semana (12 Sesiones/Pago)'}
+                ], default_option='') }}
+
+                {{ inputs.select_input('contract-frequency', 'Frecuencia', [
+                    {'value': 'monthly', 'label': 'Mensual'},
+                    {'value': 'biweekly', 'label': 'Quincenal'},
+                    {'value': 'weekly', 'label': 'Semanal'}
+                ], default_option='') }}
+
+                {{ inputs.select_input('contract-plan-type', 'Tipo de Plan', [
+                    {'value': 'individual', 'label': 'Individual'},
+                    {'value': 'group', 'label': 'Grupal / Fijo'}
+                ], default_option='') }}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{ inputs.text_input('contract-amount', 'Monto a Pagar (S/)', '0.00', type='number', extra_attrs='step="0.01" min="0"') }}
+                <div></div>
+            </div>
+
+            <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+                <label class="flex items-center gap-2 cursor-pointer mb-3">
+                    <input type="checkbox" id="contract-generate-schedule" class="rounded text-primary focus:ring-primary" checked>
+                    <span class="text-sm font-bold text-gray-700">Generar Horario Automático</span>
+                </label>
+
+                <div id="contract-schedule-fields" class="bg-gray-50 p-4 rounded-soft border border-gray-100">
+                    <h4 class="text-sm font-bold text-gray-600 mb-3"><i class="far fa-calendar-alt mr-2"></i>Programación de Sesiones</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                        {{ inputs.text_input('contract-start-date', 'Fecha Inicio', type='date') }}
+                        {{ inputs.text_input('contract-start-time', 'Hora Inicio', type='time') }}
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase mb-1">Terapeuta</label>
+                            <div class="relative">
+                                <select id="contract-therapist" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary bg-gray-50 border-gray-200 text-gray-700 transition-all shadow-sm appearance-none pr-10">
+                                    <option value="">-- Seleccionar --</option>
+                                    {% for t in therapists %}
+                                    <option value="{{ t.id }}">{{ t.username }} ({{ t.email }})</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Días de Sesión (Seleccionar según modalidad)</label>
+                        <div class="flex gap-4 flex-wrap">
+                            {% set days = [('0','Lun'),('1','Mar'),('2','Mié'),('3','Jue'),('4','Vie'),('5','Sáb')] %}
+                            {% for val, label in days %}
+                            <label class="inline-flex items-center gap-1 text-sm bg-white px-3 py-1 rounded border hover:border-primary cursor-pointer">
+                                <input type="checkbox" data-contract-day value="{{ val }}" class="contract-day text-primary rounded"> {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-none pt-4 mt-4 border-t border-gray-100 flex justify-end gap-3">
+            <button type="button" onclick="closeNewContractModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-soft font-medium hover:bg-gray-300">
+                Cancelar
+            </button>
+            <button type="button" id="contract-save-btn" onclick="submitNewContract()" class="px-5 py-2 bg-primary text-white font-bold rounded-soft hover:bg-opacity-90 transition-all">
+                <i class="fas fa-save mr-1"></i> Crear Contrato
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+import { apiFetch } from "{{ url_for('static', filename='js/api.js') }}";
+
+let contractPatients = [];
+
+async function loadContractPatients() {
+    const select = document.getElementById('contract_patient_id');
+    const hint = document.getElementById('contract_patient_hint');
+    if (!select) return;
+    try {
+        hint.classList.remove('hidden');
+        const data = await apiFetch("{{ url_for('admin.list_patients') }}", { method: 'GET' });
+        contractPatients = (data && data.patients) ? data.patients : [];
+        select.innerHTML = '<option value="">Seleccionar paciente...</option>';
+        contractPatients.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = (p.username || p.email || ('Paciente #' + p.id));
+            select.appendChild(opt);
+        });
+        hint.classList.add('hidden');
+        if (!contractPatients.length) {
+            select.innerHTML = '<option value="">Sin pacientes activos...</option>';
+        }
+    } catch (err) {
+        hint.textContent = 'Error al cargar pacientes: ' + (err.error || err.message || 'desconocido');
+        hint.classList.remove('hidden');
+        hint.classList.add('text-red-500');
+        hint.classList.remove('text-orange-500');
+    }
+}
+
+function openNewContractModal() {
+    document.getElementById('newContractModal').classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    document.getElementById('contract-generate-schedule').checked = true;
+    toggleContractSchedule();
+    loadContractPatients();
+}
+
+function closeNewContractModal() {
+    document.getElementById('newContractModal').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+
+function toggleContractSchedule() {
+    const checked = document.getElementById('contract-generate-schedule').checked;
+    const fields = document.getElementById('contract-schedule-fields');
+    if (checked) { fields.classList.remove('hidden'); } else { fields.classList.add('hidden'); }
+}
+
+async function submitNewContract() {
+    const btn = document.getElementById('contract-save-btn');
+    const patientId = document.getElementById('contract_patient_id').value;
+    const amount = parseFloat(document.getElementById('contract-amount').value) || 0;
+
+    if (!patientId) {
+        alert('Selecciona un paciente.');
+        return;
+    }
+    if (amount <= 0) {
+        alert('Ingresa un monto a pagar mayor a 0.');
+        return;
+    }
+
+    const modality = document.getElementById('contract-modality').value;
+    if (!modality) {
+        alert('Selecciona una modalidad de sesiones.');
+        return;
+    }
+
+    const payload = {
+        patient_id: parseInt(patientId, 10),
+        name: document.getElementById('contract-name').value || null,
+        modality: parseInt(modality, 10),
+        payment_frequency: document.getElementById('contract-frequency').value || 'monthly',
+        plan_type: document.getElementById('contract-plan-type').value || 'individual',
+        total_amount: amount,
+        start_date: document.getElementById('contract-start-date').value || null,
+        generate_schedule: document.getElementById('contract-generate-schedule').checked
+    };
+
+    if (payload.generate_schedule) {
+        payload.start_time = document.getElementById('contract-start-time').value || '08:00';
+        payload.therapist_id = document.getElementById('contract-therapist').value || null;
+        payload.days_of_week = Array.from(document.querySelectorAll('input[data-contract-day]:checked')).map(cb => parseInt(cb.value, 10));
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+
+    try {
+        const res = await apiFetch("{{ url_for('admin.create_contract') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        let msg = 'Contrato creado correctamente.';
+        if (res && res.contract) msg = `Contrato ${res.contract.name || ''} creado (${res.contract.installment_count} cuotas).`;
+        if (res && res.sessions_created) msg += ` Se programaron ${res.sessions_created} sesiones.`;
+
+        alert(msg);
+        closeNewContractModal();
+        if (typeof window.location.reload === 'function') window.location.reload();
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save mr-1"></i> Crear Contrato';
+        alert('Error al crear contrato: ' + (err.error || err.message || 'desconocido'));
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const scheduleCheck = document.getElementById('contract-generate-schedule');
+    if (scheduleCheck) scheduleCheck.addEventListener('change', toggleContractSchedule);
+});
 </script>
 {% endblock %}

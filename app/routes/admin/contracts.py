@@ -63,38 +63,97 @@ def create_contract():
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         patient_id = int(data.get('patient_id', 0))
-        total_amount = float(data.get('total_amount', 0))
+        cycle_amount = float(data.get('total_amount', data.get('amount', 0)))
 
-        if not patient_id or not total_amount:
+        if not patient_id or not cycle_amount:
             return jsonify({'success': False, 'error': 'patient_id y total_amount requeridos'}), 400
+
+        billing_map = {
+            'monthly': 'Mensual',
+            'mensual': 'Mensual',
+            'quincenal': 'Quincenal',
+            'biweekly': 'Quincenal',
+            'weekly': 'Semanal',
+            'semanal': 'Semanal',
+            'annual': 'Anual',
+            'anual': 'Anual',
+        }
+        frecuencia = (data.get('frecuencia') or data.get('payment_frequency') or '').strip().lower()
+        billing_type = billing_map.get(frecuencia, data.get('billing_type') or 'Mensual')
+
+        plan_type = data.get('plan_type') or 'individual'
+        modality = int(data.get('modality', data.get('modality_id', 0)) or 0)
+
+        if data.get('installment_count'):
+            installment_count = int(data.get('installment_count'))
+        else:
+            inst_map = {'Semanal': 48, 'Quincenal': 24, 'Mensual': 12, 'Anual': 1}
+            installment_count = inst_map.get(billing_type, 12)
+
+        total_amount = round(cycle_amount * installment_count, 2)
 
         success, result = contract_service.create_contract(
             patient_id=patient_id,
             total_amount=total_amount,
-            installment_count=int(data.get('installment_count', 4)),
-            name=data.get('name'),
+            installment_count=installment_count,
+            name=data.get('name') or data.get('nombre_contrato'),
             start_date=data.get('start_date'),
             notes=data.get('notes'),
-            billing_type=data.get('billing_type', 'Mensual'),
+            billing_type=billing_type,
             currency=data.get('currency', 'PEN'),
             bonus_months=int(data.get('bonus_months', 0)),
             billing_rule=data.get('billing_rule', 'standard'),
             implementation_cost=float(data.get('implementation_cost', 0)),
         )
 
-        if success:
-            return jsonify(
-                {
-                    'success': True,
-                    'contract': {
-                        'id': result.id,
-                        'name': result.name,
-                        'installment_count': result.installment_count,
-                    },
-                    'installments_generated': result.installment_count,
-                }
-            )
-        return jsonify({'success': False, 'error': str(result)}), 400
+        if not success:
+            return jsonify({'success': False, 'error': str(result)}), 400
+
+        from app.models import User, db
+
+        patient = User.query.get(patient_id)
+        if patient:
+            patient.payment_amount = cycle_amount
+            patient.payment_plan = data.get('payment_frequency') or data.get('frecuencia') or 'monthly'
+            patient.plan_type = plan_type
+            if modality:
+                pmap = {1: 4, 2: 8, 3: 12}
+                patient.sessions_total = pmap.get(modality, 0)
+                patient.sessions_attended = patient.sessions_attended or 0
+                if patient.sessions_total and patient.sessions_total > 0:
+                    patient.session_cost = round(cycle_amount / patient.sessions_total, 2)
+            db.session.commit()
+
+        sessions_created = 0
+        if data.get('generate_schedule') and modality:
+            start_date_str = data.get('start_date')
+            start_time = data.get('start_time') or '08:00'
+            therapist_id = data.get('therapist_id') or data.get('terapeuta_id')
+            days_of_week = data.get('days_of_week')
+
+            if start_date_str and therapist_id:
+                from datetime import datetime as _dt
+
+                from app.services.admin_service import AdminService
+
+                start_dt = _dt.strptime(f'{start_date_str[:10]} {start_time}', '%Y-%m-%d %H:%M')
+                admin_svc = AdminService()
+                days = days_of_week if isinstance(days_of_week, list) else None
+                admin_svc.generate_schedule(patient, int(therapist_id), start_dt, modality, days)
+                sessions_created = patient.sessions_total or modality
+
+        return jsonify(
+            {
+                'success': True,
+                'contract': {
+                    'id': result.id,
+                    'name': result.name,
+                    'installment_count': result.installment_count,
+                },
+                'installments_generated': result.installment_count,
+                'sessions_created': sessions_created,
+            }
+        )
     except Exception as e:
         logger.exception('Error creating contract')
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -314,29 +373,27 @@ def migrate_existing_patients():
         # Now migrate patients to contracts using raw SQL
         patients = User.query.filter(
             User.role == 'jugador',
-            User.is_active == True,
+            User.is_active,
             User.payment_amount > 0,
         ).all()
 
         # Also migrate active patients that only have payment history (no payment_amount set),
         # inferring their monthly amount from their most common payment amount.
 
-        patients_with_payments = (
-            conn.execute(
-                db.text(
-                    "SELECT u.id, u.username, u.payment_plan, u.payment_due_date, "
-                    "COUNT(p.id) as pay_count, "
-                    "COALESCE(u.payment_amount, 0) as payment_amount "
-                    "FROM user u "
-                    "JOIN payment p ON p.patient_id = u.id "
-                    "WHERE u.role = 'jugador' AND u.is_active = 1 " \
-                    "AND NOT EXISTS (SELECT 1 FROM contract c " \
-                    "  WHERE c.patient_id = u.id AND c.status = 'active') " \
-                    "GROUP BY u.id "
-                    "HAVING COUNT(p.id) > 0"
-                )
-            ).fetchall()
-        )
+        patients_with_payments = conn.execute(
+            db.text(
+                'SELECT u.id, u.username, u.payment_plan, u.payment_due_date, '
+                'COUNT(p.id) as pay_count, '
+                'COALESCE(u.payment_amount, 0) as payment_amount '
+                'FROM user u '
+                'JOIN payment p ON p.patient_id = u.id '
+                "WHERE u.role = 'jugador' AND u.is_active = 1 "
+                'AND NOT EXISTS (SELECT 1 FROM contract c '
+                "  WHERE c.patient_id = u.id AND c.status = 'active') "
+                'GROUP BY u.id '
+                'HAVING COUNT(p.id) > 0'
+            )
+        ).fetchall()
 
         by_id = {p.id: p for p in patients}
         for row in patients_with_payments:
@@ -346,8 +403,8 @@ def migrate_existing_patients():
             if pat:
                 inferred = conn.execute(
                     db.text(
-                        "SELECT amount, COUNT(*) as cnt FROM payment "
-                        "WHERE patient_id = :pid GROUP BY amount ORDER BY cnt DESC, amount DESC LIMIT 1"
+                        'SELECT amount, COUNT(*) as cnt FROM payment '
+                        'WHERE patient_id = :pid GROUP BY amount ORDER BY cnt DESC, amount DESC LIMIT 1'
                     ),
                     {'pid': row.id},
                 ).fetchone()

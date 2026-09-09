@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flash Launcher</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#111; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow:hidden; }
+  #chrome { position:fixed; top:0; left:0; right:0; height:44px; z-index:50; background:#0f172a; color:#fff;
+            display:flex; align-items:center; justify-content:space-between; padding:0 16px; box-sizing:border-box; }
+  #chrome .title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #chrome button { background:#22c55e; color:#fff; border:0; padding:7px 16px; border-radius:8px; font-weight:600;
+                   cursor:pointer; font-size:13px; }
+  #chrome button:hover { background:#16a34a; }
+  #stage { position:absolute; top:44px; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
+           background:#1e293b; }
+  #stage ruffle-player, #stage canvas { width:100%; height:100%; }
+  #status { position:fixed; bottom:10px; right:12px; z-index:60; background:rgba(15,23,42,.85); color:#cbd5e1;
+            padding:6px 12px; border-radius:8px; font-size:12px; display:none; }
+</style>
+</head>
+<body>
+<div id="chrome">
+  <div class="title" id="game-title">Juego Flash</div>
+  <button id="terminate">Terminar</button>
+</div>
+<div id="stage"><div id="flash-host"></div></div>
+<div id="status">Guardando resultados…</div>
+
+<script src="/static/games/vendor/ruffle/ruffle.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var game = q.get('game') || '';
+  var sessionId = q.get('session_id') || '';
+  var startTs = Date.now();
+  window.RufflePlayer = window.RufflePlayer || {};
+  window.RufflePlayer.config = {
+    autoplay: 'on',
+    publicPath: '/static/games/vendor/ruffle/'
+  };
+
+  if (game) {
+    document.getElementById('game-title').textContent = game.replace(/\.swf$/i, '').replace(/_/g, ' ');
+  }
+
+  function buildPayload() {
+    var now = Math.round((Date.now() - startTs) / 1000);
+    return {
+      game_name: game || 'Juego Flash',
+      session_id: sessionId ? parseInt(sessionId, 10) : null,
+      accuracy: 0,
+      avg_time: now,
+      duration_s: now,
+      details: { usage_only: true, launcher: 'flash', duration_s: now }
+    };
+  }
+
+  function sendMetrics() {
+    if (!sessionId) return Promise.resolve(null);
+    return fetch('/api/save_game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildPayload())
+    }).then(function (r) { return r.json(); }).catch(function (e) { return null; });
+  }
+
+  function showStatus(msg) {
+    var el = document.getElementById('status');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function play() {
+    if (!window.RufflePlayer || !window.RufflePlayer.newest) { setTimeout(play, 60); return; }
+    var ruffle = window.RufflePlayer.newest();
+    var player = ruffle.createPlayer();
+    document.getElementById('flash-host').appendChild(player);
+    player.addEventListener('loadedmetadata', function () {
+      try { player.play(); } catch (e) {}
+    });
+    player.load('/static/games/' + game).then(function () {
+      try { player.play(); } catch (e) {}
+    }).catch(function (err) { showStatus('Error al cargar el SWF') });
+  }
+  if (game) play();
+
+  document.getElementById('terminate').addEventListener('click', function () {
+    var btn = document.getElementById('terminate');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    showStatus('Guardando resultados…');
+    sendMetrics().finally(function () {
+      try { parent.postMessage({ type: 'game_finished', launcher: 'flash', game: game }, '*'); } catch (e) {}
+      setTimeout(function () { window.close(); }, 400);
+    });
+  });
+
+  window.addEventListener('beforeunload', function () {
+    if (!sessionId) return;
+    try {
+      navigator.sendBeacon('/api/save_game', new Blob([JSON.stringify(buildPayload())], { type: 'application/json' }));
+    } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

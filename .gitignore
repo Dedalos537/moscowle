@@ -124,3 +124,6 @@ obsidian-vault/
 # Graphify
 graphify-out/
 .opencode/
+
+# E2E/QA artifacts
+.e2e/

@@ -18,7 +18,7 @@
     <!-- Sessions List -->
     <div class="lg:col-span-1 bg-surface rounded-soft shadow-soft p-4 md:p-6 h-fit">
       <h3 class="text-lg font-semibold text-textDark mb-4">Mis Sesiones</h3>
-      
+
       {% if sessions %}
       <div class="space-y-3">
         {% for session in sessions %}
@@ -37,7 +37,7 @@
             </div>
             <h4 class="font-bold text-charcoal mb-1">{{ session.title or 'Sesión de Terapia' }}</h4>
             <p class="text-xs text-gray-500 mb-2">con {{ session.therapist_name }}</p>
-            
+
             {% if session.is_active %}
             <div class="flex items-center text-xs text-olive font-medium">
                 <i class="fas fa-circle text-[8px] mr-2 animate-pulse"></i>
@@ -96,6 +96,8 @@
 
 {% block extra_scripts %}
 <script>
+    var currentSessionId = null;
+
     function handleSessionClick(element) {
         const id = element.dataset.id;
         let games = [];
@@ -106,18 +108,27 @@
             games = [];
         }
         const isActive = element.dataset.active === 'true';
-        
+
         console.log('Session clicked:', id, 'Games:', games, 'Active:', isActive);
-        
+
         if (!isActive) {
             alert('Solo puedes acceder a los juegos durante el horario programado de la sesión.');
             return;
         }
-        
+
         selectSession(id, games, isActive);
     }
 
+    function gameLabel(gameFile) {
+        return gameFile
+            .replace(/\.jclic\.zip$/i, '')
+            .replace(/\.swf$/i, '')
+            .replace(/\.html?$/i, '')
+            .replace(/_/g, ' ');
+    }
+
     function selectSession(id, games, isActive) {
+        currentSessionId = id;
         const placeholder = document.getElementById('game-placeholder');
         const container = document.getElementById('game-container');
         const gamesList = document.getElementById('games-list');
@@ -127,7 +138,7 @@
         // Show container
         placeholder.classList.add('hidden');
         container.classList.remove('hidden');
-        
+
         // Reset frame
         frame.src = '';
         iframePlaceholder.classList.remove('hidden');
@@ -139,13 +150,13 @@
 
         // Render game buttons
         gamesList.innerHTML = games.map(game => `
-            <button onclick="loadGame('${game}')" 
+            <button onclick="loadGame('${game}')" data-file="${game}"
                     class="px-4 py-2 bg-gray-100 hover:bg-olive hover:text-white text-charcoal rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                 <i class="fas fa-play text-xs"></i>
-                ${game.replace('.html', '').replace(/_/g, ' ')}
+                ${gameLabel(game)}
             </button>
         `).join('');
-        
+
         // Auto load first game
         if (games.length > 0) {
             loadGame(games[0]);
@@ -155,14 +166,25 @@
     function loadGame(gameFile) {
         const frame = document.getElementById('patient-game-frame');
         const iframePlaceholder = document.getElementById('iframe-placeholder');
-        
-        frame.src = `/static/games/${gameFile}`;
+        const sessionId = currentSessionId;
+
+        let src;
+        const lower = gameFile.toLowerCase();
+        if (lower.endsWith('.jclic.zip')) {
+            src = `/static/games/_jclic_launcher.html?game=${encodeURIComponent(gameFile)}&session_id=${sessionId || ''}`;
+        } else if (lower.endsWith('.swf')) {
+            src = `/static/games/_flash_launcher.html?game=${encodeURIComponent(gameFile)}&session_id=${sessionId || ''}`;
+        } else {
+            src = `/static/games/${gameFile}?session_id=${sessionId || ''}`;
+        }
+
+        frame.src = src;
         iframePlaceholder.classList.add('hidden');
-        
+
         // Highlight active button
-        const buttons = document.querySelectorAll('#games-list button');
+        const buttons = document.querySelectorAll('#games-list button[data-file]');
         buttons.forEach(btn => {
-            if (btn.textContent.includes(gameFile.replace('.html', '').replace(/_/g, ' '))) {
+            if (btn.dataset.file === gameFile) {
                 btn.classList.add('bg-olive', 'text-white');
                 btn.classList.remove('bg-gray-100', 'text-charcoal');
             } else {

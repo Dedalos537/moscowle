@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JClic Launcher</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#111; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  #chrome { position:fixed; top:0; left:0; right:0; height:44px; z-index:50; background:#0f172a; color:#fff;
+            display:flex; align-items:center; justify-content:space-between; padding:0 16px; box-sizing:border-box; }
+  #chrome .title { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #chrome button { background:#22c55e; color:#fff; border:0; padding:7px 16px; border-radius:8px; font-weight:600;
+                   cursor:pointer; font-size:13px; }
+  #chrome button:hover { background:#16a34a; }
+  #stage { position:absolute; top:44px; left:0; right:0; bottom:0; }
+  #stage .JClic { width:100%; height:100%; }
+  #status { position:fixed; bottom:10px; right:12px; z-index:60; background:rgba(15,23,42,.85); color:#cbd5e1;
+            padding:6px 12px; border-radius:8px; font-size:12px; display:none; }
+</style>
+</head>
+<body>
+<div id="chrome">
+  <div class="title" id="game-title">Actividad JClic</div>
+  <button id="terminate">Terminar</button>
+</div>
+<div id="stage"><div id="jc" class="JClic"></div></div>
+<div id="status">Guardando resultados…</div>
+
+<script>
+  window.JClicDataOptions = { noInit: true };
+  window.__jclicParams = (function () {
+    var q = new URLSearchParams(location.search);
+    return { game: q.get('game') || '', sessionId: q.get('session_id') || '' };
+  })();
+</script>
+<script type="module" src="/static/games/vendor/jclic/jclic.min.js"></script>
+<script>
+(function () {
+  var P = window.__jclicParams;
+  if (P.game) {
+    document.getElementById('game-title').textContent = P.game.replace(/\.jclic\.zip$/i, '').replace(/_/g, ' ');
+  }
+  var startTs = Date.now();
+  var lastSent = 0;
+  var player = null;
+
+  function reportData() {
+    if (!player || !player.reporter) return null;
+    try { return player.reporter.getData(); } catch (e) { return null; }
+  }
+
+  function buildPayload() {
+    var d = reportData();
+    var now = Math.round((Date.now() - startTs) / 1000);
+    var payload = {
+      game_name: P.game || 'Actividad JClic',
+      session_id: P.sessionId ? parseInt(P.sessionId, 10) : null,
+      accuracy: 0,
+      avg_time: now,
+      duration_s: now,
+      details: { usage_only: true, launcher: 'jclic' }
+    };
+    if (d) {
+      var acts = d.activitiesDone || 0;
+      payload.accuracy = Math.max(0, Math.min(100, Math.round((d.partialScore != null ? d.partialScore : d.globalScore) || 0)));
+      payload.avg_time = acts ? Math.round((d.time || 0) / acts) : now;
+      payload.level_reached = acts;
+      payload.score = d.globalScore != null ? Math.round(d.globalScore) : null;
+      payload.deaths = 0;
+      payload.details = {
+        usage_only: false,
+        launcher: 'jclic',
+        activities_done: d.activitiesDone || 0,
+        activities_solved: d.activitiesSolved || 0,
+        ratio_solved: d.ratioSolved != null ? d.ratioSolved : null,
+        ratio_played: d.ratioPlayed != null ? d.ratioPlayed : null,
+        actions: d.actions || 0,
+        duration_s: now
+      };
+    }
+    return payload;
+  }
+
+  function sendMetrics() {
+    var payload = buildPayload();
+    if (!P.sessionId) return Promise.resolve(null);
+    return fetch('/api/save_game', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); }).catch(function (e) { return null; });
+  }
+
+  function showStatus(msg) {
+    var el = document.getElementById('status');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function boot() {
+    var JClicObject = window.JClicObject;
+    if (!JClicObject || !JClicObject.loadProject) { setTimeout(boot, 60); return; }
+    try {
+      JClicObject.loadProject(
+        document.getElementById('jc'),
+        '/static/games/' + P.game,
+        { reporter: 'SessionStorageReporter', lang: 'es', fade: 0, audioEnabled: true }
+      );
+      player = window.JClicObject.currentPlayers && window.JClicObject.currentPlayers[0];
+    } catch (e) {
+      showStatus('Error al cargar la actividad');
+      return;
+    }
+    setInterval(function () {
+      var now = Date.now();
+      if (now - lastSent >= 25000) {
+        lastSent = now;
+        sendMetrics();
+      }
+    }, 5000);
+  }
+  boot();
+
+  document.getElementById('terminate').addEventListener('click', function () {
+    var btn = document.getElementById('terminate');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    showStatus('Guardando resultados…');
+    sendMetrics().finally(function () {
+      try { parent.postMessage({ type: 'game_finished', launcher: 'jclic', game: P.game }, '*'); } catch (e) {}
+      setTimeout(function () { window.close(); }, 400);
+    });
+  });
+
+  window.addEventListener('beforeunload', function () {
+    var payload = buildPayload();
+    if (!P.sessionId) return;
+    try {
+      navigator.sendBeacon('/api/save_game', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+    } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

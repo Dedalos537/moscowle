@@ -7,6 +7,8 @@ class Game(db.Model, AuditMixin):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     filename = db.Column(db.String(100), nullable=False, unique=True)
+    filetype = db.Column(db.String(20), nullable=False, default='html')
+    meta = db.Column(db.Text, nullable=True)
     description = db.Column(db.Text, nullable=True)
     thumbnail = db.Column(db.String(200), nullable=True)
     is_active = db.Column(db.Boolean, default=True)

@@ -16,6 +16,7 @@ class SessionMetrics(db.Model, AuditMixin):
     avg_time = db.Column(db.Float, nullable=False)
     prediction = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text, nullable=True)
 
     game = db.relationship('Game', backref=db.backref('metrics', lazy=True))
     user = db.relationship(

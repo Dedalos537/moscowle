@@ -1,5 +1,7 @@
 import contextlib
 
+from werkzeug.utils import secure_filename
+
 from app.routes.api import api_bp
 from app.routes.api._shared import (
     Appointment,
@@ -44,6 +46,11 @@ def save_game():
         accuracy = float(data.get('accuracy') or 0)
         avg_time = float(data.get('avg_time') or 0)
         session_id = data.get('session_id')
+        level_reached = data.get('level_reached')
+        deaths = data.get('deaths')
+        coins = data.get('coins')
+        score = data.get('score')
+        duration_s = data.get('duration_s')
 
         appt = None
         if session_id:
@@ -65,6 +72,17 @@ def save_game():
 
         pred_code, label = predict_level(accuracy, avg_time * 1000)
 
+        details = None
+        extras = {
+            'level_reached': level_reached,
+            'deaths': deaths,
+            'coins': coins,
+            'score': score,
+            'duration_s': duration_s,
+        }
+        if any(v is not None for v in extras.values()):
+            details = json.dumps(extras, ensure_ascii=False)
+
         m = SessionMetrics(
             user_id=current_user.id,
             session_id=int(session_id) if session_id else None,
@@ -72,6 +90,7 @@ def save_game():
             accurracy=accuracy,
             avg_time=avg_time,
             prediction=pred_code,
+            details=details,
         )
 
         game_obj = Game.query.filter(or_(Game.filename == game_name, Game.title == game_name)).first()
@@ -125,13 +144,61 @@ def upload_game():
     name = request.form.get('name')
     if not file or not name:
         return jsonify({'error': 'Falta el archivo o el nombre'}), 400
-    if not name.lower().endswith('.html'):
-        name = f'{name}.html'
+
+    safe = secure_filename(file.filename or name)
+    if not safe:
+        safe = secure_filename(name)
+    lower = safe.lower()
+
+    if lower.endswith('.jclic.zip'):
+        filetype, entry = 'jclic', safe
+    elif lower.endswith('.swf'):
+        filetype, entry = 'flash', safe
+    elif lower.endswith('.zip'):
+        filetype, entry = 'zip', safe
+    elif lower.endswith(('.html', '.htm')):
+        filetype, entry = 'html', safe
+    else:
+        filetype, entry = 'html', f'{safe}.html'
+
+    if not entry.lower().endswith(('.html', '.htm', '.swf', '.zip')):
+        entry = f'{entry}.html'
+
     dest_dir = os.path.join(current_app.root_path, 'static', 'games')
     os.makedirs(dest_dir, exist_ok=True)
-    path = os.path.join(dest_dir, name)
+    path = os.path.join(dest_dir, entry)
     file.save(path)
-    return jsonify({'status': 'ok', 'file': name, 'url': url_for('static', filename=f'games/{name}')})
+
+    meta = {}
+    if filetype in ('jclic', 'flash', 'zip'):
+        meta['entry'] = entry
+
+    game = Game.query.filter_by(filename=entry).first()
+    if game:
+        game.title = (request.form.get('title') or name).strip() or game.title
+        game.filetype = filetype
+        if meta:
+            game.meta = json.dumps(meta, ensure_ascii=False)
+    else:
+        game = Game(
+            title=(request.form.get('title') or name).strip(),
+            filename=entry,
+            filetype=filetype,
+            meta=json.dumps(meta, ensure_ascii=False) if meta else None,
+            is_active=True,
+        )
+        db.session.add(game)
+    db.session.commit()
+
+    return jsonify(
+        {
+            'status': 'ok',
+            'file': entry,
+            'filetype': filetype,
+            'url': url_for('static', filename=f'games/{entry}'),
+            'game': {'id': game.id, 'title': game.title, 'filename': game.filename, 'filetype': game.filetype},
+        }
+    )
 
 
 @api_bp.route('/ai/generate_game', methods=['POST'])

@@ -700,6 +700,50 @@ def create_app(config_class=None):
                 app.logger.warning(f'Patient detail column migration (non-fatal): {e}')
                 db.session.rollback()
 
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'game' AND column_name = 'filetype'"
+                    )
+                )
+                if result.scalar() == 0:
+                    app.logger.info('Adding game multimedia columns to game table...')
+                    for col_def in [
+                        "ALTER TABLE game ADD COLUMN filetype VARCHAR(20) NOT NULL DEFAULT 'html'",
+                        'ALTER TABLE game ADD COLUMN meta TEXT NULL',
+                    ]:
+                        db.session.execute(text(col_def))
+                    db.session.commit()
+                    app.logger.info('Game multimedia columns added successfully')
+                else:
+                    app.logger.info('Game multimedia columns already exist')
+            except Exception as e:
+                app.logger.warning(f'Game multimedia column migration (non-fatal): {e}')
+                db.session.rollback()
+
+            try:
+                from sqlalchemy import text
+
+                result = db.session.execute(
+                    text(
+                        'SELECT COUNT(*) FROM information_schema.columns '
+                        "WHERE table_name = 'session_metrics' AND column_name = 'details'"
+                    )
+                )
+                if result.scalar() == 0:
+                    app.logger.info('Adding details column to session_metrics table...')
+                    db.session.execute(text('ALTER TABLE session_metrics ADD COLUMN details TEXT NULL'))
+                    db.session.commit()
+                    app.logger.info('SessionMetrics details column added successfully')
+                else:
+                    app.logger.info('SessionMetrics details column already exists')
+            except Exception as e:
+                app.logger.warning(f'SessionMetrics details column migration (non-fatal): {e}')
+                db.session.rollback()
+
         db.session.remove()
 
     _blueprints = [
