@@ -30,7 +30,7 @@ import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, Contra
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
-  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue,
+  getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
 } from './finanzas-utils';
 import {
   makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
@@ -106,6 +106,7 @@ export class Finanzas implements OnInit, OnDestroy {
     { value: '', label: 'Todos los Estados' },
     { value: 'al_dia', label: 'Al Día' },
     { value: 'deudor', label: 'Deudores' },
+    { value: 'cancelado', label: 'Cancelados' },
     { value: 'sin_contrato', label: 'Sin Contrato' },
     { value: 'inactivo', label: 'Inactivos' },
   ];
@@ -141,7 +142,7 @@ export class Finanzas implements OnInit, OnDestroy {
   patientPageSize = 20;
   patientTotalPages = 1;
 
-  patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'sin_contrato' = 'all';
+  patientStatusFilter: 'all' | 'al_dia' | 'deudor' | 'cancelado' | 'sin_contrato' = 'al_dia';
 
   expandedPatientId: number | null = null;
   selectedPatientContracts: ContractDetail[] = [];
@@ -166,9 +167,10 @@ export class Finanzas implements OnInit, OnDestroy {
     const total = this.patients.length;
     const alDia = this.patients.filter(p => getPatientStatus(p) === 'al_dia').length;
     const deudores = this.patients.filter(p => getPatientStatus(p) === 'deudor').length;
-    const sinContrato = this.patients.filter(p => !this.patientContractMap[p.id]).length;
+    const cancelados = this.patients.filter(p => getPatientStatus(p) === 'cancelado').length;
+    const sinContrato = this.patients.filter(p => getPatientStatus(p) === 'sin_contrato').length;
     const totalDeuda = this.patients.reduce((s, p) => s + (p.payment_amount || 0), 0);
-    return { total, alDia, deudores, sinContrato, totalDeuda };
+    return { total, alDia, deudores, cancelados, sinContrato, totalDeuda };
   }
 
   expenseCategoryOptions: SelectOption[] = [
@@ -188,6 +190,7 @@ export class Finanzas implements OnInit, OnDestroy {
   contractsLoading = false;
   contracts: Contract[] = [];
   patientContractMap: Record<number, Contract> = {};
+  patientContractStateMap: Record<number, { status: string; pending: number; overdue: number }> = {};
   contractProgressMap: Record<number, { paid: number; total: number; amount: number; collected: number }> = {};
   expandedContractId: number | null = null;
   contractDetail: ContractDetail | null = null;
@@ -461,6 +464,7 @@ export class Finanzas implements OnInit, OnDestroy {
               has_plan_config: !!(u.payment_plan || u.payment_amount),
             };
           });
+          this.syncPatientContractState();
           this.updateCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
@@ -589,6 +593,7 @@ export class Finanzas implements OnInit, OnDestroy {
   buildContractProgressMap() {
     this.contractProgressMap = {};
     this.patientContractMap = {};
+    this.patientContractStateMap = {};
     for (const c of this.contracts) {
       if (c.status === 'active' || c.status === 'pending') {
         this.contractProgressMap[c.patient_id] = {
@@ -598,10 +603,33 @@ export class Finanzas implements OnInit, OnDestroy {
           collected: (c.paid_count || 0) * (c.installment_amount || 0),
         };
       }
+      const prev = this.patientContractStateMap[c.patient_id];
+      const cur: { status: string; pending: number; overdue: number } = {
+        status: c.status,
+        pending: c.pending_amount || 0,
+        overdue: c.overdue_count || 0,
+      };
+      if (!prev || rankContract(prev.status) >= rankContract(cur.status)) {
+        this.patientContractStateMap[c.patient_id] = cur;
+      }
       if (c.status === 'active' && !this.patientContractMap[c.patient_id]) {
         this.patientContractMap[c.patient_id] = c;
       }
     }
+    this.syncPatientContractState();
+  }
+
+  syncPatientContractState() {
+    this.patients = this.patients.map(p => {
+      const st = this.patientContractStateMap[p.id];
+      return {
+        ...p,
+        contract_status: st ? st.status : undefined,
+        contract_pending: st ? st.pending : 0,
+        contract_overdue: st?.status === 'active' || st?.status === 'pending' ? (st.overdue || 0) : 0,
+      };
+    });
+    this.updateCharts();
   }
 
   getContractProgress(patientId: number): { paid: number; total: number; pct: number } {
@@ -1122,7 +1150,7 @@ export class Finanzas implements OnInit, OnDestroy {
   getPatientRowClass = (p: PatientRow, _i: number): string => {
     const classes: string[] = [];
     if (getPatientStatus(p) === 'deudor') classes.push('bg-error-container/10');
-    if (getPatientStatus(p) === 'sin_plan' || !this.patientContractMap[p.id]) classes.push('bg-surface-container-high/40');
+    if (getPatientStatus(p) === 'sin_contrato') classes.push('bg-surface-container-high/40');
     if (isOverdue(p)) classes.push('border-l-2 border-l-error');
     return classes.join(' ');
   };
@@ -1130,11 +1158,7 @@ export class Finanzas implements OnInit, OnDestroy {
   get filteredPatients(): PatientRow[] {
     let result = [...this.patients];
     if (this.patientStatusFilter !== 'all') {
-      if (this.patientStatusFilter === 'sin_contrato') {
-        result = result.filter(p => !this.patientContractMap[p.id]);
-      } else {
-        result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
-      }
+      result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
     }
     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
@@ -1174,7 +1198,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'sin_contrato') {
+  setPatientStatusFilter(filter: 'all' | 'al_dia' | 'deudor' | 'cancelado' | 'sin_contrato') {
     this.patientStatusFilter = filter;
     this.patientPage = 1;
     this.cdr.markForCheck();
@@ -1406,8 +1430,9 @@ export class Finanzas implements OnInit, OnDestroy {
   private updateStatusDistChart() {
     const alDia = this.patients.filter((p) => getPatientStatus(p) === 'al_dia').length;
     const deudor = this.patients.filter((p) => getPatientStatus(p) === 'deudor').length;
-    const sinPlan = this.patients.filter((p) => getPatientStatus(p) === 'sin_plan').length;
-    this.chartStatusDist = { labels: ['Al Día', 'Deudores', 'Sin Plan'], datasets: [{ data: [alDia, deudor, sinPlan], backgroundColor: ['#75a83a', '#ba1a1a', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
+    const cancelado = this.patients.filter((p) => getPatientStatus(p) === 'cancelado').length;
+    const sinContrato = this.patients.filter((p) => getPatientStatus(p) === 'sin_contrato').length;
+    this.chartStatusDist = { labels: ['Al Día', 'Deudores', 'Cancelados', 'Sin Contrato'], datasets: [{ data: [alDia, deudor, cancelado, sinContrato], backgroundColor: ['#75a83a', '#ba1a1a', '#9ca3af', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
   }
 
   private updateDebtByLocationChart() {

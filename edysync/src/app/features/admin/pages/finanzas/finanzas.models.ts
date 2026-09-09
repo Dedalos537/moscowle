@@ -15,6 +15,9 @@ export interface PatientRow {
   next_due_date?: string;
   status: string;
   has_plan_config: boolean;
+  contract_status?: string;
+  contract_pending?: number;
+  contract_overdue?: number;
 }
 
 export interface PaymentHistoryRow {

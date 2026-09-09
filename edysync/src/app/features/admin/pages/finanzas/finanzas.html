@@ -417,7 +417,7 @@
   </div>
   } @else {
 
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-5">
     <button (click)="setPatientStatusFilter('all')"
       class="rounded-xl p-3 text-center border transition-all cursor-pointer"
       [class.border-primary]="patientStatusFilter === 'all'"
@@ -445,6 +445,15 @@
       <p class="text-[10px] font-bold uppercase" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface-variant]="patientStatusFilter !== 'deudor'">Deudores</p>
       <p class="text-xl font-black font-accent" [class.text-error]="patientStatusFilter === 'deudor'" [class.text-on-surface]="patientStatusFilter !== 'deudor'">{{ patientStats.deudores }}</p>
     </button>
+    <button (click)="setPatientStatusFilter('cancelado')"
+      class="rounded-xl p-3 text-center border transition-all cursor-pointer"
+      [class.border-on-surface-variant]="patientStatusFilter === 'cancelado'"
+      [class.bg-surface-container-high/60]="patientStatusFilter === 'cancelado'"
+      [class.border-border/30]="patientStatusFilter !== 'cancelado'"
+      [class.hover:border-on-surface-variant/40]="patientStatusFilter !== 'cancelado'">
+      <p class="text-[10px] font-bold uppercase" [class.text-on-surface-variant]="patientStatusFilter === 'cancelado'" [class.text-on-surface-variant]="patientStatusFilter !== 'cancelado'">Cancelados</p>
+      <p class="text-xl font-black font-accent" [class.text-on-surface]="patientStatusFilter === 'cancelado'" [class.text-on-surface]="patientStatusFilter !== 'cancelado'">{{ patientStats.cancelados }}</p>
+    </button>
     <button (click)="setPatientStatusFilter('sin_contrato')"
       class="rounded-xl p-3 text-center border transition-all cursor-pointer"
       [class.border-warning]="patientStatusFilter === 'sin_contrato'"
@@ -452,7 +461,7 @@
       [class.border-border/30]="patientStatusFilter !== 'sin_contrato'"
       [class.hover:border-warning/40]="patientStatusFilter !== 'sin_contrato'">
       <p class="text-[10px] font-bold uppercase" [class.text-warning]="patientStatusFilter === 'sin_contrato'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_contrato'">Sin Contrato</p>
-      <p class="text-xl font-black font-accent" [class.text-warning]="patientStatusFilter === 'sin_contrato'" [class.text-on-surface-variant]="patientStatusFilter !== 'sin_contrato'">{{ patientStats.sinContrato }}</p>
+      <p class="text-xl font-black font-accent" [class.text-warning]="patientStatusFilter === 'sin_contrato'" [class.text-on-surface]="patientStatusFilter !== 'sin_contrato'">{{ patientStats.sinContrato }}</p>
     </button>
   </div>
 

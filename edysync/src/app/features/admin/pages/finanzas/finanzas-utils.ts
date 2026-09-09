@@ -76,9 +76,16 @@ export function getInitials(name: string): string {
   return name?.slice(0, 2).toUpperCase() || 'XX';
 }
 
+export function rankContract(status: string): number {
+  const ranks: Record<string, number> = { active: 4, pending: 3, completed: 2, cancelled: 1, none: 0 };
+  return ranks[status] ?? 0;
+}
+
 export function getPatientStatus(p: PatientRow): string {
-  if (!p.has_plan_config || p.payment_amount <= 0) return 'sin_plan';
-  if (p.sessions_remaining <= 0) return 'deudor';
+  if (!p.contract_status) return 'sin_contrato';
+  if (p.contract_status === 'cancelled') return 'cancelado';
+  if (p.contract_status === 'pending') return 'sin_contrato';
+  if ((p.contract_overdue || 0) > 0 || (p.contract_pending || 0) > 0) return 'deudor';
   return 'al_dia';
 }
 
@@ -89,8 +96,10 @@ export function getStatusInfo(p: PatientRow): { label: string; bg: string; text:
       return { label: 'Al Dia', bg: 'bg-success-container', text: 'text-success', dot: 'bg-success' };
     case 'deudor':
       return { label: 'Deudor', bg: 'bg-error-container', text: 'text-error', dot: 'bg-error' };
-    case 'sin_plan':
-      return { label: 'Sin Plan', bg: 'bg-warning-container', text: 'text-warning', dot: 'bg-warning' };
+    case 'cancelado':
+      return { label: 'Cancelado', bg: 'bg-surface-container-high', text: 'text-on-surface-variant', dot: 'bg-outline' };
+    case 'sin_contrato':
+      return { label: 'Sin Contrato', bg: 'bg-warning-container', text: 'text-warning', dot: 'bg-warning' };
     default:
       return { label: 'Inactivo', bg: 'bg-surface-container-high', text: 'text-on-surface-variant', dot: 'bg-outline' };
   }
