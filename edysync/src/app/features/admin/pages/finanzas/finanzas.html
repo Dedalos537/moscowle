@@ -648,16 +648,6 @@
                         <span class="font-bold text-on-surface">{{ selectedPatientContract.guardian_name }}</span>
                       </div>
                       }
-                      <div class="bg-surface-container-high/50 rounded-lg p-2.5 text-xs">
-                        <span class="text-on-surface-variant block mb-0.5">Progreso</span>
-                        <div class="flex items-center gap-2 mt-1">
-                          <div class="flex-1 h-2 bg-surface-container-high rounded-full overflow-hidden">
-                            <div class="h-full bg-primary rounded-full transition-all"
-                              [style.width.%]="selectedPatientContract.installment_count > 0 ? ((selectedPatientContract.paid_count / selectedPatientContract.installment_count) * 100) : 0"></div>
-                          </div>
-                          <span class="font-bold text-on-surface">{{ selectedPatientContract.paid_count }}/{{ selectedPatientContract.installment_count }}</span>
-                        </div>
-                      </div>
                       <div class="flex gap-2 pt-1 flex-wrap">
                         <app-button variant="primary" label="Editar Contrato" [icon]="['fas', 'file-contract']" size="sm"
                           (clicked)="openEditContractModal()"></app-button>
@@ -863,28 +853,6 @@
 
           @if (expandedPatientId === p.id) {
           <div class="border-t border-border/20 pt-3 mt-1" (click)="$event.stopPropagation()">
-            <div class="mb-3">
-              <div class="flex justify-between text-[10px] sm:text-xs text-on-surface-variant mb-1">
-                <span>Progreso Contrato</span>
-                @if (getContractProgress(p.id).total > 0) {
-                <span class="font-bold">{{ getContractProgress(p.id).paid }}/{{ getContractProgress(p.id).total }} ({{ getContractProgress(p.id).pct }}%)</span>
-                } @else {
-                <span class="font-bold">Sin contrato</span>
-                }
-              </div>
-              @if (getContractProgress(p.id).total > 0) {
-              <div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-                <div class="h-full rounded-full transition-all"
-                  [ngClass]="{
-                    'bg-success': getContractProgress(p.id).pct >= 75,
-                    'bg-warning': getContractProgress(p.id).pct >= 40 && getContractProgress(p.id).pct < 75,
-                    'bg-error': getContractProgress(p.id).pct < 40
-                  }"
-                  [style.width.%]="getContractProgress(p.id).pct"></div>
-              </div>
-              }
-            </div>
-
             @if (contractLoading) {
             <div class="flex items-center justify-center py-6 gap-2">
               <app-spinner size="sm" colorClass="text-primary"></app-spinner>
