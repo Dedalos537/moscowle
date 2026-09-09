@@ -657,7 +657,7 @@
                           (clicked)="generateBoleta()"></app-button>
                         @if (selectedPatientContract.status === 'active') {
                         <app-button variant="danger" label="Cancelar" [icon]="['fas', 'ban']" size="sm"
-                          (clicked)="showCancelContractModal = true"></app-button>
+                          (clicked)="openCancelContractModal(selectedPatientContract)"></app-button>
                         } @else {
                         <app-button variant="primary" label="Reactivar" [icon]="['fas', 'redo']" size="sm"
                           (clicked)="showReactivateContractModal = true"></app-button>
