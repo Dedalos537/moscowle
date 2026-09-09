@@ -1460,14 +1460,24 @@
     @if (!isEditingContract) {
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto Total (S/) *</label>
-        <input [(ngModel)]="createContractForm.total_amount" type="number" class="input-field" min="0" />
+        <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Monto del Periodo (S/) *</label>
+        <input [(ngModel)]="createContractForm.total_amount" type="number" class="input-field" min="0"
+          (change)="onContractAmountChange()" />
+        <p class="text-[10px] text-on-surface-variant mt-1">Lo que el paciente paga en cada periodo.</p>
       </div>
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Cuotas</label>
-        <input [(ngModel)]="createContractForm.installment_count" type="number" class="input-field" min="1" max="48" />
+        <input [value]="createContractForm.installment_count" type="number" class="input-field" readonly
+          [title]="installmentCountHint" />
+        <p class="text-[10px] text-on-surface-variant mt-1">{{ installmentCountHint }}</p>
       </div>
     </div>
+    @if (contractTotalAmount > 0) {
+    <div class="bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
+      <p class="text-xs font-bold text-primary">Total del Contrato ({{ createContractForm.installment_count }} periodos)</p>
+      <p class="text-lg font-black text-primary">S/ {{ contractTotalAmount.toFixed(2) }}</p>
+    </div>
+    }
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Costo Implementación (S/)</label>
@@ -1488,7 +1498,7 @@
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Frecuencia de Pago *</label>
-        <select [(ngModel)]="createContractForm.billing_type" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
+        <select [(ngModel)]="createContractForm.billing_type" (change)="onBillingTypeChange()" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary text-sm">
           <option value="Mensual">Mensual</option>
           <option value="Quincenal">Quincenal (cada 14 días)</option>
           <option value="Semanal">Semanal (cada semana)</option>

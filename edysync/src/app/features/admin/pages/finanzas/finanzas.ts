@@ -664,7 +664,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.isEditingContract = false;
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-      installment_count: 4, start_date: new Date().toISOString().substring(1, 10),
+      installment_count: 12, start_date: new Date().toISOString().substring(1, 10),
       implementation_cost: 0, billing_rule: 'standard', bonus_months: 0, name: '', notes: '',
     };
     this.createContractStatus = '';
@@ -760,6 +760,34 @@ export class Finanzas implements OnInit, OnDestroy {
         })
       );
     }
+  }
+
+  get contractTotalAmount(): number {
+    return (this.createContractForm.total_amount || 0) * this.createContractForm.installment_count;
+  }
+
+  get installmentCountHint(): string {
+    return this.billingTypeInstallments(this.createContractForm.billing_type) === 1
+      ? '1 cuota (pago único anual)'
+      : `${this.createContractForm.installment_count} cuotas (1 año)`;
+  }
+
+  billingTypeInstallments(billingType: string): number {
+    switch (billingType) {
+      case 'Quincenal': return 24;
+      case 'Semanal': return 48;
+      case 'Anual': return 1;
+      default: return 12;
+    }
+  }
+
+  onBillingTypeChange() {
+    this.createContractForm.installment_count = this.billingTypeInstallments(this.createContractForm.billing_type);
+    this.cdr.markForCheck();
+  }
+
+  onContractAmountChange() {
+    this.cdr.markForCheck();
   }
 
   openPayInstallmentModal(installment: any, contract: Contract) {
@@ -1274,7 +1302,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.isEditingContract = false;
     this.createContractForm = {
       patient_id: patient.id, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-      installment_count: 4, start_date: new Date().toISOString().substring(0, 10),
+      installment_count: 12, start_date: new Date().toISOString().substring(0, 10),
       implementation_cost: 0, billing_rule: 'standard', bonus_months: 0,
       name: `Plan ${patient.username}`, notes: '',
     };
