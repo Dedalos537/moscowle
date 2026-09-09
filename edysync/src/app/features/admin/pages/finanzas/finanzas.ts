@@ -1005,11 +1005,19 @@ export class Finanzas implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  submitCancelContract() {
+  async submitCancelContract() {
     if (!this.cancelContractForm.contract_id || !this.cancelContractForm.reason) {
       this.cancelContractStatus = 'Ingresa un motivo de cancelación.';
       return;
     }
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Cancelar Contrato',
+      message: `¿Cancelar el contrato de ${this.cancelContractForm.patient_name}? Las cuotas pendientes quedarán canceladas.`,
+      confirmText: 'Sí, cancelar',
+      cancelText: 'Mantener',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
     this.cancelContractStatus = '';
     const data = {
       reason: this.cancelContractForm.reason,
@@ -1044,11 +1052,19 @@ export class Finanzas implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  submitReactivateContract() {
+  async submitReactivateContract() {
     if (!this.reactivateContractId || !this.reactivateNextPaymentDate) {
       this.reactivateStatus = 'Selecciona fecha de próximo pago.';
       return;
     }
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Reactivar Contrato',
+      message: `¿Reactivar el contrato con un nuevo pago el ${this.reactivateNextPaymentDate}?`,
+      confirmText: 'Reactivar',
+      cancelText: 'Cancelar',
+      variant: 'warning',
+    }));
+    if (!confirmed) return;
     this.reactivateStatus = '';
     this.subscriptions.add(
       this.adminService.reactivateContract(this.reactivateContractId, { next_payment_date: this.reactivateNextPaymentDate }).subscribe({

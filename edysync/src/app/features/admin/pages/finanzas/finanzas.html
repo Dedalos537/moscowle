@@ -1611,7 +1611,7 @@
     @if (cancelContractStatus) {
     <p class="text-xs text-error font-medium">{{ cancelContractStatus }}</p>
     }
-    <button class="btn--danger" (click)="submitCancelContract()">Cancelar Contrato</button>
+    <app-button variant="danger" label="Cancelar Contrato" [icon]="['fas', 'ban']" (clicked)="submitCancelContract()"></app-button>
   </div>
 </app-modal>
 
