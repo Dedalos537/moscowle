@@ -1857,7 +1857,7 @@ def handle_get_debt_summary(**kwargs):
             },
             'installment_count': {'type': 'integer', 'description': 'Número de cuotas', 'default': 4},
             'start_date': {'type': 'string', 'description': 'Fecha de inicio YYYY-MM-DD'},
-            'implementation_cost': {'type': 'number', 'description': 'Costo de implementación (cuota 0)', 'default': 0},
+            'implementation_cost': {'type': 'number', 'description': 'Monto de evaluación (cuota 0)', 'default': 0},
             'billing_rule': {
                 'type': 'string',
                 'description': 'Regla de facturación',

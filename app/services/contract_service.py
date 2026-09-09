@@ -124,7 +124,7 @@ class ContractService:
                     'due_date': sign_date,
                     'amount': float(implementation_cost),
                     'status': 'pending',
-                    'description': 'Costo de Implementación',
+                    'description': 'Monto de Evaluación',
                     'is_implementation': True,
                     'is_free_month': False,
                 }
