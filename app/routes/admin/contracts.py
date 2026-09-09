@@ -92,12 +92,22 @@ def create_contract():
 
         total_amount = round(cycle_amount * installment_count, 2)
 
+        from app.extensions import db as _db
+
+        try:
+            conn = _db.session.connection()
+            conn.execute(_db.text('ALTER TABLE contract ADD COLUMN payment_start_date DATE'))
+            _db.session.commit()
+        except Exception:
+            pass
+
         success, result = contract_service.create_contract(
             patient_id=patient_id,
             total_amount=total_amount,
             installment_count=installment_count,
             name=data.get('name') or data.get('nombre_contrato'),
             start_date=data.get('start_date'),
+            payment_start_date=data.get('payment_start_date'),
             notes=data.get('notes'),
             billing_type=billing_type,
             currency=data.get('currency', 'PEN'),
@@ -336,6 +346,7 @@ def migrate_existing_patients():
             ('bonus_months', 'INTEGER DEFAULT 0'),
             ('sign_date', 'DATE'),
             ('service_start_date', 'DATE'),
+            ('payment_start_date', 'DATE'),
             ('billing_rule', "VARCHAR(20) DEFAULT 'standard'"),
             ('implementation_cost', 'FLOAT DEFAULT 0'),
             ('cancelled_at', 'DATETIME'),

@@ -12,6 +12,7 @@ class ContractService:
         installment_count=4,
         name=None,
         start_date=None,
+        payment_start_date=None,
         notes=None,
         billing_type='Mensual',
         currency='PEN',
@@ -31,6 +32,14 @@ class ContractService:
         elif isinstance(start_date, str):
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
 
+        if not payment_start_date:
+            payment_start_date = start_date
+        elif isinstance(payment_start_date, str):
+            try:
+                payment_start_date = datetime.strptime(payment_start_date, '%Y-%m-%d').date()
+            except ValueError:
+                payment_start_date = start_date
+
         sign_date = start_date
         service_start_date = start_date
 
@@ -43,6 +52,7 @@ class ContractService:
             installment_count=installment_count,
             installment_amount=installment_amount,
             start_date=start_date,
+            payment_start_date=payment_start_date,
             end_date=None,
             status='active',
             notes=notes,
@@ -71,7 +81,7 @@ class ContractService:
             duration=installment_count,
             bonus=bonus_months,
             sign_date=sign_date,
-            start_date=service_start_date,
+            start_date=payment_start_date,
             billing_rule=billing_rule,
             implementation_cost=implementation_cost,
             currency=currency,
@@ -334,6 +344,9 @@ class ContractService:
             'billing_type': getattr(c, 'billing_type', None) or 'Mensual',
             'currency': getattr(c, 'currency', None) or 'PEN',
             'start_date': c.start_date.strftime('%Y-%m-%d') if c.start_date else None,
+            'payment_start_date': c.payment_start_date.strftime('%Y-%m-%d')
+            if getattr(c, 'payment_start_date', None)
+            else None,
             'end_date': c.end_date.strftime('%Y-%m-%d') if c.end_date else None,
             'notes': c.notes,
             'pending_amount': round(pending_amount, 2),

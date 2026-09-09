@@ -13,6 +13,7 @@ class Contract(db.Model, AuditMixin):
     installment_count = db.Column(db.Integer, default=4)
     installment_amount = db.Column(db.Float, nullable=False)
     start_date = db.Column(db.Date, nullable=True)
+    payment_start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     status = db.Column(db.String(20), default='active', index=True)
     notes = db.Column(db.Text, nullable=True)

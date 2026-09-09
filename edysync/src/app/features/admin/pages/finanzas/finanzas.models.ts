@@ -133,7 +133,9 @@ export interface CreateContractForm {
   billing_type: string;
   currency: string;
   installment_count: number;
+  duration_months: number;
   start_date: string;
+  payment_start_date: string;
   implementation_cost: number;
   billing_rule: string;
   bonus_months: number;

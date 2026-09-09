@@ -158,7 +158,7 @@ export class AdminService {
     return this.http.get<{ success: boolean; contract: any }>(`/admin/api/contracts/${contractId}`);
   }
 
-  createContract(data: { patient_id: number | null; total_amount: number; installment_count: number; name?: string; start_date?: string; billing_type?: string; currency?: string; implementation_cost?: number; billing_rule?: string; bonus_months?: number; notes?: string }): Observable<{ success: boolean; contract: any; installments_generated: number; error?: string }> {
+  createContract(data: { patient_id: number | null; total_amount: number; installment_count: number; duration_months?: number; name?: string; start_date?: string; payment_start_date?: string; billing_type?: string; currency?: string; implementation_cost?: number; billing_rule?: string; bonus_months?: number; notes?: string }): Observable<{ success: boolean; contract: any; installments_generated: number; error?: string }> {
     return this.http.post<{ success: boolean; contract: any; installments_generated: number }>('/admin/api/contracts', data);
   }
 

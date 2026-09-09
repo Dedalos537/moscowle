@@ -202,7 +202,8 @@ export class Finanzas implements OnInit, OnDestroy {
   showCreateContractModal = false;
   createContractForm: CreateContractForm = {
     patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-    installment_count: 4, start_date: '', implementation_cost: 0, billing_rule: 'standard',
+    installment_count: 12, duration_months: 12, start_date: '', payment_start_date: '',
+    implementation_cost: 0, billing_rule: 'standard',
     bonus_months: 0, name: '', notes: '',
   };
   createContractStatus = '';
@@ -662,9 +663,10 @@ export class Finanzas implements OnInit, OnDestroy {
   openCreateContractModal() {
     console.log('[FINANZAS] openCreateContractModal called');
     this.isEditingContract = false;
+    const today = new Date().toISOString().substring(0, 10);
     this.createContractForm = {
       patient_id: null, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-      installment_count: 12, start_date: new Date().toISOString().substring(1, 10),
+      installment_count: 12, duration_months: 12, start_date: today, payment_start_date: today,
       implementation_cost: 0, billing_rule: 'standard', bonus_months: 0, name: '', notes: '',
     };
     this.createContractStatus = '';
@@ -741,6 +743,10 @@ export class Finanzas implements OnInit, OnDestroy {
         })
       );
     } else {
+      this.createContractForm.installment_count = this.billingTypeInstallments(
+        this.createContractForm.billing_type,
+        this.createContractForm.duration_months
+      );
       this.subscriptions.add(
         this.adminService.createContract(this.createContractForm).subscribe({
           next: (res) => {
@@ -767,23 +773,34 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   get installmentCountHint(): string {
-    return this.billingTypeInstallments(this.createContractForm.billing_type) === 1
-      ? '1 cuota (pago único anual)'
-      : `${this.createContractForm.installment_count} cuotas (1 año)`;
+    const months = this.createContractForm.duration_months || 0;
+    const cuotas = this.billingTypeInstallments(this.createContractForm.billing_type, months);
+    if (this.createContractForm.billing_type === 'Anual') {
+      return `${cuotas} cuota(s) por ${months} mes(es) (pago único anual)`;
+    }
+    return `${cuotas} cuotas (${months} meses)`;
   }
 
-  billingTypeInstallments(billingType: string): number {
+  billingTypeInstallments(billingType: string, months: number): number {
+    if (!months || months <= 0) months = 1;
     switch (billingType) {
-      case 'Quincenal': return 24;
-      case 'Semanal': return 48;
-      case 'Anual': return 1;
-      default: return 12;
+      case 'Quincenal': return months * 2;
+      case 'Semanal': return months * 4;
+      case 'Anual': return Math.max(1, Math.round(months / 12));
+      default: return months;
     }
   }
 
   onBillingTypeChange() {
-    this.createContractForm.installment_count = this.billingTypeInstallments(this.createContractForm.billing_type);
+    this.createContractForm.installment_count = this.billingTypeInstallments(
+      this.createContractForm.billing_type,
+      this.createContractForm.duration_months
+    );
     this.cdr.markForCheck();
+  }
+
+  onContractDurationChange() {
+    this.onBillingTypeChange();
   }
 
   onContractAmountChange() {
@@ -1300,15 +1317,17 @@ export class Finanzas implements OnInit, OnDestroy {
 
   openCreateContractForPatient(patient: PatientRow) {
     this.isEditingContract = false;
+    const today = new Date().toISOString().substring(0, 10);
     this.createContractForm = {
       patient_id: patient.id, total_amount: 0, billing_type: 'Mensual', currency: 'PEN',
-      installment_count: 12, start_date: new Date().toISOString().substring(0, 10),
+      installment_count: 12, duration_months: 12, start_date: today, payment_start_date: today,
       implementation_cost: 0, billing_rule: 'standard', bonus_months: 0,
       name: `Plan ${patient.username}`, notes: '',
     };
     this.createContractStatus = '';
     this.showCreateContractModal = true;
     this.cdr.markForCheck();
+    this.loadPatientsList();
   }
 
   openEditContractModal() {
@@ -1321,7 +1340,9 @@ export class Finanzas implements OnInit, OnDestroy {
       billing_type: this.selectedPatientContract.billing_type,
       currency: this.selectedPatientContract.currency,
       installment_count: this.selectedPatientContract.installment_count,
+      duration_months: 12,
       start_date: this.selectedPatientContract.start_date || '',
+      payment_start_date: this.selectedPatientContract.start_date || '',
       implementation_cost: this.selectedPatientContract.implementation_cost,
       billing_rule: this.selectedPatientContract.billing_rule,
       bonus_months: 0,
