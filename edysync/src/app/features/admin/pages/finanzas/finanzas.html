@@ -293,104 +293,6 @@
   </div>
   }
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <app-summary-card [border]="false" label="Total Recaudado (Mes)" [value]="totalIncomeReal.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'money-bill-wave']" variant="success"
-      subtitle="Ingresos del período actual" />
-
-    <app-summary-card [border]="false" label="Pendiente por Cobrar" [value]="totalPending.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'wallet']" variant="info"
-      subtitle="Monto total pendiente" />
-
-    <app-summary-card [border]="false" label="Total Deuda" [value]="totalDebt.toFixed(2)" prefix="S/ "
-      [icon]="['fas', 'exclamation-triangle']" variant="error"
-      [subtitle]="(financials?.overdue_users_count || 0) + ' pacientes morosos'" />
-
-    <app-summary-card [border]="false" label="Pacientes Registrados" [value]="totalPatients"
-      [icon]="['fas', 'heartbeat']" variant="primary"
-      subtitle="En el sistema de pagos" />
-  </div>
-
-  @if (!isSupervisor) {
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
-        Estado de Pagos
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
-        Deuda por Sede
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt"
-          [type]="chartDebtByLocationType"></canvas>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
-        Antigüedad de Vencimientos
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
-        Historial de Ingresos (6 Meses)
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt"
-          [type]="chartRevenueHistoryType"></canvas>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
-        Ingresos por Tipo de Plan
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt"
-          [type]="chartRevenueByPlanType"></canvas>
-      </div>
-    </div>
-
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
-        Proyección vs Real
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5 lg:col-start-2">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
-        Ingresos por Sede
-      </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt"
-          [type]="chartRevenueByLocationType"></canvas>
-      </div>
-    </div>
-  </div>
-  }
-
   <div class="flex gap-1 bg-surface-container-high rounded-xl p-1 w-fit">
     <button class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
       [class.bg-surface-container-lowest]="pagosTab === 'pacientes'" [class.text-on-surface]="pagosTab === 'pacientes'"
@@ -485,6 +387,34 @@
       <div class="flex flex-col md:flex-row gap-3">
         <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions"
           class="min-w-[160px]"></app-select>
+
+        <app-month-range-picker [label]="'Vencimiento'" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
+
+        @if (monthFilter) {
+        <div class="flex gap-1 bg-surface-container-high rounded-xl p-1">
+          <button (click)="setFortnightFilter(null)"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+            [class.bg-surface-container-lowest]="!fortnightFilter"
+            [class.text-on-surface]="!fortnightFilter"
+            [class.text-on-surface-variant]="!!fortnightFilter">
+            Todo el mes
+          </button>
+          <button (click)="setFortnightFilter(1)"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+            [class.bg-primary]="fortnightFilter === 1"
+            [class.text-on-primary]="fortnightFilter === 1"
+            [class.text-on-surface-variant]="fortnightFilter !== 1">
+            1ra Quincena
+          </button>
+          <button (click)="setFortnightFilter(2)"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+            [class.bg-primary]="fortnightFilter === 2"
+            [class.text-on-primary]="fortnightFilter === 2"
+            [class.text-on-surface-variant]="fortnightFilter !== 2">
+            2da Quincena
+          </button>
+        </div>
+        }
 
         <app-select (valueChange)="selectedSort = $event" [options]="sortOptions" class="min-w-[180px]"></app-select>
 

@@ -349,8 +349,11 @@ export class AdminService {
     return this.http.get<{ success: boolean; data: ContactMessage[] }>('/admin/api/contact-messages');
   }
 
-  getFinancialSummary(): Observable<{ success: boolean; data: any }> {
-    return this.http.get<{ success: boolean; data: any }>('/admin/api/financial-summary');
+  getFinancialSummary(month?: number, year?: number): Observable<{ success: boolean; data: any }> {
+    let params: any = {};
+    if (month) params = { ...params, month };
+    if (year)  params = { ...params, year };
+    return this.http.get<{ success: boolean; data: any }>('/admin/api/financial-summary', { params });
   }
 
   getTherapistStats(): Observable<{ success: boolean; data: TherapistStats[] }> {

@@ -21,6 +21,92 @@
     <div class="dashboard-section__header">
       <div class="dashboard-section__title">
         <div class="icon-box icon-box--primary">
+          <fa-icon [icon]="['fas', 'calendar-days']" class="text-sm"></fa-icon>
+        </div>
+        <h3>Resumen Financiero</h3>
+      </div>
+      <app-month-range-picker [label]="'Período'" (valueChange)="onPeriodChange($event)"></app-month-range-picker>
+    </div>
+
+    <div class="grid-4">
+      <app-summary-card label="Total Recaudado (Mes)" [value]="totalIncomeReal.toFixed(2)" prefix="S/ "
+        [icon]="['fas', 'money-bill-wave']" variant="success" subtitle="Ingresos del período" />
+      <app-summary-card label="Pendiente por Cobrar" [value]="totalPending.toFixed(2)" prefix="S/ "
+        [icon]="['fas', 'wallet']" variant="info" subtitle="Monto total pendiente" />
+      <app-summary-card label="Total Deuda" [value]="totalDebt.toFixed(2)" prefix="S/ "
+        [icon]="['fas', 'exclamation-triangle']" variant="error"
+        [subtitle]="(financials?.overdue_users_count || 0) + ' pacientes morosos'" />
+      <app-summary-card label="Pacientes Registrados" [value]="totalPatients"
+        [icon]="['fas', 'heartbeat']" variant="primary" subtitle="En el sistema de pagos" />
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <h3 class="section-label">Análisis Financiero</h3>
+    <div class="charts-scroll">
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'chart-pie']" class="text-[14px]"></fa-icon>
+          Estado de Pagos
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt"
+            [type]="chartStatusType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[14px]"></fa-icon>
+          Deuda por Sede
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt"
+            [type]="chartDebtByLocationType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'clock']" class="text-[14px]"></fa-icon>
+          Antigüedad de Vencimientos
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt"
+            [type]="chartPaymentAgeType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'chart-line']" class="text-[14px]"></fa-icon>
+          Historial de Ingresos
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartRevenueHistory"
+            [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'tags']" class="text-[14px]"></fa-icon>
+          Ingresos por Tipo de Plan
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartRevenueByPlan"
+            [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[14px]"></fa-icon>
+          Proyección vs Real
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt"
+            [type]="chartProjVsRealType"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4 class="chart-card__title">
+          <fa-icon [icon]="['fas', 'map']" class="text-[14px]"></fa-icon>
+          Ingresos por Sede
+        </h4>
+        <div class="chart-card__body"><canvas baseChart [data]="chartRevenueByLocation"
+            [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <div class="dashboard-section__header">
+      <div class="dashboard-section__title">
+        <div class="icon-box icon-box--primary">
           <fa-icon [icon]="['fas', 'robot']" class="text-sm"></fa-icon>
         </div>
         <h3>Centro de Acción Inteligente</h3>

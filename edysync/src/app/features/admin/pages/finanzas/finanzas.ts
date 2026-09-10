@@ -6,7 +6,6 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
-import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
@@ -26,22 +25,19 @@ import { Input } from '../../../../shared/components/input/input';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { SummaryCard } from '../../../../shared/components/summary-card/summary-card';
 import { Table, TableCell, TableColumn } from '../../../../shared/components/table/table';
+import { MonthRange, MonthRangePicker } from '../../../../shared/components/month-range-picker/month-range-picker';
 import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
   getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
 } from './finanzas-utils';
-import {
-  makeDoughnutOpts, makeBarOpts, makeLineOpts, makePieOpts, chartColors,
-} from './finanzas-charts-config';
-
-Chart.register(...registerables);
+import { makeLineOpts, makeDoughnutOpts } from './finanzas-charts-config';
 
 @Component({
   selector: 'app-finanzas',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, BaseChartDirective, Button, Spinner, Select, Input, Modal, SummaryCard, Table, TableCell, MonthRangePicker],
   templateUrl: './finanzas.html',
   styleUrl: './finanzas.scss',
   animations: [fadeInUp, fadeInLeft, scaleIn, listStagger, gridStagger, cardEnter],
@@ -238,40 +234,8 @@ export class Finanzas implements OnInit, OnDestroy {
 
   financials: any = { income_real: 0, income_expected: 0, overdue_amount: 0, overdue_users_count: 0 };
 
-  chartStatusDist: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  chartStatusOpt = makeDoughnutOpts();
-  readonly chartStatusType = 'doughnut' as const;
-
-  chartDebtByLocation: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartDebtByLocationOpt = makeBarOpts('y');
-  readonly chartDebtByLocationType = 'bar' as const;
-
-  chartPaymentAge: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartPaymentAgeOpt = makeBarOpts();
-  readonly chartPaymentAgeType = 'bar' as const;
-
-  chartRevenueHistory: ChartData<'line'> = { labels: [], datasets: [] };
-  chartRevenueHistoryOpt = makeLineOpts();
-  readonly chartRevenueHistoryType = 'line' as const;
-
-  chartRevenueByPlan: ChartData<'pie'> = { labels: [], datasets: [] };
-  chartRevenueByPlanOpt = makePieOpts();
-  readonly chartRevenueByPlanType = 'pie' as const;
-
-  chartProjVsReal: ChartData<'bar'> = { labels: [], datasets: [] };
-  chartProjVsRealOpt: ChartConfiguration<'bar'>['options'] = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle', padding: 16 } },
-      tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', titleFont: { family: 'Manrope', size: 12, weight: 700 }, bodyFont: { family: 'Manrope', size: 13, weight: 600 }, padding: { x: 14, y: 10 }, cornerRadius: 10, callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } },
-    },
-    scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } },
-  };
-  readonly chartProjVsRealType = 'bar' as const;
-
-  chartRevenueByLocation: ChartData<'pie'> = { labels: [], datasets: [] };
-  chartRevenueByLocationOpt = makePieOpts();
-  readonly chartRevenueByLocationType = 'pie' as const;
+  monthFilter: string | null = null;
+  fortnightFilter: 1 | 2 | null = null;
 
   dashIncomeExpenseChart: ChartData<'line'> = { labels: [], datasets: [] };
   dashIncomeExpenseOpt = makeLineOpts();
@@ -465,7 +429,6 @@ export class Finanzas implements OnInit, OnDestroy {
             };
           });
           this.syncPatientContractState();
-          this.updateCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
         },
@@ -476,7 +439,7 @@ export class Finanzas implements OnInit, OnDestroy {
 
   private loadFinancialSummary() {
     this.subscriptions.add(this.adminService.getFinancialSummary().subscribe({
-      next: (res) => { if (res.success && res.data) { this.financials = res.data; this.updateCharts(); } this.cdr.markForCheck(); },
+      next: (res) => { if (res.success && res.data) { this.financials = res.data; } this.cdr.markForCheck(); },
       error: () => this.cdr.markForCheck(),
     }));
   }
@@ -499,7 +462,6 @@ export class Finanzas implements OnInit, OnDestroy {
         }
         this.historyLoading = false;
         this.genDashboardCharts();
-        this.updateRevenueHistoryChart();
         this.cdr.markForCheck();
       },
         error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
@@ -629,7 +591,6 @@ export class Finanzas implements OnInit, OnDestroy {
         contract_overdue: st?.status === 'active' || st?.status === 'pending' ? (st.overdue || 0) : 0,
       };
     });
-    this.updateCharts();
   }
 
   getContractProgress(patientId: number): { paid: number; total: number; pct: number } {
@@ -1143,7 +1104,27 @@ export class Finanzas implements OnInit, OnDestroy {
     return c;
   }
 
-  clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; }
+  clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; this.monthFilter = null; this.fortnightFilter = null; }
+
+  onMonthFilterChange(range: MonthRange | null) {
+    if (!range) {
+      this.monthFilter = null;
+      this.fortnightFilter = null;
+    } else {
+      this.monthFilter = range.start;
+      if (range.start !== range.end) {
+        this.fortnightFilter = null;
+      }
+    }
+    this.patientPage = 1;
+    this.cdr.markForCheck();
+  }
+
+  setFortnightFilter(f: 1 | 2 | null) {
+    this.fortnightFilter = f;
+    this.patientPage = 1;
+    this.cdr.markForCheck();
+  }
 
   trackPatient = (i: number, p: PatientRow): number => p.id;
 
@@ -1159,6 +1140,16 @@ export class Finanzas implements OnInit, OnDestroy {
     let result = [...this.patients];
     if (this.patientStatusFilter !== 'all') {
       result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
+    }
+    if (this.monthFilter) {
+      result = result.filter(p => {
+        if (!p.next_due_date || p.payment_amount <= 0) return false;
+        const dueMonth = p.next_due_date.substring(0, 7);
+        if (dueMonth !== this.monthFilter) return false;
+        if (!this.fortnightFilter) return true;
+        const day = new Date(p.next_due_date).getDate();
+        return this.fortnightFilter === 1 ? day <= 15 : day > 15;
+      });
     }
     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
@@ -1410,75 +1401,6 @@ export class Finanzas implements OnInit, OnDestroy {
   get yapeTotal(): number { return this.yapeTransactions.reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
   get yapeMonthlyTotal(): number { const cm = new Date().toISOString().substring(0, 7); return this.yapeTransactions.filter((p) => p.date && p.date.startsWith(cm)).reduce((sum, p) => sum + (p.amount - (p.discount || 0)), 0); }
   get yapeCount(): number { return this.yapeTransactions.length; }
-
-  get totalIncomeReal(): number { return this.financials?.income_real || 0; }
-  get totalPending(): number { return this.patients.filter((p) => p.payment_amount > 0).reduce((sum, p) => sum + p.payment_amount, 0); }
-  get totalDebt(): number { return this.financials?.overdue_amount || 0; }
-  get totalPatients(): number { return this.patients.length; }
-  get progressPercent(): number { return this.financials?.income_expected > 0 ? (this.financials.income_real / this.financials.income_expected) * 100 : 0; }
-
-  private updateCharts() {
-    this.updateStatusDistChart();
-    this.updateDebtByLocationChart();
-    this.updatePaymentAgeChart();
-    this.updateRevenueHistoryChart();
-    this.updateRevenueByPlanChart();
-    this.updateProjVsRealChart();
-    this.updateRevenueByLocationChart();
-  }
-
-  private updateStatusDistChart() {
-    const alDia = this.patients.filter((p) => getPatientStatus(p) === 'al_dia').length;
-    const deudor = this.patients.filter((p) => getPatientStatus(p) === 'deudor').length;
-    const cancelado = this.patients.filter((p) => getPatientStatus(p) === 'cancelado').length;
-    const sinContrato = this.patients.filter((p) => getPatientStatus(p) === 'sin_contrato').length;
-    this.chartStatusDist = { labels: ['Al Día', 'Deudores', 'Cancelados', 'Sin Contrato'], datasets: [{ data: [alDia, deudor, cancelado, sinContrato], backgroundColor: ['#75a83a', '#ba1a1a', '#9ca3af', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
-  }
-
-  private updateDebtByLocationChart() {
-    const debtBySede: Record<string, number> = {};
-    this.patients.forEach((p) => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
-    const labels = Object.keys(debtBySede);
-    this.chartDebtByLocation = { labels, datasets: [{ label: 'Deuda (S/)', data: Object.values(debtBySede), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderRadius: 6, barPercentage: 0.5 }] };
-  }
-
-  private updatePaymentAgeChart() {
-    const ranges = ['1-7 días', '8-15 días', '16-30 días', '31-60 días', '+60 días'];
-    const counts = [0, 0, 0, 0, 0];
-    const now = new Date();
-    this.patients.forEach((p) => {
-      if (!p.next_due_date) return;
-      const diffDays = Math.floor((now.getTime() - new Date(p.next_due_date).getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 0) counts[0]++; else if (diffDays <= 7) counts[0]++; else if (diffDays <= 15) counts[1]++; else if (diffDays <= 30) counts[2]++; else if (diffDays <= 60) counts[3]++; else counts[4]++;
-    });
-    this.chartPaymentAge = { labels: ranges, datasets: [{ label: 'Pacientes', data: counts, backgroundColor: ['rgba(117, 168, 58, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(186, 26, 26, 0.8)'], borderRadius: 6, barPercentage: 0.6 }] };
-  }
-
-  private updateRevenueHistoryChart() {
-    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
-    const monthKeys = getLast6MonthsKeys();
-    const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
-    const labels = monthKeys.map((k) => formatMonthLabel(k));
-    this.chartRevenueHistory = { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
-  }
-
-  private updateRevenueByPlanChart() {
-    const planMap: Record<string, number> = {};
-    this.patients.forEach((p) => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
-    const labels = Object.keys(planMap);
-    this.chartRevenueByPlan = { labels, datasets: [{ data: Object.values(planMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
-  }
-
-  private updateProjVsRealChart() {
-    this.chartProjVsReal = { labels: ['Este Mes'], datasets: [{ label: 'Proyectado', data: [this.financials?.income_expected || 0], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [this.financials?.income_real || 0], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
-  }
-
-  private updateRevenueByLocationChart() {
-    const sedeMap: Record<string, number> = {};
-    this.patients.forEach((p) => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
-    const labels = Object.keys(sedeMap);
-    this.chartRevenueByLocation = { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
-  }
 
   get patientsWithoutContractCount(): number { return this.patients.filter(p => p.is_active !== false && !this.patientContractMap[p.id]).length; }
 

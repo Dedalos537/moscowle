@@ -1,4 +1,6 @@
+import type { ChartData } from 'chart.js';
 import { PatientRow, PaymentHistoryRow, MonthCell } from './finanzas.models';
+import { chartColors } from './finanzas-charts-config';
 
 export function getCategoryLabel(key: string): string {
   const map: Record<string, string> = {
@@ -115,6 +117,85 @@ export function getOverdueDays(p: PatientRow): number {
   const diff = new Date().getTime() - new Date(p.next_due_date).getTime();
   return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
 }
+export function buildChartStatusDist(patients: PatientRow[]): ChartData<'doughnut'> {
+  const alDia = patients.filter(p => getPatientStatus(p) === 'al_dia').length;
+  const deudor = patients.filter(p => getPatientStatus(p) === 'deudor').length;
+  const cancelado = patients.filter(p => getPatientStatus(p) === 'cancelado').length;
+  const sinContrato = patients.filter(p => getPatientStatus(p) === 'sin_contrato').length;
+  return { labels: ['Al Día', 'Deudores', 'Cancelados', 'Sin Contrato'], datasets: [{ data: [alDia, deudor, cancelado, sinContrato], backgroundColor: ['#75a83a', '#ba1a1a', '#9ca3af', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
+}
+
+export function buildChartDebtByLocation(patients: PatientRow[]): ChartData<'bar'> {
+  const debtBySede: Record<string, number> = {};
+  patients.forEach(p => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
+  const labels = Object.keys(debtBySede);
+  return { labels, datasets: [{ label: 'Deuda (S/)', data: Object.values(debtBySede), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderRadius: 6, barPercentage: 0.5 }] };
+}
+
+export function buildChartPaymentAge(patients: PatientRow[]): ChartData<'bar'> {
+  const ranges = ['1-7 días', '8-15 días', '16-30 días', '31-60 días', '+60 días'];
+  const counts = [0, 0, 0, 0, 0];
+  const now = new Date();
+  patients.forEach(p => {
+    if (!p.next_due_date) return;
+    const diffDays = Math.floor((now.getTime() - new Date(p.next_due_date).getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) counts[0]++; else if (diffDays <= 7) counts[0]++; else if (diffDays <= 15) counts[1]++; else if (diffDays <= 30) counts[2]++; else if (diffDays <= 60) counts[3]++; else counts[4]++;
+  });
+  return { labels: ranges, datasets: [{ label: 'Pacientes', data: counts, backgroundColor: ['rgba(117, 168, 58, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(186, 26, 26, 0.8)'], borderRadius: 6, barPercentage: 0.6 }] };
+}
+
+export function buildChartRevenueHistory(paymentHistory: PaymentHistoryRow[], monthKeys?: string[]): ChartData<'line'> {
+  const incomeByMonth = getMonthlyIncome(paymentHistory);
+  const keys = monthKeys || getLast6MonthsKeys();
+  const revenues = keys.map(k => incomeByMonth.get(k) || 0);
+  const labels = keys.map(k => formatMonthLabel(k));
+  return { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
+}
+
+export function buildChartRevenueByPlan(patients: PatientRow[]): ChartData<'pie'> {
+  const planMap: Record<string, number> = {};
+  patients.forEach(p => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
+  const labels = Object.keys(planMap);
+  return { labels, datasets: [{ data: Object.values(planMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
+}
+
+export function buildChartProjVsReal(incomeExpected: number, incomeReal: number): ChartData<'bar'> {
+  return { labels: ['Este Mes'], datasets: [{ label: 'Proyectado', data: [incomeExpected], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [incomeReal], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
+}
+
+export function buildChartRevenueByLocation(patients: PatientRow[]): ChartData<'pie'> {
+  const sedeMap: Record<string, number> = {};
+  patients.forEach(p => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
+  const labels = Object.keys(sedeMap);
+  return { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => chartColors[i % chartColors.length]), borderWidth: 0, hoverOffset: 8 }] };
+}
+
+export function getMonthKeysBetween(start: string, end: string): string[] {
+  const keys: string[] = [];
+  const [sy, sm] = start.split('-').map(Number);
+  const [ey, em] = end.split('-').map(Number);
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    keys.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return keys;
+}
+
+export function getPatientMonthDebt(p: PatientRow, monthKey: string): boolean {
+  if (!p.next_due_date) return false;
+  return p.next_due_date.substring(0, 7) === monthKey;
+}
+
+export function getPatientFortnightDebt(p: PatientRow, monthKey: string, fortnight: 1 | 2): boolean {
+  if (!p.next_due_date || p.payment_amount <= 0) return false;
+  const datePart = p.next_due_date.substring(0, 7);
+  if (datePart !== monthKey) return false;
+  const day = new Date(p.next_due_date).getDate();
+  return fortnight === 1 ? day <= 15 : day > 15;
+}
+
 export function buildPatientYearGrid(payments: PaymentHistoryRow[], patient: PatientRow): MonthCell[] {
   const now = new Date();
   const year = now.getFullYear();

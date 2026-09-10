@@ -1,0 +1,58 @@
+<div class="mrp">
+  <button type="button" class="mrp__trigger" (click)="toggle()" [class.mrp__trigger--open]="isOpen"
+    [title]="label() + ': ' + selectedLabel" aria-haspopup="true" [attr.aria-expanded]="isOpen">
+    <fa-icon [icon]="['fas', 'calendar-days']"></fa-icon>
+    <span class="mrp__label">{{ label() }}</span>
+    <span class="mrp__value">{{ selectedLabel }}</span>
+    <fa-icon [icon]="['fas', isOpen ? 'chevron-up' : 'chevron-down']" class="mrp__chevron"></fa-icon>
+  </button>
+
+  @if (isOpen) {
+    <div class="mrp__panel">
+      <div class="mrp__header">
+        @if (allowRange) {
+          <button type="button" class="mrp__flag" (click)="toggleRangeMode()" title="Cambiar a mes único">
+            <span class="mrp__dot"></span> rango
+          </button>
+        } @else {
+          <button type="button" class="mrp__flag" (click)="toggleRangeMode()" title="Cambiar a rango de meses">
+            <span class="mrp__dot mrp__dot--off"></span> mes
+          </button>
+        }
+        <div class="mrp__years">
+          <button type="button" class="mrp__nav" (click)="prevYear()" [disabled]="!canPrev()"
+            title="Año anterior">
+            <fa-icon [icon]="['fas', 'chevron-left']"></fa-icon>
+          </button>
+          <span class="mrp__year">{{ year }}</span>
+          <button type="button" class="mrp__nav" (click)="nextYear()" title="Año siguiente">
+            <fa-icon [icon]="['fas', 'chevron-right']"></fa-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="mrp__grid">
+        @for (m of months; track m; let i = $index) {
+          <button type="button" class="mrp__cell"
+            [class.mrp__cell--selected]="isSelected(year, i)"
+            [class.mrp__cell--start]="isStart(year, i)"
+            [class.mrp__cell--end]="isEnd(year, i)"
+            [class.mrp__cell--preview]="isPreview(year, i)"
+            [class.mrp__cell--range]="allowRange"
+            (click)="select(i)">
+            {{ m }}
+          </button>
+        }
+      </div>
+
+      <div class="mrp__footer">
+        <span class="mrp__hint">
+          {{ allowRange ? 'Elige dos meses para formar un rango' : 'Elige un mes' }}
+        </span>
+        @if (value()) {
+          <button type="button" class="mrp__clear" (click)="clear($event)">Limpiar</button>
+        }
+      </div>
+    </div>
+  }
+</div>
