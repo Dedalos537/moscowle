@@ -276,6 +276,74 @@
     </div>
     }
   </div>
+
+  @if (!isSupervisor) {
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
+        Estado de Pagos
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
+        Deuda por Sede
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
+        Antigüedad de Vencimientos
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
+        Historial de Ingresos (6 Meses)
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
+        Ingresos por Tipo de Plan
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
+        Proyección vs Real
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas>
+      </div>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
+      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
+        <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
+        Ingresos por Sede
+      </h4>
+      <div class="relative" style="height: 220px">
+        <canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas>
+      </div>
+    </div>
+  </div>
+  }
 </div>
 } @if (activeTab === 'pagos') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
@@ -388,7 +456,7 @@
         <app-select (valueChange)="selectedStatus = $event" [options]="statusFilterOptions"
           class="min-w-[160px]"></app-select>
 
-        <app-month-range-picker [label]="'Vencimiento'" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
+        <app-month-range-picker [label]="'Vencimiento'" [value]="monthRangeValue" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
 
         @if (monthFilter) {
         <div class="flex gap-1 bg-surface-container-high rounded-xl p-1">

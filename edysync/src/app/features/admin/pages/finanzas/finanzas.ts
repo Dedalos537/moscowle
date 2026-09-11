@@ -234,7 +234,39 @@ export class Finanzas implements OnInit, OnDestroy {
 
   financials: any = { income_real: 0, income_expected: 0, overdue_amount: 0, overdue_users_count: 0 };
 
-  monthFilter: string | null = null;
+  chartStatusDist: any = { labels: [], datasets: [] };
+  chartStatusOpt: any;
+  readonly chartStatusType = 'doughnut' as const;
+  chartDebtByLocation: any = { labels: [], datasets: [] };
+  chartDebtByLocationOpt: any;
+  readonly chartDebtByLocationType = 'bar' as const;
+  chartPaymentAge: any = { labels: [], datasets: [] };
+  chartPaymentAgeOpt: any;
+  readonly chartPaymentAgeType = 'bar' as const;
+  chartRevenueHistory: any = { labels: [], datasets: [] };
+  chartRevenueHistoryOpt: any;
+  readonly chartRevenueHistoryType = 'line' as const;
+  chartRevenueByPlan: any = { labels: [], datasets: [] };
+  chartRevenueByPlanOpt: any;
+  readonly chartRevenueByPlanType = 'pie' as const;
+  chartProjVsReal: any = { labels: [], datasets: [] };
+  chartProjVsRealOpt: any;
+  readonly chartProjVsRealType = 'bar' as const;
+  chartRevenueByLocation: any = { labels: [], datasets: [] };
+  chartRevenueByLocationOpt: any;
+  readonly chartRevenueByLocationType = 'pie' as const;
+
+  private initChartOpts() {
+    this.chartStatusOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)' } }, cutout: '68%' };
+    this.chartDebtByLocationOpt = { responsive: true, maintainAspectRatio: false, indexAxis: 'y' as const, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } }, scales: { x: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10 }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true }, y: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 11, weight: 600 }, color: '#1a1c16' } } } };
+    this.chartPaymentAgeOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10 }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10 }, color: '#76796c' }, beginAtZero: true } } };
+    this.chartRevenueHistoryOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10 }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10 }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } }, elements: { line: { tension: 0.4, borderWidth: 3 }, point: { radius: 4, hoverRadius: 6 } } };
+    this.chartRevenueByPlanOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } } };
+    this.chartProjVsRealOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, usePointStyle: true, pointStyle: 'circle', padding: 16 } }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c' } }, y: { grid: { color: 'rgba(217, 219, 206, 0.4)' }, ticks: { font: { family: 'Manrope', size: 10, weight: 500 }, color: '#76796c', callback: (val: any) => `S/${val}` }, beginAtZero: true } } };
+    this.chartRevenueByLocationOpt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Manrope', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyle: 'circle' } }, tooltip: { backgroundColor: 'rgba(26, 28, 22, 0.92)', callbacks: { label: (ctx: any) => `S/ ${Number(ctx.raw).toLocaleString('es-PE', { minimumFractionDigits: 2 })}` } } } };
+  }
+
+  monthFilter: string | null = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   fortnightFilter: 1 | 2 | null = null;
 
   dashIncomeExpenseChart: ChartData<'line'> = { labels: [], datasets: [] };
@@ -288,6 +320,7 @@ export class Finanzas implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.initChartOpts();
     this.authService.currentUser$.subscribe((u: User | null) => {
       this.isSupervisor = u?.role === 'supervisor';
       this.cdr.markForCheck();
@@ -370,6 +403,70 @@ export class Finanzas implements OnInit, OnDestroy {
       labels: catLabels.map((k) => getCategoryLabel(k)),
       datasets: [{ data: Object.values(catMap), backgroundColor: catLabels.map((k) => catColors[k] || '#8b5cf6'), borderWidth: 0, hoverOffset: 8 }],
     };
+    this.updateCharts();
+  }
+
+  private updateCharts() {
+    this.chartStatusDist = this.buildChartStatusDist();
+    this.chartDebtByLocation = this.buildChartDebtByLocation();
+    this.chartPaymentAge = this.buildChartPaymentAge();
+    this.chartRevenueHistory = this.buildChartRevenueHistory();
+    this.chartRevenueByPlan = this.buildChartRevenueByPlan();
+    this.chartProjVsReal = this.buildChartProjVsReal();
+    this.chartRevenueByLocation = this.buildChartRevenueByLocation();
+  }
+
+  private buildChartStatusDist() {
+    const alDia = this.patients.filter((p) => getPatientStatus(p) === 'al_dia').length;
+    const deudor = this.patients.filter((p) => getPatientStatus(p) === 'deudor').length;
+    const cancelado = this.patients.filter((p) => getPatientStatus(p) === 'cancelado').length;
+    const sinContrato = this.patients.filter((p) => getPatientStatus(p) === 'sin_contrato').length;
+    return { labels: ['Al Día', 'Deudores', 'Cancelados', 'Sin Contrato'], datasets: [{ data: [alDia, deudor, cancelado, sinContrato], backgroundColor: ['#75a83a', '#ba1a1a', '#9ca3af', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
+  }
+
+  private buildChartDebtByLocation() {
+    const debtBySede: Record<string, number> = {};
+    this.patients.forEach((p) => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
+    const labels = Object.keys(debtBySede);
+    return { labels, datasets: [{ label: 'Deuda (S/)', data: Object.values(debtBySede), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderRadius: 6, barPercentage: 0.5 }] };
+  }
+
+  private buildChartPaymentAge() {
+    const ranges = ['1-7 días', '8-15 días', '16-30 días', '31-60 días', '+60 días'];
+    const counts = [0, 0, 0, 0, 0];
+    const now = new Date();
+    this.patients.forEach((p) => {
+      if (!p.next_due_date) return;
+      const diffDays = Math.floor((now.getTime() - new Date(p.next_due_date).getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) counts[0]++; else if (diffDays <= 7) counts[0]++; else if (diffDays <= 15) counts[1]++; else if (diffDays <= 30) counts[2]++; else if (diffDays <= 60) counts[3]++; else counts[4]++;
+    });
+    return { labels: ranges, datasets: [{ label: 'Pacientes', data: counts, backgroundColor: ['rgba(117, 168, 58, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(186, 26, 26, 0.8)'], borderRadius: 6, barPercentage: 0.6 }] };
+  }
+
+  private buildChartRevenueHistory() {
+    const incomeByMonth = getMonthlyIncome(this.paymentHistory);
+    const monthKeys = getLast6MonthsKeys();
+    const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
+    const labels = monthKeys.map((k) => formatMonthLabel(k));
+    return { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
+  }
+
+  private buildChartRevenueByPlan() {
+    const planMap: Record<string, number> = {};
+    this.patients.forEach((p) => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
+    const labels = Object.keys(planMap);
+    return { labels, datasets: [{ data: Object.values(planMap), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderWidth: 0, hoverOffset: 8 }] };
+  }
+
+  private buildChartProjVsReal() {
+    return { labels: ['Este Mes'], datasets: [{ label: 'Proyectado', data: [this.financials?.income_expected || 0], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [this.financials?.income_real || 0], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
+  }
+
+  private buildChartRevenueByLocation() {
+    const sedeMap: Record<string, number> = {};
+    this.patients.forEach((p) => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
+    const labels = Object.keys(sedeMap);
+    return { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
   get summaryBalance(): number { return this.summaryIngresos - this.summaryGastos; }
@@ -1105,6 +1202,11 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   clearFilters() { this.searchQuery = ''; this.selectedSedeId = null; this.selectedTherapistId = null; this.selectedStatus = ''; this.selectedSort = ''; this.monthFilter = null; this.fortnightFilter = null; }
+
+  get monthRangeValue(): MonthRange | null {
+    if (!this.monthFilter) return null;
+    return { start: this.monthFilter, end: this.monthFilter, mode: 'single' };
+  }
 
   onMonthFilterChange(range: MonthRange | null) {
     if (!range) {

@@ -39,6 +39,11 @@ export class MonthRangePicker {
     return new Date().getFullYear();
   }
 
+  get currentMonthKey(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   get selectedLabel(): string {
     const v = this.value();
     if (!v) return 'Seleccionar período';
@@ -74,12 +79,8 @@ export class MonthRangePicker {
     return this.year > this.minYear();
   }
 
-  isDisabled(year: number): boolean {
-    return year < this.minYear();
-  }
-
-  isSelected(currentYear: number, monthIndex: number): boolean {
-    const key = this.keyOf(currentYear, monthIndex);
+  isSelected(displayYear: number, monthIndex: number): boolean {
+    const key = this.keyOf(displayYear, monthIndex);
     const v = this.value();
     if (!v) return false;
     if (v.start === key || v.end === key) return true;
@@ -87,18 +88,23 @@ export class MonthRangePicker {
     return false;
   }
 
-  isStart(currentYear: number, monthIndex: number): boolean {
-    return this.value()?.start === this.keyOf(currentYear, monthIndex);
+  isStart(displayYear: number, monthIndex: number): boolean {
+    return this.value()?.start === this.keyOf(displayYear, monthIndex);
   }
 
-  isEnd(currentYear: number, monthIndex: number): boolean {
-    return this.value()?.end === this.keyOf(currentYear, monthIndex);
+  isEnd(displayYear: number, monthIndex: number): boolean {
+    return this.value()?.end === this.keyOf(displayYear, monthIndex);
   }
 
-  isPreview(currentYear: number, monthIndex: number): boolean {
+  isPreview(displayYear: number, monthIndex: number): boolean {
     if (!this.allowRange || !this.pendingStart) return false;
-    const key = this.keyOf(currentYear, monthIndex);
-    return (key >= this.pendingStart && key <= `${this.year}-12`) || (key <= this.pendingStart && key >= `${this.year}-01`);
+    const key = this.keyOf(displayYear, monthIndex);
+    const pStart = this.pendingStart;
+    if (key < pStart) return false;
+    const [py] = pStart.split('-').map(Number);
+    if (displayYear > py && displayYear <= this.year) return true;
+    if (displayYear === py && key >= pStart) return true;
+    return false;
   }
 
   select(monthIndex: number) {
@@ -147,8 +153,8 @@ export class MonthRangePicker {
     this.cdr.markForCheck();
   }
 
-  private keyOf(currentYear: number, monthIndex: number): string {
-    return `${currentYear}-${this.monthKeys[monthIndex]}`;
+  private keyOf(displayYear: number, monthIndex: number): string {
+    return `${displayYear}-${this.monthKeys[monthIndex]}`;
   }
 
   private emit(value: MonthRange | null) {
