@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, NgZone, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -18,7 +18,7 @@ import { base64urlToBuffer, serializeWebauthnCredential } from '../../../../shar
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Login implements OnInit, OnDestroy, AfterViewInit {
+export class Login implements OnInit, OnDestroy {
   floating = inject(FloatingUiService);
 
   email = '';
@@ -70,16 +70,6 @@ export class Login implements OnInit, OnDestroy, AfterViewInit {
     }));
     this.scheduleGuide();
     this.restoreRemembered();
-  }
-
-  ngAfterViewInit() {
-    setTimeout(() => {
-      if (this.wfAutoTrigger && this.wfModalOpen) {
-        const btn = document.getElementById('webauthn-modal-btn');
-        if (btn) { btn.click(); return; }
-        this.loginWithFingerprint();
-      }
-    }, 500);
   }
 
   ngOnDestroy() {
@@ -224,6 +214,13 @@ export class Login implements OnInit, OnDestroy, AfterViewInit {
             this.wfModalOpen = true;
             this.wfAutoTrigger = true;
             this.cdr.markForCheck();
+            setTimeout(() => {
+              if (this.wfAutoTrigger && this.wfModalOpen) {
+                const btn = document.getElementById('webauthn-modal-btn');
+                if (btn) { btn.click(); return; }
+                this.loginWithFingerprint();
+              }
+            }, 400);
           }
         } else {
           this.clearRemembered();

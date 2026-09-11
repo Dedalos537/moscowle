@@ -39,7 +39,23 @@
 
 @if (activeTab === 'resumen') {
 <div class="finanzas-body animate-fade-in" [@fadeInUp]>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="flex flex-wrap items-center gap-3 mb-5">
+    <app-month-range-picker [label]="'Período'" [value]="monthRangeValue" (valueChange)="onMonthFilterChange($event)"></app-month-range-picker>
+    @if (monthFilter) {
+    <div class="flex gap-1 bg-surface-container-high rounded-xl p-1">
+      <button (click)="setFortnightFilter(null)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        [class.bg-surface-container-lowest]="!fortnightFilter" [class.text-on-surface]="!fortnightFilter"
+        [class.text-on-surface-variant]="!!fortnightFilter">Todo el mes</button>
+      <button (click)="setFortnightFilter(1)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        [class.bg-primary]="fortnightFilter === 1" [class.text-on-primary]="fortnightFilter === 1"
+        [class.text-on-surface-variant]="fortnightFilter !== 1">1ra Quincena</button>
+      <button (click)="setFortnightFilter(2)" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        [class.bg-primary]="fortnightFilter === 2" [class.text-on-primary]="fortnightFilter === 2"
+        [class.text-on-surface-variant]="fortnightFilter !== 2">2da Quincena</button>
+    </div>
+    }
+  </div>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
     <app-summary-card [border]="false" label="Deuda Total" [value]="summaryTotalDeuda.toFixed(2)" prefix="S/ "
       [icon]="['fas', 'exclamation-triangle']" variant="error"
       [trend]="{ icon: ['fas', 'arrow-up'], label: 'Pendiente', subtitle: 'de cobro', color: 'error' }" />
@@ -278,69 +294,50 @@
   </div>
 
   @if (!isSupervisor) {
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'chart-pie']" class="text-[16px]"></fa-icon>
-        Estado de Pagos
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'chart-pie']" class="text-primary text-[12px]"></fa-icon> Estado de Pagos
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartStatusDist" [options]="chartStatusOpt" [type]="chartStatusType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-[16px]"></fa-icon>
-        Deuda por Sede
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'map-marker-alt']" class="text-primary text-[12px]"></fa-icon> Deuda por Sede
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartDebtByLocation" [options]="chartDebtByLocationOpt" [type]="chartDebtByLocationType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'clock']" class="text-[16px]"></fa-icon>
-        Antigüedad de Vencimientos
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'clock']" class="text-primary text-[12px]"></fa-icon> Antigüedad
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartPaymentAge" [options]="chartPaymentAgeOpt" [type]="chartPaymentAgeType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'chart-line']" class="text-[16px]"></fa-icon>
-        Historial de Ingresos (6 Meses)
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'chart-line']" class="text-primary text-[12px]"></fa-icon> Historial 6 Meses
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartRevenueHistory" [options]="chartRevenueHistoryOpt" [type]="chartRevenueHistoryType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'tags']" class="text-[16px]"></fa-icon>
-        Ingresos por Tipo de Plan
+  </div>
+  <div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'tags']" class="text-primary text-[12px]"></fa-icon> Ingresos por Plan
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartRevenueByPlan" [options]="chartRevenueByPlanOpt" [type]="chartRevenueByPlanType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'exchange-alt']" class="text-[16px]"></fa-icon>
-        Proyección vs Real
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'exchange-alt']" class="text-primary text-[12px]"></fa-icon> Proyección vs Real
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartProjVsReal" [options]="chartProjVsRealOpt" [type]="chartProjVsRealType"></canvas></div>
     </div>
-    <div class="bg-surface-container-lowest rounded-xl border border-border/30 shadow-soft p-5">
-      <h4 class="text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 font-accent">
-        <fa-icon [icon]="['fas', 'map']" class="text-[16px]"></fa-icon>
-        Ingresos por Sede
+    <div class="bg-surface-container-lowest rounded-xl border border-border/30 p-3">
+      <h4 class="text-[10px] font-bold text-on-surface-variant mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+        <fa-icon [icon]="['fas', 'map']" class="text-primary text-[12px]"></fa-icon> Ingresos por Sede
       </h4>
-      <div class="relative" style="height: 220px">
-        <canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas>
-      </div>
+      <div style="height: 170px"><canvas baseChart [data]="chartRevenueByLocation" [options]="chartRevenueByLocationOpt" [type]="chartRevenueByLocationType"></canvas></div>
     </div>
   </div>
   }

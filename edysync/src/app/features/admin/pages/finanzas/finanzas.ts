@@ -526,6 +526,7 @@ export class Finanzas implements OnInit, OnDestroy {
             };
           });
           this.syncPatientContractState();
+          this.genDashboardCharts();
           this.paymentsLoading = false;
           this.cdr.markForCheck();
         },
