@@ -209,6 +209,7 @@
           </span>
         </div>
         <button type="button"
+          id="webauthn-modal-btn"
           [disabled]="isLoading || wfChecking"
           (click)="loginWithFingerprint(); dismissGuide()"
           class="w-full py-3 rounded-lg font-bold text-sm bg-primary text-on-primary flex items-center justify-center gap-2 cursor-pointer transition-opacity disabled:opacity-60">
