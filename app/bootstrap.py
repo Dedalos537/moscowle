@@ -375,6 +375,7 @@ def register_blueprints(app: Flask) -> None:
         ('oauth', 'app.auth.oauth', 'oauth_bp'),
         ('api_service_requests', 'app.api.service_requests', 'api_sr'),
         ('incidents', 'app.routes.incident_routes', 'incident_bp'),
+        ('mcp', 'app.routes.mcp_routes', 'mcp_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
