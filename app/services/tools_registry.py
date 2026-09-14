@@ -26,6 +26,28 @@ DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 LIMA_TZ = ZoneInfo('America/Lima')
 
 
+TOOL_REGISTRY = {}
+
+
+def tool(name, description, parameters, category='read', roles=None):
+    def decorator(func):
+        TOOL_REGISTRY[name] = {
+            'name': name,
+            'description': description,
+            'parameters': parameters,
+            'category': category,
+            'roles': roles or ROLES_ALL,
+            'handler': func,
+        }
+        return func
+
+    return decorator
+
+
+# Write tools that are safe to run without an explicit confirmation gate.
+SAFE_WRITE_TOOLS = {'mark_notifications_read', 'generate_weekly_report'}
+
+
 def _today_lima():
     return datetime.now(LIMA_TZ).strftime('%Y-%m-%d')
 
@@ -44,22 +66,24 @@ def _today_lima():
 )
 def handle_get_server_logs(lines=100, **kwargs):
     import subprocess
+
     try:
         # Intentamos leer via journalctl (estándar en Ubuntu para servicios systemd)
         # Asumimos que el servicio se llama 'moscowle'
         result = subprocess.run(
-            ['journalctl', '-u', 'moscowle', f'-n', str(lines), '--no-pager'],
+            ['journalctl', '-u', 'moscowle', '-n', str(lines), '--no-pager'],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            check=False,
         )
         if result.stdout:
             return {'success': True, 'logs': result.stdout}
 
         # Fallback: intentar leer syslog si journalctl falló o no devolvió nada
-        with open('/var/log/syslog', 'r') as f:
+        with open('/var/log/syslog') as f:
             content = f.readlines()
-            return {'success': True, 'logs': "".join(content[-lines:])}
+            return {'success': True, 'logs': ''.join(content[-lines:])}
     except Exception as e:
         return {'error': f'No se pudieron leer los logs: {str(e)}'}
 
@@ -73,25 +97,7 @@ def _last_day_of_month(year, month):
     return (next_month.replace(day=1) - timedelta(days=1)).day
 
 
-TOOL_REGISTRY = {}
-
-# Write tools that are safe to run without an explicit confirmation gate.
-SAFE_WRITE_TOOLS = {'mark_notifications_read', 'generate_weekly_report'}
-
-
-def tool(name, description, parameters, category='read', roles=None):
-    def decorator(func):
-        TOOL_REGISTRY[name] = {
-            'name': name,
-            'description': description,
-            'parameters': parameters,
-            'category': category,
-            'roles': roles or ROLES_ALL,
-            'handler': func,
-        }
-        return func
-
-    return decorator
+# No change here, just removing the old definition block
 
 
 CORE_TOOL_NAMES = [

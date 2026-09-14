@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -5,13 +6,17 @@ import re
 import tempfile
 import uuid
 
+import requests as req
 from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from app.auth_compat import current_user
 from app.models import User
 from app.services.audit_service import transcribe_audio
-from app.services.llm_client import llm_chat_stream
+from app.services.llm_client import (
+    get_gemini_model,
+    llm_chat_stream,
+)
 from app.services.mcp_service import (
     SYSTEM_PROMPTS,
     MCPService,
@@ -54,36 +59,96 @@ def _requires_confirmation(name):
 
 CHIPS_AFTER_TOOL = {
     'register_payment': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
         {'id': 'act-debtors', 'type': 'action', 'label': 'Mostrar deudores del mes', 'icon': 'exclamation-circle'},
     ],
     'cancel_payment': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'edit_payment': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'send_payment_reminder': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'pay_installment': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'create_session': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
         {'id': 'act-more-sessions', 'type': 'action', 'label': 'Crear otra sesión', 'icon': 'calendar-plus'},
     ],
     'update_session': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
     ],
     'cancel_session': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
     ],
     'complete_session': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
     ],
     'batch_create_sessions': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
     ],
     'create_user': [
         {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
@@ -98,25 +163,67 @@ CHIPS_AFTER_TOOL = {
         {'id': 'nav-users', 'type': 'navigation', 'label': 'Ver usuarios', 'icon': 'users', 'target': '/admin/users'},
     ],
     'assign_therapist': [
-        {'id': 'nav-sessions', 'type': 'navigation', 'label': 'Ver sesiones', 'icon': 'calendar', 'target': '/admin/sessions'},
+        {
+            'id': 'nav-sessions',
+            'type': 'navigation',
+            'label': 'Ver sesiones',
+            'icon': 'calendar',
+            'target': '/admin/sessions',
+        },
     ],
     'create_incident': [
-        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+        {
+            'id': 'nav-incidents',
+            'type': 'navigation',
+            'label': 'Ver incidencias',
+            'icon': 'exclamation-triangle',
+            'target': '/admin/incidents',
+        },
     ],
     'update_incident_status': [
-        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+        {
+            'id': 'nav-incidents',
+            'type': 'navigation',
+            'label': 'Ver incidencias',
+            'icon': 'exclamation-triangle',
+            'target': '/admin/incidents',
+        },
     ],
     'assign_incident': [
-        {'id': 'nav-incidents', 'type': 'navigation', 'label': 'Ver incidencias', 'icon': 'exclamation-triangle', 'target': '/admin/incidents'},
+        {
+            'id': 'nav-incidents',
+            'type': 'navigation',
+            'label': 'Ver incidencias',
+            'icon': 'exclamation-triangle',
+            'target': '/admin/incidents',
+        },
     ],
     'create_expense': [
-        {'id': 'nav-expenses', 'type': 'navigation', 'label': 'Ver gastos', 'icon': 'wallet', 'target': '/admin/expenses'},
+        {
+            'id': 'nav-expenses',
+            'type': 'navigation',
+            'label': 'Ver gastos',
+            'icon': 'wallet',
+            'target': '/admin/expenses',
+        },
     ],
     'broadcast_message': [
-        {'id': 'nav-messages', 'type': 'navigation', 'label': 'Ver mensajes', 'icon': 'envelope', 'target': '/admin/messages'},
+        {
+            'id': 'nav-messages',
+            'type': 'navigation',
+            'label': 'Ver mensajes',
+            'icon': 'envelope',
+            'target': '/admin/messages',
+        },
     ],
     'send_direct_message': [
-        {'id': 'nav-messages', 'type': 'navigation', 'label': 'Ver mensajes', 'icon': 'envelope', 'target': '/admin/messages'},
+        {
+            'id': 'nav-messages',
+            'type': 'navigation',
+            'label': 'Ver mensajes',
+            'icon': 'envelope',
+            'target': '/admin/messages',
+        },
     ],
     'update_patient': [
         {'id': 'act-patient-detail', 'type': 'action', 'label': 'Ver detalle del paciente', 'icon': 'user'},
@@ -128,16 +235,40 @@ CHIPS_AFTER_TOOL = {
         {'id': 'act-list-groups', 'type': 'action', 'label': 'Listar grupos de pacientes', 'icon': 'users'},
     ],
     'create_contract': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'update_contract': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'cancel_contract': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
     'reactivate_contract': [
-        {'id': 'nav-payments', 'type': 'navigation', 'label': 'Ver pagos', 'icon': 'receipt', 'target': '/admin/payments'},
+        {
+            'id': 'nav-payments',
+            'type': 'navigation',
+            'label': 'Ver pagos',
+            'icon': 'receipt',
+            'target': '/admin/payments',
+        },
     ],
 }
 
@@ -283,7 +414,8 @@ def mcp_chat_stream():
                         f'<function={cname}{json.dumps(cargs, ensure_ascii=False)}</function>'
                     )
                     if _requires_confirmation(cname):
-                        yield f'data: {json.dumps({"type": "thinking", "content": "Ejecutando acción confirmada..."})}\n\n'
+                        msg = {'type': 'thinking', 'content': 'Ejecutando acción confirmada...'}
+                        yield f'data: {json.dumps(msg)}\n\n'
                         tc_data = {'type': 'tool_call', 'name': cname, 'args': cargs}
                         yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
 
@@ -304,7 +436,8 @@ def mcp_chat_stream():
                                     f'[REAL Tool {cname} result — use ONLY this data, do NOT invent anything]:\n'
                                     f'{last_result_str}\n\n'
                                     f'IMPORTANT: {cname} was ALREADY executed successfully. '
-                                    f'Do NOT call the tool again. Respond to the user now using ONLY the exact values above. '
+                                    f'Do NOT call the tool again. Respond to the user now using '
+                                    f'ONLY the exact values above. '
                                     f'If a field is missing, say "no disponible".'
                                 ),
                             }
@@ -326,7 +459,8 @@ def mcp_chat_stream():
                                 yield f'data: {json.dumps({"type": "chunk", "content": clean}, ensure_ascii=False)}\n\n'
 
                         if not full_content.strip():
-                            yield f'data: {json.dumps({"type": "text", "content": "No pude generar una respuesta."})}\n\n'
+                            msg = {'type': 'text', 'content': 'No pude generar una respuesta.'}
+                            yield f'data: {json.dumps(msg)}\n\n'
                             break
 
                         tool_name, tool_args = _parse_text_tool_call(full_content)
@@ -334,7 +468,8 @@ def mcp_chat_stream():
                         if tool_name:
                             # Never re-execute a tool that was already confirmed & run above.
                             if confirmed_tool.get('name') and tool_name == confirmed_tool['name'] and last_result_str:
-                                yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                                msg = {'type': 'thinking', 'content': 'Procesando resultado...'}
+                                yield f'data: {json.dumps(msg)}\n\n'
                                 tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
                                 clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
                                 messages.append({'role': 'assistant', 'content': clean_assistant})
@@ -342,9 +477,11 @@ def mcp_chat_stream():
                                     {
                                         'role': 'user',
                                         'content': (
-                                            f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                            f'[REAL Tool {tool_name} result — use ONLY this data, '
+                                            f'do NOT invent anything]:\n'
                                             f'{last_result_str}\n\n'
-                                            f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                            f'Respond to the user using ONLY the exact values above. '
+                                            f'If a field is missing, say "no disponible".'
                                         ),
                                     }
                                 )
@@ -392,9 +529,11 @@ def mcp_chat_stream():
                                 {
                                     'role': 'user',
                                     'content': (
-                                        f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
+                                        f'[REAL Tool {tool_name} result — use ONLY this data, '
+                                        f'do NOT invent anything]:\n'
                                         f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                        f'Respond to the user using ONLY the exact values above. '
+                                        f'If a field is missing, say "no disponible".'
                                     ),
                                 }
                             )
@@ -422,7 +561,7 @@ def mcp_chat_stream():
                                 if tn:
                                     # Never re-execute an already-confirmed tool.
                                     if confirmed_tool.get('name') and tn == confirmed_tool['name'] and last_result_str:
-                                        yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                                        yield f'data: {json.dumps(msg)}\n\n'
                                         tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
                                         clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
                                         messages.append({'role': 'assistant', 'content': clean_assistant})
@@ -432,7 +571,8 @@ def mcp_chat_stream():
                                                 'content': (
                                                     f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
                                                     f'{last_result_str}\n\n'
-                                                    f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                                    f'Respond to the user using ONLY the exact values above. '
+                                                    f'If a field is missing, say "no disponible".'
                                                 ),
                                             }
                                         )
@@ -475,14 +615,15 @@ def mcp_chat_stream():
                                             'content': (
                                                 f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
                                                 f'{result_str}\n\n'
-                                                f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                                f'Respond to the user using ONLY the exact values above. '
+                                                f'If a field is missing, say "no disponible".'
                                             ),
                                         }
                                     )
                                     chips = _next_action_chips(tn)
                                     if chips:
                                         yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
-                                    yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                                    yield f'data: {json.dumps(msg)}\n\n'
                                     continue
 
                         if iteration >= 2:
@@ -508,8 +649,43 @@ def mcp_chat_stream():
     )
 
 
-@mcp_bp.route('/tools', methods=['GET'])
-def mcp_tools():
+@mcp_bp.route('/execute', methods=['POST'])
+def mcp_execute():
+    """Execute a specific tool by name. Used by MCP bridges."""
+    user = _get_current_user()
+    cors = _cors_headers()
+    if not user:
+        resp = jsonify({'error': 'No autenticado'})
+        resp.status_code = 401
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    data = request.get_json(silent=True) or {}
+    tool_name = data.get('tool_name')
+    args = data.get('args', {})
+
+    if not tool_name:
+        resp = jsonify({'error': 'tool_name requerido'})
+        resp.status_code = 400
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
+    try:
+        result = execute_tool(tool_name, args, user_id=user.id, role=user.role)
+        resp = jsonify(result)
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+    except Exception as e:
+        logger.error(f'MCP execute error for {tool_name}: {e}', exc_info=True)
+        resp = jsonify({'error': f'Error ejecutando herramienta: {str(e)}'})
+        resp.status_code = 500
+        for k, v in cors.items():
+            resp.headers[k] = v
+        return resp
+
     """List available tools for the current user's role."""
     user = _get_current_user()
     cors = _cors_headers()
@@ -659,11 +835,12 @@ def mcp_transcribe():
 def _ocr_voucher(file_path, ext):
     """Use available LLM vision to extract payment data from voucher image."""
     try:
-        import base64
         with open(file_path, 'rb') as f:
             img_b64 = base64.b64encode(f.read()).decode()
 
-        mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(ext, 'image/jpeg')
+        mime = {'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}.get(
+            ext, 'image/jpeg'
+        )
         prompt = (
             'LEE ESTA IMAGEN CUIDADOSAMENTE. Es un comprobante de pago.\n'
             'NO INVENTES DATOS. Si no puedes leer algo, pon null.\n\n'
@@ -674,21 +851,22 @@ def _ocr_voucher(file_path, ext):
             '- Método de pago (Plin, Yape, Efectivo, Transferencia)\n'
             '- Número de operación o referencia\n\n'
             'Responde SOLO con JSON válido:\n'
-            '{"amount": number|null, "method": "Plin"|"Yape"|"Efectivo"|"Transferencia"|null, "date": "YYYY-MM-DD"|null, "patient_hint": "nombre completo"|null, "reference": "string"|null}\n\n'
-            'EJEMPLO de respuesta correcta: {"amount": 200, "method": "Plin", "date": "2026-07-22", "patient_hint": "Diego Alejandro Centeno Barrutia", "reference": "2026077240"}'
+            '{"amount": number|null, "method": "Plin"|"Yape"|"Efectivo"|"Transferencia"|null, '
+            '"date": "YYYY-MM-DD"|null, "patient_hint": "nombre completo"|null, '
+            '"reference": "string"|null}\n\n'
+            'EJEMPLO de respuesta correcta: {"amount": 200, "method": "Plin", '
+            '"date": "2026-07-22", "patient_hint": "Diego Alejandro Centeno Barrutia", '
+            '"reference": "2026077240"}'
         )
 
         # Try Gemini first
         try:
-            from app.services.llm_client import get_gemini_model
             gemini = get_gemini_model()
+
             if gemini:
-                response = gemini.generate_content([
-                    prompt,
-                    {'inline_data': {'mime_type': mime, 'data': img_b64}}
-                ])
+                response = gemini.generate_content([prompt, {'inline_data': {'mime_type': mime, 'data': img_b64}}])
                 text = response.text.strip()
-                import json
+
                 match = re.search(r'\{[^}]+\}', text)
                 if match:
                     logger.info('OCR via Gemini exitoso')
@@ -698,21 +876,21 @@ def _ocr_voucher(file_path, ext):
 
         # Try Groq with llama vision
         try:
-            import json
-            import os
             api_key = os.environ.get('GROQ_API_KEY', '')
             if api_key:
-                import requests as req
                 resp = req.post(
                     'https://api.groq.com/openai/v1/chat/completions',
                     headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
                     json={
                         'model': 'llama-3.2-11b-vision-preview',
                         'messages': [
-                            {'role': 'user', 'content': [
-                                {'type': 'text', 'text': prompt},
-                                {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{img_b64}'}},
-                            ]},
+                            {
+                                'role': 'user',
+                                'content': [
+                                    {'type': 'text', 'text': prompt},
+                                    {'type': 'image_url', 'image_url': {'url': f'data:{mime};base64,{img_b64}'}},
+                                ],
+                            },
                         ],
                         'max_tokens': 300,
                     },

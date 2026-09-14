@@ -33,6 +33,14 @@ async function apiPost(path, body = {}) {
   return res.json();
 }
 
+async function executeTool(name, args) {
+  const result = await apiPost('/mcp/execute', { tool_name: name, args });
+  if (result.error) {
+    throw new Error(`Tool ${name} failed: ${result.error}`);
+  }
+  return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+}
+
 const server = new McpServer({ name: 'moscowle', version: '1.0.0' });
 
 // ─── Auth ───────────────────────────────────────────────────────────
@@ -74,6 +82,41 @@ server.tool('get_patient_detail', 'Obtener detalle de un paciente.', {
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 });
 
+server.tool('create_full_patient', 'Registra un paciente nuevo con perfil completo: datos personales, DNI, apoderado y metas.', {
+  username: z.string().describe('Nombre completo'),
+  email: z.string().optional().describe('Email'),
+  password: z.string().optional().describe('Contraseña temporal'),
+  sede_id: z.number().describe('ID de la sede'),
+  phone: z.string().optional().describe('Teléfono'),
+  document_number: z.string().optional().describe('DNI del paciente'),
+  date_of_birth: z.string().optional().describe('Fecha de nacimiento YYYY-MM-DD'),
+  sex: z.string().optional().describe('Sexo (M/F/Otro)'),
+  guardian_name: z.string().optional().describe('Nombre del apoderado'),
+  guardian_type: z.string().optional().describe('Tipo de apoderado (padre/madre/tutor/otro)'),
+  guardian_dni: z.string().optional().describe('DNI del apoderado'),
+  guardian_contact: z.string().optional().describe('Contacto del apoderado'),
+  preliminary_diagnosis: z.string().optional().describe('Diagnóstico preliminar'),
+  therapy_goals: z.string().optional().describe('Objetivos de terapia'),
+  notes: z.string().optional().describe('Notas adicionales'),
+  assigned_therapist_id: z.number().describe('ID del terapeuta asignado'),
+}, async (args) => executeTool('create_full_patient', args));
+
+server.tool('update_patient_profile', 'Actualiza el perfil detallado de un paciente: DNI, datos del apoderado, diagnóstico y metas.', {
+  patient_id: z.number().describe('ID del paciente'),
+  document_number: z.string().optional().describe('DNI del paciente'),
+  phone: z.string().optional().describe('Teléfono'),
+  date_of_birth: z.string().optional().describe('Fecha de nacimiento YYYY-MM-DD'),
+  sex: z.string().optional().describe('Sexo (M/F/Otro)'),
+  guardian_name: z.string().optional().describe('Nombre del apoderado'),
+  guardian_type: z.string().optional().describe('Tipo de apoderado'),
+  guardian_dni: z.string().optional().describe('DNI del apoderado'),
+  guardian_contact: z.string().optional().describe('Contacto del apoderado'),
+  preliminary_diagnosis: z.string().optional().describe('Diagnóstico preliminar'),
+  therapy_goals: z.string().optional().describe('Objetivos de terapia'),
+  notes: z.string().optional().describe('Notas adicionales'),
+  email: z.string().optional().describe('Nuevo email'),
+}, async (args) => executeTool('update_patient_profile', args));
+
 // ─── Usuarios / Terapeutas ──────────────────────────────────────────
 server.tool('get_users', 'Obtener lista de todos los usuarios (terapeutas, pacientes, admins).', {
   role: z.string().optional().describe('Filtrar por rol: admin, supervisor, terapista, jugador'),
@@ -113,6 +156,22 @@ server.tool('get_upcoming_sessions', 'Obtener sesiones próximas.', {}, async ()
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 });
 
+server.tool('schedule_programmed_session', 'Programa una sesión con un plan terapéutico: incluye fecha, hora, notas de programación y una lista de juegos asignados.', {
+  patient_id: z.number().describe('ID del paciente'),
+  therapist_id: z.number().describe('ID del terapeuta'),
+  start_time: z.string().describe('Fecha y hora de inicio YYYY-MM-DD HH:MM'),
+  title: z.string().optional().describe('Título de la sesión'),
+  programming_notes: z.string().describe('Notas de programación y objetivos de la sesión'),
+  games_list: z.array(z.string()).describe('Lista de juegos a asignar (ej: ["memoria.html"])'),
+  duration_minutes: z.number().optional().describe('Duración en minutos (default: 60)'),
+}, async (args) => executeTool('schedule_programmed_session', args));
+
+server.tool('update_session_plan', 'Actualiza el plan de una sesión existente: cambia las notas de programación y/o la lista de juegos.', {
+  session_id: z.number().describe('ID de la sesión'),
+  new_notes: z.string().optional().describe('Nuevas notas de programación'),
+  new_games: z.array(z.string()).optional().describe('Nueva lista de juegos asignados'),
+}, async (args) => executeTool('update_session_plan', args));
+
 // ─── Pagos / Finanzas ───────────────────────────────────────────────
 server.tool('get_financial_summary', 'Obtener resumen financiero del centro (ingresos, egresos, balance).', {
   period: z.string().optional().describe('Período: month, quarter, year'),
@@ -143,6 +202,27 @@ server.tool('get_contracts', 'Obtener contratos del centro.', {
   const data = await api('/admin/api/contracts', { status });
   return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
 });
+
+server.tool('create_service_contract', 'Crea un contrato de servicio para un paciente con generación automática de cuotas.', {
+  patient_id: z.number().describe('ID del paciente'),
+  total_amount: z.number().describe('Monto total del contrato en soles'),
+  start_date: z.string().describe('Fecha de inicio del servicio YYYY-MM-DD'),
+  installment_count: z.number().optional().describe('Número de cuotas (default: 4)'),
+  billing_type: z.string().optional().describe('Tipo de facturación: Mensual, Anual, Quincenal, Semanal'),
+  name: z.string().optional().describe('Nombre personalizado del contrato'),
+  notes: z.string().optional().describe('Notas adicionales'),
+  implementation_cost: z.number().optional().describe('Costo de evaluación inicial (Cuota 0)'),
+}, async (args) => executeTool('create_service_contract', args));
+
+server.tool('register_payment_with_evidence', 'Registra el pago de una cuota específica incluyendo la evidencia (URL del comprobante).', {
+  installment_id: z.number().describe('ID de la cuota a pagar'),
+  amount: z.number().describe('Monto pagado'),
+  method: z.string().describe('Método de pago: Efectivo, Yape, Transferencia, Plin, Tarjeta'),
+  payment_date: z.string().describe('Fecha del pago YYYY-MM-DD'),
+  receipt_url: z.string().describe('URL o ruta de la imagen del voucher'),
+  reference: z.string().optional().describe('Número de operación o referencia'),
+  payment_notes: z.string().optional().describe('Notas adicionales sobre el pago'),
+}, async (args) => executeTool('register_payment_with_evidence', args));
 
 // ─── Notificaciones ─────────────────────────────────────────────────
 server.tool('get_notifications', 'Obtener notificaciones agrupadas.', {
