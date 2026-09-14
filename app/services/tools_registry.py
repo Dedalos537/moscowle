@@ -30,6 +30,40 @@ def _today_lima():
     return datetime.now(LIMA_TZ).strftime('%Y-%m-%d')
 
 
+@tool(
+    name='get_server_logs',
+    description='Lee las últimas líneas de los logs del servidor para diagnosticar errores (ej: 404, 500). Solo para administradores.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'lines': {'type': 'integer', 'description': 'Cantidad de líneas a leer (default: 100)', 'default': 100},
+        },
+    },
+    category='read',
+    roles=ROLES_ADMIN,
+)
+def handle_get_server_logs(lines=100, **kwargs):
+    import subprocess
+    try:
+        # Intentamos leer via journalctl (estándar en Ubuntu para servicios systemd)
+        # Asumimos que el servicio se llama 'moscowle'
+        result = subprocess.run(
+            ['journalctl', '-u', 'moscowle', f'-n', str(lines), '--no-pager'],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.stdout:
+            return {'success': True, 'logs': result.stdout}
+
+        # Fallback: intentar leer syslog si journalctl falló o no devolvió nada
+        with open('/var/log/syslog', 'r') as f:
+            content = f.readlines()
+            return {'success': True, 'logs': "".join(content[-lines:])}
+    except Exception as e:
+        return {'error': f'No se pudieron leer los logs: {str(e)}'}
+
+
 def _valid_date(value):
     return bool(DATE_RE.match(str(value)))
 
@@ -122,6 +156,7 @@ CORE_TOOL_NAMES = [
     'get_upcoming_installments',
     'get_patient_stats',
     'update_patient_details',
+    'get_server_logs',
 ]
 
 
