@@ -25,8 +25,11 @@ export class AuthService {
     private preload: PreloadService,
   ) {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const accessToken = localStorage.getItem('access_token');
+    if (storedUser && accessToken && !this.isJwtExpiredSoon(accessToken)) {
       this.currentUserSubject.next(JSON.parse(storedUser));
+    } else {
+      this.currentUserSubject.next(null);
     }
   }
 
@@ -137,6 +140,32 @@ export class AuthService {
         }
       })
     );
+  }
+
+  /**
+   * Refreshes the access token in advance when it is missing or about to
+   * expire, so verifying the session on boot never produces a 401 for a
+   * user that still has a valid refresh cookie.
+   */
+  refreshIfNeeded(): Observable<any> {
+    const token = localStorage.getItem('access_token');
+    if (token && !this.isJwtExpiredSoon(token)) {
+      return of(null);
+    }
+    return this.refreshToken().pipe(catchError(() => of(null)));
+  }
+
+  private isJwtExpiredSoon(token: string, bufferSeconds: number = 300): boolean {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return true;
+      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      const exp = Number(decoded?.exp);
+      if (!Number.isFinite(exp)) return true;
+      return exp * 1000 < Date.now() + bufferSeconds * 1000;
+    } catch {
+      return true;
+    }
   }
 
   clearSession(): void {

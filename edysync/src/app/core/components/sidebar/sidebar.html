@@ -4,12 +4,12 @@
 <aside
   class="sidebar"
   [class.sidebar--open]="isOpen"
-  [class.sidebar--pinned]="pinned()">
+  [class.sidebar--pinned]="effectivePinned">
 
   <!-- Brand / Logo -->
   <div class="sidebar-brand">
     <app-logo class="sidebar-logo-img"></app-logo>
-    @if (pinned()) {
+    @if (effectivePinned) {
       <span class="sidebar-brand-name">Centro Juan Pablo II</span>
     }
   </div>
@@ -27,11 +27,11 @@
         (click)="sidebarService.close()"
         (mouseenter)="onItemHover(i)"
         (mouseleave)="onItemLeave()"
-        [title]="!pinned() ? item.label : null">
+        [title]="!effectivePinned ? item.label : null">
         <fa-icon [icon]="item.icon" class="nav-link-icon"></fa-icon>
 
-        <!-- Inline text when pinned OR when open on mobile -->
-        @if (pinned() || isOpen) {
+        <!-- Inline text when pinned (labels mode) OR when open on mobile -->
+        @if (effectivePinned || isOpen) {
           <div class="nav-link-text">
             <span class="nav-link-label">{{ item.label }}</span>
             @if (item.subtitle) {
@@ -41,7 +41,7 @@
         }
 
         <!-- Expanded tab on hover (not pinned, not open on mobile) -->
-        @if (!pinned() && !isOpen && hoveredIndex === i) {
+        @if (!effectivePinned && !isOpen && hoveredIndex === i) {
           <div class="nav-link-expand">
             <span class="nav-link-expand__label">{{ item.label }}</span>
             @if (item.subtitle) {

@@ -7,6 +7,38 @@ import { importProvidersFrom, ErrorHandler, APP_INITIALIZER } from '@angular/cor
 import { FaIconLibrary } from '@fortawesome/angular-fontawesome';
 import { provideBeacon } from 'ng-beacon';
 import * as Sentry from '@sentry/angular';
+import {
+  Chart,
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  BarController,
+  DoughnutController,
+  LineController,
+  PieController,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+
+Chart.register(
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  BarController,
+  DoughnutController,
+  LineController,
+  PieController,
+  Tooltip,
+  Legend,
+  Filler,
+);
 
 import { App } from './app/app';
 import { environment } from './environments/environment';

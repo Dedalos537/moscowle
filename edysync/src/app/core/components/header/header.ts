@@ -13,11 +13,12 @@ import { Button } from '../../../shared/components/button/button';
 import { Spinner } from '../../../shared/components/spinner/spinner';
 import { NotificationService } from '../../services/notification.service';
 import { CATEGORY_ICONS, CATEGORY_COLORS, CATEGORY_LABELS, NotificationGroup } from '../../models/notification';
+import { PreferencesMenu } from '../../../shared/components/preferences-menu/preferences-menu';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, FontAwesomeModule, Button, Spinner],
+  imports: [CommonModule, FontAwesomeModule, Button, Spinner, PreferencesMenu],
   templateUrl: './header.html',
   styleUrl: './header.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

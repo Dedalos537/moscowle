@@ -141,20 +141,35 @@
 
       <div class="setting-divider"></div>
 
-      <!-- Ocultar gráficos -->
+      <!-- Estilo / etiquetas de la barra lateral -->
       <div class="setting-item">
         <div class="setting-item__left">
           <div class="setting-item__icon setting-item__icon--primary">
-            <fa-icon [icon]="['fas', 'chart-bar']"></fa-icon>
+            <fa-icon [icon]="['fas', 'th-large']"></fa-icon>
           </div>
           <div class="setting-item__text">
-            <span class="setting-item__label">Ocultar gráficos</span>
-            <span class="setting-item__desc">Reduce elementos visuales en paneles</span>
+            <span class="setting-item__label">Barra lateral</span>
+            <span class="setting-item__desc">Mostrar solo logos o iconos con subtítulos</span>
           </div>
         </div>
-        <button type="button" class="toggle" [class.toggle--on]="hideCharts()" (click)="toggleHideCharts()">
-          <span class="toggle__thumb"></span>
-        </button>
+        <div class="flex gap-1 bg-surface-container-high rounded-lg p-1 shrink-0">
+          <button
+            type="button"
+            class="text-[11px] py-1.5 px-3 rounded-md font-bold transition-all"
+            [class]="sidebarDisplay() === 'icons' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
+            (click)="setSidebarDisplay('icons')"
+          >
+            Logos
+          </button>
+          <button
+            type="button"
+            class="text-[11px] py-1.5 px-3 rounded-md font-bold transition-all"
+            [class]="sidebarDisplay() === 'labels' ? 'bg-primary text-on-primary' : 'text-on-surface-variant'"
+            (click)="setSidebarDisplay('labels')"
+          >
+            Subtítulos
+          </button>
+        </div>
       </div>
     </div>
   </section>

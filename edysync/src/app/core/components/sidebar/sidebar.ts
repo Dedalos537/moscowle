@@ -31,6 +31,7 @@ export class Sidebar implements OnInit, OnDestroy {
   private router = inject(Router);
   hideCharts = this.settings.hideCharts;
   pinned = this.settings.sidebarPinned;
+  sidebarDisplay = this.settings.sidebarDisplay;
 
   userRole: string = '';
   error: string | null = null;
@@ -67,6 +68,16 @@ export class Sidebar implements OnInit, OnDestroy {
     return items;
   }
 
+  /** Labels (label + subtitle) shown inline next to icons on desktop. */
+  get labelsVisible(): boolean {
+    return this.sidebarDisplay() === 'labels';
+  }
+
+  /** Pinned only takes effect when labels are shown (icons-only mode keeps a compact rail). */
+  get effectivePinned(): boolean {
+    return this.pinned() && this.labelsVisible;
+  }
+
   private hideChartsEffect = effect(() => {
     this.hideCharts();
     this.cdr.markForCheck();
@@ -74,6 +85,11 @@ export class Sidebar implements OnInit, OnDestroy {
 
   private pinnedEffect = effect(() => {
     this.pinned();
+    this.cdr.markForCheck();
+  });
+
+  private sidebarDisplayEffect = effect(() => {
+    this.sidebarDisplay();
     this.cdr.markForCheck();
   });
 
@@ -109,7 +125,7 @@ export class Sidebar implements OnInit, OnDestroy {
   }
 
   onItemHover(index: number) {
-    if (!this.pinned()) {
+    if (!this.effectivePinned) {
       this.hoveredIndex = index;
       this.cdr.markForCheck();
     }

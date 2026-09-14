@@ -154,7 +154,7 @@
               Recaudado
             </p>
             <p class="text-sm font-bold text-success">
-              S/ {{ (financials?.income_real || 0).toFixed(2) }}
+              S/ {{ summaryIngresos.toFixed(2) }}
             </p>
           </div>
           <div>
@@ -162,7 +162,7 @@
               Proyectado
             </p>
             <p class="text-sm font-bold text-on-surface">
-              S/ {{ (financials?.income_expected || 0).toFixed(2) }}
+              S/ {{ dashExpectedIncome.toFixed(2) }}
             </p>
           </div>
           <div>
@@ -170,8 +170,7 @@
               Pendiente
             </p>
             <p class="text-sm font-bold text-warning">
-              S/ {{ Math.max(0, (financials?.income_expected || 0) -
-              (financials?.income_real || 0)).toFixed(2) }}
+              S/ {{ Math.max(0, dashExpectedIncome - summaryIngresos).toFixed(2) }}
             </p>
           </div>
         </div>

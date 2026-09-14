@@ -1,6 +1,10 @@
+import base64
 import contextlib
+import json
 import logging
 import os
+import subprocess
+import tempfile
 import traceback
 import uuid
 from datetime import datetime
@@ -26,6 +30,31 @@ _last_error = {}
 
 def get_last_error():
     return dict(_last_error)
+
+
+def _parse_deleted_for_me(value):
+    """Parsa deleted_for_me_ids (JSON list) → lista de ids de usuario."""
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        return [int(i) for i in parsed if str(i).isdigit()]
+    except Exception:
+        return []
+
+
+def _sio_emit_deleted(chat_id, message_id, mode, user_id):
+    try:
+        from app.extensions import socketio
+
+        socketio.emit(
+            'message:deleted',
+            {'chat_id': chat_id, 'message_id': message_id, 'mode': mode, 'user_id': user_id},
+            namespace='/',
+            room=f'chat_{chat_id}',
+        )
+    except Exception as e:
+        logger.warning(f'SocketIO deleted emit failed: {str(e)}')
 
 
 STAFF_ROLES = ('admin', 'supervisor', 'terapista', 'terapeuta')
@@ -185,10 +214,18 @@ def list_chats():
 
                 last_msg_row = db.session.execute(
                     text(
-                        'SELECT id, body, sender_id, created_at, attachment_type FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1'
+                        'SELECT id, body, sender_id, created_at, attachment_type, deleted_at, deleted_for_me_ids FROM message WHERE chat_id = :cid ORDER BY created_at DESC LIMIT 1'
                     ),
                     {'cid': cr.id},
                 ).fetchone()
+
+                last_body = last_msg_row.body if last_msg_row else None
+                last_att = last_msg_row.attachment_type if last_msg_row else None
+                if last_msg_row and (
+                    last_msg_row.deleted_at or current_user.id in _parse_deleted_for_me(last_msg_row.deleted_for_me_ids)
+                ):
+                    last_body = 'Este mensaje fue eliminado'
+                    last_att = None
 
                 unread_count = (
                     db.session.execute(
@@ -218,10 +255,10 @@ def list_chats():
                         'unread_count': unread_count,
                         'last_message': {
                             'id': last_msg_row.id,
-                            'body': last_msg_row.body,
+                            'body': last_body,
                             'sender_id': last_msg_row.sender_id,
                             'created_at': last_msg_row.created_at.isoformat() if last_msg_row.created_at else None,
-                            'attachment_type': last_msg_row.attachment_type,
+                            'attachment_type': last_att,
                         }
                         if last_msg_row
                         else None,
@@ -396,34 +433,49 @@ def get_messages(chat_id):
 
         rows = db.session.execute(
             text(
-                'SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs'
+                'SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type, created_at, deleted_at, deleted_for_me_ids FROM message WHERE chat_id = :cid ORDER BY id DESC LIMIT :lim OFFSET :offs'
             ),
             {'cid': chat_id, 'offs': (page - 1) * limit, 'lim': limit},
         ).fetchall()
         rows = list(reversed(list(rows)))
 
-        total = (
+        total_raw = (
             db.session.execute(text('SELECT COUNT(*) FROM message WHERE chat_id = :cid'), {'cid': chat_id}).scalar()
             or 0
         )
 
-        def _msg_dict(r):
+        def _msg_dict(r, deleted=False):
             return {
                 'id': r.id,
                 'sender_id': r.sender_id,
                 'receiver_id': r.receiver_id,
-                'body': r.body,
+                'body': 'Este mensaje fue eliminado' if deleted else r.body,
                 'status': r.status,
                 'is_read': r.is_read,
-                'file_url': url_for('uploads.protected_file', filename=f'messages/{r.attachment_path}', _external=False)
-                if r.attachment_path
-                else None,
-                'attachment_type': r.attachment_type,
-                'created_at': None,
+                'deleted': deleted,
+                'file_url': None
+                if deleted or not r.attachment_path
+                else url_for('uploads.protected_file', filename=f'messages/{r.attachment_path}', _external=False),
+                'attachment_type': None if deleted else r.attachment_type,
+                'created_at': r.created_at.isoformat() if r.created_at else None,
             }
 
+        result_messages = []
+        for r in rows:
+            if getattr(r, 'deleted_at', None):
+                result_messages.append(_msg_dict(r, deleted=True))
+            elif current_user.id not in _parse_deleted_for_me(getattr(r, 'deleted_for_me_ids', None)):
+                result_messages.append(_msg_dict(r, deleted=False))
+
+        total = len(result_messages) if page <= 1 else total_raw
+
         return jsonify(
-            {'messages': [_msg_dict(r) for r in rows], 'total': total, 'page': page, 'has_more': (page * limit) < total}
+            {
+                'messages': result_messages,
+                'total': total,
+                'page': page,
+                'has_more': (page * limit) < total,
+            }
         )
     except Exception as e:
         logger.error(f'Error getting messages for chat {chat_id}: {str(e)}', exc_info=True)
@@ -462,12 +514,13 @@ def send_message(chat_id):
                 if file and file.filename:
                     filename = secure_filename(file.filename)
                     unique_filename = f'{uuid.uuid4().hex}_{filename}'
-                    ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-                    if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                    ext = (filename.rsplit('.', 1)[1] if '.' in filename else '').lower()
+                    mime = (file.mimetype or '').lower()
+                    if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] or mime.startswith('image/'):
                         attachment_type = 'image'
-                    elif ext in ['mp4', 'mov', 'webm']:
+                    elif ext in ['mp4', 'mov'] or mime.startswith('video/'):
                         attachment_type = 'video'
-                    elif ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                    elif ext in ['mp3', 'wav', 'ogg', 'm4a', 'webm', 'opus'] or mime.startswith('audio/'):
                         attachment_type = 'audio'
                     else:
                         attachment_type = 'file'
@@ -502,15 +555,17 @@ def send_message(chat_id):
 
         msg_row = db.session.execute(
             text(
-                'SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type FROM message WHERE id = :mid'
+                'SELECT id, sender_id, receiver_id, body, status, is_read, attachment_path, attachment_type, created_at FROM message WHERE id = :mid'
             ),
             {'mid': msg_id},
         ).fetchone()
 
-        try:
-            from flask_socketio import emit as sio_emit
+        msg_created_at = msg_row.created_at.isoformat() if msg_row.created_at else None
 
-            sio_emit(
+        try:
+            from app.extensions import socketio
+
+            socketio.emit(
                 'message:new',
                 {
                     'chat_id': chat_id,
@@ -527,9 +582,10 @@ def send_message(chat_id):
                         if msg_row.attachment_path
                         else None,
                         'attachment_type': msg_row.attachment_type,
-                        'created_at': None,
+                        'created_at': msg_created_at,
                     },
                 },
+                namespace='/',
                 room=f'chat_{chat_id}',
             )
         except Exception as e:
@@ -551,15 +607,17 @@ def send_message(chat_id):
                 'message': {
                     'id': msg_row.id,
                     'sender_id': msg_row.sender_id,
+                    'receiver_id': msg_row.receiver_id,
                     'body': msg_row.body,
                     'status': msg_row.status,
+                    'is_read': msg_row.is_read,
                     'file_url': url_for(
                         'uploads.protected_file', filename=f'messages/{msg_row.attachment_path}', _external=False
                     )
                     if msg_row.attachment_path
                     else None,
                     'attachment_type': msg_row.attachment_type,
-                    'created_at': None,
+                    'created_at': msg_created_at,
                 },
             }
         )
@@ -624,11 +682,12 @@ def mark_read(chat_id):
         db.session.commit()
 
         try:
-            from flask_socketio import emit as sio_emit
+            from app.extensions import socketio
 
-            sio_emit(
+            socketio.emit(
                 'message:status',
                 {'chat_id': chat_id, 'user_id': current_user.id, 'status': 'read'},
+                namespace='/',
                 room=f'chat_{chat_id}',
                 include_self=False,
             )
@@ -661,3 +720,225 @@ def delete_chat(chat_id):
         db.session.rollback()
         logger.error(f'Error deleting chat {chat_id}: {str(e)}', exc_info=True)
         return jsonify({'success': False, 'message': 'Error al eliminar conversación'}), 500
+
+
+@chat_bp.route('/api/chats/<int:chat_id>/messages/<int:msg_id>', methods=['DELETE'])
+@csrf.exempt
+@login_required
+def delete_message(chat_id, msg_id):
+    """Elimina un mensaje: scope 'me' (solo para mí) o 'all' (para todos)."""
+    try:
+        participant = ChatParticipant.query.filter_by(chat_id=chat_id, user_id=current_user.id).first()
+        if not participant:
+            return jsonify({'success': False, 'message': 'No eres participante de este chat'}), 403
+
+        msg = Message.query.filter_by(id=msg_id, chat_id=chat_id).first()
+        if not msg:
+            return jsonify({'success': False, 'message': 'Mensaje no encontrado'}), 404
+
+        data = request.get_json(silent=True) or {}
+        scope = data.get('scope', 'me')
+
+        if scope == 'all':
+            if msg.sender_id != current_user.id:
+                return jsonify(
+                    {'success': False, 'message': 'Solo puedes eliminar para todos tus propios mensajes'}
+                ), 403
+            msg.deleted_at = datetime.utcnow()
+            db.session.commit()
+            _sio_emit_deleted(chat_id, msg_id, 'all', current_user.id)
+        else:
+            ids = _parse_deleted_for_me(msg.deleted_for_me_ids)
+            if current_user.id not in ids:
+                ids.append(current_user.id)
+            msg.deleted_for_me_ids = json.dumps(ids)
+            db.session.commit()
+            _sio_emit_deleted(chat_id, msg_id, 'me', current_user.id)
+
+        return jsonify({'success': True, 'scope': scope})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error deleting message {msg_id} in chat {chat_id}: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'message': 'Error al eliminar mensaje'}), 500
+
+
+# ─── IA: previsualizador de archivos ─────────────────────────────────
+
+
+def _mime_and_category(ext: str, attachment_type: str | None):
+    at = (attachment_type or '').lower()
+    if at == 'image' or ext in ('jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'):
+        return ('image/jpeg' if ext == 'jpg' else f'image/{ext if ext != "jpeg" else "jpeg"}', 'image')
+    if at == 'audio' or ext in ('mp3', 'wav', 'ogg', 'm4a', 'webm', 'opus', 'aac', 'flac'):
+        return ('audio/webm' if ext == 'webm' else f'audio/{ext}', 'audio')
+    if at == 'video' or ext in ('mp4', 'mov', 'avi', 'mkv', 'webm'):
+        return ('video/mp4', 'video')
+    if ext == 'pdf':
+        return ('application/pdf', 'document')
+    if ext in ('doc', 'docx', 'txt', 'rtf', 'odt'):
+        return ('text/plain', 'document')
+    if ext in ('xls', 'xlsx', 'csv'):
+        return ('text/csv', 'spreadsheet')
+    if ext in ('zip', 'rar', '7z', 'tar', 'gz'):
+        return ('application/zip', 'archive')
+    return ('application/octet-stream', 'other')
+
+
+def _base64_file(path):
+    with open(path, 'rb') as f:
+        return base64.b64encode(f.read()).decode('ascii')
+
+
+def _summarize_text(text, prompt_extra=''):
+    from app.services.llm_client import llm_chat
+
+    msgs = [
+        {
+            'role': 'user',
+            'content': f'Resumé este contenido en español, en 3-5 oraciones concisas.{prompt_extra}\n\nContenido:\n{text[:6000]}',
+        }
+    ]
+    try:
+        content, _ = llm_chat(msgs, temperature=0.2, max_tokens=512)
+        return content.strip() if content else None
+    except Exception as e:
+        logger.warning(f'LLM summary failed: {e}')
+        return None
+
+
+def _analyze_file(path, ext, mime, category):
+    result = {}
+    try:
+        if category == 'image':
+            b64 = _base64_file(path)
+            from app.services.llm_client import get_gemini_model
+
+            gemini = get_gemini_model()
+            if gemini:
+                resp = gemini.generate_content(
+                    [
+                        'Describe esta imagen en detalle: qué se ve, personas, objetos, contexto, emociones. Responde en español con 3-5 oraciones.',
+                        {'inline_data': {'mime_type': mime, 'data': b64}},
+                    ]
+                )
+                result['summary'] = resp.text.strip()
+        elif category == 'audio':
+            from app.services.local_whisper import transcribe_local
+
+            out = transcribe_local(path, language='es')
+            result['summary'] = out.get('text')
+            result['duration'] = out.get('duration')
+            result['language'] = out.get('language')
+        elif category == 'video':
+            tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            tmp.close()
+            subprocess.run(
+                ['ffmpeg', '-y', '-i', path, '-frames:v', '1', '-q:v', '2', tmp.name], capture_output=True, timeout=20
+            )
+            b64 = _base64_file(tmp.name)
+            os.unlink(tmp.name)
+            from app.services.llm_client import get_gemini_model
+
+            gemini = get_gemini_model()
+            if gemini:
+                resp = gemini.generate_content(
+                    [
+                        'Describe la escena de este fotograma de video: qué se ve, acción, entorno. Responde en español.',
+                        {'inline_data': {'mime_type': 'image/png', 'data': b64}},
+                    ]
+                )
+                result['summary'] = resp.text.strip()
+        elif category == 'document':
+            text = None
+            try:
+                import pdfplumber
+
+                with pdfplumber.open(path) as pdf:
+                    text = ' '.join((p.extract_text() or '') for p in pdf.pages[:5])
+            except Exception:
+                pass
+            if not text:
+                try:
+                    import docx
+
+                    d = docx.Document(path)
+                    text = '\n'.join(p.text for p in d.paragraphs)
+                except Exception:
+                    pass
+            if not text:
+                text = open(path, 'rb').read()[:2000].decode('utf-8', 'ignore')
+            result['summary'] = _summarize_text(text)
+            result['text'] = (text or '')[:1500]
+        elif category == 'spreadsheet':
+            try:
+                import openpyxl
+
+                wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+                rows = []
+                for ws in wb.worksheets[:3]:
+                    for r in ws.iter_rows(values_only=True):
+                        rows.append(' '.join(str(c) for c in r if c is not None))
+                text = '\n'.join(rows[:40])
+            except Exception:
+                import csv
+
+                with open(path, encoding='utf-8', errors='ignore') as f:
+                    text = '\n'.join([','.join(r) for r in csv.reader(f)][:40])
+            result['summary'] = _summarize_text(text)
+            result['text'] = (text or '')[:1500]
+        else:
+            text = open(path, 'rb').read()[:2000].decode('utf-8', 'ignore')
+            result['summary'] = _summarize_text(text)
+            result['text'] = text
+    except Exception as e:
+        logger.warning(f'File analysis failed for {path}: {e}')
+        result['summary'] = None
+        result['error'] = str(e)
+    return result
+
+
+@chat_bp.route('/api/files/ai-preview', methods=['POST'])
+@login_required
+def ai_preview():
+    """Genera una vista previa con IA de cualquier archivo adjunto de chat."""
+    try:
+        data = request.get_json(silent=True) or {}
+        message_id = data.get('message_id')
+        if not message_id:
+            return jsonify({'success': False, 'message': 'Falta message_id'}), 400
+
+        msg = Message.query.get(message_id)
+        if not msg or not msg.attachment_path:
+            return jsonify({'success': False, 'message': 'Archivo no encontrado'}), 404
+
+        participant = ChatParticipant.query.filter_by(chat_id=msg.chat_id, user_id=current_user.id).first()
+        if not participant:
+            return jsonify({'success': False, 'message': 'No eres participante'}), 403
+
+        disk_path = os.path.join(current_app.instance_path, 'uploads', 'messages', msg.attachment_path)
+        if not os.path.exists(disk_path):
+            return jsonify({'success': False, 'message': 'Archivo no existe en disco'}), 404
+
+        ext = msg.attachment_path.rsplit('.', 1)[-1].lower() if '.' in msg.attachment_path else ''
+        mime, category = _mime_and_category(ext, msg.attachment_type)
+        size = os.path.getsize(disk_path)
+
+        result = _analyze_file(disk_path, ext, mime, category)
+
+        return jsonify(
+            {
+                'success': True,
+                'preview': {
+                    'fileName': msg.attachment_path,
+                    'fileSize': size,
+                    'mimeType': mime,
+                    'extension': ext,
+                    'category': category,
+                    'fileUrl': msg.file_url,
+                    'ai': result,
+                },
+            }
+        ), 200
+    except Exception as e:
+        logger.error(f'AI preview error: {str(e)}', exc_info=True)
+        return jsonify({'success': False, 'message': 'Error al generar la vista previa'}), 500

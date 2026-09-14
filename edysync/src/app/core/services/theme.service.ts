@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { GlobalSettingsService } from './global-settings.service';
+import { AuthService } from './auth.service';
 
 export interface ThemeSchedule {
   enabled: boolean;
@@ -10,9 +11,10 @@ export interface ThemeSchedule {
 }
 
 @Injectable({ providedIn: 'root' })
-export class ThemeService {
+export class ThemeService implements OnDestroy {
   private http = inject(HttpClient);
   private globalSettings = inject(GlobalSettingsService);
+  private auth = inject(AuthService);
 
   private themeSubject = new BehaviorSubject<string>('light');
   theme$ = this.themeSubject.asObservable();
@@ -22,9 +24,18 @@ export class ThemeService {
   schedule$ = this.scheduleSubject.asObservable();
 
   private timer: ReturnType<typeof setInterval> | null = null;
+  private authSub: Subscription;
+  private lastAuthUserId: number | null = null;
 
   constructor() {
-    this.loadScheduleFromAPI();
+    this.authSub = this.auth.currentUser$.subscribe(user => {
+      const uid: number | null = user?.id ?? null;
+      if (uid !== null && uid !== this.lastAuthUserId) {
+        this.lastAuthUserId = uid;
+        this.loadScheduleFromAPI();
+      }
+    });
+
     const saved = localStorage.getItem('theme');
     const isDark = document.documentElement.classList.contains('dark');
     if (saved === 'dark' || (!saved && isDark)) {
@@ -37,6 +48,10 @@ export class ThemeService {
       document.documentElement.classList.remove('dark');
     }
     this.startScheduleWatcher();
+  }
+
+  ngOnDestroy() {
+    this.authSub.unsubscribe();
   }
 
   toggle() {

@@ -1,7 +1,10 @@
 import { Injectable, inject, signal, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export type FontSize = 'small' | 'medium' | 'large';
+export type SidebarDisplay = 'icons' | 'labels';
 
 export interface ColorPreset {
   name: string;
@@ -31,16 +34,33 @@ const FONT_SIZE_MAP: Record<FontSize, string> = {
 export class GlobalSettingsService {
   private http = inject(HttpClient);
   private zone = inject(NgZone);
+  private auth = inject(AuthService);
 
   hideCharts = signal<boolean>(this.loadLocal('edysync_hide_charts') === 'true');
   fontSize = signal<FontSize>((this.loadLocal('edysync_font_size') as FontSize) || 'medium');
   primaryColor = signal<string>(this.loadLocal('edysync_primary_color') || 'green');
   sidebarPinned = signal<boolean>(this.loadLocal('edysync_sidebar_pinned') === 'true');
+  sidebarDisplay = signal<SidebarDisplay>((this.loadLocal('edysync_sidebar_display') as SidebarDisplay) || 'labels');
+
+  /** Public: re-fetch preferences from API (e.g. after login / auth detection). */
+  refreshFromAPI(): void {
+    this.loadFromAPI();
+  }
+
+  private authSub: Subscription;
+  private lastAuthUserId: number | null = null;
 
   constructor() {
     this.applyFontSize(this.fontSize());
     this.applyPrimaryColor(this.primaryColor());
-    this.loadFromAPI();
+
+    this.authSub = this.auth.currentUser$.subscribe(user => {
+      const uid: number | null = user?.id ?? null;
+      if (uid !== null && uid !== this.lastAuthUserId) {
+        this.lastAuthUserId = uid;
+        this.loadFromAPI();
+      }
+    });
   }
 
   toggleHideCharts(): void {
@@ -67,6 +87,12 @@ export class GlobalSettingsService {
   setSidebarPinned(pinned: boolean): void {
     this.sidebarPinned.set(pinned);
     this.saveLocal('edysync_sidebar_pinned', String(pinned));
+  }
+
+  setSidebarDisplay(mode: SidebarDisplay): void {
+    this.sidebarDisplay.set(mode);
+    this.saveLocal('edysync_sidebar_display', mode);
+    this.saveToAPI({ sidebar_display: mode });
   }
 
   private applyFontSize(size: FontSize): void {
@@ -212,7 +238,7 @@ export class GlobalSettingsService {
   }
 
   private loadFromAPI(): void {
-    this.http.get<{ font_size: FontSize; primary_color: string; hide_charts: boolean }>('/api/user/preferences').subscribe({
+    this.http.get<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay }>('/api/user/preferences').subscribe({
       next: (data) => {
         this.zone.run(() => {
           if (data.font_size && data.font_size !== this.fontSize()) {
@@ -229,13 +255,17 @@ export class GlobalSettingsService {
             this.hideCharts.set(data.hide_charts);
             this.saveLocal('edysync_hide_charts', String(data.hide_charts));
           }
+          if (data.sidebar_display !== undefined && data.sidebar_display !== this.sidebarDisplay()) {
+            this.sidebarDisplay.set(data.sidebar_display);
+            this.saveLocal('edysync_sidebar_display', data.sidebar_display);
+          }
         });
       },
       error: () => {},
     });
   }
 
-  private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean }>): void {
+  private saveToAPI(data: Partial<{ font_size: FontSize; primary_color: string; hide_charts: boolean; sidebar_display: SidebarDisplay }>): void {
     this.http.put('/api/user/preferences', data).subscribe({ error: () => {} });
   }
 

@@ -27,6 +27,10 @@
     }
 
     <div class="relative">
+      <app-preferences-menu class="block"></app-preferences-menu>
+    </div>
+
+    <div class="relative">
       <button (click)="$event.stopPropagation(); toggleNotifications()" class="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container-high transition-colors focus:outline-none focus:ring-2 focus:ring-primary-container/30">
         <fa-icon [icon]="['fas', 'bell']" [class.!text-primary-container]="unreadCount > 0" class="text-sm"></fa-icon>
         @if (unreadCount > 0) {
@@ -35,7 +39,7 @@
       </button>
 
       @if (showNotifications) {
-        <div class="absolute right-0 mt-3 w-96 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col max-h-[85vh] animate-fade-in">
+        <div class="fixed left-1/2 top-16 -translate-x-1/2 w-[calc(100vw-1.5rem)] max-w-96 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:translate-x-0 sm:w-96 bg-surface-container-lowest/95 backdrop-blur-xl rounded-xl shadow-soft border border-border/50 z-50 flex flex-col max-h-[85vh] animate-fade-in">
           <!-- Header -->
           <div class="p-4 border-b border-border/30 bg-surface-container-low/80 rounded-t-xl">
             <div class="flex justify-between items-center mb-3">
@@ -200,7 +204,7 @@
             <p class="text-label-caps text-on-surface-variant capitalize">{{ user?.role || 'User' }}</p>
             <p class="text-xs text-on-surface-variant mt-1">{{ user?.timezone || 'America/Lima' }}</p>
           </div>
-          <button class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="logout()">
+          <button class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-high transition-colors rounded-lg" (click)="$event.stopPropagation(); logout()">
             <fa-icon [icon]="['fas', 'sign-out-alt']" class="text-on-surface-variant text-sm shrink-0"></fa-icon>
             <span>Cerrar Sesion</span>
           </button>

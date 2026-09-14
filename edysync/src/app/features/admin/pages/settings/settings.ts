@@ -44,6 +44,7 @@ export class Settings implements OnInit, OnDestroy {
   get primaryColor() { return this.settings.primaryColor; }
   get hideCharts() { return this.settings.hideCharts; }
   get sidebarPinned() { return this.settings.sidebarPinned; }
+  get sidebarDisplay() { return this.settings.sidebarDisplay; }
   get notifPrefs() { return this.notifService.preferences() ?? this.notifService.defaultPrefs; }
 
   telegramAccounts: any[] = [];
@@ -233,13 +234,13 @@ export class Settings implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  toggleHideCharts(): void {
-    this.settings.toggleHideCharts();
+  toggleSidebarPinned(): void {
+    this.settings.setSidebarPinned(!this.sidebarPinned());
     this.cdr.markForCheck();
   }
 
-  toggleSidebarPinned(): void {
-    this.settings.setSidebarPinned(!this.sidebarPinned());
+  setSidebarDisplay(mode: 'icons' | 'labels'): void {
+    this.settings.setSidebarDisplay(mode);
     this.cdr.markForCheck();
   }
 

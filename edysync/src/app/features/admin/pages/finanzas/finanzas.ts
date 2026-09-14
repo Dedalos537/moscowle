@@ -6,9 +6,23 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription, firstValueFrom, forkJoin } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
-import { Chart, registerables } from 'chart.js';
 import type { ChartConfiguration, ChartData } from 'chart.js';
-Chart.register(...registerables);
+import {
+  Chart,
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  BarController,
+  DoughnutController,
+  LineController,
+  PieController,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
 import { AdminService } from '../../../../core/services/admin.service';
 import { HeaderService } from '../../../../core/services/header.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -31,10 +45,26 @@ import { MonthRange, MonthRangePicker } from '../../../../shared/components/mont
 import { PatientRow, PaymentHistoryRow, Therapist, ExpenseForm, Contract, ContractDetail, ContractFilter, CreateContractForm, PayInstallmentForm, CancelContractForm } from './finanzas.models';
 import {
   getCategoryLabel, getMethodBadgeClass, getMethodLabel, formatMonthLabel,
-  getLast6MonthsKeys, getMonthlyIncome, getMonthlyExpenses,
+  getAnchorMonthsKeys, getMonthlyIncome, getMonthlyExpenses,
   getWhatsAppLink, getInitials, getPatientStatus, getStatusInfo, isOverdue, rankContract,
 } from './finanzas-utils';
 import { makeLineOpts, makeDoughnutOpts } from './finanzas-charts-config';
+
+Chart.register(
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  BarController,
+  DoughnutController,
+  LineController,
+  PieController,
+  Tooltip,
+  Legend,
+  Filler,
+);
 
 @Component({
   selector: 'app-finanzas',
@@ -69,9 +99,17 @@ export class Finanzas implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  summaryTotalDeuda = 0;
-  summaryIngresos = 0;
-  summaryGastos = 0;
+  get summaryTotalDeuda(): number {
+    return this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+  }
+
+  get summaryIngresos(): number {
+    return this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0);
+  }
+
+  get summaryGastos(): number {
+    return this.getFilteredExpenses().reduce((sum, e) => sum + (e.amount || 0), 0);
+  }
 
   patients: PatientRow[] = [];
   paymentHistory: PaymentHistoryRow[] = [];
@@ -234,8 +272,6 @@ export class Finanzas implements OnInit, OnDestroy {
 
   patientsList: User[] = [];
 
-  financials: any = { income_real: 0, income_expected: 0, overdue_amount: 0, overdue_users_count: 0 };
-
   chartStatusDist: any = { labels: [], datasets: [] };
   chartStatusOpt: any;
   readonly chartStatusType = 'doughnut' as const;
@@ -344,46 +380,19 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private loadSummaryData() {
-    this.subscriptions.add(
-      this.adminService.getDebtReport('all').subscribe({
-        next: (res) => {
-          if (res.success && res.data) {
-            const porSede: Record<string, any> = res.data.por_sede || {};
-            this.summaryTotalDeuda = Object.values(porSede).reduce((sum: number, g: any) =>
-              sum + ((g.deudores || []).reduce((s: number, d: any) => s + (d.monto || 0), 0)), 0);
-          }
-          this.genDashboardCharts();
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-    this.subscriptions.add(
-      this.adminService.getFinancialSummary().subscribe({
-        next: (res) => {
-          if (res.success && res.data) this.summaryIngresos = res.data.income_real || 0;
-          this.genDashboardCharts();
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
-    this.subscriptions.add(
-      this.adminService.getExpenses().subscribe({
-        next: (res) => {
-          if (res.success && res.data) this.summaryGastos = res.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
-          this.genDashboardCharts();
-          this.cdr.markForCheck();
-        },
-        error: () => this.cdr.markForCheck(),
-      }),
-    );
+    this.genDashboardCharts();
+    this.cdr.detectChanges();
   }
 
   private genDashboardCharts() {
+    const anchor = this.monthFilter || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const incomeByMonth = getMonthlyIncome(this.paymentHistory);
     const expenseByMonth = getMonthlyExpenses(this.recentExpenses);
-    const monthKeys = getLast6MonthsKeys();
+    if (this.monthFilter) {
+      incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
+      expenseByMonth.set(this.monthFilter, this.getFilteredExpenses().reduce((sum, e) => sum + (e.amount || 0), 0));
+    }
+    const monthKeys = getAnchorMonthsKeys(anchor);
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const expValues = monthKeys.map((k) => expenseByMonth.get(k) || 0);
     const labels = monthKeys.map((k) => formatMonthLabel(k));
@@ -397,7 +406,7 @@ export class Finanzas implements OnInit, OnDestroy {
     };
 
     const catMap: Record<string, number> = {};
-    this.recentExpenses.forEach((e) => { const k = e.category || 'Otros'; catMap[k] = (catMap[k] || 0) + e.amount; });
+    this.getFilteredExpenses().forEach((e) => { const k = e.category || 'Otros'; catMap[k] = (catMap[k] || 0) + e.amount; });
     if (Object.keys(catMap).length === 0) catMap['Sin datos'] = 0;
     const catLabels = Object.keys(catMap);
     const catColors: Record<string, string> = { therapist_payment: '#75a83a', operational: '#3b82f6', bonus: '#f59e0b', other: '#8b5cf6' };
@@ -418,26 +427,71 @@ export class Finanzas implements OnInit, OnDestroy {
     this.chartRevenueByLocation = this.buildChartRevenueByLocation();
   }
 
+  private getChartPatients(): PatientRow[] {
+    if (!this.monthFilter) return this.patients;
+    const [year, month] = this.monthFilter.split('-').map(Number);
+    return this.patients.filter(p => {
+      if (!p.next_due_date) return false;
+      const py = Number(p.next_due_date.substring(0, 4));
+      const pm = Number(p.next_due_date.substring(5, 7));
+      if (py !== year || pm !== month) return false;
+      if (this.fortnightFilter === 1) return Number(p.next_due_date.substring(8, 10)) <= 15;
+      if (this.fortnightFilter === 2) return Number(p.next_due_date.substring(8, 10)) > 15;
+      return true;
+    });
+  }
+
+  private getFilteredPayments(): PaymentHistoryRow[] {
+    if (!this.monthFilter) return this.paymentHistory;
+    const [year, month] = this.monthFilter.split('-').map(Number);
+    return this.paymentHistory.filter(p => {
+      if (!p.date) return false;
+      const py = Number(p.date.substring(0, 4));
+      const pm = Number(p.date.substring(5, 7));
+      if (py !== year || pm !== month) return false;
+      if (this.fortnightFilter === 1) return Number(p.date.substring(8, 10)) <= 15;
+      if (this.fortnightFilter === 2) return Number(p.date.substring(8, 10)) > 15;
+      return true;
+    });
+  }
+
+  private getFilteredExpenses(): Expense[] {
+    if (!this.monthFilter) return this.recentExpenses;
+    const [year, month] = this.monthFilter.split('-').map(Number);
+    return this.recentExpenses.filter(e => {
+      if (!e.date) return false;
+      const ey = Number(e.date.substring(0, 4));
+      const em = Number(e.date.substring(5, 7));
+      if (ey !== year || em !== month) return false;
+      if (this.fortnightFilter === 1) return Number(e.date.substring(8, 10)) <= 15;
+      if (this.fortnightFilter === 2) return Number(e.date.substring(8, 10)) > 15;
+      return true;
+    });
+  }
+
   private buildChartStatusDist() {
-    const alDia = this.patients.filter((p) => getPatientStatus(p) === 'al_dia').length;
-    const deudor = this.patients.filter((p) => getPatientStatus(p) === 'deudor').length;
-    const cancelado = this.patients.filter((p) => getPatientStatus(p) === 'cancelado').length;
-    const sinContrato = this.patients.filter((p) => getPatientStatus(p) === 'sin_contrato').length;
+    const filtered = this.getChartPatients();
+    const alDia = filtered.filter((p) => getPatientStatus(p) === 'al_dia').length;
+    const deudor = filtered.filter((p) => getPatientStatus(p) === 'deudor').length;
+    const cancelado = filtered.filter((p) => getPatientStatus(p) === 'cancelado').length;
+    const sinContrato = filtered.filter((p) => getPatientStatus(p) === 'sin_contrato').length;
     return { labels: ['Al Día', 'Deudores', 'Cancelados', 'Sin Contrato'], datasets: [{ data: [alDia, deudor, cancelado, sinContrato], backgroundColor: ['#75a83a', '#ba1a1a', '#9ca3af', '#d9dbce'], borderWidth: 0, hoverOffset: 8 }] };
   }
 
   private buildChartDebtByLocation() {
+    const filtered = this.getChartPatients();
     const debtBySede: Record<string, number> = {};
-    this.patients.forEach((p) => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
+    filtered.forEach((p) => { debtBySede[p.sede_name] = (debtBySede[p.sede_name] || 0) + p.payment_amount; });
     const labels = Object.keys(debtBySede);
     return { labels, datasets: [{ label: 'Deuda (S/)', data: Object.values(debtBySede), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderRadius: 6, barPercentage: 0.5 }] };
   }
 
   private buildChartPaymentAge() {
+    const filtered = this.getChartPatients();
     const ranges = ['1-7 días', '8-15 días', '16-30 días', '31-60 días', '+60 días'];
     const counts = [0, 0, 0, 0, 0];
     const now = new Date();
-    this.patients.forEach((p) => {
+    filtered.forEach((p) => {
       if (!p.next_due_date) return;
       const diffDays = Math.floor((now.getTime() - new Date(p.next_due_date).getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays <= 0) counts[0]++; else if (diffDays <= 7) counts[0]++; else if (diffDays <= 15) counts[1]++; else if (diffDays <= 30) counts[2]++; else if (diffDays <= 60) counts[3]++; else counts[4]++;
@@ -446,44 +500,59 @@ export class Finanzas implements OnInit, OnDestroy {
   }
 
   private buildChartRevenueHistory() {
+    const anchor = this.monthFilter || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const incomeByMonth = getMonthlyIncome(this.paymentHistory);
-    const monthKeys = getLast6MonthsKeys();
+    if (this.monthFilter) {
+      incomeByMonth.set(this.monthFilter, this.getFilteredPayments().reduce((sum, p) => sum + (p.amount || 0) - (p.discount || 0), 0));
+    }
+    const monthKeys = getAnchorMonthsKeys(anchor);
     const revenues = monthKeys.map((k) => incomeByMonth.get(k) || 0);
     const labels = monthKeys.map((k) => formatMonthLabel(k));
     return { labels, datasets: [{ label: 'Ingresos (S/)', data: revenues, borderColor: '#75a83a', backgroundColor: 'rgba(117, 168, 58, 0.1)', fill: true, pointBackgroundColor: '#75a83a', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
   }
 
   private buildChartRevenueByPlan() {
+    const filtered = this.getChartPatients();
     const planMap: Record<string, number> = {};
-    this.patients.forEach((p) => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
+    filtered.forEach((p) => { const k = p.plan_name || 'Sin plan'; planMap[k] = (planMap[k] || 0) + p.payment_amount; });
     const labels = Object.keys(planMap);
     return { labels, datasets: [{ data: Object.values(planMap), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
   private buildChartProjVsReal() {
-    return { labels: ['Este Mes'], datasets: [{ label: 'Proyectado', data: [this.financials?.income_expected || 0], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [this.financials?.income_real || 0], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
+    const expected = this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+    const real = this.summaryIngresos;
+    const label = this.monthFilter ? formatMonthLabel(this.monthFilter) : 'Este Mes';
+    return { labels: [label], datasets: [{ label: 'Proyectado', data: [expected], backgroundColor: 'rgba(59, 130, 246, 0.85)', borderRadius: 6, barPercentage: 0.4 }, { label: 'Real', data: [real], backgroundColor: 'rgba(117, 168, 58, 0.85)', borderRadius: 6, barPercentage: 0.4 }] };
   }
 
   private buildChartRevenueByLocation() {
+    const filtered = this.getChartPatients();
     const sedeMap: Record<string, number> = {};
-    this.patients.forEach((p) => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
+    filtered.forEach((p) => { sedeMap[p.sede_name] = (sedeMap[p.sede_name] || 0) + p.payment_amount; });
     const labels = Object.keys(sedeMap);
     return { labels, datasets: [{ data: Object.values(sedeMap), backgroundColor: labels.map((_, i) => ['#75a83a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#ba1a1a'][i % 7]), borderWidth: 0, hoverOffset: 8 }] };
   }
 
   get summaryBalance(): number { return this.summaryIngresos - this.summaryGastos; }
 
+  get dashExpectedIncome(): number {
+    return this.getChartPatients().reduce((sum, p) => sum + (p.payment_amount || 0), 0);
+  }
+
   get dashCollectionRate(): number {
-    if (this.financials?.income_expected > 0) return Math.min(100, (this.financials.income_real / this.financials.income_expected) * 100);
+    const expected = this.dashExpectedIncome;
+    if (expected > 0) return Math.min(100, (this.summaryIngresos / expected) * 100);
     return 0;
   }
 
-  get dashRecentTransactions(): any[] { return this.paymentHistory.slice(0, 10); }
+  get dashRecentTransactions(): any[] { return this.getFilteredPayments().slice(0, 10); }
 
   get dashExpenseStats() {
-    const total = this.recentExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const therapistPayments = this.recentExpenses.filter((e) => e.category === 'therapist_payment').reduce((sum, e) => sum + e.amount, 0);
-    const operational = this.recentExpenses.filter((e) => e.category === 'operational').reduce((sum, e) => sum + e.amount, 0);
+    const filtered = this.getFilteredExpenses();
+    const total = filtered.reduce((sum, e) => sum + e.amount, 0);
+    const therapistPayments = filtered.filter((e) => e.category === 'therapist_payment').reduce((sum, e) => sum + e.amount, 0);
+    const operational = filtered.filter((e) => e.category === 'operational').reduce((sum, e) => sum + e.amount, 0);
     return { total, therapistPayments, operational, other: total - therapistPayments - operational };
   }
 
@@ -492,7 +561,7 @@ export class Finanzas implements OnInit, OnDestroy {
     if (params['search_patient']) this.searchQuery = params['search_patient'];
   }
 
-  private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadFinancialSummary(); this.loadPaymentHistory(); this.loadContractAlerts(); }
+  private loadPaymentsData() { this.loadSedes(); this.loadPaymentsTherapists(); this.loadPaymentsDebtReport(); this.loadPaymentHistory(); this.loadContractAlerts(); }
 
   private loadSedes() {
     this.subscriptions.add(this.adminService.getSedes().subscribe({ next: (list) => { this.sedes = list; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
@@ -530,18 +599,11 @@ export class Finanzas implements OnInit, OnDestroy {
           this.syncPatientContractState();
           this.genDashboardCharts();
           this.paymentsLoading = false;
-          this.cdr.markForCheck();
+          this.cdr.detectChanges();
         },
         error: () => { this.paymentsLoading = false; this.cdr.markForCheck(); },
       }),
     );
-  }
-
-  private loadFinancialSummary() {
-    this.subscriptions.add(this.adminService.getFinancialSummary().subscribe({
-      next: (res) => { if (res.success && res.data) { this.financials = res.data; } this.cdr.markForCheck(); },
-      error: () => this.cdr.markForCheck(),
-    }));
   }
 
   reloadPaymentHistory() {
@@ -562,9 +624,9 @@ export class Finanzas implements OnInit, OnDestroy {
         }
         this.historyLoading = false;
         this.genDashboardCharts();
-        this.cdr.markForCheck();
+        this.cdr.detectChanges();
       },
-        error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
+      error: () => { this.historyLoading = false; this.cdr.markForCheck(); },
       }));
   }
 
@@ -1222,12 +1284,14 @@ export class Finanzas implements OnInit, OnDestroy {
       }
     }
     this.patientPage = 1;
+    this.genDashboardCharts();
     this.cdr.markForCheck();
   }
 
   setFortnightFilter(f: 1 | 2 | null) {
     this.fortnightFilter = f;
     this.patientPage = 1;
+    this.genDashboardCharts();
     this.cdr.markForCheck();
   }
 
@@ -1245,16 +1309,6 @@ export class Finanzas implements OnInit, OnDestroy {
     let result = [...this.patients];
     if (this.patientStatusFilter !== 'all') {
       result = result.filter(p => getPatientStatus(p) === this.patientStatusFilter);
-    }
-    if (this.monthFilter) {
-      result = result.filter(p => {
-        if (!p.next_due_date || p.payment_amount <= 0) return false;
-        const dueMonth = p.next_due_date.substring(0, 7);
-        if (dueMonth !== this.monthFilter) return false;
-        if (!this.fortnightFilter) return true;
-        const day = new Date(p.next_due_date).getDate();
-        return this.fortnightFilter === 1 ? day <= 15 : day > 15;
-      });
     }
     if (this.searchQuery) { const q = this.searchQuery.toLowerCase(); result = result.filter((p) => p.username.toLowerCase().includes(q) || p.email.toLowerCase().includes(q)); }
     if (this.selectedSedeId) { const sn = this.sedes.find((s) => s.id === this.selectedSedeId)?.name || ''; result = result.filter((p) => p.sede_name === sn); }
@@ -1639,7 +1693,7 @@ export class Finanzas implements OnInit, OnDestroy {
     this.expensesLoading = true;
     this.subscriptions.add(this.adminService.getTherapistFinancials().subscribe({ next: (res) => { this.therapistFinancials = res.data; this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
     this.subscriptions.add(this.adminService.getUsers('terapista').subscribe({ next: (res) => { this.expenseTherapists = res.users.map((u: any) => ({ ...u, is_active: true } as User)); this.cdr.markForCheck(); }, error: () => this.cdr.markForCheck() }));
-    this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.markForCheck(); }, error: () => { this.expensesLoading = false; this.cdr.markForCheck(); } }));
+    this.subscriptions.add(this.adminService.getExpenses().subscribe({ next: (res) => { this.recentExpenses = res.data; this.expensesLoading = false; this.genDashboardCharts(); this.cdr.detectChanges(); }, error: () => { this.expensesLoading = false; this.cdr.markForCheck(); } }));
   }
 
   openTherapistPaymentModal(therapist: TherapistFinancial) {

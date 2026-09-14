@@ -38,6 +38,7 @@ export interface MessageData {
   file_url: string | null;
   attachment_type: string | null;
   created_at: string | null;
+  deleted?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -60,25 +61,32 @@ export class ChatService {
   private _userStoppedTyping = new Subject<{ chat_id: number; user_id: number }>();
   userStoppedTyping$ = this._userStoppedTyping.asObservable();
 
+  private _messageDeleted = new Subject<{ chat_id: number; message_id: number; mode: string; user_id: number }>();
+  messageDeleted$ = this._messageDeleted.asObservable();
+
   private _connectionStatus = new BehaviorSubject<boolean>(false);
   connectionStatus$ = this._connectionStatus.asObservable();
 
   private _notificationEvent = new Subject<any>();
   notificationEvent$ = this._notificationEvent.asObservable();
 
+  private _seenIds = new Set<number>();
+
   constructor(private http: HttpClient) {}
 
   async connect() {
     if (this.socket?.connected) return;
     const { io } = await import('socket.io-client');
+    const getToken = () => localStorage.getItem('access_token') || '';
     this.socket = io(this.SOCKET_URL, {
-      transports: ['polling'],
+      transports: ['polling', 'websocket'],
+      auth: { token: getToken() },
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      reconnectionDelay: 10000,
-      reconnectionDelayMax: 60000,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 8000,
       randomizationFactor: 0.5,
     });
 
@@ -97,6 +105,11 @@ export class ChatService {
 
     this.socket.on('connect_error', (err: any) => {
       console.warn('Socket.IO connection error:', err?.message || err);
+      const fresh = getToken();
+      const auth = this.socket.auth as unknown as { token?: string } | undefined;
+      if (fresh && typeof auth === 'object' && auth?.token !== fresh) {
+        this.socket.auth = { token: fresh };
+      }
       this._connectionStatus.next(false);
     });
 
@@ -117,6 +130,9 @@ export class ChatService {
     });
 
     this.socket.on('message:new', (data: { chat_id: number; message: MessageData }) => {
+      const msg = data.message;
+      if (msg && msg.id && this._seenIds.has(msg.id)) return;
+      if (msg && msg.id) this._seenIds.add(msg.id);
       this._newMessage.next(data);
     });
 
@@ -130,6 +146,10 @@ export class ChatService {
 
     this.socket.on('user:stop_typing', (data: { chat_id: number; user_id: number }) => {
       this._userStoppedTyping.next(data);
+    });
+
+    this.socket.on('message:deleted', (data: { chat_id: number; message_id: number; mode: string; user_id: number }) => {
+      this._messageDeleted.next(data);
     });
 
     this.socket.on('notification:new', (data: any) => {
@@ -197,5 +217,17 @@ export class ChatService {
 
   deleteChat(chatId: number): Observable<{ success: boolean }> {
     return this.http.delete<{ success: boolean }>(`/api/chats/${chatId}`);
+  }
+
+  deleteMessage(chatId: number, messageId: number, scope: 'me' | 'all'): Observable<{ success: boolean; scope: string }> {
+    return this.http.request<{ success: boolean; scope: string }>(
+      'delete',
+      `/api/chats/${chatId}/messages/${messageId}`,
+      { body: { scope } }
+    );
+  }
+
+  aiPreview(messageId: number): Observable<any> {
+    return this.http.post(`/api/files/ai-preview`, { message_id: messageId });
   }
 }

@@ -49,7 +49,7 @@ def _server_alive():
 @api_bp.route('/user/preferences', methods=['GET', 'PUT'])
 @login_required
 def user_preferences():
-    """Get or update user UI preferences (font_size, primary_color, hide_charts)."""
+    """Get or update user UI preferences (font_size, primary_color, hide_charts, sidebar_display)."""
     try:
         if request.method == 'GET':
             prefs = current_user.preferences or {}
@@ -58,6 +58,7 @@ def user_preferences():
                     'font_size': prefs.get('font_size', 'medium'),
                     'primary_color': prefs.get('primary_color', '#2563eb'),
                     'hide_charts': prefs.get('hide_charts', False),
+                    'sidebar_display': prefs.get('sidebar_display', 'labels'),
                 }
             )
         else:

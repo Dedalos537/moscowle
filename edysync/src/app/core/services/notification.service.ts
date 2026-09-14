@@ -46,11 +46,16 @@ export class NotificationService implements OnDestroy {
   private subs = new Subscription();
   private pollSub: Subscription | null = null;
   private socketSub: Subscription | null = null;
+  private initialized = false;
 
   constructor() {
     this.authService.currentUser$.subscribe(user => {
-      if (user) {
+      if (user && !this.initialized) {
+        this.initialized = true;
         this.init();
+      } else if (!user) {
+        this.initialized = false;
+        this.stopPolling();
       }
     });
   }

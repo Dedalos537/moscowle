@@ -45,6 +45,18 @@ export function getLast6MonthsKeys(): string[] {
   return keys;
 }
 
+export function getMonthsFromKey(key: string, offset: number): string {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, m - 1 + offset, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function getAnchorMonthsKeys(anchor: string): string[] {
+  const keys: string[] = [];
+  for (let i = 5; i >= 0; i--) keys.push(getMonthsFromKey(anchor, -i));
+  return keys;
+}
+
 export function getMonthlyIncome(paymentHistory: PaymentHistoryRow[]): Map<string, number> {
   const map = new Map<string, number>();
   paymentHistory.forEach((p) => {
