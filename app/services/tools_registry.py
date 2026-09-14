@@ -6,9 +6,13 @@ from zoneinfo import ZoneInfo
 from flask import current_app
 
 from app.auth_compat import current_user
-from app.extensions import db
+from app.extensions import bcrypt, db
 from app.models import Appointment, Payment, User
+from app.services.appointment_service import AppointmentService
+from app.services.contract_service import ContractService
+from app.services.email_service import EmailService
 from app.services.payment_service import PaymentService
+from app.utils.sanitizer import sanitize_text
 
 ROLES_ADMIN = {'admin'}
 ROLES_SUPERVISOR = {'admin', 'supervisor'}
@@ -63,14 +67,14 @@ CORE_TOOL_NAMES = [
     'get_therapist_patients',
     'get_patient_detail',
     'get_user_detail',
-    'create_user',
-    'update_user',
+    'create_full_patient',
+    'update_patient_profile',
     'delete_user',
     'assign_therapist',
     'get_sessions',
     'get_sessions_day',
-    'create_session',
-    'update_session',
+    'schedule_programmed_session',
+    'update_session_plan',
     'cancel_session',
     'complete_session',
     'batch_create_sessions',
@@ -106,12 +110,12 @@ CORE_TOOL_NAMES = [
     'get_therapist_efficiency',
     'get_therapist_financials',
     'list_contracts',
-    'create_contract',
+    'create_service_contract',
     'get_contract_detail',
     'get_contracts_filtered',
     'get_due_installments',
     'update_contract',
-    'pay_installment',
+    'register_payment_with_evidence',
     'cancel_contract',
     'reactivate_contract',
     'get_monthly_collection',
@@ -635,73 +639,103 @@ def handle_toggle_user_status(user_id, status, **kwargs):
 
 
 @tool(
-    name='create_session',
-    description='Crea una sesion para un paciente en una fecha y hora especifica.',
+    name='schedule_programmed_session',
+    description='Programa una sesión con un plan terapéutico: incluye fecha, hora, notas de programación y una lista de juegos asignados.',
     parameters={
         'type': 'object',
         'properties': {
             'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
-            'day': {'type': 'string', 'description': 'Fecha YYYY-MM-DD'},
-            'time': {'type': 'string', 'description': 'Hora HH:MM'},
-            'duration_minutes': {'type': 'integer', 'description': 'Duracion en minutos', 'default': 60},
-            'therapist_id': {'type': 'integer', 'description': 'ID del terapeuta (opcional, usa el actual)'},
+            'therapist_id': {'type': 'integer', 'description': 'ID del terapeuta'},
+            'start_time': {'type': 'string', 'description': 'Fecha y hora de inicio YYYY-MM-DD HH:MM'},
+            'title': {'type': 'string', 'description': 'Título de la sesión (opcional)'},
+            'programming_notes': {'type': 'string', 'description': 'Notas de programación y objetivos de la sesión'},
+            'games_list': {
+                'type': 'array',
+                'items': {'type': 'string', 'description': 'Nombre del archivo del juego (ej: "memoria_colores.html")'},
+                'description': 'Lista de juegos a asignar a la sesión',
+            },
+            'duration_minutes': {'type': 'integer', 'description': 'Duración en minutos', 'default': 60},
         },
-        'required': ['patient_id', 'day', 'time'],
+        'required': ['patient_id', 'therapist_id', 'start_time', 'programming_notes', 'games_list'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_create_session(patient_id, day, time, therapist_id=None, duration_minutes=60, notes=None, **kwargs):
-    patient = User.query.get(patient_id)
-    if not patient:
-        return {'error': 'Paciente no encontrado'}
-    tid = therapist_id or current_user.id
-    start_dt = datetime.strptime(f'{day} {time}', '%Y-%m-%d %H:%M')
-    end_dt = start_dt + timedelta(minutes=duration_minutes)
-    appt = Appointment(
-        therapist_id=tid,
-        patient_id=patient_id,
-        title=f'Sesion con {patient.username}',
-        start_time=start_dt,
-        end_time=end_dt,
-        status='scheduled',
-        notes=notes,
-        duration_minutes=duration_minutes,
-    )
-    db.session.add(appt)
-    db.session.commit()
-    return {'success': True, 'session_id': appt.id, 'message': f'Sesion creada para {patient.username} el {day} {time}'}
+def handle_schedule_programmed_session(patient_id, therapist_id, start_time, programming_notes, games_list, **kwargs):
+    try:
+        start_dt = datetime.strptime(start_time, '%Y-%m-%d %H:%M')
+        duration = kwargs.get('duration_minutes', 60)
+        end_dt = start_dt + timedelta(minutes=duration)
+
+        therapist = User.query.get(therapist_id)
+        if not therapist:
+            return {'error': 'Terapeuta no encontrado'}
+
+        svc = AppointmentService()
+        data = {
+            'patient_id': patient_id,
+            'start_time': start_dt,
+            'end_time': end_dt,
+            'title': kwargs.get('title'),
+            'notes': programming_notes,
+            'games': games_list,
+        }
+
+        appt = svc.create_session(therapist_id, data, therapist.username)
+
+        return {
+            'success': True,
+            'session_id': appt.id,
+            'message': f'Sesión programada con éxito para el paciente ID {patient_id} el {start_time}, con {len(games_list)} juegos asignados.',
+        }
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @tool(
-    name='update_session',
-    description='Actualiza una sesion: cambiar estado, notas, hora.',
+    name='update_session_plan',
+    description='Actualiza el plan de una sesión existente: cambia las notas de programación y/o la lista de juegos.',
     parameters={
         'type': 'object',
         'properties': {
-            'session_id': {'type': 'integer', 'description': 'ID de la sesion'},
-            'status': {'type': 'string', 'description': 'Nuevo estado: scheduled, in_progress, completed, cancelled'},
-            'notes': {'type': 'string', 'description': 'Notas actualizadas'},
+            'session_id': {'type': 'integer', 'description': 'ID de la sesión'},
+            'new_notes': {'type': 'string', 'description': 'Nuevas notas de programación'},
+            'new_games': {
+                'type': 'array',
+                'items': {'type': 'string', 'description': 'Nombre del archivo del juego'},
+                'description': 'Nueva lista de juegos asignados',
+            },
         },
         'required': ['session_id'],
     },
     category='write',
     roles=ROLES_THERAPIST,
 )
-def handle_update_session(session_id, status=None, notes=None, **kwargs):
-    appt = Appointment.query.get(session_id)
-    if not appt:
-        return {'error': 'Sesion no encontrada'}
-    updated = []
-    if status:
-        appt.status = status
-        updated.append('status')
-    if notes is not None:
-        appt.notes = notes
-        updated.append('notes')
-    if updated:
-        db.session.commit()
-    return {'success': True, 'updated_fields': updated, 'message': f'Sesion {session_id} actualizada'}
+def handle_update_session_plan(session_id, **kwargs):
+    try:
+        svc = AppointmentService()
+        updated = []
+
+        # Update notes
+        if 'new_notes' in kwargs and kwargs['new_notes'] is not None:
+            svc.update_session(session_id, {'notes': kwargs['new_notes']})
+            updated.append('notes')
+
+        # Update games
+        if 'new_games' in kwargs and kwargs['new_games'] is not None:
+            svc.set_session_games(session_id, kwargs['new_games'])
+            updated.append('games')
+
+        if not updated:
+            return {'error': 'No se proporcionaron notas ni juegos para actualizar'}
+
+        return {
+            'success': True,
+            'message': f'Plan de la sesión {session_id} actualizado correctamente.',
+            'updated': updated,
+        }
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @tool(
@@ -890,94 +924,184 @@ def handle_get_user_detail(user_id, **kwargs):
 
 
 @tool(
-    name='create_user',
-    description='Crea un usuario nuevo (paciente, terapeuta, supervisor).',
+    name='create_full_patient',
+    description='Registra un paciente nuevo con perfil completo: datos personales, DNI, apoderado y metas. Crea la cuenta y el perfil en un solo paso.',
     parameters={
         'type': 'object',
         'properties': {
             'username': {'type': 'string', 'description': 'Nombre completo'},
-            'email': {'type': 'string', 'description': 'Email unico'},
-            'password': {'type': 'string', 'description': 'Contrasena temporal'},
-            'role': {
-                'type': 'string',
-                'enum': ['jugador', 'terapista', 'supervisor', 'admin'],
-                'description': 'Rol del usuario',
-            },
-            'sede_id': {'type': 'integer', 'description': 'ID de sede'},
+            'email': {'type': 'string', 'description': 'Email (opcional, si se omite se crea cuenta presencial)'},
+            'password': {'type': 'string', 'description': 'Contrasena temporal (opcional)'},
+            'role': {'type': 'string', 'description': 'Rol (siempre jugador)', 'default': 'jugador'},
+            'sede_id': {'type': 'integer', 'description': 'ID de la sede'},
             'phone': {'type': 'string', 'description': 'Telefono'},
+            'document_number': {'type': 'string', 'description': 'DNI del paciente'},
+            'date_of_birth': {'type': 'string', 'description': 'Fecha de nacimiento YYYY-MM-DD'},
+            'sex': {'type': 'string', 'description': 'Sexo (M/F/Otro)'},
+            'guardian_name': {'type': 'string', 'description': 'Nombre del apoderado'},
+            'guardian_type': {'type': 'string', 'description': 'Tipo de apoderado (padre/madre/tutor/otro)'},
+            'guardian_dni': {'type': 'string', 'description': 'DNI del apoderado'},
+            'guardian_contact': {'type': 'string', 'description': 'Contacto del apoderado'},
+            'preliminary_diagnosis': {'type': 'string', 'description': 'Diagnostico preliminar'},
+            'therapy_goals': {'type': 'string', 'description': 'Objetivos de terapia'},
+            'notes': {'type': 'string', 'description': 'Notas adicionales'},
+            'assigned_therapist_id': {'type': 'integer', 'description': 'ID del terapeuta asignado'},
         },
-        'required': ['username', 'email', 'password', 'role'],
+        'required': ['username', 'sede_id', 'assigned_therapist_id'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_create_user(username, email, password, role, sede_id=None, phone=None, **kwargs):
-    if User.query.filter_by(email=email).first():
-        return {'error': f'Ya existe un usuario con email {email}'}
+def handle_create_full_patient(username, sede_id, assigned_therapist_id, **kwargs):
+    import uuid
+
+    email = (kwargs.get('email') or '').strip().lower()
+    password = kwargs.get('password')
+
+    is_full_account = False
+    if not email:
+        email = f'noemail_{uuid.uuid4().hex[:8]}@local'
+        password = uuid.uuid4().hex
+        is_full_account = False
+    else:
+        # Basic validation
+        password = password or EmailService.generate_password()
+        is_full_account = True
+
+    hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
+
     try:
-        resp = _api_post(
-            '/api/admin/create-user',
-            json={
-                'username': username,
-                'email': email,
-                'password': password,
-                'role': role,
-                'sede_id': sede_id,
-                'phone': phone,
-            },
-            user_id=kwargs.get('_user_id'),
-            role=kwargs.get('_role'),
+        new_patient = User(
+            username=username,
+            email=email,
+            password=hashed_pw,
+            role='jugador',
+            is_active=is_full_account,
+            sede_id=sede_id,
+            phone=sanitize_text(kwargs.get('phone', ''), 20),
+            assigned_therapist_id=assigned_therapist_id,
+            document_number=sanitize_text(kwargs.get('document_number', ''), 15),
+            date_of_birth=datetime.strptime(kwargs['date_of_birth'], '%Y-%m-%d').date()
+            if kwargs.get('date_of_birth')
+            else None,
+            sex=sanitize_text(kwargs.get('sex', ''), 20),
+            guardian_name=sanitize_text(kwargs.get('guardian_name', ''), 200),
+            guardian_type=sanitize_text(kwargs.get('guardian_type', ''), 50),
+            guardian_dni=sanitize_text(kwargs.get('guardian_dni', ''), 15),
+            guardian_contact=sanitize_text(kwargs.get('guardian_contact', ''), 200),
+            preliminary_diagnosis=sanitize_text(kwargs.get('preliminary_diagnosis', ''), 2000),
+            therapy_goals=sanitize_text(kwargs.get('therapy_goals', ''), 2000),
+            notes=sanitize_text(kwargs.get('notes', ''), 2000),
         )
-        data = resp.get_json() if resp else {}
-        if resp and resp.status_code < 400:
-            return {'success': True, 'message': f'Usuario {username} creado como {role}', 'data': data}
-        return {'error': data.get('message', 'Error al crear usuario')}
+        new_patient.login_code = User.generate_login_code('jugador')
+
+        # therapist relationship
+        therapist = User.query.get(assigned_therapist_id)
+        if therapist:
+            new_patient.therapists.append(therapist)
+
+        db.session.add(new_patient)
+        db.session.commit()
+
+        if is_full_account:
+            EmailService.send_welcome_email(email, password, new_patient.username)
+
+        return {
+            'success': True,
+            'patient_id': new_patient.id,
+            'username': new_patient.username,
+            'message': f'Paciente {new_patient.username} creado con perfil completo.',
+            'credentials': {'email': email, 'password': password} if is_full_account else None,
+        }
     except Exception as e:
+        db.session.rollback()
         return {'error': str(e)}
 
 
 @tool(
-    name='update_user',
-    description='Actualiza datos de un usuario: nombre, email, sede, telefono, estado activo.',
+    name='update_patient_profile',
+    description='Actualiza el perfil detallado de un paciente: DNI, datos del apoderado, diagnostico y metas.',
     parameters={
         'type': 'object',
         'properties': {
-            'user_id': {'type': 'integer', 'description': 'ID del usuario'},
-            'username': {'type': 'string', 'description': 'Nuevo nombre'},
-            'email': {'type': 'string', 'description': 'Nuevo email'},
-            'sede_id': {'type': 'integer', 'description': 'Nueva sede'},
-            'phone': {'type': 'string', 'description': 'Nuevo telefono'},
-            'is_active': {'type': 'boolean', 'description': 'Activar/desactivar'},
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'document_number': {'type': 'string', 'description': 'DNI del paciente'},
+            'phone': {'type': 'string', 'description': 'Telefono'},
+            'date_of_birth': {'type': 'string', 'description': 'Fecha de nacimiento YYYY-MM-DD'},
+            'sex': {'type': 'string', 'description': 'Sexo (M/F/Otro)'},
+            'guardian_name': {'type': 'string', 'description': 'Nombre del apoderado'},
+            'guardian_type': {'type': 'string', 'description': 'Tipo de apoderado'},
+            'guardian_dni': {'type': 'string', 'description': 'DNI del apoderado'},
+            'guardian_contact': {'type': 'string', 'description': 'Contacto del apoderado'},
+            'preliminary_diagnosis': {'type': 'string', 'description': 'Diagnostico preliminar'},
+            'therapy_goals': {'type': 'string', 'description': 'Objetivos de terapia'},
+            'notes': {'type': 'string', 'description': 'Notas adicionales'},
+            'email': {'type': 'string', 'description': 'Nuevo email (si se añade, activa la cuenta)'},
         },
-        'required': ['user_id'],
+        'required': ['patient_id'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_update_user(user_id, username=None, email=None, sede_id=None, phone=None, is_active=None, **kwargs):
-    user = User.query.get(user_id)
-    if not user:
-        return {'error': 'Usuario no encontrado'}
+def handle_update_patient_profile(patient_id, **kwargs):
+    patient = User.query.get(patient_id)
+    if not patient or patient.role != 'jugador':
+        return {'error': 'Paciente no encontrado'}
+
     try:
-        payload = {'user_id': user_id}
-        if username:
-            payload['username'] = username
-        if email:
-            payload['email'] = email
-        if sede_id:
-            payload['sede_id'] = sede_id
-        if phone:
-            payload['phone'] = phone
-        if is_active is not None:
-            payload['is_active'] = is_active
-        resp = _api_post(
-            '/api/admin/update-user', json=payload, user_id=kwargs.get('_user_id'), role=kwargs.get('_role')
-        )
-        data = resp.get_json() if resp else {}
-        if resp and resp.status_code < 400:
-            return {'success': True, 'message': f'Usuario {user.username} actualizado', 'data': data}
-        return {'error': data.get('message', 'Error al actualizar')}
+        updated = []
+        # Detailed fields
+        fields = {
+            'document_number': 15,
+            'phone': 20,
+            'guardian_name': 200,
+            'guardian_type': 50,
+            'guardian_dni': 15,
+            'guardian_contact': 200,
+            'preliminary_diagnosis': 2000,
+            'therapy_goals': 2000,
+            'notes': 2000,
+            'sex': 20,
+        }
+        for field, length in fields.items():
+            if field in kwargs and kwargs[field] is not None:
+                setattr(patient, field, sanitize_text(kwargs[field], length))
+                updated.append(field)
+
+        if 'date_of_birth' in kwargs and kwargs['date_of_birth']:
+            try:
+                patient.date_of_birth = datetime.strptime(kwargs['date_of_birth'], '%Y-%m-%d').date()
+                updated.append('date_of_birth')
+            except ValueError:
+                return {'error': 'Formato de fecha invalido para date_of_birth. Use YYYY-MM-DD'}
+
+        # Email activation logic
+        if 'email' in kwargs and kwargs['email']:
+            new_email = kwargs['email'].strip().lower()
+            if new_email != patient.email and new_email:
+                exists = User.query.filter_by(email=new_email).first()
+                if exists:
+                    return {'error': 'El correo ya está registrado por otro usuario'}
+
+                was_placeholder = patient.email.startswith('noemail_') or patient.email.startswith('temp_')
+                patient.email = new_email
+
+                if was_placeholder:
+                    password = EmailService.generate_password()
+                    patient.password = bcrypt.generate_password_hash(password).decode('utf-8')
+                    patient.is_active = True
+                    EmailService.send_welcome_email(new_email, password, patient.username)
+                    updated.append('email (cuenta activada)')
+                else:
+                    updated.append('email')
+
+        if not updated:
+            return {'error': 'No se proporcionaron campos para actualizar'}
+
+        db.session.commit()
+        return {'success': True, 'message': f'Perfil de {patient.username} actualizado', 'updated_fields': updated}
     except Exception as e:
+        db.session.rollback()
         return {'error': str(e)}
 
 
@@ -1833,72 +1957,58 @@ def handle_get_debt_summary(**kwargs):
 
 
 @tool(
-    name='create_contract',
-    description=(
-        'Crea un contrato para un paciente con generación automática de cuotas. '
-        'Antes de crear, usa search_patients para obtener el ID.'
-    ),
+    name='create_service_contract',
+    description='Crea un contrato de servicio para un paciente con generación automática de cuotas. Requiere monto total y fecha de inicio.',
     parameters={
         'type': 'object',
         'properties': {
             'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
-            'total_amount': {'type': 'number', 'description': 'Monto total del contrato'},
+            'total_amount': {'type': 'number', 'description': 'Monto total del contrato en soles'},
+            'installment_count': {'type': 'integer', 'description': 'Número de cuotas (default: 4)', 'default': 4},
             'billing_type': {
                 'type': 'string',
                 'description': 'Tipo de facturación',
-                'enum': ['Mensual', 'Anual'],
+                'enum': ['Mensual', 'Anual', 'Quincenal', 'Semanal'],
                 'default': 'Mensual',
             },
-            'currency': {
-                'type': 'string',
-                'description': 'Moneda',
-                'enum': ['PEN', 'USD'],
-                'default': 'PEN',
+            'start_date': {'type': 'string', 'description': 'Fecha de inicio del servicio YYYY-MM-DD'},
+            'name': {'type': 'string', 'description': 'Nombre personalizado del contrato (opcional)'},
+            'notes': {'type': 'string', 'description': 'Notas adicionales sobre el contrato'},
+            'implementation_cost': {
+                'type': 'number',
+                'description': 'Costo de evaluación inicial (Cuota 0)',
+                'default': 0,
             },
-            'installment_count': {'type': 'integer', 'description': 'Número de cuotas', 'default': 4},
-            'start_date': {'type': 'string', 'description': 'Fecha de inicio YYYY-MM-DD'},
-            'implementation_cost': {'type': 'number', 'description': 'Monto de evaluación (cuota 0)', 'default': 0},
-            'billing_rule': {
-                'type': 'string',
-                'description': 'Regla de facturación',
-                'enum': ['standard', 'sign-date'],
-                'default': 'standard',
-            },
-            'bonus_months': {'type': 'integer', 'description': 'Meses de bonificación (solo anual)', 'default': 0},
-            'name': {'type': 'string', 'description': 'Nombre del contrato'},
-            'notes': {'type': 'string', 'description': 'Notas adicionales'},
         },
         'required': ['patient_id', 'total_amount', 'start_date'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_create_contract(patient_id, total_amount, start_date, **kwargs):
-    from app.services.contract_service import ContractService
-
-    svc = ContractService()
-    success, result = svc.create_contract(
-        patient_id=patient_id,
-        total_amount=float(total_amount),
-        start_date=start_date,
-        billing_type=kwargs.get('billing_type', 'Mensual'),
-        currency=kwargs.get('currency', 'PEN'),
-        installment_count=kwargs.get('installment_count', 4),
-        implementation_cost=float(kwargs.get('implementation_cost', 0)),
-        billing_rule=kwargs.get('billing_rule', 'standard'),
-        bonus_months=kwargs.get('bonus_months', 0),
-        name=kwargs.get('name'),
-        notes=kwargs.get('notes'),
-    )
-    if success:
-        return {
-            'success': True,
-            'contract_id': result.id,
-            'name': result.name,
-            'installments_generated': result.installment_count,
-            'message': f'Contrato "{result.name}" creado con {result.installment_count} cuotas',
-        }
-    return {'error': str(result)}
+def handle_create_service_contract(patient_id, total_amount, start_date, **kwargs):
+    try:
+        svc = ContractService()
+        success, result = svc.create_contract(
+            patient_id=patient_id,
+            total_amount=float(total_amount),
+            start_date=start_date,
+            installment_count=kwargs.get('installment_count', 4),
+            billing_type=kwargs.get('billing_type', 'Mensual'),
+            name=kwargs.get('name'),
+            notes=kwargs.get('notes'),
+            implementation_cost=float(kwargs.get('implementation_cost', 0)),
+        )
+        if success:
+            return {
+                'success': True,
+                'contract_id': result.id,
+                'name': result.name,
+                'installments_generated': result.installment_count,
+                'message': f'Contrato "{result.name}" creado con éxito y cuotas generadas.',
+            }
+        return {'error': str(result)}
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @tool(
@@ -1959,58 +2069,49 @@ def handle_get_contracts_filtered(**kwargs):
 
 
 @tool(
-    name='pay_installment',
-    description=(
-        'Registra el pago de una cuota específica de un contrato. '
-        'Usa get_contract_detail para encontrar el installment_id.'
-    ),
+    name='register_payment_with_evidence',
+    description='Registra el pago de una cuota específica incluyendo la evidencia (URL del comprobante).',
     parameters={
         'type': 'object',
         'properties': {
-            'installment_id': {'type': 'integer', 'description': 'ID de la cuota'},
-            'amount': {'type': 'number', 'description': 'Monto a pagar'},
+            'installment_id': {'type': 'integer', 'description': 'ID de la cuota a pagar'},
+            'amount': {'type': 'number', 'description': 'Monto pagado'},
             'method': {
                 'type': 'string',
                 'description': 'Método de pago',
                 'enum': ['Efectivo', 'Yape', 'Transferencia', 'Plin', 'Tarjeta'],
             },
             'payment_date': {'type': 'string', 'description': 'Fecha del pago YYYY-MM-DD'},
-            'reference': {'type': 'string', 'description': 'Número de operación'},
-            'payment_notes': {'type': 'string', 'description': 'Notas del pago'},
-            'discount': {'type': 'number', 'description': 'Descuento aplicado', 'default': 0},
-            'receipt_url': {
-                'type': 'string',
-                'description': 'Ruta o URL de la imagen del voucher (ej: receipts/xxx.jpg)',
-            },
-            'is_free_month': {'type': 'boolean', 'description': 'Marcar como mes gratis', 'default': False},
+            'receipt_url': {'type': 'string', 'description': 'URL o ruta de la imagen del voucher'},
+            'reference': {'type': 'string', 'description': 'Número de operación o referencia'},
+            'payment_notes': {'type': 'string', 'description': 'Notas adicionales sobre el pago'},
         },
-        'required': ['installment_id', 'amount', 'method', 'payment_date'],
+        'required': ['installment_id', 'amount', 'method', 'payment_date', 'receipt_url'],
     },
     category='write',
     roles=ROLES_SUPERVISOR,
 )
-def handle_pay_installment(installment_id, amount, method, payment_date, **kwargs):
-    from app.services.contract_service import ContractService
-
-    svc = ContractService()
-    success, result = svc.pay_installment(
-        installment_id=installment_id,
-        amount=float(amount),
-        method=method,
-        payment_date=payment_date,
-        reference=kwargs.get('reference'),
-        payment_notes=kwargs.get('payment_notes'),
-        is_free_month=kwargs.get('is_free_month', False),
-        discount=kwargs.get('discount') or 0,
-        receipt_path=kwargs.get('receipt_url'),
-    )
-    if success:
-        return {
-            'success': True,
-            'message': f'Cuota #{installment_id} pagada - S/. {amount:.2f} vía {method}',
-            'payment_id': result.id if result else None,
-        }
-    return {'error': str(result)}
+def handle_register_payment_with_evidence(installment_id, amount, method, payment_date, receipt_url, **kwargs):
+    try:
+        svc = ContractService()
+        success, result = svc.pay_installment(
+            installment_id=installment_id,
+            amount=float(amount),
+            method=method,
+            payment_date=payment_date,
+            reference=kwargs.get('reference'),
+            payment_notes=kwargs.get('payment_notes'),
+            receipt_path=receipt_url,
+        )
+        if success:
+            return {
+                'success': True,
+                'payment_id': result.id if result else None,
+                'message': f'Pago de S/. {amount} registrado exitosamente con evidencia.',
+            }
+        return {'error': str(result)}
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @tool(
