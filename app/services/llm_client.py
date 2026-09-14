@@ -20,13 +20,13 @@ GLM_MODEL = 'z-ai/glm-5.2'
 
 GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
 GEMINI_MODEL = 'gemini-2.0-flash'
-OLLAMA_MODEL_DEFAULT = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
+OLLAMA_MODEL_DEFAULT = os.environ.get('OLLAMA_MODEL', 'gemma2')
 
 _RATE_LIMIT_RETRIES = 2
 _RATE_LIMIT_BACKOFF = 2.0
 
-# Provider order. Groq first (fast + free tier) unless overridden via LLM_PROVIDER.
-_DEFAULT_PROVIDER_ORDER = ['groq', 'glm', 'gemini', 'ollama']
+# Provider order. Ollama first (Gemma 4) unless overridden via LLM_PROVIDER.
+_DEFAULT_PROVIDER_ORDER = ['ollama', 'groq', 'glm', 'gemini']
 
 
 def _is_rate_limit(exc):
