@@ -63,9 +63,9 @@ if [ -n "$FRONTEND_TAR" ] && [ -f "$FRONTEND_TAR" ]; then
   mkdir -p "$STAGE"
   if tar -xzf "$FRONTEND_TAR" -C "$STAGE"; then
     log "Extracted frontend dist (stage)"
-    if ${SUDO_CMD} -n rsync -a --delete "$STAGE/" "$FRONTEND_ROOT/"; then
+    if rsync -a --delete "$STAGE/" "$FRONTEND_ROOT/"; then
       log "Frontend synced to $FRONTEND_ROOT"
-      if ${SUDO_CMD} -n systemctl reload nginx >>"$LOG_FILE" 2>&1; then
+      if ${SUDO_CMD} -n /usr/bin/systemctl reload nginx >>"$LOG_FILE" 2>&1; then
         log "nginx reloaded"
       else
         log "ERROR: nginx reload failed"
