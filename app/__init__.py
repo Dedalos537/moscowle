@@ -775,6 +775,7 @@ def create_app(config_class=None):
         ('telegram', 'app.routes.telegram_routes', 'telegram_bp'),
         ('kanban', 'app.routes.kanban_routes', 'kanban_bp'),
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
+        ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:

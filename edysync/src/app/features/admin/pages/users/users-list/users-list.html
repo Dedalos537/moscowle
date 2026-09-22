@@ -616,6 +616,36 @@
       </div>
     </div>
     }
+    <div class="bg-surface-container-high rounded-xl p-4">
+      <h4 class="text-sm font-bold text-primary flex items-center gap-2 mb-4">
+        <fa-icon [icon]="['fas', 'user-shield']" class="text-lg"></fa-icon>
+        Datos del Apoderado
+      </h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1 block">Nombre Apoderado</label>
+          <input [(ngModel)]="newUser.guardian_name" type="text" class="input-field text-sm" placeholder="Nombre completo" />
+        </div>
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1 block">Tipo Apoderado</label>
+          <select [(ngModel)]="newUser.guardian_type" class="input-field text-sm">
+            <option value="">No especificado</option>
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="tutor">Tutor</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1 block">DNI Apoderado</label>
+          <input [(ngModel)]="newUser.guardian_dni" type="text" class="input-field text-sm" placeholder="12345678" />
+        </div>
+        <div>
+          <label class="text-label-caps text-on-surface-variant mb-1 block">Contacto Apoderado</label>
+          <input [(ngModel)]="newUser.guardian_contact" type="text" class="input-field text-sm" placeholder="Telefono o email" />
+        </div>
+      </div>
+    </div>
   </div>
   }
 

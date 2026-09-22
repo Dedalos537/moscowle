@@ -121,6 +121,14 @@ wsgi.py
 # Obsidian vault (separate repo)
 obsidian-vault/
 
+# Auto-deploy records (generated on the server by server_deploy.sh)
+docs/obsidian_graph/Deployments/deploy-*.md
+
+# Build/debug artifacts
+edysync/mj_fix.py
+edysync/patcher_notif.py
+edysync/src/app/features/admin/pages/visor-funcionamiento/*.bak_dup
+
 # Graphify
 graphify-out/
 .opencode/

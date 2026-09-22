@@ -105,7 +105,7 @@ export class UsersList implements OnInit, OnDestroy {
   editData: any = {};
   currentEditUser: UserRow | null = null;
   resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
-  newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, evaluation_date: '' as string, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
+  newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, evaluation_date: '' as string, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[], guardian_name: '', guardian_type: 'tutor', guardian_dni: '', guardian_contact: '' };
   createStatus = '';
 
   patientGroups: any[] = [];
@@ -704,7 +704,7 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   openCreateDrawer() {
-    this.newUser = { email: '', username: '', role: 'jugador', sede_id: null, sede_ids: [], salary: null, hours: null, modality: null, evaluation_date: '', frequency: 'monthly', plan_type: 'individual', amount: null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null, days: [] };
+    this.newUser = { email: '', username: '', role: 'jugador', sede_id: null, sede_ids: [], salary: null, hours: null, modality: null, evaluation_date: '', frequency: 'monthly', plan_type: 'individual', amount: null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null, days: [], guardian_name: '', guardian_type: 'tutor', guardian_dni: '', guardian_contact: '' };
     this.createStatus = '';
     this.showCreateDrawer = true;
     this.cdr.markForCheck();
@@ -739,6 +739,10 @@ export class UsersList implements OnInit, OnDestroy {
         if (this.newUser.schedule_therapist) payload.therapist_id = this.newUser.schedule_therapist;
         if (this.newUser.days.length) payload.days_of_week = this.newUser.days;
       }
+      if (this.newUser.guardian_name) payload.guardian_name = this.newUser.guardian_name;
+      if (this.newUser.guardian_type) payload.guardian_type = this.newUser.guardian_type;
+      if (this.newUser.guardian_dni) payload.guardian_dni = this.newUser.guardian_dni;
+      if (this.newUser.guardian_contact) payload.guardian_contact = this.newUser.guardian_contact;
     }
 
     this.subscriptions.add(

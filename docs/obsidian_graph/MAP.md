@@ -26,5 +26,9 @@ Welcome to the architectural map of Moscowle IA. Use these links to navigate the
 - [[Routes.AdminRoutes]] - Management panel API.
 - [[Routes.ApiRoutes]] - General public/client API.
 
+## 🚀 Deploy ([[DEPLOY_FLOW]])
+- [[DEPLOY_FLOW]] - Auto-deploy pipeline (webhook + GitHub Actions + nginx).
+- [[Deployments]] - Registro timestamped de cada deploy.
+
 ---
 **AI Usage**: To understand a feature, start at `MAP.md` $\rightarrow$ find the relevant `Service` $\rightarrow$ check the `Model` it modifies.

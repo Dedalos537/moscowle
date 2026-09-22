@@ -94,6 +94,10 @@ class Config:
     LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 
+    # ========== AUTO-DEPLOY WEBHOOK ==========
+    DEPLOY_WEBHOOK_TOKEN = os.getenv('DEPLOY_WEBHOOK_TOKEN', '')
+    DEPLOY_WEBHOOK_URL = os.getenv('DEPLOY_WEBHOOK_URL', '')
+
     # ========== FILE UPLOADS ==========
     basedir = os.path.abspath(os.path.dirname(__file__))
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(basedir, 'instance', 'uploads'))

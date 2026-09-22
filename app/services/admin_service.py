@@ -121,6 +121,14 @@ class AdminService:
             user.phone = data.get('phone')
         if data.get('guardian'):
             user.guardian_name = data.get('guardian')
+        if data.get('guardian_name'):
+            user.guardian_name = data.get('guardian_name')
+        if data.get('guardian_type'):
+            user.guardian_type = data.get('guardian_type')
+        if data.get('guardian_dni'):
+            user.guardian_dni = data.get('guardian_dni')
+        if data.get('guardian_contact'):
+            user.guardian_contact = data.get('guardian_contact')
 
         try:
             sede_id = data.get('sede_id')
