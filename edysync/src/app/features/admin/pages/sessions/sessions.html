@@ -1,16 +1,5 @@
 <ng-template #headerActions>
   <div class="flex items-center gap-1 sm:gap-2">
-    <button (click)="toggleMultiSelect()"
-      class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap"
-      [class.border-primary]="multiSelectMode"
-      [class.bg-primary-container]="multiSelectMode"
-      [class.text-on-primary-container]="multiSelectMode"
-      [class.border-border/30]="!multiSelectMode"
-      [class.hover:bg-surface-container-high]="!multiSelectMode">
-      <fa-icon [icon]="multiSelectMode ? ['fas', 'times'] : ['fas', 'check-double']" class="text-[10px] sm:text-xs"></fa-icon>
-      <span class="hidden sm:inline">{{ multiSelectMode ? 'Cancelar' : 'Selección múltiple' }}</span>
-      <span class="sm:hidden">{{ multiSelectMode ? 'Cancelar' : 'Seleccionar' }}</span>
-    </button>
     <button (click)="openCreateModal()"
       class="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-sm font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer whitespace-nowrap">
       <fa-icon [icon]="['fas', 'plus']" class="text-[10px] sm:text-xs"></fa-icon>
@@ -46,11 +35,13 @@
         [role]="'admin'"
         [multiSelect]="multiSelectMode"
         [selectedIds]="selectedSessionIds"
+        [holidays]="holidaysMap"
         (dayDblClick)="onDayDblClick($event)"
         (rangeDblClick)="onRangeDblClick($event)"
         (eventClick)="onEventClick($event)"
         (selectionChange)="onSelectionChange($event)"
         (monthChange)="onMonthChange($event)"
+        (toggleMultiSelect)="toggleMultiSelect()"
       ></app-calendar-widget>
     }
   </div>

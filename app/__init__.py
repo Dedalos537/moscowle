@@ -650,6 +650,14 @@ def create_app(config_class=None):
                 app.logger.warning(f'Database tables creation failed (non-fatal): {e}')
 
             try:
+                from app.services.holiday_service import seed_holidays
+
+                created = seed_holidays()
+                app.logger.info(f'Holidays seeded (created={created})')
+            except Exception as e:
+                app.logger.warning(f'Holiday seed failed (non-fatal): {e}')
+
+            try:
                 from sqlalchemy import text
 
                 result = db.session.execute(

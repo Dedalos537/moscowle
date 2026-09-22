@@ -232,6 +232,12 @@ export class AdminService {
     return this.http.get<CalendarEvent[]>('/admin/api/sessions', { params });
   }
 
+  getHolidays(region: string = 'PIURA'): Observable<{ success: boolean; holidays: { date: string; name: string }[] }> {
+    return this.http.get<{ success: boolean; holidays: { date: string; name: string }[] }>('/api/holidays', {
+      params: new HttpParams().set('region', region),
+    });
+  }
+
   batchCreateSessions(data: BatchSessionPayload): Observable<ApiResponse> {
     return this.http.post<ApiResponse>('/admin/api/sessions/batch', data);
   }
@@ -434,6 +440,18 @@ export class AdminService {
 
   updateLLMConfig(data: Record<string, string>): Observable<any> {
     return this.http.post('/api/health/llm/config', data);
+  }
+
+  getNotificationConfig(): Observable<any> {
+    return this.http.get('/api/health/notifications/config');
+  }
+
+  updateNotificationConfig(data: Record<string, string>): Observable<any> {
+    return this.http.post('/api/health/notifications/config', data);
+  }
+
+  testNotifications(): Observable<any> {
+    return this.http.post('/api/health/notifications/test', {});
   }
 
 

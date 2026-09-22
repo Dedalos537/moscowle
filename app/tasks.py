@@ -413,6 +413,21 @@ def send_whatsapp_debt_reminders(app):
             traceback.print_exc()
 
 
+def send_session_reminders(app):
+    """Send session reminders to guardian: D-1/D-0 (WhatsApp + SMS) and renewal notice."""
+    with app.app_context():
+        try:
+            from app.services.session_reminder_service import SessionReminderService
+
+            result = SessionReminderService().run()
+            print(f'Session reminders: {result}')
+        except Exception as e:
+            print(f'Error in send_session_reminders: {e}')
+            import traceback
+
+            traceback.print_exc()
+
+
 def run_incident_detection(app):
     """Run automated incident detection checks."""
     with app.app_context():
@@ -497,6 +512,14 @@ def init_scheduler(app):
 
     scheduler.add_job(
         func=lambda: send_whatsapp_debt_reminders(app), trigger='cron', hour=9, minute=0, id='whatsapp_cobranza'
+    )
+
+    scheduler.add_job(
+        func=lambda: send_session_reminders(app),
+        trigger='cron',
+        hour=8,
+        minute=30,
+        id='session_reminders',
     )
 
     # --- Incident Monitoring Jobs ---

@@ -362,6 +362,20 @@
     }
   }
 
+  &.holiday {
+    cursor: not-allowed;
+    background: var(--color-error-container);
+
+    .day-number {
+      color: var(--color-error);
+    }
+
+    &:hover {
+      background: var(--color-error-container);
+      transform: none;
+    }
+  }
+
   &.in-range {
     background: var(--color-primary-container);
     border-radius: 0;
@@ -456,6 +470,20 @@
   @media (min-width: 640px) {
     font-size: 0.55rem;
     padding: 0 2px;
+  }
+}
+
+.holiday-marker {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-error);
+  margin-top: 2px;
+
+  @media (min-width: 640px) {
+    width: 6px;
+    height: 6px;
+    margin-top: 3px;
   }
 }
 

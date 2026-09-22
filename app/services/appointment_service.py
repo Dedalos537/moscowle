@@ -156,6 +156,7 @@ class AppointmentService:
             end_time=end_time,
             notes=data.get('notes'),
             location=data.get('location'),
+            session_type=data.get('session_type') or 'individual',
             status=data.get('status') or 'scheduled',
         )
 

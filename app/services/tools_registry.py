@@ -107,10 +107,13 @@ CORE_TOOL_NAMES = [
     'get_therapist_patients',
     'get_patient_detail',
     'get_user_detail',
+    'create_user',
     'create_full_patient',
     'update_patient_profile',
     'delete_user',
     'assign_therapist',
+    'assign_therapist_to_sede',
+    'get_current_datetime',
     'get_sessions',
     'get_sessions_day',
     'schedule_programmed_session',
@@ -193,6 +196,10 @@ def execute_tool(name, args, user_id=None, role=None):
     t = TOOL_REGISTRY.get(name)
     if not t:
         return {'error': f'Unknown tool: {name}'}
+    if role and t.get('roles') and role not in t['roles']:
+        return {
+            'error': f'No tienes permisos ({role}) para usar {name}. Acceso requerido: {", ".join(sorted(t["roles"]))}.'
+        }
     required = t['parameters'].get('required', [])
     if required:
         missing = [r for r in required if r not in args or args.get(r) is None or args.get(r) == '']
@@ -245,7 +252,7 @@ def _api_put(endpoint, json=None, user_id=None, role=None):
 
 @tool(
     name='search_patients',
-    description='Busca pacientes por nombre o email. Retorna lista con ID y nombre.',
+    description='Busca pacientes por nombre o email. Retorna lista con ID y nombre, e incluye el terapeuta asignado.',
     parameters={
         'type': 'object',
         'properties': {
@@ -273,7 +280,18 @@ def handle_search_patients(query=None, limit=10, **kwargs):
     return {
         'success': True,
         'count': len(patients),
-        'patients': [{'id': p.id, 'username': p.username, 'email': p.email, 'role': p.role} for p in patients],
+        'patients': [
+            {
+                'id': p.id,
+                'username': p.username,
+                'email': p.email,
+                'role': p.role,
+                'assigned_therapist_id': p.assigned_therapist_id,
+                'assigned_therapist': p.assigned_therapist.username if p.assigned_therapist else None,
+                'sede_id': p.sede_id,
+            }
+            for p in patients
+        ],
     }
 
 
@@ -367,6 +385,13 @@ def handle_get_therapist_patients(therapist_name=None, **kwargs):
     roles=ROLES_SUPERVISOR,
 )
 def handle_get_patient_detail(patient_id, **kwargs):
+    try:
+        patient_id = int(patient_id)
+    except (TypeError, ValueError):
+        return {
+            'error': 'patient_id debe ser un número entero (el ID del paciente). '
+            'Para buscar un paciente por su nombre usa SIEMPRE search_patients({"query": "nombre"}) y toma el id de su resultado.'
+        }
     patient = User.query.get(patient_id)
     if not patient or patient.role != 'jugador':
         return {'error': 'Paciente no encontrado'}
@@ -395,6 +420,8 @@ def handle_get_patient_detail(patient_id, **kwargs):
             'guardian_name': patient.guardian_name,
             'guardian_contact': patient.guardian_contact,
             'sede_id': patient.sede_id,
+            'assigned_therapist_id': patient.assigned_therapist_id,
+            'assigned_therapist': patient.assigned_therapist.username if patient.assigned_therapist else None,
             'sessions_total': patient.sessions_total,
             'sessions_attended': patient.sessions_attended,
             'sessions_remaining': patient.sessions_remaining,
@@ -1060,6 +1087,93 @@ def handle_create_full_patient(username, sede_id, assigned_therapist_id, **kwarg
 
 
 @tool(
+    name='create_user',
+    description='Crea un usuario nuevo en el sistema (rol: admin, supervisor, terapista o jugador). Tipico para registrar un paciente (rol jugador) o un terapeuta. Si se provee email, la cuenta queda activa y se envia clave temporal por email.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'username': {'type': 'string', 'description': 'Nombre completo del usuario'},
+            'email': {'type': 'string', 'description': 'Email (si se omite, se crea cuenta presencial sin acceso)'},
+            'role': {
+                'type': 'string',
+                'description': "Rol: admin, supervisor, terapista o jugador (si dicen 'paciente' usar jugador)",
+            },
+            'phone': {'type': 'string', 'description': 'Telefono (opcional)'},
+            'sede_id': {'type': 'integer', 'description': 'ID de la sede (opcional)'},
+            'guardian': {'type': 'string', 'description': 'Nombre del apoderado (si es menor, opcional)'},
+        },
+        'required': ['username', 'role'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_create_user(username, role, email=None, **kwargs):
+    from app.services.admin_service import AdminService
+
+    ROLE_ALIASES = {'paciente': 'jugador'}
+    role = (role or '').strip().lower()
+    role = ROLE_ALIASES.get(role, role)
+    if role not in ROLES_ALL:
+        return {'error': f'Rol invalido: {role}. Roles validos: admin, supervisor, terapista o jugador (paciente).'}
+
+    if not username or not str(username).strip():
+        return {'error': 'El nombre (username) es obligatorio para crear el usuario.'}
+
+    svc = AdminService()
+    ok, result = svc.create_user(
+        {
+            'username': str(username).strip(),
+            'email': (email or '').strip() or None,
+            'role': role,
+            'phone': (kwargs.get('phone') or '').strip() or None,
+            'guardian': (kwargs.get('guardian') or '').strip() or None,
+            'sede_id': kwargs.get('sede_id'),
+        }
+    )
+    if not ok:
+        return {'error': str(result)}
+
+    user = result['user']
+    return {
+        'success': True,
+        'user_id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'role': user.role,
+        'temp_password': result.get('temp_password'),
+        'contract_created': result.get('contract_created', False),
+        'message': f'Usuario {user.username} creado correctamente (ID: {user.id}).',
+    }
+
+
+@tool(
+    name='get_current_datetime',
+    description='Devuelve la fecha y hora actuales del centro en la zona horaria de Lima (America/Lima). Usa esta herramienta SIEMPRE que el usuario pregunte qué hora es, qué fecha es, qué día es hoy o cuánto falta para algo. Nunca calcules ni adivines la hora.',
+    parameters={'type': 'object', 'properties': {}, 'required': []},
+    category='read',
+    roles=ROLES_ALL,
+)
+def handle_get_current_datetime(**kwargs):
+    now = datetime.now(LIMA_TZ)
+    day_names = {
+        'Monday': 'lunes',
+        'Tuesday': 'martes',
+        'Wednesday': 'miércoles',
+        'Thursday': 'jueves',
+        'Friday': 'viernes',
+        'Saturday': 'sábado',
+        'Sunday': 'domingo',
+    }
+    return {
+        'fecha': now.strftime('%Y-%m-%d'),
+        'hora': now.strftime('%H:%M'),
+        'fecha_hora': now.strftime('%Y-%m-%d %H:%M'),
+        'dia_semana': day_names.get(now.strftime('%A'), now.strftime('%A')),
+        'zona': 'America/Lima',
+    }
+
+
+@tool(
     name='update_patient_profile',
     description='Actualiza el perfil detallado de un paciente: DNI, datos del apoderado, diagnostico y metas.',
     parameters={
@@ -1209,6 +1323,131 @@ def handle_assign_therapist(patient_id, therapist_id, **kwargs):
         return {'error': data.get('message', 'Error al asignar')}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='assign_therapist_to_sede',
+    description='Asigna (o remueve) un terapeuta a una o varias sedes del centro. Sirve para decir "asigna a X como terapeuta de la sede Y". Puedes buscar por ID o por nombre del terapeuta y de la sede.',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'therapist_id': {
+                'type': 'integer',
+                'description': 'ID del terapeuta (o usa therapist_name si no lo conoces)',
+            },
+            'therapist_name': {
+                'type': 'string',
+                'description': 'Nombre del terapeuta a buscar (si no aportaste therapist_id)',
+            },
+            'sede_id': {
+                'type': 'integer',
+                'description': 'ID de la sede (o usa sede_name si no lo conoces). Usa 0 para quitar TODAS las sedes del terapeuta.',
+            },
+            'sede_name': {'type': 'string', 'description': 'Nombre de la sede a buscar (si no aportaste sede_id)'},
+            'action': {'type': 'string', 'description': '"asignar" (por defecto) o "remover" para sacarlo de la sede'},
+        },
+        'required': [],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_assign_therapist_to_sede(
+    therapist_id=None,
+    therapist_name=None,
+    sede_id=None,
+    sede_name=None,
+    action='asignar',
+    **kwargs,
+):
+    from app.models import Sede, User, db
+
+    action = (action or 'asignar').strip().lower()
+    if action not in ('asignar', 'remover'):
+        return {'error': 'Acción inválida. Usa "asignar" o "remover".'}
+
+    therapist = None
+    if therapist_id or therapist_name:
+        if therapist_id:
+            therapist = User.query.filter_by(id=int(therapist_id), role='terapista').first()
+            if not therapist:
+                return {'error': f'No existe un terapeuta con ID {therapist_id}.'}
+        elif therapist_name:
+            matches = (
+                User.query.filter(User.role == 'terapista', User.username.ilike(f'%{therapist_name.strip()}%'))
+                .order_by(User.id)
+                .all()
+            )
+            if not matches:
+                return {
+                    'error': f'No encontré ningún terapeuta llamado "{therapist_name}". Usa list_users/role para verificar.'
+                }
+            if len(matches) > 1:
+                candidatos = ', '.join(f'{m.id}: {m.username}' for m in matches)
+                return {
+                    'error': f'Varios terapeutas coinciden con "{therapist_name}": {candidatos}. Pide que indique el ID exacto.'
+                }
+            therapist = matches[0]
+    else:
+        return {'error': 'Necesito el terapeuta: proporciona therapist_id o therapist_name.'}
+
+    if action == 'remover':
+        if not sede_id and not sede_name:
+            therapist.assigned_sedes = []
+            db.session.commit()
+            return {
+                'success': True,
+                'message': f'{therapist.username} fue removido de todas sus sedes.',
+                'therapist': {'id': therapist.id, 'username': therapist.username},
+                'sedes': [],
+            }
+
+    if sede_id:
+        if int(sede_id) == 0:
+            therapist.assigned_sedes = []
+            db.session.commit()
+            return {
+                'success': True,
+                'message': f'{therapist.username} fue removido de todas sus sedes.',
+                'therapist': {'id': therapist.id, 'username': therapist.username},
+                'sedes': [],
+            }
+        sede = Sede.query.filter_by(id=int(sede_id)).first()
+        if not sede or not sede.is_active:
+            return {'error': f'No existe una sede activa con ID {sede_id}.'}
+    elif sede_name:
+        sedes = Sede.query.filter(Sede.name.ilike(f'%{sede_name.strip()}%'), Sede.is_active == True).all()
+        if not sedes:
+            return {'error': f'No encontré ninguna sede llamada "{sede_name}". Usa list_sedes para ver la lista.'}
+        if len(sedes) > 1:
+            candidatos = ', '.join(f'{s.id}: {s.name}' for s in sedes)
+            return {'error': f'Varias sedes coinciden: {candidatos}. Pide que confirme el ID.'}
+        sede = sedes[0]
+    else:
+        return {'error': 'Necesito la sede: proporciona sede_id o sede_name.'}
+
+    current = list(therapist.assigned_sedes)
+    if action == 'remover':
+        if sede in current:
+            therapist.assigned_sedes.remove(sede)
+            msg = f'{therapist.username} fue removido de la sede {sede.name}.'
+        else:
+            msg = f'{therapist.username} ya no estaba asignado a la sede {sede.name}.'
+    elif sede in current:
+        msg = f'{therapist.username} ya estaba asignado a la sede {sede.name}.'
+    else:
+        therapist.assigned_sedes.append(sede)
+        msg = f'{therapist.username} fue asignado como terapeuta de la sede {sede.name}.'
+
+    db.session.commit()
+
+    sedes = [{'id': s.id, 'name': s.name} for s in sorted(therapist.assigned_sedes, key=lambda x: x.id)]
+    return {
+        'success': True,
+        'message': msg,
+        'therapist': {'id': therapist.id, 'username': therapist.username, 'role': therapist.role},
+        'sedes': sedes,
+        'count': len(sedes),
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

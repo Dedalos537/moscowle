@@ -157,20 +157,39 @@
         }
 
         @if (loading) {
-          @if (thinkingText) {
-            <div class="message assistant thinking-msg">
-              <div class="thinking-indicator">
-                <fa-icon [icon]="['fas', 'spinner']" animation="spin"></fa-icon>
-                <span>{{ thinkingText }}</span>
-              </div>
+          <div class="message assistant thinking-msg">
+            <div class="think-loop">
+              <span class="think-loop__core"><img src="assets/img/logo.svg" alt="Centro Juan Pablo II"></span>
+              <span class="think-loop__qs" aria-hidden="true">
+                <i class="think-loop__q think-loop__q--1">?</i>
+                <i class="think-loop__q think-loop__q--2">?</i>
+                <i class="think-loop__q think-loop__q--3">?</i>
+              </span>
+              @if (thinkingText) {
+                <span class="think-loop__label">{{ thinkingText }}</span>
+              }
             </div>
-          } @else {
-            <div class="message assistant" style="opacity:1">
-              <div class="typing-indicator">
-                <span></span><span></span><span></span>
+            <details class="think-panel">
+              <summary class="think-panel__summary">
+                <fa-icon [icon]="['fas', 'chevron-down']" class="think-panel__chevron"></fa-icon>
+                <span>Pensamiento y herramientas</span>
+                @if (streamToolCalls.length > 0) {
+                  <span class="think-panel__live">· llamando: {{ liveToolNames }}</span>
+                }
+              </summary>
+              <div class="think-panel__body">
+                @if (thinkingLog.length === 0) {
+                  <div class="think-panel__tools think-panel__tools--empty">
+                    Pensando...
+                  </div>
+                } @else {
+                  @for (thought of thinkingLog; track $index) {
+                    <div class="think-panel__thought">{{ thought }}</div>
+                  }
+                }
               </div>
-            </div>
-          }
+            </details>
+          </div>
         }
       </div>
     }

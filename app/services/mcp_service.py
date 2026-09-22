@@ -5,6 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
+from app.services.personality_prompt import PERSONALITY_PROMPT, ROLE_NAMES_ES
 from app.services.tools_registry import SAFE_WRITE_TOOLS, TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
@@ -69,8 +70,8 @@ SYSTEM_PROMPTS = {
         'User: "Registra pago de Juan por 100 soles en efectivo"\n'
         'You: <function=register_payment{"patient_id": 5, "amount": 100, "method": "Efectivo", "payment_date": "2026-08-18"}</function>\n\n'
         'TOOLS BY CATEGORY:\n\n'
-        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_therapist_patients (pacientes asignados a un terapeuta), get_user_detail, create_user, update_user, delete_user, assign_therapist, update_patient, toggle_user_status\n'
-        'SESSIONS: get_sessions, get_sessions_day, create_session, update_session, cancel_session, complete_session, batch_create_sessions\n'
+        'PATIENTS/USERS: search_patients, list_patients, get_patient_detail, list_users, get_therapist_patients (pacientes asignados a un terapeuta), get_user_detail, create_user, delete_user, assign_therapist, update_patient, toggle_user_status\n'
+        'SESSIONS: get_sessions, get_sessions_day, schedule_programmed_session, update_session_plan, cancel_session, complete_session, batch_create_sessions\n'
         'INCIDENTS: create_incident, list_incidents, get_incident_detail, update_incident_status, assign_incident\n'
         'BRANCHES: list_sedes, get_sede_stats, list_patient_groups, create_patient_group\n'
         'FINANCE: get_financial_summary (use month/year params for past months), get_payment_history, register_payment, cancel_payment (delete a payment by ID), edit_payment (modify amount/method/date/status/receipt_url), get_debtors, send_payment_reminder, list_expenses, create_expense, get_therapist_financials, get_debt_summary, compare_periods (compare 2 months)\n'
@@ -132,10 +133,72 @@ SYSTEM_PROMPTS = {
     ),
 }
 
+
+def get_configured_system_prompt():
+    """Prompt editado en el módulo de configuración del bot, si existe."""
+    try:
+        from app.models.bot_config import BotConfig
+
+        configured = (BotConfig.get_or_create().system_prompt or '').strip()
+        return configured or None
+    except Exception:
+        return None
+
+
+def _substitute_tokens(prompt, user_role, user_id):
+    prompt = prompt.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
+    prompt = prompt.replace('{rol_id}', user_role)
+    prompt = prompt.replace('{user_id}', str(user_id or ''))
+    try:
+        from app.models import User
+
+        u = User.query.get(int(user_id)) if user_id else None
+        name = ''
+        if u:
+            name = getattr(u, 'full_name', None) or getattr(u, 'username', '') or ''
+        prompt = prompt.replace('{usuario}', name)
+    except Exception:
+        pass
+    return prompt
+
+
+def get_role_access_block(user_role, mode='grande'):
+    """Refuerza en runtime qué puede y qué NO puede hacer el rol actual."""
+    role_name = ROLE_NAMES_ES.get(user_role, user_role)
+    allowed = get_tools_for_mode(mode, user_role)
+    names = ', '.join(t['function']['name'] for t in allowed) or 'ninguna'
+    return (
+        f'\n\nACCESO Y PERMISOS DEL USUARIO (nivel: {role_name}):\n'
+        f'- Herramientas permitidas para tu nivel (SOLO estas): {names}\n'
+        '- NO puedes usar ninguna otra herramienta ni elevar tu nivel de acceso.\n'
+        '- PROHIBIDO: inventar resultados, afirmar que una operación se completó sin confirmación '
+        'de la herramienta, y ejecutar acciones de escritura sin confirmación del usuario.\n'
+        '- Si el usuario pide algo fuera de tu nivel de acceso, responde que no tienes permisos '
+        'y sugiere solicitarlo al administrador o supervisor.'
+    )
+
+
+def resolve_system_prompt(user_role, user_id=None, mode='grande'):
+    """Prompt base: configuración del bot > prompt de personalidad, + acceso según rol."""
+    configured = get_configured_system_prompt()
+    base = configured if configured else PERSONALITY_PROMPT
+    base = _substitute_tokens(base, user_role, user_id)
+    base += get_role_access_block(user_role, mode=mode)
+    return base
+
+
 MAX_ITERATIONS = 6
 
+# Copia del patrón de mcp_routes (sin imports circulares): la respuesta del
+# modelo afirma una CANTIDAD o dato del sistema sin haber ejecutado herramienta.
+_DATA_CLAIM_RE = re.compile(
+    r'(?:hay|existen|son|total(?:\s+dé\s+|de\s+)?|registrad[oa]s?|encontrad[oa]s?|tienen?|cuenta\s+con)\s*[:>]*\s*\d{1,4}'
+    r'|\b\d{1,4}\s+(?:terapeutas?|paciente[s]?|usuarios?|alumnos?|sesiones?|pagos?|sede[s]?|contratos?|incidentes?|grupos?)\b',
+    re.IGNORECASE,
+)
+
 TOOL_CALL_PATTERN = re.compile(
-    r'<function=(\w+)\s*(\{.*?\})?\s*</function>',
+    r'<function=(\w+)\s*(\{.*?\})?\s*(?:</function>|' + r'/\s*' + r'>)',
     re.DOTALL,
 )
 
@@ -149,6 +212,8 @@ _FALLBACK_PATTERNS = [
     re.compile(r'```[^`]*<function=(\w+)\s*(\{.*?\})?\s*</function>', re.DOTALL),
     # Partial: search_patients{"query":"Carlos"} (no <function> tags)
     re.compile(r'\b(\w+)\s*(\{[^{}]*\})\s*(?:->|$|\n)', re.DOTALL),
+    # Markdown block: ```tool_code list_users({"role": "terapista"})
+    re.compile(r'```[^\n]*\n?\s*(\w+)\s*\(\s*(\{[^{}]*\})\s*\)\s*```'),
 ]
 
 # Pattern for parentheses format: toolname(key: value, key: value)
@@ -244,10 +309,34 @@ def _parse_text_tool_call(text):
         tool_name = match.group(1)
         args_str = match.group(2)
         if tool_name in TOOL_REGISTRY:
-            tool_args = _parse_paren_args(args_str)
+            cleaned = (args_str or '').strip()
+            if cleaned.startswith('{'):
+                # JSON inside parens – fix single quotes → double quotes, remove trailing commas
+                fixed = re.sub(r',\s*([}\]])', r'\1', cleaned.replace("'", '"'))
+                try:
+                    tool_args = json.loads(fixed)
+                except json.JSONDecodeError:
+                    tool_args = _parse_paren_args(args_str)
+            else:
+                tool_args = _parse_paren_args(args_str)
             return tool_name, tool_args
 
     return None, None
+
+
+def _readable_name_list(items):
+    """Build a verbatim numbered list (name/dni/email) for list results so the
+    small model copies exact values instead of hallucinating."""
+    lines = []
+    ok = False
+    for i, it in enumerate(items, 1):
+        if not isinstance(it, dict):
+            continue
+        name = it.get('username') or it.get('full_name') or it.get('name') or it.get('patient_name') or it.get('title')
+        label = name if name else it.get('email') or str(it.get('id', '?'))
+        lines.append(f'{i}. {label}')
+        ok = True
+    return ok, '\n'.join(lines)
 
 
 def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
@@ -264,11 +353,17 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
             }
         elif 'users' in result and isinstance(result['users'], list):
             users = result['users']
+            read_ok, read_list = _readable_name_list(users)
             result = {
                 'success': result.get('success', True),
                 'count': result.get('count', len(users)),
-                'users_preview': users[:5],
-                'note': f'Showing 5 of {len(users)} users' if len(users) > 5 else None,
+                'users': users[:50],
+                'readable_list': read_list,
+                'note': (
+                    f'Showing {min(50, len(users))} of {len(users)} users'
+                    if len(users) > 50
+                    else ('Copia "readable_list" y "users" TAL CUAL en tu respuesta.' if read_ok else None)
+                ),
             }
         elif 'payments' in result and isinstance(result['payments'], list):
             payments = result['payments']
@@ -324,7 +419,7 @@ class MCPService:
     def process_message(
         self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
     ):
-        system_prompt = SYSTEM_PROMPTS.get(user_role, SYSTEM_PROMPTS['jugador'])
+        system_prompt = resolve_system_prompt(user_role, user_id=user_id, mode=mode)
 
         if telegram_mode:
             system_prompt += (
@@ -363,7 +458,7 @@ class MCPService:
         messages = [{'role': 'system', 'content': full_system}]
 
         if history:
-            for h in history[-8:]:
+            for h in history[-5:]:
                 messages.append({'role': h['role'], 'content': h['content']})
 
         messages.append({'role': 'user', 'content': message})
@@ -420,6 +515,7 @@ class MCPService:
                     'done': True,
                 }
 
+        corrections = 0
         for iteration in range(MAX_ITERATIONS):
             try:
                 content, provider = llm_chat(
@@ -439,6 +535,29 @@ class MCPService:
                 logger.info(f'MCP LLM response via {provider} (iteration {iteration})')
 
                 tool_name, tool_args = _parse_text_tool_call(content)
+
+                if not tool_name:
+                    # Guard against hallucinated tool names: if the model emits a
+                    # <function=X{...}> call for a tool that does not exist, re-prompt
+                    # instead of silently passing the fabricated text to the user.
+                    m = re.search(r'<function=(\w+)', content)
+                    if m and m.group(1) not in TOOL_REGISTRY:
+                        unknown = m.group(1)
+                        logger.warning(f'MCP hallucinated unknown tool: {unknown}')
+                        available = ', '.join(sorted(TOOL_REGISTRY.keys()))
+                        messages.append(
+                            {
+                                'role': 'user',
+                                'content': (
+                                    f'ERROR: la herramienta "{unknown}" NO existe. '
+                                    f'Herramientas disponibles: {available}. '
+                                    'Si necesitas ejecutar una accion, repite usando SIEMPRE la sintaxis '
+                                    '<function=nombre{"param": "valor"}</function> con el nombre EXACTO '
+                                    'de una herramienta disponible. Para consultas simples responde con datos reales.'
+                                ),
+                            }
+                        )
+                        continue
 
                 if tool_name:
                     logger.info(f'MCP parsed tool call: {tool_name}({tool_args})')
@@ -474,7 +593,7 @@ class MCPService:
 
                     result_str = _trim_tool_result(result)
                     # Strip any fabricated text before the tool call — only keep the tool invocation
-                    tool_call_match = re.search(r'<function=.*?</function>', content, re.DOTALL)
+                    tool_call_match = re.search(r'<function=.*?(?:</function>|/\s*>)', content, re.DOTALL)
                     clean_assistant = tool_call_match.group(0) if tool_call_match else content
                     messages.append({'role': 'assistant', 'content': clean_assistant})
                     messages.append(
@@ -483,7 +602,31 @@ class MCPService:
                             'content': (
                                 f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
                                 f'{result_str}\n\n'
-                                f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given (never adapt, translate or merge names/emails). If a field is missing, say "no disponible".'
+                            ),
+                        }
+                    )
+                    continue
+
+                # Si la respuesta afirma un dato del sistema sin haber ejecutado
+                # herramienta (conteos/lists/estados), re-consulta hasta 2 veces
+                # pidiendo la llamada real antes de devolverla como final.
+                clean_content = re.sub(r'<function=\w+.*?</function>', '', content).strip()
+                if (
+                    not (confirmed_tool or {}).get('name')
+                    and corrections < 2
+                    and _DATA_CLAIM_RE.search(clean_content)
+                    and not tool_calls_log
+                ):
+                    corrections += 1
+                    messages.append(
+                        {
+                            'role': 'user',
+                            'content': (
+                                '¡ALTO! Tu respuesta afirma un dato del sistema (cantidad, lista o estado), '
+                                'pero NO ejecutaste ninguna herramienta en este turno. Eso está PROHIBIDO. '
+                                'Emite la llamada a la herramienta correspondiente '
+                                '(<function=nombre{"param": "valor"}</function>) y espera SU resultado real.'
                             ),
                         }
                     )
@@ -525,7 +668,7 @@ class MCPService:
                             )
 
                             result_str = _trim_tool_result(result)
-                            tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                            tool_call_match = re.search(r'<function=.*?(?:</function>|/\s*>)', failed_gen, re.DOTALL)
                             clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
                             messages.append({'role': 'assistant', 'content': clean_assistant})
                             messages.append(
@@ -534,7 +677,7 @@ class MCPService:
                                     'content': (
                                         f'[REAL Tool {tool_name} result — use ONLY this data, do NOT invent anything]:\n'
                                         f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above. If a field is missing, say "no disponible".'
+                                        f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given (never adapt, translate or merge names/emails). If a field is missing, say "no disponible".'
                                     ),
                                 }
                             )

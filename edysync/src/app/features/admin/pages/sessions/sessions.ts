@@ -104,6 +104,7 @@ export class Sessions implements OnInit, OnDestroy {
   sessionTypeOptions: SelectOption[] = [
     {value: 'individual', label: 'Individual'},
     {value: 'grupal', label: 'Grupal'},
+    {value: 'evaluacion', label: 'Evaluación'},
   ];
 
   months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -137,6 +138,8 @@ export class Sessions implements OnInit, OnDestroy {
   calendarMonth: Date = new Date();
   calendarDays: { date: Date; day: number; selected: boolean; disabled: boolean }[][] = [];
   unlockPastDates = false;
+
+  holidaysMap: Map<string, string> = new Map();
 
   auditState: any = null;
   programUploading = false;
@@ -176,6 +179,7 @@ export class Sessions implements OnInit, OnDestroy {
     this.loadSedes();
     this.loadSessions();
     this.loadPatientGroups();
+    this.loadHolidays();
     this.buildCalendarGrid();
   }
 
@@ -230,6 +234,18 @@ export class Sessions implements OnInit, OnDestroy {
       this.adminService.getPatientGroups().subscribe({
         next: (res: any) => {
           this.patientGroups = res.groups || [];
+          this.cdr.markForCheck();
+        },
+        error: () => this.cdr.markForCheck(),
+      })
+    );
+  }
+
+  private loadHolidays() {
+    this.subscriptions.add(
+      this.adminService.getHolidays().subscribe({
+        next: (res) => {
+          this.holidaysMap = new Map((res.holidays || []).map((h) => [h.date, h.name]));
           this.cdr.markForCheck();
         },
         error: () => this.cdr.markForCheck(),

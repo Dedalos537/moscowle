@@ -4,10 +4,13 @@ import time
 
 from flask import Blueprint, abort, current_app, jsonify, redirect, send_from_directory, url_for
 
+from app.extensions import limiter
+
 public_bp = Blueprint('public', __name__, url_prefix='/api/public')
 
 
 @public_bp.route('/app-key', methods=['GET'])
+@limiter.exempt
 def generate_app_key():
     secret = current_app.config.get('APP_SECRET_KEY', 'dev-app-key-change-in-production')
     client_timestamp = int(time.time() / 300)

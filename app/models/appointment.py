@@ -73,6 +73,9 @@ class Appointment(db.Model, AuditMixin):
 
     therapy_type = db.Column(db.String(120), nullable=True)
     duration_minutes = db.Column(db.Integer, nullable=True)
+    session_type = db.Column(db.String(50), nullable=True, default='individual')
+    reminder_d1_sent = db.Column(db.Boolean, default=False)
+    reminder_d0_sent = db.Column(db.Boolean, default=False)
 
     group_id = db.Column(db.Integer, db.ForeignKey('patient_group.id'), nullable=True, index=True)
     group_session_key = db.Column(db.String(50), nullable=True, index=True)

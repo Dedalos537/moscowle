@@ -320,9 +320,10 @@
                 </div>
                 <div class="bot-config-field">
                   <label class="bot-config-label">Prompt del sistema</label>
-                  <p class="bot-config-hint">Instrucciones personalizadas para el bot. Si está vacío, usa el prompt por defecto.</p>
-                  <textarea [(ngModel)]="editForm.system_prompt" rows="6" placeholder="(Opcional) Instrucciones personalizadas..."
+                  <p class="bot-config-hint">Instrucciones completas para la personalidad y acceso del bot. Si está vacío, usa el prompt por defecto. Tokens opcionales: {{ '{rol}' }}, {{ '{usuario}' }}, {{ '{user_id}' }}.</p>
+                  <textarea [(ngModel)]="editForm.system_prompt" rows="14" placeholder="(Opcional) Instrucciones personalizadas..."
                     class="bot-config-input bot-config-textarea bot-config-textarea--mono"></textarea>
+                  <p class="bot-config-hint">Caracteres: {{ (editForm.system_prompt || '').length }}</p>
                 </div>
                 <div class="flex items-center gap-3 mt-4">
                   <app-button variant="primary" label="Guardar" [icon]="['fas', 'save']" [loading]="saving" (clicked)="saveConfig()"></app-button>

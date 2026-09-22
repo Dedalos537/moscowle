@@ -105,7 +105,7 @@ export class UsersList implements OnInit, OnDestroy {
   editData: any = {};
   currentEditUser: UserRow | null = null;
   resetData = { userId: 0, loginCount: 0, newPassword: '', showPassword: false, status: '', firstTime: false };
-  newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
+  newUser = { email: '', username: '', role: 'jugador', sede_id: null as number | null, sede_ids: [] as number[], salary: null as number | null, hours: null as number | null, modality: null as number | null, evaluation_date: '' as string, frequency: 'monthly', plan_type: 'individual', amount: null as number | null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null as number | null, days: [] as number[] };
   createStatus = '';
 
   patientGroups: any[] = [];
@@ -704,7 +704,7 @@ export class UsersList implements OnInit, OnDestroy {
   }
 
   openCreateDrawer() {
-    this.newUser = { email: '', username: '', role: 'jugador', sede_id: null, sede_ids: [], salary: null, hours: null, modality: null, frequency: 'monthly', plan_type: 'individual', amount: null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null, days: [] };
+    this.newUser = { email: '', username: '', role: 'jugador', sede_id: null, sede_ids: [], salary: null, hours: null, modality: null, evaluation_date: '', frequency: 'monthly', plan_type: 'individual', amount: null, generate_schedule: true, start_date: '', start_time: '', schedule_therapist: null, days: [] };
     this.createStatus = '';
     this.showCreateDrawer = true;
     this.cdr.markForCheck();
@@ -732,6 +732,7 @@ export class UsersList implements OnInit, OnDestroy {
       payload.payment_frequency = this.newUser.frequency;
       payload.plan_type = this.newUser.plan_type;
       payload.generate_schedule = this.newUser.generate_schedule;
+      if (this.newUser.evaluation_date) payload.evaluation_date = this.newUser.evaluation_date;
       if (this.newUser.generate_schedule) {
         if (this.newUser.start_date) payload.start_date = this.newUser.start_date;
         if (this.newUser.start_time) payload.start_time = this.newUser.start_time;

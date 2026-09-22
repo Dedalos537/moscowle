@@ -20,6 +20,20 @@ _COLUMNS = [
             ('awaiting_patient_name', 'JSON'),
         ],
     ),
+    (
+        'appointment',
+        [
+            ('session_type', 'VARCHAR(50)'),
+            ('reminder_d1_sent', 'BOOLEAN'),
+            ('reminder_d0_sent', 'BOOLEAN'),
+        ],
+    ),
+    (
+        'user',
+        [
+            ('renewal_notified_count', 'INTEGER'),
+        ],
+    ),
 ]
 
 

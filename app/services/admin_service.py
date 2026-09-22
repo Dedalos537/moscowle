@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.extensions import bcrypt
 from app.models import Appointment, Sede, User, db
 from app.services.email_service import EmailService
+from app.services.holiday_service import is_holiday
 from app.services.notification_service import NotificationService
 
 HOLIDAYS_2026 = [
@@ -207,7 +208,8 @@ class AdminService:
                     cycle_amount = payment_amount or 0
                     total_amount = round(cycle_amount * installment_count, 2) if cycle_amount else 0
 
-                    start_date = data.get('start_date')
+                    eval_anchor = data.get('evaluation_date') or data.get('start_date')
+                    start_date = eval_anchor
                     name = data.get('nombre_contrato') or f'Plan Terapias {user.username}'
 
                     contract_svc = ContractService()
@@ -234,7 +236,14 @@ class AdminService:
 
                 if start_date_str and start_time_str and therapist_id and modality > 0:
                     start_dt = datetime.strptime(f'{start_date_str} {start_time_str}', '%Y-%m-%d %H:%M')
-                    self.generate_schedule(user, therapist_id, start_dt, modality, days_selected)
+                    self.generate_schedule(
+                        user,
+                        therapist_id,
+                        start_dt,
+                        modality,
+                        days_selected,
+                        evaluation_date=data.get('evaluation_date'),
+                    )
             except Exception as e:
                 print(f'Error generating schedule: {e}')
 
@@ -248,7 +257,7 @@ class AdminService:
             'contract_created': contract_created,
         }
 
-    def generate_schedule(self, user, therapist_id, start_dt, modality, days_of_week=None):
+    def generate_schedule(self, user, therapist_id, start_dt, modality, days_of_week=None, evaluation_date=None):
         total_sessions = 0
         if modality == 1:
             total_sessions = 4
@@ -278,11 +287,9 @@ class AdminService:
             safety_break += 1
 
             if current_date.weekday() in days_of_week:
-                is_holiday = current_date.strftime('%Y-%m-%d') in HOLIDAYS_2026
-
-                notes = ''
-                if is_holiday:
-                    notes = 'WARNING: Scheduled on Holiday'
+                if is_holiday(current_date):
+                    current_date += timedelta(days=1)
+                    continue
 
                 appt_dt = datetime(
                     current_date.year, current_date.month, current_date.day, start_dt.hour, start_dt.minute
@@ -293,10 +300,12 @@ class AdminService:
                     therapist_id=therapist_id,
                     start_time=appt_dt,
                     end_time=appt_dt + timedelta(minutes=45),
-                    title=f'Sesión {created_count + 1}',
+                    title='Evaluaci\u00f3n'
+                    if bool(evaluation_date) and created_count == 0
+                    else f'Sesi\u00f3n {created_count + 1}',
                     status='scheduled',
                     games='[]',
-                    notes=notes,
+                    notes='',
                 )
                 db.session.add(appt)
                 created_count += 1

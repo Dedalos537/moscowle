@@ -26,6 +26,7 @@ from app.routes.api._shared import (
     url_for,
     uuid,
 )
+from app.services.holiday_service import is_holiday
 from app.utils import get_user_day_utc_range, get_user_timezone, localize_datetime_for_display
 from app.utils.objectives import enrich_objectives_from_audit, parse_objectives
 from app.utils.sanitizer import sanitize_text
@@ -36,6 +37,17 @@ def _is_date_only_param(value):
         return False
     v = value.strip()
     return len(v) <= 10 and 'T' not in v and ' ' not in v
+
+
+@api_bp.route('/holidays', methods=['GET'])
+@login_required
+def api_get_holidays():
+    if current_user.role not in ('terapista', 'admin', 'supervisor'):
+        return jsonify({'error': 'Acceso denegado'}), 403
+    from app.services.holiday_service import get_holidays
+
+    region = (request.args.get('region') or 'PIURA').upper()
+    return jsonify({'success': True, 'holidays': get_holidays(region)})
 
 
 @api_bp.route('/sessions', methods=['GET'])
@@ -123,6 +135,7 @@ def api_get_sessions():
                     'therapist': a.therapist.username if a.therapist else '',
                     'patient': a.patient.username if a.patient else '',
                     'status': a.status,
+                    'session_type': a.session_type or 'individual',
                     'notes': a.notes or '',
                     'audit_score': audit_score,
                     'has_transcript': has_transcript,
@@ -282,6 +295,17 @@ def api_create_session():
 
     if not data.get('patient_id') or not data.get('start_time'):
         return jsonify({'success': False, 'message': 'patient_id and start_time are required'}), 400
+
+    if is_holiday(data['start_time']):
+        return (
+            jsonify(
+                {
+                    'success': False,
+                    'message': 'No se pueden agendar sesiones en fecha feriada. Elige otro día.',
+                }
+            ),
+            422,
+        )
 
     if not data.get('end_time'):
         data['end_time'] = data['start_time'] + timedelta(hours=1)

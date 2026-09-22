@@ -741,10 +741,176 @@
   opacity: 0.8;
 }
 
+/* Pensando: logo en bucle que crea signos ? 1, 2, 3 y se reinicia */
+.think-loop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+}
+
+.think-loop__core {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--color-surface-container-lowest, #fff);
+  border: 1px solid var(--color-outline-variant);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.think-loop__core img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.think-loop__qs {
+  position: relative;
+  width: 12px;
+  height: 34px;
+}
+
+.think-loop__q {
+  position: absolute;
+  left: 0;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-primary);
+  opacity: 0;
+}
+
+.think-loop__q--1 { top: 0; }
+.think-loop__q--2 { top: 11px; }
+.think-loop__q--3 { top: 22px; }
+
+.think-loop__q--1 { animation: thinkQ1 2.7s ease-in-out infinite; }
+.think-loop__q--2 { animation: thinkQ2 2.7s ease-in-out infinite; }
+.think-loop__q--3 { animation: thinkQ3 2.7s ease-in-out infinite; }
+
+@keyframes thinkQ1 {
+  0%, 9%     { opacity: 0; transform: scale(0.4); }
+  13%, 62%   { opacity: 1; transform: scale(1); }
+  70%, 100%  { opacity: 0; transform: scale(0.5); }
+}
+
+@keyframes thinkQ2 {
+  0%, 24%    { opacity: 0; transform: scale(0.4); }
+  28%, 70%   { opacity: 1; transform: scale(1); }
+  78%, 100%  { opacity: 0; transform: scale(0.5); }
+}
+
+@keyframes thinkQ3 {
+  0%, 46%    { opacity: 0; transform: scale(0.4); }
+  50%, 78%   { opacity: 1; transform: scale(1); }
+  86%, 100%  { opacity: 0; transform: scale(0.5); }
+}
+
+.think-loop__label {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--color-primary);
+  opacity: 0.85;
+  margin-left: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .thinking-msg {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+.think-panel {
+  margin-top: 8px;
+  border: 1px dashed var(--color-outline-variant);
+  border-radius: 10px;
+  background: var(--color-surface-container-lowest, #fff);
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.think-panel__summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+  user-select: none;
+  list-style: none;
+}
+
+.think-panel__summary::-webkit-details-marker {
+  display: none;
+}
+
+.think-panel__chevron {
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  transition: transform 0.2s ease;
+}
+
+.think-panel[open] .think-panel__chevron {
+  transform: rotate(180deg);
+}
+
+.think-panel__live {
+  color: var(--color-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.think-panel__body {
+  padding: 4px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.think-panel__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.think-panel__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.think-panel__body::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 3px;
+}
+
+.think-panel__thought {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--color-on-surface-variant);
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--color-surface-container);
+  border-left: 3px solid var(--color-primary-container);
+  word-break: break-word;
+}
+
+.think-panel__tools--empty {
+  color: var(--color-on-surface-variant);
+  font-style: italic;
+  opacity: 0.7;
+  padding: 2px 6px;
 }
 
 .tool-badge {

@@ -18,7 +18,7 @@ import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
 
-type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'bot';
+type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
 interface PasswordResetRow {
   id: number;
@@ -112,6 +112,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   llmSuccess: string | null = null;
   llmEditing = false;
   llmEditKeys: Record<string, string> = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
+  // --- Notificaciones SMS/WhatsApp (OCP) ---
+  notifConfig: any = null;
+  notifEdit: { destination: string; sms_template: string; whatsapp_template: string } = { destination: '', sms_template: '', whatsapp_template: '' };
+  notifLoading = false;
+  notifSaving = false;
+  notifTesting = false;
+  notifError: string | null = null;
+  notifSuccess: string | null = null;
+  notifEditing = false;
 
   ngOnInit() {
     this.headerService.setConfig({
@@ -136,6 +145,9 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     this.activeTab = tab;
     if (tab === 'llm') {
       this.loadLLMConfig();
+    }
+    if (tab === 'notifications') {
+      this.loadNotificationConfig();
     }
   }
 
@@ -306,6 +318,15 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     }
   }
 
+  providerStatusColor(status: string): string {
+    const map: Record<string, string> = {
+      ok: 'var(--color-success)',
+      client_null: 'var(--color-warning)',
+      error: 'var(--color-error)',
+    };
+    return map[status] || 'var(--color-on-surface-variant)';
+  }
+
   logLevelColor(level: string): string {
     const map: Record<string, string> = {
       ERROR: 'var(--color-error)',
@@ -457,9 +478,63 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  providerStatusColor(status: string): string {
-    if (status === 'ok') return '#22c55e';
-    if (status === 'client_null') return '#eab308';
-    return '#ef4444';
+  // --- Notificaciones SMS/WhatsApp (OCP) ---
+  loadNotificationConfig() {
+    this.notifLoading = true;
+    this.notifError = null;
+    this.subs.add(
+      this.admin.getNotificationConfig().subscribe({
+        next: (res) => { this.notifConfig = res; this.notifLoading = false; this.cdr.markForCheck(); },
+        error: (err) => { this.notifLoading = false; this.notifError = err.error?.error || 'Error al cargar config notif'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  testNotificationProviders() {
+    this.notifTesting = true;
+    this.notifError = null;
+    this.notifSuccess = null;
+    this.subs.add(
+      this.admin.testNotifications().subscribe({
+        next: (res) => {
+          this.notifTesting = false;
+          this.notifSuccess = res?.status === 'ok' ? 'Envio de prueba OK' : 'Prueba enviada (revisa SMS/WhatsApp)';
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.notifTesting = false; this.notifError = err.error?.error || 'Error al probar notificaciones'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  startEditNotification() {
+    this.notifEditing = true;
+    this.notifError = null;
+  }
+
+  cancelEditNotification() {
+    this.notifEditing = false;
+  }
+
+  saveNotificationConfig() {
+    const payload: Record<string, string> = {};
+    if (this.notifEdit?.destination?.trim()) payload['destination'] = this.notifEdit.destination.trim();
+    if (this.notifEdit?.sms_template?.trim()) payload['sms_template'] = this.notifEdit.sms_template.trim();
+    if (this.notifEdit?.whatsapp_template?.trim()) payload['whatsapp_template'] = this.notifEdit.whatsapp_template.trim();
+    if (!Object.keys(payload).length) {
+      this.notifError = 'Ingresa al menos un campo';
+      return;
+    }
+    this.notifSaving = true;
+    this.subs.add(
+      this.admin.updateNotificationConfig(payload).subscribe({
+        next: (res) => {
+          this.notifSaving = false;
+          this.notifEditing = false;
+          this.notifSuccess = `Guardadas: ${res.updated?.join(', ') || 'ok'}`;
+          this.loadNotificationConfig();
+        },
+        error: (err) => { this.notifSaving = false; this.notifError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+      })
+    );
   }
 }

@@ -87,6 +87,7 @@ class User(db.Model, UserMixin, AuditMixin):
     sessions_total = db.Column(db.Integer, default=0)
     sessions_attended = db.Column(db.Integer, default=0)
     sessions_remaining = db.Column(db.Integer, default=0)
+    renewal_notified_count = db.Column(db.Integer, nullable=True)
     session_cost = db.Column(db.Float, default=0.0)
     plan_type = db.Column(db.String(50), default='individual')
 

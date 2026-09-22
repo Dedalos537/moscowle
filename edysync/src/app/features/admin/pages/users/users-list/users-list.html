@@ -579,6 +579,10 @@
       </h5>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div>
+          <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Sesion de Evaluacion</label>
+          <input [(ngModel)]="newUser.evaluation_date" type="date" class="input-field text-sm" />
+        </div>
+        <div>
           <label class="text-label-caps text-on-surface-variant mb-1 block">Fecha Inicio</label>
           <input [(ngModel)]="newUser.start_date" type="date" class="input-field text-sm" />
         </div>
@@ -586,7 +590,7 @@
           <label class="text-label-caps text-on-surface-variant mb-1 block">Hora Inicio</label>
           <input [(ngModel)]="newUser.start_time" type="time" class="input-field text-sm" />
         </div>
-        <div class="sm:col-span-2">
+        <div class="sm:col-span-1">
           <label class="text-label-caps text-on-surface-variant mb-1 block">Terapeuta</label>
           <app-select [(ngModel)]="newUser.schedule_therapist" [options]="scheduleTherapistOptions"
             class="w-full"></app-select>

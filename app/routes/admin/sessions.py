@@ -6,6 +6,7 @@ from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import Appointment, User
 from app.routes.admin import admin_bp
+from app.services.holiday_service import is_holiday
 from app.utils import (
     get_user_day_utc_range,
     localize_datetime_for_display,
@@ -164,9 +165,14 @@ def batch_create_sessions():
             if len(specific_dates) > 31:
                 return jsonify({'error': 'Máximo 31 fechas'}), 400
             now = datetime.utcnow()
+            skipped_holidays = []
             for pid in patient_ids:
                 for date_str in specific_dates:
                     current_date = datetime.strptime(date_str, '%Y-%m-%d')
+                    if is_holiday(current_date.date()):
+                        if date_str not in skipped_holidays:
+                            skipped_holidays.append(date_str)
+                        continue
                     local_start = current_date.replace(hour=start_h, minute=start_m)
                     local_end = current_date.replace(hour=end_h, minute=end_m)
                     if local_end < local_start:
@@ -187,6 +193,7 @@ def batch_create_sessions():
                         location=sede,
                         group_id=group_id,
                         group_session_key=f'{group_id}:{date_str}' if group_id else None,
+                        session_type=session_type,
                         created_at=datetime.utcnow(),
                     )
                     db.session.add(appt)
@@ -197,8 +204,10 @@ def batch_create_sessions():
             return jsonify(
                 {
                     'success': True,
-                    'message': f'Se crearon {created_count} sesiones, todo ok.',
+                    'message': f'Se crearon {created_count} sesiones, todo ok.'
+                    + (f' Se omitieron feriados: {", ".join(skipped_holidays)}.' if skipped_holidays else ''),
                     'session_ids': created_ids,
+                    'skipped_holidays': skipped_holidays,
                 }
             )
 
@@ -228,6 +237,9 @@ def batch_create_sessions():
             current_date_iter = start_date
             while current_date_iter < end_date_iter:
                 if current_date_iter.weekday() in days_of_week:
+                    if is_holiday(current_date_iter.date()):
+                        current_date_iter += timedelta(days=1)
+                        continue
                     local_start = current_date_iter.replace(hour=start_h, minute=start_m)
                     local_end = current_date_iter.replace(hour=end_h, minute=end_m)
                     if local_end < local_start:
@@ -248,6 +260,7 @@ def batch_create_sessions():
                         status='completed' if is_past and unlock_past else 'scheduled',
                         group_id=group_id,
                         group_session_key=f'{group_id}:{current_date_iter.strftime("%Y-%m-%d")}' if group_id else None,
+                        session_type=session_type,
                         created_at=datetime.utcnow(),
                     )
                     db.session.add(appt)

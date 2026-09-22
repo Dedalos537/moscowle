@@ -46,7 +46,7 @@ def register_auth_loader(app: Flask) -> None:
 
 
 def register_error_handlers(app: Flask) -> None:
-    from app.middleware.request_handlers import _is_api_request
+    from app.utils.api_helpers import _is_api_request
 
     try:
         from flask_wtf.csrf import CSRFError

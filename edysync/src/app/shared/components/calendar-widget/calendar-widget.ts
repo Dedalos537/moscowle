@@ -24,6 +24,7 @@ interface DayCell {
   isRangeStart: boolean;
   isRangeEnd: boolean;
   events: CalendarWidgetEvent[];
+  holidayName?: string;
 }
 
 @Component({
@@ -38,6 +39,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   events = input<CalendarWidgetEvent[]>([]);
   role = input<'admin' | 'therapist' | 'patient'>('admin');
   readonly = input(false);
+  holidays = input<Map<string, string>>(new Map());
 
   dayClick = output<Date>();
   dayDblClick = output<Date>();
@@ -47,6 +49,7 @@ export class CalendarWidget implements OnInit, OnChanges {
   multiSelect = input(false);
   selectedIds = input<Set<number>>(new Set());
   selectionChange = output<number[]>();
+  toggleMultiSelect = output<void>();
 
   currentMonth: Date = new Date();
   selectedDate: Date = new Date();
@@ -147,6 +150,7 @@ export class CalendarWidget implements OnInit, OnChanges {
           isRangeStart: !!isRs,
           isRangeEnd: !!isRe,
           events: dayEvents,
+          holidayName: this.holidays().get(this.dateKey(dayStart)),
         });
         cursor.setDate(cursor.getDate() + 1);
       }
@@ -301,6 +305,9 @@ export class CalendarWidget implements OnInit, OnChanges {
   }
 
   private handleSingleClick(cell: DayCell, isModifier: boolean) {
+    if (cell.holidayName) {
+      return;
+    }
     if (isModifier) {
       if (!this.rangeStart) {
         this.rangeStart = new Date(cell.date);
@@ -345,6 +352,9 @@ export class CalendarWidget implements OnInit, OnChanges {
   }
 
   private handleDblClick(cell: DayCell) {
+    if (cell.holidayName) {
+      return;
+    }
     if (this.isRangeSelected) {
       this.rangeDblClick.emit({ start: this.rangeStart!, end: this.rangeEnd! });
     } else {

@@ -36,6 +36,11 @@
       <span>Bot</span>
       <div class="chrome-tab-indicator"></div>
     </button>
+    <button class="chrome-tab" [class.active]="activeTab === 'notifications'" (click)="switchTab('notifications')">
+      <fa-icon [icon]="['fas', 'bell']"></fa-icon>
+      <span>Notificaciones</span>
+      <div class="chrome-tab-indicator"></div>
+    </button>
   </div>
 
   @if (activeTab === 'backend') {
@@ -582,6 +587,100 @@
           </div>
           <div class="mt-4 p-3 bg-surface-container-high rounded-xl text-xs text-on-surface-variant">
             <strong>Cadena de fallback:</strong> GLM-5.2 → Groq → Gemini → Ollama
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Notificaciones Tab -->
+  @if (activeTab === 'notifications') {
+    <div class="tab-section" @fadeInUp>
+      <div class="tab-toolbar">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+              <fa-icon [icon]="['fas', 'bell']" class="text-primary"></fa-icon> Configuracion Notificaciones
+            </h2>
+            <p class="text-sm text-on-surface-variant">Destino numero SMS + plantillas SMS/WhatsApp (OCP)</p>
+          </div>
+          <div class="flex items-center gap-2">
+              <app-button variant="primary" label="Provar Notifs" [icon]="['fas', 'play']" [loading]="notifTesting" (clicked)="testNotificationProviders()"></app-button>
+            @if (!notifEditing) {
+              <app-button variant="secondary" label="Configurar" [icon]="['fas', 'key']" (clicked)="startEditNotification()"></app-button>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (notifError) {
+        <app-alert type="error" [message]="notifError" class="mb-4"></app-alert>
+      }
+      @if (notifSuccess) {
+        <app-alert type="success" [message]="notifSuccess" class="mb-4"></app-alert>
+      }
+
+      @if (notifConfig) {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div class="bg-surface-container rounded-xl border border-border/20 p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20">
+                <fa-icon [icon]="['fas', 'phone']" class="text-primary"></fa-icon>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-on-surface uppercase">Destino SMS</h3>
+                <p class="text-xs text-on-surface-variant">{{ notifConfig.destination || 'Sin configurar' }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-surface-container rounded-xl border border-border/20 p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20">
+                <fa-icon [icon]="['fas', 'comment']" class="text-primary"></fa-icon>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-on-surface uppercase">Plantilla SMS</h3>
+                <p class="text-xs text-on-surface-variant font-mono truncate">{{ notifConfig.sms_template || 'Sin configurar' }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-surface-container rounded-xl border border-border/20 p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20">
+                <fa-icon [icon]="['fas', 'comment-dots']" class="text-primary"></fa-icon>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-on-surface uppercase">Plantilla WhatsApp</h3>
+                <p class="text-xs text-on-surface-variant font-mono truncate">{{ notifConfig.whatsapp_template || 'Sin configurar' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (notifEditing) {
+        <div class="bg-surface-container rounded-xl border border-primary/30 p-6 mb-6" @fadeInUp>
+          <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
+            <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon> Actualizar Notificaciones
+          </h3>
+          <p class="text-sm text-on-surface-variant mb-4">Numero destino + plantillas SMS / WhatsApp.</p>
+          <div class="space-y-4">
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant block mb-1">Numero destino SMS</label>
+              <input type="text" [(ngModel)]="notifEdit.destination" placeholder="+51 999 888 777" class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant block mb-1">Plantilla SMS</label>
+              <input type="text" [(ngModel)]="notifEdit.sms_template" placeholder="Recordatorio de pago del paciente..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+            </div>
+            <div>
+              <label class="text-xs font-bold text-on-surface-variant block mb-1">Plantilla WhatsApp</label>
+              <input type="text" [(ngModel)]="notifEdit.whatsapp_template" placeholder="Hola! te recordamos tu cita..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+            </div>
+          </div>
+          <div class="flex gap-2 mt-4">
+            <app-button variant="ghost" label="Cancelar" (clicked)="cancelEditNotification()"></app-button>
+            <app-button variant="primary" label="Guardar y Provar" [icon]="['fas', 'save']" (clicked)="saveNotificationConfig()"></app-button>
           </div>
         </div>
       }

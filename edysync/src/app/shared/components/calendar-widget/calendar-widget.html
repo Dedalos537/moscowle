@@ -73,9 +73,14 @@
             [class.in-range]="cell.isInRange"
             [class.range-start]="cell.isRangeStart"
             [class.range-end]="cell.isRangeEnd"
-            (click)="onDayClick(cell, $event)"
+            [class.holiday]="!!cell.holidayName"
+            [title]="cell.holidayName"
+            (click)="cell.holidayName ? null : onDayClick(cell, $event)"
           >
             <span class="day-number">{{ cell.day }}</span>
+            @if (cell.holidayName) {
+              <div class="holiday-marker" [title]="cell.holidayName"></div>
+            }
             @if (cell.events.length > 0 && !cell.isInRange) {
               <div class="event-dots">
                 @for (e of cell.events.slice(0, 3); track e.id) {
@@ -96,6 +101,18 @@
     <div class="agenda-header">
       <fa-icon [icon]="['fas', 'calendar-day']" class="text-on-surface-variant/60"></fa-icon>
       <span class="agenda-date">{{ selectedDateLabel }}</span>
+      @if (role() === 'admin') {
+        <button (click)="toggleMultiSelect.emit()"
+          class="flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer whitespace-nowrap"
+          [class.border-primary]="multiSelect()"
+          [class.bg-primary-container]="multiSelect()"
+          [class.text-on-primary-container]="multiSelect()"
+          [class.border-border/30]="!multiSelect()"
+          [class.hover:bg-surface-container-high]="!multiSelect()">
+          <fa-icon [icon]="multiSelect() ? ['fas', 'times'] : ['fas', 'check-double']" class="text-[10px]"></fa-icon>
+          <span>{{ multiSelect() ? 'Cancelar' : 'Selección múltiple' }}</span>
+        </button>
+      }
       @if (eventCount > 0) {
         <span class="event-count-badge">{{ eventCount }} sesión{{ eventCount !== 1 ? 'es' : '' }}</span>
       }

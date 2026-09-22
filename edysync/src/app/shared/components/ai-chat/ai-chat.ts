@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
 import { AdminService } from '../../../core/services/admin.service';
 import { WizardService } from '../../contextual-help/services/wizard.service';
 import { FloatingUiService } from '../../../core/services/floating-ui.service';
@@ -92,6 +93,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
   private floatingUi = inject(FloatingUiService);
   private mcpChat = inject(McpChatService);
   private sessionStore = inject(ChatSessionService);
+  private router = inject(Router);
   private abortCtrl: AbortController | null = null;
   private streamSub: Subscription | null = null;
 
@@ -127,7 +129,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   private lastRequest: { message: string; history: { role: string; content: string }[] } | null = null;
   private assistantText = '';
-  private streamToolCalls: ToolCallResult[] = [];
+  streamToolCalls: ToolCallResult[] = [];
+  thinkingLog: string[] = [];
 
   private pendingFilePreview: string | null = null;
   private subs = new Subscription();
@@ -147,6 +150,10 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   get currentMode(): 'chiquito' | 'grande' {
     return this.fullScreen ? 'grande' : 'chiquito';
+  }
+
+  get liveToolNames(): string {
+    return this.streamToolCalls.map((t) => t.name).join(', ');
   }
 
   sanitize(html: string): string {
@@ -315,9 +322,9 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     switch (chip.type) {
       case 'navigation':
         if (chip.target && ALLOWED_REDIRECT_PREFIXES.some((p) => chip.target!.startsWith(p))) {
-          setTimeout(() => {
-            window.location.href = chip.target!;
-          }, 300);
+          this.router.navigateByUrl(chip.target!).catch(() => {
+            window.location.href = '/app' + chip.target!;
+          });
         }
         break;
       case 'wizard':
@@ -364,12 +371,38 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
   private updateThinking(text: string) {
     this.thinkingText = text;
+    this.pushThought(text);
+    this.cdr.markForCheck();
+  }
+
+  private pushThought(text: string) {
+    if (!text) return;
+    const last = this.thinkingLog[this.thinkingLog.length - 1];
+    if (last !== text) {
+      this.thinkingLog.push(text);
+      if (this.thinkingLog.length > 30) {
+        this.thinkingLog.shift();
+      }
+    }
     this.cdr.markForCheck();
   }
 
   private clearThinking() {
     this.thinkingText = '';
+    this.thinkingLog = [];
     this.cdr.markForCheck();
+  }
+
+  private summarizeArgs(args: Record<string, unknown>): string {
+    if (!args || Object.keys(args).length === 0) return 'sin argumentos';
+    const json = JSON.stringify(args);
+    return json.length > 100 ? json.slice(0, 100) + '…' : json;
+  }
+
+  private summarizeResult(result: string): string {
+    if (!result) return 'sin resultado';
+    const clean = result.replace(/\s+/g, ' ').trim();
+    return clean.length > 120 ? clean.slice(0, 120) + '…' : clean;
   }
 
   private ensureActiveSession() {
@@ -446,6 +479,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
     this.pendingAction = null;
     this.assistantText = '';
     this.streamToolCalls = [];
+    this.thinkingLog = [];
     this.thinkingText = '';
   }
 
@@ -484,6 +518,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
 
     this.messages.push({ role: 'user', content: msg });
     this.inputMessage = '';
+    this.thinkingLog = [];
     this.persistCurrentSession();
     const history = this.messages.slice(0, -1).slice(-8).map((m) => ({ role: m.role, content: m.content }));
     this.lastRequest = { message: msg, history };
@@ -538,6 +573,7 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           result: '',
           success: false,
         });
+        this.pushThought(`Llamando a la herramienta: ${event.name || '?'}(${this.summarizeArgs(event.args || {})})`);
         this.updateLastAssistant(this.assistantText, this.streamToolCalls);
         break;
 
@@ -546,6 +582,8 @@ export class AiChat implements AfterViewChecked, OnDestroy {
           const tc = this.streamToolCalls[this.streamToolCalls.length - 1];
           tc.result = event.result || '';
           tc.success = event.success !== false;
+          const state = tc.success ? 'obtuve' : 'error en';
+          this.pushThought(`Resultado de ${tc.name}: ${state} → ${this.summarizeResult(tc.result || (tc.success ? '' : 'la herramienta falló'))}`);
         }
         this.updateLastAssistant(this.assistantText, this.streamToolCalls);
         break;

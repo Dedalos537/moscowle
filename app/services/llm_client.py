@@ -383,13 +383,13 @@ def _try_ollama(messages, temperature):
     # Optimización para CPU: paralelismo, keep_alive
     options = {
         'temperature': temperature,
-        'num_ctx': 4096,  # Increased for tool calling with small models
+        'num_ctx': 8192,  # 4096 desbordaba con prompt+tools+historial -> el modelo perdía tools y respondía genérico
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
         'top_p': 0.9,
         'repeat_penalty': 1.1,
     }
-    resp = ollama.chat(model=ollama_model, messages=messages, options=options)
+    resp = ollama.chat(model=ollama_model, messages=messages, options=options, keep_alive=-1)
     return resp.get('message', {}).get('content', '') or None
 
 
@@ -500,13 +500,13 @@ def _stream_ollama(messages, temperature):
     # Optimización para CPU: paralelismo
     options = {
         'temperature': temperature,
-        'num_ctx': 4096,  # Increased for tool calling with small models
+        'num_ctx': 8192,  # 4096 desbordaba con prompt+tools+historial -> el modelo perdía tools y respondía genérico
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
         'top_p': 0.9,
         'repeat_penalty': 1.1,
     }
-    resp = ollama.chat(model=ollama_model, messages=messages, options=options)
+    resp = ollama.chat(model=ollama_model, messages=messages, options=options, keep_alive=-1)
     content = resp.get('message', {}).get('content', '')
     if content:
         yield content

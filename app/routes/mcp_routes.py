@@ -18,12 +18,12 @@ from app.services.llm_client import (
     llm_chat_stream,
 )
 from app.services.mcp_service import (
-    SYSTEM_PROMPTS,
     MCPService,
     _build_tool_prompt,
     _parse_text_tool_call,
     _trim_tool_result,
     get_current_date_context,
+    resolve_system_prompt,
 )
 from app.services.tools_registry import (
     SAFE_WRITE_TOOLS,
@@ -46,6 +46,34 @@ ALLOWED_ORIGINS = [
 
 # Write tools that are safe to run without a confirmation gate.
 # (Shared SAFE_WRITE_TOOLS lives in tools_registry.py)
+
+# Anti-false-positive guard: if the LLM claims to have completed an action (or
+# claims it consulted the DB) but did NOT actually run any tool in this turn,
+# we append a visible warning so the user never trusts a hallucinated result.
+_ACTION_CLAIM_RE = re.compile(
+    r'(se ha creado|se creó|usuario creado|fue creado[^ ]*|ha sido creado[^ ]*|he creado|ya creé'
+    r'|se ha registrado|registrado correctamente|se registró|he registrado|ya registré'
+    r'|se actualizó|se ha actualizado|he actualizado'
+    r'|se eliminó|se ha eliminado|se canceló|se ha cancelado'
+    r'|se ha enviado|se envió|se guardó|se ha guardado|se ha completado|se completó'
+    r'|asigné a|asigné la|se asignó|se le asignó|asignad[oa]|agregué a|se agregó|asocié a|se asoció'
+    r'|confirmando|procediendo a la|procedo a la|listo[ ,]|hecho[ ,])',
+    re.IGNORECASE,
+)
+
+_FAKE_VERIFY_RE = re.compile(
+    r'(existe en el sistema|no existe en el sistema|existe el usuario|no existe el usuario'
+    r'|el resultado fue truncado|fue truncado|null[^,]*)',
+    re.IGNORECASE,
+)
+
+# El modelo afirma una CANTIDAD o dato del sistema sin haber ejecutado herramienta.
+# (p.ej. "Hay 7 terapeutas", "6 pacientes registrados", "total: 12").
+_DATA_CLAIM_RE = re.compile(
+    r'(?:hay|existen|son|total(?:\s+dé\s+|de\s+)?|registrad[oa]s?|encontrad[oa]s?|tienen?|cuenta\s+con)\s*[:>]*\s*\d{1,4}'
+    r'|\b\d{1,4}\s+(?:terapeutas?|paciente[s]?|usuarios?|alumnos?|sesiones?|pagos?|sede[s]?|contratos?|incidentes?|grupos?)\b',
+    re.IGNORECASE,
+)
 
 
 def _is_write_tool(name):
@@ -386,23 +414,25 @@ def mcp_chat_stream():
         with _app.app_context():
             try:
                 # Send thinking indicator
-                yield f'data: {json.dumps({"type": "thinking", "content": "Procesando..."})}\n\n'
+                yield f'data: {json.dumps({"type": "thinking", "content": "Evaluando tu petición..."})}\n\n'
 
                 tools = get_tools_for_mode(mode, user.role)
                 tool_prompt = _build_tool_prompt(tools)
-                system_prompt = SYSTEM_PROMPTS.get(user.role, SYSTEM_PROMPTS['jugador'])
-                full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
+                base_prompt = resolve_system_prompt(user.role, user_id=user.id, mode=mode)
+                full_system = get_current_date_context() + '\n\n' + base_prompt + '\n\n' + tool_prompt
                 messages = [{'role': 'system', 'content': full_system}]
 
                 if history:
-                    for h in history[-8:]:
+                    for h in history[-5:]:
                         messages.append({'role': h['role'], 'content': h['content']})
 
                 messages.append({'role': 'user', 'content': message})
 
                 tool_calls_log = []
                 last_result_str = ''
+                streamed_text = ''
                 confirmed_tool = data.get('confirmed_tool') or {}
+                corrections = 0
 
                 # If the user confirmed a pending write action in the modal,
                 # execute it now and feed the real result back into the conversation
@@ -414,7 +444,7 @@ def mcp_chat_stream():
                         f'<function={cname}{json.dumps(cargs, ensure_ascii=False)}</function>'
                     )
                     if _requires_confirmation(cname):
-                        msg = {'type': 'thinking', 'content': 'Ejecutando acción confirmada...'}
+                        msg = {'type': 'thinking', 'content': f'Ejecutando la acción confirmada: llamando a {cname}...'}
                         yield f'data: {json.dumps(msg)}\n\n'
                         tc_data = {'type': 'tool_call', 'name': cname, 'args': cargs}
                         yield f'data: {json.dumps(tc_data, ensure_ascii=False)}\n\n'
@@ -437,7 +467,8 @@ def mcp_chat_stream():
                                     f'{last_result_str}\n\n'
                                     f'IMPORTANT: {cname} was ALREADY executed successfully. '
                                     f'Do NOT call the tool again. Respond to the user now using '
-                                    f'ONLY the exact values above. '
+                                    f'ONLY the exact values above, copying names and numbers EXACTLY as given '
+                                    f'(never adapt, translate or merge names/emails). '
                                     f'If a field is missing, say "no disponible".'
                                 ),
                             }
@@ -456,6 +487,7 @@ def mcp_chat_stream():
                             full_content += chunk
                             clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
                             if clean.strip():
+                                streamed_text += clean
                                 yield f'data: {json.dumps({"type": "chunk", "content": clean}, ensure_ascii=False)}\n\n'
 
                         if not full_content.strip():
@@ -468,9 +500,11 @@ def mcp_chat_stream():
                         if tool_name:
                             # Never re-execute a tool that was already confirmed & run above.
                             if confirmed_tool.get('name') and tool_name == confirmed_tool['name'] and last_result_str:
-                                msg = {'type': 'thinking', 'content': 'Procesando resultado...'}
+                                msg = {'type': 'thinking', 'content': f'Analizando el resultado de {tool_name}...'}
                                 yield f'data: {json.dumps(msg)}\n\n'
-                                tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
+                                tool_call_match = re.search(
+                                    r'<function=.*?(?:</function>|/\s*>)', full_content, re.DOTALL
+                                )
                                 clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
                                 messages.append({'role': 'assistant', 'content': clean_assistant})
                                 messages.append(
@@ -480,7 +514,7 @@ def mcp_chat_stream():
                                             f'[REAL Tool {tool_name} result — use ONLY this data, '
                                             f'do NOT invent anything]:\n'
                                             f'{last_result_str}\n\n'
-                                            f'Respond to the user using ONLY the exact values above. '
+                                            f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
                                             f'If a field is missing, say "no disponible".'
                                         ),
                                     }
@@ -522,7 +556,7 @@ def mcp_chat_stream():
 
                             result_str = _trim_tool_result(result)
                             last_result_str = result_str
-                            tool_call_match = re.search(r'<function=.*?</function>', full_content, re.DOTALL)
+                            tool_call_match = re.search(r'<function=.*?(?:</function>|/\s*>)', full_content, re.DOTALL)
                             clean_assistant = tool_call_match.group(0) if tool_call_match else full_content
                             messages.append({'role': 'assistant', 'content': clean_assistant})
                             messages.append(
@@ -532,7 +566,7 @@ def mcp_chat_stream():
                                         f'[REAL Tool {tool_name} result — use ONLY this data, '
                                         f'do NOT invent anything]:\n'
                                         f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above. '
+                                        f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
                                         f'If a field is missing, say "no disponible".'
                                     ),
                                 }
@@ -543,7 +577,31 @@ def mcp_chat_stream():
                                 yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
 
                             # Send thinking indicator for next iteration
-                            yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
+                            yield f'data: {json.dumps({"type": "thinking", "content": f"Analizando el resultado de {tool_name}..."})}\n\n'
+                            continue
+
+                        # No more tool calls — check if the model affirmed a system datum
+                        # without having called any tool.  If so, re-prompt up to 2 times.
+                        clean_final = re.sub(r'<function=\w+.*?</function>', '', full_content).strip()
+                        if (
+                            not confirmed_tool.get('name')
+                            and corrections < 2
+                            and _DATA_CLAIM_RE.search(clean_final)
+                            and not tool_calls_log
+                        ):
+                            corrections += 1
+                            messages.append(
+                                {
+                                    'role': 'user',
+                                    'content': (
+                                        '¡ALTO! Tu respuesta afirma un dato del sistema (cantidad, lista o estado), '
+                                        'pero NO ejecutaste ninguna herramienta en este turno. Eso está PROHIBIDO. '
+                                        'Vuelve a emitir la llamada a la herramienta correspondiente '
+                                        '(formato: <function=nombre{"param": "valor"}</function>) y espera su resultado real.'
+                                    ),
+                                }
+                            )
+                            yield f'data: {json.dumps({"type": "thinking", "content": "Los datos deben venir de una herramienta. Reintentando..."})}\n\n'
                             continue
 
                         # No more tool calls — final response already streamed
@@ -562,7 +620,9 @@ def mcp_chat_stream():
                                     # Never re-execute an already-confirmed tool.
                                     if confirmed_tool.get('name') and tn == confirmed_tool['name'] and last_result_str:
                                         yield f'data: {json.dumps(msg)}\n\n'
-                                        tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                                        tool_call_match = re.search(
+                                            r'<function=.*?(?:</function>|/\s*>)', failed_gen, re.DOTALL
+                                        )
                                         clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
                                         messages.append({'role': 'assistant', 'content': clean_assistant})
                                         messages.append(
@@ -571,7 +631,7 @@ def mcp_chat_stream():
                                                 'content': (
                                                     f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
                                                     f'{last_result_str}\n\n'
-                                                    f'Respond to the user using ONLY the exact values above. '
+                                                    f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
                                                     f'If a field is missing, say "no disponible".'
                                                 ),
                                             }
@@ -606,7 +666,9 @@ def mcp_chat_stream():
 
                                     result_str = _trim_tool_result(result)
                                     last_result_str = result_str
-                                    tool_call_match = re.search(r'<function=.*?</function>', failed_gen, re.DOTALL)
+                                    tool_call_match = re.search(
+                                        r'<function=.*?(?:</function>|/\s*>)', failed_gen, re.DOTALL
+                                    )
                                     clean_assistant = tool_call_match.group(0) if tool_call_match else failed_gen
                                     messages.append({'role': 'assistant', 'content': clean_assistant})
                                     messages.append(
@@ -615,7 +677,7 @@ def mcp_chat_stream():
                                             'content': (
                                                 f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
                                                 f'{result_str}\n\n'
-                                                f'Respond to the user using ONLY the exact values above. '
+                                                f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
                                                 f'If a field is missing, say "no disponible".'
                                             ),
                                         }
@@ -629,6 +691,17 @@ def mcp_chat_stream():
                         if iteration >= 2:
                             yield f'data: {json.dumps({"type": "text", "content": f"Error: {error_str[:200]}"})}\n\n'
                             break
+
+                if not tool_calls_log and (
+                    _ACTION_CLAIM_RE.search(streamed_text) or _FAKE_VERIFY_RE.search(streamed_text)
+                ):
+                    warning = (
+                        '\n\n⚠️ *Aviso:* esta respuesta afirmaba una acción o un dato de la base de datos, '
+                        'pero en este turno NO se ejecutó ninguna herramienta del sistema, así que '
+                        'esa afirmación puede ser errónea. Si esperabas una acción o un dato real, '
+                        'repítelo por favor.'
+                    )
+                    yield f'data: {json.dumps({"type": "text", "content": warning}, ensure_ascii=False)}\n\n'
 
                 yield f'data: {json.dumps({"type": "done", "tool_calls": tool_calls_log}, ensure_ascii=False)}\n\n'
 

@@ -674,6 +674,66 @@ def health_llm_config_update():
     return jsonify({'updated': updated, 'errors': errors})
 
 
+@health_bp.route('/health/notifications/config', methods=['GET', 'POST'])
+def health_notifications_config():
+    """OCP: Centro de Operaciones puede configurar numero destino SMS + plantilla SMS/WhatsApp del servicio de notificaciones."""
+    import os
+
+    if request.method == 'GET':
+        return jsonify(
+            {
+                'destination': (
+                    current_app.config.get('NOTIFICATION_SMS_DESTINATION')
+                    or os.environ.get('NOTIFICATION_SMS_DESTINATION')
+                    or ''
+                ),
+                'sms_template': (
+                    current_app.config.get('NOTIFICATION_SMS_TEMPLATE')
+                    or os.environ.get('NOTIFICATION_SMS_TEMPLATE')
+                    or ''
+                ),
+                'whatsapp_template': (
+                    current_app.config.get('NOTIFICATION_WHATSAPP_TEMPLATE')
+                    or os.environ.get('NOTIFICATION_WHATSAPP_TEMPLATE')
+                    or ''
+                ),
+            }
+        )
+
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+    from app.models import User
+
+    try:
+        verify_jwt_in_request(locations=['cookies', 'headers'])
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid))
+        if not user or user.role not in ('admin', 'supervisor'):
+            return jsonify({'error': 'No autorizado'}), 403
+    except Exception:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    data = request.get_json(silent=True) or {}
+    updated = []
+    errors = []
+
+    for key_name, env_key in [
+        ('destination', 'NOTIFICATION_SMS_DESTINATION'),
+        ('sms_template', 'NOTIFICATION_SMS_TEMPLATE'),
+        ('whatsapp_template', 'NOTIFICATION_WHATSAPP_TEMPLATE'),
+    ]:
+        if key_name in data and data[key_name]:
+            new_val = str(data[key_name])
+            os.environ[env_key] = new_val
+            current_app.config[env_key] = new_val
+            updated.append(key_name)
+
+    if updated:
+        current_app.logger.info(f'  Notification config updated (Centro de Operaciones OCP): {updated}')
+
+    return jsonify({'updated': updated, 'errors': errors})
+
+
 @health_bp.route('/health/debug/routes', methods=['GET'])
 def debug_routes():
     rules = []

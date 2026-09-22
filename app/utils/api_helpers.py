@@ -1,6 +1,24 @@
 from flask import g, jsonify, request
 
 
+def _is_api_request() -> bool:
+    path = request.path or ''
+    if '/api/' in path:
+        return True
+    if getattr(g, 'is_api', False):
+        return True
+    if request.blueprint == 'api':
+        return True
+    if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+        return True
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return True
+    if request.is_json:
+        return True
+    accept = request.headers.get('Accept', '')
+    return '*/*' in accept
+
+
 def api_response(success=True, data=None, error=None, status=200):
     payload = {
         'success': bool(success),

@@ -6,6 +6,7 @@ from app.models.chat import *
 from app.models.contract import *
 from app.models.faq import Faq as Faq
 from app.models.game import *
+from app.models.holiday import Holiday as Holiday
 from app.models.incidente import *
 from app.models.kanban import *
 from app.models.notification import *
