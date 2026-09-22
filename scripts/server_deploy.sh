@@ -40,11 +40,15 @@ if [ "$BACKEND" = "1" ]; then
   log "Pulling origin/main..."
   if cd "$DEPLOY_ROOT" && git fetch origin main 2>>"$LOG_FILE" && git reset --hard origin/main 2>>"$LOG_FILE"; then
     log "git reset to $(git rev-parse --short HEAD)"
-    log "Restarting moscowle service..."
-    if ${SUDO_CMD} -n systemctl restart moscowle >>"$LOG_FILE" 2>&1; then
-      log "moscowle restarted"
+    log "Scheduling moscowle restart (detached systemd-run)..."
+    # The deploy script runs inside the moscowle service cgroup; a direct
+    # restart would kill this script mid-run. systemd-run spawns a transient
+    # unit outside that cgroup, so we survive the restart.
+    if ${SUDO_CMD} -n systemd-run --collect --unit="moscowle-restart-$(date +%s)" \
+        /bin/systemctl restart moscowle >>"$LOG_FILE" 2>&1; then
+      log "moscowle restart scheduled"
     else
-      log "ERROR: systemctl restart moscowle failed"
+      log "ERROR: systemd-run restart scheduling failed"
       FAILED=1
     fi
   else
