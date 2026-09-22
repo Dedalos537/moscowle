@@ -52,6 +52,9 @@ def deploy_webhook():
         frontend_file.save(TAR_STAGING)
         args.extend(['--frontend', TAR_STAGING])
 
+    app_obj = current_app._get_current_object()
+    result_flag = {'ok': False}
+
     def _run():
         env = dict(os.environ)
         try:
@@ -64,8 +67,11 @@ def deploy_webhook():
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
             )
+            result_flag['ok'] = True
         except Exception as exc:
-            current_app.logger.error(f'deploy webhook spawn error: {exc}')
+            with app_obj.app_context():
+                current_app.logger.error(f'deploy webhook spawn error: {exc}')
+            app_obj.logger.info(f'  Deploy triggered: backend={backend} frontend={bool(frontend_file)}')
 
     threading.Thread(target=_run, daemon=True).start()
     current_app.logger.info(f'  Deploy triggered: backend={backend} frontend={bool(frontend_file)}')
