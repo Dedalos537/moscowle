@@ -64,6 +64,8 @@ jobs:
           test "$code" = "200"
       - name: Check frontend /app/
         run: |
-          code=$(curl -s -o /tmp/app.html -w "%{http_code}" "https://moscowle.centrojuanpabloii.com/app/")
+          code=$(curl -s -o /tmp/app.html -w "%{http_code}" "https://api-centrojuanpabloii.online/app/")
           echo "Frontend /app/ HTTP $code"
+          grep -q '<base href="/app/">' /tmp/app.html
+          grep -q 'guardian_name' /tmp/app.html || true
           test "$code" = "200"

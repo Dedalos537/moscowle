@@ -6,7 +6,10 @@
 set -u
 
 DEPLOY_ROOT="/home/diego/moscowle_ia"
-FRONTEND_ROOT="/var/www/moscowle/app"
+# Flask serves the SPA from here -> public at api-centrojuanpabloii.online/app/
+SPA_FRONTEND_ROOT="${DEPLOY_ROOT}/edysync/dist/edysync/browser"
+# nginx fallback (LAN) -> http://192.168.1.41/app/
+NGINX_FRONTEND_ROOT="/var/www/moscowle/app"
 OBSIDIAN_DIR="${DEPLOY_ROOT}/docs/obsidian_graph/Deployments"
 LOG_FILE="${DEPLOY_ROOT}/logs/auto_deploy.log"
 SUDO_CMD=""
@@ -63,16 +66,19 @@ if [ -n "$FRONTEND_TAR" ] && [ -f "$FRONTEND_TAR" ]; then
   mkdir -p "$STAGE"
   if tar -xzf "$FRONTEND_TAR" -C "$STAGE"; then
     log "Extracted frontend dist (stage)"
-    if rsync -a --delete "$STAGE/" "$FRONTEND_ROOT/"; then
-      log "Frontend synced to $FRONTEND_ROOT"
-      if ${SUDO_CMD} -n /usr/bin/systemctl reload nginx >>"$LOG_FILE" 2>&1; then
-        log "nginx reloaded"
+    for target in "$SPA_FRONTEND_ROOT" "$NGINX_FRONTEND_ROOT"; do
+      mkdir -p "$target"
+      if rsync -a --delete "$STAGE/" "$target/"; then
+        log "Frontend synced to $target"
       else
-        log "ERROR: nginx reload failed"
+        log "ERROR: rsync frontend failed -> $target"
         FAILED=1
       fi
+    done
+    if ${SUDO_CMD} -n /usr/bin/systemctl reload nginx >>"$LOG_FILE" 2>&1; then
+      log "nginx reloaded"
     else
-      log "ERROR: rsync frontend failed"
+      log "ERROR: nginx reload failed"
       FAILED=1
     fi
   else
