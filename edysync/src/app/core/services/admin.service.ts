@@ -351,6 +351,10 @@ export class AdminService {
     return this.http.post<ApiResponse>('/admin/api/expenses/create', formData);
   }
 
+  deleteExpense(expenseId: number): Observable<ApiResponse> {
+    return this.http.delete<ApiResponse>(`/admin/api/expenses/${expenseId}`);
+  }
+
   getContactMessages(): Observable<{ success: boolean; data: ContactMessage[] }> {
     return this.http.get<{ success: boolean; data: ContactMessage[] }>('/admin/api/contact-messages');
   }

@@ -70,8 +70,8 @@ def handle_get_server_logs(lines=100, **kwargs):
     try:
         # Intentamos leer via journalctl (estándar en Ubuntu para servicios systemd)
         # Asumimos que el servicio se llama 'moscowle'
-        result = subprocess.run(
-            ['journalctl', '-u', 'moscowle', '-n', str(lines), '--no-pager'],
+        result = subprocess.run(  # noqa: S603
+            ['journalctl', '-u', 'moscowle', '-n', str(lines), '--no-pager'],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=10,
@@ -1390,16 +1390,15 @@ def handle_assign_therapist_to_sede(
     else:
         return {'error': 'Necesito el terapeuta: proporciona therapist_id o therapist_name.'}
 
-    if action == 'remover':
-        if not sede_id and not sede_name:
-            therapist.assigned_sedes = []
-            db.session.commit()
-            return {
-                'success': True,
-                'message': f'{therapist.username} fue removido de todas sus sedes.',
-                'therapist': {'id': therapist.id, 'username': therapist.username},
-                'sedes': [],
-            }
+    if action == 'remover' and not sede_id and not sede_name:
+        therapist.assigned_sedes = []
+        db.session.commit()
+        return {
+            'success': True,
+            'message': f'{therapist.username} fue removido de todas sus sedes.',
+            'therapist': {'id': therapist.id, 'username': therapist.username},
+            'sedes': [],
+        }
 
     if sede_id:
         if int(sede_id) == 0:
@@ -1415,7 +1414,7 @@ def handle_assign_therapist_to_sede(
         if not sede or not sede.is_active:
             return {'error': f'No existe una sede activa con ID {sede_id}.'}
     elif sede_name:
-        sedes = Sede.query.filter(Sede.name.ilike(f'%{sede_name.strip()}%'), Sede.is_active == True).all()
+        sedes = Sede.query.filter(Sede.name.ilike(f'%{sede_name.strip()}%'), Sede.is_active).all()
         if not sedes:
             return {'error': f'No encontré ninguna sede llamada "{sede_name}". Usa list_sedes para ver la lista.'}
         if len(sedes) > 1:
@@ -1854,8 +1853,9 @@ def handle_list_expenses(month=None, **kwargs):
         if month:
             url += f'?month={month}'
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
-        data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'expenses': data}
+        payload = resp.get_json() if resp else {}
+        data = payload.get('data', []) if isinstance(payload, dict) else []
+        return {'success': True, 'count': len(data), 'expenses': data}
     except Exception as e:
         return {'error': str(e)}
 
@@ -1870,7 +1870,7 @@ def handle_list_expenses(month=None, **kwargs):
             'amount': {'type': 'number', 'description': 'Monto en soles'},
             'category': {
                 'type': 'string',
-                'description': 'Categoria: alquiler, servicios, suministros, personal, otro',
+                'description': 'Categoria: therapist_payment, operational, bonus, other (default: operational)',
             },
         },
         'required': ['description', 'amount'],
@@ -1878,14 +1878,20 @@ def handle_list_expenses(month=None, **kwargs):
     category='write',
     roles=ROLES_ADMIN,
 )
-def handle_create_expense(description, amount, category='otro', **kwargs):
+def handle_create_expense(description, amount, category='operational', **kwargs):
     try:
+        from datetime import datetime as _dt
+
+        from app.services.financial_service import normalize_expense_category
+
         resp = _api_post(
             '/admin/api/expenses/create',
             json={
                 'description': description,
                 'amount': float(amount),
-                'category': category,
+                'category': normalize_expense_category(category),
+                'date': _dt.now().strftime('%Y-%m-%d'),
+                'method': 'other',
             },
             user_id=kwargs.get('_user_id'),
             role=kwargs.get('_role'),
@@ -1893,7 +1899,7 @@ def handle_create_expense(description, amount, category='otro', **kwargs):
         data = resp.get_json() if resp else {}
         if resp and resp.status_code < 400:
             return {'success': True, 'message': f'Gasto de S/. {amount:.2f} registrado', 'data': data}
-        return {'error': data.get('message', 'Error al registrar gasto')}
+        return {'error': data.get('error') or data.get('message') or 'Error al registrar gasto'}
     except Exception as e:
         return {'error': str(e)}
 

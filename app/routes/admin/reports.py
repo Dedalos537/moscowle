@@ -358,14 +358,27 @@ def ai_chat_process():
             if not amt:
                 return jsonify({'response': friendly, 'status': 'info'})
 
+            try:
+                amt = float(amt)
+            except (ValueError, TypeError):
+                return jsonify(
+                    {
+                        'response': f'No pude registrar el gasto: el monto "{amt}" no es un número válido.',
+                        'status': 'error',
+                    }
+                ), 400
+
+            from app.services.financial_service import normalize_expense_category
+
             finance_service.create_expense(
                 {
-                    'category': cat,
-                    'amount': float(amt),
+                    'category': normalize_expense_category(cat),
+                    'amount': amt,
                     'date': datetime.now().strftime('%Y-%m-%d'),
                     'description': desc,
-                    'method': 'IA/Chat',
-                }
+                    'method': 'other',
+                },
+                created_by_id=current_user.id,
             )
 
             notif_service.create_notification(

@@ -73,6 +73,7 @@
               <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Categoria</th>
               <th class="px-6 py-4 text-left text-xs font-bold text-on-surface-variant/60 uppercase">Descripcion</th>
               <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Monto</th>
+              <th class="px-6 py-4 text-right text-xs font-bold text-on-surface-variant/60 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border/10">
@@ -108,9 +109,16 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 text-right font-mono font-bold text-on-surface">S/ {{ e.amount.toFixed(2) }}</td>
+                <td class="px-6 py-4 text-right">
+                  <button (click)="deleteExpense(e)" title="Eliminar gasto"
+                    class="p-2 text-on-surface-variant/60 hover:text-error transition-colors cursor-pointer"
+                    [attr.aria-label]="'Eliminar gasto'">
+                    <fa-icon [icon]="['fas', 'trash']" class="text-sm"></fa-icon>
+                  </button>
+                </td>
               </tr>
             } @empty {
-              <tr><td colspan="4" class="px-6 py-8 text-center text-on-surface-variant/60">No hay gastos registrados.</td></tr>
+              <tr><td colspan="5" class="px-6 py-8 text-center text-on-surface-variant/60">No hay gastos registrados.</td></tr>
             }
           </tbody>
         </table>

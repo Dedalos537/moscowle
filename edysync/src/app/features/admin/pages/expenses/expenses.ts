@@ -171,4 +171,15 @@ export class Expenses implements OnInit, OnDestroy {
       })
     );
   }
+
+  deleteExpense(expense: Expense) {
+    const label = expense.description || expense.category.replace('_', ' ');
+    if (!confirm(`¿Eliminar este gasto?\n\n${label} — S/ ${expense.amount.toFixed(2)}`)) return;
+    this.subscriptions.add(
+      this.adminService.deleteExpense(expense.id).subscribe({
+        next: () => this.loadData(),
+        error: () => this.cdr.markForCheck(),
+      })
+    );
+  }
 }

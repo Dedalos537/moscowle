@@ -76,6 +76,7 @@ class FinanceService:
                 .filter(
                     Expense.therapist_id.in_(therapist_ids),
                     Expense.category == 'therapist_payment',
+                    Expense.is_active.is_(True),
                     Expense.date >= start_date,
                     Expense.date < end_date,
                 )

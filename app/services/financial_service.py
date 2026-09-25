@@ -11,6 +11,45 @@ from app.services.automation.financial_analysis import PatientFinancialStatus
 
 logger = logging.getLogger(__name__)
 
+EXPENSE_CATEGORY_MAP = {
+    # IA / parse libre -> categoría estándar del sistema
+    'therapist_payment': 'therapist_payment',
+    'pago_terapeuta': 'therapist_payment',
+    'pago terapeuta': 'therapist_payment',
+    'pago-terapeuta': 'therapist_payment',
+    'personal': 'therapist_payment',
+    'salario': 'therapist_payment',
+    'sueldo': 'therapist_payment',
+    'operational': 'operational',
+    'operativo': 'operational',
+    'operación': 'operational',
+    'alquiler': 'operational',
+    'servicios': 'operational',
+    'suministros': 'operational',
+    'rent': 'operational',
+    'mantenimiento': 'operational',
+    'utility': 'operational',
+    'bonus': 'bonus',
+    'bonificación': 'bonus',
+    'bono': 'bonus',
+    'other': 'other',
+    'otro': 'other',
+    'otros': 'other',
+    'gasto': 'other',
+}
+
+
+def normalize_expense_category(raw):
+    """Normaliza una categoría de gasto (IA / formulario libre) a una estándar.
+
+    Devuelve 'other' si la categoría no se reconoce, en vez de sembrar valores
+    ajenos que rompen los filtros y el balance de terapeutas.
+    """
+    if not raw:
+        return 'other'
+    key = str(raw).strip().lower()
+    return EXPENSE_CATEGORY_MAP.get(key, 'other')
+
 
 class FinancialService:
     def __init__(self):
@@ -165,8 +204,10 @@ class FinancialService:
             'balance': round(float(balance), 2),
         }
 
-    def get_expenses(self, start_date=None, end_date=None, category=None):
+    def get_expenses(self, start_date=None, end_date=None, category=None, only_active=True):
         q = Expense.query
+        if only_active:
+            q = q.filter(Expense.is_active.is_(True))
         if start_date:
             q = q.filter(Expense.date >= start_date)
         if end_date:
@@ -175,19 +216,20 @@ class FinancialService:
             q = q.filter(Expense.category == category)
         return q.order_by(Expense.date.desc()).all()
 
-    def create_expense(self, data):
+    def create_expense(self, data, created_by_id=None):
         try:
             date_val = data.get('date')
             if isinstance(date_val, str):
                 date_val = datetime.strptime(date_val, '%Y-%m-%d')
             exp = Expense(
-                category=data.get('category'),
+                category=normalize_expense_category(data.get('category')),
                 amount=float(data.get('amount')),
                 date=date_val,
                 description=data.get('description'),
                 therapist_id=data.get('therapist_id'),
                 method=data.get('method'),
-                receipt_image_path=data.get('receipt_image_path')
+                receipt_image_path=data.get('receipt_image_path'),
+                created_by_id=created_by_id,
             )
             db.session.add(exp)
             db.session.commit()
@@ -196,8 +238,10 @@ class FinancialService:
             return False, str(e)
 
     def get_therapist_financials(self, month=None, year=None):
-        if not month: month = datetime.now().month
-        if not year: year = datetime.now().year
+        if not month:
+            month = datetime.now().month
+        if not year:
+            year = datetime.now().year
         therapists = User.query.filter_by(role='terapista').filter_by(is_active=True).all()
         results = []
         start_date = datetime(year, month, 1)
@@ -209,27 +253,36 @@ class FinancialService:
             rate = 0
             if t.salary_base and t.contract_hours and t.contract_hours > 0:
                 rate = t.salary_base / t.contract_hours
-            worked_minutes = db.session.query(func.sum(Appointment.duration_minutes))\
-                .filter(Appointment.therapist_id == t.id)\
-                .filter(Appointment.status == 'completed')\
-                .filter(Appointment.start_time >= start_date)\
-                .filter(Appointment.start_time < end_date)\
-                .scalar() or 0
+            worked_minutes = (
+                db.session.query(func.sum(Appointment.duration_minutes))
+                .filter(Appointment.therapist_id == t.id)
+                .filter(Appointment.status == 'completed')
+                .filter(Appointment.start_time >= start_date)
+                .filter(Appointment.start_time < end_date)
+                .scalar()
+                or 0
+            )
             worked_hours = worked_minutes / 60
             projected_pay = rate * worked_hours
-            paid_amount = db.session.query(func.sum(Expense.amount))\
-                .filter(Expense.therapist_id == t.id)\
-                .filter(Expense.category == 'therapist_payment')\
-                .filter(Expense.date >= start_date)\
-                .filter(Expense.date < end_date)\
-                .scalar() or 0
-            results.append({
-                'therapist': t,
-                'rate': rate,
-                'contract_hours': t.contract_hours,
-                'worked_hours': worked_hours,
-                'projected_pay': projected_pay,
-                'paid': paid_amount,
-                'balance': projected_pay - paid_amount
-            })
+            paid_amount = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(Expense.therapist_id == t.id)
+                .filter(Expense.category == 'therapist_payment')
+                .filter(Expense.is_active.is_(True))
+                .filter(Expense.date >= start_date)
+                .filter(Expense.date < end_date)
+                .scalar()
+                or 0
+            )
+            results.append(
+                {
+                    'therapist': t,
+                    'rate': rate,
+                    'contract_hours': t.contract_hours,
+                    'worked_hours': worked_hours,
+                    'projected_pay': projected_pay,
+                    'paid': paid_amount,
+                    'balance': round(projected_pay - paid_amount, 2),
+                }
+            )
         return results

@@ -178,9 +178,7 @@ class PaymentService:
     def check_and_deactivate_overdue(self):
         """Desactivar usuarios vencidos"""
         today = datetime.utcnow().date()
-        overdue_users = User.query.filter(
-            User.role == 'jugador', User.is_active, User.payment_due_date < today
-        ).all()
+        overdue_users = User.query.filter(User.role == 'jugador', User.is_active, User.payment_due_date < today).all()
 
         count = 0
         for user in overdue_users:
@@ -306,6 +304,7 @@ class PaymentService:
 
         expenses_query = (
             db.session.query(func.sum(Expense.amount))
+            .filter(Expense.is_active.is_(True))
             .filter(Expense.date >= start_date, Expense.date <= end_date)
             .scalar()
         )

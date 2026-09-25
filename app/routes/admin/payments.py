@@ -11,6 +11,7 @@ from app.auth_compat import current_user, login_required
 from app.extensions import db
 from app.models import (
     Appointment,
+    Expense,
     Payment,
     Sede,
     SessionMetrics,
@@ -65,7 +66,7 @@ def create_expense_route():
             file.save(os.path.join(upload_dir, unique_name))
             data['receipt_image_path'] = f'vouchers/{unique_name}'
 
-    success, res = finance_service.create_expense(data)
+    success, res = finance_service.create_expense(data, created_by_id=current_user.id)
 
     if success:
         flash('Gasto registrado, todo ok.', 'success')
@@ -113,6 +114,18 @@ def api_expenses():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     category = request.args.get('category')
+    month = request.args.get('month')
+    if month and not start_date:
+        try:
+            start_date = f'{month}-01'
+            y, m = int(month[:4]), int(month[5:7])
+            if m == 12:
+                end_date = f'{y + 1}-01-01'
+            else:
+                end_date = f'{y:04d}-{m + 1:02d}-01'
+        except (ValueError, IndexError):
+            start_date = None
+            end_date = None
     expenses = finance_service.get_expenses(start_date=start_date, end_date=end_date, category=category)
     result = []
     for e in expenses:
@@ -167,7 +180,7 @@ def api_create_expense():
                 os.makedirs(upload_dir)
             file.save(os.path.join(upload_dir, unique_name))
             data['receipt_image_path'] = f'vouchers/{unique_name}'
-    success, res = finance_service.create_expense(data)
+    success, res = finance_service.create_expense(data, created_by_id=current_user.id)
     if success:
         return jsonify(
             {
@@ -182,6 +195,19 @@ def api_create_expense():
             }
         )
     return jsonify({'success': False, 'error': res}), 400
+
+
+@admin_bp.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
+@login_required
+def api_delete_expense(expense_id):
+    if current_user.role not in ('admin', 'supervisor'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    expense = Expense.query.get(expense_id)
+    if not expense:
+        return jsonify({'success': False, 'error': 'Gasto no encontrado'}), 404
+    expense.is_active = False
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Gasto eliminado'})
 
 
 @admin_bp.route('/api/financial-summary')
