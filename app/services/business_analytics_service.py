@@ -223,7 +223,9 @@ Dame 3 RECOMENDACIONES ESPECÍFICAS para mejorar los horarios y aumentar cobranz
             return {'recommendations': 'IA local no disponible en este entorno'}
 
         response = _ollama_client.chat(
-            model='qwen2.5:1.5b', messages=[{'role': 'user', 'content': context}], options={'temperature': 0.3}
+            model=os.environ.get('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b'),
+            messages=[{'role': 'user', 'content': context}],
+            options={'temperature': 0.3},
         )
 
         recommendations = response['message']['content']
@@ -326,7 +328,9 @@ Responde de forma concisa y basada en estos DATOS REALES. Si la pregunta es sobr
             }
 
         response = _ollama_client.chat(
-            model='qwen2.5:1.5b', messages=[{'role': 'user', 'content': context}], options={'temperature': 0.2}
+            model=os.environ.get('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b'),
+            messages=[{'role': 'user', 'content': context}],
+            options={'temperature': 0.2},
         )
 
         answer = response['message']['content']

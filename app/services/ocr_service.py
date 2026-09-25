@@ -201,7 +201,9 @@ def validate_voucher_with_llama(amount: float, names: list, text_sample: str) ->
         Responde SOLO en JSON: {{"is_valid_amount": boolean, "confidence": 0-1, "note": "breve observación"}}"""
 
         resp = client.chat(
-            model='qwen2.5:1.5b', messages=[{'role': 'user', 'content': prompt}], options={'temperature': 0.1}
+            model=os.environ.get('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b'),
+            messages=[{'role': 'user', 'content': prompt}],
+            options={'temperature': 0.1},
         )
 
         raw = resp['message'].get('content', '').strip()

@@ -93,6 +93,9 @@ class Config:
     GROQ_API_KEY = os.getenv('GROQ_API_KEY')
     LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
     OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
+    OLLAMA_MODEL_ROUTER = os.getenv('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b')
+    OLLAMA_MODEL_TACTICAL = os.getenv('OLLAMA_MODEL_TACTICAL', 'openbmb/minicpm5:q4_K_M')
+    OLLAMA_MODEL_FALLBACK = os.getenv('OLLAMA_MODEL_FALLBACK', 'gemma3:4b')
 
     # ========== AUTO-DEPLOY WEBHOOK ==========
     DEPLOY_WEBHOOK_TOKEN = os.getenv('DEPLOY_WEBHOOK_TOKEN', '')

@@ -19,8 +19,12 @@ from app.services.llm_client import (
 )
 from app.services.mcp_service import (
     MCPService,
+    _build_local_system_prompt,
     _build_tool_prompt,
+    _is_ollama_primary,
+    _is_smalltalk,
     _parse_text_tool_call,
+    _select_local_tools,
     _trim_tool_result,
     get_current_date_context,
     resolve_system_prompt,
@@ -417,9 +421,16 @@ def mcp_chat_stream():
                 yield f'data: {json.dumps({"type": "thinking", "content": "Evaluando tu petición..."})}\n\n'
 
                 tools = get_tools_for_mode(mode, user.role)
-                tool_prompt = _build_tool_prompt(tools)
-                base_prompt = resolve_system_prompt(user.role, user_id=user.id, mode=mode)
-                full_system = get_current_date_context() + '\n\n' + base_prompt + '\n\n' + tool_prompt
+                local_mode = _is_ollama_primary()
+                if local_mode:
+                    local_tools = _select_local_tools(tools, message)
+                    full_system = _build_local_system_prompt(
+                        user.role, user.id, mode, message, selected_tools=local_tools
+                    )
+                else:
+                    tool_prompt = _build_tool_prompt(tools)
+                    base_prompt = resolve_system_prompt(user.role, user_id=user.id, mode=mode)
+                    full_system = get_current_date_context() + '\n\n' + base_prompt + '\n\n' + tool_prompt
                 messages = [{'role': 'system', 'content': full_system}]
 
                 if history:
@@ -483,7 +494,31 @@ def mcp_chat_stream():
                 for iteration in range(6):
                     try:
                         full_content = ''
-                        for chunk in llm_chat_stream(messages, temperature=0.3, max_tokens=4096):
+                        # Small-talk local: responder de una (MiniCPM, sin tools) y terminar.
+                        if local_mode and iteration == 0 and not confirmed_tool.get('name') and _is_smalltalk(message):
+                            for chunk in llm_chat_stream(messages, temperature=0.35, max_tokens=256, phase='tactical'):
+                                full_content += chunk
+                                if chunk.strip():
+                                    streamed_text += chunk
+                                    chunk_data = {'type': 'chunk', 'content': chunk}
+                                    yield f'data: {json.dumps(chunk_data, ensure_ascii=False)}\n\n'
+                            msg = {'type': 'text', 'content': full_content}
+                            yield f'data: {json.dumps(msg)}\n\n'
+                            done_payload = {
+                                'type': 'done',
+                                'has_tool_call': False,
+                            }
+                            yield f'data: {json.dumps(done_payload)}\n\n'
+                            return
+
+                        llm_stream_kwargs = {'temperature': 0.3, 'max_tokens': 4096}
+                        if local_mode:
+                            # Sin resultado REAL previo todavía -> fase route con tools nativas.
+                            local_phase = 'resume' if tool_calls_log or last_result_str else 'route'
+                            llm_stream_kwargs['phase'] = local_phase
+                            if local_phase == 'route' and not confirmed_tool.get('name'):
+                                llm_stream_kwargs['tools'] = local_tools
+                        for chunk in llm_chat_stream(messages, **llm_stream_kwargs):
                             full_content += chunk
                             clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
                             if clean.strip():
@@ -514,7 +549,8 @@ def mcp_chat_stream():
                                             f'[REAL Tool {tool_name} result — use ONLY this data, '
                                             f'do NOT invent anything]:\n'
                                             f'{last_result_str}\n\n'
-                                            f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
+                                            f'Respond to the user using ONLY the exact values above, '
+                                            f'copying names and numbers EXACTLY as given '
                                             f'If a field is missing, say "no disponible".'
                                         ),
                                     }
@@ -566,7 +602,8 @@ def mcp_chat_stream():
                                         f'[REAL Tool {tool_name} result — use ONLY this data, '
                                         f'do NOT invent anything]:\n'
                                         f'{result_str}\n\n'
-                                        f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
+                                        f'Respond to the user using ONLY the exact values above, '
+                                        f'copying names and numbers EXACTLY as given '
                                         f'If a field is missing, say "no disponible".'
                                     ),
                                 }
@@ -577,7 +614,8 @@ def mcp_chat_stream():
                                 yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
 
                             # Send thinking indicator for next iteration
-                            yield f'data: {json.dumps({"type": "thinking", "content": f"Analizando el resultado de {tool_name}..."})}\n\n'
+                            thinking_msg = f'Analizando el resultado de {tool_name}...'
+                            yield f'data: {json.dumps({"type": "thinking", "content": thinking_msg})}\n\n'
                             continue
 
                         # No more tool calls — check if the model affirmed a system datum
@@ -597,11 +635,13 @@ def mcp_chat_stream():
                                         '¡ALTO! Tu respuesta afirma un dato del sistema (cantidad, lista o estado), '
                                         'pero NO ejecutaste ninguna herramienta en este turno. Eso está PROHIBIDO. '
                                         'Vuelve a emitir la llamada a la herramienta correspondiente '
-                                        '(formato: <function=nombre{"param": "valor"}</function>) y espera su resultado real.'
+                                        '(formato: <function=nombre{"param": "valor"}</function>) '
+                                        'y espera su resultado real.'
                                     ),
                                 }
                             )
-                            yield f'data: {json.dumps({"type": "thinking", "content": "Los datos deben venir de una herramienta. Reintentando..."})}\n\n'
+                            thinking_retry = 'Los datos deben venir de una herramienta. Reintentando...'
+                            yield f'data: {json.dumps({"type": "thinking", "content": thinking_retry})}\n\n'
                             continue
 
                         # No more tool calls — final response already streamed
@@ -629,9 +669,11 @@ def mcp_chat_stream():
                                             {
                                                 'role': 'user',
                                                 'content': (
-                                                    f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
+                                                    f'[REAL Tool {tn} result — use ONLY this data, '
+                                                    'do NOT invent anything]:\n'
                                                     f'{last_result_str}\n\n'
-                                                    f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
+                                                    f'Respond to the user using ONLY the exact values above, '
+                                                    'copying names and numbers EXACTLY as given '
                                                     f'If a field is missing, say "no disponible".'
                                                 ),
                                             }
@@ -675,16 +717,21 @@ def mcp_chat_stream():
                                         {
                                             'role': 'user',
                                             'content': (
-                                                f'[REAL Tool {tn} result — use ONLY this data, do NOT invent anything]:\n'
+                                                f'[REAL Tool {tn} result — use ONLY this data, '
+                                                'do NOT invent anything]:\n'
                                                 f'{result_str}\n\n'
-                                                f'Respond to the user using ONLY the exact values above, copying names and numbers EXACTLY as given '
+                                                f'Respond to the user using ONLY the exact values above, '
+                                                'copying names and numbers EXACTLY as given '
                                                 f'If a field is missing, say "no disponible".'
                                             ),
                                         }
                                     )
                                     chips = _next_action_chips(tn)
                                     if chips:
-                                        yield f'data: {json.dumps({"type": "chips", "chips": chips}, ensure_ascii=False)}\n\n'
+                                        chips_payload = json.dumps(
+                                            {'type': 'chips', 'chips': chips}, ensure_ascii=False
+                                        )
+                                        yield f'data: {chips_payload}\n\n'
                                     yield f'data: {json.dumps(msg)}\n\n'
                                     continue
 

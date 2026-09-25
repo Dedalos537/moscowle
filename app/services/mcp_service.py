@@ -1,16 +1,18 @@
 import json
 import logging
+import os
 import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
-from app.services.personality_prompt import PERSONALITY_PROMPT, ROLE_NAMES_ES
+from app.services.personality_prompt import LOCAL_BASE_PROMPT, PERSONALITY_PROMPT, ROLE_NAMES_ES
 from app.services.tools_registry import SAFE_WRITE_TOOLS, TOOL_REGISTRY, execute_tool, get_tools_for_mode
 
 logger = logging.getLogger('app.mcp')
 
 MAX_TOOL_RESULT_CHARS = 1500
+LOCAL_MAX_TOOLS = 14
 
 LIMA_TZ = ZoneInfo('America/Lima')
 
@@ -389,6 +391,223 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
     return result_str
 
 
+def _is_ollama_primary():
+    """True cuando el proveedor activo es Ollama local (qwen/minicpm/gemma)."""
+    try:
+        from flask import current_app
+
+        pref = os.environ.get('LLM_PROVIDER') or current_app.config.get('LLM_PROVIDER')
+    except Exception:
+        pref = os.environ.get('LLM_PROVIDER')
+    return (pref or '').lower() == 'ollama'
+
+
+_INTENT_GROUPS = {
+    'pagos': {
+        'search_patients',
+        'get_payment_history',
+        'register_payment',
+        'register_payment_with_evidence',
+        'cancel_payment',
+        'edit_payment',
+        'get_debtors',
+        'get_current_datetime',
+    },
+    'finanzas': {
+        'get_financial_summary',
+        'compare_periods',
+        'get_user_growth',
+        'get_therapist_financials',
+        'get_monthly_collection',
+        'get_upcoming_installments',
+        'get_payment_history',
+        'get_current_datetime',
+        'get_debtors',
+        'get_monthly_reports',
+    },
+    'sesiones': {
+        'get_sessions',
+        'get_sessions_day',
+        'schedule_programmed_session',
+        'update_session_plan',
+        'cancel_session',
+        'complete_session',
+        'batch_create_sessions',
+        'search_patients',
+        'get_current_datetime',
+    },
+    'pacientes': {
+        'search_patients',
+        'list_patients',
+        'get_patient_detail',
+        'get_patient_stats',
+        'update_patient_profile',
+        'update_patient_details',
+        'create_full_patient',
+        'assign_therapist',
+        'get_therapist_patients',
+        'get_current_datetime',
+    },
+    'usuarios': {
+        'list_users',
+        'get_user_detail',
+        'create_user',
+        'delete_user',
+        'toggle_user_status',
+        'assign_therapist_to_sede',
+        'get_current_datetime',
+    },
+    'incidentes': {
+        'create_incident',
+        'list_incidents',
+        'get_incident_detail',
+        'update_incident_status',
+        'assign_incident',
+        'search_patients',
+        'get_current_datetime',
+    },
+    'mensajeria': {
+        'broadcast_message',
+        'send_direct_message',
+        'get_notifications',
+        'mark_notifications_read',
+        'list_users',
+        'search_patients',
+        'get_current_datetime',
+    },
+    'reportes': {
+        'generate_weekly_report',
+        'get_weekly_summary',
+        'get_monthly_reports',
+        'get_therapist_efficiency',
+        'get_financial_summary',
+        'get_current_datetime',
+    },
+    'contratos': {
+        'list_contracts',
+        'create_service_contract',
+        'get_contract_detail',
+        'get_contracts_filtered',
+        'get_due_installments',
+        'update_contract',
+        'cancel_contract',
+        'reactivate_contract',
+        'get_current_datetime',
+    },
+    'general': {
+        'search_patients',
+        'list_patients',
+        'list_users',
+        'get_patient_detail',
+        'get_current_datetime',
+        'list_sedes',
+        'get_notifications',
+    },
+}
+
+_INTENT_KEYWORDS = {
+    'pagos': ('pago', 'pagar', 'pagó', 'pagos', 'abono', 'deuda', 'deudor', 'saldo', 'voucher', 'comprobante'),
+    'finanzas': (
+        'financ',
+        'ingreso',
+        'egreso',
+        'mensual',
+        'utilidad',
+        'ganancia',
+        'recaud',
+        'deuda',
+        'deudor',
+        'colecci',
+    ),
+    'sesiones': ('sesi', 'cita', 'agenda', 'agendar', 'programar', 'turno', 'horario', 'atender'),
+    'pacientes': ('paciente', 'busca', 'buscar', 'ficha', 'perfil', 'historia'),
+    'usuarios': ('usuario', 'staff', 'terapeuta', 'cuenta', 'acceso', 'alta', 'baja'),
+    'incidentes': ('incidente', 'queja', 'reclamo', 'reporta', 'incidenc'),
+    'mensajeria': ('mensaj', 'notificac', 'avis', 'contactar', 'enviar'),
+    'reportes': ('reporte', 'resumen', 'semanal', 'semana', 'mensual'),
+    'contratos': ('contrato', 'plan', 'cuota', 'instalment', 'matricula', 'pension'),
+}
+
+_ALWAYS_LOCAL_TOOLS = {'get_current_datetime', 'search_patients'}
+
+
+_SMALLTALK_RE = re.compile(
+    r'^\s*[¿¡]?\s*(?:'
+    r'hola[\s\.,!?]*.*|buenas(?: tardes| noches| dias)?[\s\.,!?]*.*|'
+    r'buenos dias[\s\.,!?]*.*|gracias?[\s\.,!?]*.*|ok|okay|dale|perfecto|listo|genial|excelente|'
+    r'bien y tu\??|como estas|cómo estás|chau|hasta luego|bye|adios|adiós|'
+    r'(?:quien|qué|que) (?:eres|sos|es)\??[^\n]{0,30}|a (?:que|qué) te dedicas|que sabes hacer|qué sabes hacer|'
+    r'(?:eres|sois|es) (?:un|una|el|la) (?:bot|robot|ia|asistente)|test|prueba'
+    r')[\s\.,!?]*$',
+    re.IGNORECASE,
+)
+
+
+def _is_smalltalk(message):
+    """True si el mensaje es pura conversación casual (no requiere tools)."""
+    return bool(_SMALLTALK_RE.match((message or '').strip()))
+
+
+def _select_local_tools(tools, message):
+    """Selecciona un subconjunto relevante de tools para el LLM local (CPU):
+    filtra por intención del mensaje y siempre incluye los esenciales.
+    Mantiene el prompt pequeño -> prefill rápido (clave para <10s)."""
+    msg = (message or '').lower()
+    wanted = set(_ALWAYS_LOCAL_TOOLS)
+    hit = False
+    for intent, keywords in _INTENT_KEYWORDS.items():
+        if any(k in msg for k in keywords):
+            wanted |= _INTENT_GROUPS.get(intent, set())
+            hit = True
+    if not hit:
+        wanted |= _INTENT_GROUPS['general']
+    selected = [t for t in tools if t['function']['name'] in wanted]
+    if len(selected) > LOCAL_MAX_TOOLS:
+        extra = [t for t in selected if t['function']['name'] not in _ALWAYS_LOCAL_TOOLS]
+        extra.sort(key=lambda t: TOOL_REGISTRY.get(t['function']['name'], {}).get('category', 'read') != 'read')
+        selected = [t for t in selected if t['function']['name'] in _ALWAYS_LOCAL_TOOLS] + extra[
+            : LOCAL_MAX_TOOLS - len(_ALWAYS_LOCAL_TOOLS)
+        ]
+    return [_compact_local_schema(t) for t in selected]
+
+
+def _compact_local_schema(tool):
+    """Miniatura del schema para el router local: sin ejemplos, desc corta.
+    Reduce el prefill (y por tanto la latencia) del modelo en CPU."""
+    fn = tool['function']
+    params = fn.get('parameters', {}).get('properties', {})
+    compact_props = {}
+    for pname, pinfo in params.items():
+        compact_props[pname] = {'type': pinfo.get('type', 'string')}
+    desc = (fn.get('description') or '')[:120]
+    return {
+        'type': 'function',
+        'function': {
+            'name': fn['name'],
+            'description': desc,
+            'parameters': {
+                'type': 'object',
+                'properties': compact_props,
+                'required': list(fn.get('parameters', {}).get('required', [])),
+            },
+        },
+    }
+
+
+def _build_local_system_prompt(user_role, user_id, mode, message, selected_tools=None):
+    """Prompt sistema COMPACTO para Ollama local: personalidad corta + tools del turno."""
+    base = LOCAL_BASE_PROMPT.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
+    base = base.replace('{rol_id}', user_role)
+    base = base.replace('{user_id}', str(user_id or ''))
+    if selected_tools:
+        names = ', '.join(t['function']['name'] for t in selected_tools)
+    else:
+        allowed = get_tools_for_mode(mode, user_role)
+        names = ', '.join(t['function']['name'] for t in allowed) or 'ninguna'
+    base += f'\n\nHerramientas disponibles este turno: {names}'
+    return get_current_date_context() + '\n\n' + base
+
+
 def _build_tool_prompt(tools):
     """Build a compact text listing of available tools."""
     lines = [
@@ -419,42 +638,56 @@ class MCPService:
     def process_message(
         self, message, user_role, user_id, mode='grande', history=None, confirmed_tool=None, telegram_mode=False
     ):
-        system_prompt = resolve_system_prompt(user_role, user_id=user_id, mode=mode)
+        local_mode = _is_ollama_primary()
 
-        if telegram_mode:
-            system_prompt += (
-                '\n\nTELEGRAM MODE:\n'
-                '- You are responding via Telegram chat.\n'
-                '- Keep responses SHORT (max 10 lines).\n'
-                '- Use emoji sparingly for emphasis.\n'
-                '- Format with *bold* and _italic_ for readability.\n'
-                '- For lists, use bullet points.\n'
-                '- If data is long, summarize with count + top 3 items.\n'
-                '- Always end with a clear answer or next step.\n'
-            )
-
-        # Chasqui MCP auto-fill: teach the bot to read logs and self-correct.
-        try:
-            from app.models.bot_config import BotConfig
-
-            if BotConfig.get_or_create().mcp_prompt_enabled:
+        if local_mode:
+            tools = get_tools_for_mode(mode, user_role)
+            local_tools = _select_local_tools(tools, message)
+            system_prompt = _build_local_system_prompt(user_role, user_id, mode, message, selected_tools=local_tools)
+            if telegram_mode:
                 system_prompt += (
-                    '\n\nSELF-SUPERVISION & AUTOCORRECCIÓN (MCP):\n'
-                    '- Si no estás seguro de un dato o una operación falló, NO inventes respuestas.\n'
-                    '- Ante un error de ejecución, usa las herramientas de logs/disponibles para REVISAR el estado '
-                    'real antes de responder al usuario.\n'
-                    '- Si detectas que una consulta devolvió datos incompletos o un error, explícalo con claridad '
-                    'y sugiere el siguiente paso concreto.\n'
-                    '- Nunca afirmes que una operación se completó si no tienes confirmación de la herramienta.\n'
-                    '- Si hay un fallo recurrente, indica que se revisará y sugiere re-intentar.\n'
+                    '\n\nTELEGRAM: responde corto (máx 10 líneas), usa *negrita* y bullets. '
+                    'Si los datos son largos, resume con conteo + top 3.'
                 )
-        except Exception:
-            pass
+        else:
+            system_prompt = resolve_system_prompt(user_role, user_id=user_id, mode=mode)
 
-        tools = get_tools_for_mode(mode, user_role)
-        tool_prompt = _build_tool_prompt(tools)
+            if telegram_mode:
+                system_prompt += (
+                    '\n\nTELEGRAM MODE:\n'
+                    '- You are responding via Telegram chat.\n'
+                    '- Keep responses SHORT (max 10 lines).\n'
+                    '- Use emoji sparingly for emphasis.\n'
+                    '- Format with *bold* and _italic_ for readability.\n'
+                    '- For lists, use bullet points.\n'
+                    '- If data is long, summarize with count + top 3 items.\n'
+                    '- Always end with a clear answer or next step.\n'
+                )
 
-        full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
+            # Chasqui MCP auto-fill: teach the bot to read logs and self-correct.
+            try:
+                from app.models.bot_config import BotConfig
+
+                if BotConfig.get_or_create().mcp_prompt_enabled:
+                    system_prompt += (
+                        '\n\nSELF-SUPERVISION & AUTOCORRECCIÓN (MCP):\n'
+                        '- Si no estás seguro de un dato o una operación falló, NO inventes respuestas.\n'
+                        '- Ante un error de ejecución, usa las herramientas de logs/disponibles para REVISAR el estado '
+                        'real antes de responder al usuario.\n'
+                        '- Si detectas que una consulta devolvió datos incompletos o un error, explícalo con claridad '
+                        'y sugiere el siguiente paso concreto.\n'
+                        '- Nunca afirmes que una operación se completó si no tienes confirmación de la herramienta.\n'
+                        '- Si hay un fallo recurrente, indica que se revisará y sugiere re-intentar.\n'
+                    )
+            except Exception:
+                pass
+
+        if local_mode:
+            full_system = system_prompt
+        else:
+            tool_prompt = _build_tool_prompt(tools)
+            full_system = get_current_date_context() + '\n\n' + system_prompt + '\n\n' + tool_prompt
+
         messages = [{'role': 'system', 'content': full_system}]
 
         if history:
@@ -468,6 +701,24 @@ class MCPService:
         def _safe_write(name):
             entry = TOOL_REGISTRY.get(name, {})
             return bool(entry) and entry.get('category') == 'write' and name not in SAFE_WRITE_TOOLS
+
+        # Fast-path local: small-talk puro -> MiniCPM táctico (sin tools, <3s).
+        if local_mode and not confirmed_tool and _is_smalltalk(message):
+            try:
+                content, provider = llm_chat(
+                    messages,
+                    temperature=0.35,
+                    max_tokens=256,
+                    phase='tactical',
+                )
+                return {
+                    'response': content or '¡Hola! ¿En qué te ayudo hoy? 😊',
+                    'tool_calls': [],
+                    'done': True,
+                    'provider': provider,
+                }
+            except Exception as e:
+                logger.warning(f'MCP small-talk fallback to main loop: {e}')
 
         # If confirmed_tool is provided, execute it directly without calling LLM
         if confirmed_tool and confirmed_tool.get('name'):
@@ -500,7 +751,10 @@ class MCPService:
                     }
                 )
 
-                content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024)
+                tools_kw = {}
+                if local_mode:
+                    tools_kw['phase'] = 'resume'
+                content, provider = llm_chat(messages, temperature=0.3, max_tokens=1024, **tools_kw)
                 return {
                     'response': content or f'✅ Operación ejecutada: {tool_name}',
                     'tool_calls': tool_calls_log,
@@ -516,13 +770,17 @@ class MCPService:
                 }
 
         corrections = 0
+        local_resume = False
         for iteration in range(MAX_ITERATIONS):
             try:
-                content, provider = llm_chat(
-                    messages,
-                    temperature=0.3,
-                    max_tokens=4096,
-                )
+                llm_kwargs = {'temperature': 0.3, 'max_tokens': 4096}
+                if local_mode:
+                    # Ruta: el router local decide/ejecuta la tool con tools nativas.
+                    # Resume: tras un resultado real, responder directo sin re-llamar tools.
+                    llm_kwargs['phase'] = 'resume' if local_resume else 'route'
+                    if not local_resume:
+                        llm_kwargs['tools'] = local_tools
+                content, provider = llm_chat(messages, **llm_kwargs)
 
                 if not content.strip():
                     return {
@@ -606,6 +864,8 @@ class MCPService:
                             ),
                         }
                     )
+                    if local_mode:
+                        local_resume = True
                     continue
 
                 # Si la respuesta afirma un dato del sistema sin haber ejecutado

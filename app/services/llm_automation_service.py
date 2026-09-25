@@ -399,7 +399,7 @@ def process_chat_command(user_id, command, context_brief=''):
     prompt = f"Contexto: {context_brief}\nFecha/Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nUsuario ID {user_id} dice: '{command}'"
     try:
         response = client.chat(
-            model='qwen2.5:1.5b',
+            model=os.environ.get('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b'),
             messages=[
                 {'role': 'system', 'content': SYSTEM_PROMPT},
                 {'role': 'user', 'content': prompt},

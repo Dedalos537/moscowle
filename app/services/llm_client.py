@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -20,7 +21,18 @@ GLM_MODEL = 'z-ai/glm-5.2'
 
 GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
 GEMINI_MODEL = 'gemini-2.0-flash'
+
+# Local Ollama chain (clase "Claude + MCP"): un modelo RÁPIDO decide la tool
+# (ruteo), otro produce la respuesta final, y gemma queda como último recurso.
 OLLAMA_MODEL_DEFAULT = os.environ.get('OLLAMA_MODEL', 'gemma2')
+OLLAMA_MODEL_ROUTER = os.environ.get('OLLAMA_MODEL_ROUTER', 'qwen2.5:1.5b')
+OLLAMA_MODEL_TACTICAL = os.environ.get('OLLAMA_MODEL_TACTICAL', 'openbmb/minicpm5:q4_K_M')
+OLLAMA_MODEL_FALLBACK = os.environ.get('OLLAMA_MODEL_FALLBACK', 'gemma3:4b')
+OLLAMA_KEEP_ALIVE = os.environ.get('OLLAMA_KEEP_ALIVE', '6m')
+
+# Contexto por fase: ruteo corto (solo necesita decidir), resume más holgado.
+OLLAMA_CTX_ROUTE = int(os.environ.get('OLLAMA_CTX_ROUTE', '8192'))
+OLLAMA_CTX_TACTICAL = int(os.environ.get('OLLAMA_CTX_TACTICAL', '4096'))
 
 _RATE_LIMIT_RETRIES = 2
 _RATE_LIMIT_BACKOFF = 2.0
@@ -284,11 +296,19 @@ def _notify_provider_error(provider_name, error_msg):
 # ─── Unified chat completion ───────────────────────────────────────────────
 
 
-def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
+def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
     """
     Send chat completion through provider chain: Groq → GLM-5.2 → Gemini → Ollama
     (order configurable via LLM_PROVIDER). Providers with invalid keys are
     temporarily blocked to avoid wasting time on every call.
+
+    Extra params (Ollama only):
+      - tools: lista de schemas nativos ({'type':'function','function': {...}}).
+               Cuando la resp. trae tool_calls de Ollama, se serializan de vuelta
+               al formato de texto <function=name{...}</function> que ya parsea
+               mcp_service, para reutilizar todo el flujo de ejecución existente.
+      - phase: 'route' (router Qwen, decide la tool), 'resume' (respuesta final),
+               'tactical' (MiniCPM, charla corta sin tools).
     Returns (content: str, provider: str) or raises RuntimeError.
     """
     errors = []
@@ -306,7 +326,9 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
             elif name == 'gemini':
                 content = _try_gemini(messages, temperature, max_tokens)
             elif name == 'ollama':
-                content = _try_ollama(messages, temperature)
+                content = _try_ollama(
+                    messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens
+                )
             else:
                 continue
             if content is not None and content.strip():
@@ -322,6 +344,18 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096):
 
     _notify_provider_failure(errors)
     raise RuntimeError(f'All LLM providers failed: {"; ".join(errors)}')
+
+
+def _ollama_route_model(phase, tools):
+    """Elige el modelo local según la fase."""
+    if phase == 'tactical':
+        return OLLAMA_MODEL_TACTICAL
+    if phase == 'resume':
+        return OLLAMA_MODEL_FALLBACK if os.environ.get('OLLAMA_RESUME_GEMMA') == '1' else OLLAMA_MODEL_ROUTER
+    # 'route' con tools nativas -> Qwen (rápido y correcto); sin tools -> fallback
+    if tools:
+        return OLLAMA_MODEL_ROUTER
+    return os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
 
 
 def _try_glm(messages, model, temperature, max_tokens):
@@ -375,25 +409,72 @@ def _try_gemini(messages, temperature, max_tokens):
     return resp.text or None
 
 
-def _try_ollama(messages, temperature):
+def _try_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None):
     ollama = get_ollama_client()
     if not ollama:
         return None
-    ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    # Optimización para CPU: paralelismo, keep_alive
+
+    if model:
+        ollama_model = model
+    else:
+        ollama_model = _ollama_route_model(phase, tools)
+
+    tactical = phase == 'tactical'
+    ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
     options = {
         'temperature': temperature,
-        'num_ctx': 8192,  # 4096 desbordaba con prompt+tools+historial -> el modelo perdía tools y respondía genérico
+        'num_ctx': ctx,
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
-        'top_p': 0.9,
+        'top_p': 0.8 if tactical else 0.9,
         'repeat_penalty': 1.1,
     }
-    resp = ollama.chat(model=ollama_model, messages=messages, options=options, keep_alive=-1)
-    return resp.get('message', {}).get('content', '') or None
+    if max_tokens:
+        options['num_predict'] = int(max_tokens)
+    # MiniCPM aún en "thinking" a pesar de phase tactical: se apaga explícito.
+    if ollama_model.startswith('openbmb/minicpm'):
+        options['enable_thinking'] = False
+
+    req = {'model': ollama_model, 'messages': messages, 'options': options}
+    if tools:
+        req['tools'] = tools
+    req['keep_alive'] = OLLAMA_KEEP_ALIVE
+    try:
+        resp = ollama.chat(**req)
+    except TypeError:
+        # Versiones antiguas del cliente sin param tools -> sin tools
+        if tools:
+            req.pop('tools', None)
+            resp = ollama.chat(**req)
+        else:
+            raise
+
+    msg = resp.get('message', {}) or {}
+    content = msg.get('content') or ''
+    tool_calls = msg.get('tool_calls') or []
+
+    if tool_calls:
+        # Serializar el tool_call nativo de Ollama al formato de texto que ya
+        # entiende mcp_service: <function=name{...}</function>
+        serialized = []
+        for tc in tool_calls:
+            fn = tc.get('function', {})
+            tname = fn.get('name', '')
+            targs = fn.get('arguments') or {}
+            if isinstance(targs, str):
+                try:
+                    targs = json.loads(targs)
+                except (json.JSONDecodeError, TypeError):
+                    targs = {}
+            serialized.append(f'<function={tname}{json.dumps(targs, ensure_ascii=False)}</function>')
+        combined = '\n'.join(serialized)
+        if combined.strip():
+            return combined
+
+    return content or None
 
 
-def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
+def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
     """
     Stream chat completion. Yields text chunks.
     Tries Groq first, then GLM-5.2, then Gemini, then Ollama.
@@ -411,7 +492,9 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096):
             elif name == 'gemini':
                 done = yield from _stream_gemini(messages, temperature, max_tokens)
             elif name == 'ollama':
-                done = yield from _stream_ollama(messages, temperature)
+                done = yield from _stream_ollama(
+                    messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens
+                )
             else:
                 continue
             if done:
@@ -492,24 +575,50 @@ def _stream_gemini(messages, temperature, max_tokens):
     return True
 
 
-def _stream_ollama(messages, temperature):
+def _stream_ollama(messages, temperature, model=None, tools=None, phase='route', max_tokens=None):
     ollama = get_ollama_client()
     if not ollama:
         return False
-    ollama_model = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
-    # Optimización para CPU: paralelismo
+    ollama_model = model or _ollama_route_model(phase, tools)
+    tactical = phase == 'tactical'
+    ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
     options = {
         'temperature': temperature,
-        'num_ctx': 8192,  # 4096 desbordaba con prompt+tools+historial -> el modelo perdía tools y respondía genérico
+        'num_ctx': ctx,
         'num_thread': 4,  # Usar todos los cores del i5-4590T
         'num_gpu': 0,  # Forzar CPU (no hay GPU)
-        'top_p': 0.9,
+        'top_p': 0.8 if tactical else 0.9,
         'repeat_penalty': 1.1,
     }
-    resp = ollama.chat(model=ollama_model, messages=messages, options=options, keep_alive=-1)
-    content = resp.get('message', {}).get('content', '')
-    if content:
-        yield content
+    if max_tokens:
+        options['num_predict'] = int(max_tokens)
+    if ollama_model.startswith('openbmb/minicpm'):
+        options['enable_thinking'] = False
+    stream = ollama.chat(
+        model=ollama_model,
+        messages=messages,
+        options=options,
+        tools=tools or None,
+        stream=True,
+        keep_alive=OLLAMA_KEEP_ALIVE,
+    )
+    for chunk in stream:
+        msg = chunk.get('message', {}) or {}
+        content_piece = msg.get('content') or ''
+        if content_piece:
+            yield content_piece
+        for tc in msg.get('tool_calls') or []:
+            fn = tc.get('function', {})
+            tname = fn.get('name', '')
+            targs = fn.get('arguments') or {}
+            if isinstance(targs, str):
+                try:
+                    targs = json.loads(targs)
+                except (json.JSONDecodeError, TypeError):
+                    targs = {}
+            yield f'<function={tname}{json.dumps(targs, ensure_ascii=False)}</function>'
+        if chunk.get('done'):
+            break
     return True
 
 
