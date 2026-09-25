@@ -214,7 +214,7 @@ class FinancialService:
             q = q.filter(Expense.date <= end_date)
         if category:
             q = q.filter(Expense.category == category)
-        return q.order_by(Expense.date.desc()).all()
+        return q.order_by(Expense.date.desc(), Expense.id.desc()).all()
 
     def create_expense(self, data, created_by_id=None):
         try:

@@ -48,12 +48,15 @@ export class Expenses implements OnInit, OnDestroy {
     {value: 'other', label: 'Otro'},
   ];
 
+  get therapistOptions(): SelectOption[] {
+    return this.therapists.map((t) => ({ value: t.id, label: t.username }));
+  }
+
   showModal = false;
   modalMode: 'therapist_payment' | 'operational' = 'operational';
   form = {
     category: 'operational' as string,
     therapist_id: null as number | null,
-    therapist_name: '',
     amount: 0,
     method: 'transfer' as string,
     date: '',
@@ -114,7 +117,6 @@ export class Expenses implements OnInit, OnDestroy {
     this.form = {
       category: 'therapist_payment',
       therapist_id: therapist.therapist.id,
-      therapist_name: therapist.therapist.username,
       amount: therapist.balance > 0 ? therapist.balance : 0,
       method: 'transfer',
       date: new Date().toISOString().split('T')[0],
@@ -129,7 +131,6 @@ export class Expenses implements OnInit, OnDestroy {
     this.form = {
       category: 'operational',
       therapist_id: null,
-      therapist_name: '',
       amount: 0,
       method: 'transfer',
       date: new Date().toISOString().split('T')[0],
@@ -149,6 +150,14 @@ export class Expenses implements OnInit, OnDestroy {
   }
 
   submitForm() {
+    if (this.form.category === 'therapist_payment' && !this.form.therapist_id) {
+      alert('Selecciona el terapeuta destinatario del pago.');
+      return;
+    }
+    if (!this.form.amount || this.form.amount <= 0) {
+      alert('Ingresa un monto válido.');
+      return;
+    }
     this.submitting = true;
     const fd = new FormData();
     fd.append('category', this.form.category);

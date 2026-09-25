@@ -134,10 +134,10 @@
       <app-select [(ngModel)]="form.category" [options]="categoryOptions" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"></app-select>
     </div>
 
-    @if (form.therapist_id) {
+    @if (form.category === 'therapist_payment') {
       <div>
         <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Destinatario</label>
-        <input type="text" [value]="form.therapist_name" readonly class="w-full px-3 py-2 bg-surface-container-high border rounded-lg text-on-surface-variant">
+        <app-select [(ngModel)]="form.therapist_id" [options]="therapistOptions" class="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"></app-select>
       </div>
     }
 
