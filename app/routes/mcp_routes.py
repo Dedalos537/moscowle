@@ -496,7 +496,7 @@ def mcp_chat_stream():
                         full_content = ''
                         # Small-talk local: responder de una (MiniCPM, sin tools) y terminar.
                         if local_mode and iteration == 0 and not confirmed_tool.get('name') and _is_smalltalk(message):
-                            for chunk in llm_chat_stream(messages, temperature=0.35, max_tokens=256, phase='tactical'):
+                            for chunk in llm_chat_stream(messages, temperature=0.35, max_tokens=512, phase='tactical'):
                                 full_content += chunk
                                 if chunk.strip():
                                     streamed_text += chunk

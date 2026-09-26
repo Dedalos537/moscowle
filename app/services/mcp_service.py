@@ -571,6 +571,33 @@ def _select_local_tools(tools, message):
     return [_compact_local_schema(t) for t in selected]
 
 
+# Mapa determinista intención -> tool de reporte (sin args requeridos).
+# Se usa SOLO como fallback cuando el router local (Qwen) no emite tool call
+# ante una consulta de datos inequívoca sobre reportes sin parámetros.
+_LOCAL_FORCE_TOOLS = (
+    ('get_debtors', ('moroso', 'morosos', 'deudor', 'deudores', 'cuanto debe', 'deuda', 'saldos pendientes')),
+    (
+        'get_financial_summary',
+        ('ingreso', 'ingresos', 'utilidad', 'ganancia', 'recaud', 'resumen financiero', 'finanzas'),
+    ),
+    ('get_user_growth', ('crecimiento', 'nuevos usuarios', 'registro de usuarios', 'cuántos se registr')),
+    ('get_monthly_collection', ('recaudaci', 'total cobrado', 'cobrado este mes', 'collection')),
+)
+
+
+def _force_intent_tool(message, local_tools, user_role):
+    """Si el router local no llamó ninguna tool para un reporte inequívoco,
+    fuerza la ejecución determinista de la tool de reporte del intent."""
+    if not local_tools:
+        return None
+    msg = (message or '').lower()
+    allowed = {t['function']['name'] for t in local_tools}
+    for tool_name, keywords in _LOCAL_FORCE_TOOLS:
+        if any(k in msg for k in keywords) and tool_name in allowed:
+            return (tool_name, {})
+    return None
+
+
 def _compact_local_schema(tool):
     """Miniatura del schema para el router local: sin ejemplos, desc corta.
     Reduce el prefill (y por tanto la latencia) del modelo en CPU."""
@@ -708,7 +735,7 @@ class MCPService:
                 content, provider = llm_chat(
                     messages,
                     temperature=0.35,
-                    max_tokens=256,
+                    max_tokens=512,
                     phase='tactical',
                 )
                 return {
@@ -816,6 +843,13 @@ class MCPService:
                             }
                         )
                         continue
+
+                if not tool_name and local_mode and not local_resume and not tool_calls_log:
+                    forced = _force_intent_tool(message, local_tools, user_role)
+                    if forced:
+                        tool_name, tool_args = forced
+                        content = f'<function={tool_name}{json.dumps(tool_args, ensure_ascii=False)}</function>'
+                        logger.info(f'MCP deterministic intent tool: {tool_name}({tool_args})')
 
                 if tool_name:
                     logger.info(f'MCP parsed tool call: {tool_name}({tool_args})')
