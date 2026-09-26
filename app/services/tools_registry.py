@@ -1801,7 +1801,14 @@ def handle_get_debtors(month=None, **kwargs):
             url += f'?month={month}'
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'debtors': data}
+        count = 0
+        if isinstance(data, list):
+            count = len(data)
+        elif isinstance(data, dict):
+            payload = data.get('data') if isinstance(data.get('data'), dict) else data
+            por_sede = payload.get('por_sede') or {}
+            count = sum(len(sede.get('deudores') or []) for sede in por_sede.values())
+        return {'success': True, 'count': count, 'debtors': data}
     except Exception as e:
         return {'error': str(e)}
 
