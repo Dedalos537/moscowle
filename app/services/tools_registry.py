@@ -2592,11 +2592,84 @@ def handle_update_contract(contract_id, **kwargs):
 )
 def handle_get_patient_stats(**kwargs):
 
-    from app.routes.admin.users import patient_stats
+    from datetime import date
 
-    with current_app.test_request_context('/api/patient-stats'):
-        result = patient_stats()
-        return result.get_json()
+    from app.models import User
+    from app.models.contract import Contract
+
+    try:
+        patients = User.query.filter_by(role='jugador', is_active=True).all()
+        total = len(patients)
+        if total == 0:
+            return {'success': True, 'stats': {'total': 0}}
+
+        today = date.today()
+
+        age_ranges = {'0-3': 0, '4-6': 0, '7-9': 0, '10-12': 0, '13-15': 0, '16-18': 0, '19+': 0}
+        sex_counts = {'M': 0, 'F': 0, 'Otro': 0, 'No especificado': 0}
+        sede_counts = {}
+        join_month_counts = {}
+        has_guardian = 0
+        has_dni = 0
+        has_diagnosis = 0
+
+        for p in patients:
+            if p.date_of_birth:
+                age = (today - p.date_of_birth).days // 365
+                if age <= 3:
+                    age_ranges['0-3'] += 1
+                elif age <= 6:
+                    age_ranges['4-6'] += 1
+                elif age <= 9:
+                    age_ranges['7-9'] += 1
+                elif age <= 12:
+                    age_ranges['10-12'] += 1
+                elif age <= 15:
+                    age_ranges['13-15'] += 1
+                elif age <= 18:
+                    age_ranges['16-18'] += 1
+                else:
+                    age_ranges['19+'] += 1
+
+            if p.sex:
+                sex_key = p.sex if p.sex in ('M', 'F') else 'Otro'
+            else:
+                sex_key = 'No especificado'
+            sex_counts[sex_key] = sex_counts.get(sex_key, 0) + 1
+
+            sede_name = p.sede_item.name if p.sede_item else 'Sin sede'
+            sede_counts[sede_name] = sede_counts.get(sede_name, 0) + 1
+
+            if p.created_at:
+                month_key = p.created_at.strftime('%Y-%m')
+                join_month_counts[month_key] = join_month_counts.get(month_key, 0) + 1
+
+            if p.guardian_name:
+                has_guardian += 1
+            if p.document_number:
+                has_dni += 1
+            if p.preliminary_diagnosis:
+                has_diagnosis += 1
+
+        active_contracts = Contract.query.filter_by(status='active').count()
+
+        return {
+            'success': True,
+            'stats': {
+                'total': total,
+                'age_ranges': age_ranges,
+                'sex_distribution': sex_counts,
+                'by_sede': sede_counts,
+                'by_join_month': dict(sorted(join_month_counts.items(), reverse=True)[:12]),
+                'has_guardian': has_guardian,
+                'has_dni': has_dni,
+                'has_diagnosis': has_diagnosis,
+                'active_contracts': active_contracts,
+                'without_contract': total - active_contracts,
+            },
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 
 @tool(
