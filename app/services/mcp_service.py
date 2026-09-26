@@ -345,7 +345,23 @@ def _trim_tool_result(result, max_chars=MAX_TOOL_RESULT_CHARS):
     """Trim tool result to avoid blowing up the context window."""
     if isinstance(result, dict):
         # For list results, keep count + first few items
-        if 'patients' in result and isinstance(result['patients'], list):
+        if 'debtors' in result:
+            payload = result.get('debtors')
+            if isinstance(payload, dict):
+                payload = payload.get('data') if isinstance(payload.get('data'), dict) else payload
+                por_sede = payload.get('por_sede') or {}
+                deudores = []
+                for sede_id in sorted(por_sede, key=int, reverse=True):
+                    deudores.extend((por_sede[sede_id] or {}).get('deudores') or [])
+                result = {
+                    'success': result.get('success', True),
+                    'count': result.get('count', len(deudores)),
+                    'deudores': deudores[:8],
+                    'note': (
+                        f'Showing {min(8, len(deudores))} of {len(deudores)} deudores' if len(deudores) > 8 else None
+                    ),
+                }
+        elif 'patients' in result and isinstance(result['patients'], list):
             patients = result['patients']
             result = {
                 'success': result.get('success', True),
