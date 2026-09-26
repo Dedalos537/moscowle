@@ -838,7 +838,7 @@
 
     <div>
       <label class="text-xs font-bold text-on-surface-variant block mb-1">Modelo</label>
-      <input type="text" [(ngModel)]="providerForm.model" placeholder="Ej: gemma3:4b, llama-3.3-70b-versatile, z-ai/glm-5.2..."
+      <input type="text" [(ngModel)]="providerForm.model" placeholder="Ej: gemma3:4b, qwen/qwen3.8-27b, openai/gpt-oss-120b, z-ai/glm-5.2, deepseek-chat, gpt-4o-mini"
         class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
     </div>
 
@@ -851,7 +851,7 @@
     <div>
       <label class="text-xs font-bold text-on-surface-variant block mb-1">API Key</label>
       <input type="password" [(ngModel)]="providerForm.api_key"
-        [placeholder]="providerForm.provider_type === 'ollama' ? '(no requerida para Ollama)' : (llmPresets['custom']?.key_placeholder || 'sk-...')"
+        [placeholder]="apiKeyPlaceholder()"
         class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
     </div>
 

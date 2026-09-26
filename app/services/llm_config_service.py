@@ -19,7 +19,7 @@ LLM_PRESETS = {
         'name': 'Groq',
         'provider_type': 'groq',
         'base_url': '',
-        'model': '',
+        'model': 'qwen/qwen3.8-27b',
         'key_prefix': 'gsk_',
     },
     'glm': {
@@ -82,7 +82,7 @@ SEED_SPECS = [
         'name': 'Groq',
         'provider_type': 'groq',
         'base_url': None,
-        'model': None,
+        'model': 'qwen/qwen3.8-27b',
         'key_env': 'GROQ_API_KEY',
         'priority': 100,
     },

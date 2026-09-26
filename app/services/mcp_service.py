@@ -440,6 +440,8 @@ _INTENT_GROUPS = {
         'get_current_datetime',
         'get_debtors',
         'get_monthly_reports',
+        'list_expenses',
+        'create_expense',
     },
     'sesiones': {
         'get_sessions',
@@ -527,6 +529,9 @@ _INTENT_KEYWORDS = {
         'financ',
         'ingreso',
         'egreso',
+        'egresos',
+        'gasto',
+        'gastos',
         'mensual',
         'utilidad',
         'ganancia',
@@ -587,18 +592,95 @@ def _select_local_tools(tools, message):
     return [_compact_local_schema(t) for t in selected]
 
 
-# Mapa determinista intención -> tool de reporte (sin args requeridos).
+# Mapa determinista intención -> tool de reporte.
 # Se usa SOLO como fallback cuando el router local (Qwen) no emite tool call
-# ante una consulta de datos inequívoca sobre reportes sin parámetros.
+# ante una consulta de datos inequívoca sobre reportes/estadísticas.
+# Formato por entrada: (tool_name, keywords, args) donde args puede ser un dict
+# fijo, la string 'month' (se extrae el mes del mensaje) o None (sin args).
 _LOCAL_FORCE_TOOLS = (
-    ('get_debtors', ('moroso', 'morosos', 'deudor', 'deudores', 'cuanto debe', 'deuda', 'saldos pendientes')),
+    ('get_debtors', ('moroso', 'morosos', 'deudor', 'deudores', 'cuanto debe', 'deuda', 'saldos pendientes'), None),
+    (
+        'list_expenses',
+        ('gastos de', 'gastos en', 'gastos del mes', 'gastos registrados', 'gasto'),
+        'month',
+    ),
+    (
+        'get_patient_stats',
+        (
+            'cuántos pacientes',
+            'cuantos pacientes',
+            'cuántos paciente',
+            'cuantos paciente',
+            'número de pacientes',
+            'numero de pacientes',
+            'cantidad de pacientes',
+            'total de pacientes',
+            'cuántos hay de pacientes',
+        ),
+        None,
+    ),
+    (
+        'list_patients',
+        (
+            'cuántos pacientes',
+            'cuantos pacientes',
+            'cuántos paciente',
+            'cuantos paciente',
+            'pacientes tiene el centro',
+            'cuántos pacientes tiene el centro',
+        ),
+        None,
+    ),
     (
         'get_financial_summary',
         ('ingreso', 'ingresos', 'utilidad', 'ganancia', 'recaud', 'resumen financiero', 'finanzas'),
+        None,
     ),
-    ('get_user_growth', ('crecimiento', 'nuevos usuarios', 'registro de usuarios', 'cuántos se registr')),
-    ('get_monthly_collection', ('recaudaci', 'total cobrado', 'cobrado este mes', 'collection')),
+    ('get_user_growth', ('crecimiento', 'nuevos usuarios', 'registro de usuarios', 'cuántos se registr'), None),
+    ('get_monthly_collection', ('recaudaci', 'total cobrado', 'cobrado este mes', 'collection'), None),
 )
+
+
+_LOCAL_MONTH_ABBR = {
+    'ene': 1,
+    'feb': 2,
+    'mar': 3,
+    'abr': 4,
+    'may': 5,
+    'jun': 6,
+    'jul': 7,
+    'ago': 8,
+    'sep': 9,
+    'set': 9,
+    'oct': 10,
+    'nov': 11,
+    'dic': 12,
+}
+
+
+def _extract_month_arg(message):
+    """Devuelve {'month': 'YYYY-MM'} si el mensaje menciona un mes ('setiembre',
+    'septiembre', 'este mes', nombres/abr. en español); si no, {} (default)."""
+    msg = (message or '').lower()
+    now = datetime.now(LIMA_TZ)
+    current = f'{now.year}-{now.month:02d}'
+    if 'este mes' in msg or 'de este mes' in msg:
+        return {'month': current}
+    month_num = None
+    for i, name in enumerate(_MESES_ES, 1):
+        if name in msg:
+            month_num = i
+            break
+    if month_num is None and 'setiembre' in msg:
+        month_num = 9
+    if month_num is None:
+        for abbr, num in _LOCAL_MONTH_ABBR.items():
+            if f' {abbr}' in msg or msg.startswith(abbr):
+                month_num = num
+                break
+    if month_num:
+        return {'month': f'{now.year}-{month_num:02d}'}
+    return {}
 
 
 def _force_intent_tool(message, local_tools, user_role):
@@ -608,9 +690,10 @@ def _force_intent_tool(message, local_tools, user_role):
         return None
     msg = (message or '').lower()
     allowed = {t['function']['name'] for t in local_tools}
-    for tool_name, keywords in _LOCAL_FORCE_TOOLS:
+    for tool_name, keywords, arg_spec in _LOCAL_FORCE_TOOLS:
         if any(k in msg for k in keywords) and tool_name in allowed:
-            return (tool_name, {})
+            resolved_args = _extract_month_arg(message) if arg_spec == 'month' else arg_spec
+            return (tool_name, resolved_args or {})
     return None
 
 

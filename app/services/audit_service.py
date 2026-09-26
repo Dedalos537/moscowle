@@ -280,7 +280,7 @@ Analiza y genera el reporte de cumplimiento en formato JSON."""
         client = Groq(api_key=api_key)
 
         response = client.chat.completions.create(
-            model='llama-3.1-8b-instant',
+            model='qwen/qwen3.8-27b',
             messages=[{'role': 'system', 'content': AUDIT_SYSTEM_PROMPT}, {'role': 'user', 'content': user_prompt}],
             temperature=0.1,
             max_tokens=2000,
@@ -399,7 +399,7 @@ TRANSCRIPCIÓN REAL:
 Analiza si el paciente asistió y cubrió al menos el 5% de lo planificado."""
 
         response = client.chat.completions.create(
-            model='llama-3.1-8b-instant',
+            model='qwen/qwen3.8-27b',
             messages=[
                 {'role': 'system', 'content': ATTENDANCE_SYSTEM_PROMPT},
                 {'role': 'user', 'content': user_prompt},

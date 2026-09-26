@@ -21,6 +21,7 @@ from app.services.mcp_service import (
     MCPService,
     _build_local_system_prompt,
     _build_tool_prompt,
+    _force_intent_tool,
     _is_ollama_primary,
     _is_smalltalk,
     _parse_text_tool_call,
@@ -531,6 +532,22 @@ def mcp_chat_stream():
                             break
 
                         tool_name, tool_args = _parse_text_tool_call(full_content)
+
+                        if (
+                            not tool_name
+                            and local_mode
+                            and iteration == 0
+                            and not confirmed_tool.get('name')
+                            and not tool_calls_log
+                        ):
+                            forced = _force_intent_tool(message, local_tools, user.role)
+                            if forced:
+                                tool_name, tool_args = forced
+                                forced_content = (
+                                    f'<function={tool_name}{json.dumps(tool_args, ensure_ascii=False)}</function>'
+                                )
+                                full_content = forced_content
+                                logger.info(f'MCP stream deterministic intent tool: {tool_name}({tool_args})')
 
                         if tool_name:
                             # Never re-execute a tool that was already confirmed & run above.

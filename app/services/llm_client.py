@@ -19,7 +19,8 @@ _PROVIDER_COOLDOWN_SECONDS = 600  # 10 min
 GLM_BASE_URL = 'https://integrate.api.nvidia.com/v1'
 GLM_MODEL = 'z-ai/glm-5.2'
 
-GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
+# Groq retiró llama-3.1/3.3 en 2026; catálogo actual verificado vía /models (Sept 2026).
+GROQ_MODELS = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b']
 GEMINI_MODEL = 'gemini-2.0-flash'
 
 # Local Ollama chain (clase "Claude + MCP"): un modelo RÁPIDO decide la tool

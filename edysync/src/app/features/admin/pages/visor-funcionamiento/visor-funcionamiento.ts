@@ -151,6 +151,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   llmFallbackToggling = false;
   showProviderModal = false;
   editingProviderId: number | null = null;
+  editingHasKey = false;
   providerSaving = false;
   providerForm: AIProviderForm = {
     name: '',
@@ -510,6 +511,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
 
   openProviderModal(provider?: AIProviderRow) {
     this.editingProviderId = provider ? provider.id : null;
+    this.editingHasKey = provider?.has_key ?? false;
     if (provider) {
       this.providerForm = {
         name: provider.name || '',
@@ -538,6 +540,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   closeProviderModal() {
     this.showProviderModal = false;
     this.editingProviderId = null;
+    this.editingHasKey = false;
     this.providerSaving = false;
   }
 
@@ -551,6 +554,12 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  apiKeyPlaceholder(): string {
+    if (this.providerForm.provider_type === 'ollama') return '(no requerida para Ollama)';
+    if (this.editingHasKey) return '••••••••••••(deja vacío para conservar la actual)';
+    return this.llmPresets['custom']?.key_placeholder || 'sk-...';
+  }
+
   addProviderFromPreset(presetKey: string) {
     this.openProviderModal();
     this.onPresetChange(presetKey);
@@ -561,7 +570,8 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
       this.llmError = 'El nombre es obligatorio';
       return;
     }
-    if (this.providerForm.provider_type !== 'ollama' && !this.providerForm.api_key?.trim()) {
+    const needsKey = !this.editingProviderId || !this.editingHasKey;
+    if (this.providerForm.provider_type !== 'ollama' && !this.providerForm.api_key?.trim() && needsKey) {
       this.llmError = 'Ingresa la API key del provider';
       return;
     }
@@ -584,6 +594,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
           this.providerSaving = false;
           this.showProviderModal = false;
           this.editingProviderId = null;
+          this.editingHasKey = false;
           this.llmSuccess = res.provider?.slug === 'ollama' ? 'Provider configurado correctamente' : 'Provider guardado correctamente';
           this.loadLLMConfig();
           this.cdr.markForCheck();
