@@ -37,6 +37,41 @@ interface PasswordResetRow {
   temp_password?: string;
 }
 
+interface AIProviderPreset {
+  name: string;
+  provider_type: string;
+  base_url: string;
+  model: string;
+  key_prefix?: string;
+  key_placeholder?: string;
+}
+
+interface AIProviderRow {
+  id: number;
+  slug: string;
+  name: string;
+  provider_type: string;
+  base_url: string;
+  model: string;
+  api_key: string;
+  has_key: boolean;
+  is_active: boolean;
+  priority: number;
+  is_seed: boolean;
+  testing?: boolean;
+  testStatus?: 'ok' | 'error' | null;
+  testResult?: any;
+}
+
+interface AIProviderForm {
+  name: string;
+  provider_type: string;
+  base_url: string;
+  model: string;
+  api_key: string;
+  is_active: boolean;
+}
+
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
@@ -110,8 +145,21 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   llmTesting = false;
   llmError: string | null = null;
   llmSuccess: string | null = null;
-  llmEditing = false;
-  llmEditKeys: Record<string, string> = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
+  llmRows: AIProviderRow[] = [];
+  llmPresets: Record<string, AIProviderPreset> = {};
+  llmFallback = true;
+  llmFallbackToggling = false;
+  showProviderModal = false;
+  editingProviderId: number | null = null;
+  providerSaving = false;
+  providerForm: AIProviderForm = {
+    name: '',
+    provider_type: 'ollama',
+    base_url: '',
+    model: '',
+    api_key: '',
+    is_active: true,
+  };
   // --- Notificaciones SMS/WhatsApp (OCP) ---
   notifConfig: any = null;
   notifEdit: { destination: string; sms_template: string; whatsapp_template: string } = { destination: '', sms_template: '', whatsapp_template: '' };
@@ -414,10 +462,16 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   loadLLMConfig() {
     this.llmLoading = true;
     this.llmError = null;
-    const base = (window as any).__apiBaseUrl || '';
     this.subs.add(
       this.admin.getLLMConfig().subscribe({
-        next: (res) => { this.llmConfig = res; this.llmLoading = false; this.cdr.markForCheck(); },
+        next: (res) => {
+          this.llmConfig = res;
+          this.llmRows = (res.providers || []) as AIProviderRow[];
+          this.llmPresets = (res.presets || {}) as Record<string, AIProviderPreset>;
+          this.llmFallback = !!res.settings?.fallback_enabled;
+          this.llmLoading = false;
+          this.cdr.markForCheck();
+        },
         error: (err) => { this.llmLoading = false; this.llmError = err.error?.error || 'Error al cargar config LLM'; this.cdr.markForCheck(); },
       })
     );
@@ -443,37 +497,189 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     );
   }
 
-  startEditLLM() {
-    this.llmEditing = true;
-    this.llmEditKeys = { GLM_API_KEY: '', GROQ_API_KEY: '', GEMINI_API_KEY: '' };
+  presetKeys(): string[] {
+    return Object.keys(this.llmPresets || {});
+  }
+
+  providerTypeLabel(t: string): string {
+    const map: Record<string, string> = {
+      ollama: 'Ollama', groq: 'Groq', glm: 'GLM / NVIDIA', openai: 'OpenAI-compatible', anthropic: 'Claude', gemini: 'Gemini',
+    };
+    return map[t] || t;
+  }
+
+  openProviderModal(provider?: AIProviderRow) {
+    this.editingProviderId = provider ? provider.id : null;
+    if (provider) {
+      this.providerForm = {
+        name: provider.name || '',
+        provider_type: provider.provider_type || 'openai',
+        base_url: provider.base_url || '',
+        model: provider.model || '',
+        api_key: '',
+        is_active: provider.is_active,
+      };
+    } else {
+      this.providerForm = {
+        name: '',
+        provider_type: 'ollama',
+        base_url: '',
+        model: '',
+        api_key: '',
+        is_active: true,
+      };
+    }
     this.llmError = null;
     this.llmSuccess = null;
+    this.showProviderModal = true;
+    this.cdr.markForCheck();
   }
 
-  cancelEditLLM() {
-    this.llmEditing = false;
+  closeProviderModal() {
+    this.showProviderModal = false;
+    this.editingProviderId = null;
+    this.providerSaving = false;
   }
 
-  saveLLMKeys() {
-    const payload: Record<string, string> = {};
-    for (const [k, v] of Object.entries(this.llmEditKeys)) {
-      if (v && v.trim()) {
-        payload[k] = v.trim();
-      }
-    }
-    if (!Object.keys(payload).length) {
-      this.llmError = 'Ingresa al menos una API key';
+  onPresetChange(presetKey: string) {
+    const preset = this.llmPresets[presetKey];
+    if (!preset) return;
+    this.providerForm.provider_type = preset.provider_type;
+    this.providerForm.base_url = preset.base_url || '';
+    this.providerForm.model = preset.model || '';
+    if (!this.providerForm.name) this.providerForm.name = preset.name || '';
+    this.cdr.markForCheck();
+  }
+
+  addProviderFromPreset(presetKey: string) {
+    this.openProviderModal();
+    this.onPresetChange(presetKey);
+  }
+
+  saveProvider() {
+    if (!this.providerForm.name?.trim()) {
+      this.llmError = 'El nombre es obligatorio';
       return;
     }
+    if (this.providerForm.provider_type !== 'ollama' && !this.providerForm.api_key?.trim()) {
+      this.llmError = 'Ingresa la API key del provider';
+      return;
+    }
+    const payload: Partial<AIProviderForm> = {
+      name: this.providerForm.name.trim(),
+      provider_type: this.providerForm.provider_type,
+      base_url: this.providerForm.base_url?.trim() || undefined,
+      model: this.providerForm.model?.trim() || undefined,
+      is_active: this.providerForm.is_active,
+    };
+    if (this.providerForm.api_key?.trim()) payload.api_key = this.providerForm.api_key.trim();
+    this.providerSaving = true;
+    this.llmError = null;
+    const req = this.editingProviderId
+      ? this.admin.updateLLMProvider(this.editingProviderId, payload)
+      : this.admin.createLLMProvider(payload);
     this.subs.add(
-      this.admin.updateLLMConfig(payload).subscribe({
+      req.subscribe({
         next: (res) => {
-          this.llmEditing = false;
-          this.llmSuccess = `Actualizadas: ${res.updated?.join(', ') || 'ninguna'}`;
+          this.providerSaving = false;
+          this.showProviderModal = false;
+          this.editingProviderId = null;
+          this.llmSuccess = res.provider?.slug === 'ollama' ? 'Provider configurado correctamente' : 'Provider guardado correctamente';
           this.loadLLMConfig();
-          this.testLLMProviders();
+          this.cdr.markForCheck();
         },
-        error: (err) => { this.llmError = err.error?.error || 'Error al guardar'; this.cdr.markForCheck(); },
+        error: (err) => { this.providerSaving = false; this.llmError = err.error?.error || 'Error al guardar provider'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  toggleProviderActive(provider: AIProviderRow) {
+    const next = !provider.is_active;
+    this.llmError = null;
+    this.llmSuccess = null;
+    this.subs.add(
+      this.admin.updateLLMProvider(provider.id, { is_active: next }).subscribe({
+        next: () => {
+          this.llmSuccess = next ? `'${provider.name}' activado` : `'${provider.name}' desactivado`;
+          this.loadLLMConfig();
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.llmError = err.error?.error || 'Error al cambiar estado'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  async deleteProvider(provider: AIProviderRow) {
+    const confirmed = await firstValueFrom(this.confirmService.confirm({
+      title: 'Eliminar provider',
+      message: `¿Eliminar '${provider.name}' de la configuración? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    }));
+    if (!confirmed) return;
+    this.subs.add(
+      this.admin.deleteLLMProvider(provider.id).subscribe({
+        next: () => { this.llmSuccess = 'Provider eliminado'; this.loadLLMConfig(); this.testLLMProviders(); this.cdr.markForCheck(); },
+        error: (err) => { this.llmError = err.error?.error || 'Error al eliminar'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  testSingleProvider(provider: AIProviderRow) {
+    provider.testing = true;
+    provider.testResult = null;
+    this.llmError = null;
+    this.subs.add(
+      this.admin.testLLMProvider(provider.id).subscribe({
+        next: (res) => {
+          provider.testing = false;
+          provider.testStatus = res.ok ? 'ok' : 'error';
+          provider.testResult = res;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          provider.testing = false;
+          provider.testStatus = 'error';
+          provider.testResult = { error: err.error?.error || 'Error al probar' };
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  toggleFallback() {
+    this.llmFallbackToggling = true;
+    this.llmError = null;
+    this.llmSuccess = null;
+    this.subs.add(
+      this.admin.updateLLMSettings({ fallback_enabled: !this.llmFallback }).subscribe({
+        next: () => {
+          this.llmFallback = !this.llmFallback;
+          this.llmFallbackToggling = false;
+          this.llmSuccess = this.llmFallback ? 'Fallback activado: se usará la cadena por orden de prioridad' : 'Fallback desactivado: solo se usará el provider principal';
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.llmFallbackToggling = false; this.llmError = err.error?.error || 'Error al cambiar fallback'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  moveProvider(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= this.llmRows.length) return;
+    const [item] = this.llmRows.splice(index, 1);
+    this.llmRows.splice(target, 0, item);
+    this.persistOrder();
+  }
+
+  persistOrder() {
+    this.llmError = null;
+    const order = this.llmRows.map((p, i) => ({ id: p.id, priority: i * 10 }));
+    this.subs.add(
+      this.admin.reorderLLMProviders(order).subscribe({
+        next: () => { this.llmSuccess = 'Orden actualizado'; this.loadLLMConfig(); this.cdr.markForCheck(); },
+        error: (err) => { this.llmError = err.error?.error || 'Error al guardar orden'; this.loadLLMConfig(); this.cdr.markForCheck(); },
       })
     );
   }

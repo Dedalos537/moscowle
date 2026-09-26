@@ -1,5 +1,7 @@
 from app.models.admin import *
 from app.models.ai import *
+from app.models.ai_provider import AIProvider as AIProvider
+from app.models.ai_provider import AISettings as AISettings
 from app.models.appointment import *
 from app.models.bot_config import BotConfig as BotConfig
 from app.models.chat import *

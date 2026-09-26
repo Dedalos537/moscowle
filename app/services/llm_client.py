@@ -81,20 +81,8 @@ def _block_provider(name, exc=None):
 
 
 def _provider_order():
-    """Return the provider chain order, honoring LLM_PROVIDER override."""
-    order = list(_DEFAULT_PROVIDER_ORDER)
-    try:
-        from flask import current_app
-
-        pref = os.environ.get('LLM_PROVIDER') or current_app.config.get('LLM_PROVIDER')
-    except Exception:
-        pref = os.environ.get('LLM_PROVIDER')
-    if pref:
-        pref = pref.lower()
-        if pref in order:
-            order.remove(pref)
-            order.insert(0, pref)
-    return order
+    """Return the provider slugs in chain order (respects fallback toggle)."""
+    return [p['slug'] for p in _configured_providers()]
 
 
 _PROVIDER_DISPLAY = {'groq': 'Groq', 'glm': 'GLM-5.2', 'gemini': 'Gemini', 'ollama': 'Ollama'}
@@ -102,6 +90,164 @@ _PROVIDER_DISPLAY = {'groq': 'Groq', 'glm': 'GLM-5.2', 'gemini': 'Gemini', 'olla
 
 def _provider_display(name):
     return _PROVIDER_DISPLAY.get(name, name)
+
+
+# ─── Provider config (persistida en BD: app.models.ai_provider) ────────────
+
+# Cache de providers activos + toggle fallback. Se invalida con reset_clients()
+# o invalidate_provider_config() tras cada cambio desde el panel.
+_db_config_cache = {'providers': None, 'fallback': True}
+
+
+def invalidate_provider_config():
+    """Fuerza relectura de providers/fallback desde la BD."""
+    _reset_provider_config_cache()
+
+
+def _reset_provider_config_cache():
+    _db_config_cache['providers'] = None
+    _db_config_cache['fallback'] = True
+
+
+def _load_db_providers():
+    """Return (providers, fallback_enabled) desde la BD, o None si está vacía/rota."""
+    if _db_config_cache['providers'] is not None:
+        return _db_config_cache['providers'], _db_config_cache['fallback']
+    try:
+        from app.models.ai_provider import AIProvider, AISettings
+
+        settings = AISettings.get_or_create()
+        rows = AIProvider.query.filter_by(is_active=True).order_by(AIProvider.priority.asc(), AIProvider.id.asc()).all()
+        if not rows:
+            return None
+        _db_config_cache['providers'] = [r.to_config_dict() for r in rows]
+        _db_config_cache['fallback'] = settings.fallback_enabled
+        return _db_config_cache['providers'], _db_config_cache['fallback']
+    except Exception as e:
+        logger.warning(f'DB provider config unavailable, using env chain: {e}')
+        return None
+
+
+def _configured_providers():
+    """Cadena efectiva de providers (dicts). OFF de fallback => solo el primario."""
+    db = _load_db_providers()
+    if db is not None:
+        providers, fallback = db
+        if not fallback:
+            providers = providers[:1]
+        return providers
+    return _env_providers()
+
+
+def _env_providers():
+    """Fallback legacy: providers construidos desde variables de entorno."""
+    order = list(_DEFAULT_PROVIDER_ORDER)
+    try:
+        from flask import current_app
+
+        pref = os.environ.get('LLM_PROVIDER') or current_app.config.get('LLM_PROVIDER')
+    except Exception:
+        pref = os.environ.get('LLM_PROVIDER')
+    if pref and pref.lower() in order:
+        order.remove(pref.lower())
+        order.insert(0, pref.lower())
+
+    def key(env_name, default=''):
+        value = os.environ.get(env_name)
+        if not value:
+            try:
+                from flask import current_app
+
+                value = current_app.config.get(env_name)
+            except Exception:
+                pass
+        return value or default
+
+    specs = {
+        'ollama': {
+            'slug': 'ollama',
+            'name': 'Ollama (Local)',
+            'provider_type': 'ollama',
+            'base_url': None,
+            'model': None,
+            'api_key': None,
+            'is_active': True,
+            'priority': 0,
+        },
+        'groq': {
+            'slug': 'groq',
+            'name': 'Groq',
+            'provider_type': 'groq',
+            'base_url': None,
+            'model': None,
+            'api_key': key('GROQ_API_KEY'),
+            'is_active': True,
+            'priority': 100,
+        },
+        'glm': {
+            'slug': 'glm',
+            'name': 'GLM-5.2 (NVIDIA)',
+            'provider_type': 'glm',
+            'base_url': GLM_BASE_URL,
+            'model': GLM_MODEL,
+            'api_key': key('GLM_API_KEY'),
+            'is_active': True,
+            'priority': 200,
+        },
+        'gemini': {
+            'slug': 'gemini',
+            'name': 'Gemini',
+            'provider_type': 'gemini',
+            'base_url': None,
+            'model': GEMINI_MODEL,
+            'api_key': key('GEMINI_API_KEY'),
+            'is_active': True,
+            'priority': 300,
+        },
+    }
+    return [specs[o] for o in order if o in specs]
+
+
+def _cached_client(key, builder):
+    """Cliente por provider con caché módulo-local."""
+    if key in _clients:
+        return _clients[key]
+    try:
+        client = builder()
+    except Exception as e:
+        logger.error(f'Failed to build client {key}: {e}')
+        return None
+    if client is not None:
+        _clients[key] = client
+    return client
+
+
+def _to_anthropic_messages(messages):
+    """Convierte [{role, content}] al formato de Anthropic (system aparte)."""
+    system = '\n'.join(m['content'] for m in messages if m.get('role') == 'system')
+    body = []
+    for m in messages:
+        if m.get('role') == 'system':
+            continue
+        role = 'assistant' if m.get('role') == 'assistant' else 'user'
+        body.append({'role': role, 'content': m.get('content') or ''})
+    merged = []
+    for m in body:
+        if merged and merged[-1]['role'] == m['role']:
+            merged[-1]['content'] += '\n\n' + m['content']
+        else:
+            merged.append(dict(m))
+    if merged and merged[0]['role'] == 'assistant':
+        merged.insert(0, {'role': 'user', 'content': 'Continúa.'})
+    return (system or None), merged
+
+
+def _anthropic_text(response):
+    parts = []
+    for block in getattr(response, 'content', None) or []:
+        if getattr(block, 'type', '') == 'text':
+            parts.append(getattr(block, 'text', '') or '')
+    return '\n'.join(parts)
 
 
 def _chat_with_retry(call, retries=_RATE_LIMIT_RETRIES, backoff=_RATE_LIMIT_BACKOFF):
@@ -224,10 +370,97 @@ def get_ollama_client():
         return None
 
 
+def get_glm_client_for(cfg):
+    """Cliente NVIDIA NIM (OpenAI-compatible) construido desde un provider cfg."""
+    return _cached_client(
+        f'glm:{cfg["slug"]}',
+        lambda: _build_openai_provider(cfg, fallback_base=GLM_BASE_URL, fallback_model=GLM_MODEL),
+    )
+
+
+def get_groq_client_for(cfg):
+    """Cliente Groq construido desde un provider cfg."""
+    return _cached_client(
+        f'groq:{cfg["slug"]}',
+        lambda: _build_groq_provider(cfg),
+    )
+
+
+def get_gemini_model_for(cfg):
+    """Modelo Gemini construido desde un provider cfg."""
+    return _cached_client(
+        f'gemini:{cfg["slug"]}',
+        lambda: _build_gemini_provider(cfg),
+    )
+
+
+def get_openai_provider_client(cfg):
+    """Cliente OpenAI-compatible genérico (OpenAI, DeepSeek, custom base_url)."""
+    return _cached_client(
+        f'openai:{cfg["slug"]}',
+        lambda: _build_openai_provider(cfg, fallback_base=None, fallback_model=None),
+    )
+
+
+def get_anthropic_provider_client(cfg):
+    """Cliente Claude (SDK anthropic). None si la librería no está instalada."""
+
+    def _build():
+        try:
+            from anthropic import Anthropic
+        except ImportError:
+            logger.error('anthropic library not installed — pip install anthropic')
+            return None
+        api_key = cfg.get('api_key')
+        if not api_key:
+            return None
+        return Anthropic(api_key=api_key)
+
+    return _cached_client(f'anthropic:{cfg["slug"]}', _build)
+
+
+def _build_openai_provider(cfg, fallback_base=None, fallback_model=None):
+    try:
+        from openai import OpenAI
+    except ImportError:
+        logger.error('openai library not installed — pip install openai')
+        return None
+    api_key = cfg.get('api_key')
+    if not api_key:
+        return None
+    base_url = cfg.get('base_url') or fallback_base
+    return OpenAI(base_url=base_url, api_key=api_key)
+
+
+def _build_groq_provider(cfg):
+    try:
+        from groq import Groq
+    except ImportError:
+        return None
+    api_key = cfg.get('api_key')
+    if not api_key:
+        return None
+    return Groq(api_key=api_key)
+
+
+def _build_gemini_provider(cfg):
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return None
+    api_key = cfg.get('api_key')
+    if not api_key:
+        return None
+    genai.configure(api_key=api_key)
+    model_name = cfg.get('model') or GEMINI_MODEL
+    return genai.GenerativeModel(model_name)
+
+
 def reset_clients():
-    """Reset cached clients and circuit breaker (useful after key rotation)."""
+    """Reset cached clients, circuit breaker y config de providers de BD."""
     _clients.clear()
     _provider_cooldowns.clear()
+    _reset_provider_config_cache()
 
 
 def _notify_provider_failure(errors):
@@ -322,23 +555,13 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None,
     errors = []
     logger.info(f'llm_chat called: {len(messages)} messages, providers in order: {_provider_order()}')
 
-    for name in _provider_order():
+    for cfg in _configured_providers():
+        name = cfg['slug']
         if _provider_blocked(name):
             errors.append(f'{name}: blocked (cooldown)')
             continue
         try:
-            if name == 'groq':
-                content = _try_groq(messages, model, temperature, max_tokens)
-            elif name == 'glm':
-                content = _try_glm(messages, model, temperature, max_tokens)
-            elif name == 'gemini':
-                content = _try_gemini(messages, temperature, max_tokens)
-            elif name == 'ollama':
-                content = _try_ollama(
-                    messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens
-                )
-            else:
-                continue
+            content = _invoke_provider(cfg, messages, model, temperature, max_tokens, tools=tools, phase=phase)
             if content is not None and content.strip():
                 logger.info(f'{name} success: {len(content)} chars')
                 return content, name
@@ -354,6 +577,63 @@ def llm_chat(messages, model=None, temperature=0.3, max_tokens=4096, tools=None,
     raise RuntimeError(f'All LLM providers failed: {"; ".join(errors)}')
 
 
+def _invoke_provider(cfg, messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
+    """Despacha una llamada de chat al tipo de provider configurado."""
+    p_type = cfg.get('provider_type')
+    if p_type == 'ollama':
+        return _try_ollama(messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens)
+    if p_type == 'groq':
+        return _try_groq(cfg, messages, model, temperature, max_tokens)
+    if p_type == 'glm':
+        return _try_glm(cfg, messages, model, temperature, max_tokens)
+    if p_type == 'gemini':
+        return _try_gemini(cfg, messages, temperature, max_tokens)
+    if p_type == 'openai':
+        return _try_openai(cfg, messages, model, temperature, max_tokens)
+    if p_type == 'anthropic':
+        return _try_anthropic(cfg, messages, model, temperature, max_tokens)
+    logger.warning(f'Unknown provider_type={p_type} for {cfg.get("slug")}')
+    return None
+
+
+def _try_openai(cfg, messages, model, temperature, max_tokens):
+    client = get_openai_provider_client(cfg)
+    if not client:
+        return None
+    use_model = model or cfg.get('model')
+    if not use_model:
+        return None
+    response = _chat_with_retry(
+        lambda: client.chat.completions.create(
+            model=use_model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+    )
+    return response.choices[0].message.content or None
+
+
+def _try_anthropic(cfg, messages, model, temperature, max_tokens):
+    client = get_anthropic_provider_client(cfg)
+    if not client:
+        return None
+    use_model = model or cfg.get('model')
+    if not use_model:
+        return None
+    system, body = _to_anthropic_messages(messages)
+    response = _chat_with_retry(
+        lambda: client.messages.create(
+            model=use_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            messages=body,
+        )
+    )
+    return _anthropic_text(response) or None
+
+
 def _ollama_route_model(phase, tools):
     """Elige el modelo local según la fase."""
     if phase == 'tactical':
@@ -366,11 +646,11 @@ def _ollama_route_model(phase, tools):
     return os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
 
 
-def _try_glm(messages, model, temperature, max_tokens):
-    glm = get_glm_client()
+def _try_glm(cfg, messages, model, temperature, max_tokens):
+    glm = get_glm_client_for(cfg)
     if not glm:
         return None
-    use_model = model or GLM_MODEL
+    use_model = model or cfg.get('model') or GLM_MODEL
     response = _chat_with_retry(
         lambda: glm.chat.completions.create(
             model=use_model,
@@ -382,12 +662,13 @@ def _try_glm(messages, model, temperature, max_tokens):
     return response.choices[0].message.content or None
 
 
-def _try_groq(messages, model, temperature, max_tokens):
-    groq = get_groq_client()
+def _try_groq(cfg, messages, model, temperature, max_tokens):
+    groq = get_groq_client_for(cfg)
     if not groq:
         return None
     last_exc = None
-    for gm in GROQ_MODELS:
+    groq_models = [cfg['model']] if cfg.get('model') else GROQ_MODELS
+    for gm in groq_models:
         try:
             response = _chat_with_retry(
                 lambda: groq.chat.completions.create(
@@ -408,8 +689,8 @@ def _try_groq(messages, model, temperature, max_tokens):
     return None
 
 
-def _try_gemini(messages, temperature, max_tokens):
-    gemini = get_gemini_model()
+def _try_gemini(cfg, messages, temperature, max_tokens):
+    gemini = get_gemini_model_for(cfg) or get_gemini_model()
     if not gemini:
         return None
     flat = '\n'.join(f'[{m["role"]}] {m["content"]}' for m in messages)
@@ -496,22 +777,12 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tool
     """
     logger.info(f'llm_chat_stream called: {len(messages)} messages, order: {_provider_order()}')
 
-    for name in _provider_order():
+    for cfg in _configured_providers():
+        name = cfg['slug']
         if _provider_blocked(name):
             continue
         try:
-            if name == 'groq':
-                done = yield from _stream_groq(messages, model, temperature, max_tokens)
-            elif name == 'glm':
-                done = yield from _stream_glm(messages, model, temperature, max_tokens)
-            elif name == 'gemini':
-                done = yield from _stream_gemini(messages, temperature, max_tokens)
-            elif name == 'ollama':
-                done = yield from _stream_ollama(
-                    messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens
-                )
-            else:
-                continue
+            done = yield from _stream_provider(cfg, messages, model, temperature, max_tokens, tools=tools, phase=phase)
             if done:
                 return
         except Exception as e:
@@ -525,11 +796,78 @@ def llm_chat_stream(messages, model=None, temperature=0.3, max_tokens=4096, tool
     yield 'Error: todos los proveedores de IA fallaron. Verifica las API keys en Configuracion del Sistema.'
 
 
-def _stream_glm(messages, model, temperature, max_tokens):
-    glm = get_glm_client()
+def _stream_provider(cfg, messages, model=None, temperature=0.3, max_tokens=4096, tools=None, phase='route'):
+    """Despacha un stream de chat al tipo de provider configurado."""
+    p_type = cfg.get('provider_type')
+    if p_type == 'ollama':
+        yield from _stream_ollama(messages, temperature, model=model, tools=tools, phase=phase, max_tokens=max_tokens)
+        return True
+    if p_type == 'groq':
+        yield from _stream_groq(cfg, messages, model, temperature, max_tokens)
+        return True
+    if p_type == 'glm':
+        yield from _stream_glm(cfg, messages, model, temperature, max_tokens)
+        return True
+    if p_type == 'gemini':
+        yield from _stream_gemini(cfg, messages, temperature, max_tokens)
+        return True
+    if p_type == 'openai':
+        yield from _stream_openai(cfg, messages, model, temperature, max_tokens)
+        return True
+    if p_type == 'anthropic':
+        yield from _stream_anthropic(cfg, messages, model, temperature, max_tokens)
+        return True
+    return False
+
+
+def _stream_openai(cfg, messages, model, temperature, max_tokens):
+    client = get_openai_provider_client(cfg)
+    if not client:
+        return False
+    use_model = model or cfg.get('model')
+    if not use_model:
+        return False
+    stream = _chat_with_retry(
+        lambda: client.chat.completions.create(
+            model=use_model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+    )
+    for chunk in stream:
+        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+            yield chunk.choices[0].delta.content
+    return True
+
+
+def _stream_anthropic(cfg, messages, model, temperature, max_tokens):
+    client = get_anthropic_provider_client(cfg)
+    if not client:
+        return False
+    use_model = model or cfg.get('model')
+    if not use_model:
+        return False
+    system, body = _to_anthropic_messages(messages)
+    with client.messages.stream(
+        model=use_model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system,
+        messages=body,
+    ) as stream:
+        for text in stream.text_stream:
+            if text:
+                yield text
+    return True
+
+
+def _stream_glm(cfg, messages, model, temperature, max_tokens):
+    glm = get_glm_client_for(cfg)
     if not glm:
         return False
-    use_model = model or GLM_MODEL
+    use_model = model or cfg.get('model') or GLM_MODEL
     stream = _chat_with_retry(
         lambda: glm.chat.completions.create(
             model=use_model,
@@ -545,12 +883,12 @@ def _stream_glm(messages, model, temperature, max_tokens):
     return True
 
 
-def _stream_groq(messages, model, temperature, max_tokens):
-    groq = get_groq_client()
+def _stream_groq(cfg, messages, model, temperature, max_tokens):
+    groq = get_groq_client_for(cfg)
     if not groq:
         return False
     last_exc = None
-    for gm in GROQ_MODELS:
+    for gm in [cfg['model']] if cfg.get('model') else GROQ_MODELS:
         try:
             logger.info(f'Trying Groq stream with {gm}')
             stream = _chat_with_retry(
@@ -575,8 +913,8 @@ def _stream_groq(messages, model, temperature, max_tokens):
     return False
 
 
-def _stream_gemini(messages, temperature, max_tokens):
-    gemini = get_gemini_model()
+def _stream_gemini(cfg, messages, temperature, max_tokens):
+    gemini = get_gemini_model_for(cfg) or get_gemini_model()
     if not gemini:
         return False
     response = gemini.generate_content(
@@ -643,6 +981,26 @@ def _stream_ollama(messages, temperature, model=None, tools=None, phase='route',
 
 
 # ─── Legacy helpers (used by enhanced_llm_service_v5, _shared, etc.) ───────
+
+
+def test_provider(cfg, max_tokens=24):
+    """Prueba un provider individual con un mini chat. Devuelve dict de resultado."""
+    start = time.monotonic()
+    try:
+        content = _invoke_provider(
+            cfg,
+            [{'role': 'user', 'content': 'Responde solo con: ok'}],
+            None,
+            0.2,
+            max_tokens,
+        )
+        latency_ms = int((time.monotonic() - start) * 1000)
+        if content and content.strip():
+            return {'ok': True, 'latency_ms': latency_ms, 'response': content.strip()[:120]}
+        return {'ok': False, 'latency_ms': latency_ms, 'error': 'Respuesta vacía'}
+    except Exception as e:
+        latency_ms = int((time.monotonic() - start) * 1000)
+        return {'ok': False, 'latency_ms': latency_ms, 'error': str(e)[:200]}
 
 
 def llm_fallback_chain(system_prompt, msg):

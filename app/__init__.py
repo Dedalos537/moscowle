@@ -1043,6 +1043,12 @@ def create_app_lite():
             ensure_columns()
         except Exception as e:
             app.logger.warning(f'ensure_columns failed (non-fatal): {e}')
+        try:
+            from app.services.llm_config_service import seed_providers_from_env
+
+            seed_providers_from_env()
+        except Exception as e:
+            app.logger.warning(f'llm providers seed failed (non-fatal): {e}')
 
     app.logger.info('Application initialized (lite mode)')
     return app

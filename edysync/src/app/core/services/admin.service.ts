@@ -446,6 +446,30 @@ export class AdminService {
     return this.http.post('/api/health/llm/config', data);
   }
 
+  createLLMProvider(data: any): Observable<any> {
+    return this.http.post('/api/health/llm/providers', data);
+  }
+
+  updateLLMProvider(id: number, data: any): Observable<any> {
+    return this.http.put(`/api/health/llm/providers/${id}`, data);
+  }
+
+  deleteLLMProvider(id: number): Observable<any> {
+    return this.http.delete(`/api/health/llm/providers/${id}`);
+  }
+
+  testLLMProvider(id: number): Observable<any> {
+    return this.http.post(`/api/health/llm/providers/${id}/test`, {});
+  }
+
+  reorderLLMProviders(order: { id: number; priority: number }[]): Observable<any> {
+    return this.http.post('/api/health/llm/reorder', { order });
+  }
+
+  updateLLMSettings(payload: { fallback_enabled: boolean }): Observable<any> {
+    return this.http.post('/api/health/llm/settings', payload);
+  }
+
   getNotificationConfig(): Observable<any> {
     return this.http.get('/api/health/notifications/config');
   }

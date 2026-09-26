@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 from datetime import UTC
@@ -602,45 +603,50 @@ def health_llm():
     except Exception as e:
         results['chain'] = {'status': 'error', 'error': str(e)[:500]}
 
+    # Ollama
+    try:
+        from app.services.llm_client import OLLAMA_MODEL_DEFAULT, get_ollama_client
+
+        model_name = os.environ.get('OLLAMA_MODEL', OLLAMA_MODEL_DEFAULT)
+        results['ollama'] = {'key_set': True, 'model': model_name}
+        ollama = get_ollama_client()
+        if ollama:
+            t0 = time.time()
+            r = ollama.chat(
+                model=model_name,
+                messages=test_messages,
+                options={'temperature': 0.1, 'num_predict': 20, 'num_thread': 4, 'num_gpu': 0},
+            )
+            results['ollama']['status'] = 'ok'
+            results['ollama']['response'] = (r.get('message', {}).get('content') or '')[:100]
+            results['ollama']['latency_ms'] = int((time.time() - t0) * 1000)
+            results['ollama']['provider'] = f'ollama:{model_name}'
+        else:
+            results['ollama']['status'] = 'client_null'
+            results['ollama']['error'] = 'Ollama no disponible (cliente retornó None)'
+    except Exception as e:
+        results['ollama'] = {'status': 'error', 'error': str(e)[:300]}
+
     return jsonify({'providers': results})
 
 
 @health_bp.route('/health/llm/config', methods=['GET'])
 @csrf.exempt
 def health_llm_config():
-    """Get current LLM configuration (API keys masked)."""
-    import os
+    """Get current LLM configuration: providers (masked) + settings + presets."""
+    from app.services.llm_config_service import list_config
 
-    def mask_key(k):
-        if not k:
-            return ''
-        if len(k) <= 8:
-            return '****'
-        return k[:4] + '****' + k[-4:]
-
-    return jsonify(
-        {
-            'glm': {
-                'key': mask_key(os.environ.get('GLM_API_KEY', '')),
-                'model': 'z-ai/glm-5.2',
-                'base_url': 'https://integrate.api.nvidia.com/v1',
-            },
-            'groq': {
-                'key': mask_key(os.environ.get('GROQ_API_KEY', '')),
-                'models': ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-            },
-            'gemini': {
-                'key': mask_key(os.environ.get('GEMINI_API_KEY', '')),
-                'model': 'gemini-2.0-flash',
-            },
-        }
-    )
+    try:
+        return jsonify(list_config())
+    except Exception as e:
+        logger.warning(f'health_llm_config failed: {e}')
+        return jsonify({'providers': [], 'settings': {'fallback_enabled': True}, 'presets': {}})
 
 
 @health_bp.route('/health/llm/config', methods=['POST'])
 @csrf.exempt
 def health_llm_config_update():
-    """Update LLM API keys at runtime. Admin only."""
+    """Update LLM API keys at runtime. Admin only. Sincroniza env + BD."""
     from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
     from app.models import User
@@ -667,11 +673,249 @@ def health_llm_config_update():
                 updated.append(key_name)
 
     if updated:
+        from app.services.llm_config_service import sync_env_key_to_provider
+
+        slug_map = {'GLM_API_KEY': 'glm', 'GROQ_API_KEY': 'groq', 'GEMINI_API_KEY': 'gemini'}
+        for key_name in updated:
+            slug = slug_map.get(key_name)
+            if slug:
+                sync_env_key_to_provider(slug, key_name, data[key_name])
+
         from app.services.llm_client import reset_clients
 
         reset_clients()
 
     return jsonify({'updated': updated, 'errors': errors})
+
+
+# ─── Admin CRUD de providers de IA (Centro de Operaciones) ─────────────────
+
+
+def _require_llm_admin():
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+    from app.models import User
+
+    try:
+        verify_jwt_in_request(locations=['cookies', 'headers'])
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid))
+        if not user or user.role not in ('admin', 'supervisor'):
+            return None, jsonify({'error': 'No autorizado'}), 403
+        return user, None, None
+    except Exception:
+        return None, jsonify({'error': 'No autenticado'}), 401
+
+
+def _slugify(value):
+    import re
+
+    slug = re.sub(r'[^a-z0-9]+', '-', value.strip().lower()).strip('-')
+    return slug or 'provider'
+
+
+def _llm_allowed_types():
+    return {'ollama', 'groq', 'glm', 'openai', 'anthropic', 'gemini'}
+
+
+def _ensure_unique_slug(slug, exclude_id=None):
+    from app.models.ai_provider import AIProvider
+
+    base = slug
+    n = 1
+    while True:
+        q = AIProvider.query.filter_by(slug=slug)
+        if exclude_id:
+            q = q.filter(AIProvider.id != exclude_id)
+        if q.first() is None:
+            return slug
+        n += 1
+        slug = f'{base}-{n}'
+
+
+@health_bp.route('/health/llm/providers', methods=['POST'])
+@csrf.exempt
+def health_llm_providers_create():
+    """Alta de un provider (preset o custom OpenAI-compatible). Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AIProvider
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    provider_type = (data.get('provider_type') or '').strip().lower()
+    if not name:
+        return jsonify({'error': 'name es obligatorio'}), 400
+    if provider_type not in _llm_allowed_types():
+        return jsonify({'error': f'provider_type inválido: {provider_type}'}), 400
+
+    api_key = data.get('api_key') or ''
+    if api_key == '****':
+        api_key = ''
+
+    max_priority = db.session.query(db.func.max(AIProvider.priority)).scalar() or 0
+    provider = AIProvider(
+        slug=_ensure_unique_slug(data.get('slug') or _slugify(name)),
+        name=name,
+        provider_type=provider_type,
+        base_url=(data.get('base_url') or '').strip() or None,
+        model=(data.get('model') or '').strip() or None,
+        api_key=api_key or None,
+        is_active=bool(data.get('is_active', True)),
+        priority=int(data.get('priority') or max_priority + 10),
+        is_seed=False,
+        created_by_id=user.id,
+    )
+    db.session.add(provider)
+    db.session.commit()
+
+    from app.services.llm_client import reset_clients
+
+    reset_clients()
+    return jsonify({'success': True, 'provider': provider.to_dict(mask_keys=True)}), 201
+
+
+@health_bp.route('/health/llm/providers/<int:pid>', methods=['PUT'])
+@csrf.exempt
+def health_llm_providers_update(pid):
+    """Edición de un provider (clave '****' = dejar la actual). Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AIProvider
+
+    provider = db.session.get(AIProvider, pid)
+    if not provider:
+        return jsonify({'error': 'Provider no encontrado'}), 404
+
+    data = request.get_json(silent=True) or {}
+
+    if 'name' in data:
+        provider.name = (data.get('name') or '').strip() or provider.name
+    if 'provider_type' in data:
+        pt = (data.get('provider_type') or '').strip().lower()
+        if pt and pt in _llm_allowed_types():
+            provider.provider_type = pt
+    if 'base_url' in data:
+        provider.base_url = (data.get('base_url') or '').strip() or None
+    if 'model' in data:
+        provider.model = (data.get('model') or '').strip() or None
+    if 'api_key' in data:
+        new_key = (data.get('api_key') or '').strip()
+        if new_key not in ('', '****'):
+            provider.api_key = new_key
+    if 'is_active' in data:
+        provider.is_active = bool(data.get('is_active', provider.is_active))
+    if 'priority' in data:
+        with contextlib.suppress(TypeError, ValueError):
+            provider.priority = int(data.get('priority'))
+
+    db.session.commit()
+
+    from app.services.llm_client import reset_clients
+
+    reset_clients()
+    return jsonify({'success': True, 'provider': provider.to_dict(mask_keys=True)})
+
+
+@health_bp.route('/health/llm/providers/<int:pid>', methods=['DELETE'])
+@csrf.exempt
+def health_llm_providers_delete(pid):
+    """Baja de un provider. Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AIProvider
+
+    provider = db.session.get(AIProvider, pid)
+    if not provider:
+        return jsonify({'error': 'Provider no encontrado'}), 404
+
+    db.session.delete(provider)
+    db.session.commit()
+
+    from app.services.llm_client import reset_clients
+
+    reset_clients()
+    return jsonify({'success': True, 'deleted': pid})
+
+
+@health_bp.route('/health/llm/providers/<int:pid>/test', methods=['POST'])
+@csrf.exempt
+def health_llm_providers_test(pid):
+    """Prueba un provider individual con un mini chat. Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AIProvider
+    from app.services.llm_client import test_provider as run_test
+
+    provider = db.session.get(AIProvider, pid)
+    if not provider:
+        return jsonify({'error': 'Provider no encontrado'}), 404
+
+    result = run_test(provider.to_config_dict())
+    return jsonify({'success': result.get('ok'), **result})
+
+
+@health_bp.route('/health/llm/reorder', methods=['POST'])
+@csrf.exempt
+def health_llm_providers_reorder():
+    """Reordena la cadena: body {order: [{id, priority}]}. Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AIProvider
+
+    data = request.get_json(silent=True) or {}
+    order = data.get('order') or []
+    if not isinstance(order, list) or not order:
+        return jsonify({'error': 'order requerido'}), 400
+
+    touched = 0
+    for idx, item in enumerate(order):
+        pid = int(item.get('id') or 0)
+        priority = int(item.get('priority', idx * 10))
+        provider = db.session.get(AIProvider, pid)
+        if provider:
+            provider.priority = priority
+            touched += 1
+    db.session.commit()
+
+    from app.services.llm_client import reset_clients
+
+    reset_clients()
+    return jsonify({'success': True, 'touched': touched})
+
+
+@health_bp.route('/health/llm/settings', methods=['POST'])
+@csrf.exempt
+def health_llm_settings_update():
+    """Toggle de fallback: body {fallback_enabled: bool}. Admin only."""
+    user, err, code = _require_llm_admin()
+    if err is not None:
+        return err, code
+
+    from app.models.ai_provider import AISettings
+
+    data = request.get_json(silent=True) or {}
+    if 'fallback_enabled' not in data:
+        return jsonify({'error': 'fallback_enabled requerido'}), 400
+
+    settings = AISettings.get_or_create()
+    settings.fallback_enabled = bool(data.get('fallback_enabled'))
+    db.session.commit()
+
+    from app.services.llm_client import reset_clients
+
+    reset_clients()
+    return jsonify({'success': True, 'settings': settings.to_dict()})
 
 
 @health_bp.route('/health/notifications/config', methods=['GET', 'POST'])

@@ -480,13 +480,11 @@
             <h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
               <fa-icon [icon]="['fas', 'robot']" class="text-primary"></fa-icon> Configuracion LLM / IA
             </h2>
-            <p class="text-sm text-on-surface-variant">Proveedores de inteligencia artificial para el chat y asistente</p>
+            <p class="text-sm text-on-surface-variant">Proveedores de inteligencia artificial y orden de la cadena de fallback</p>
           </div>
           <div class="flex items-center gap-2">
             <app-button variant="primary" label="Provar Providers" [icon]="['fas', 'play']" [loading]="llmTesting" (clicked)="testLLMProviders()"></app-button>
-            @if (!llmEditing) {
-              <app-button variant="secondary" label="Configurar API Keys" [icon]="['fas', 'key']" (clicked)="startEditLLM()"></app-button>
-            }
+            <app-button variant="secondary" label="Añadir Provider" [icon]="['fas', 'plus']" (clicked)="openProviderModal()"></app-button>
           </div>
         </div>
       </div>
@@ -500,7 +498,7 @@
 
       @if (llmProviders) {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          @for (key of ['glm', 'groq', 'gemini', 'chain']; track key) {
+          @for (key of ['ollama', 'glm', 'groq', 'gemini']; track key) {
             <div class="bg-surface-container rounded-xl border border-border/20 p-4">
               <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders[key]?.status) + '20'">
@@ -513,7 +511,7 @@
                   }
                 </div>
                 <div>
-                  <h3 class="font-bold text-sm text-on-surface uppercase">{{ key }}</h3>
+                  <h3 class="font-bold text-sm text-on-surface uppercase">{{ providerTypeLabel(key) }}</h3>
                   <p class="text-xs text-on-surface-variant">
                     @if (llmProviders[key]?.status === 'ok') {
                       @if (llmProviders[key]?.latency_ms) { {{ llmProviders[key].latency_ms }}ms }
@@ -530,6 +528,29 @@
               }
             </div>
           }
+          <div class="bg-surface-container rounded-xl border border-border/20 p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" [style.background]="providerStatusColor(llmProviders?.chain?.status) + '20'">
+                @if (llmProviders?.chain?.status === 'ok') {
+                  <fa-icon [icon]="['fas', 'check-circle']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
+                } @else {
+                  <fa-icon [icon]="['fas', 'times-circle']" [style.color]="providerStatusColor(llmProviders?.chain?.status)"></fa-icon>
+                }
+              </div>
+              <div>
+                <h3 class="font-bold text-sm text-on-surface uppercase">Cadena</h3>
+                <p class="text-xs text-on-surface-variant">
+                  @if (llmProviders?.chain?.status === 'ok') {
+                    @if (llmProviders?.chain?.latency_ms) { {{ llmProviders.chain.latency_ms }}ms }
+                    @if (llmProviders?.chain?.provider) { via {{ llmProviders.chain.provider }} }
+                  } @else { Error }
+                </p>
+              </div>
+            </div>
+            @if (llmProviders?.chain?.error) {
+              <div class="text-xs text-error bg-error/10 rounded-lg p-2 font-mono truncate">{{ llmProviders.chain.error | slice:0:100 }}</div>
+            }
+          </div>
         </div>
       }
 
@@ -537,56 +558,108 @@
         <div class="flex justify-center py-12"><app-spinner></app-spinner></div>
       }
 
-      @if (llmEditing) {
-        <div class="bg-surface-container rounded-xl border border-primary/30 p-6 mb-6" @fadeInUp>
-          <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'key']" class="text-primary"></fa-icon> Actualizar API Keys
-          </h3>
-          <p class="text-sm text-on-surface-variant mb-4">Deja en blanco si no quieres cambiar esa key.</p>
-          <div class="space-y-4">
+      @if (llmConfig && !llmLoading) {
+        <div class="bg-surface-container rounded-xl border border-border/20 p-6 mb-6" @fadeInUp>
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
             <div>
-              <label class="text-xs font-bold text-on-surface-variant block mb-1">GLM API Key</label>
-              <input type="password" [(ngModel)]="llmEditKeys['GLM_API_KEY']" placeholder="nvapi-..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+              <h3 class="font-bold text-on-surface flex items-center gap-2">
+                <fa-icon [icon]="['fas', 'share-nodes']" class="text-primary"></fa-icon> Cadena de fallback
+              </h3>
+              <p class="text-xs text-on-surface-variant">
+                @if (llmFallback) {
+                  ON: si un provider falla, se intenta el siguiente por orden.
+                } @else {
+                  OFF: solo se usa el provider principal de la lista.
+                }
+              </p>
             </div>
-            <div>
-              <label class="text-xs font-bold text-on-surface-variant block mb-1">GROQ API Key</label>
-              <input type="password" [(ngModel)]="llmEditKeys['GROQ_API_KEY']" placeholder="gsk_..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
-            </div>
-            <div>
-              <label class="text-xs font-bold text-on-surface-variant block mb-1">GEMINI API Key</label>
-              <input type="password" [(ngModel)]="llmEditKeys['GEMINI_API_KEY']" placeholder="AI..." class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
-            </div>
+            <app-button [variant]="llmFallback ? 'primary' : 'secondary'" [label]="llmFallback ? 'Fallback ON' : 'Fallback OFF'"
+              [icon]="llmFallback ? ['fas', 'toggle-on'] : ['fas', 'toggle-off']"
+              [disabled]="llmFallbackToggling" (clicked)="toggleFallback()"></app-button>
           </div>
-          <div class="flex gap-2 mt-4">
-            <app-button variant="ghost" label="Cancelar" (clicked)="cancelEditLLM()"></app-button>
-            <app-button variant="primary" label="Guardar y Provar" [icon]="['fas', 'save']" (clicked)="saveLLMKeys()"></app-button>
-          </div>
+
+          @if (llmRows.length) {
+            <div class="space-y-2">
+              @for (provider of llmRows; track provider.id; let i = $index) {
+                <div class="flex flex-col lg:flex-row lg:items-center gap-3 p-4 rounded-xl bg-surface-container-high border border-border/20">
+                  <div class="flex items-center gap-2 shrink-0">
+                    <div class="flex flex-col">
+                      <button (click)="moveProvider(i, -1)" [disabled]="i === 0"
+                        class="w-6 h-6 flex items-center justify-center rounded text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Subir en la cadena">
+                        <fa-icon [icon]="['fas', 'chevron-up']"></fa-icon>
+                      </button>
+                      <button (click)="moveProvider(i, 1)" [disabled]="i === llmRows.length - 1"
+                        class="w-6 h-6 flex items-center justify-center rounded text-on-surface-variant hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Bajar en la cadena">
+                        <fa-icon [icon]="['fas', 'chevron-down']"></fa-icon>
+                      </button>
+                    </div>
+                    <span class="text-sm font-bold text-on-surface-variant">{{ i + 1 }}</span>
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h4 class="font-bold text-on-surface">{{ provider.name }}</h4>
+                      <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ providerTypeLabel(provider.provider_type) }}</span>
+                      @if (provider.is_seed) {
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-container-lowest text-on-surface-variant border border-border/20">Seed</span>
+                      }
+                    </div>
+                    <div class="text-xs text-on-surface-variant space-y-0.5 mt-1">
+                      @if (provider.model) { <p><span class="font-semibold">Modelo:</span> {{ provider.model }}</p> }
+                      @if (provider.base_url) { <p class="truncate"><span class="font-semibold">URL:</span> <code class="bg-surface-container rounded px-1 text-[10px]">{{ provider.base_url }}</code></p> }
+                      <p>
+                        <span class="font-semibold">API Key:</span>
+                        @if (provider.has_key) {
+                          <span class="text-success">Configurada</span>
+                        } @else {
+                          <span class="text-warning">No configurada</span>
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 flex-wrap shrink-0">
+                    @if (provider.testStatus) {
+                      <span class="text-xs font-bold px-2 py-1 rounded-lg"
+                        [class.bg-success/15]="provider.testStatus === 'ok'" [class.text-success]="provider.testStatus === 'ok'"
+                        [class.bg-error/15]="provider.testStatus === 'error'" [class.text-error]="provider.testStatus === 'error'">
+                        @if (provider.testStatus === 'ok') {
+                          OK{{ provider.testResult?.latency_ms ? ' ' + provider.testResult.latency_ms + 'ms' : '' }}
+                        } @else {
+                          {{ provider.testResult?.latency_ms ? 'Respuesta "' + (provider.testResult?.response ?? provider.testResult?.error ?? 'vacia') + '" ' + provider.testResult.latency_ms + 'ms' : 'Error' }}
+                        }
+                      </span>
+                    }
+                    <label class="flex items-center gap-2 cursor-pointer select-none" title="Activar/desactivar provider">
+                      <input type="checkbox" [checked]="provider.is_active" (change)="toggleProviderActive(provider)"
+                        class="rounded text-primary focus:ring-primary">
+                      <span class="text-xs font-semibold text-on-surface-variant">Activo</span>
+                    </label>
+                    <app-button variant="ghost" [icon]="['fas', 'vial']" [loading]="provider.testing === true" (clicked)="testSingleProvider(provider)"></app-button>
+                    <app-button variant="ghost" [icon]="['fas', 'pencil']" (clicked)="openProviderModal(provider)"></app-button>
+                    <app-button variant="danger" [icon]="['fas', 'trash']" (clicked)="deleteProvider(provider)"></app-button>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="text-sm text-on-surface-variant">Sin providers configurados. Añade uno o selecciona un preset.</p>
+          }
         </div>
       }
 
-      @if (llmConfig && !llmEditing) {
+      @if (llmConfig && !llmLoading) {
         <div class="bg-surface-container rounded-xl border border-border/20 p-6" @fadeInUp>
           <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2">
-            <fa-icon [icon]="['fas', 'cog']" class="text-on-surface-variant"></fa-icon> Configuracion Actual
+            <fa-icon [icon]="['fas', 'wand-magic-sparkles']" class="text-primary"></fa-icon> Presets rapidos
           </h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            @for (prov of ['glm', 'groq', 'gemini']; track prov) {
-              <div class="bg-surface-container-high rounded-xl p-4">
-                <h4 class="font-bold text-sm uppercase text-on-surface mb-2">{{ prov }}</h4>
-                <div class="space-y-1 text-xs text-on-surface-variant">
-                  @if (llmConfig[prov]?.key) {
-                    <p><span class="font-semibold">Key:</span> <code class="bg-surface-container rounded px-1">{{ llmConfig[prov].key }}</code></p>
-                  } @else {
-                    <p class="text-error font-semibold">No configurada</p>
-                  }
-                  @if (llmConfig[prov]?.model) { <p><span class="font-semibold">Modelo:</span> {{ llmConfig[prov].model }}</p> }
-                  @if (llmConfig[prov]?.base_url) { <p><span class="font-semibold">URL:</span> <code class="bg-surface-container rounded px-1 text-[10px]">{{ llmConfig[prov].base_url }}</code></p> }
-                </div>
-              </div>
+          <p class="text-sm text-on-surface-variant mb-4">Crea un provider con la configuracion recomendada de cada proveedor.</p>
+          <div class="flex flex-wrap gap-2">
+            @for (presetKey of presetKeys(); track presetKey) {
+              <app-button variant="secondary" [label]="llmPresets[presetKey].name" [icon]="['fas', 'plus']" (clicked)="addProviderFromPreset(presetKey)"></app-button>
             }
-          </div>
-          <div class="mt-4 p-3 bg-surface-container-high rounded-xl text-xs text-on-surface-variant">
-            <strong>Cadena de fallback:</strong> GLM-5.2 → Groq → Gemini → Ollama
           </div>
         </div>
       }
@@ -724,6 +797,74 @@
     } @else {
       <app-button variant="primary" label="Cerrar" (clicked)="closeCreateTokenModal()"></app-button>
     }
+  </div>
+</app-modal>
+
+<app-modal [isOpen]="showProviderModal" [title]="editingProviderId ? 'Editar Provider' : 'Nuevo Provider'" (close)="closeProviderModal()">
+  <div class="space-y-4">
+    <app-alert type="info" message="La API key se almacena en el servidor. Al editar, deja el campo en blanco para conservar la actual."></app-alert>
+
+    @if (!editingProviderId) {
+      <div>
+        <label class="text-xs font-bold text-on-surface-variant block mb-1">Preset (opcional)</label>
+        <select (ngModelChange)="onPresetChange($event)" [ngModel]="''"
+          class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm">
+          <option value="">Selecciona un preset...</option>
+          @for (presetKey of presetKeys(); track presetKey) {
+            <option [value]="presetKey">{{ llmPresets[presetKey].name }}</option>
+          }
+        </select>
+      </div>
+    }
+
+    <div>
+      <label class="text-xs font-bold text-on-surface-variant block mb-1">Nombre *</label>
+      <input type="text" [(ngModel)]="providerForm.name" placeholder="Ej: Groq, Gemini, Ollama..."
+        class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-on-surface-variant block mb-1">Tipo de provider</label>
+      <select [(ngModel)]="providerForm.provider_type"
+        class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm">
+        <option value="ollama">Ollama (local)</option>
+        <option value="groq">Groq</option>
+        <option value="glm">GLM / NVIDIA</option>
+        <option value="openai">OpenAI-compatible</option>
+        <option value="anthropic">Claude (Anthropic)</option>
+        <option value="gemini">Gemini (Google)</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-on-surface-variant block mb-1">Modelo</label>
+      <input type="text" [(ngModel)]="providerForm.model" placeholder="Ej: gemma3:4b, llama-3.3-70b-versatile, z-ai/glm-5.2..."
+        class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-on-surface-variant block mb-1">Base URL (opcional)</label>
+      <input type="text" [(ngModel)]="providerForm.base_url" placeholder="https://api.proveedor.com/v1"
+        class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-on-surface-variant block mb-1">API Key</label>
+      <input type="password" [(ngModel)]="providerForm.api_key"
+        [placeholder]="providerForm.provider_type === 'ollama' ? '(no requerida para Ollama)' : (llmPresets['custom']?.key_placeholder || 'sk-...')"
+        class="w-full px-4 py-2 bg-surface-container-high border border-border/30 rounded-xl text-sm font-mono">
+    </div>
+
+    <label class="flex items-center gap-3">
+      <input type="checkbox" [(ngModel)]="providerForm.is_active" class="rounded text-primary focus:ring-primary">
+      <span class="text-sm text-on-surface">Activo (se usa en la cadena)</span>
+    </label>
+  </div>
+
+  <div modal-footer>
+    <app-button variant="ghost" label="Cancelar" (clicked)="closeProviderModal()"></app-button>
+    <app-button variant="primary" [label]="editingProviderId ? 'Guardar cambios' : 'Crear provider'" [icon]="['fas', 'save']"
+      [loading]="providerSaving" (clicked)="saveProvider()"></app-button>
   </div>
 </app-modal>
 
