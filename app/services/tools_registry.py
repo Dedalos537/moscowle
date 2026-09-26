@@ -2590,7 +2590,7 @@ def handle_update_contract(contract_id, **kwargs):
     category='read',
     roles=ROLES_ADMIN,
 )
-def handle_get_patient_stats():
+def handle_get_patient_stats(**kwargs):
 
     from app.routes.admin.users import patient_stats
 
