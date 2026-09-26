@@ -34,6 +34,14 @@ OLLAMA_KEEP_ALIVE = os.environ.get('OLLAMA_KEEP_ALIVE', '6m')
 OLLAMA_CTX_ROUTE = int(os.environ.get('OLLAMA_CTX_ROUTE', '8192'))
 OLLAMA_CTX_TACTICAL = int(os.environ.get('OLLAMA_CTX_TACTICAL', '4096'))
 
+# Fase táctica: MiniCPM responde solo charla corta, sin tools ni tecnicismos.
+_TACTICAL_SYSTEM = (
+    'Eres Diego, asistente amable del Centro Juan Pablo II (Perú). '
+    'Respondes SIEMPRE en español, breve y cálido: 1-3 líneas. '
+    'No mencionas herramientas, sistemas ni datos de pacientes. '
+    'Solo conversación casual.'
+)
+
 _RATE_LIMIT_RETRIES = 2
 _RATE_LIMIT_BACKOFF = 2.0
 
@@ -421,6 +429,13 @@ def _try_ollama(messages, temperature, model=None, tools=None, phase='route', ma
 
     tactical = phase == 'tactical'
     ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
+    # El táctico (charla corta) no debe ver el system de tools del router: lo
+    # reemplazamos por una persona simple para evitar que MiniCPM "hable" de tools.
+    if tactical:
+        messages = [
+            {'role': 'system', 'content': _TACTICAL_SYSTEM},
+            *[m for m in messages if m.get('role') != 'system'],
+        ]
     options = {
         'temperature': temperature,
         'num_ctx': ctx,
@@ -582,6 +597,11 @@ def _stream_ollama(messages, temperature, model=None, tools=None, phase='route',
     ollama_model = model or _ollama_route_model(phase, tools)
     tactical = phase == 'tactical'
     ctx = OLLAMA_CTX_TACTICAL if tactical else OLLAMA_CTX_ROUTE
+    if tactical:
+        messages = [
+            {'role': 'system', 'content': _TACTICAL_SYSTEM},
+            *[m for m in messages if m.get('role') != 'system'],
+        ]
     options = {
         'temperature': temperature,
         'num_ctx': ctx,
