@@ -121,6 +121,7 @@ CORE_TOOL_NAMES = [
     'cancel_session',
     'complete_session',
     'batch_create_sessions',
+    'create_group_sessions',
     'get_financial_summary',
     'get_payment_history',
     'register_payment',
