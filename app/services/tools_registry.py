@@ -112,6 +112,46 @@ def _unwrap_items(data, key):
     return []
 
 
+_WEEKDAY_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+
+
+def _with_display_times(sessions):
+    """Agrega 'hora' y 'dia' ya formateados a cada sesion.
+
+    El modelo local interpreta mal los ISO y termina diciendo '08:00 PM'
+    para una sesion de las 08:00. Con los strings listos para copiar evita
+    que reformatee la hora.
+    """
+    out = []
+    for s in sessions:
+        if not isinstance(s, dict):
+            out.append(s)
+            continue
+        item = dict(s)
+        start_raw = item.get('start') or item.get('start_time')
+        end_raw = item.get('end') or item.get('end_time')
+        try:
+            start_dt = datetime.fromisoformat(str(start_raw)) if start_raw else None
+        except (ValueError, TypeError):
+            start_dt = None
+        try:
+            end_dt = datetime.fromisoformat(str(end_raw)) if end_raw else None
+        except (ValueError, TypeError):
+            end_dt = None
+        if start_dt:
+            item['hora'] = start_dt.strftime('%H:%M')
+            item['dia'] = f"{_WEEKDAY_ES[start_dt.weekday()]} {start_dt.day:02d}/{start_dt.month:02d}"
+        if end_dt:
+            item['hora_fin'] = end_dt.strftime('%H:%M')
+            if start_dt:
+                item['horario'] = f"{item['hora']} - {item['hora_fin']}"
+        patient = item.get('patient')
+        if isinstance(patient, dict) and patient.get('name'):
+            item['paciente'] = patient['name']
+        out.append(item)
+    return out
+
+
 def _last_day_of_month(year, month):
     next_month = datetime(year, month, 1) + timedelta(days=31)
     return (next_month.replace(day=1) - timedelta(days=1)).day
@@ -1500,7 +1540,7 @@ def handle_get_sessions_day(date=None, **kwargs):
             sessions = data
         else:
             sessions = []
-        return {'success': True, 'date': target, 'count': len(sessions), 'sessions': sessions}
+        return {'success': True, 'date': target, 'count': len(sessions), 'sessions': _with_display_times(sessions)}
     except Exception as e:
         return {'error': str(e)}
 
