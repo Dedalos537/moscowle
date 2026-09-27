@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
@@ -600,6 +600,40 @@ def _select_local_tools(tools, message):
 # fijo, la string 'month' (se extrae el mes del mensaje) o None (sin args).
 _LOCAL_FORCE_TOOLS = (
     (
+        'get_sessions_day',
+        (
+            'que sesiones hay',
+            'que sesiones',
+            'sesiones hay para',
+            'sesiones para el',
+            'sesiones del dia',
+            'sesiones de hoy',
+            'sesiones de mañana',
+            'agenda del',
+            'agenda de hoy',
+            'agenda de mañana',
+            'que hay el',
+            'citas del dia',
+            'citas de hoy',
+        ),
+        'session_day',
+    ),
+    (
+        'list_sedes',
+        (
+            'cuantas sedes',
+            'cuántas sedes',
+            'que sedes',
+            'qué sedes',
+            'sedes tiene',
+            'sedes del centro',
+            'lista de sedes',
+            'donde estan las sedes',
+            'dónde están las sedes',
+        ),
+        None,
+    ),
+    (
         'create_group_sessions',
         (
             'grupo y se hacen las sesiones',
@@ -707,6 +741,75 @@ _WEEKDAY_MAP = {
     'sábado': 5,
     'domingo': 6,
 }
+
+
+_LOCAL_MONTH_NAMES = {
+    'enero': 1,
+    'febrero': 2,
+    'marzo': 3,
+    'abril': 4,
+    'mayo': 5,
+    'junio': 6,
+    'julio': 7,
+    'agosto': 8,
+    'setiembre': 9,
+    'septiembre': 9,
+    'octubre': 10,
+    'noviembre': 11,
+    'diciembre': 12,
+}
+
+
+def _extract_date_arg(message):
+    """Resuelve la fecha de una consulta de agenda: 'lunes 28 de setiembre',
+    '28/09', 'el lunes', 'hoy', 'mañana'. Devuelve {'date': 'YYYY-MM-DD'}."""
+    import re as _re
+
+    text = _normalize_text(message)
+    today = datetime.now(LIMA_TZ).date()
+
+    if 'manana' in text or 'mañana' in text:
+        return {'date': (today + timedelta(days=1)).strftime('%Y-%m-%d')}
+    if 'ayer' in text:
+        return {'date': (today - timedelta(days=1)).strftime('%Y-%m-%d')}
+    if 'hoy' in text:
+        return {'date': today.strftime('%Y-%m-%d')}
+
+    month_num = None
+    for name, num in _LOCAL_MONTH_NAMES.items():
+        if _re.search(rf'\b{name}\b', text):
+            month_num = num
+            break
+
+    day = None
+    dm = _re.search(r'\b(\d{1,2})\s*(?:de\s+\w+)?[/.-]\s*(\d{1,2})(?:[/.-]\d{2,4})?\b', text)
+    if dm:
+        day, month_num = int(dm.group(1)), int(dm.group(2))
+    else:
+        dm = _re.search(r'\b(\d{1,2})\s+de\s+\w+\b', text)
+        if dm and month_num:
+            day = int(dm.group(1))
+        else:
+            dm = _re.search(r'\b(\d{1,2})\b', text)
+            if dm:
+                day = int(dm.group(1))
+
+    if day and month_num:
+        year = today.year
+        try:
+            return {'date': date(year, month_num, day).strftime('%Y-%m-%d')}
+        except ValueError:
+            try:
+                return {'date': date(year + 1, month_num, day).strftime('%Y-%m-%d')}
+            except ValueError:
+                return None
+
+    for name, weekday in _WEEKDAY_MAP.items():
+        if _re.search(rf'\b{name}\b', text):
+            delta = (weekday - today.weekday()) % 7
+            return {'date': (today + timedelta(days=delta)).strftime('%Y-%m-%d')}
+
+    return None
 
 
 def _normalize_text(value):
@@ -823,6 +926,8 @@ def _force_intent_tool(message, local_tools, user_role):
         if any(k in msg for k in keywords) and tool_name in allowed:
             if arg_spec == 'month':
                 resolved_args = _extract_month_arg(message)
+            elif arg_spec == 'session_day':
+                resolved_args = _extract_date_arg(message) or {}
             elif arg_spec == 'group_session':
                 resolved_args = _build_group_session_args(message)
                 if not resolved_args:
