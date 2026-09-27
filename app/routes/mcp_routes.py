@@ -492,6 +492,14 @@ def mcp_chat_stream():
 
                         yield f'data: {json.dumps({"type": "thinking", "content": "Procesando resultado..."})}\n\n'
 
+                # Intent determinista: si el mensaje corresponde a un reporte inequívoco
+                # (agenda de una fecha, sedes, gastos, deudores, grupo de sesiones), se ejecuta
+                # la tool sin pasar por el router local. Evita que el modelo de 1.5B emita prosa
+                # inventada antes del tool_call y ahorra CPU.
+                det_tool = None
+                if local_mode and not confirmed_tool.get('name') and not tool_calls_log:
+                    det_tool = _force_intent_tool(message, local_tools, user.role)
+
                 for iteration in range(6):
                     try:
                         full_content = ''
@@ -512,19 +520,25 @@ def mcp_chat_stream():
                             yield f'data: {json.dumps(done_payload)}\n\n'
                             return
 
-                        llm_stream_kwargs = {'temperature': 0.3, 'max_tokens': 4096}
-                        if local_mode:
-                            # Sin resultado REAL previo todavía -> fase route con tools nativas.
-                            local_phase = 'resume' if tool_calls_log or last_result_str else 'route'
-                            llm_stream_kwargs['phase'] = local_phase
-                            if local_phase == 'route' and not confirmed_tool.get('name'):
-                                llm_stream_kwargs['tools'] = local_tools
-                        for chunk in llm_chat_stream(messages, **llm_stream_kwargs):
-                            full_content += chunk
-                            clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
-                            if clean.strip():
-                                streamed_text += clean
-                                yield f'data: {json.dumps({"type": "chunk", "content": clean}, ensure_ascii=False)}\n\n'
+                        if det_tool and iteration == 0:
+                            _det_args = json.dumps(det_tool[1], ensure_ascii=False)
+                            full_content = f'<function={det_tool[0]}{_det_args}</function>'
+                            logger.info(f'MCP stream intent determinista (sin router): {det_tool[0]}({_det_args})')
+                        else:
+                            llm_stream_kwargs = {'temperature': 0.3, 'max_tokens': 4096}
+                            if local_mode:
+                                # Sin resultado REAL previo todavia -> fase route con tools nativas.
+                                local_phase = 'resume' if tool_calls_log or last_result_str else 'route'
+                                llm_stream_kwargs['phase'] = local_phase
+                                if local_phase == 'route' and not confirmed_tool.get('name'):
+                                    llm_stream_kwargs['tools'] = local_tools
+                            for chunk in llm_chat_stream(messages, **llm_stream_kwargs):
+                                full_content += chunk
+                                clean = re.sub(r'<function=\w+.*?</function>', '', chunk)
+                                if clean.strip():
+                                    streamed_text += clean
+                                    _cd = {'type': 'chunk', 'content': clean}
+                                    yield f'data: {json.dumps(_cd, ensure_ascii=False)}\n\n'
 
                         if not full_content.strip():
                             msg = {'type': 'text', 'content': 'No pude generar una respuesta.'}
