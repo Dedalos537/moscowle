@@ -219,7 +219,7 @@ class Config:
     # Fallback to memory if not set
     RATELIMIT_STORAGE_URL = os.getenv('RATELIMIT_STORAGE_URL', 'memory://')
     RATELIMIT_HEADERS_ENABLED = True
-    RATELIMIT_DEFAULT = '2000 per day,200 per hour'  # Allow session polling
+    RATELIMIT_DEFAULT = '20000 per day,600 per hour'  # Allow session polling
 
     # ========== LOGGING CONFIGURATION ==========
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
