@@ -1079,7 +1079,7 @@ class MCPService:
                         )
                         continue
 
-                if not tool_name and local_mode and not local_resume and not tool_calls_log:
+                if local_mode and not local_resume and not tool_calls_log:
                     forced = _force_intent_tool(message, local_tools, user_role)
                     if forced:
                         tool_name, tool_args = forced
