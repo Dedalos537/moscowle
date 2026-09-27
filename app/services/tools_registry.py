@@ -93,6 +93,25 @@ def _valid_date(value):
     return bool(DATE_RE.match(str(value)))
 
 
+def _unwrap_items(data, key):
+    """Normaliza la respuesta de un endpoint a lista.
+
+    Algunos endpoints devuelven una lista suelta y otros un sobre
+    {'<key>': [...]}. Sin esto, count queda en 0 y el modelo responde
+    'no hay registros' aunque existan.
+    """
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        value = data.get(key)
+        if isinstance(value, list):
+            return value
+        for v in data.values():
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return v
+    return []
+
+
 def _last_day_of_month(year, month):
     next_month = datetime(year, month, 1) + timedelta(days=31)
     return (next_month.replace(day=1) - timedelta(days=1)).day
@@ -469,7 +488,8 @@ def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
         qs = '&'.join(f'{k}={v}' for k, v in params.items())
         resp = _api_get(f'/admin/api/sessions?{qs}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'sessions': data}
+        items = _unwrap_items(data, 'sessions')
+        return {'success': True, 'count': len(items), 'sessions': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -1474,7 +1494,13 @@ def handle_get_sessions_day(date=None, **kwargs):
         target = date or _today_lima()
         resp = _api_get(f'/api/sessions/day?date={target}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'date': target, 'count': len(data) if isinstance(data, list) else 0, 'sessions': data}
+        if isinstance(data, dict):
+            sessions = data.get('sessions') or []
+        elif isinstance(data, list):
+            sessions = data
+        else:
+            sessions = []
+        return {'success': True, 'date': target, 'count': len(sessions), 'sessions': sessions}
     except Exception as e:
         return {'error': str(e)}
 
@@ -1777,7 +1803,8 @@ def handle_list_incidents(status=None, limit=20, **kwargs):
             params += f'&estado={status}'
         resp = _api_get(f'/api/incidents{params}', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'incidents': data}
+        items = _unwrap_items(data, 'incidents')
+        return {'success': True, 'count': len(items), 'incidents': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -1883,7 +1910,8 @@ def handle_list_sedes(**kwargs):
     try:
         resp = _api_get('/api/admin/sedes', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'sedes': data}
+        items = _unwrap_items(data, 'sedes')
+        return {'success': True, 'count': len(items), 'sedes': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -1922,7 +1950,8 @@ def handle_list_patient_groups(**kwargs):
     try:
         resp = _api_get('/api/admin/patient-groups', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'groups': data}
+        items = _unwrap_items(data, 'groups')
+        return {'success': True, 'count': len(items), 'groups': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -2297,7 +2326,8 @@ def handle_get_monthly_reports(**kwargs):
     try:
         resp = _api_get('/api/reports/monthly', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'reports': data}
+        items = _unwrap_items(data, 'reports')
+        return {'success': True, 'count': len(items), 'reports': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -2373,7 +2403,8 @@ def handle_get_notifications(category=None, **kwargs):
             url += f'/category/{category}'
         resp = _api_get(url, user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'notifications': data}
+        items = _unwrap_items(data, 'notifications')
+        return {'success': True, 'count': len(items), 'notifications': items}
     except Exception as e:
         return {'error': str(e)}
 
@@ -2408,7 +2439,8 @@ def handle_list_contracts(**kwargs):
     try:
         resp = _api_get('/admin/api/contracts', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
         data = resp.get_json() if resp else []
-        return {'success': True, 'count': len(data) if isinstance(data, list) else 0, 'contracts': data}
+        items = _unwrap_items(data, 'contracts')
+        return {'success': True, 'count': len(items), 'contracts': items}
     except Exception as e:
         return {'error': str(e)}
 
