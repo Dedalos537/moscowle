@@ -1662,6 +1662,35 @@ def handle_create_group_sessions(
             )
             therapist_id = therapist.id if therapist else kwargs.get('_user_id')
 
+        # Idempotencia: si ya existe un grupo activo con el mismo nombre, paciente y fechas,
+        # no duplicar (protege contra doble confirmacion del modal o reintentos).
+        from app.models.patient_group import PatientGroup
+
+        existing = (
+            PatientGroup.query.filter_by(name=group_name, is_active=True)
+            .order_by(PatientGroup.id.desc())
+            .first()
+        )
+        if existing:
+            same_members = sorted(existing.member_ids or []) == sorted(patient_ids)
+            same_dates = sorted(existing.session_dates or []) == sorted(dates)
+            if same_members and same_dates:
+                already = Appointment.query.filter_by(group_id=existing.id).all()
+                return {
+                    'success': True,
+                    'already_exists': True,
+                    'message': (
+                        f'El grupo "{group_name}" ya existe con esas mismas fechas y pacientes. '
+                        f'No se duplico (ya tiene {len(already)} sesion(es)).'
+                    ),
+                    'group_id': existing.id,
+                    'member_ids': patient_ids,
+                    'dates': dates,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'session_ids': [a.id for a in already],
+                }
+
         group_resp = _api_post(
             '/api/admin/patient-groups',
             json={
