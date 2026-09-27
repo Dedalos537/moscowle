@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from app.services.llm_client import llm_chat
@@ -451,6 +451,7 @@ _INTENT_GROUPS = {
         'cancel_session',
         'complete_session',
         'batch_create_sessions',
+        'create_group_sessions',
         'search_patients',
         'get_current_datetime',
     },
@@ -598,6 +599,18 @@ def _select_local_tools(tools, message):
 # Formato por entrada: (tool_name, keywords, args) donde args puede ser un dict
 # fijo, la string 'month' (se extrae el mes del mensaje) o None (sin args).
 _LOCAL_FORCE_TOOLS = (
+    (
+        'create_group_sessions',
+        (
+            'grupo y se hacen las sesiones',
+            'se crea un grupo de',
+            'crea un grupo de',
+            'crear un grupo de',
+            'creamos un grupo de',
+            'grupo de sesiones',
+        ),
+        'group_session',
+    ),
     ('get_debtors', ('moroso', 'morosos', 'deudor', 'deudores', 'cuanto debe', 'deuda', 'saldos pendientes'), None),
     (
         'list_expenses',
@@ -683,6 +696,122 @@ def _extract_month_arg(message):
     return {}
 
 
+_WEEKDAY_MAP = {
+    'lunes': 0,
+    'martes': 1,
+    'miercoles': 2,
+    'miércoles': 2,
+    'jueves': 3,
+    'viernes': 4,
+    'sabado': 5,
+    'sábado': 5,
+    'domingo': 6,
+}
+
+
+def _normalize_text(value):
+    import unicodedata
+
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', str(value or '')) if unicodedata.category(c) != 'Mn'
+    ).lower()
+
+
+def _find_user_id_by_words(full_name, roles=('jugador',)):
+    from app.models import User
+
+    words = [w for w in _normalize_text(full_name).split() if len(w) > 1]
+    if not words:
+        return None
+    candidates = User.query.filter(User.role.in_(roles)).all()
+    for u in candidates:
+        uu = _normalize_text(u.username)
+        if all(w in uu for w in words):
+            return u.id
+    return None
+
+
+def _default_therapist_id():
+    from app.models import User
+
+    t = (
+        User.query.filter_by(role='terapista', is_active=True).order_by(User.id).first()
+        or User.query.filter_by(role='terapista').order_by(User.id).first()
+    )
+    return t.id if t else None
+
+
+def _extract_session_time(msg):
+    m = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.|hrs?)?\s*(?:a\s+las?|-)\s*(\d{1,2})(?::(\d{2}))?\s*(?:am|a\.m\.)', msg)
+    if not m:
+        m = re.search(r'(\d{1,2})[:.](\d{2})\s*(?:a\s+las?|-)\s*(\d{1,2})[:.](\d{2})', msg)
+    if m:
+        sh = int(m.group(1))
+        sm = int(m.group(2) or 0)
+        eh = int(m.group(3))
+        em = int(m.group(4) or 0)
+        return f'{sh:02d}:{sm:02d}', f'{eh:02d}:{em:02d}'
+    return '08:00', '10:00'
+
+
+def _extract_session_count(msg):
+    m = re.search(r'(\d+)\s*(?:sesiones|sesión|ses)', msg)
+    return int(m.group(1)) if m else 3
+
+
+def _build_group_session_args(message):
+    """Devuelve args deterministas para create_group_sessions si el mensaje pide
+    crear un grupo de pacientes con sesiones; si no, None."""
+    msg = _normalize_text(message)
+    if 'grupo' not in msg or not re.search(r'sesion|se hacen', msg):
+        return None
+    names_blob = None
+    m = re.search(r'grupo de\s+(.+?)(?:\s+y\s+(?:se\s+hacen|se\s+programan|sean|se)\b|$)', msg)
+    if not m:
+        m = re.search(r'grupo de\s+(.+?)(?:\s+y\s+(?:se|sean)\b|$)', msg)
+    if m:
+        names_blob = m.group(1).strip()
+    if not names_blob:
+        m2 = re.search(r'sesiones (?:para|de)\s+(.+?)(?:\s+a\s+partir|\s+desde|$)', msg)
+        if m2:
+            names_blob = m2.group(1).strip()
+    if not names_blob:
+        return None
+    ids = []
+    raw_names = [p.strip() for p in re.split(r'\s+y\s+', names_blob) if p.strip()]
+    for rn in raw_names:
+        pid = _find_user_id_by_words(rn)
+        if pid:
+            ids.append(pid)
+    if not ids:
+        return None
+    start_date = None
+    for name, wd in _WEEKDAY_MAP.items():
+        if name in msg:
+            today = datetime.now(LIMA_TZ).date()
+            delta = (wd - today.weekday()) % 7
+            if delta == 0:
+                delta = 7
+            start_date = (today + timedelta(days=delta)).strftime('%Y-%m-%d')
+            break
+    if not start_date:
+        m3 = re.search(r'\b(\d{4}-\d{2}-\d{2})\b', msg)
+        start_date = m3.group(1) if m3 else None
+    if not start_date:
+        return None
+    start_time, end_time = _extract_session_time(msg)
+    return {
+        'group_name': 'Grupo ' + ' y '.join(raw_names).title(),
+        'patient_ids': list(dict.fromkeys(ids)),
+        'start_date': start_date,
+        'days': [0, 1, 2],
+        'therapist_id': _default_therapist_id(),
+        'start_time': start_time,
+        'end_time': end_time,
+        'count': _extract_session_count(msg),
+    }
+
+
 def _force_intent_tool(message, local_tools, user_role):
     """Si el router local no llamó ninguna tool para un reporte inequívoco,
     fuerza la ejecución determinista de la tool de reporte del intent."""
@@ -692,7 +821,14 @@ def _force_intent_tool(message, local_tools, user_role):
     allowed = {t['function']['name'] for t in local_tools}
     for tool_name, keywords, arg_spec in _LOCAL_FORCE_TOOLS:
         if any(k in msg for k in keywords) and tool_name in allowed:
-            resolved_args = _extract_month_arg(message) if arg_spec == 'month' else arg_spec
+            if arg_spec == 'month':
+                resolved_args = _extract_month_arg(message)
+            elif arg_spec == 'group_session':
+                resolved_args = _build_group_session_args(message)
+                if not resolved_args:
+                    continue
+            else:
+                resolved_args = arg_spec
             return (tool_name, resolved_args or {})
     return None
 

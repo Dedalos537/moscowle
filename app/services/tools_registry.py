@@ -1572,6 +1572,148 @@ def handle_batch_create_sessions(sessions=None, **kwargs):
         return {'error': str(e)}
 
 
+@tool(
+    name='create_group_sessions',
+    description='Crea un grupo de pacientes y programa sesiones para todos los miembros del grupo a partir de una fecha de inicio, con dias de la semana, hora de inicio y fin, y cantidad de sesiones. Ej: "crea un grupo de liam gonzales y valentina con 3 sesiones a partir del lunes a las 8 am"',
+    parameters={
+        'type': 'object',
+        'properties': {
+            'group_name': {'type': 'string', 'description': 'Nombre del grupo de pacientes'},
+            'patient_ids': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'IDs de los pacientes que son miembros del grupo',
+            },
+            'start_date': {
+                'type': 'string',
+                'description': 'Fecha de inicio YYYY-MM-DD o dia de la semana en espanol (lunes, martes...) para la primera sesion',
+            },
+            'days': {
+                'type': 'array',
+                'items': {'type': 'integer'},
+                'description': 'Dias de la semana donde ocurren las sesiones (0=Lunes,1=Martes,2=Miercoles,3=Jueves,4=Viernes,5=Sabado,6=Domingo). Default [0,1,2]',
+            },
+            'therapist_id': {'type': 'integer', 'description': 'ID del terapeuta (opcional, se auto-asigna si falta)'},
+            'start_time': {'type': 'string', 'description': 'Hora de inicio HH:MM. Default "08:00"'},
+            'end_time': {'type': 'string', 'description': 'Hora de fin HH:MM. Default "10:00"'},
+            'count': {'type': 'integer', 'description': 'Cantidad de sesiones consecutivas. Default 3'},
+        },
+        'required': ['group_name', 'patient_ids', 'start_date'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_create_group_sessions(
+    group_name,
+    patient_ids,
+    start_date,
+    days=None,
+    therapist_id=None,
+    start_time='08:00',
+    end_time='10:00',
+    count=3,
+    **kwargs,
+):
+    try:
+        if isinstance(patient_ids, int):
+            patient_ids = [patient_ids]
+        if not patient_ids:
+            return {'error': 'Se requiere al menos un paciente'}
+        if days is None:
+            days = [0, 1, 2]
+        if isinstance(days, str):
+            days = [int(d) for d in days.split(',') if d.strip().lstrip('-').isdigit()]
+
+        if re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(start_date)):
+            start_dt = datetime.strptime(str(start_date), '%Y-%m-%d').date()
+        else:
+            weekday_names = {
+                'domingo': 6, 'lunes': 0, 'martes': 1, 'miercoles': 2,
+                'miércoles': 2, 'jueves': 3, 'viernes': 4, 'sabado': 5, 'sábado': 5,
+            }
+            target = None
+            phrase = str(start_date)
+            for name, wd in weekday_names.items():
+                if name in phrase:
+                    target = wd
+                    break
+            if target is None:
+                return {'error': f'Fecha de inicio invalida: {start_date}'}
+            today = datetime.now().date()
+            delta = (target - today.weekday()) % 7
+            if delta == 0:
+                delta = 7
+            start_dt = today + timedelta(days=delta)
+
+        dates = []
+        d = start_dt
+        minute = 0
+        while minute < count:
+            if d.weekday() in days:
+                dates.append(d.strftime('%Y-%m-%d'))
+                minute += 1
+            d += timedelta(days=1)
+
+        if not therapist_id:
+            therapist = (
+                User.query.filter_by(role='terapista', is_active=True).order_by(User.id).first()
+                or User.query.filter_by(role='terapista').order_by(User.id).first()
+            )
+            therapist_id = therapist.id if therapist else kwargs.get('_user_id')
+
+        group_resp = _api_post(
+            '/api/admin/patient-groups',
+            json={
+                'name': group_name,
+                'therapist_id': therapist_id,
+                'member_ids': patient_ids,
+                'start_time': start_time,
+                'end_time': end_time,
+                'work_days': ','.join(str(d) for d in days),
+                'session_dates': dates,
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
+        group_data = group_resp.get_json() if group_resp else {}
+        group_id = (group_data.get('group') or {}).get('id')
+        if not group_id:
+            return {'error': group_data.get('message', 'Error al crear el grupo de pacientes')}
+
+        batch_resp = _api_post(
+            '/admin/api/sessions/batch',
+            json={
+                'patient_ids': patient_ids,
+                'therapist_id': therapist_id,
+                'dates': dates,
+                'start_time': start_time,
+                'end_time': end_time,
+                'group_id': group_id,
+                'session_type': 'grupal',
+            },
+            user_id=kwargs.get('_user_id'),
+            role=kwargs.get('_role'),
+        )
+        batch_data = batch_resp.get_json() if batch_resp else {}
+        if batch_resp and batch_resp.status_code < 400:
+            return {
+                'success': True,
+                'message': f'Grupo "{group_name}" creado con {len(dates)} sesiones para {len(patient_ids)} paciente(s). {batch_data.get("message") or ""}',
+                'group_id': group_id,
+                'member_ids': patient_ids,
+                'dates': dates,
+                'start_time': start_time,
+                'end_time': end_time,
+                'session_ids': batch_data.get('session_ids'),
+            }
+        return {
+            'error': batch_data.get('error') or batch_data.get('message', 'Error al crear las sesiones'),
+            'group_id': group_id,
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # FASE B: INCIDENCIAS
 # ═══════════════════════════════════════════════════════════════════════════════
