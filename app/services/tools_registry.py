@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from datetime import datetime, timedelta
@@ -1672,8 +1673,15 @@ def handle_create_group_sessions(
             .first()
         )
         if existing:
-            same_members = sorted(existing.member_ids or []) == sorted(patient_ids)
-            same_dates = sorted(existing.session_dates or []) == sorted(dates)
+            existing_member_ids = [m.id for m in existing.members]
+            try:
+                existing_dates = json.loads(existing.session_dates) if existing.session_dates else []
+            except (ValueError, TypeError):
+                existing_dates = (
+                    [d for d in existing.session_dates.split(',') if d] if existing.session_dates else []
+                )
+            same_members = sorted(existing_member_ids) == sorted(patient_ids)
+            same_dates = sorted(existing_dates) == sorted(dates)
             if same_members and same_dates:
                 already = Appointment.query.filter_by(group_id=existing.id).all()
                 return {
