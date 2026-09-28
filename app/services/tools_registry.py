@@ -322,6 +322,7 @@ def _api_put(endpoint, json=None, user_id=None, role=None):
         'required': ['query'],
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_search_patients(query=None, limit=10, **kwargs):
     if not query or len(query) < 2:
@@ -370,6 +371,7 @@ def handle_search_patients(query=None, limit=10, **kwargs):
         },
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_list_users(role=None, **kwargs):
     q = User.query
@@ -507,6 +509,7 @@ def handle_get_patient_detail(patient_id, **kwargs):
         },
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
     try:
@@ -575,6 +578,7 @@ def handle_financial_summary(month=None, year=None, **kwargs):
         'required': ['patient_id'],
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_payment_history(patient_id, **kwargs):
     patient = User.query.get(patient_id)
@@ -614,6 +618,7 @@ def handle_payment_history(patient_id, **kwargs):
         'required': ['patient_id', 'amount', 'method', 'payment_date'],
     },
     category='write',
+roles=ROLES_THERAPIST,
 )
 def handle_register_payment(patient_id, amount, method, payment_date, reference='', **kwargs):
     patient = User.query.get(patient_id) if patient_id else None
@@ -956,6 +961,7 @@ def handle_update_patient(patient_id, **kwargs):
         'required': ['subject', 'body'],
     },
     category='write',
+roles=ROLES_THERAPIST,
 )
 def handle_broadcast(subject, body, target='all', **kwargs):
     try:
@@ -988,6 +994,7 @@ def handle_broadcast(subject, body, target='all', **kwargs):
         },
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_list_patients(sede_id=None, is_active=None, limit=50, **kwargs):
     q = User.query.filter_by(role='jugador')
@@ -1526,6 +1533,7 @@ def handle_assign_therapist_to_sede(
         },
     },
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_get_sessions_day(date=None, **kwargs):
     try:
@@ -1985,6 +1993,7 @@ def handle_get_sede_stats(sede_id=None, **kwargs):
     description='Lista grupos de pacientes (ej: "Talara", "Lima Norte").',
     parameters={'type': 'object', 'properties': {}},
     category='read',
+roles=ROLES_THERAPIST,
 )
 def handle_list_patient_groups(**kwargs):
     try:
@@ -2405,6 +2414,7 @@ def handle_get_therapist_efficiency(**kwargs):
         'required': ['receiver_id', 'content'],
     },
     category='write',
+roles=ROLES_THERAPIST,
 )
 def handle_send_direct_message(receiver_id, content, **kwargs):
     try:
