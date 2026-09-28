@@ -14,6 +14,9 @@ _CREADOS = []
 @pytest.fixture(autouse=True)
 def _limpiar(db, session):
     """La BD de test es de sesion: sin esto el segundo test ve el primero."""
+    # Otro modulo puede haber dejado objetos sin commitear en la sesion: un
+    # commit dentro de este test los volcaria y descuadraria los totales.
+    session.rollback()
     yield
     from app.models.contract import Contract
     from app.models.user import User, patient_therapist
@@ -59,36 +62,63 @@ def _stats(**kw):
     return r
 
 
+def _delta(antes, despues, campo):
+    """Diferencia respecto a la foto previa.
+
+    La BD de test es de sesion y otros archivos dejan jugadores dentro, asi
+    que afirmar totales absolutos hacia fallar en la suite completa y pasar
+    en aislamiento. Lo que importa es el cambio que provoca lo que anadimos.
+    """
+    return despues[campo] - antes[campo]
+
+
 def test_un_numero_de_pacientes_nunca_es_negativo(db, session, stats):
-    """La regresion: sin contrato daba -5."""
+    """La regresión: sin contrato daba -5."""
     for i in range(3):
         stats(f'solo_activo_{i}', activo=True)
     s = _stats()['stats']
     assert s['without_contract'] >= 0, 'un numero de pacientes no puede ser negativo'
-    assert s['without_contract'] == s['total'], 'sin contratos, todos lo estan'
+    assert (
+        s['with_active_contract'] + s['without_contract'] == s['total']
+    ), f"el rango no cuadra: {s['with_active_contract']} + {s['without_contract']} != {s['total']}"
 
 
-def test_el_rango_cuadra_con_el_total(db, session, stats):
-    a = stats('con_contrato', activo=True, contrato=True)
-    b = stats('sin_contrato', activo=True)
-    c = stats('contrato_cancelado', activo=True, contrato=False)
-    s = _stats()['stats']
-    assert s['total'] == 3
-    assert s['with_active_contract'] == 1, 'solo el contrato vigente cuenta'
-    assert s['without_contract'] == 2
-    assert s['with_active_contract'] + s['without_contract'] == s['total'], 'el rango debe cuadrar'
+def test_cuenta_pacientes_no_contratos_del_centro(db, session, stats):
+    """El fallo real: 4 pacientes del informe menos 9 contratos del centro."""
+    antes = _stats()['stats']
+    for i in range(3):
+        stats(f'sin_contrato_{i}', activo=True)
+    d = _stats()['stats']
+    assert d['without_contract'] - antes['without_contract'] == 3, (
+        'los contratos del centro no pueden restarse de los pacientes del informe'
+    )
 
 
-def test_responde_cuantos_pacientes_hay_en_total(db, session, stats):
+def test_solo_cuenta_el_contrato_vigente(db, session, stats):
+    antes = _stats()['stats']
+    stats('con_contrato', activo=True, contrato=True)
+    stats('contrato_cancelado', activo=True, contrato=False)
+    d = _stats()['stats']
+    assert _delta(antes, d, 'with_active_contract') == 1, (
+        'un contrato cancelado no es un contrato vigente'
+    )
+    assert _delta(antes, d, 'without_contract') == 1
+
+
+def test_el_ambito_se_dice_y_se_pide_explicito(db, session, stats):
     """Habia 51 pacientes y 4 activos. Decir 'hay 4' sin mas es mentir."""
+    antes = _stats()['stats']
     stats('activo_1', activo=True)
     stats('baja_1', activo=False)
     stats('baja_2', activo=False)
 
-    s = _stats()['stats']
-    assert s['total'] == 1, 'por defecto solo los activos'
+    activos = _stats()['stats']
+    assert _delta(antes, activos, 'total') == 1, 'por defecto solo los activos'
     assert _stats()['scope'] == 'solo pacientes activos', 'el ambito debe decirse'
 
     todos = _stats(include_inactive=True)['stats']
-    assert todos['total'] == 3
     assert _stats(include_inactive=True)['scope'] == 'todos los pacientes'
+    assert todos['total'] > activos['total'], (
+        'los dados de baja tienen que aparecer cuando se piden: '
+        f'activos={activos["total"]} todos={todos["total"]}'
+    )
