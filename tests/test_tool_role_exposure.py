@@ -107,3 +107,47 @@ class TestEjecucionRechazadaPorRol:
         )
         assert 'error' in resultado
         assert 'permisos' in str(resultado['error']).lower()
+
+
+class TestSedesParaElPaciente:
+    """Las sedes son informacion publica y el chatbot informativo las necesita.
+
+    Regresion: la tool pedia /api/admin/sedes, que exige admin o supervisor, asi
+    que para el rol jugador devolvia 403 y terminaba reportando 0 sedes, que es
+    justamente el dato que hace que el bot invente una cantidad de sedes.
+    """
+
+    def test_el_paciente_recibe_las_sedes_reales(self, app, session):
+        from app.models.user import Sede
+
+        # is_active en NULL es un caso real de sedes creadas antes del default
+        for nombre, activo in (('Sede Test Activa', True), ('Sede Test Null', None)):
+            if not Sede.query.filter_by(name=nombre).first():
+                session.add(Sede(name=nombre, address='Direccion de prueba', is_active=activo))
+        session.commit()
+
+        from app.services.tools_registry import execute_tool
+
+        resultado = execute_tool('list_sedes', {}, user_id=1, role='jugador')
+
+        assert 'error' not in resultado, resultado
+        assert resultado['count'] >= 2, f'se perdieron las sedes: {resultado}'
+        nombres = {s['name'] for s in resultado['sedes']}
+        assert 'Sede Test Activa' in nombres
+        assert 'Sede Test Null' in nombres, 'una sede con is_active NULL debe listarse'
+
+    def test_una_sede_inactiva_no_se_lista(self, app, session):
+        from app.models.user import Sede
+
+        if not Sede.query.filter_by(name='Sede Test Inactiva').first():
+            session.add(Sede(name='Sede Test Inactiva', address='x', is_active=False))
+        session.commit()
+
+        from app.services.tools_registry import execute_tool
+
+        resultado = execute_tool('list_sedes', {}, user_id=1, role='jugador')
+
+        nombres = {s['name'] for s in resultado['sedes']}
+        # no puede pasar vacio: tiene que listar algo y descartar la inactiva
+        assert 'Sede Test Activa' in nombres, 'no listo ninguna sede activa'
+        assert 'Sede Test Inactiva' not in nombres, 'listo una sede desactivada'

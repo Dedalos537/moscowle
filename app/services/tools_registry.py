@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import current_app
+from sqlalchemy import or_
 
 from app.auth_compat import current_user
 from app.extensions import bcrypt, db
@@ -1955,10 +1956,26 @@ def handle_assign_incident(incident_id, assignee_id, **kwargs):
     category='read',
 )
 def handle_list_sedes(**kwargs):
+    """Lista las sedes activas del centro.
+
+    Se lee directo del modelo y no via /api/admin/sedes porque ese endpoint
+    exige admin o supervisor: para el rol jugador devolvia 403 y la tool
+    terminaba reportando 0 sedes, que es justamente lo que hacia que el bot
+    inventara una cantidad de sedes. La informacion (nombre y direccion del
+    centro) no es sensible y el chatbot informativo la necesita.
+    """
     try:
-        resp = _api_get('/api/admin/sedes', user_id=kwargs.get('_user_id'), role=kwargs.get('_role'))
-        data = resp.get_json() if resp else []
-        items = _unwrap_items(data, 'sedes')
+        from app.models.user import Sede
+
+        # is_active puede venir en NULL en sedes creadas antes del default,
+        # por eso se aceptan tanto True como NULL (mismo criterio que
+        # /api/admin/sedes/active).
+        sedes = (
+            Sede.query.filter(or_(Sede.is_active.is_(True), Sede.is_active.is_(None)))
+            .order_by(Sede.name.asc())
+            .all()
+        )
+        items = [{'id': s.id, 'name': s.name, 'address': s.address or ''} for s in sedes]
         return {'success': True, 'count': len(items), 'sedes': items}
     except Exception as e:
         return {'error': str(e)}
