@@ -98,7 +98,8 @@ class PolicyEngine:
         """Ids de paciente visibles. None = sin restriccion.
 
         admin y supervisor: global (gestion del centro).
-        terapista: asignados + los que tiene en agenda hoy o por delante.
+        terapista: los que tiene asignados en la tabla puente (N:M), mas los
+        que tiene en agenda hoy o por delante.
         jugador: unicamente el mismo.
         """
         if role in ('admin', 'supervisor'):
@@ -117,25 +118,55 @@ class PolicyEngine:
             if role == 'jugador':
                 scope = {int(user_id)}
             else:
-                rows = db.session.query(User.id).filter(
-                    User.role == 'jugador',
-                    User.assigned_therapist_id == int(user_id),
-                    User.is_active.is_(True),
-                ).all()
-                scope = {r[0] for r in rows}
-                # assigned_therapist_id esta desactualizado en produccion
-                # (Liam y Valentina apuntaban al terapeuta 13 pero sus
-                # sesiones las impartia el 1). Un terapeuta no puede perder de
-                # vista a quien tiene en agenda, asi que el alcance se completa
-                # con las sesiones de HOY o por delante.
+                # El vinculo terapeuta<->paciente es N:M. Un paciente puede
+                # tener varios terapeutas y al reves (Liam lo atienden el 1,
+                # el 13 y el 15). Por eso NO se lee assigned_therapist_id: es
+                # una columna unica y solo puede guardar UNO de ellos.
+                scope = set()
+
+                # 1) patient_therapist: la tabla puente, la que de verdad
+                #    representa el N:M.
+                try:
+                    from app.models.user import User, patient_therapist
+
+                    filas = (
+                        db.session.query(patient_therapist.c.patient_id)
+                        .filter(patient_therapist.c.therapist_id == int(user_id))
+                        .all()
+                    )
+                    scope |= {r[0] for r in filas if r[0] is not None}
+                except Exception:
+                    pass
+
+                # 2) assigned_therapist_id: hay 5 pacientes que estan aqui y
+                #    no en la puente, asi que sigue aportando algo.
+                try:
+                    from app.models.user import User
+
+                    filas = (
+                        db.session.query(User.id)
+                        .filter(
+                            User.role == 'jugador',
+                            User.assigned_therapist_id == int(user_id),
+                        )
+                        .all()
+                    )
+                    scope |= {r[0] for r in filas if r[0] is not None}
+                except Exception:
+                    pass
+
+                # 3) La agenda de hoy o por delante. assigned_therapist_id esta
+                #    desactualizado, asi que un terapeuta no puede perder de
+                #    vista a quien tiene delante.
                 #
-                # OJO: 'hoy' entra a proposito. Con start_time > now, la
-                # sesion de las 08:00 de esta manana ya habria terminado y la
-                # agenda del dia se filtraria a cero. Ocultar trabajo real es
-                # tan grave como la fuga que esto evita.
+                #    OJO: 'hoy' entra a proposito. Con start_time > now la
+                #    sesion de las 08:00 de esta manana ya habria terminado y
+                #    la agenda del dia se filtraria a cero.
                 #
-                # No entra el historico: el terapeuta ve a quien tiene delante,
-                # no la ficha de quien trato hace dos anos.
+                #    No se filtra por User.is_active: 'es mi paciente' y 'la
+                #    cuenta esta activa' son preguntas distintas. Exigiendo
+                #    is_active, al terapeuta 13 le quedaban 0 de sus 4
+                #    pacientes y el chatbot le mostraba la nada.
                 try:
                     from datetime import datetime, timedelta
                     from zoneinfo import ZoneInfo

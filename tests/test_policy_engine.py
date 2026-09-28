@@ -156,6 +156,9 @@ def policy():
     return get_policy()
 
 
+_CREADOS = []
+
+
 def _mk_user(session, username, email, role, **extra):
     """Crea un usuario y lo borra al terminar el test (la BD es de sesion)."""
     from app.models.user import User
@@ -163,6 +166,7 @@ def _mk_user(session, username, email, role, **extra):
     u = User(username=username, email=email, password='x', role=role, is_active=True, **extra)
     session.add(u)
     session.commit()
+    _CREADOS.append(username)
     return u
 
 
@@ -171,9 +175,6 @@ def _cleanup_users(db, session):
     """La BD de test es de sesion: sin esto el segundo test choca en UNIQUE."""
     from app.models.user import User
 
-    usernames = [
-        'terapista_scope', 'paciente_suyo', 'paciente_ajeno', 'paciente_secreto',
-    ]
     yield
     # La politica cachea el alcance en flask.g, que en produccion es por
     # request pero aqui la app context es de sesion: hay que limpiarlo.
@@ -183,8 +184,18 @@ def _cleanup_users(db, session):
     for attr in [a for a in g.__dict__ if a.startswith('_policy_scope_')]:
         delattr(g, attr)
     session.rollback()
-    User.query.filter(User.username.in_(usernames)).delete(synchronize_session=False)
+    # La lista es dinamica: anadir un fixture sin acordarse de registrarla
+    # aqui hacia fallar el SIGUIENTE test por UNIQUE de email.
+    #
+    # patient_therapist tambien se limpia: son filas puente, no cuelgan de
+    # _CREADOS y sobrevivian al borrado de usuarios, Rompiendo el PK compuesto
+    # en el test siguiente.
+    from app.models.user import patient_therapist
+
+    session.execute(patient_therapist.delete())
+    User.query.filter(User.username.in_(_CREADOS)).delete(synchronize_session=False)
     session.commit()
+    _CREADOS.clear()
 
 
 @pytest.fixture
@@ -342,3 +353,85 @@ class TestCasosRealesDeProduccion:
             user_id=therapist_with_patients.id,
         )
         assert len(resultado['sessions']) == 1, 'oculto una sesion legitima por buscar solo patient_id'
+
+
+class TestVinculoNtoM:
+    """El vinculo terapeuta<->paciente es N:M, no 1:1.
+
+    Un paciente puede tener varios terapeutas (Liam lo atienden el 1, el 13
+    y el 15) y un terapeuta varios pacientes. Por eso assigned_therapist_id,
+    que es una columna unica, no puede ser la fuente: solo guarda UNO.
+    """
+
+    @pytest.fixture
+    def other_therapist(self, db, session):
+        return _mk_user(session, 'terapeuta_colega', 'col@x.com', 'terapista')
+
+    def test_el_terapeuta_ve_a_su_colega_y_no_al_resto(
+        self, policy, session, therapist_with_patients, other_therapist,
+        patient_of_therapist, other_patient,
+    ):
+        self._puente(session, patient_of_therapist.id, therapist_with_patients.id)
+        self._puente(session, patient_of_therapist.id, other_therapist.id)
+        self._puente(session, other_patient.id, other_therapist.id)
+
+        a = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        b = policy.allowed_patient_ids('terapista', other_therapist.id)
+        assert patient_of_therapist.id in a and patient_of_therapist.id in b, 'co-terapia: ambos ven'
+        assert other_patient.id in b, 'el colega ve a su propio paciente'
+        assert other_patient.id not in a, 'y yo NO veo al suyo: ahi si se acaba'
+
+    def _puente(self, session, patient_id, therapist_id):
+        from app.models.user import patient_therapist
+
+        session.execute(patient_therapist.delete().where(
+            (patient_therapist.c.patient_id == patient_id)
+            & (patient_therapist.c.therapist_id == therapist_id),
+        ))
+        session.execute(patient_therapist.insert().values(
+            patient_id=patient_id, therapist_id=therapist_id,
+        ))
+        session.commit()
+
+    def test_el_puente_manda_sobre_la_columna_unica(
+        self, policy, session, therapist_with_patients, patient_of_therapist,
+    ):
+        """La columna dice 999, el puente dice este terapeuta: entra igual."""
+
+
+        # La columna dice OTRO terapeuta; el puente dice este.
+        patient_of_therapist.assigned_therapist_id = 999
+        session.commit()
+        self._puente(session, patient_of_therapist.id, therapist_with_patients.id)
+
+        ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        assert patient_of_therapist.id in ids, 'el puente es la relacion real'
+
+    def test_un_paciente_inactivo_no_desaparece(
+        self, policy, session, therapist_with_patients, patient_of_therapist,
+    ):
+        """'es mi paciente' y 'la cuenta esta activa' son preguntas distintas.
+
+        Exigiendo is_active, al terapeuta 13 le quedaban 0 de sus 4 pacientes
+        en produccion y el chatbot le mostraba la nada.
+        """
+
+        patient_of_therapist.is_active = False
+        session.commit()
+        self._puente(session, patient_of_therapist.id, therapist_with_patients.id)
+
+        ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        assert patient_of_therapist.id in ids, 'un paciente dado de alta sigue siendo suyo'
+
+    def test_varios_terapeutas_para_el_mismo_paciente(
+        self, policy, session, therapist_with_patients, other_therapist,
+        patient_of_therapist,
+    ):
+        """Los dos terapers deben ver al paciente; ninguno se lo queda."""
+        self._puente(session, patient_of_therapist.id, therapist_with_patients.id)
+        self._puente(session, patient_of_therapist.id, other_therapist.id)
+
+        a = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        b = policy.allowed_patient_ids('terapista', other_therapist.id)
+        assert patient_of_therapist.id in a
+        assert patient_of_therapist.id in b
