@@ -987,7 +987,11 @@ def _compact_local_schema(tool):
 
 
 def _build_local_system_prompt(user_role, user_id, mode, message, selected_tools=None):
-    """Prompt sistema COMPACTO para Ollama local: personalidad corta + tools del turno."""
+    """Prompt sistema COMPACTO para Ollama local: personalidad corta + tools del turno.
+
+    Inyecta ademas las entidades ya resueltas contra la base de datos, para que
+    el modelo use identificadores reales en vez de inventarlos.
+    """
     base = LOCAL_BASE_PROMPT.replace('{rol}', ROLE_NAMES_ES.get(user_role, user_role))
     base = base.replace('{rol_id}', user_role)
     base = base.replace('{user_id}', str(user_id or ''))
@@ -997,7 +1001,21 @@ def _build_local_system_prompt(user_role, user_id, mode, message, selected_tools
         allowed = get_tools_for_mode(mode, user_role)
         names = ', '.join(t['function']['name'] for t in allowed) or 'ninguna'
     base += f'\n\nHerramientas disponibles este turno: {names}'
-    return get_current_date_context() + '\n\n' + base
+
+    context = get_current_date_context() + '\n\n' + base
+    try:
+        from app.services.entity_resolver import resolve_entities
+
+        entities = resolve_entities(message, role=user_role)
+        if entities:
+            context += (
+                '\n\nDATOS VERIFICADOS DE LA BASE (usa estos identificadores tal cual, '
+                'no los inventes ni los calcules):\n'
+                + entities.to_prompt_context()
+            )
+    except Exception:
+        pass
+    return context
 
 
 def _build_tool_prompt(tools):
