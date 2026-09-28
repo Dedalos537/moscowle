@@ -203,3 +203,76 @@ def patient_of_therapist(db, session, therapist_with_patients):
 @pytest.fixture
 def other_patient(db, session):
     return _mk_user(session, 'paciente_ajeno', 'pa@x.com', 'jugador')
+
+
+class TestCasosRealesDeProduccion:
+    """Regresiones detectadas al verificar en el servidor real.
+
+    1. get_sessions_day devuelve el paciente ANIDADO (patient: {id: 14}), no
+       en patient_id plano. Con solo patient_id, el filtro no encontraba al
+       dueño y ocultaba TODA la agenda de la terapeuta (count: 0 con 2
+       sesiones reales).
+    2. Los pacientes que una terapeuta atiende de verdad no siempre coinciden
+       con User.assigned_therapist_id: Liam (14) y Valentina (42) tenian
+       assigned_therapist_id=13 pero sus sesiones las impartia el terapeuta 1.
+       El alcance tiene que derivarse tambien de las sesiones.
+    """
+
+    def test_el_alcance_incluye_a_quien_atiende_por_sesiones(
+        self, policy, session, therapist_with_patients, patient_of_therapist,
+    ):
+        from datetime import datetime, timedelta
+
+        from app.models.appointment import Appointment
+
+        # Un paciente cuyo assigned_therapist_id NO es este terapeuta...
+        huerfano = _mk_user(
+            session, 'paciente_por_sesion', 'ph@x.com', 'jugador',
+            assigned_therapist_id=999,
+        )
+        # ...pero con una sesion impartida por el terapeuta.
+        session.add(
+            Appointment(
+                patient_id=huerfano.id,
+                therapist_id=therapist_with_patients.id,
+                title='Sesion impartida',
+                start_time=datetime.utcnow() + timedelta(days=1),
+                end_time=datetime.utcnow() + timedelta(days=1, hours=1),
+                status='scheduled',
+            )
+        )
+        session.commit()
+
+        ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        assert huerfano.id in ids, (
+            'el terapeuta no ve a quien atiende de verdad: '
+            'assigned_therapist_id esta desactualizado'
+        )
+
+    def test_una_sesion_con_paciente_anidado_no_se_oculta(
+        self, policy, session, therapist_with_patients, patient_of_therapist,
+    ):
+        """La forma real del payload: patient: {id, name} en vez de patient_id."""
+        from datetime import datetime, timedelta
+
+        from app.models.appointment import Appointment
+
+        session.add(
+            Appointment(
+                patient_id=patient_of_therapist.id,
+                therapist_id=therapist_with_patists if False else therapist_with_patients.id,
+                title='Sesion',
+                start_time=datetime.utcnow() + timedelta(days=1),
+                end_time=datetime.utcnow() + timedelta(days=1, hours=1),
+                status='scheduled',
+            )
+        )
+        session.commit()
+
+        resultado = policy.filter_result(
+            'get_sessions_day',
+            {'count': 1, 'sessions': [{'id': 1, 'patient': {'id': patient_of_therapist.id, 'name': 'x'}}]},
+            role='terapista',
+            user_id=therapist_with_patients.id,
+        )
+        assert len(resultado['sessions']) == 1, 'oculto una sesion legitima por buscar solo patient_id'

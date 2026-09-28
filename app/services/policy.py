@@ -123,6 +123,25 @@ class PolicyEngine:
                     User.is_active.is_(True),
                 ).all()
                 scope = {r[0] for r in rows}
+                # assigned_therapist_id esta desactualizado en produccion
+                # (Liam y Valentina apuntaban al terapeuta 13 pero sus sesiones
+                # las impartia el 1). Un terapeuta DEBE ver a quien atiende de
+                # verdad, asi que el alcance se completa con sus sesiones.
+                try:
+                    from app.models.appointment import Appointment
+
+                    atendidos = (
+                        db.session.query(Appointment.patient_id)
+                        .filter(
+                            Appointment.therapist_id == int(user_id),
+                            Appointment.status != 'cancelled',
+                        )
+                        .distinct()
+                        .all()
+                    )
+                    scope |= {r[0] for r in atendidos if r[0] is not None}
+                except Exception:
+                    pass
         except Exception:
             scope = set()
         _set_cached(role, user_id, scope)
@@ -229,6 +248,15 @@ class PolicyEngine:
             return False
         owner_key = _ROW_OWNER_KEY.get(tool_name, 'patient_id')
         raw = row.get(owner_key)
+        if raw is None:
+            # El paciente suele venir anidado: {'patient': {'id': 14, ...}}.
+            # get_sessions_day lo devuelve asi, y buscar solo en patient_id
+            # ocultaba la agenda entera de la terapeuta.
+            anidado = row.get('patient')
+            if isinstance(anidado, dict):
+                raw = anidado.get('id')
+            elif isinstance(row.get('paciente'), dict):
+                raw = row['paciente'].get('id')
         try:
             owner_id = int(raw) if raw is not None else None
         except (TypeError, ValueError):
