@@ -10,6 +10,7 @@ from app import db
 from app.models.bot_config import BotConfig
 from app.models.faq import Faq
 from app.models.telegram_user import TelegramUser
+from app.utils.decorators import admin_required, admin_write_required, check_write_access
 
 logger = logging.getLogger('app.telegram')
 
@@ -86,6 +87,7 @@ def webhook():
 
 @telegram_bp.route('/link', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def link_account():
     """Link a Telegram account using a 6-character code."""
     user_id = int(get_jwt_identity())
@@ -122,6 +124,7 @@ def link_account():
 
 @telegram_bp.route('/status', methods=['GET'])
 @jwt_required()
+@admin_required
 def get_status():
     """Get Telegram link status for the current user."""
     user_id = int(get_jwt_identity())
@@ -147,6 +150,7 @@ def get_status():
 
 @telegram_bp.route('/unlink', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def unlink_account():
     """Unlink a Telegram account."""
     user_id = int(get_jwt_identity())
@@ -170,6 +174,7 @@ def unlink_account():
 
 @telegram_bp.route('/notifications/toggle', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def toggle_notifications():
     """Enable/disable Telegram notifications."""
     user_id = int(get_jwt_identity())
@@ -190,6 +195,7 @@ def toggle_notifications():
 
 @telegram_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
+@admin_required
 def get_bot_dashboard():
     """Unified dashboard: bot config + channels + recent conversations + activity."""
     data = {}
@@ -363,6 +369,7 @@ def get_bot_dashboard():
 # ────────────────────────────────────────────────────────────────────────
 @telegram_bp.route('/config', methods=['GET', 'PUT'])
 @jwt_required()
+@admin_required
 def bot_config_endpoint():
     """Get or update the bot's persisted configuration (persona, prompt, toggles)."""
     cfg = BotConfig.get_or_create()
@@ -370,6 +377,7 @@ def bot_config_endpoint():
     if request.method == 'GET':
         return jsonify(cfg.to_dict())
 
+    check_write_access()
     data = request.get_json(silent=True) or {}
     if 'bot_name' in data:
         cfg.bot_name = str(data['bot_name'])[:120]
@@ -396,9 +404,11 @@ def bot_config_endpoint():
 # ────────────────────────────────────────────────────────────────────────
 @telegram_bp.route('/faq', methods=['GET', 'POST'])
 @jwt_required()
+@admin_required
 def faq_list():
     cfg = BotConfig.get_or_create()
     if request.method == 'POST':
+        check_write_access()
         data = request.get_json(silent=True) or {}
         question = (data.get('question') or '').strip()
         answer = (data.get('answer') or '').strip()
@@ -427,6 +437,7 @@ def faq_list():
 
 @telegram_bp.route('/faq/proposed', methods=['GET'])
 @jwt_required()
+@admin_required
 def faq_proposed():
     """Pending auto-proposed FAQs (repeated unanswered questions) for approval."""
     faqs = Faq.query.filter_by(status='proposed').order_by(Faq.usage_count.desc()).all()
@@ -435,6 +446,7 @@ def faq_proposed():
 
 @telegram_bp.route('/faq/autogrow', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def faq_autogrow():
     """Manually trigger auto-growth: promote repeated unanswered questions to proposed FAQs."""
     from app.services.faq_service import auto_propose_faq
@@ -445,6 +457,7 @@ def faq_autogrow():
 
 @telegram_bp.route('/faq/search', methods=['POST'])
 @jwt_required()
+@admin_required
 def faq_search():
     from app.services.faq_service import match_faq
 
@@ -457,6 +470,7 @@ def faq_search():
 
 @telegram_bp.route('/faq/<int:faq_id>', methods=['PUT', 'DELETE'])
 @jwt_required()
+@admin_write_required
 def faq_item(faq_id):
     faq = Faq.query.get(faq_id)
     if not faq:
@@ -492,6 +506,7 @@ def faq_item(faq_id):
 # ────────────────────────────────────────────────────────────────────────
 @telegram_bp.route('/webhook/status', methods=['GET'])
 @jwt_required()
+@admin_required
 def webhook_status():
     try:
         from app.services.telegram_bot_service import _tg_request
@@ -520,6 +535,7 @@ def webhook_status():
 
 @telegram_bp.route('/webhook/setup', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def webhook_setup():
     data = request.get_json(silent=True) or {}
     url = (data.get('url') or '').strip()
@@ -547,6 +563,7 @@ def webhook_setup():
 
 @telegram_bp.route('/webhook', methods=['DELETE'])
 @jwt_required()
+@admin_write_required
 def webhook_delete():
     from app.services.telegram_bot_service import _tg_request
 
@@ -566,6 +583,7 @@ def webhook_delete():
 # ────────────────────────────────────────────────────────────────────────
 @telegram_bp.route('/test', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def send_test():
     data = request.get_json(silent=True) or {}
     chat_id = data.get('chat_id')
@@ -589,6 +607,7 @@ def send_test():
 # ────────────────────────────────────────────────────────────────────────
 @telegram_bp.route('/reply', methods=['POST'])
 @jwt_required()
+@admin_write_required
 def bot_reply():
     """Admin intervention: send a message to a Telegram chat directly from the panel."""
     data = request.get_json(silent=True) or {}

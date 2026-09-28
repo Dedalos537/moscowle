@@ -558,7 +558,7 @@ def handle_webhook_update(update):
             chat_id,
             msg['voice']['file_id'] if msg.get('voice') else msg['audio']['file_id'],
             tg_user.admin_user_id,
-            'admin',
+            _real_role_for(tg_user.admin_user_id),
         )
     elif msg.get('photo'):
         photo = msg['photo'][-1]
@@ -567,7 +567,7 @@ def handle_webhook_update(update):
             chat_id,
             photo['file_id'],
             tg_user.admin_user_id,
-            'admin',
+            _real_role_for(tg_user.admin_user_id),
             caption=caption,
         )
     elif msg.get('text'):
@@ -598,7 +598,7 @@ def handle_webhook_update(update):
                         },
                     },
                     'user_id': tg_user.admin_user_id,
-                    'user_role': 'admin',
+                    'user_role': _real_role_for(tg_user.admin_user_id),
                     'mode': 'grande',
                 },
             )
@@ -610,9 +610,9 @@ def handle_webhook_update(update):
             elif text.lower() in ('no', 'cancelar', 'cancel'):
                 result = confirm_pending_operation(chat_id, confirmed=False)
             else:
-                result = process_text_message(chat_id, text, tg_user.admin_user_id, 'admin')
+                result = process_text_message(chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id))
         else:
-            result = process_text_message(chat_id, text, tg_user.admin_user_id, 'admin')
+            result = process_text_message(chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id))
     else:
         return
 
@@ -1053,6 +1053,29 @@ def _handle_callback(callback, bot_token):
     send_telegram_message(chat_id, response_text, bot_token)
 
 
+def _real_role_for(user_id):
+    """Resuelve el rol real del usuario en la BD.
+
+    Antes el webhook pasaba el literal 'admin' a process_text_message para
+    cualquier cuenta vinculada, lo que daba privilegios administrativos a
+    cuentas de otros roles. Ahora el rol se lee siempre de la BD y, si el
+    usuario no existe o esta inactivo, se cae al rol mas restrictivo.
+    """
+    if not user_id:
+        return 'jugador'
+    try:
+        from app import db
+        from app.models.user import User
+
+        user = db.session.get(User, int(user_id))
+        if user is None or not getattr(user, 'is_active', True):
+            return 'jugador'
+        return user.role or 'jugador'
+    except Exception:
+        logger.exception('No se pudo resolver el rol del usuario %s', user_id)
+        return 'jugador'
+
+
 def _handle_quick_command(chat_id, tg_user, text, bot_token):
     """Process a quick command through MCP."""
     if not tg_user or not tg_user.is_linked:
@@ -1063,7 +1086,7 @@ def _handle_quick_command(chat_id, tg_user, text, bot_token):
         )
         return
 
-    result = process_text_message(chat_id, text, tg_user.admin_user_id, 'admin')
+    result = process_text_message(chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id))
     response_text = result.get('response', 'Sin respuesta.')
 
     if len(response_text) > 4000:
