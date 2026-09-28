@@ -2876,10 +2876,19 @@ def handle_update_contract(contract_id, **kwargs):
 
 @tool(
     name='get_patient_stats',
-    description='Obtener estadisticas demograficas de pacientes: distribucion por edades, sexo, sede, fecha de ingreso, guardianes, diagnosticos, contratos activos.',
+    description=(
+        "Estadisticas de pacientes: distribucion por edad, sexo, sede, mes de ingreso, "
+        "y cuantos tienen o no contrato vigente. Por defecto solo pacientes ACTIVOS: "
+        "hay 51 pacientes y 4 activos, asi que di siempre el ambito de la respuesta."
+    ),
     parameters={
         'type': 'object',
-        'properties': {},
+        'properties': {
+            'include_inactive': {
+                'type': 'boolean',
+                'description': 'Incluir tambien los dados de baja (por defecto false)',
+            },
+        },
     },
     category='read',
     roles=ROLES_ADMIN,
@@ -2891,11 +2900,19 @@ def handle_get_patient_stats(**kwargs):
     from app.models import User
     from app.models.contract import Contract
 
+    incluir_inactivos = bool(kwargs.get('include_inactive'))
     try:
-        patients = User.query.filter_by(role='jugador', is_active=True).all()
+        q = User.query.filter_by(role='jugador')
+        if not incluir_inactivos:
+            q = q.filter_by(is_active=True)
+        patients = q.all()
         total = len(patients)
         if total == 0:
-            return {'success': True, 'stats': {'total': 0}}
+            return {
+                'success': True,
+                'scope': 'todos los pacientes' if incluir_inactivos else 'solo pacientes activos',
+                'stats': {'total': 0, 'with_active_contract': 0, 'without_contract': 0},
+            }
 
         today = date.today()
 
@@ -2945,10 +2962,29 @@ def handle_get_patient_stats(**kwargs):
             if p.preliminary_diagnosis:
                 has_diagnosis += 1
 
-        active_contracts = Contract.query.filter_by(status='active').count()
+        # 'Contrato vigente' se cuenta SOBRE LOS PACIENTES DE ESTE INFORME.
+        #
+        # Antes contaba los contratos de todo el centro (9) y luego restaba
+        # 4 - 9 = -5, un numero de pacientes negativo. De ahi salio la
+        # respuesta "9 contratos y nadie sin contrato" que dio el bot.
+        #
+        # Ademas el modelo tiene 'status' y 'is_active', que pueden no
+        # coincidir. Se cuenta el paciente, nunca se restan dos agregados.
+        con_contrato = 0
+        for p in patients:
+            tiene = Contract.query.filter(
+                Contract.patient_id == p.id,
+                db.or_(
+                    Contract.is_active.is_(True),
+                    Contract.status == 'active',
+                ),
+            ).first()
+            if tiene is not None:
+                con_contrato += 1
 
         return {
             'success': True,
+            'scope': 'todos los pacientes' if incluir_inactivos else 'solo pacientes activos',
             'stats': {
                 'total': total,
                 'age_ranges': age_ranges,
@@ -2958,8 +2994,8 @@ def handle_get_patient_stats(**kwargs):
                 'has_guardian': has_guardian,
                 'has_dni': has_dni,
                 'has_diagnosis': has_diagnosis,
-                'active_contracts': active_contracts,
-                'without_contract': total - active_contracts,
+                'with_active_contract': con_contrato,
+                'without_contract': total - con_contrato,
             },
         }
     except Exception as e:
