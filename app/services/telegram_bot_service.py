@@ -258,6 +258,20 @@ def _parse_telegram_ocr(text):
     return result
 
 
+def _bot_identity():
+    """Nombre y emoji configurados en BotConfig, con respaldo razonable."""
+    name, emoji = 'Diego', '\U0001f99c'
+    try:
+        from app.models.bot_config import BotConfig
+
+        cfg = BotConfig.get_or_create()
+        name = cfg.bot_name or name
+        emoji = cfg.bot_emoji or emoji
+    except Exception:
+        logger.exception('No se pudo leer la identidad del bot')
+    return name, emoji
+
+
 _FALLBACK_MARKERS = (
     'no pude',
     'no puedo',
@@ -324,9 +338,12 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
         'preséntate',
     ]
     if any(trigger in text_lower for trigger in identity_triggers):
+        # La identidad sale de BotConfig (editable desde el panel); antes el
+        # nombre venia hardcodeado y cambiarlo en el panel no tenia efecto.
+        bot_name, bot_emoji = _bot_identity()
         return {
             'type': 'response',
-            'response': 'Soy Diego, tu asistente del Centro Juan Pablo II. 💙',
+            'response': f'Soy {bot_name}, tu asistente del Centro Juan Pablo II. {bot_emoji}'.strip(),
         }
 
     # FAQ matching (auto-growing knowledge base): answer directly on strong match,

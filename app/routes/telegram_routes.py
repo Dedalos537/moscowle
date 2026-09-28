@@ -16,6 +16,26 @@ logger = logging.getLogger('app.telegram')
 
 telegram_bp = Blueprint('telegram', __name__, url_prefix='/api/telegram')
 
+
+def _webhook_secret():
+    """Fuente unica del secreto del webhook.
+
+    Antes la validacion de incoming usaba `current_app.config` mientras el
+    setup y el dashboard usaban `os.environ`, asi que tras cambiar el secreto
+    desde el panel el proceso seguia validando con el valor viejo (y el
+    dashboard mostraba un valor que no era el que se aplicaba).
+    """
+    return current_app.config.get('TELEGRAM_WEBHOOK_SECRET') or ''
+
+
+def _mask_secret(value):
+    """Enmascara un secreto para devolverlo en respuestas de API."""
+    if not value:
+        return ''
+    if len(value) <= 8:
+        return '*' * len(value)
+    return f'{value[:4]}{"*" * (len(value) - 8)}{value[-4:]}'
+
 # Track processed update_ids to prevent duplicate processing (max 1000 entries)
 _processed_updates: dict[int, float] = {}
 _MAX_PROCESSED = 1000
@@ -48,7 +68,7 @@ def webhook():
     Responds immediately (200) and processes the message in a background thread
     to avoid Telegram's 30-second timeout.
     """
-    secret = current_app.config.get('TELEGRAM_WEBHOOK_SECRET')
+    secret = _webhook_secret()
     if secret:
         sig = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
         if not hmac.compare_digest(sig, secret):
@@ -218,7 +238,7 @@ def get_bot_dashboard():
         system_prompt = os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
     is_active = bool(bot_token_full)
     webhook_url = os.getenv('TELEGRAM_WEBHOOK_URL', '')
-    webhook_secret = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
+    webhook_secret = _webhook_secret()
 
     data['bot'] = {
         'name': bot_name,
@@ -228,7 +248,9 @@ def get_bot_dashboard():
         'persona_message': persona_msg,
         'system_prompt': system_prompt,
         'webhook_url': webhook_url,
-        'webhook_secret': webhook_secret,
+        # nunca en claro: el token del bot ya se enmascara arriba
+        'webhook_secret': _mask_secret(webhook_secret),
+        'webhook_secret_configured': bool(webhook_secret),
     }
 
     if bot_cfg is not None:
@@ -553,9 +575,25 @@ def webhook_setup():
         payload['secret_token'] = secret
     try:
         result = _tg_request('setWebhook', payload, token)
-        if secret:
-            os.environ['TELEGRAM_WEBHOOK_SECRET'] = secret
-        return jsonify({'ok': result.get('ok'), 'description': result.get('description'), 'result': result})
+        if secret and result.get('ok'):
+            # Fuente unica: el proceso valida con current_app.config. Antes se
+            # escribia solo en os.environ, que no afecta al config ya cargado
+            # y leaveaba al proceso validando con el secreto anterior.
+            current_app.config['TELEGRAM_WEBHOOK_SECRET'] = secret
+        return jsonify(
+            {
+                'ok': result.get('ok'),
+                'description': result.get('description'),
+                'result': result,
+                'applied': bool(secret and result.get('ok')),
+                'note': (
+                    'El secreto quedo activo en este proceso. Para que sobreviva a un '
+                    'reinicio, exporta TELEGRAM_WEBHOOK_SECRET con el mismo valor.'
+                )
+                if secret
+                else 'No se envio secret_token: el webhook quedo sin validar.',
+            }
+        )
     except Exception as e:
         logger.error(f'webhook setup error: {e}')
         return jsonify({'ok': False, 'error': str(e)})

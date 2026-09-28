@@ -10,7 +10,7 @@ Estas pruebas fallan contra el codigo vulnerable y pasan tras el fix.
 """
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from flask_jwt_extended import create_access_token
@@ -72,7 +72,7 @@ def _make_pending_code(session, chat_id=999001, code='ABC123'):
     tg.is_linked = False
     tg.admin_user_id = None
     tg.link_code = code
-    tg.link_code_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    tg.link_code_expires_at = datetime.now(UTC) + timedelta(minutes=10)
     session.commit()
     return tg
 
