@@ -1007,8 +1007,12 @@ class MCPService:
     ):
         local_mode = _is_ollama_primary()
 
+        # Las herramientas se resuelven para AMBAS ramas: la remota tambien
+        # construye el prompt de tools y antes recien se inicializaba dentro
+        # de `if local_mode:`, lo que la hacia reventar con UnboundLocalError.
+        tools = get_tools_for_mode(mode, user_role)
+
         if local_mode:
-            tools = get_tools_for_mode(mode, user_role)
             local_tools = _select_local_tools(tools, message)
             system_prompt = _build_local_system_prompt(user_role, user_id, mode, message, selected_tools=local_tools)
             if telegram_mode:

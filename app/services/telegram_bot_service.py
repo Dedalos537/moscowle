@@ -258,6 +258,50 @@ def _parse_telegram_ocr(text):
     return result
 
 
+_FALLBACK_MARKERS = (
+    'no pude',
+    'no puedo',
+    'no tengo',
+    'no encontre',
+    'no encontré',
+    'no hay informacion',
+    'no hay información',
+    'no estoy seguro',
+    'lo siento',
+    'disculpa',
+    'no pude generar',
+    'sin informacion',
+    'sin información',
+)
+
+
+def _note_if_unanswered(result, text):
+    """Registra la pregunta como 'sin responder' solo si la IA no dio una respuesta util.
+
+    Antes se llamaba note_unanswered() ANTES de invocar al modelo, asi que toda
+    pregunta sin coincidencia fuerte de FAQ contaba como fallida aunque las
+    tools hubieran respondido con datos reales. Eso llenaba la cola de
+    propuestas con preguntas que el sistema ya sabia responder.
+    """
+    if not text or not isinstance(result, dict):
+        return
+    if result.get('error') or result.get('already_sent'):
+        return
+    if result.get('tool_calls'):
+        return
+    response = (result.get('response') or '').strip().lower()
+    if not response:
+        return
+    if len(response) > 15 and not any(marker in response for marker in _FALLBACK_MARKERS):
+        return
+    try:
+        from app.services.faq_service import note_unanswered
+
+        note_unanswered(text)
+    except Exception:
+        logger.exception('No se pudo registrar la pregunta sin respuesta')
+
+
 def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     """Process a text message through MCP and return the response."""
     from app.services.mcp_service import MCPService
@@ -288,7 +332,7 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
     # FAQ matching (auto-growing knowledge base): answer directly on strong match,
     # else track unanswered for later auto-proposal.
     try:
-        from app.services.faq_service import match_faq, note_unanswered, record_usage
+        from app.services.faq_service import match_faq, record_usage
 
         matches = match_faq(text, limit=1)
         if matches and matches[0]['score'] >= 6:
@@ -296,7 +340,6 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
             record_usage([faq.id])
             send_telegram_message(chat_id, faq.answer, bot_token)
             return {'type': 'response', 'response': faq.answer, 'already_sent': True, 'faq_id': faq.id}
-        note_unanswered(text)
     except Exception:
         pass
 
@@ -315,6 +358,8 @@ def process_text_message(chat_id, text, user_id, user_role, mode='grande'):
         mode=mode,
         telegram_mode=True,
     )
+
+    _note_if_unanswered(result, text)
 
     if result.get('requires_confirmation'):
         pending = result.get('pending_tool', {})

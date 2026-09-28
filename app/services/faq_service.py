@@ -1,12 +1,12 @@
 import difflib
 import logging
 import re
-from collections import Counter
-from datetime import UTC
+from datetime import UTC, datetime
 
 from app.extensions import db
 from app.models.bot_config import BotConfig
 from app.models.faq import Faq
+from app.models.faq_unanswered import FaqUnanswered
 
 logger = logging.getLogger('app.faq')
 
@@ -76,29 +76,78 @@ def record_usage(faq_ids):
 
 
 class _UnansweredTracker:
-    """In-memory tracker of repeated unanswered questions to auto-propose FAQ."""
+    """Contador de preguntas repetidas sin responder, persistido en la BD.
 
-    def __init__(self):
-        self._log = {}  # normalized question -> counter
+    Antes era un diccionario en memoria: los contadores se perdian al
+    reiniciar y cada worker de gunicorn llevaba su propia copia, asi que una
+    pregunta podia no alcanzar el umbral nunca. Se mantiene la misma API
+    (note/popular/forget/clear) para no tocar los llamadores.
+    """
 
     def note(self, text):
         if not text or len(text.strip()) < 6:
-            return
-        key = _normalize(text)[:120]
-        c = self._log.setdefault(key, Counter())
-        c['text'] = text.strip()[:300]
-        c['count'] += 1
-        return c
+            return None
+        key = _normalize(text)[:160]
+        now = datetime.now(UTC)
+        row = FaqUnanswered.query.filter_by(question_key=key).first()
+        if row is None:
+            row = FaqUnanswered(
+                question_key=key,
+                question=text.strip()[:300],
+                count=1,
+                first_seen_at=now,
+                last_seen_at=now,
+            )
+            db.session.add(row)
+        else:
+            row.count = (row.count or 0) + 1
+            row.question = text.strip()[:300]
+            row.last_seen_at = now
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('No se pudo registrar la pregunta sin responder')
+            return None
+        return row
 
-    def popular(self):
-        out = []
-        for _key, c in self._log.items():
-            if c.get('count', 0) >= 3:
-                out.append({'question': c['text'], 'count': c['count']})
-        return out
+    def popular(self, threshold=3):
+        """Preguntas que alcanzaron el umbral.
+
+        Antes el umbral estaba fijo en 3 dentro de popular(), asi que un
+        auto_faq_threshold de 1 o 2 nunca podia surtir efecto: el filtro
+        ocurria antes de comparar con el umbral configurado.
+        """
+        try:
+            threshold = max(1, int(threshold))
+        except (TypeError, ValueError):
+            threshold = 3
+        rows = FaqUnanswered.query.filter(FaqUnanswered.count >= threshold).order_by(FaqUnanswered.count.desc()).all()
+        return [{'question': r.question, 'count': r.count} for r in rows]
+
+    def forget(self, questions):
+        """Elimina solo las preguntas indicadas.
+
+        clear() borraba el registro completo al crear propuestas y perdia los
+        contadores de otras preguntas que aun estaban acumulando.
+        """
+        keys = [_normalize(q)[:160] for q in questions if q]
+        if not keys:
+            return
+        try:
+            FaqUnanswered.query.filter(FaqUnanswered.question_key.in_(keys)).delete(synchronize_session=False)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('No se pudo limpiar el registro de preguntas')
 
     def clear(self):
-        self._log.clear()
+        try:
+            FaqUnanswered.query.delete(synchronize_session=False)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('No se pudo vaciar el registro de preguntas')
 
 
 _unanswered = _UnansweredTracker()
@@ -125,9 +174,8 @@ def auto_propose_faq():
     threshold = max(1, cfg.auto_faq_threshold or 3)
 
     created = 0
-    for item in _unanswered.popular():
-        if item['count'] < threshold:
-            continue
+    promoted = []
+    for item in _unanswered.popular(threshold):
         if _proposed_exists(item['question']):
             continue
         # Skip if an active FAQ already covers it
@@ -144,10 +192,12 @@ def auto_propose_faq():
             usage_count=item['count'],
         )
         db.session.add(faq)
+        promoted.append(item['question'])
         created += 1
     if created:
         db.session.commit()
-        _unanswered.clear()
+        # Solo se retiran las preguntas promovidas: las demas siguen contando.
+        _unanswered.forget(promoted)
     return created
 
 
