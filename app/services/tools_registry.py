@@ -271,7 +271,7 @@ def execute_tool(name, args, user_id=None, role=None):
                 f'Usa el formato: <function={name}{{"param1": "valor1"}}' + '</function>'
             }
     try:
-        return t['handler'](**args, _user_id=user_id, _role=role)
+        resultado = t['handler'](**args, _user_id=user_id, _role=role)
     except TypeError as e:
         return {
             'error': f'Parametros incorrectos para {name}: {str(e)}. '
@@ -280,6 +280,21 @@ def execute_tool(name, args, user_id=None, role=None):
     except Exception as e:
         logger.error(f'Tool {name} error: {e}', exc_info=True)
         return {'error': str(e)}
+
+    # Aislamiento por fila. Se aplica aqui y no dentro de cada handler para que
+    # una tool nueva no pueda saltarselo por olvido: el filtro corre DESPUES del
+    # handler, sobre lo que devuelve.
+    try:
+        from app.services.policy import get_policy
+
+        policy = get_policy()
+        permitido, args, motivo = policy.check(name, args, role=role, user_id=user_id)
+        if not permitido:
+            return {'error': f'No se puede ejecutar {name}: {motivo}'}
+        return policy.filter_result(name, resultado, role=role, user_id=user_id)
+    except Exception as e:
+        logger.error(f'Policy error on {name}: {e}', exc_info=True)
+        return {'error': 'No se pudo verificar el acceso a esos datos.'}
 
 
 def _make_auth_cookie(user_id, role=None):
