@@ -218,6 +218,72 @@ class TestCasosRealesDeProduccion:
        El alcance tiene que derivarse tambien de las sesiones.
     """
 
+    def test_el_historico_no_entra_en_el_alcance(
+        self, policy, session, therapist_with_patients,
+    ):
+        """Ver a quien se trato hace 6 meses no es 'su paciente' hoy.
+
+        Con el historico completo el alcance era de 18 de 51 pacientes: el
+        terapeuta podia pedir pagos de gente a la que ya no trata.
+        """
+        from datetime import datetime, timedelta
+
+        from app.models.appointment import Appointment
+
+        antiguo = _mk_user(
+            session, 'paciente_antiguo', 'pa@x.com', 'jugador',
+            assigned_therapist_id=999,
+        )
+        session.add(
+            Appointment(
+                patient_id=antiguo.id,
+                therapist_id=therapist_with_patients.id,
+                title='Sesion lejana',
+                start_time=datetime.utcnow() - timedelta(days=180),
+                end_time=datetime.utcnow() - timedelta(days=180) + timedelta(hours=1),
+                status='completed',
+            )
+        )
+        session.commit()
+
+        ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        assert antiguo.id not in ids, 'el historico completo no debe ampliar el alcance'
+
+    def test_una_sesion_de_hoy_no_desaparece_al_terminar(
+        self, policy, session, therapist_with_patients,
+    ):
+        """La sesion de las 08:00 sigue siendo suya a las 15:00.
+
+        Con start_time > now la agenda del dia se filtraba a cero: el mismo
+        bug que ocultaba count=0 en produccion.
+        """
+        from datetime import datetime, timedelta
+        from zoneinfo import ZoneInfo
+
+        from app.models.appointment import Appointment
+
+        de_manana = _mk_user(
+            session, 'paciente_de_manana', 'pm@x.com', 'jugador',
+            assigned_therapist_id=999,
+        )
+        inicio_hoy = datetime.now(ZoneInfo('America/Lima')).replace(
+            hour=8, minute=0, second=0, microsecond=0,
+        )
+        session.add(
+            Appointment(
+                patient_id=de_manana.id,
+                therapist_id=therapist_with_patists if False else therapist_with_patients.id,
+                title='Sesion de esta manana',
+                start_time=inicio_hoy.astimezone(ZoneInfo('UTC')).replace(tzinfo=None),
+                end_time=inicio_hoy.astimezone(ZoneInfo('UTC')).replace(tzinfo=None) + timedelta(hours=2),
+                status='completed',
+            )
+        )
+        session.commit()
+
+        ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
+        assert de_manana.id in ids, 'una sesion de HOY debe seguir en su alcance'
+
     def test_el_alcance_incluye_a_quien_atiende_por_sesiones(
         self, policy, session, therapist_with_patients, patient_of_therapist,
     ):
@@ -230,7 +296,7 @@ class TestCasosRealesDeProduccion:
             session, 'paciente_por_sesion', 'ph@x.com', 'jugador',
             assigned_therapist_id=999,
         )
-        # ...pero con una sesion impartida por el terapeuta.
+        # ...pero con una sesion FUTURA impartida por el terapeuta.
         session.add(
             Appointment(
                 patient_id=huerfano.id,
@@ -245,7 +311,7 @@ class TestCasosRealesDeProduccion:
 
         ids = policy.allowed_patient_ids('terapista', therapist_with_patients.id)
         assert huerfano.id in ids, (
-            'el terapeuta no ve a quien atiende de verdad: '
+            'el terapeuta no ve a quien tiene en agenda: '
             'assigned_therapist_id esta desactualizado'
         )
 

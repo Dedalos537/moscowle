@@ -98,7 +98,7 @@ class PolicyEngine:
         """Ids de paciente visibles. None = sin restriccion.
 
         admin y supervisor: global (gestion del centro).
-        terapista: solo los pacientes que tiene asignados.
+        terapista: asignados + los que tiene en agenda hoy o por delante.
         jugador: unicamente el mismo.
         """
         if role in ('admin', 'supervisor'):
@@ -124,22 +124,37 @@ class PolicyEngine:
                 ).all()
                 scope = {r[0] for r in rows}
                 # assigned_therapist_id esta desactualizado en produccion
-                # (Liam y Valentina apuntaban al terapeuta 13 pero sus sesiones
-                # las impartia el 1). Un terapeuta DEBE ver a quien atiende de
-                # verdad, asi que el alcance se completa con sus sesiones.
+                # (Liam y Valentina apuntaban al terapeuta 13 pero sus
+                # sesiones las impartia el 1). Un terapeuta no puede perder de
+                # vista a quien tiene en agenda, asi que el alcance se completa
+                # con las sesiones de HOY o por delante.
+                #
+                # OJO: 'hoy' entra a proposito. Con start_time > now, la
+                # sesion de las 08:00 de esta manana ya habria terminado y la
+                # agenda del dia se filtraria a cero. Ocultar trabajo real es
+                # tan grave como la fuga que esto evita.
+                #
+                # No entra el historico: el terapeuta ve a quien tiene delante,
+                # no la ficha de quien trato hace dos anos.
                 try:
+                    from datetime import datetime, timedelta
+                    from zoneinfo import ZoneInfo
+
                     from app.models.appointment import Appointment
 
-                    atendidos = (
+                    hoy = datetime.now(ZoneInfo('America/Lima')).date()
+                    desde = datetime.combine(hoy, datetime.min.time()) - timedelta(hours=5)
+                    en_agenda = (
                         db.session.query(Appointment.patient_id)
                         .filter(
                             Appointment.therapist_id == int(user_id),
                             Appointment.status != 'cancelled',
+                            Appointment.start_time >= desde,
                         )
                         .distinct()
                         .all()
                     )
-                    scope |= {r[0] for r in atendidos if r[0] is not None}
+                    scope |= {r[0] for r in en_agenda if r[0] is not None}
                 except Exception:
                     pass
         except Exception:
