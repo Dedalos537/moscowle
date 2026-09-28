@@ -570,27 +570,52 @@ def _is_smalltalk(message):
     return bool(_SMALLTALK_RE.match((message or '').strip()))
 
 
-def _select_local_tools(tools, message):
-    """Selecciona un subconjunto relevante de tools para el LLM local (CPU):
-    filtra por intención del mensaje y siempre incluye los esenciales.
-    Mantiene el prompt pequeño -> prefill rápido (clave para <10s)."""
-    msg = (message or '').lower()
-    wanted = set(_ALWAYS_LOCAL_TOOLS)
-    hit = False
-    for intent, keywords in _INTENT_KEYWORDS.items():
-        if any(k in msg for k in keywords):
-            wanted |= _INTENT_GROUPS.get(intent, set())
-            hit = True
-    if not hit:
-        wanted |= _INTENT_GROUPS['general']
-    selected = [t for t in tools if t['function']['name'] in wanted]
-    if len(selected) > LOCAL_MAX_TOOLS:
-        extra = [t for t in selected if t['function']['name'] not in _ALWAYS_LOCAL_TOOLS]
-        extra.sort(key=lambda t: TOOL_REGISTRY.get(t['function']['name'], {}).get('category', 'read') != 'read')
-        selected = [t for t in selected if t['function']['name'] in _ALWAYS_LOCAL_TOOLS] + extra[
-            : LOCAL_MAX_TOOLS - len(_ALWAYS_LOCAL_TOOLS)
-        ]
-    return [_compact_local_schema(t) for t in selected]
+_RETRIEVER = None
+
+
+def _get_retriever():
+    """Recuperador singleton. El indice (67 docs) se construye una sola vez."""
+    global _RETRIEVER  # noqa: PLW0603
+    if _RETRIEVER is None:
+        from app.services.retrieval import ToolRetriever
+
+        _RETRIEVER = ToolRetriever(TOOL_REGISTRY)
+    return _RETRIEVER
+
+
+def _select_local_tools(tools, message, user_role=None, k=None):
+    """Selecciona las tools relevantes para el mensaje.
+
+    Reemplaza la seleccion por palabras clave (que seccionaba el catalogo y
+    llegaba a ofrecer 'delete_user' a una consulta de conteo) por el
+    recuperador BM25 + sinonimos, que además respeta el rol del usuario.
+
+    Mantiene ademas las tools esenciales del turno y el limite LOCAL_MAX_TOOLS
+    para no degradar el prefill en CPU.
+    """
+    # 8 tools, no LOCAL_MAX_TOOLS(14): el objetivo es que el prompt del
+    # sintetizador pase de 8142 tokens a ~1200. Con 6 recuperadas mas el reloj
+    # hay margen de sobra y el prefill en CPU se mantiene corto.
+    k = k or 8
+    permitidas = {t['function']['name'] for t in tools}
+    role = user_role
+
+    candidates = _get_retriever().search(message, role=role, k=k)
+
+    # El prompt local siempre incluye el reloj: el bot lo necesita para
+    # cualquier referencia temporal y es lo mas barato posible.
+    if 'get_current_datetime' in permitidas and not any(
+        t.name == 'get_current_datetime' for t in candidates
+    ):
+        rel = next(
+            t for t in _get_retriever().search('fecha hora actual', role=role, k=1)
+            if t.name == 'get_current_datetime'
+        )
+        candidates = [rel] + candidates
+
+    por_nombre = {t['function']['name']: t for t in tools}
+    selected = [por_nombre[t.name] for t in candidates if t.name in permitidas]
+    return [_compact_local_schema(t) for t in selected[:k]]
 
 
 # Mapa determinista intención -> tool de reporte.
@@ -1013,7 +1038,7 @@ class MCPService:
         tools = get_tools_for_mode(mode, user_role)
 
         if local_mode:
-            local_tools = _select_local_tools(tools, message)
+            local_tools = _select_local_tools(tools, message, user_role=user_role)
             system_prompt = _build_local_system_prompt(user_role, user_id, mode, message, selected_tools=local_tools)
             if telegram_mode:
                 system_prompt += (

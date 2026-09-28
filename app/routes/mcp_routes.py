@@ -424,7 +424,7 @@ def mcp_chat_stream():
                 tools = get_tools_for_mode(mode, user.role)
                 local_mode = _is_ollama_primary()
                 if local_mode:
-                    local_tools = _select_local_tools(tools, message)
+                    local_tools = _select_local_tools(tools, message, user_role=user.role)
                     full_system = _build_local_system_prompt(
                         user.role, user.id, mode, message, selected_tools=local_tools
                     )
