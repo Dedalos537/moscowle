@@ -1000,24 +1000,43 @@ def handle_broadcast(subject, body, target='all', **kwargs):
 
 @tool(
     name='list_patients',
-    description='Lista TODOS los pacientes con filtros opcionales: sede, estado activo/inactivo. Retorna lista completa.',
+    description='Lista TODOS los pacientes con filtros opcionales: sede, estado activo/inactivo, y quien no tenga contrato vigente. Retorna lista completa.',
     parameters={
         'type': 'object',
         'properties': {
             'sede_id': {'type': 'integer', 'description': 'Filtrar por ID de sede'},
             'is_active': {'type': 'boolean', 'description': 'true=activos, false=inactivos. Sin filtro = todos'},
+            'without_active_contract': {
+                'type': 'boolean',
+                'description': 'true=solo los que NO tienen contrato vigente, false=solo los que si',
+            },
             'limit': {'type': 'integer', 'description': 'Max resultados (default 50)'},
         },
     },
     category='read',
 roles=ROLES_THERAPIST,
 )
-def handle_list_patients(sede_id=None, is_active=None, limit=50, **kwargs):
+def handle_list_patients(sede_id=None, is_active=None, without_active_contract=None,
+                         limit=50, **kwargs):
+    from app.models.contract import Contract
+
     q = User.query.filter_by(role='jugador')
     if sede_id:
         q = q.filter_by(sede_id=sede_id)
     if is_active is not None:
         q = q.filter_by(is_active=is_active)
+    if without_active_contract is not None:
+        # Con contrato vigente = que is_active o status digan 'active'. Las dos
+        # columnas existen y pueden no coincidir (varias filas tienen is_active
+        # en NULL), asi que se acepta cualquiera de las dos.
+        con_contrato = (
+            db.session.query(Contract.patient_id)
+            .filter(db.or_(Contract.is_active.is_(True), Contract.status == 'active'))
+        )
+        if without_active_contract:
+            q = q.filter(~User.id.in_(con_contrato))
+        else:
+            q = q.filter(User.id.in_(con_contrato))
     patients = q.order_by(User.username).limit(limit).all()
     return {
         'success': True,
@@ -2541,6 +2560,86 @@ def handle_get_debt_summary(**kwargs):
         return {'success': True, 'summary': data}
     except Exception as e:
         return {'error': str(e)}
+
+
+@tool(
+    name='get_contract_suggestion',
+    description=(
+        'Condiciones de contrato sugeridas para un paciente, basadas en su ultimo contrato '
+        'y en su plan de pago. Usar ANTES de create_service_contract para no inventar el '
+        'precio: devuelve monto, cuotas y si tiene sentido renovar.'
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+        },
+        'required': ['patient_id'],
+    },
+    category='read',
+    roles=ROLES_THERAPIST,
+)
+def handle_get_contract_suggestion(patient_id, **kwargs):
+    from app.models.contract import Contract
+
+    p = User.query.get(patient_id)
+    if p is None or p.role != 'jugador':
+        return {'error': f'Paciente {patient_id} no encontrado'}
+
+    contratos = (
+        Contract.query.filter_by(patient_id=p.id).order_by(Contract.id.desc()).all()
+    )
+    vigente = next(
+        (c for c in contratos if c.is_active is True or c.status == 'active'), None
+    )
+    ultimo = contratos[0] if contratos else None
+    base = vigente or ultimo
+
+    # Sesiones consumidas: es lo que dice si toca renovar o no crear nada.
+    total = int(p.sessions_total or 0)
+    restante = int(p.sessions_remaining or 0)
+
+    sug = {
+        'patient_id': p.id,
+        'username': p.username,
+        'sessions_total': total,
+        'sessions_remaining': restante,
+        'sessions_consumed': max(total - restante, 0),
+        'has_active_contract': vigente is not None,
+        'plan_type': p.payment_plan,
+        'payment_amount': p.payment_amount,
+        'session_cost': p.session_cost,
+    }
+    if base is not None:
+        sug['based_on_contract_id'] = base.id
+        sug['suggested_total_amount'] = base.total_amount
+        sug['suggested_installment_count'] = base.installment_count
+        sug['suggested_installment_amount'] = base.installment_amount
+        sug['suggested_billing_type'] = base.billing_type
+        sug['implementation_cost'] = base.implementation_cost
+    elif p.payment_amount:
+        # Sin contrato previo se propone el plan de pago de la ficha. El numero
+        # de cuotas sale de las sesiones contratadas, no de un supuesto.
+        cuotas = total if total > 0 else 4
+        sug['based_on'] = 'plan de pago de la ficha (sin contrato previo)'
+        sug['suggested_installment_count'] = cuotas
+        sug['suggested_installment_amount'] = float(p.payment_amount)
+        sug['suggested_total_amount'] = float(p.payment_amount) * cuotas
+        sug['suggested_billing_type'] = 'Mensual'
+        sug['implementation_cost'] = 0
+    else:
+        sug['based_on'] = 'sin datos: hay que preguntar el precio'
+        sug['needs_human_input'] = True
+
+    if vigente is not None and restante <= 0:
+        sug['action'] = 'renovar: ya tiene contrato vigente y se le acabaron las sesiones'
+    elif vigente is not None:
+        sug['action'] = 'no hace falta nada: tiene contrato vigente y sesiones'
+    elif total > 0 and restante <= 0:
+        sug['action'] = 'crear contrato nuevo: agoto las sesiones y no tiene contrato'
+    else:
+        sug['action'] = 'crear contrato nuevo: no tiene contrato vigente'
+    return {'success': True, 'suggestion': sug}
 
 
 @tool(
