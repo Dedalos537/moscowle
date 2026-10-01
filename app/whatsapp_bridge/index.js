@@ -142,11 +142,14 @@ async function start() {
 
       // Sin esto no se ve nunca el motivo: statusCode viene vacio en muchos
       // errores de Baileys y quedaba un reason=None inutil para diagnosticar.
+      // err.data.stack apunta a quien llamo a promiseTimeout: es el unico
+      // lugar que dice si colgo sendRawMessage, awaitNextMessage o el query.
       const err = lastDisconnect?.error;
       const errName = err?.name || err?.constructor?.name || 'desconocido';
-      const errMsg = (err?.message || String(err || '')).slice(0, 300);
+      const errMsg = (err?.message || String(err || '')).slice(0, 400);
+      const where = String(err?.data?.stack || '').split('\n').slice(0, 8).join(' | ');
       logger.warn(
-        { statusCode, errName, loggedOut, banned },
+        { statusCode, errName, loggedOut, banned, caller: where },
         'connection close: %s %s',
         errName,
         errMsg
