@@ -25,3 +25,7 @@ from app.models.user_session import UserSession as UserSession
 from app.models.user_status_log import UserStatusLog as UserStatusLog
 from app.models.webauthn import WebAuthnChallenge as WebAuthnChallenge
 from app.models.webauthn import WebAuthnCredential as WebAuthnCredential
+from app.models.message_log import MessageLog as MessageLog
+from app.models.message_template import MessageTemplate as MessageTemplate
+from app.models.campaign import Campaign as Campaign
+from app.models.campaign import CampaignSend as CampaignSend

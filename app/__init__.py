@@ -915,6 +915,7 @@ def create_app_lite():
     from app.routes.api import api_bp
     from app.routes.auth import auth_bp
     from app.routes.chat_routes import chat_bp
+    from app.routes.crm_routes import crm_bp
     from app.routes.health_routes import health_bp
     from app.routes.kanban_routes import kanban_bp
     from app.routes.main import main_bp
@@ -932,6 +933,7 @@ def create_app_lite():
     csrf.exempt(uploads_bp)
     csrf.exempt(kanban_bp)
     csrf.exempt(webauthn_bp)
+    csrf.exempt(crm_bp)
 
     for bp in [
         auth_bp,
@@ -948,6 +950,7 @@ def create_app_lite():
         uploads_bp,
         kanban_bp,
         webauthn_bp,
+        crm_bp,
     ]:
         try:
             app.register_blueprint(bp)

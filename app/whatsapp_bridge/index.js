@@ -1,63 +1,204 @@
+/**
+ * Puente de WhatsApp via Baileys.
+ *
+ * Habla con Python por stdin/stdout: una linea JSON entra, una linea JSON sale.
+ * stdout es solo para este protocolo, los logs van a stderr.
+ *
+ * Lo que cambia respecto a la version anterior:
+ *  - Los envios se correlacionan por id, para que Python sepa si el mensaje
+ *    salio de verdad. Antes Python asumia exito al escribir y se equivocaba.
+ *  - La reconexion espera antes de reintentar y para si WhatsApp ya no
+ *    permite la sesion, en vez de quedarse reconectando en bucle.
+ *  - Reporta el numero conectado, que es el dato que hace falta para saber
+ *    desde que numero sale la comunicacion.
+ */
 const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
 
 const SESSION_DIR = path.join(__dirname, '..', '..', 'whatsapp_sessions');
+const RECONNECT_BASE_MS = 5000;
+const RECONNECT_MAX_MS = 120000;
 
-function sendJSON(data) {
+const logger = pino({ level: process.env.BRIDGE_LOG_LEVEL || 'warn' });
+
+function send(data) {
   process.stdout.write(JSON.stringify(data) + '\n');
 }
 
-async function startBot() {
-  if (!fs.existsSync(SESSION_DIR)) {
-    fs.mkdirSync(SESSION_DIR, { recursive: true });
-  }
+let sock = null;
+let stopping = false;
+let pending = new Map();
+let nextMsgId = 1;
+let queue = Promise.resolve();
 
+function jidOf(phone) {
+  let digits = String(phone).replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = '51' + digits.slice(1);
+  if (!digits.startsWith('51')) digits = '51' + digits;
+  return `${digits}@s.whatsapp.net`;
+}
+
+function settle(msgId, result) {
+  const entry = pending.get(msgId);
+  if (!entry) return;
+  pending.delete(msgId);
+  clearTimeout(entry.timer);
+  entry.resolve(result);
+}
+
+function stopAll(error) {
+  for (const [id, entry] of pending) {
+    clearTimeout(entry.timer);
+    entry.resolve({ ok: false, error: error || 'timeout' });
+    pending.delete(id);
+  }
+}
+
+async function sendMessage(phone, text) {
+  if (!sock) return { ok: false, error: 'no_conectado' };
+
+  const msgId = String(nextMsgId++);
+  const jid = jidOf(phone);
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      settle(msgId, { ok: false, error: 'timeout' });
+    }, 30000);
+    pending.set(msgId, { resolve, timer });
+
+    queue = queue
+      .then(() =>
+        sock.sendMessage(jid, { text }, { messageId: msgId })
+      )
+      .then((info) => {
+        settle(msgId, {
+          ok: true,
+          provider_message_id: info?.key?.id || null,
+          jid: jid,
+        });
+      })
+      .catch((err) => {
+        const code = err?.output?.statusCode;
+        settle(msgId, { ok: false, error: code ? `wa_${code}` : (err?.message || 'error') });
+      });
+  });
+}
+
+async function start() {
+  fs.mkdirSync(SESSION_DIR, { recursive: true });
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
-    logger: pino({ level: 'silent' }),
-    browser: ['Moscowle Bot', 'Chrome', '1.0'],
-  });
-
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      sendJSON({ type: 'qr', qr });
-    }
-    if (connection === 'open') {
-      sendJSON({ type: 'ready' });
-    }
-    if (connection === 'close') {
-      const reason = lastDisconnect?.error?.output?.statusCode;
-      sendJSON({ type: 'disconnected', reason });
-      if (reason === DisconnectReason.loggedOut) {
-        fs.rmSync(SESSION_DIR, { recursive: true, force: true });
-      }
-      startBot();
-    }
+    logger,
+    browser: ['Moscowle', 'Chrome', '1.0'],
+    connectTimeoutMs: 60000,
+    keepAliveIntervalMs: 25000,
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  process.stdin.on('data', async (data) => {
-    try {
-      const msg = JSON.parse(data.toString().trim());
-      if (msg.type === 'send') {
-        const phone = msg.phone.replace(/\D/g, '');
-        const jid = `${phone}@s.whatsapp.net`;
-        await sock.sendMessage(jid, { text: msg.message });
-        sendJSON({ type: 'sent', phone: msg.phone });
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    if (qr) {
+      send({ type: 'qr', qr });
+    }
+
+    if (connection === 'open') {
+      let me = null;
+      try {
+        me = sock.user?.id || null;
+      } catch (_) {
+        me = null;
       }
-    } catch (e) {
-      sendJSON({ type: 'error', message: e.message });
+      send({ type: 'ready', jid: me, phone: me ? me.split('@')[0] : null });
+    }
+
+    if (connection === 'close') {
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const loggedOut = statusCode === DisconnectReason.loggedOut;
+      const banned = statusCode === DisconnectReason.forbidden;
+
+      stopAll('desconectado');
+      send({ type: 'disconnected', reason: statusCode || null, logged_out: loggedOut, banned });
+
+      if (stopping) return;
+
+      if (loggedOut || banned) {
+        // Ya no hay sesion que reconectar. Reconectar en bucle aqui produce
+        // miles de intentos y no recupera nada: hay que volver a escanear QR
+        // a proposito. Si es un baneo, avisamos y paramos.
+        if (loggedOut) {
+          try {
+            fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+          } catch (_) {}
+        }
+        send({ type: 'needs_qr', banned });
+        return;
+      }
+
+      const delay = Math.min(RECONNECT_BASE_MS * (pending.size + 1), RECONNECT_MAX_MS);
+      send({ type: 'reconnecting', in_ms: RECONNECT_BASE_MS });
+      setTimeout(() => {
+        if (!stopping) start().catch((err) => send({ type: 'error', message: err.message }));
+      }, RECONNECT_BASE_MS);
     }
   });
 }
 
-startBot().catch((err) => {
-  sendJSON({ type: 'error', message: err.message });
+function handleLine(line) {
+  let msg;
+  try {
+    msg = JSON.parse(line);
+  } catch (err) {
+    send({ type: 'error', message: 'json_invalido' });
+    return;
+  }
+
+  if (msg.type === 'send') {
+    sendMessage(msg.phone, msg.message).then((r) => {
+      send({ type: 'send_result', ref: msg.ref || null, ...r });
+    });
+  } else if (msg.type === 'ping') {
+    send({ type: 'pong', connected: Boolean(sock) });
+  } else if (msg.type === 'status') {
+    let jid = null;
+    try {
+      jid = sock?.user?.id || null;
+    } catch (_) {}
+    send({ type: 'status', connected: Boolean(sock), jid, phone: jid ? jid.split('@')[0] : null });
+  } else if (msg.type === 'logout') {
+    stopping = true;
+    try {
+      fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+    } catch (_) {}
+    send({ type: 'logged_out' });
+    process.exit(0);
+  }
+}
+
+let buffer = '';
+process.stdin.on('data', (chunk) => {
+  buffer += chunk.toString();
+  let idx;
+  while ((idx = buffer.indexOf('\n')) >= 0) {
+    const line = buffer.slice(0, idx).trim();
+    buffer = buffer.slice(idx + 1);
+    if (line) handleLine(line);
+  }
+});
+
+process.on('SIGTERM', () => {
+  stopping = true;
+  try {
+    sock?.end?.(undefined);
+  } catch (_) {}
+  process.exit(0);
+});
+
+start().catch((err) => {
+  send({ type: 'fatal', message: err.message });
   process.exit(1);
 });

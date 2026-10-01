@@ -3204,3 +3204,218 @@ def handle_update_patient_details(patient_id, **kwargs):
 
     _db.session.commit()
     return {'success': True, 'message': f'Paciente #{patient_id} actualizado', 'updated_fields': updated}
+
+
+@tool(
+    name='list_messaging_contacts',
+    description=(
+        "Contactos que pueden recibir WhatsApp o SMS, con su numero, si estan "
+        "activos y por que no se les puede avisar. Responde 'quien esta subscribed'"
+        "y 'de quienes son los numeros'."
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'include_inactive': {
+                'type': 'boolean',
+                'description': 'Incluir tambien los dados de baja (por defecto false)',
+            },
+            'only_without_phone': {
+                'type': 'boolean',
+                'description': 'Solo los que no tienen numero (por defecto false)',
+            },
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_list_messaging_contacts(**kwargs):
+    from app.services.messaging import contact_summary
+
+    from app.models import User
+    from app.services.whatsapp_service import whatsapp_service
+
+    q = User.query.filter_by(role='jugador')
+    if not kwargs.get('include_inactive'):
+        q = q.filter_by(is_active=True)
+    if kwargs.get('only_without_phone'):
+        q = q.filter(
+            (User.phone.is_(None)) | (User.phone == '')
+            | (User.guardian_contact.is_(None)) | (User.guardian_contact == '')
+        )
+
+    contacts = []
+    def full_name(patient):
+        parts = [p for p in ((patient.first_name or '').strip(), (patient.last_name or '').strip()) if p]
+        return ' '.join(parts) or patient.username
+
+    for pat in q.order_by(User.first_name, User.last_name).all():
+        contacts.append(
+            {
+                'id': pat.id,
+                'username': pat.username,
+                'name': full_name(pat),
+                'phone': pat.phone,
+                'guardian_contact': pat.guardian_contact,
+                'effective_phone': (pat.guardian_contact or pat.phone or ''),
+                'is_active': pat.is_active,
+            }
+        )
+
+    return {
+        'success': True,
+        'summary': contact_summary(),
+        'whatsapp_sender': whatsapp_service.status(),
+        'contacts': contacts,
+    }
+
+
+@tool(
+    name='set_messaging_contact_active',
+    description=(
+        "Activa o desactiva los avisos (WhatsApp/SMS) de un paciente. "
+        "Desactivar deja de avisarle: el servicio de envio lo comprueba antes "
+        "de cada mensaje, no solo la pantalla."
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'is_active': {
+                'type': 'boolean',
+                'description': 'true para volver a avisarle, false para dejarlo de avisar',
+            },
+        },
+        'required': ['patient_id', 'is_active'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_set_messaging_contact_active(**kwargs):
+    from app.models import User
+    from app.services.messaging import MessagingService
+
+    patient_id = kwargs.get('patient_id')
+    is_active = kwargs.get('is_active')
+    if patient_id is None or is_active is None:
+        return {'error': 'patient_id e is_active son obligatorios'}
+
+    patient = User.query.get(patient_id)
+    if not patient:
+        return {'error': f'Paciente {patient_id} no encontrado'}
+
+    patient.is_active = bool(is_active)
+    patient.account_status = 'active' if is_active else 'inactive'
+    db.session.commit()
+
+    contactable, reason = MessagingService().check_contactable(patient, 'whatsapp')
+    return {
+        'success': True,
+        'patient_id': patient_id,
+        'is_active': patient.is_active,
+        'contactable': contactable,
+        'note': reason or 'Vuelve a recibir avisos',
+    }
+
+
+@tool(
+    name='get_whatsapp_status',
+    description=(
+        "Estado de la conexion de WhatsApp: si esta conectada, de que numero "
+        "sale la comunicacion, y si hay que volver a escanear el QR."
+    ),
+    parameters={'type': 'object', 'properties': {}},
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_whatsapp_status(**_kwargs):
+    from app.services.messaging import MessagingService
+    from app.services.whatsapp_service import whatsapp_service
+
+    svc = MessagingService()
+    return {
+        'success': True,
+        'whatsapp': whatsapp_service.status(),
+        'delivery': svc.stats(),
+    }
+
+
+@tool(
+    name='send_patient_message',
+    description=(
+        "Envia un WhatsApp o SMS a un paciente. Usa esto para avisos de pago, "
+        "renovacion o confirmaciones. Si el paciente esta desactivado, no "
+        "sale y te dice por que."
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'ID del paciente'},
+            'message': {'type': 'string', 'description': 'Texto del mensaje'},
+            'channel': {
+                'type': 'string',
+                'enum': ['whatsapp', 'sms'],
+                'description': 'Canal de envio (por defecto whatsapp)',
+            },
+        },
+        'required': ['patient_id', 'message'],
+    },
+    category='write',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_send_patient_message(**kwargs):
+    from app.services.messaging import MessagingService
+
+    patient_id = kwargs.get('patient_id')
+    message = (kwargs.get('message') or '').strip()
+    if not patient_id or not message:
+        return {'error': 'patient_id y message son obligatorios'}
+
+    svc = MessagingService()
+    result = svc.send_to_patient(
+        patient_id, message,
+        channel=(kwargs.get('channel') or 'whatsapp'),
+        sent_by_id=kwargs.get('_user_id'),
+        trigger='manual',
+    )
+    return {'success': result['status'] == 'sent', **result}
+
+
+@tool(
+    name='get_message_history',
+    description=(
+        "Historial de mensajes enviados: a quien, que dice, por que canal y si "
+        "salio o fallo. Responde 'que le mandamos a este paciente'."
+    ),
+    parameters={
+        'type': 'object',
+        'properties': {
+            'patient_id': {'type': 'integer', 'description': 'Filtrar por paciente'},
+            'channel': {'type': 'string', 'enum': ['sms', 'whatsapp']},
+            'days': {'type': 'integer', 'description': 'Dias hacia atras (por defecto 30)'},
+            'limit': {'type': 'integer', 'description': 'Maximo de resultados (por defecto 50)'},
+        },
+    },
+    category='read',
+    roles=ROLES_SUPERVISOR,
+)
+def handle_get_message_history(**kwargs):
+    from datetime import datetime, timedelta
+
+    from app.models.message_log import MessageLog
+
+    q = MessageLog.query
+    if kwargs.get('patient_id'):
+        q = q.filter_by(patient_id=kwargs['patient_id'])
+    if kwargs.get('channel'):
+        q = q.filter_by(channel=kwargs['channel'])
+
+    days = int(kwargs.get('days') or 30)
+    q = q.filter(MessageLog.created_at >= datetime.utcnow() - timedelta(days=days))
+    rows = q.order_by(MessageLog.created_at.desc()).limit(min(int(kwargs.get('limit') or 50), 200)).all()
+
+    return {
+        'success': True,
+        'count': len(rows),
+        'messages': [r.to_dict() for r in rows],
+    }

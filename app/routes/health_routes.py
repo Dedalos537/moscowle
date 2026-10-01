@@ -647,19 +647,6 @@ def health_llm_config():
 @csrf.exempt
 def health_llm_config_update():
     """Update LLM API keys at runtime. Admin only. Sincroniza env + BD."""
-    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-
-    from app.models import User
-
-    try:
-        verify_jwt_in_request(locations=['cookies', 'headers'])
-        uid = get_jwt_identity()
-        user = User.query.get(int(uid))
-        if not user or user.role not in ('admin', 'supervisor'):
-            return jsonify({'error': 'No autorizado'}), 403
-    except Exception:
-        return jsonify({'error': 'No autenticado'}), 401
-
     data = request.get_json(silent=True) or {}
     updated = []
     errors = []
@@ -920,8 +907,25 @@ def health_llm_settings_update():
 
 @health_bp.route('/health/notifications/config', methods=['GET', 'POST'])
 def health_notifications_config():
-    """OCP: Centro de Operaciones puede configurar numero destino SMS + plantilla SMS/WhatsApp del servicio de notificaciones."""
+    """OCP: Centro de Operaciones puede configurar numero destino SMS + plantilla SMS/WhatsApp del servicio de notificaciones.
+
+    El GET tambien va autenticado: antes cualquiera que abriera la URL leia
+    el numero de destino y los textos de las plantillas.
+    """
     import os
+
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+    from app.models import User
+
+    try:
+        verify_jwt_in_request(locations=['cookies', 'headers'])
+        uid = get_jwt_identity()
+        user = User.query.get(int(uid))
+        if not user or user.role not in ('admin', 'supervisor'):
+            return jsonify({'error': 'No autorizado'}), 403
+    except Exception:
+        return jsonify({'error': 'No autenticado'}), 401
 
     if request.method == 'GET':
         return jsonify(
@@ -943,19 +947,6 @@ def health_notifications_config():
                 ),
             }
         )
-
-    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-
-    from app.models import User
-
-    try:
-        verify_jwt_in_request(locations=['cookies', 'headers'])
-        uid = get_jwt_identity()
-        user = User.query.get(int(uid))
-        if not user or user.role not in ('admin', 'supervisor'):
-            return jsonify({'error': 'No autorizado'}), 403
-    except Exception:
-        return jsonify({'error': 'No autenticado'}), 401
 
     data = request.get_json(silent=True) or {}
     updated = []

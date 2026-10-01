@@ -118,23 +118,25 @@ Centro de Terapias
                 return jsonify({'success': False, 'error': 'No phone number available for this patient'}), 400
 
             if channel == 'sms':
-                success = sms_service.send_payment_reminder_sms(
+                result = sms_service.send_payment_reminder_sms(
                     phone_number, patient_name, amount, due_date, days_overdue
                 )
             else:
-                success = sms_service.send_payment_reminder_whatsapp(
+                result = sms_service.send_payment_reminder_whatsapp(
                     phone_number, patient_name, amount, due_date, days_overdue
                 )
 
-                if success:
-                    return api_response(
-                        success=True,
-                        data={'message': f'Recordatorio enviado por {channel} a {phone_number}', 'channel': channel},
-                    )
-                else:
-                    return api_response(
-                        success=False, error={'message': f'Error al enviar recordatorio por {channel}'}, status=500
-                    )
+            success = result.get('ok', result) if isinstance(result, dict) else bool(result)
+            msg = f'Recordatorio enviado por {channel} a {phone_number}'
+            if not success:
+                err = result.get('error') if isinstance(result, dict) else f'Error al enviar recordatorio por {channel}'
+                return api_response(
+                    success=False, error={'message': err}, status=500
+                )
+            return api_response(
+                success=True,
+                data={'message': msg, 'channel': channel, 'provider_message_id': result.get('provider_message_id') if isinstance(result, dict) else None},
+            )
 
         else:
             return api_response(

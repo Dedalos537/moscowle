@@ -1,127 +1,307 @@
+"""WhatsApp por Baileys: conexion con WhatsApp Web desde el numero del centro.
+
+Se escanea un QR una vez y la sesion queda en disco. A partir de ahi el puente
+arranca solo con el servicio.
+
+Lo que cambia respecto a la version anterior:
+
+  - Los envios esperan confirmacion. Antes `send_message` devolvia
+    `{'sent': True}` nada mas escribir en stdin, asi que el log de cobranza
+    marcaba como enviado un mensaje que quizas nunca salio.
+  - `.start()` ahora se llama de verdad al crear la app, asi que el puente
+    existe y no cae siempre al link de wa.me.
+  - `connected_phone` expone de que numero sale la comunicacion, que es la
+    pregunta que hay que poder responder.
+  - Reintenta solo ante caidas de red. Si WhatsApp revoca la sesion para y
+    avisa, en vez de martillear la API.
+"""
 import json
 import logging
 import os
+import re
 import subprocess
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 
-WHATSAPP_SESSION_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'whatsapp_sessions')
+BRIDGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'whatsapp_bridge'))
+SESSION_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'whatsapp_sessions'))
+
+# Baileys reporta los errores de envio en su mayoria como codigo numerico.
+# Estos dos son los que un humano tiene que entender.
+_FRIENDLY = {
+    'wa_401': 'WhatsApp cerrado: el contacto no te tiene en su lista',
+    'wa_403': 'WhatsApp rechazo el envio',
+    'wa_404': 'WhatsApp no tiene ese numero',
+    'wa_429': 'WhatsApp pidio parar: se mando demasiado rapido',
+    'wa_500': 'WhatsApp fallo por su lado',
+}
+
+
+class WhatsAppBridgeError(RuntimeError):
+    """Fallo enviando por WhatsApp. El motivo ya viene en castellano."""
 
 
 class WhatsAppService:
-    """WhatsApp integration via Baileys (Node.js bridge)
-
-    Uses a small Node.js script that runs Baileys to connect to WhatsApp Web.
-    Falls back to wa.me links if the bridge is not connected.
-    """
+    """Cliente del puente Baileys."""
 
     def __init__(self):
-        self.connected = False
-        self.qr_code = None
         self._process = None
+        self._lock = threading.Lock()
         self._ready = threading.Event()
-        self.session_path = WHATSAPP_SESSION_DIR
+        self._needs_qr = False
+        self._banned = False
+        self.connected = False
+        self.connected_phone = None
+        self.connected_jid = None
+        self.qr_code = None
+        self.last_error = None
+        self.started_at = None
+        # Envios en vuelo: ref -> (evento, resultado). El hilo de stdout
+        # resuelve el que corresponda con la respuesta.
+        self._pending = {}
+        self._seq = 0
+
+    # ---------------------------------------------------------------- ciclo
 
     def start(self):
-        """Start the Baileys Node.js bridge process"""
-        bridge_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'whatsapp_bridge')
-        main_js = os.path.join(bridge_path, 'index.js')
+        """Arranca el puente. Devuelve True si el proceso levanto."""
+        if self._process and self._process.poll() is None:
+            return True
 
+        main_js = os.path.join(BRIDGE_DIR, 'index.js')
         if not os.path.exists(main_js):
-            logger.warning("WhatsApp bridge not found at %s. Run 'node setup.js' in whatsapp_bridge/", main_js)
+            logger.warning('Puente de WhatsApp no encontrado en %s', BRIDGE_DIR)
             return False
 
         try:
             self._process = subprocess.Popen(
                 ['node', 'index.js'],
-                cwd=bridge_path,
+                cwd=BRIDGE_DIR,
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                bufsize=1,
+                env={**os.environ, 'BRIDGE_LOG_LEVEL': os.environ.get('BRIDGE_LOG_LEVEL', 'warn')},
             )
-            threading.Thread(target=self._read_output, daemon=True).start()
-            return True
         except FileNotFoundError:
-            logger.error('Node.js not found. Install Node.js to use WhatsApp.')
+            logger.error('Node.js no esta instalado, WhatsApp no puede funcionar')
             return False
 
-    def _read_output(self):
-        for line in self._process.stdout:
-            try:
-                data = json.loads(line.strip())
-                if data.get('type') == 'qr':
-                    self.qr_code = data['qr']
-                    self.connected = False
-                elif data.get('type') == 'ready':
-                    self.connected = True
-                    self.qr_code = None
-                    self._ready.set()
-                elif data.get('type') == 'disconnected':
-                    self.connected = False
-                    self._ready.clear()
-            except (json.JSONDecodeError, KeyError):
-                pass
+        self.started_at = time.time()
+        self._needs_qr = False
+        self._banned = False
+        threading.Thread(target=self._read_stdout, daemon=True).start()
+        threading.Thread(target=self._drain_stderr, daemon=True).start()
+        return True
 
     def stop(self):
-        if self._process:
-            self._process.terminate()
-            self._process = None
+        if self._process and self._process.poll() is None:
+            try:
+                self._write({'type': 'logout'})
+            except Exception:
+                pass
+            try:
+                self._process.terminate()
+                self._process.wait(timeout=10)
+            except Exception:
+                try:
+                    self._process.kill()
+                except Exception:
+                    pass
+        self._process = None
+        self._reset_state()
+
+    def _reset_state(self):
         self.connected = False
+        self.connected_phone = None
+        self.connected_jid = None
         self.qr_code = None
+        self._ready.clear()
+        self._fail_pending('WhatsApp se desconecto')
+
+    def _fail_pending(self, error):
+        for ref, (event, box) in list(self._pending.items()):
+            box['error'] = error
+            event.set()
+        self._pending.clear()
+
+    # ------------------------------------------------------------- lectura
+
+    def _read_stdout(self):
+        proc = self._process
+        if not proc or not proc.stdout:
+            return
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                self._handle(json.loads(line))
+            except json.JSONDecodeError:
+                logger.debug('Linea no JSON del puente de WhatsApp: %s', line[:120])
+
+    def _drain_stderr(self):
+        proc = self._process
+        if not proc or not proc.stderr:
+            return
+        for line in proc.stderr:
+            # stderr trae los logs de pino: no son datos de pacientes, pero
+            # se dejan en debug para no inundar el journal de produccion.
+            logger.debug('[baileys] %s', line.rstrip()[:300])
+
+    def _handle(self, msg):
+        kind = msg.get('type')
+
+        if kind == 'qr':
+            self.qr_code = msg.get('qr')
+            self.connected = False
+            self._ready.clear()
+
+        elif kind == 'ready':
+            self.connected = True
+            self.qr_code = None
+            self._needs_qr = False
+            self.connected_jid = msg.get('jid')
+            self.connected_phone = msg.get('phone')
+            self.last_error = None
+            self._ready.set()
+            logger.info('WhatsApp conectado como %s', self.connected_phone)
+
+        elif kind == 'send_result':
+            ref = msg.get('ref')
+            entry = self._pending.get(ref) if ref else None
+            if entry:
+                event, box = entry
+                box['result'] = msg
+                event.set()
+                self._pending.pop(ref, None)
+
+        elif kind in ('disconnected', 'reconnecting'):
+            self.connected = False
+            self._ready.clear()
+            self._fail_pending('WhatsApp se desconecto, reintentando')
+
+        elif kind == 'needs_qr':
+            self._needs_qr = True
+            self._banned = bool(msg.get('banned'))
+            self.connected = False
+            self._ready.clear()
+            self.last_error = (
+                'WhatsApp baneo este numero' if self._banned
+                else 'Hay que volver a escanear el QR de WhatsApp'
+            )
+            self._fail_pending(self.last_error)
+            logger.error('Puente de WhatsApp: %s', self.last_error)
+
+        elif kind in ('error', 'fatal'):
+            self.last_error = msg.get('message')
+            logger.error('Error del puente de WhatsApp: %s', self.last_error)
+            if kind == 'fatal':
+                self._reset_state()
+
+    # --------------------------------------------------------------- envio
+
+    def _write(self, payload):
+        if not self._process or self._process.poll() is not None:
+            raise WhatsAppBridgeError('El puente de WhatsApp no esta corriendo')
+        try:
+            self._process.stdin.write(json.dumps(payload) + '\n')
+            self._process.stdin.flush()
+        except (BrokenPipeError, ValueError) as exc:
+            raise WhatsAppBridgeError('El puente de WhatsApp no responde') from exc
+
+    def send_message(self, phone, message, timeout=35):
+        """Envia y espera confirmacion. Devuelve dict con provider_message_id.
+
+        Lanza WhatsAppBridgeError si no sale. No devuelve 'sent: True'
+        mientras no haya confirmacion: un log que dice enviado y no se
+        envio es peor que no tener log.
+        """
+        digits = re.sub(r'\D', '', str(phone or ''))
+        if not digits:
+            raise WhatsAppBridgeError('El numero esta vacio')
+
+        if self._banned:
+            raise WhatsAppBridgeError('WhatsApp baneo este numero, hay que parar los envios')
+        if self._needs_qr:
+            raise WhatsAppBridgeError('Hay que volver a escanear el QR de WhatsApp')
+        if not self.connected:
+            self.start()
+            if not self._ready.wait(timeout=10):
+                raise WhatsAppBridgeError(
+                    self.last_error or 'WhatsApp no esta conectado todavia'
+                )
+
+        with self._lock:
+            self._seq += 1
+            ref = f'ref{self._seq}'
+            event = threading.Event()
+            box = {}
+            self._pending[ref] = (event, box)
+
+        try:
+            self._write({'type': 'send', 'ref': ref, 'phone': digits, 'message': message})
+        except WhatsAppBridgeError:
+            self._pending.pop(ref, None)
+            raise
+
+        if not event.wait(timeout=timeout):
+            self._pending.pop(ref, None)
+            raise WhatsAppBridgeError('WhatsApp no respondio a tiempo')
+
+        result = box.get('result') or {}
+        if box.get('error') or not result.get('ok'):
+            raise WhatsAppBridgeError(_FRIENDLY.get(
+                result.get('error'), result.get('error') or box.get('error') or 'fallo desconocido'
+            ))
+
+        return {
+            'sent': True,
+            'method': 'baileys',
+            'to': digits,
+            'provider_message_id': result.get('provider_message_id'),
+        }
+
+    # ------------------------------------------------------------- estado
 
     @property
     def is_connected(self):
-        return self.connected
+        return bool(self.connected)
 
-    def send_message(self, phone, message):
-        """Send a WhatsApp message via Baileys bridge or fallback to wa.me"""
-        if not self.connected:
-            return self._generate_wa_link(phone, message)
+    @property
+    def needs_qr(self):
+        return self._needs_qr
 
-        if self._process:
-            payload = json.dumps({'type': 'send', 'phone': phone, 'message': message})
-            self._process.stdin.write(payload + '\n')
-            self._process.stdin.flush()
-            return {'sent': True, 'method': 'baileys'}
+    @property
+    def is_banned(self):
+        return self._banned
 
-        return self._generate_wa_link(phone, message)
-
-    def send_installment_reminder(
-        self, patient_name, patient_phone, installment_number, due_date, amount, days_overdue=0
-    ):
-        """Send a debt reminder for an installment"""
-        if days_overdue <= 0:
-            msg = (
-                f'Hola {patient_name}, 👋\\n\\n'
-                f'Recordarte que tu cuota N°{installment_number} de S/ {amount:.2f} '
-                f'vence el {due_date}.\\n\\n'
-                f'¡Gracias por confiar en nosotros! 🙌'
-            )
-        else:
-            msg = (
-                f'Hola {patient_name}, 👋\\n\\n'
-                f'Tu cuota N°{installment_number} de S/ {amount:.2f} '
-                f'tiene {days_overdue} días de atraso (vencía el {due_date}).\\n\\n'
-                f'Por favor regulariza tu situación para evitar bloqueos. '
-                f'¡Estamos para ayudarte! 🙌'
-            )
-
-        return self.send_message(patient_phone, msg)
+    def status(self):
+        """Estado para la pantalla de configuracion y para la IA."""
+        return {
+            'connected': bool(self.connected),
+            'needs_qr': self._needs_qr,
+            'banned': self._banned,
+            'phone': self.connected_phone,
+            'jid': self.connected_jid,
+            'has_qr': bool(self.qr_code),
+            'running': bool(self._process and self._process.poll() is None),
+            'last_error': self.last_error,
+            'uptime_s': int(time.time() - self.started_at) if self.started_at else 0,
+        }
 
     @staticmethod
-    def _generate_wa_link(phone, message):
-        """Fallback: generate wa.me link for manual sending"""
-        import urllib.parse
-
-        clean_phone = ''.join(filter(str.isdigit, phone))
-        if clean_phone.startswith('0'):
-            clean_phone = '51' + clean_phone[1:]
-        if not clean_phone.startswith('51'):
-            clean_phone = '51' + clean_phone
-        encoded = urllib.parse.quote(message[:500])
-        link = f'https://wa.me/{clean_phone}?text={encoded}'
-        return {'sent': False, 'method': 'link', 'url': link}
+    def normalize_phone(phone):
+        """Numero peruano en formato internacional, sin signos."""
+        digits = re.sub(r'\D', '', str(phone or ''))
+        if digits.startswith('0'):
+            digits = '51' + digits[1:]
+        if digits and not digits.startswith('51'):
+            digits = '51' + digits
+        return digits
 
 
 whatsapp_service = WhatsAppService()

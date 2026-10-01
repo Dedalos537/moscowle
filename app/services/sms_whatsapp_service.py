@@ -38,7 +38,10 @@ class SMSWhatsAppService:
         self.account_sid = os.getenv('TWILIO_ACCOUNT_SID')
         self.auth_token = os.getenv('TWILIO_AUTH_TOKEN')
         self.from_phone = os.getenv('TWILIO_PHONE_NUMBER')
-        self.whatsapp_from = os.getenv('TWILIO_WHATSAPP_NUMBER', 'whatsapp:+14155552671')
+        # Sin numero configurado no hay de donde salir. Antes caia al
+        # +14155552671 de ejemplo de la documentacion de Twilio, que no
+        # pertenece a nadie: los mensajes se perdian sin dejar rastro.
+        self.whatsapp_from = os.getenv('TWILIO_WHATSAPP_NUMBER') or ''
 
         self.twilio_client = None
         if TWILIO_AVAILABLE and self.account_sid and self.auth_token:
@@ -122,7 +125,12 @@ class SMSWhatsAppService:
         return False
 
     def send_sms_message(self, phone_number, message_body):
-        """SMS genérico vía Twilio."""
+        """SMS generico via Twilio. Devuelve dict con el sid del proveedor.
+
+        Antes devolvia un booleano, que obliga a quien llama a no poder
+        distinguir 'no salio' de 'no se pudo consultar'. El id del mensaje
+        es lo que permite pedirle luego el recibo a Twilio.
+        """
         if not self.twilio_available:
             logger.warning(' SMS: Twilio not available')
             return False
