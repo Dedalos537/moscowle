@@ -1,0 +1,27 @@
+[Unit]
+Description=Moscowle IA - puente de WhatsApp (Baileys)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=diego
+WorkingDirectory=/home/diego/moscowle_ia/app/whatsapp_bridge
+Environment=NODE_ENV=production
+Environment=HOME=/home/diego
+Environment=PATH=/home/diego/.nvm/versions/node/v20.20.2/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/diego/.nvm/versions/node/v20.20.2/bin/node index.js
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+# El puente solo necesita red y poder escribir su sesion.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/diego/moscowle_ia/whatsapp_sessions
+
+[Install]
+WantedBy=multi-user.target
