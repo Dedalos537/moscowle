@@ -135,3 +135,7 @@ graphify-out/
 
 # E2E/QA artifacts
 .e2e/
+
+# build de Angular: lo sirve nginx desde /var/www/moscowle/app, no el repo
+static/
+edysync/dist/
