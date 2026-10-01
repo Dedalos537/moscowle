@@ -537,6 +537,10 @@ def create_app(config_class=None):
     from app.routes.webauthn import webauthn_bp
 
     csrf.exempt(webauthn_bp)
+
+    from app.routes.crm_routes import crm_bp
+
+    csrf.exempt(crm_bp)
     cors_origins = (
         app.config.get(
             'CORS_ORIGINS', 'https://moscowle.centrojuanpabloii.com https://centrojuanpabloii.com http://localhost:4200'
@@ -783,6 +787,7 @@ def create_app(config_class=None):
         ('kanban', 'app.routes.kanban_routes', 'kanban_bp'),
         ('webauthn', 'app.routes.webauthn', 'webauthn_bp'),
         ('deploy', 'app.routes.deploy_routes', 'deploy_bp'),
+        ('crm', 'app.routes.crm_routes', 'crm_bp'),
     ]
     for name, module_path, bp_name in _blueprints:
         try:
