@@ -21,7 +21,7 @@ const SESSION_DIR = path.join(__dirname, '..', '..', 'whatsapp_sessions');
 const RECONNECT_BASE_MS = 5000;
 const RECONNECT_MAX_MS = 120000;
 
-const logger = pino({ level: process.env.BRIDGE_LOG_LEVEL || 'warn' });
+const logger = pino({ level: process.env.BRIDGE_LOG_LEVEL || 'info' }, pino.destination(2));
 
 function send(data) {
   process.stdout.write(JSON.stringify(data) + '\n');
@@ -29,6 +29,7 @@ function send(data) {
 
 let sock = null;
 let stopping = false;
+let starting = false;
 let pending = new Map();
 let nextMsgId = 1;
 let queue = Promise.resolve();
@@ -87,6 +88,21 @@ async function sendMessage(phone, text) {
 }
 
 async function start() {
+  if (starting) return;
+  if (stopping) return;
+  starting = true;
+
+  // Se cierra y desengancha el socket anterior. Si no, sus listeners siguen
+  // vivos y Python recibe 'disconnected' del socket viejo mientras el nuevo
+  // esta conectado: por eso el estado quedaba en false.
+  if (sock) {
+    try { sock.ev.removeAllListeners(); } catch (_) {}
+    try { if (sock.ws) sock.ws.close(); } catch (_) {}
+    try { if (sock.end) sock.end(); } catch (_) {}
+    sock = null;
+  }
+
+  try {
   fs.mkdirSync(SESSION_DIR, { recursive: true });
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
 
@@ -100,6 +116,9 @@ async function start() {
   });
 
   sock.ev.on('creds.update', saveCreds);
+  } finally {
+    starting = false;
+  }
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
@@ -122,6 +141,10 @@ async function start() {
       const banned = statusCode === DisconnectReason.forbidden;
 
       stopAll('desconectado');
+      // Se suelta el socket caido. Dejarlo referenciado hacia que sendMessage
+      // intente usarlo y fallara tarde, y start() lo reemplazaria igual.
+      try { sock.ev.removeAllListeners(); } catch (_) {}
+      sock = null;
       send({ type: 'disconnected', reason: statusCode || null, logged_out: loggedOut, banned });
 
       if (stopping) return;
