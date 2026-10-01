@@ -213,6 +213,13 @@ class WhatsAppService:
         elif kind in ('disconnected', 'reconnecting'):
             self.connected = False
             self._ready.clear()
+            # El codigo de desconexion explica por que se cayo: 401 es que
+            # WhatsApp nos expulso, 408 timeout, 440 reemplazado, 515 reinicio.
+            if kind == 'disconnected':
+                logger.warning(
+                    'WhatsApp desconectado (reason=%s logged_out=%s banned=%s)',
+                    msg.get('reason'), msg.get('logged_out'), msg.get('banned'),
+                )
             self._fail_pending('WhatsApp se desconecto, reintentando')
 
         elif kind == 'needs_qr':
