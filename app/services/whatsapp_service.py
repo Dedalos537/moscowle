@@ -179,9 +179,10 @@ class WhatsAppService:
         if not proc or not proc.stderr:
             return
         for line in proc.stderr:
-            # stderr trae los logs de pino: no son datos de pacientes, pero
-            # se dejan en debug para no inundar el journal de produccion.
-            logger.debug('[baileys] %s', line.rstrip()[:300])
+            # stderr trae los logs de pino. El puente corre en nivel warn,
+            # asi que solo llegan avisos y errores: es el unico lugar donde
+            # se ve por que se cae la sesion, asi que van a info.
+            logger.info('[baileys] %s', line.rstrip()[:300])
 
     def _handle(self, msg):
         kind = msg.get('type')

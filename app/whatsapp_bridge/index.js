@@ -21,7 +21,7 @@ const SESSION_DIR = path.join(__dirname, '..', '..', 'whatsapp_sessions');
 const RECONNECT_BASE_MS = 5000;
 const RECONNECT_MAX_MS = 120000;
 
-const logger = pino({ level: process.env.BRIDGE_LOG_LEVEL || 'info' }, pino.destination(2));
+const logger = pino({ level: process.env.BRIDGE_LOG_LEVEL || 'warn' }, pino.destination(2));
 
 function send(data) {
   process.stdout.write(JSON.stringify(data) + '\n');
@@ -139,6 +139,18 @@ async function start() {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
       const banned = statusCode === DisconnectReason.forbidden;
+
+      // Sin esto no se ve nunca el motivo: statusCode viene vacio en muchos
+      // errores de Baileys y quedaba un reason=None inutil para diagnosticar.
+      const err = lastDisconnect?.error;
+      const errName = err?.name || err?.constructor?.name || 'desconocido';
+      const errMsg = (err?.message || String(err || '')).slice(0, 300);
+      logger.warn(
+        { statusCode, errName, loggedOut, banned },
+        'connection close: %s %s',
+        errName,
+        errMsg
+      );
 
       stopAll('desconectado');
       // Se suelta el socket caido. Dejarlo referenciado hacia que sendMessage
