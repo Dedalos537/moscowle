@@ -139,3 +139,8 @@ graphify-out/
 # build de Angular: lo sirve nginx desde /var/www/moscowle/app, no el repo
 static/
 edysync/dist/
+
+# Puente WhatsApp: archivos de runtime del puente Node (pid, lock, node_modules)
+app/whatsapp_bridge/.bridge.pid
+app/whatsapp_bridge/.bridge.lock
+app/whatsapp_bridge/node_modules/

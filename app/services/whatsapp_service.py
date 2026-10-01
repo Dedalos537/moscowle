@@ -15,14 +15,18 @@ Lo que cambia respecto a la version anterior:
   - Reintenta solo ante caidas de red. Si WhatsApp revoca la sesion para y
     avisa, en vez de martillear la API.
 """
+
+import atexit
+import contextlib
+import fcntl
 import json
 import logging
 import os
 import re
-import atexit
 import shutil
 import signal
 import subprocess
+import sys
 import threading
 import time
 
@@ -68,7 +72,6 @@ def _node_bin():
     return None
 
 
-
 def _pid_alive(pid):
     try:
         os.kill(pid, 0)
@@ -89,46 +92,70 @@ def _ppid_of(pid):
         return None
 
 
-def _kill_orphan_bridge():
-    """Cierra el puente que quedo suelto tras reiniciar un worker.
+LOCK_FILE = os.path.join(BRIDGE_DIR, '.bridge.lock')
+LOCK_RETRY_SECONDS = int(os.environ.get('WHATSAPP_LOCK_RETRY_SECONDS', '30'))
 
-    Cuando gunicorn hace HUP el worker viejo muere, pero su hijo node queda
-    vivo con PPID 1. El worker nuevo spawneando otro da dos puentes sobre la
-    misma sesion de WhatsApp: se expulsan mutuamente y la sesion cae cada
-    60 segundos en un bucle infinito.
 
-    Solo se mata al que esta huerfano (PPID 1). Un hijo con padre vivo es el
-    puente de otro proceso en uso y no se toca.
+def _pids_running_bridge():
+    """PIDs de procesos que ejecutan el puente de este directorio.
+
+    Se mira el cwd real en vez del nombre del comando: dos workers de
+    gunicorn ejecutan exactamente lo mismo y el nombre no los distingue.
     """
-    try:
-        with open(PID_FILE) as fh:
-            pid = int(fh.read().strip() or 0)
-    except (OSError, ValueError):
-        return False
-    if pid <= 0 or not _pid_alive(pid):
-        return False
-
-    ppid = _ppid_of(pid)
-    if ppid != 1:
-        return False
-
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except OSError:
-        return False
-
-    for _ in range(30):
-        if not _pid_alive(pid):
-            break
-        time.sleep(0.1)
-    if _pid_alive(pid):
+    if not os.path.isdir('/proc'):
+        return []
+    found = []
+    for name in os.listdir('/proc'):
+        if not name.isdigit():
+            continue
+        pid = int(name)
+        if pid == os.getpid():
+            continue
         try:
-            os.kill(pid, signal.SIGKILL)
+            if os.readlink(f'/proc/{pid}/cwd') != BRIDGE_DIR:
+                continue
+            with open(f'/proc/{pid}/cmdline', 'rb') as fh:
+                cmd = fh.read().replace(b'\\0', b' ').decode('utf-8', 'replace')
         except OSError:
-            pass
+            continue
+        if 'index.js' in cmd:
+            found.append(pid)
+    return found
 
-    logger.warning('Puente huerfano %s terminado antes de relanzar', pid)
-    return True
+
+def _kill_bridge_pids(pids):
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            continue
+        for _ in range(30):
+            if not _pid_alive(pid):
+                break
+            time.sleep(0.1)
+        if _pid_alive(pid):
+            with contextlib.suppress(OSError):
+                os.kill(pid, signal.SIGKILL)
+        logger.warning('Puente de WhatsApp duplicado (%s) terminado', pid)
+
+
+def _autostart_allowed():
+    """Arranca solo en el servidor.
+
+    create_app corre en tests, en scripts de diagnostico y en el worker de
+    gunicorn. Si todos levantaran un puente, cada uno usaria las mismas
+    credenciales y WhatsApp los expulsaria en cadena (440 connectionReplaced):
+    la sesion nunca quedaria conectada. Fuera del servidor no hace falta
+    ningun puente, asi que no se arranca.
+    """
+    flag = os.environ.get('WHATSAPP_AUTOSTART', '').strip().lower()
+    if flag in ('1', 'true', 'yes', 'on'):
+        return True
+    if flag in ('0', 'false', 'no', 'off'):
+        return False
+    argv0 = os.path.basename(sys.argv[0] or '').lower()
+    return 'gunicorn' in argv0 or argv0 in ('uwsgi', 'waitress-serve')
+
 
 class WhatsAppBridgeError(RuntimeError):
     """Fallo enviando por WhatsApp. El motivo ya viene en castellano."""
@@ -140,6 +167,8 @@ class WhatsAppService:
     def __init__(self):
         self._process = None
         self._lock = threading.Lock()
+        self._lock_fd = None
+        self._retrying = False
         self._ready = threading.Event()
         self._needs_qr = False
         self._banned = False
@@ -156,15 +185,64 @@ class WhatsAppService:
 
     # ---------------------------------------------------------------- ciclo
 
+    def _retry_start(self):
+        """Vuelve a intentar spawneear hasta que el lock este libre."""
+        if self._retrying:
+            return
+        self._retrying = True
+
+        def _run():
+            deadline = time.time() + LOCK_RETRY_SECONDS
+            try:
+                while time.time() < deadline:
+                    if self.start():
+                        return
+                    time.sleep(1.0)
+                logger.error('Se agoto la espera del lock del puente de WhatsApp')
+            finally:
+                self._retrying = False
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _acquire_lock(self):
+        """Toma el lock del directorio del puente.
+
+        Es un flock: si el proceso muere sin liberarlo el kernel lo suelta
+        solo, asi que no queda un lock viciado tras un HUP. Devuelve False si
+        otro proceso lo tiene ya.
+        """
+        if self._lock_fd is not None:
+            return True
+        try:
+            fd = os.open(LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o644)
+        except OSError as e:
+            logger.warning('No se pudo abrir %s: %s', LOCK_FILE, e)
+            return False
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            os.close(fd)
+            return False
+        self._lock_fd = fd
+        return True
+
+    def _release_lock(self):
+        fd, self._lock_fd = self._lock_fd, None
+        if fd is None:
+            return
+        with contextlib.suppress(OSError):
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        with contextlib.suppress(OSError):
+            os.close(fd)
+
     def start(self):
         """Arranca el puente. Devuelve True si el proceso levanto."""
         if self._process and self._process.poll() is None:
             return True
 
-        # Antes de spawneear se cierra cualquier puente huerfano de un worker
-        # anterior: con dos procesos sobre la misma sesion la cuenta se expulsa
-        # sola y nunca queda conectada.
-        _kill_orphan_bridge()
+        if not _autostart_allowed():
+            logger.info('Puente de WhatsApp no arrancado fuera del servidor')
+            return False
 
         main_js = os.path.join(BRIDGE_DIR, 'index.js')
         if not os.path.exists(main_js):
@@ -176,8 +254,21 @@ class WhatsAppService:
             logger.error('Node.js no esta instalado, WhatsApp no puede funcionar')
             return False
 
+        # Un solo puente por sesion. Dos procesos usando las mismas credenciales
+        # hacen que WhatsApp expulse al primero (440 connectionReplaced) en un
+        # bucle: por eso la cuenta nunca quedaba conectada.
+        if not self._acquire_lock():
+            # Al hacer HUP el worker nuevo arranca mientras el viejo aun vive
+            # y conserva el lock. Si desistimos, no queda ningun puente en pie
+            # cuando el viejo muera, asi que reintentamos hasta que lo suelte.
+            logger.warning('Otro proceso ya tiene el puente de WhatsApp, reintento en %ss', LOCK_RETRY_SECONDS)
+            self._retry_start()
+            return False
+
+        _kill_bridge_pids(_pids_running_bridge())
+
         try:
-            self._process = subprocess.Popen(
+            self._process = subprocess.Popen(  # noqa: S603 - node y args fijos
                 [node, 'index.js'],
                 cwd=BRIDGE_DIR,
                 stdin=subprocess.PIPE,
@@ -189,6 +280,7 @@ class WhatsAppService:
             )
         except FileNotFoundError:
             logger.error('No se pudo ejecutar node en %s', node)
+            self._release_lock()
             return False
 
         try:
@@ -222,26 +314,21 @@ class WhatsAppService:
                 break
             time.sleep(0.1)
         if proc.poll() is None:
-            try:
+            with contextlib.suppress(OSError):
                 os.kill(proc.pid, signal.SIGKILL)
-            except OSError:
-                pass
 
     def stop(self):
         if self._process and self._process.poll() is None:
-            try:
+            with contextlib.suppress(Exception):
                 self._write({'type': 'logout'})
-            except Exception:
-                pass
             try:
                 self._process.terminate()
                 self._process.wait(timeout=10)
             except Exception:
-                try:
+                with contextlib.suppress(Exception):
                     self._process.kill()
-                except Exception:
-                    pass
         self._process = None
+        self._release_lock()
         self._reset_state()
 
     def _reset_state(self):
@@ -253,7 +340,7 @@ class WhatsAppService:
         self._fail_pending('WhatsApp se desconecto')
 
     def _fail_pending(self, error):
-        for ref, (event, box) in list(self._pending.items()):
+        for _ref, (event, box) in list(self._pending.items()):
             box['error'] = error
             event.set()
         self._pending.clear()
@@ -264,8 +351,8 @@ class WhatsAppService:
         proc = self._process
         if not proc or not proc.stdout:
             return
-        for line in proc.stdout:
-            line = line.strip()
+        for raw_line in proc.stdout:
+            line = raw_line.strip()
             if not line:
                 continue
             try:
@@ -318,7 +405,9 @@ class WhatsAppService:
             if kind == 'disconnected':
                 logger.warning(
                     'WhatsApp desconectado (reason=%s logged_out=%s banned=%s)',
-                    msg.get('reason'), msg.get('logged_out'), msg.get('banned'),
+                    msg.get('reason'),
+                    msg.get('logged_out'),
+                    msg.get('banned'),
                 )
             self._fail_pending('WhatsApp se desconecto, reintentando')
 
@@ -328,8 +417,7 @@ class WhatsAppService:
             self.connected = False
             self._ready.clear()
             self.last_error = (
-                'WhatsApp baneo este numero' if self._banned
-                else 'Hay que volver a escanear el QR de WhatsApp'
+                'WhatsApp baneo este numero' if self._banned else 'Hay que volver a escanear el QR de WhatsApp'
             )
             self._fail_pending(self.last_error)
             logger.error('Puente de WhatsApp: %s', self.last_error)
@@ -369,9 +457,7 @@ class WhatsAppService:
         if not self.connected:
             self.start()
             if not self._ready.wait(timeout=10):
-                raise WhatsAppBridgeError(
-                    self.last_error or 'WhatsApp no esta conectado todavia'
-                )
+                raise WhatsAppBridgeError(self.last_error or 'WhatsApp no esta conectado todavia')
 
         with self._lock:
             self._seq += 1
@@ -392,9 +478,9 @@ class WhatsAppService:
 
         result = box.get('result') or {}
         if box.get('error') or not result.get('ok'):
-            raise WhatsAppBridgeError(_FRIENDLY.get(
-                result.get('error'), result.get('error') or box.get('error') or 'fallo desconocido'
-            ))
+            raise WhatsAppBridgeError(
+                _FRIENDLY.get(result.get('error'), result.get('error') or box.get('error') or 'fallo desconocido')
+            )
 
         return {
             'sent': True,
