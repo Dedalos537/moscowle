@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import subprocess
 import threading
 import time
@@ -37,6 +38,31 @@ _FRIENDLY = {
     'wa_429': 'WhatsApp pidio parar: se mando demasiado rapido',
     'wa_500': 'WhatsApp fallo por su lado',
 }
+
+
+def _node_bin():
+    """Ubica el binario de node.
+
+    node suele vivir en nvm, que no esta en el PATH de los servicios de
+    systemd, asi que buscarlo con shutil.which no alcanza: se recorre
+    ~/.nvm y /usr/local por si acaso.
+    """
+    found = shutil.which('node')
+    if found:
+        return found
+
+    candidates = []
+    nvm_dir = os.environ.get('NVM_DIR') or os.path.expanduser('~/.nvm')
+    versions = os.path.join(nvm_dir, 'versions', 'node')
+    if os.path.isdir(versions):
+        for name in sorted(os.listdir(versions), reverse=True):
+            candidates.append(os.path.join(versions, name, 'bin', 'node'))
+    candidates += ['/usr/local/bin/node', '/usr/bin/node']
+
+    for path in candidates:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
 
 
 class WhatsAppBridgeError(RuntimeError):
@@ -75,9 +101,14 @@ class WhatsAppService:
             logger.warning('Puente de WhatsApp no encontrado en %s', BRIDGE_DIR)
             return False
 
+        node = _node_bin()
+        if not node:
+            logger.error('Node.js no esta instalado, WhatsApp no puede funcionar')
+            return False
+
         try:
             self._process = subprocess.Popen(
-                ['node', 'index.js'],
+                [node, 'index.js'],
                 cwd=BRIDGE_DIR,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -87,7 +118,7 @@ class WhatsAppService:
                 env={**os.environ, 'BRIDGE_LOG_LEVEL': os.environ.get('BRIDGE_LOG_LEVEL', 'warn')},
             )
         except FileNotFoundError:
-            logger.error('Node.js no esta instalado, WhatsApp no puede funcionar')
+            logger.error('No se pudo ejecutar node en %s', node)
             return False
 
         self.started_at = time.time()
