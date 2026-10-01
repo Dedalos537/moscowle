@@ -515,6 +515,18 @@ def create_app(config_class=None):
     oauth.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+
+    # El puente de WhatsApp se levanta con la app. Antes solo arrancaba si
+    # alguien llamaba .start() a mano, y nadie lo hacia, asi que el numero
+    # nunca se conectaba solo. Es un proceso Node hijo: si la app muere, lo
+    # reinicia systemd.
+    try:
+        from app.services.whatsapp_service import whatsapp_service
+
+        whatsapp_service.start()
+    except Exception as e:  # pragma: no cover - node puede no estar
+        app.logger.warning('No se pudo arrancar el puente de WhatsApp: %s', e)
+
     from app.routes.api import api_bp
 
     csrf.exempt(api_bp)

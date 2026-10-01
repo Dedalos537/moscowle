@@ -17,6 +17,7 @@ import { Alert } from '../../../../shared/components/alert/alert';
 import { Modal } from '../../../../shared/components/modal/modal';
 import { Incidents } from '../incidents/incidents';
 import { BotPanel } from '../bot-panel/bot-panel';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 type TabId = 'backend' | 'logs' | 'csp' | 'tokens' | 'incidents' | 'llm' | 'notifications' | 'bot';
 
@@ -75,7 +76,7 @@ interface AIProviderForm {
 @Component({
   selector: 'app-visor-funcionamiento',
   standalone: true,
-  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel],
+  imports: [CommonModule, FormsModule, FontAwesomeModule, Button, Spinner, Input, Alert, Modal, Incidents, BotPanel, QRCodeComponent],
   templateUrl: './visor-funcionamiento.html',
   styleUrl: './visor-funcionamiento.scss',
   animations: [fadeInUp, scaleIn, listStagger, cardEnter],
@@ -171,6 +172,14 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
   notifSuccess: string | null = null;
   notifEditing = false;
 
+  // --- WhatsApp (Baileys) ---
+  waStatus: any = null;
+  waQr: string | null = null;
+  waQrLoading = false;
+  waError: string | null = null;
+  private waPoll: Subscription | null = null;
+  private waIdlePoll: Subscription | null = null;
+
   ngOnInit() {
     this.headerService.setConfig({
       title: 'Centro de Operaciones',
@@ -188,6 +197,8 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     this.headerService.reset();
     this.subs.unsubscribe();
     this.logsRefreshSub?.unsubscribe();
+    this.stopQrPolling();
+    this.waIdlePoll?.unsubscribe();
   }
 
   switchTab(tab: TabId) {
@@ -197,6 +208,7 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
     }
     if (tab === 'notifications') {
       this.loadNotificationConfig();
+      this.loadWhatsappStatus();
     }
   }
 
@@ -705,6 +717,79 @@ export class VisorFuncionamiento implements OnInit, OnDestroy {
         error: (err) => { this.notifLoading = false; this.notifError = err.error?.error || 'Error al cargar config notif'; this.cdr.markForCheck(); },
       })
     );
+  }
+
+  // --- WhatsApp: conectar el numero desde el navegador ---
+
+  loadWhatsappStatus() {
+    this.waError = null;
+    this.subs.add(
+      this.admin.getWhatsappStatus().subscribe({
+        next: (res) => {
+          this.waStatus = res;
+          this.cdr.markForCheck();
+          // Mientras haya QR en pantalla, se consulta si ya se escaneo.
+          if (this.waQr) this.startQrPolling();
+          // Con la sesion guardada no se espera escaneo: basta con ver el estado.
+          if (!res.connected && !res.banned && !this.waQr && !this.waIdlePoll) {
+            this.waIdlePoll = interval(20000).subscribe(() => this.loadWhatsappStatus());
+          }
+        },
+        error: () => { this.waError = 'No se pudo leer el estado de WhatsApp'; this.cdr.markForCheck(); },
+      })
+    );
+  }
+
+  /**
+   * Pide un QR nuevo. Caduca a los ~30s, asi que se genera bajo demanda y
+   * no en cada carga de la pantalla.
+   */
+  requestWhatsappQr() {
+    this.waQrLoading = true;
+    this.waError = null;
+    this.admin.getWhatsappQr().subscribe({
+      next: (res) => {
+        this.waQrLoading = false;
+        this.waQr = res?.qr ?? null;
+        this.waStatus = { ...(this.waStatus ?? {}), connected: !!res?.connected, phone: res?.phone ?? null };
+        if (!res?.qr) this.waError = res?.message ?? 'No se pudo generar el QR';
+        else this.startQrPolling();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.waQrLoading = false;
+        this.waError = err.error?.error || err.error?.message || 'No se pudo generar el QR';
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** Al escanear, el puente confirma la conexion en unos segundos. */
+  private startQrPolling() {
+    if (this.waPoll) return;
+    this.waPoll = interval(3000).subscribe(() => {
+      this.admin.getWhatsappStatus().subscribe({
+        next: (res) => {
+          this.waStatus = res;
+          if (res.connected) {
+            this.waQr = null;
+            this.stopQrPolling();
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {},
+      });
+    });
+  }
+
+  private stopQrPolling() {
+    this.waPoll?.unsubscribe();
+    this.waPoll = null;
+  }
+
+  stopWhatsappIdlePolling() {
+    this.waIdlePoll?.unsubscribe();
+    this.waIdlePoll = null;
   }
 
   testNotificationProviders() {

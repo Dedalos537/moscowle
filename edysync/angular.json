@@ -65,7 +65,10 @@
                   "maximumError": "50kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "allowedCommonJsDependencies": [
+                "qrcode"
+              ]
             },
             "development": {
               "optimization": false,

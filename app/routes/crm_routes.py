@@ -4,6 +4,7 @@ Todas las rutas exigen sesion de admin o supervisor, salvo el estado del
 puente de WhatsApp que tambien lo exigen porque revela el numero del centro.
 """
 import logging
+import time
 from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request
@@ -382,3 +383,60 @@ def whatsapp_start():
 
     started = whatsapp_service.start()
     return jsonify({'started': started, 'status': whatsapp_service.status()})
+
+
+@crm_bp.route('/whatsapp/qr', methods=['GET'])
+def whatsapp_qr():
+    """Devuelve el QR para escanear desde el celular.
+
+    El puente se arranca aqui y se deja vivo: el QR caduca a los ~30s, asi
+    que se genera al pedirlo y no antes. Si la sesion ya estaba guardada no
+    hay nada que escanear y se informa eso en vez de un QR muerto.
+    """
+    from app.services.whatsapp_service import whatsapp_service
+
+    service = whatsapp_service
+
+    if service.is_connected:
+        return jsonify({
+            'connected': True,
+            'phone': service.connected_phone,
+            'qr': None,
+            'message': 'Ya esta conectado, no hay nada que escanear',
+        })
+
+    service.start()
+
+    # El puente anuncia el QR por stdout en cuanto se conecta. Se espera a que
+    # llegue, con techo para no dejar la peticion colgada.
+    limite = time.time() + 25
+    while time.time() < limite:
+        if service.qr_code:
+            return jsonify({
+                'connected': False,
+                'qr': service.qr_code,
+                'phone': None,
+                'message': 'Escanea con WhatsApp > Dispositivos vinculados',
+            })
+        if service.needs_qr:
+            return jsonify({
+                'connected': False,
+                'qr': None,
+                'phone': None,
+                'message': service.last_error or 'Hay que volver a escanear el QR',
+            })
+        if service.is_banned:
+            return jsonify({
+                'connected': False,
+                'qr': None,
+                'phone': None,
+                'message': 'WhatsApp baneo este numero',
+            }), 409
+        time.sleep(0.5)
+
+    return jsonify({
+        'connected': False,
+        'qr': None,
+        'phone': None,
+        'message': 'No se pudo generar el QR. Revisa que el puente de WhatsApp este corriendo.',
+    }), 503

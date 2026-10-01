@@ -482,6 +482,49 @@ export class AdminService {
     return this.http.post('/api/health/notifications/test', {});
   }
 
+  // ---- CRM de contactos y campanas ----
+
+  getCrmContacts(params?: { all?: boolean; without_phone?: boolean; q?: string }): Observable<any> {
+    return this.http.get('/api/crm/contacts', { params: params ?? {} });
+  }
+
+  toggleCrmContact(patientId: number, isActive: boolean): Observable<any> {
+    return this.http.post(`/api/crm/contacts/${patientId}/toggle`, { is_active: isActive });
+  }
+
+  getWhatsappStatus(): Observable<any> {
+    return this.http.get('/api/crm/whatsapp/status');
+  }
+
+  /** Genera un QR nuevo para escanear. Caduca rapido, se pide al momento. */
+  getWhatsappQr(): Observable<any> {
+    return this.http.get('/api/crm/whatsapp/qr');
+  }
+
+  startWhatsappBridge(): Observable<any> {
+    return this.http.post('/api/crm/whatsapp/start', {});
+  }
+
+  getMessageHistory(params?: { patient_id?: number; channel?: string; days?: number; limit?: number }): Observable<any> {
+    return this.http.get('/api/crm/history', { params: params ?? {} });
+  }
+
+  getCampaigns(): Observable<any> {
+    return this.http.get('/api/crm/campaigns');
+  }
+
+  createCampaign(payload: Record<string, unknown>): Observable<any> {
+    return this.http.post('/api/crm/campaigns', payload);
+  }
+
+  getCampaignRecipients(campaignId: number): Observable<any> {
+    return this.http.get(`/api/crm/campaigns/${campaignId}/recipients`);
+  }
+
+  sendCampaign(campaignId: number, payload: Record<string, unknown> = {}): Observable<any> {
+    return this.http.post(`/api/crm/campaigns/${campaignId}/send`, payload);
+  }
+
 
   updateProfile(data: { username?: string; timezone?: string; new_password?: string }): Observable<{ success: boolean; message?: string; timezone?: string }> {
     return this.http.post<{ success: boolean; message?: string }>('/api/admin/profile', data);
