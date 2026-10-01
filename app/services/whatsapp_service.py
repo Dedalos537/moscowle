@@ -19,7 +19,9 @@ import json
 import logging
 import os
 import re
+import atexit
 import shutil
+import signal
 import subprocess
 import threading
 import time
@@ -27,6 +29,7 @@ import time
 logger = logging.getLogger(__name__)
 
 BRIDGE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'whatsapp_bridge'))
+PID_FILE = os.path.join(BRIDGE_DIR, '.bridge.pid')
 SESSION_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'whatsapp_sessions'))
 
 # Baileys reporta los errores de envio en su mayoria como codigo numerico.
@@ -65,6 +68,68 @@ def _node_bin():
     return None
 
 
+
+def _pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def _ppid_of(pid):
+    """PPID de un proceso, o None si no se puede leer."""
+    try:
+        with open(f'/proc/{pid}/stat') as fh:
+            # El campo comm puede traer espacios y parentesis: se corta desde
+            # el ultimo parentesis para no desplazar los campos.
+            tail = fh.read().rsplit(')', 1)[1].split()
+            return int(tail[1])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _kill_orphan_bridge():
+    """Cierra el puente que quedo suelto tras reiniciar un worker.
+
+    Cuando gunicorn hace HUP el worker viejo muere, pero su hijo node queda
+    vivo con PPID 1. El worker nuevo spawneando otro da dos puentes sobre la
+    misma sesion de WhatsApp: se expulsan mutuamente y la sesion cae cada
+    60 segundos en un bucle infinito.
+
+    Solo se mata al que esta huerfano (PPID 1). Un hijo con padre vivo es el
+    puente de otro proceso en uso y no se toca.
+    """
+    try:
+        with open(PID_FILE) as fh:
+            pid = int(fh.read().strip() or 0)
+    except (OSError, ValueError):
+        return False
+    if pid <= 0 or not _pid_alive(pid):
+        return False
+
+    ppid = _ppid_of(pid)
+    if ppid != 1:
+        return False
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return False
+
+    for _ in range(30):
+        if not _pid_alive(pid):
+            break
+        time.sleep(0.1)
+    if _pid_alive(pid):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+    logger.warning('Puente huerfano %s terminado antes de relanzar', pid)
+    return True
+
 class WhatsAppBridgeError(RuntimeError):
     """Fallo enviando por WhatsApp. El motivo ya viene en castellano."""
 
@@ -96,6 +161,11 @@ class WhatsAppService:
         if self._process and self._process.poll() is None:
             return True
 
+        # Antes de spawneear se cierra cualquier puente huerfano de un worker
+        # anterior: con dos procesos sobre la misma sesion la cuenta se expulsa
+        # sola y nunca queda conectada.
+        _kill_orphan_bridge()
+
         main_js = os.path.join(BRIDGE_DIR, 'index.js')
         if not os.path.exists(main_js):
             logger.warning('Puente de WhatsApp no encontrado en %s', BRIDGE_DIR)
@@ -121,12 +191,41 @@ class WhatsAppService:
             logger.error('No se pudo ejecutar node en %s', node)
             return False
 
+        try:
+            with open(PID_FILE, 'w') as fh:
+                fh.write(str(self._process.pid))
+        except OSError as e:
+            logger.warning('No se pudo escribir %s: %s', PID_FILE, e)
+
+        # Si el worker muere sin poder limpiar (HUP, SIGTERM), el hijo se va a
+        # quedar huerfano y a pelear con el siguiente. El atexit lo cierra.
+        atexit.register(self._terminate_bridge)
+
         self.started_at = time.time()
         self._needs_qr = False
         self._banned = False
         threading.Thread(target=self._read_stdout, daemon=True).start()
         threading.Thread(target=self._drain_stderr, daemon=True).start()
         return True
+
+    def _terminate_bridge(self):
+        """Cierra el puente propio sin mandar 'logout' (no hay stdin garantizado)."""
+        proc = self._process
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            os.kill(proc.pid, signal.SIGTERM)
+        except OSError:
+            return
+        for _ in range(30):
+            if proc.poll() is not None:
+                break
+            time.sleep(0.1)
+        if proc.poll() is None:
+            try:
+                os.kill(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
 
     def stop(self):
         if self._process and self._process.poll() is None:
