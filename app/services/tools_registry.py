@@ -141,11 +141,11 @@ def _with_display_times(sessions):
             end_dt = None
         if start_dt:
             item['hora'] = start_dt.strftime('%H:%M')
-            item['dia'] = f"{_WEEKDAY_ES[start_dt.weekday()]} {start_dt.day:02d}/{start_dt.month:02d}"
+            item['dia'] = f'{_WEEKDAY_ES[start_dt.weekday()]} {start_dt.day:02d}/{start_dt.month:02d}'
         if end_dt:
             item['hora_fin'] = end_dt.strftime('%H:%M')
             if start_dt:
-                item['horario'] = f"{item['hora']} - {item['hora_fin']}"
+                item['horario'] = f'{item["hora"]} - {item["hora_fin"]}'
         patient = item.get('patient')
         if isinstance(patient, dict) and patient.get('name'):
             item['paciente'] = patient['name']
@@ -338,7 +338,7 @@ def _api_put(endpoint, json=None, user_id=None, role=None):
         'required': ['query'],
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_search_patients(query=None, limit=10, **kwargs):
     if not query or len(query) < 2:
@@ -387,7 +387,7 @@ def handle_search_patients(query=None, limit=10, **kwargs):
         },
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_list_users(role=None, **kwargs):
     q = User.query
@@ -525,7 +525,7 @@ def handle_get_patient_detail(patient_id, **kwargs):
         },
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_get_sessions(start=None, end=None, therapist_id=None, **kwargs):
     try:
@@ -594,7 +594,7 @@ def handle_financial_summary(month=None, year=None, **kwargs):
         'required': ['patient_id'],
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_payment_history(patient_id, **kwargs):
     patient = User.query.get(patient_id)
@@ -634,7 +634,7 @@ def handle_payment_history(patient_id, **kwargs):
         'required': ['patient_id', 'amount', 'method', 'payment_date'],
     },
     category='write',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_register_payment(patient_id, amount, method, payment_date, reference='', **kwargs):
     patient = User.query.get(patient_id) if patient_id else None
@@ -977,7 +977,7 @@ def handle_update_patient(patient_id, **kwargs):
         'required': ['subject', 'body'],
     },
     category='write',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_broadcast(subject, body, target='all', **kwargs):
     try:
@@ -1014,10 +1014,9 @@ def handle_broadcast(subject, body, target='all', **kwargs):
         },
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
-def handle_list_patients(sede_id=None, is_active=None, without_active_contract=None,
-                         limit=50, **kwargs):
+def handle_list_patients(sede_id=None, is_active=None, without_active_contract=None, limit=50, **kwargs):
     from app.models.contract import Contract
 
     q = User.query.filter_by(role='jugador')
@@ -1029,9 +1028,8 @@ def handle_list_patients(sede_id=None, is_active=None, without_active_contract=N
         # Con contrato vigente = que is_active o status digan 'active'. Las dos
         # columnas existen y pueden no coincidir (varias filas tienen is_active
         # en NULL), asi que se acepta cualquiera de las dos.
-        con_contrato = (
-            db.session.query(Contract.patient_id)
-            .filter(db.or_(Contract.is_active.is_(True), Contract.status == 'active'))
+        con_contrato = db.session.query(Contract.patient_id).filter(
+            db.or_(Contract.is_active.is_(True), Contract.status == 'active')
         )
         if without_active_contract:
             q = q.filter(~User.id.in_(con_contrato))
@@ -1568,7 +1566,7 @@ def handle_assign_therapist_to_sede(
         },
     },
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_get_sessions_day(date=None, **kwargs):
     try:
@@ -1739,8 +1737,15 @@ def handle_create_group_sessions(
             start_dt = datetime.strptime(str(start_date), '%Y-%m-%d').date()
         else:
             weekday_names = {
-                'domingo': 6, 'lunes': 0, 'martes': 1, 'miercoles': 2,
-                'miércoles': 2, 'jueves': 3, 'viernes': 4, 'sabado': 5, 'sábado': 5,
+                'domingo': 6,
+                'lunes': 0,
+                'martes': 1,
+                'miercoles': 2,
+                'miércoles': 2,
+                'jueves': 3,
+                'viernes': 4,
+                'sabado': 5,
+                'sábado': 5,
             }
             target = None
             phrase = str(start_date)
@@ -1777,18 +1782,14 @@ def handle_create_group_sessions(
         from app.models.patient_group import PatientGroup
 
         existing = (
-            PatientGroup.query.filter_by(name=group_name, is_active=True)
-            .order_by(PatientGroup.id.desc())
-            .first()
+            PatientGroup.query.filter_by(name=group_name, is_active=True).order_by(PatientGroup.id.desc()).first()
         )
         if existing:
             existing_member_ids = [m.id for m in existing.members]
             try:
                 existing_dates = json.loads(existing.session_dates) if existing.session_dates else []
             except (ValueError, TypeError):
-                existing_dates = (
-                    [d for d in existing.session_dates.split(',') if d] if existing.session_dates else []
-                )
+                existing_dates = [d for d in existing.session_dates.split(',') if d] if existing.session_dates else []
             same_members = sorted(existing_member_ids) == sorted(patient_ids)
             same_dates = sorted(existing_dates) == sorted(dates)
             if same_members and same_dates:
@@ -2005,9 +2006,7 @@ def handle_list_sedes(**kwargs):
         # por eso se aceptan tanto True como NULL (mismo criterio que
         # /api/admin/sedes/active).
         sedes = (
-            Sede.query.filter(or_(Sede.is_active.is_(True), Sede.is_active.is_(None)))
-            .order_by(Sede.name.asc())
-            .all()
+            Sede.query.filter(or_(Sede.is_active.is_(True), Sede.is_active.is_(None))).order_by(Sede.name.asc()).all()
         )
         items = [{'id': s.id, 'name': s.name, 'address': s.address or ''} for s in sedes]
         return {'success': True, 'count': len(items), 'sedes': items}
@@ -2044,7 +2043,7 @@ def handle_get_sede_stats(sede_id=None, **kwargs):
     description='Lista grupos de pacientes (ej: "Talara", "Lima Norte").',
     parameters={'type': 'object', 'properties': {}},
     category='read',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_list_patient_groups(**kwargs):
     try:
@@ -2465,7 +2464,7 @@ def handle_get_therapist_efficiency(**kwargs):
         'required': ['receiver_id', 'content'],
     },
     category='write',
-roles=ROLES_THERAPIST,
+    roles=ROLES_THERAPIST,
 )
 def handle_send_direct_message(receiver_id, content, **kwargs):
     try:
@@ -2586,12 +2585,8 @@ def handle_get_contract_suggestion(patient_id, **kwargs):
     if p is None or p.role != 'jugador':
         return {'error': f'Paciente {patient_id} no encontrado'}
 
-    contratos = (
-        Contract.query.filter_by(patient_id=p.id).order_by(Contract.id.desc()).all()
-    )
-    vigente = next(
-        (c for c in contratos if c.is_active is True or c.status == 'active'), None
-    )
+    contratos = Contract.query.filter_by(patient_id=p.id).order_by(Contract.id.desc()).all()
+    vigente = next((c for c in contratos if c.is_active is True or c.status == 'active'), None)
     ultimo = contratos[0] if contratos else None
     base = vigente or ultimo
 
@@ -2976,9 +2971,9 @@ def handle_update_contract(contract_id, **kwargs):
 @tool(
     name='get_patient_stats',
     description=(
-        "Estadisticas de pacientes: distribucion por edad, sexo, sede, mes de ingreso, "
-        "y cuantos tienen o no contrato vigente. Por defecto solo pacientes ACTIVOS: "
-        "hay 51 pacientes y 4 activos, asi que di siempre el ambito de la respuesta."
+        'Estadisticas de pacientes: distribucion por edad, sexo, sede, mes de ingreso, '
+        'y cuantos tienen o no contrato vigente. Por defecto solo pacientes ACTIVOS: '
+        'hay 51 pacientes y 4 activos, asi que di siempre el ambito de la respuesta.'
     ),
     parameters={
         'type': 'object',
@@ -3209,7 +3204,7 @@ def handle_update_patient_details(patient_id, **kwargs):
 @tool(
     name='list_messaging_contacts',
     description=(
-        "Contactos que pueden recibir WhatsApp o SMS, con su numero, si estan "
+        'Contactos que pueden recibir WhatsApp o SMS, con su numero, si estan '
         "activos y por que no se les puede avisar. Responde 'quien esta subscribed'"
         "y 'de quienes son los numeros'."
     ),
@@ -3230,9 +3225,8 @@ def handle_update_patient_details(patient_id, **kwargs):
     roles=ROLES_SUPERVISOR,
 )
 def handle_list_messaging_contacts(**kwargs):
-    from app.services.messaging import contact_summary
-
     from app.models import User
+    from app.services.messaging import contact_summary
     from app.services.whatsapp_service import whatsapp_service
 
     q = User.query.filter_by(role='jugador')
@@ -3240,16 +3234,18 @@ def handle_list_messaging_contacts(**kwargs):
         q = q.filter_by(is_active=True)
     if kwargs.get('only_without_phone'):
         q = q.filter(
-            (User.phone.is_(None)) | (User.phone == '')
-            | (User.guardian_contact.is_(None)) | (User.guardian_contact == '')
+            (User.phone.is_(None))
+            | (User.phone == '')
+            | (User.guardian_contact.is_(None))
+            | (User.guardian_contact == '')
         )
 
     contacts = []
-    def full_name(patient):
-        parts = [p for p in ((patient.first_name or '').strip(), (patient.last_name or '').strip()) if p]
-        return ' '.join(parts) or patient.username
 
-    for pat in q.order_by(User.first_name, User.last_name).all():
+    def full_name(patient):
+        return (getattr(patient, 'username', None) or '').strip() or f'Paciente #{patient.id}'
+
+    for pat in q.order_by(User.username).all():
         contacts.append(
             {
                 'id': pat.id,
@@ -3273,9 +3269,9 @@ def handle_list_messaging_contacts(**kwargs):
 @tool(
     name='set_messaging_contact_active',
     description=(
-        "Activa o desactiva los avisos (WhatsApp/SMS) de un paciente. "
-        "Desactivar deja de avisarle: el servicio de envio lo comprueba antes "
-        "de cada mensaje, no solo la pantalla."
+        'Activa o desactiva los avisos (WhatsApp/SMS) de un paciente. '
+        'Desactivar deja de avisarle: el servicio de envio lo comprueba antes '
+        'de cada mensaje, no solo la pantalla.'
     ),
     parameters={
         'type': 'object',
@@ -3321,8 +3317,8 @@ def handle_set_messaging_contact_active(**kwargs):
 @tool(
     name='get_whatsapp_status',
     description=(
-        "Estado de la conexion de WhatsApp: si esta conectada, de que numero "
-        "sale la comunicacion, y si hay que volver a escanear el QR."
+        'Estado de la conexion de WhatsApp: si esta conectada, de que numero '
+        'sale la comunicacion, y si hay que volver a escanear el QR.'
     ),
     parameters={'type': 'object', 'properties': {}},
     category='read',
@@ -3343,9 +3339,9 @@ def handle_get_whatsapp_status(**_kwargs):
 @tool(
     name='send_patient_message',
     description=(
-        "Envia un WhatsApp o SMS a un paciente. Usa esto para avisos de pago, "
-        "renovacion o confirmaciones. Si el paciente esta desactivado, no "
-        "sale y te dice por que."
+        'Envia un WhatsApp o SMS a un paciente. Usa esto para avisos de pago, '
+        'renovacion o confirmaciones. Si el paciente esta desactivado, no '
+        'sale y te dice por que.'
     ),
     parameters={
         'type': 'object',
@@ -3373,7 +3369,8 @@ def handle_send_patient_message(**kwargs):
 
     svc = MessagingService()
     result = svc.send_to_patient(
-        patient_id, message,
+        patient_id,
+        message,
         channel=(kwargs.get('channel') or 'whatsapp'),
         sent_by_id=kwargs.get('_user_id'),
         trigger='manual',
@@ -3384,7 +3381,7 @@ def handle_send_patient_message(**kwargs):
 @tool(
     name='get_message_history',
     description=(
-        "Historial de mensajes enviados: a quien, que dice, por que canal y si "
+        'Historial de mensajes enviados: a quien, que dice, por que canal y si '
         "salio o fallo. Responde 'que le mandamos a este paciente'."
     ),
     parameters={

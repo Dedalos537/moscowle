@@ -3,7 +3,9 @@
 Todas las rutas exigen sesion de admin o supervisor, salvo el estado del
 puente de WhatsApp que tambien lo exigen porque revela el numero del centro.
 """
+
 import logging
+import re
 import time
 from datetime import datetime, timedelta
 
@@ -16,6 +18,7 @@ from app.models.campaign import Campaign, CampaignSend
 from app.models.message_log import MessageLog
 from app.models.message_template import MessageTemplate
 from app.services.messaging import MessagingService, contact_summary
+from app.services.whatsapp_service import whatsapp_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +44,11 @@ def _service():
 
 
 def full_name(patient):
-    """Nombre y apellido, o el username si estan vacios."""
-    parts = [part for part in ((patient.first_name or '').strip(), (patient.last_name or '').strip()) if part]
-    return ' '.join(parts) or patient.username
+    """Nombre visible del paciente.
+
+    La tabla user no trae first_name/last_name: el username es el nombre.
+    """
+    return (getattr(patient, 'username', None) or '').strip() or f'Paciente #{getattr(patient, "id", "?")}'
 
 
 # ------------------------------------------------------------- contactos
@@ -64,20 +69,22 @@ def list_contacts():
 
     if request.args.get('without_phone') == '1':
         q = q.filter(
-            (User.phone.is_(None)) | (User.phone == '')
-            | (User.guardian_contact.is_(None)) | (User.guardian_contact == '')
+            (User.phone.is_(None))
+            | (User.phone == '')
+            | (User.guardian_contact.is_(None))
+            | (User.guardian_contact == '')
         )
 
     if request.args.get('q'):
         term = f'%{request.args["q"]}%'
         q = q.filter(
             (User.username.ilike(term))
-            | (User.first_name.ilike(term))
-            | (User.last_name.ilike(term))
+            | (User.email.ilike(term))
             | (User.phone.ilike(term))
+            | (User.guardian_contact.ilike(term))
         )
 
-    patients = q.order_by(User.first_name, User.last_name).all()
+    patients = q.order_by(User.username).all()
     svc = _service()
 
     rows = []
@@ -87,7 +94,7 @@ def list_contacts():
             {
                 'id': p.id,
                 'username': p.username,
-                'name': f'{(p.first_name or "").strip()} {(p.last_name or "").strip()}'.strip() or p.username,
+                'name': full_name(p),
                 'phone': p.phone,
                 'guardian_contact': p.guardian_contact,
                 'guardian_name': p.guardian_name,
@@ -97,9 +104,7 @@ def list_contacts():
                 'contactable': ok,
                 'reason': reason,
                 'last_message_at': (
-                    db.session.query(db.func.max(MessageLog.created_at))
-                    .filter(MessageLog.patient_id == p.id)
-                    .scalar()
+                    db.session.query(db.func.max(MessageLog.created_at)).filter(MessageLog.patient_id == p.id).scalar()
                 ),
             }
         )
@@ -114,8 +119,6 @@ def list_contacts():
 
 
 def _whatsapp_status():
-    from app.services.whatsapp_service import whatsapp_service
-
     return whatsapp_service.status()
 
 
@@ -143,7 +146,10 @@ def toggle_contact(patient_id):
     ok, reason = svc.check_contactable(patient, 'whatsapp')
     logger.info(
         'Contacto de %s (id %d) -> %s por %s',
-        patient.username, patient.id, 'activo' if activate else 'inactivo', request.user.username,
+        patient.username,
+        patient.id,
+        'activo' if activate else 'inactivo',
+        request.user.username,
     )
     return jsonify(
         {
@@ -177,8 +183,6 @@ def templates():
 
     # Se rechazan marcadores que no son {nombre}: una llave suelta rompe el
     # render en el envio y el mensaje se pierde entero.
-    import re
-
     bad = [m for m in re.findall(r'\{([^{}]*)\}', body) if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', m)]
     if bad:
         return jsonify({'error': f'Marcadores invalidos: {", ".join(bad)}'}), 400
@@ -266,7 +270,7 @@ def campaign_recipients(campaign_id):
         db.session.query(CampaignSend, User)
         .join(User, User.id == CampaignSend.patient_id)
         .filter(CampaignSend.campaign_id == campaign_id)
-        .order_by(CampaignSend.status, User.first_name)
+        .order_by(CampaignSend.status, User.username)
         .all()
     )
     return jsonify(
@@ -319,7 +323,9 @@ def cancel_campaign(campaign_id):
         return jsonify({'error': 'La campana ya se completo'}), 400
 
     campaign.status = 'cancelled'
-    CampaignSend.query.filter_by(campaign_id=campaign_id, status='pending').update({'status': 'skipped', 'skip_reason': 'Campana cancelada'})
+    CampaignSend.query.filter_by(campaign_id=campaign_id, status='pending').update(
+        {'status': 'skipped', 'skip_reason': 'Campana cancelada'}
+    )
     db.session.commit()
     return jsonify({'campaign': campaign.to_dict()})
 
@@ -340,8 +346,12 @@ def send_message():
 
     svc = _service()
     result = svc.send_to_patient(
-        patient_id, message, channel=channel, sent_by_id=request.user.id,
-        template_key=data.get('template_key'), trigger='manual',
+        patient_id,
+        message,
+        channel=channel,
+        sent_by_id=request.user.id,
+        template_key=data.get('template_key'),
+        trigger='manual',
     )
     return jsonify(result), 200 if result['status'] == 'sent' else 400
 
@@ -372,15 +382,11 @@ def history():
 @crm_bp.route('/whatsapp/status', methods=['GET'])
 def whatsapp_status():
     """Estado del puente y de que numero sale la comunicacion."""
-    from app.services.whatsapp_service import whatsapp_service
-
     return jsonify(whatsapp_service.status())
 
 
 @crm_bp.route('/whatsapp/start', methods=['POST'])
 def whatsapp_start():
-    from app.services.whatsapp_service import whatsapp_service
-
     started = whatsapp_service.start()
     return jsonify({'started': started, 'status': whatsapp_service.status()})
 
@@ -393,17 +399,17 @@ def whatsapp_qr():
     que se genera al pedirlo y no antes. Si la sesion ya estaba guardada no
     hay nada que escanear y se informa eso en vez de un QR muerto.
     """
-    from app.services.whatsapp_service import whatsapp_service
-
     service = whatsapp_service
 
     if service.is_connected:
-        return jsonify({
-            'connected': True,
-            'phone': service.connected_phone,
-            'qr': None,
-            'message': 'Ya esta conectado, no hay nada que escanear',
-        })
+        return jsonify(
+            {
+                'connected': True,
+                'phone': service.connected_phone,
+                'qr': None,
+                'message': 'Ya esta conectado, no hay nada que escanear',
+            }
+        )
 
     service.start()
 
@@ -412,31 +418,39 @@ def whatsapp_qr():
     limite = time.time() + 25
     while time.time() < limite:
         if service.qr_code:
-            return jsonify({
-                'connected': False,
-                'qr': service.qr_code,
-                'phone': None,
-                'message': 'Escanea con WhatsApp > Dispositivos vinculados',
-            })
+            return jsonify(
+                {
+                    'connected': False,
+                    'qr': service.qr_code,
+                    'phone': None,
+                    'message': 'Escanea con WhatsApp > Dispositivos vinculados',
+                }
+            )
         if service.needs_qr:
-            return jsonify({
-                'connected': False,
-                'qr': None,
-                'phone': None,
-                'message': service.last_error or 'Hay que volver a escanear el QR',
-            })
+            return jsonify(
+                {
+                    'connected': False,
+                    'qr': None,
+                    'phone': None,
+                    'message': service.last_error or 'Hay que volver a escanear el QR',
+                }
+            )
         if service.is_banned:
-            return jsonify({
-                'connected': False,
-                'qr': None,
-                'phone': None,
-                'message': 'WhatsApp baneo este numero',
-            }), 409
+            return jsonify(
+                {
+                    'connected': False,
+                    'qr': None,
+                    'phone': None,
+                    'message': 'WhatsApp baneo este numero',
+                }
+            ), 409
         time.sleep(0.5)
 
-    return jsonify({
-        'connected': False,
-        'qr': None,
-        'phone': None,
-        'message': 'No se pudo generar el QR. Revisa que el puente de WhatsApp este corriendo.',
-    }), 503
+    return jsonify(
+        {
+            'connected': False,
+            'qr': None,
+            'phone': None,
+            'message': 'No se pudo generar el QR. Revisa que el puente de WhatsApp este corriendo.',
+        }
+    ), 503
