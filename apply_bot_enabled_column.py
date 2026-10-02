@@ -10,6 +10,12 @@ import os
 import sys
 
 import sqlalchemy as sa
+from dotenv import load_dotenv
+
+# El script se lanza suelto, sin pasar por config.py: carga el .env igual.
+_BASEDIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(_BASEDIR, '.env'))
+load_dotenv(os.path.join(_BASEDIR, '.env.local'), override=True)
 
 # Tabla y columna fijas en el codigo: no se interpola ninguna entrada externa.
 COLUMN = 'enabled'
