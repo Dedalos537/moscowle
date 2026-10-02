@@ -15,6 +15,7 @@ concentra las tres cosas que faltaban:
 
 No se manda nada sin pasar por `send_to_patient`, que es quien aplica todo.
 """
+
 import logging
 import random
 import re
@@ -41,7 +42,7 @@ DEFAULT_MIN_GAP_SECONDS = 45
 REPEAT_WINDOW_HOURS = 6
 
 
-class ContactRefused(ValueError):
+class ContactRefusedError(ValueError):
     """No se puede contactar a este paciente. El motivo va en el mensaje."""
 
 
@@ -82,10 +83,15 @@ class MessagingService:
 
         Se prefiere el contacto del apoderado: en terapia infantil casi
         siempre el que paga y recibe los avisos es el padre, no el nino.
+
+        Ojo con el tipo: guardian_contact mezcla telefono y correo. Si el
+        apoderado esta cargado con su correo hay que saltar al telefono del
+        paciente, porque mandar un SMS a una direccion de correo es un
+        error que solo se ve cuando el proveedor rechaza el envio.
         """
         guardian = (getattr(patient, 'guardian_contact', None) or '').strip()
         own = (getattr(patient, 'phone', None) or '').strip()
-        return guardian or own
+        return guardian if _is_phone(guardian) else own
 
     def check_contactable(self, patient, channel='whatsapp'):
         """Devuelve (True, None) o (False, motivo en castellano)."""
@@ -96,7 +102,9 @@ class MessagingService:
         phone = self.resolve_phone(patient)
         if not phone:
             return False, 'El paciente no tiene numero de telefono'
-        if channel == 'whatsapp' and len(re.sub(r'\D', '', phone)) < 9:
+        # Vale para los dos canales: un SMS a un correo o a un numero de
+        # tres digitos falla igual que un WhatsApp.
+        if not _is_phone(phone):
             return False, 'El numero registrado no es valido'
         return True, None
 
@@ -118,6 +126,7 @@ class MessagingService:
         reventar. Antes usaba str.format y cualquier llave sobrante
         devolvia un KeyError que se comia el envio entero.
         """
+
         def sub(match):
             key = match.group(1).strip()
             value = context.get(key)
@@ -138,13 +147,11 @@ class MessagingService:
 
     def sent_today(self, channel):
         start = (self._today() - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        return (
-            MessageLog.query.filter(
-                MessageLog.channel == channel,
-                MessageLog.status == 'sent',
-                MessageLog.created_at >= start,
-            ).count()
-        )
+        return MessageLog.query.filter(
+            MessageLog.channel == channel,
+            MessageLog.status == 'sent',
+            MessageLog.created_at >= start,
+        ).count()
 
     def check_quota(self, channel):
         cap = self.daily_caps.get(channel, DEFAULT_DAILY_CAPS.get(channel, 100))
@@ -192,9 +199,16 @@ class MessagingService:
         ok, reason = self.check_contactable(patient, channel)
         if not ok:
             self._log(
-                patient=patient, phone=None, channel=channel, message=message,
-                status='skipped', failed_reason=reason, sent_by_id=sent_by_id,
-                template_key=template_key, campaign_id=campaign_id, trigger=trigger,
+                patient=patient,
+                phone=None,
+                channel=channel,
+                message=message,
+                status='skipped',
+                failed_reason=reason,
+                sent_by_id=sent_by_id,
+                template_key=template_key,
+                campaign_id=campaign_id,
+                trigger=trigger,
             )
             return {'status': 'skipped', 'reason': reason, 'patient_id': patient_id}
 
@@ -208,9 +222,16 @@ class MessagingService:
         ok, reason = self.check_quota(channel)
         if not ok:
             self._log(
-                patient=patient, phone=phone, channel=channel, message=message,
-                status='skipped', failed_reason=reason, sent_by_id=sent_by_id,
-                template_key=template_key, campaign_id=campaign_id, trigger=trigger,
+                patient=patient,
+                phone=phone,
+                channel=channel,
+                message=message,
+                status='skipped',
+                failed_reason=reason,
+                sent_by_id=sent_by_id,
+                template_key=template_key,
+                campaign_id=campaign_id,
+                trigger=trigger,
             )
             return {'status': 'skipped', 'reason': reason, 'patient_id': patient_id}
 
@@ -222,9 +243,16 @@ class MessagingService:
         status = 'sent' if result.get('ok') else 'failed'
         reason = result.get('error')
         self._log(
-            patient=patient, phone=phone, channel=channel, message=message,
-            status=status, failed_reason=reason, sent_by_id=sent_by_id,
-            template_key=template_key, campaign_id=campaign_id, trigger=trigger,
+            patient=patient,
+            phone=phone,
+            channel=channel,
+            message=message,
+            status=status,
+            failed_reason=reason,
+            sent_by_id=sent_by_id,
+            template_key=template_key,
+            campaign_id=campaign_id,
+            trigger=trigger,
             provider_message_id=result.get('provider_message_id'),
         )
         return {
@@ -247,18 +275,29 @@ class MessagingService:
         try:
             svc = self._sms()
             if not svc.is_available():
-                return {'ok': False, 'error': 'Twilio no esta configurado'}
+                return {'ok': False, 'error': 'SMS: no hay proveedor configurado'}
             ok = svc.send_sms_message(phone, message)
             if isinstance(ok, dict):
                 return ok
-            return {'ok': bool(ok), 'error': None if ok else 'Twilio rechazo el envio'}
+            return {'ok': bool(ok), 'error': None if ok else 'El proveedor de SMS rechazo el envio'}
         except Exception as exc:
             logger.warning('Fallo SMS a %s: %s', phone[-4:], exc)
             return {'ok': False, 'error': str(exc)[:250]}
 
-    def _log(self, patient, phone, channel, message, status, failed_reason=None,
-             sent_by_id=None, template_key=None, campaign_id=None, trigger='manual',
-             provider_message_id=None):
+    def _log(
+        self,
+        patient,
+        phone,
+        channel,
+        message,
+        status,
+        failed_reason=None,
+        sent_by_id=None,
+        template_key=None,
+        campaign_id=None,
+        trigger='manual',
+        provider_message_id=None,
+    ):
         try:
             entry = MessageLog(
                 patient_id=patient.id if patient else None,
@@ -341,9 +380,7 @@ class MessagingService:
             return {'error': 'La campana ya se completo'}
 
         pending = (
-            CampaignSend.query.filter_by(campaign_id=campaign_id, status='pending')
-            .order_by(CampaignSend.id)
-            .all()
+            CampaignSend.query.filter_by(campaign_id=campaign_id, status='pending').order_by(CampaignSend.id).all()
         )
         if max_messages:
             pending = pending[:max_messages]
@@ -356,11 +393,16 @@ class MessagingService:
         for row in pending:
             if pace and sent:
                 # Pausa con jitter: siempre igual delata el patron automatico.
-                time.sleep(self.min_gap + random.uniform(0, self.min_gap))
+                # Es un retardo, no una decision criptografica.
+                time.sleep(self.min_gap + random.uniform(0, self.min_gap))  # noqa: S311
             res = self.send_to_patient(
-                row.patient_id, row.message, channel=campaign.channel,
-                sent_by_id=sent_by_id, template_key=campaign.template_key,
-                campaign_id=campaign.id, trigger='campaign',
+                row.patient_id,
+                row.message,
+                channel=campaign.channel,
+                sent_by_id=sent_by_id,
+                template_key=campaign.template_key,
+                campaign_id=campaign.id,
+                trigger='campaign',
             )
             row.status = res['status']
             if res['status'] == 'sent':
@@ -374,15 +416,9 @@ class MessagingService:
             db.session.commit()
 
         # Recuento global de la campana, no solo de este tramo.
-        campaign.sent_count = CampaignSend.query.filter_by(
-            campaign_id=campaign_id, status='sent'
-        ).count()
-        campaign.failed_count = CampaignSend.query.filter_by(
-            campaign_id=campaign_id, status='failed'
-        ).count()
-        campaign.skipped_count = CampaignSend.query.filter_by(
-            campaign_id=campaign_id, status='skipped'
-        ).count()
+        campaign.sent_count = CampaignSend.query.filter_by(campaign_id=campaign_id, status='sent').count()
+        campaign.failed_count = CampaignSend.query.filter_by(campaign_id=campaign_id, status='failed').count()
+        campaign.skipped_count = CampaignSend.query.filter_by(campaign_id=campaign_id, status='skipped').count()
 
         left = CampaignSend.query.filter_by(campaign_id=campaign_id, status='pending').count()
         campaign.status = 'sent' if left == 0 else 'paused'
@@ -415,10 +451,19 @@ class MessagingService:
 
 
 def campaign_send_exists(campaign_id, patient_id):
-    return (
-        CampaignSend.query.filter_by(campaign_id=campaign_id, patient_id=patient_id).first()
-        is not None
-    )
+    return CampaignSend.query.filter_by(campaign_id=campaign_id, patient_id=patient_id).first() is not None
+
+
+def _is_phone(value):
+    """True si el valor es un telefono usable, y no un correo ni un resto.
+
+    guardian_contact se carga a mano y termina guardando lo que sea: en un
+    paciente real esta el correo del apoderado. Un telefono movil peruano
+    tiene 9 digitos; con menos no hay con que enviar.
+    """
+    if not value or '@' in value:
+        return False
+    return len(re.sub(r'\D', '', value)) >= 9
 
 
 def _first_name(user):
@@ -430,7 +475,8 @@ def contact_summary():
     total = User.query.filter_by(role='jugador').count()
     active = User.query.filter_by(role='jugador', is_active=True).count()
     with_phone = User.query.filter(
-        User.role == 'jugador', User.is_active.is_(True),
+        User.role == 'jugador',
+        User.is_active.is_(True),
         (User.phone.isnot(None) | (User.guardian_contact.isnot(None))),
     ).count()
     active_no_phone = active - with_phone

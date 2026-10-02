@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import threading
 from datetime import datetime
 
@@ -24,9 +25,35 @@ except ImportError:
     PYWHATKIT_AVAILABLE = False
     logger.debug('pywhatkit not installed')
 
+try:
+    import requests
+
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    logger.debug('requests not installed')
+
+
+def to_e164(phone):
+    """'+51937657870' a partir de lo que haya guardado en la base.
+
+    La base trae el numero local ('937657870') o con guiones. El mismo
+    criterio que jidOf() del puente de WhatsApp (index.js): un 0 inicial
+    se cambia por 51 y si no empieza por 51 se le antepone. Devuelve ''
+    si no queda nada con que trabajar.
+    """
+    digits = re.sub(r'\D', '', str(phone or ''))
+    if not digits:
+        return ''
+    if digits.startswith('0'):
+        digits = '51' + digits[1:]
+    elif not digits.startswith('51'):
+        digits = '51' + digits
+    return f'+{digits}'
+
 
 class SMSWhatsAppService:
-    """Manda SMS y WhatsApp. Prioridad: pywhatkit > Twilio"""
+    """Manda SMS y WhatsApp. SMS: gateway del celular > Twilio."""
 
     DEFAULT_NOTIFICATION_NUMBER = os.environ.get('TWILIO_NOTIFICATION_PHONE')
     if not DEFAULT_NOTIFICATION_NUMBER:
@@ -43,6 +70,13 @@ class SMSWhatsAppService:
         # pertenece a nadie: los mensajes se perdian sin dejar rastro.
         self.whatsapp_from = os.getenv('TWILIO_WHATSAPP_NUMBER') or ''
 
+        # Gateway que usa el celular del centro como origen. Salta primero
+        # porque el remitente que ve el apoderado es el mismo numero que el
+        # de WhatsApp: no depende de que un proveedor tenga un numero propio.
+        self.gateway_url = (os.getenv('SMS_GATEWAY_URL') or 'https://api.sms.json.pe').rstrip('/')
+        self.gateway_token = os.getenv('SMS_GATEWAY_TOKEN') or ''
+        self.gateway_available = REQUESTS_AVAILABLE and bool(self.gateway_token)
+
         self.twilio_client = None
         if TWILIO_AVAILABLE and self.account_sid and self.auth_token:
             try:
@@ -58,11 +92,11 @@ class SMSWhatsAppService:
         self.pywhatkit_available = PYWHATKIT_AVAILABLE
 
         if not self.is_available():
-            logger.warning('  No messaging service available (install pywhatkit or configure Twilio)')
+            logger.warning('  No messaging service available (set SMS_GATEWAY_TOKEN or configure Twilio)')
 
     def is_available(self):
         """Verifica disponibilidad de servicio de mensajería"""
-        return self.pywhatkit_available or self.twilio_available
+        return self.gateway_available or self.pywhatkit_available or self.twilio_available
 
     def _send_whatsapp_pywhatkit(self, phone_number, message_text):
         """Enviar WhatsApp vía pywhatkit en segundo plano"""
@@ -125,24 +159,65 @@ class SMSWhatsAppService:
         return False
 
     def send_sms_message(self, phone_number, message_body):
-        """SMS generico via Twilio. Devuelve dict con el sid del proveedor.
+        """Envia un SMS. Devuelve dict con provider_message_id si salio.
 
-        Antes devolvia un booleano, que obliga a quien llama a no poder
-        distinguir 'no salio' de 'no se pudo consultar'. El id del mensaje
-        es lo que permite pedirle luego el recibo a Twilio.
+        La normalizacion a E.164 pasa aqui y no en cada proveedor: la base
+        guarda el numero local ('937657870') y ni Twilio ni el gateway
+        aceptan eso. Nunca lanza: quien llama solo quiere saber si salio y
+        con que id.
         """
+        target = to_e164(phone_number)
+        if not target:
+            return {'ok': False, 'error': 'El numero no es valido'}
+
+        if self.gateway_available:
+            return self._send_sms_gateway(target, message_body)
+
         if not self.twilio_available:
-            logger.warning(' SMS: Twilio not available')
-            return False
+            logger.warning(' SMS: no hay proveedor configurado')
+            return {'ok': False, 'error': 'SMS: no hay proveedor configurado'}
+
         try:
-            if not phone_number.startswith('+'):
-                phone_number = f'+{phone_number}'
-            message = self.twilio_client.messages.create(body=message_body, from_=self.from_phone, to=phone_number)
-            current_app.logger.info(f' SMS sent to {phone_number}: {message.sid}')
-            return True
+            message = self.twilio_client.messages.create(body=message_body, from_=self.from_phone, to=target)
+            logger.info(' SMS (twilio) enviado a %s: %s', target, message.sid)
+            return {'ok': True, 'provider_message_id': message.sid}
         except Exception as e:
-            current_app.logger.error(f' Error sending SMS: {e}')
-            return False
+            logger.error(' Error sending SMS: %s', e)
+            return {'ok': False, 'error': str(e)[:250]}
+
+    def _send_sms_gateway(self, target, message_body):
+        """Salida por el celular Android vinculado al centro.
+
+        El remitente que ve el destinatario es la linea del celular, es decir
+        el mismo numero que usa WhatsApp. El gateway pide el numero con
+        codigo de pais y sin '+'. El device tiene que estar en linea y con
+        saldo de SMS: si no, el rechazo vuelve como error y queda en
+        message_log.
+        """
+        try:
+            resp = requests.post(
+                f'{self.gateway_url}/send',
+                headers={'Authorization': f'Bearer {self.gateway_token}'},
+                json={'number': target.lstrip('+'), 'message': message_body},
+                timeout=30,
+            )
+        except Exception as e:
+            logger.warning(' SMS gateway sin respuesta: %s', e)
+            return {'ok': False, 'error': f'Gateway sin respuesta: {e}'[:250]}
+
+        try:
+            data = resp.json()
+        except Exception:
+            data = {}
+
+        if resp.status_code != 200 or not data.get('success'):
+            reason = str(data.get('message') or resp.text or resp.status_code)[:200]
+            logger.error(' SMS gateway rechazo (%s): %s', resp.status_code, reason)
+            return {'ok': False, 'error': f'Gateway: {reason}'[:250]}
+
+        provider_id = data.get('message_id')
+        logger.info(' SMS (gateway) enviado a %s: %s', target, provider_id)
+        return {'ok': True, 'provider_message_id': provider_id}
 
     def _get_notification_destination(self):
         """OCP: número destino configurable (Centro de Operaciones > env > default)."""

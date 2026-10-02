@@ -6,6 +6,7 @@ from flask import current_app
 
 from app.extensions import db
 from app.models import Appointment, User
+from app.services.messaging import MessagingService
 from app.services.sms_whatsapp_service import SMSWhatsAppService
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,10 @@ class SessionReminderService:
         self.messaging = SMSWhatsAppService()
 
     def _recipient_phone(self, patient):
-        contact = (patient.guardian_contact or '').strip() or (patient.phone or '').strip()
-        return contact
+        # Mismo criterio que el CRM: el apoderado solo si trae un telefono,
+        # porque guardian_contact puede traer un correo. Si no, el del
+        # paciente.
+        return MessagingService.resolve_phone(patient)
 
     def _local_date(self, dt):
         if dt is None:
@@ -88,8 +91,6 @@ class SessionReminderService:
         return counts
 
     def _send_reminder(self, phone, patient, appt, prefix, counts):
-        therapist = appt.therapist
-        therapist_name = therapist.username if therapist else ''
         location = (appt.location or '').strip()
         start_local = self._local_date(appt.start_time)
         time_str = (
@@ -138,5 +139,9 @@ class SessionReminderService:
     def _dispatch(self, phone, body, counts):
         if self.messaging.send_whatsapp_message(phone, body):
             counts['sent_whatsapp'] += 1
-        if self.messaging.send_sms_message(phone, body):
+        # send_sms_message devuelve un dict desde que trae el id del
+        # proveedor. Contar el truthy del dict contaria tambien los fallos.
+        sms = self.messaging.send_sms_message(phone, body)
+        sms_ok = sms.get('ok') if isinstance(sms, dict) else bool(sms)
+        if sms_ok:
             counts['sent_sms'] += 1
