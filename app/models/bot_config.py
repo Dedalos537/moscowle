@@ -19,6 +19,11 @@ class BotConfig(db.Model, AuditMixin):
     notify_supervision_enabled = db.Column(db.Boolean, default=True, nullable=False)
     intervention_enabled = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Interruptor maestro: apaga las respuestas del bot sin tocar el token.
+    # No es lo mismo que "hay token configurado" (is_active derivado): un bot
+    # con token puede estar parado a proposito.
+    enabled = db.Column(db.Boolean, default=True, nullable=False)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -31,6 +36,7 @@ class BotConfig(db.Model, AuditMixin):
             'mcp_prompt_enabled': self.mcp_prompt_enabled,
             'notify_supervision_enabled': self.notify_supervision_enabled,
             'intervention_enabled': self.intervention_enabled,
+            'enabled': self.enabled,
         }
 
     @staticmethod

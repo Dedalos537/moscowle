@@ -272,6 +272,40 @@ def _bot_identity():
     return name, emoji
 
 
+def _bot_enabled():
+    """Interruptor maestro del bot (BotConfig.enabled).
+
+    Desactiva las respuestas sin borrar el token: son cosas distintas.
+    Si no se puede leer, se asume encendido para no dejar el bot mudo.
+    """
+    try:
+        from app.models.bot_config import BotConfig
+
+        return bool(BotConfig.get_or_create().enabled)
+    except Exception:
+        logger.exception('No se pudo leer BotConfig.enabled, se asume encendido')
+        return True
+
+
+# Comandos que siguen funcionando con el bot apagado: son gestion de la
+# vinculacion y de los propios ajustes, no consultas del asistente.
+_BOT_OFF_ALLOWED = frozenset(
+    {
+        '/start',
+        '/unlink',
+        '/status',
+        '/help',
+        '/ayuda',
+        '/menu',
+        '/comandos',
+        '/notificaciones',
+        '/notifications',
+        '/activar_sla',
+        '/desactivar_sla',
+    }
+)
+
+
 _FALLBACK_MARKERS = (
     'no pude',
     'no puedo',
@@ -547,6 +581,17 @@ def handle_webhook_update(update):
     if not chat_id:
         return
 
+    # Interruptor maestro: si el bot esta apagado no responde a consultas,
+    # pero deja gestionar la vinculacion y reencenderlo desde /menu.
+    text = (msg.get('text') or '').strip()
+    if not _bot_enabled() and text not in _BOT_OFF_ALLOWED and not text.startswith('/link'):
+        send_telegram_message(
+            chat_id,
+            '⏸️ El bot está desactivado temporalmente.\nUn administrador puede reencenderlo en Centro de control → Bot.',
+            bot_token,
+        )
+        return
+
     from app import db
     from app.models.telegram_user import TelegramUser
 
@@ -672,7 +717,9 @@ def handle_webhook_update(update):
             elif text.lower() in ('no', 'cancelar', 'cancel'):
                 result = confirm_pending_operation(chat_id, confirmed=False)
             else:
-                result = process_text_message(chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id))
+                result = process_text_message(
+                    chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id)
+                )
         else:
             result = process_text_message(chat_id, text, tg_user.admin_user_id, _real_role_for(tg_user.admin_user_id))
     else:

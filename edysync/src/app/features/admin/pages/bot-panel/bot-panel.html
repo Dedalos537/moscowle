@@ -24,10 +24,27 @@
         </div>
       </div>
       <div class="bot-header__actions">
+        @if (toggleError) {
+          <span class="bot-header__switch-error">{{ toggleError }}</span>
+        }
         <span class="bot-header__status" [class.bot-header__status--active]="bot?.is_active">
           <span class="bot-header__status-dot"></span>
-          {{ bot?.is_active ? 'Activo' : 'Inactivo' }}
+          @if (bot?.is_active) {
+            Activo
+          } @else if (bot?.configured === false) {
+            Sin token
+          } @else {
+            Inactivo
+          }
         </span>
+        <label class="bot-switch bot-header__switch"
+               [title]="bot?.enabled ? 'Apagar el bot' : 'Encender el bot'">
+          <input type="checkbox"
+                 [ngModel]="!!bot?.enabled"
+                 [disabled]="toggleSaving"
+                 (ngModelChange)="toggleEnabled($event)" />
+          <span class="bot-switch__slider"></span>
+        </label>
       </div>
     </div>
 
@@ -126,6 +143,36 @@
                             {{ channels[ch]?.active ? 'Activo' : 'Inactivo' }}
                           }
                         </div>
+                      }
+                      @if (ch === 'whatsapp' && channels[ch]?.status !== 'coming_soon') {
+                        <div class="bot-channel__meta">
+                          @if (channels[ch]?.phone) {
+                            <span class="bot-channel__meta-item">
+                              <fa-icon [icon]="['fas', 'phone']"></fa-icon>
+                              {{ formatWaPhone(channels[ch]?.phone) }}
+                            </span>
+                          }
+                          @if (channels[ch]?.connected) {
+                            <span class="bot-channel__meta-item">
+                              <fa-icon [icon]="['fas', 'clock']"></fa-icon>
+                              {{ formatUptime(channels[ch]?.uptime_s) }}
+                            </span>
+                          } @else if (channels[ch]?.needs_qr) {
+                            <span class="bot-channel__meta-item">
+                              <fa-icon [icon]="['fas', 'qrcode']"></fa-icon>
+                              Esperando QR
+                            </span>
+                          } @else if (channels[ch]?.last_error) {
+                            <span class="bot-channel__meta-item bot-channel__meta-item--error">
+                              <fa-icon [icon]="['fas', 'triangle-exclamation']"></fa-icon>
+                              {{ channels[ch]?.last_error }}
+                            </span>
+                          }
+                        </div>
+                        <button type="button" class="bot-channel__cta" (click)="openNotifications.emit()">
+                          <fa-icon [icon]="['fas', channels[ch]?.connected ? 'arrow-up-right-from-square' : 'link']"></fa-icon>
+                          {{ channels[ch]?.connected ? 'Ver número emisor' : 'Vincular número' }}
+                        </button>
                       }
                     </div>
                   </div>

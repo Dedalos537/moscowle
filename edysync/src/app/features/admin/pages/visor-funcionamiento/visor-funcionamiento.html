@@ -826,7 +826,7 @@
   @if (activeTab === 'bot') {
     <div class="tab-section" @fadeInUp>
       <div class="tab-body">
-        <app-bot-panel></app-bot-panel>
+        <app-bot-panel (openNotifications)="switchTab('notifications')"></app-bot-panel>
       </div>
     </div>
   }

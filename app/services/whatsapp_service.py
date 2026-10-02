@@ -383,7 +383,9 @@ class WhatsAppService:
             self.qr_code = None
             self._needs_qr = False
             self.connected_jid = msg.get('jid')
-            self.connected_phone = msg.get('phone')
+            # El jid trae el indice de dispositivo (51974651682:2). El telefono
+            # que se muestra y con el que se envia no lo lleva.
+            self.connected_phone = self.normalize_phone(str(msg.get('phone') or '').split(':')[0])
             self.last_error = None
             self._ready.set()
             logger.info('WhatsApp conectado como %s', self.connected_phone)

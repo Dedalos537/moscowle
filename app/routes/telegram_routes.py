@@ -36,6 +36,7 @@ def _mask_secret(value):
         return '*' * len(value)
     return f'{value[:4]}{"*" * (len(value) - 8)}{value[-4:]}'
 
+
 # Track processed update_ids to prevent duplicate processing (max 1000 entries)
 _processed_updates: dict[int, float] = {}
 _MAX_PROCESSED = 1000
@@ -213,6 +214,50 @@ def toggle_notifications():
     return jsonify({'status': 'updated', 'notifications_enabled': tg_user.notifications_enabled})
 
 
+def _whatsapp_channel_status():
+    """Estado real del puente Baileys para el panel de canales.
+
+    Antes estaba hardcodeado a `coming_soon`, asi que el tarjero decia
+    "Proximamente" aunque la cuenta estuviera conectada. Solo lee estado:
+    no arranca nada.
+    """
+    try:
+        from app.services.whatsapp_service import whatsapp_service
+
+        st = whatsapp_service.status()
+    except Exception as e:  # pragma: no cover - el puente puede no existir
+        logger.warning('No se pudo leer el estado de WhatsApp: %s', e)
+        st = {}
+
+    connected = bool(st.get('connected'))
+    if connected:
+        status = 'connected'
+    elif st.get('needs_qr'):
+        status = 'waiting_qr'
+    elif st.get('last_error'):
+        status = 'error'
+    else:
+        status = 'offline'
+
+    return {
+        'active': connected,
+        'connected': connected,
+        'running': bool(st.get('running')),
+        'label': 'WhatsApp (Baileys)',
+        'icon': 'whatsapp',
+        'status': status,
+        'phone': st.get('phone') or '',
+        'jid': st.get('jid') or '',
+        'uptime_s': st.get('uptime_s') or 0,
+        'needs_qr': bool(st.get('needs_qr')),
+        'has_qr': bool(st.get('has_qr')),
+        'banned': bool(st.get('banned')),
+        'last_error': st.get('last_error'),
+        # a donde ir a vincular el numero: la pestaña Notificaciones
+        'setup_tab': 'notifications',
+    }
+
+
 @telegram_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 @admin_required
@@ -236,7 +281,10 @@ def get_bot_dashboard():
         bot_emoji = os.getenv('TELEGRAM_BOT_EMOJI', '\U0001f99c')
         persona_msg = os.getenv('TELEGRAM_PERSONA_MESSAGE', '')
         system_prompt = os.getenv('TELEGRAM_SYSTEM_PROMPT', '')
-    is_active = bool(bot_token_full)
+    # Hay dos cosas distintas: "hay token" (configurado) y "esta encendido"
+    # (interruptor del usuario). El bot solo responde si coinciden ambas.
+    bot_enabled = bool(bot_cfg.enabled) if bot_cfg is not None else True
+    is_active = bool(bot_token_full) and bot_enabled
     webhook_url = os.getenv('TELEGRAM_WEBHOOK_URL', '')
     webhook_secret = _webhook_secret()
 
@@ -244,6 +292,8 @@ def get_bot_dashboard():
         'name': bot_name,
         'emoji': bot_emoji,
         'is_active': is_active,
+        'enabled': bot_enabled,
+        'configured': bool(bot_token_full),
         'bot_token_masked': bot_token_masked,
         'persona_message': persona_msg,
         'system_prompt': system_prompt,
@@ -287,7 +337,7 @@ def get_bot_dashboard():
     data['channels'] = {
         'web': {'active': True, 'label': 'Chat Web', 'icon': 'globe'},
         'telegram': tg_status,
-        'whatsapp': {'active': False, 'label': 'WhatsApp (Baileys)', 'icon': 'whatsapp', 'status': 'coming_soon'},
+        'whatsapp': _whatsapp_channel_status(),
         'instagram': {'active': False, 'label': 'Instagram DMs', 'icon': 'instagram', 'status': 'coming_soon'},
     }
 
@@ -409,7 +459,13 @@ def bot_config_endpoint():
         cfg.persona_message = data['persona_message']
     if 'system_prompt' in data:
         cfg.system_prompt = data['system_prompt']
-    for key in ('auto_faq_enabled', 'mcp_prompt_enabled', 'notify_supervision_enabled', 'intervention_enabled'):
+    for key in (
+        'enabled',
+        'auto_faq_enabled',
+        'mcp_prompt_enabled',
+        'notify_supervision_enabled',
+        'intervention_enabled',
+    ):
         if key in data:
             setattr(cfg, key, bool(data[key]))
     if 'auto_faq_threshold' in data:

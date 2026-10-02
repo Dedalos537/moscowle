@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
@@ -55,9 +55,17 @@ export class BotPanel implements OnInit, OnDestroy {
     { id: 'test', label: 'Pruebas', icon: ['fas', 'flask'] },
   ];
 
+  /** Salta a la pestaña Notificaciones del Centro de control, donde está el
+   *  QR y el estado del número emisor de WhatsApp. */
+  @Output() openNotifications = new EventEmitter<void>();
+
   // Bot data
   bot: any = null;
   channels: any = {};
+
+  // Interruptor maestro del bot
+  toggleSaving = false;
+  toggleError = '';
   conversations: any[] = [];
   activity: any[] = [];
 
@@ -594,6 +602,49 @@ export class BotPanel implements OnInit, OnDestroy {
       web: '#22c55e', telegram: '#229ED9', whatsapp: '#25D366', instagram: '#E4405F',
     };
     return colors[ch] || '#94a3b8';
+  }
+
+  get whatsappChannel(): any {
+    return this.channels?.['whatsapp'] || null;
+  }
+
+  /** Enciende o apaga el bot sin tocar el token. */
+  toggleEnabled(value: boolean) {
+    if (this.toggleSaving) return;
+    this.toggleSaving = true;
+    this.toggleError = '';
+    this.cdr.markForCheck();
+    this.subs.add(
+      this.admin.updateTelegramConfig({ enabled: value }).subscribe({
+        next: (res) => {
+          const cfg = res?.config;
+          if (this.bot && cfg) {
+            this.bot.enabled = !!cfg.enabled;
+            this.bot.is_active = !!(this.bot.configured && cfg.enabled);
+          }
+          this.toggleSaving = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.toggleSaving = false;
+          this.toggleError = err?.error?.error || 'No se pudo cambiar el estado del bot';
+          this.cdr.markForCheck();
+        },
+      })
+    );
+  }
+
+  formatUptime(seconds?: number): string {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m} min`;
+    return `${Math.floor(m / 60)}h ${m % 60} min`;
+  }
+
+  formatWaPhone(phone?: string): string {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return digits ? `+${digits}` : '';
   }
 
   channelLabel(ch: string): string {

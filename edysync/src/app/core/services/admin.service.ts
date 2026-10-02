@@ -745,7 +745,7 @@ export class AdminService {
     return this.http.get('/api/telegram/config');
   }
 
-  updateTelegramConfig(data: { bot_name?: string; bot_emoji?: string; persona_message?: string; system_prompt?: string; is_active?: boolean; auto_faq_enabled?: boolean; auto_faq_threshold?: number; mcp_prompt_enabled?: boolean; notify_supervision_enabled?: boolean; intervention_enabled?: boolean }): Observable<any> {
+  updateTelegramConfig(data: { bot_name?: string; bot_emoji?: string; persona_message?: string; system_prompt?: string; is_active?: boolean; enabled?: boolean; auto_faq_enabled?: boolean; auto_faq_threshold?: number; mcp_prompt_enabled?: boolean; notify_supervision_enabled?: boolean; intervention_enabled?: boolean }): Observable<any> {
     return this.http.put('/api/telegram/config', data);
   }
 

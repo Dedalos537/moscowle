@@ -883,3 +883,60 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Interruptor maestro del bot (header) ─────────────────────────── */
+.bot-header__switch {
+  flex-shrink: 0;
+}
+
+.bot-header__switch-error {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+/* ── Detalle del canal WhatsApp (estado real del puente) ──────────── */
+.bot-channel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.375rem;
+}
+
+.bot-channel__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+
+  &--error {
+    color: var(--color-error);
+  }
+}
+
+.bot-channel__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.3125rem 0.625rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
